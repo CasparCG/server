@@ -18,8 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-#include "../../StdAfx.h"
-
 #include "image_mixer.h"
 
 #include "image_kernel.h"
@@ -114,7 +112,7 @@ public:
 
 private:
 
-	void draw(spl::shared_ptr<texture>&			target_texture,
+	void draw(std::shared_ptr<texture>&			target_texture,
 			  std::vector<layer>				layers,
 			  const core::video_format_desc&	format_desc,
 			  core::field_mode					field_mode)
@@ -128,7 +126,7 @@ private:
 		}
 	}
 
-	void draw(spl::shared_ptr<texture>&			target_texture,
+	void draw(std::shared_ptr<texture>&			target_texture,
 			  layer								layer,
 			  std::shared_ptr<texture>&			layer_key_texture,
 			  const core::video_format_desc&	format_desc,
@@ -192,7 +190,7 @@ private:
 		layer_key_texture = std::move(local_key_texture);
 	}
 
-	void draw(spl::shared_ptr<texture>& target_texture,
+	void draw(std::shared_ptr<texture>& target_texture,
 			  item item,
 		      std::shared_ptr<texture>& layer_key_texture,
 			  std::shared_ptr<texture>& local_key_texture,
@@ -242,7 +240,7 @@ private:
 		}
 	}
 
-	void draw(spl::shared_ptr<texture>&	 target_texture,
+	void draw(std::shared_ptr<texture>&	 target_texture,
 			  std::shared_ptr<texture>&& source_buffer,
 			  core::blend_mode			 blend_mode = core::blend_mode::normal)
 	{

@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../../StdAfx.h"
-
 #include "image_mixer.h"
 
 #include "../util/xmm.h"
@@ -49,19 +46,19 @@
 #include <set>
 #include <array>
 
-#if defined(_MSC_VER)
-#pragma warning (push)
-#pragma warning (disable : 4244)
-#endif
-extern "C"
-{
-	#include <libswscale/swscale.h>
-	#include <libavcodec/avcodec.h>
-	#include <libavformat/avformat.h>
-}
-#if defined(_MSC_VER)
-#pragma warning (pop)
-#endif
+//#if defined(_MSC_VER)
+//#pragma warning (push)
+//#pragma warning (disable : 4244)
+//#endif
+//extern "C"
+//{
+//	#include <libswscale/swscale.h>
+//	#include <libavcodec/avcodec.h>
+//	#include <libswscale/swscale.h>
+//}
+//#if defined(_MSC_VER)
+//#pragma warning (pop)
+//#endif
 
 namespace caspar { namespace accelerator { namespace cpu {
 
@@ -144,7 +141,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 
 class image_renderer
 {
-	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
+	//tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
 	core::video_format_desc																				format_desc_;
 public:
@@ -153,7 +150,7 @@ public:
 		if (format_desc != format_desc_)
 		{
 			format_desc_ = format_desc;
-			sws_devices_.clear();
+			//sws_devices_.clear();
 		}
 
 		convert(items, format_desc.width, format_desc.height);

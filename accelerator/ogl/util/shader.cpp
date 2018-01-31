@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../../StdAfx.h"
-
 #include "shader.h"
 
 #include <common/gl/gl_check.h>
@@ -40,11 +37,11 @@ public:
 	impl(const std::string& vertex_source_str, const std::string& fragment_source_str) : program_(0)
 	{
 		GLint success;
-	
+
 		const char* vertex_source = vertex_source_str.c_str();
-						
+
 		auto vertex_shader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
-					
+
 		GL(glShaderSourceARB(vertex_shader, 1, &vertex_source, NULL));
 		GL(glCompileShaderARB(vertex_shader));
 
@@ -58,11 +55,11 @@ public:
 			str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
-			
+
 		const char* fragment_source = fragment_source_str.c_str();
-						
+
 		auto fragmemt_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
-					
+
 		GL(glShaderSourceARB(fragmemt_shader, 1, &fragment_source, NULL));
 		GL(glCompileShaderARB(fragmemt_shader));
 
@@ -76,14 +73,14 @@ public:
 			str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
-			
+
 		program_ = glCreateProgramObjectARB();
-			
+
 		GL(glAttachObjectARB(program_, vertex_shader));
 		GL(glAttachObjectARB(program_, fragmemt_shader));
 
 		GL(glLinkProgramARB(program_));
-			
+
 		GL(glDeleteObjectARB(vertex_shader));
 		GL(glDeleteObjectARB(fragmemt_shader));
 
@@ -99,7 +96,7 @@ public:
 		}
 		GL(glUseProgramObjectARB(program_));
 	}
-	
+
 	~impl()
 	{
 		glDeleteProgram(program_);
@@ -112,7 +109,7 @@ public:
 			it = locations_.insert(std::make_pair(name, glGetUniformLocation(program_, name))).first;
 		return it->second;
 	}
-	
+
 	void set(const std::string& name, bool value)
 	{
 		set(name, value ? 1 : 0);
@@ -122,12 +119,12 @@ public:
 	{
 		GL(glUniform1i(get_location(name.c_str()), value));
 	}
-	
+
 	void set(const std::string& name, float value)
 	{
 		GL(glUniform1f(get_location(name.c_str()), value));
 	}
-	
+
 	void set(const std::string& name, double value0, double value1)
 	{
 		GL(glUniform2f(get_location(name.c_str()), static_cast<float>(value0), static_cast<float>(value1)));
@@ -139,8 +136,8 @@ public:
 	}
 
 	void use()
-	{		
-		GL(glUseProgramObjectARB(program_));	
+	{
+		GL(glUseProgramObjectARB(program_));
 	}
 };
 

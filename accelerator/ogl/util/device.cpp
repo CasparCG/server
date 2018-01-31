@@ -18,11 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-// TODO: Smart GC
-
-#include "../../StdAfx.h"
-
 #include "device.h"
 
 #include "buffer.h"
@@ -65,13 +60,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4>  device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>   host_pools_;
 
-    typedef std::pair<GLsync, std::shared_ptr<buffer>> sync_t;
-    typedef tbb::concurrent_bounded_queue<sync_t>      sync_queue_t;
+    typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>> sync_queue_t;
 
     sync_queue_t sync_queue_;
     GLsync       sync_fence_ = 0;
 
-	GLuint fbo_;
+	GLuint       fbo_;
 
 	io_context&      service_;
     io_context::work work_;
@@ -114,15 +108,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			for (auto& pool : device_pools_)
 				pool.clear();
 
+            sync_queue_.clear();
+
             if (sync_fence_) {
                 glDeleteSync(sync_fence_);
-            }
-
-            sync_t sync;
-            while (sync_queue_.try_pop(sync)) {
-                if (sync.first) {
-                    glDeleteSync(sync.first);
-                }
             }
 
 			glDeleteFramebuffers(1, &fbo_);
@@ -133,30 +122,27 @@ struct device::impl : public std::enable_shared_from_this<impl>
         thread_.join();
 	}
 
-    template <typename F>
-    void post(F&& func)
+    template<typename Func>
+    auto spawn_async(Func&& func)
     {
-        auto func_ptr = std::make_shared<std::function<void()>>(std::forward<F>(func));
-        boost::asio::post(service_, std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
-    }
+        typedef decltype(func(std::declval<yield_context>()))  result_type;
+        typedef std::packaged_task<result_type(yield_context)> task_type;
 
-    template <typename F>
-    void dispatch(F&& func)
-    {
-        auto func_ptr = std::make_shared<std::function<void()>>(std::forward<F>(func));
-        boost::asio::dispatch(service_, std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
+        auto task = task_type(std::forward<Func>(func));
+        auto future = task.get_future();
+        boost::asio::spawn(service_, std::move(task));
+        return future;
     }
 
     template<typename Func>
-    auto dispatch_async(Func&& func) -> std::future<decltype(func())>
+    auto dispatch_async(Func&& func)
     {
-        typedef typename std::remove_reference<Func>::type	function_type;
         typedef decltype(func())							result_type;
         typedef std::packaged_task<result_type()>			task_type;
 
-        auto task = std::make_shared<task_type>(std::forward<Func>(func));
-        auto future = task->get_future();
-        boost::asio::dispatch(service_, std::bind(&task_type::operator(), std::move(task)));
+        auto task = task_type(std::forward<Func>(func));
+        auto future = task.get_future();
+        boost::asio::dispatch(service_, std::move(task));
         return future;
     }
 
@@ -181,7 +167,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}
 	}
 
-	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
+	std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
 	{
 		CASPAR_VERIFY(stride > 0 && stride < 5);
 		CASPAR_VERIFY(width > 0 && height > 0);
@@ -191,19 +177,15 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
-            dispatch_sync([&]
-            {
-                tex = spl::make_shared<texture>(width, height, stride);
-            });
-        }
-        if (clear) {
-            dispatch_sync([&]
-            {
-                tex->clear();
-            });
+             tex = spl::make_shared<texture>(width, height, stride);
         }
 
-        return spl::shared_ptr<texture>(tex.get(), [tex, pool](texture*) mutable
+        if (clear) {
+            tex->clear();
+        }
+
+        auto ptr = tex.get();
+        return std::shared_ptr<texture>(ptr, [tex = std::move(tex), pool](texture*) mutable
         {
             pool->push(tex);
         });
@@ -224,9 +206,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
             });
         }
 
-        return std::shared_ptr<buffer>(buf.get(), [=](buffer*) mutable
+        auto ptr = buf.get();
+        return std::shared_ptr<buffer>(ptr, [=, buf = std::move(buf)](buffer*) mutable
         {
-            sync_queue_.emplace(static_cast<GLsync>(0), std::move(buf));
+            sync_queue_.emplace(std::move(buf));
         });
 	}
 
@@ -256,51 +239,43 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride)
 	{
 		auto buf = copy_to_buf(source);
-		return dispatch_async([=]() -> std::shared_ptr<texture>
+		return dispatch_async([=, buf = std::move(buf)]
 		{
-			auto texture = create_texture(width, height, stride, false);
-			texture->copy_from(*buf);
-			return texture;
+			auto tex = create_texture(width, height, stride, false);
+            tex->copy_from(*buf);
+			return tex;
 		});
 	}
 
-	std::future<array<const uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
+	std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source)
 	{
-        auto promise = std::make_shared<std::promise<array<const uint8_t>>>();
-
-        boost::asio::spawn(service_, [=](yield_context yield)
+        return spawn_async([=](yield_context yield)
         {
-            try {
-                auto buf = create_buffer(source->size(), false);
-                source->copy_to(*buf);
-                auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+            auto buf = create_buffer(source->size(), false);
+            source->copy_to(*buf);
+            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-                for (auto n = 0; true; ++n) {
-                    auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
-                    if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                        break;
-                    }
-                    deadline_timer timer(service_, boost::posix_time::milliseconds(std::min(10, n)));
-                    timer.async_wait(yield);
+            deadline_timer timer(service_);
+            for (auto n = 0; true; ++n) {
+                timer.expires_from_now(boost::posix_time::milliseconds(2));
+                timer.async_wait(yield);
+
+                auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    break;
                 }
-
-                auto ptr = reinterpret_cast<uint8_t*>(buf->data());
-                auto size = buf->size();
-                promise->set_value(array<const uint8_t>(ptr, size, true, std::move(buf)));
-            } catch (...) {
-                promise->set_exception(std::current_exception());
             }
-        });
 
-        return promise->get_future();
+            auto ptr = reinterpret_cast<uint8_t*>(buf->data());
+            auto size = buf->size();
+            return array<const uint8_t>(ptr, size, true, std::move(buf));
+        });
 	}
 
     void flush()
     {
         boost::asio::post(service_, [this]
         {
-            sync_queue_.push(sync_t(glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0), nullptr));
-
             if (sync_fence_) {
                 auto wait = glClientWaitSync(sync_fence_, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
                 if (wait != GL_ALREADY_SIGNALED && wait != GL_CONDITION_SATISFIED) {
@@ -308,20 +283,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 }
                 glDeleteSync(sync_fence_);
                 sync_fence_ = 0;
-            }
 
-            sync_t sync;
-            while (sync_queue_.try_pop(sync)) {
-                if (sync.first) {
-                    sync_fence_ = sync.first;
-                    break;
-                } else {
-                    auto buf = sync.second;
+                std::shared_ptr<buffer> buf;
+                while (sync_queue_.try_pop(buf) && buf) {
                     auto pool = &host_pools_[static_cast<int>(buf->write() ? 1 : 0)][buf->size()];
                     pool->push(std::move(buf));
                 }
-
             }
+
+            sync_queue_.push(nullptr);
+            sync_fence_ = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         });
     }
 };
@@ -329,10 +300,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
 device::device()
 	: impl_(new impl(service_)){}
 device::~device() {}
-spl::shared_ptr<texture>					device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
+std::shared_ptr<texture>					device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
 array<uint8_t>							    device::create_array(int size) { return impl_->create_array(size); }
 std::future<std::shared_ptr<texture>>		device::copy_async(const array<const uint8_t>& source, int width, int height, int stride) { return impl_->copy_async(source, width, height, stride); }
-std::future<array<const uint8_t>>		    device::copy_async(const spl::shared_ptr<texture>& source) { return impl_->copy_async(source); }
+std::future<array<const uint8_t>>		    device::copy_async(const std::shared_ptr<texture>& source) { return impl_->copy_async(source); }
 std::wstring								device::version() const { return impl_->version(); }
 void                                        device::flush() { return impl_->flush(); }
 }}}
