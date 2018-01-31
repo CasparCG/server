@@ -69,7 +69,7 @@ struct amcp_command_repository::impl
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
 	spl::shared_ptr<const core::frame_producer_registry>		producer_registry;
 	spl::shared_ptr<const core::frame_consumer_registry>		consumer_registry;
-	std::promise<bool>&											shutdown_server_now;
+	std::function<void(bool)>									shutdown_server_now;
 
 	std::map<std::wstring, std::pair<amcp_command_func, int>>	commands;
 	std::map<std::wstring, std::pair<amcp_command_func, int>>	channel_commands;
@@ -79,7 +79,7 @@ struct amcp_command_repository::impl
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-			std::promise<bool>& shutdown_server_now)
+			std::function<void(bool)> shutdown_server_now)
 		: cg_registry(cg_registry)
 		, producer_registry(producer_registry)
 		, consumer_registry(consumer_registry)
@@ -100,7 +100,7 @@ amcp_command_repository::amcp_command_repository(
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 		const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-		std::promise<bool>& shutdown_server_now)
+        std::function<void(bool)> shutdown_server_now)
 		: impl_(new impl(
 				channels,
 				cg_registry,

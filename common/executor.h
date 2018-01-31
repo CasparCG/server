@@ -57,7 +57,7 @@ public:
         CASPAR_LOG(debug) << L"Shutting down " << name_;
 
         is_running_ = false;
-        queue_.push(nullptr);
+        queue_.abort();
         thread_.join();
     }
 
@@ -108,7 +108,6 @@ public:
     void stop()
     {
         is_running_ = false;
-        queue_.push(nullptr);
     }
 
     void wait()
@@ -157,16 +156,14 @@ private:
     {
         task_t task;
 
-        while (true) {
+        while (is_running_) {
             try {
                 queue_.pop(task);
                 do {
-                    if (!task) {
-                        break;
-                    } else {
-                        task();
-                    }
+                    task();
                 } while (queue_.try_pop(task));
+            } catch (tbb::user_abort&) {
+                return;
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
