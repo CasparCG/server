@@ -21,11 +21,11 @@
 
 #pragma once
 
+#include <boost/asio/io_service.hpp>
+
 #include <future>
 #include <memory>
 #include <cstdint>
-
-#include <boost/asio/io_service.hpp>
 
 namespace caspar { namespace accelerator { namespace ogl {
 

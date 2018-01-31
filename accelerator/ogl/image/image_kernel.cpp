@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../../StdAfx.h"
-
 #include "image_kernel.h"
 
 #include "image_shader.h"
@@ -41,6 +38,8 @@
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+
+#include <GL/glew.h>
 
 #include <cmath>
 

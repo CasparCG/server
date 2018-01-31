@@ -1,10 +1,10 @@
-#include "StdAfx.h"
-
 #include "accelerator.h"
 
 #include "cpu/image/image_mixer.h"
 #include "ogl/image/image_mixer.h"
 #include "ogl/util/device.h"
+
+#include <boost/property_tree/ptree.hpp>
 
 #include <common/env.h>
 
