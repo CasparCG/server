@@ -149,8 +149,6 @@ public:
 			//foreground_event_subject_ << monitor::event("type") % foreground_->name();
 			//background_event_subject_ << monitor::event("type") % background_->name();
 
-			current_frame_age_ = frame.get_and_record_age_millis();
-
 			return frame;
 		}
 		catch(...)
@@ -171,17 +169,8 @@ public:
 
 		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
 		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - foreground_->frame_number() - (auto_play_delta_ ? *auto_play_delta_ : 0)));
-		info.add(L"frame-age", current_frame_age_);
 		info.add_child(L"foreground.producer", foreground_->info());
 		info.add_child(L"background.producer", background_->info());
-		return info;
-	}
-
-	boost::property_tree::wptree delay_info() const
-	{
-		boost::property_tree::wptree info;
-		info.add(L"producer", foreground_->print());
-		info.add(L"frame-age", current_frame_age_);
 		return info;
 	}
 
