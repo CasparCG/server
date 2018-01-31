@@ -37,7 +37,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
-#include <common/semaphore.h>
 #include <common/array.h>
 #include <common/future.h>
 #include <common/timer.h>
@@ -332,7 +331,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ static_cast<unsigned long>(buffer_size_ + 1) };
 
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
-	caspar::semaphore									ready_for_new_frames_	{ 0 };
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										tick_timer_;
@@ -340,6 +338,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	std::atomic<int64_t>								current_presentation_delay_;
 	std::atomic<int64_t>								scheduled_frames_completed_;
 	std::unique_ptr<key_video_context<Configuration>>	key_context_;
+
+    executor                                            executor_;
 
 public:
 	decklink_consumer(
@@ -349,6 +349,7 @@ public:
 		: channel_index_(channel_index)
 		, config_(config)
 		, format_desc_(format_desc)
+        , executor_(L"decklink")
 	{
 		is_running_ = true;
 		current_presentation_delay_ = 0;
@@ -512,8 +513,6 @@ public:
 				frame_buffer_.pop(frame);
 			}
 
-			ready_for_new_frames_.release();
-
 			if (!is_running_)
 				return E_FAIL;
 
@@ -572,16 +571,11 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 
-		frame_buffer_.push(frame);
-
-		auto send_completion = spl::make_shared<std::promise<bool>>();
-
-		ready_for_new_frames_.acquire(1, [send_completion]
-		{
-			send_completion->set_value(true);
-		});
-
-		return send_completion->get_future();
+        return executor_.begin_invoke([=]
+        {
+            frame_buffer_.push(frame);
+            return true;
+        });
 	}
 
 	std::wstring print() const

@@ -32,19 +32,19 @@
 #include <core/producer/stage.h>
 
 #include <common/except.h>
-#include <common/semaphore.h>
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_queue.h>
 
+#include <queue>
+
 namespace caspar { namespace reroute {
 
 class layer_consumer : public core::write_frame_consumer
 {
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
-	semaphore										frames_available_ { 0 };
 	int												frames_delay_;
 
 public:
@@ -60,12 +60,9 @@ public:
 
 	// write_frame_consumer
 
-	void send(const core::draw_frame& src_frame) override
+	void send(const core::draw_frame& frame) override
 	{
-		bool pushed = frame_buffer_.try_push(src_frame);
-
-		if (pushed)
-			frames_available_.release();
+        frame_buffer_.try_push(frame);
 	}
 
 	std::wstring print() const override
@@ -75,19 +72,9 @@ public:
 
 	core::draw_frame receive()
 	{
-		core::draw_frame frame;
-		if (!frame_buffer_.try_pop(frame))
-		{
-			return core::draw_frame::late();
-		}
+		auto frame = core::draw_frame::late();
+        frame_buffer_.try_pop(frame);
 		return frame;
-	}
-
-	void block_until_first_frame_available()
-	{
-		if (!frames_available_.try_acquire(1 + frames_delay_, std::chrono::seconds(2)))
-			CASPAR_LOG(warning)
-					<< print() << L" Timed out while waiting for first frame";
 	}
 };
 
@@ -159,7 +146,6 @@ public:
 		, last_frame_(core::draw_frame::late())
 	{
 		channel->stage().add_layer_consumer(this, layer_, consumer_);
-		consumer_->block_until_first_frame_available();
 		double_framerate_ = false;
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}

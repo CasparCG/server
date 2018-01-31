@@ -52,7 +52,6 @@ set(HEADERS
 		prec_timer.h
 		ptree.h
 		scope_exit.h
-		semaphore.h
 		stdafx.h
 		timer.h
 		tweener.h

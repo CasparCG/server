@@ -30,8 +30,6 @@
 #include "../../video_channel.h"
 #include "../output.h"
 
-#include <common/semaphore.h>
-
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -45,7 +43,6 @@ class syncto_consumer : public frame_consumer
 {
 	monitor::subject				monitor_subject_;
 	spl::shared_ptr<video_channel>	other_channel_;
-	semaphore						frames_to_render_	{ 0 };
 	std::shared_ptr<void>			tick_subscription_;
 	int								self_channel_index_	= -1;
 public:
