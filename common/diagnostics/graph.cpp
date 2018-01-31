@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../stdafx.h"
-
 #include "graph.h"
 
 #include <mutex>

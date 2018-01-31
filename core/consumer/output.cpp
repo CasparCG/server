@@ -41,6 +41,7 @@
 #include <common/memshfl.h>
 #include <common/env.h>
 #include <common/timer.h>
+#include <common/diagnostics/graph.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>

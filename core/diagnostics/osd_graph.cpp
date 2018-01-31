@@ -45,6 +45,7 @@
 #include <atomic>
 #include <mutex>
 #include <numeric>
+#include <list>
 #include <tuple>
 #include <memory>
 
