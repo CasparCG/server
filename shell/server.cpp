@@ -39,7 +39,6 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
-#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
@@ -146,7 +145,6 @@ struct server::impl : boost::noncopyable
 
 		initialize_modules(dependencies);
 		core::init_cg_proxy_as_producer(dependencies);
-		core::syncto::init(dependencies);
 	}
 
 	void start()
