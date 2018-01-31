@@ -28,7 +28,6 @@
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
-#include <core/frame/audio_channel_layout.h>
 
 #include <future>
 #include <vector>
@@ -114,14 +113,13 @@ public:
 	}
 
 	std::future<bool> send(const_frame frame) override																				{return consumer_->send(std::move(frame));}
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override	{return consumer_->initialize(format_desc, channel_layout, channel_index);}
+	void initialize(const video_format_desc& format_desc, int channel_index) override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																								{return consumer_->print();}
 	std::wstring name() const override																								{return consumer_->name();}
 	boost::property_tree::wptree info() const override 																				{return consumer_->info();}
 	bool has_synchronization_clock() const override																					{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																								{return consumer_->buffer_depth();}
 	int index() const override																										{return consumer_->index();}
-	int64_t presentation_frame_age_millis() const override																			{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override																						{return consumer_->monitor_output();}
 	const frame_consumer* unwrapped() const override																				{return consumer_->unwrapped();}
 };
@@ -144,9 +142,9 @@ public:
 	}
 
 	std::future<bool> send(const_frame frame) override																				{return consumer_->send(std::move(frame));}
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
-		consumer_->initialize(format_desc, channel_layout, channel_index);
+		consumer_->initialize(format_desc, channel_index);
 		CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
 	}
 	std::wstring print() const override																								{return consumer_->print();}
@@ -155,7 +153,6 @@ public:
 	bool has_synchronization_clock() const override																					{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																								{return consumer_->buffer_depth();}
 	int index() const override																										{return consumer_->index();}
-	int64_t presentation_frame_age_millis() const override																			{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override																						{return consumer_->monitor_output();}
 	const frame_consumer* unwrapped() const override																				{return consumer_->unwrapped();}
 };
@@ -165,7 +162,6 @@ class recover_consumer_proxy : public frame_consumer
 	std::shared_ptr<frame_consumer> consumer_;
 	int								channel_index_	= -1;
 	video_format_desc				format_desc_;
-	audio_channel_layout			channel_layout_	= audio_channel_layout::invalid();
 public:
 	recover_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
 		: consumer_(std::move(consumer))
@@ -183,7 +179,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			try
 			{
-				consumer_->initialize(format_desc_, channel_layout_, channel_index_);
+				consumer_->initialize(format_desc_, channel_index_);
 				return consumer_->send(frame);
 			}
 			catch(...)
@@ -195,12 +191,11 @@ public:
 		}
 	}
 
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		format_desc_	= format_desc;
-		channel_layout_ = channel_layout;
 		channel_index_	= channel_index;
-		return consumer_->initialize(format_desc, channel_layout, channel_index);
+		return consumer_->initialize(format_desc, channel_index);
 	}
 
 	std::wstring print() const override										{return consumer_->print();}
@@ -209,7 +204,6 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
-	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}
 	const frame_consumer* unwrapped() const override						{return consumer_->unwrapped();}
 };
@@ -220,7 +214,6 @@ class cadence_guard : public frame_consumer
 	spl::shared_ptr<frame_consumer>		consumer_;
 	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
-	audio_channel_layout				channel_layout_	= audio_channel_layout::invalid();
 	boost::circular_buffer<std::size_t>	sync_buffer_;
 public:
 	cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
@@ -228,13 +221,12 @@ public:
 	{
 	}
 
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		audio_cadence_	= format_desc.audio_cadence;
 		sync_buffer_	= boost::circular_buffer<std::size_t>(format_desc.audio_cadence.size());
 		format_desc_	= format_desc;
-		channel_layout_ = channel_layout;
-		consumer_->initialize(format_desc, channel_layout, channel_index);
+		consumer_->initialize(format_desc, channel_index);
 	}
 
 	std::future<bool> send(const_frame frame) override
@@ -244,7 +236,7 @@ public:
 
 		std::future<bool> result = make_ready_future(true);
 
-		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() * channel_layout_.num_channels == static_cast<int>(frame.audio_data().size()))
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() * format_desc_.audio_channels == static_cast<int>(frame.audio_data().size()))
 		{
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
@@ -253,7 +245,7 @@ public:
 		else
 			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
-		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size() / channel_layout_.num_channels));
+		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels));
 
 		return std::move(result);
 	}
@@ -264,7 +256,6 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
-	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}
 	const frame_consumer* unwrapped() const override						{return consumer_->unwrapped();}
 };
@@ -326,13 +317,12 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 	{
 	public:
 		std::future<bool> send(const_frame) override { return make_ready_future(false); }
-		void initialize(const video_format_desc&, const audio_channel_layout&, int) override{}
+		void initialize(const video_format_desc&, int) override{}
 		std::wstring print() const override {return L"empty";}
 		std::wstring name() const override {return L"empty";}
 		bool has_synchronization_clock() const override {return false;}
 		int buffer_depth() const override {return 0;};
 		int index() const override {return -1;}
-		int64_t presentation_frame_age_millis() const override {return -1;}
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}
 		boost::property_tree::wptree info() const override
 		{

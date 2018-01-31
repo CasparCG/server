@@ -406,27 +406,6 @@ public:
 		});
 	}
 
-	std::future<boost::property_tree::wptree> delay_info()
-	{
-		return std::move(executor_.begin_invoke([this]() -> boost::property_tree::wptree
-		{
-			boost::property_tree::wptree info;
-
-			for (auto& layer : layers_)
-				info.add_child(L"layer", layer.second.delay_info()).add(L"index", layer.first);
-
-			return info;
-		}));
-	}
-
-	std::future<boost::property_tree::wptree> delay_info(int index)
-	{
-		return std::move(executor_.begin_invoke([=]() -> boost::property_tree::wptree
-		{
-			return get_layer(index).delay_info();
-		}));
-	}
-
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
 		return flatten(executor_.begin_invoke([=]
@@ -486,8 +465,6 @@ void stage::remove_layer_consumer(void* token, int layer){ impl_->remove_layer_c
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::future<boost::property_tree::wptree> stage::info() const{ return impl_->info(); }
 std::future<boost::property_tree::wptree> stage::info(int index) const{ return impl_->info(index); }
-std::future<boost::property_tree::wptree> stage::delay_info() const{ return impl_->delay_info(); }
-std::future<boost::property_tree::wptree> stage::delay_info(int index) const{ return impl_->delay_info(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc){ return (*impl_)(format_desc); }
 monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }

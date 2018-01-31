@@ -4,11 +4,6 @@ project ("modules")
 add_subdirectory(reroute)
 add_subdirectory(ffmpeg)
 add_subdirectory(oal)
-
-if (MSVC)
-	add_subdirectory(bluefish)
-endif ()	
-
 add_subdirectory(decklink)
 add_subdirectory(screen)
 add_subdirectory(html)

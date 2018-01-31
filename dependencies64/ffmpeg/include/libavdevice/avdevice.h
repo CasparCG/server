@@ -28,19 +28,21 @@
  */
 
 /**
- * @defgroup lavd Special devices muxing/demuxing library
- * @{
+ * @defgroup lavd libavdevice
+ * Special devices muxing/demuxing library.
+ *
  * Libavdevice is a complementary library to @ref libavf "libavformat". It
  * provides various "special" platform-specific muxers and demuxers, e.g. for
  * grabbing devices, audio capture and playback etc. As a consequence, the
  * (de)muxers in libavdevice are of the AVFMT_NOFILE type (they use their own
  * I/O functions). The filename passed to avformat_open_input() often does not
  * refer to an actually existing file, but has some special device-specific
- * meaning - e.g. for x11grab it is the display name.
+ * meaning - e.g. for xcbgrab it is the display name.
  *
  * To use libavdevice, simply call avdevice_register_all() to register all
  * compiled muxers and demuxers. They all use standard libavformat API.
- * @}
+ *
+ * @{
  */
 
 #include "libavutil/log.h"
@@ -65,7 +67,6 @@ const char *avdevice_license(void);
 
 /**
  * Initialize libavdevice and register all the input and output devices.
- * @warning This function is not thread safe.
  */
 void avdevice_register_all(void);
 
@@ -324,7 +325,7 @@ int avdevice_dev_to_app_control_message(struct AVFormatContext *s,
  * Following API allows user to probe device capabilities (supported codecs,
  * pixel formats, sample formats, resolutions, channel counts, etc).
  * It is build on top op AVOption API.
- * Queried capabilities allows to set up converters of video or audio
+ * Queried capabilities make it possible to set up converters of video or audio
  * parameters that fit to the device.
  *
  * List of capabilities that can be queried:
@@ -505,5 +506,9 @@ int avdevice_list_input_sources(struct AVInputFormat *device, const char *device
                                 AVDictionary *device_options, AVDeviceInfoList **device_list);
 int avdevice_list_output_sinks(struct AVOutputFormat *device, const char *device_name,
                                AVDictionary *device_options, AVDeviceInfoList **device_list);
+
+/**
+ * @}
+ */
 
 #endif /* AVDEVICE_AVDEVICE_H */

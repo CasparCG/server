@@ -54,7 +54,7 @@ public:
 	{
 	}
 
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		verify_cyclic_reference(channel_index, other_channel_);
 
@@ -116,11 +116,6 @@ public:
 	int index() const override
 	{
 		return 70000;
-	}
-
-	int64_t presentation_frame_age_millis() const override
-	{
-		return 0;
 	}
 
 	spl::shared_ptr<video_channel> other_channel() const

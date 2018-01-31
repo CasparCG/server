@@ -39,7 +39,6 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -78,7 +77,7 @@ public:
 		audio_mixer_.monitor_output().attach_parent(monitor_subject_);
 	}
 
-	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
+	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{
 		caspar::timer frame_timer;
 
@@ -98,11 +97,11 @@ public:
 				}
 
 				auto image = (*image_mixer_)(format_desc, straighten_alpha_);
-				auto audio = audio_mixer_(format_desc, channel_layout);
+				auto audio = audio_mixer_(format_desc);
 
 				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-				return const_frame(std::move(image), std::move(audio), this, desc, channel_layout);
+				return const_frame(std::move(image), std::move(audio), this, desc);
 			}
 			catch(...)
 			{
@@ -157,14 +156,6 @@ public:
 
 		return make_ready_future(std::move(info));
 	}
-
-	std::future<boost::property_tree::wptree> delay_info() const
-	{
-		boost::property_tree::wptree info;
-		info.put_value(current_mix_time_);
-
-		return make_ready_future(std::move(info));
-	}
 };
 
 mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
@@ -174,8 +165,7 @@ float mixer::get_master_volume() { return impl_->get_master_volume(); }
 void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
 bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-std::future<boost::property_tree::wptree> mixer::delay_info() const{ return impl_->delay_info(); }
-const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout){ return (*impl_)(std::move(frames), format_desc, channel_layout); }
-mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) {return impl_->image_mixer_->create_frame(tag, desc, channel_layout);}
+const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
+mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }
 }}

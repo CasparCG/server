@@ -29,8 +29,7 @@ public:
 	explicit mutable_frame(std::vector<array<std::uint8_t>> image_buffers,
 						mutable_audio_buffer audio_data,
 						const void* tag,
-						const pixel_format_desc& desc,
-						const audio_channel_layout& channel_layout);
+						const pixel_format_desc& desc);
 	~mutable_frame();
 
 	// Methods
@@ -43,7 +42,6 @@ public:
 	// Properties
 
 	const core::pixel_format_desc& pixel_format_desc() const;
-	const core::audio_channel_layout& audio_channel_layout() const;
 
 	const array<std::uint8_t>& image_data(std::size_t index = 0) const;
 	const core::mutable_audio_buffer& audio_data() const;
@@ -81,8 +79,7 @@ public:
 	explicit const_frame(std::shared_future<array<const std::uint8_t>> image,
 						audio_buffer audio_data,
 						const void* tag,
-						const pixel_format_desc& desc,
-						const audio_channel_layout& channel_layout);
+						const pixel_format_desc& desc);
 	const_frame(mutable_frame&& other);
 	~const_frame();
 
@@ -99,7 +96,6 @@ public:
 	// Properties
 
 	const core::pixel_format_desc& pixel_format_desc() const;
-	const core::audio_channel_layout& audio_channel_layout() const;
 
 	array<const std::uint8_t> image_data(int index = 0) const;
 	const core::audio_buffer& audio_data() const;

@@ -18,6 +18,7 @@ include_directories(..)
 include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
+include_directories(${FFMPEG_INCLUDE_PATH})
 include_directories(${OPENAL_INCLUDE_PATH})
 
 set_target_properties(oal PROPERTIES FOLDER modules)

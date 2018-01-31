@@ -54,7 +54,7 @@ public:
 	// Methods
 
 	virtual std::future<bool>				send(const_frame frame) = 0;
-	virtual void							initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) = 0;
+	virtual void							initialize(const video_format_desc& format_desc, int channel_index) = 0;
 
 	// monitor::observable
 
@@ -68,7 +68,6 @@ public:
 	virtual bool							has_synchronization_clock() const {return true;}
 	virtual int								buffer_depth() const = 0; // -1 to not participate in frame presentation synchronization
 	virtual int								index() const = 0;
-	virtual int64_t							presentation_frame_age_millis() const = 0;
 	virtual const frame_consumer*			unwrapped() const { return this; }
 };
 
