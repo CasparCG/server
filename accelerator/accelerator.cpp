@@ -66,9 +66,4 @@ std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(int channel_i
 	return impl_->create_image_mixer(channel_id);
 }
 
-std::shared_ptr<ogl::device> accelerator::get_ogl_device() const
-{
-	return impl_->ogl_device_;
-}
-
 }}

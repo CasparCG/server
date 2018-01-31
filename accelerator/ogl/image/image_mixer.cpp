@@ -343,16 +343,6 @@ public:
 
 		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc);
 	}
-
-	int get_max_frame_size() override
-	{
-		return ogl_->dispatch_sync([]
-		{
-			GLint64 params[1];
-			glGetInteger64v(GL_MAX_TEXTURE_SIZE, params);
-			return static_cast<int>(params[0]);
-		});
-	}
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted, int channel_id) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted, channel_id)){}
@@ -360,7 +350,6 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-int image_mixer::get_max_frame_size() { return impl_->get_max_frame_size(); }
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool straighten_alpha){return impl_->render(format_desc, straighten_alpha);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
