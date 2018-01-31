@@ -1441,29 +1441,6 @@ std::wstring diag_command(command_context& ctx)
 	return L"202 DIAG OK\r\n";
 }
 
-std::wstring gl_info_command(command_context& ctx)
-{
-	auto device = ctx.ogl_device;
-
-	if (!device)
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
-
-	std::wstringstream result;
-	result << L"202 GL INFO OK\r\n";
-
-	return result.str();
-}
-
-std::wstring gl_gc_command(command_context& ctx)
-{
-	auto device = ctx.ogl_device;
-
-	if (!device)
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
-
-	return L"202 GL GC OK\r\n";
-}
-
 std::wstring bye_command(command_context& ctx)
 {
 	ctx.client->disconnect();
@@ -1593,12 +1570,9 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"TLS", tls_command, 0);
     repo.register_command(L"Query Commands", L"VERSION", version_command, 0);
     repo.register_command(L"Query Commands", L"DIAG", diag_command, 0);
-    repo.register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
-    repo.register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
     repo.register_command(L"Query Commands", L"BYE", bye_command, 0);
     repo.register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
 }
 
-}	//namespace amcp
-}}	//namespace caspar
+}}}

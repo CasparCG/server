@@ -297,7 +297,6 @@ struct server::impl : boost::noncopyable
 				cg_registry_,
 				producer_registry_,
 				consumer_registry_,
-				accelerator_.get_ogl_device(),
 				shutdown_server_now_);
 		amcp::register_commands(*amcp_command_repo_);
 
