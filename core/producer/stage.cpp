@@ -39,6 +39,8 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <tbb/parallel_for_each.h>
 

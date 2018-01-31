@@ -18,9 +18,6 @@
 *
 * Author: Helge Norberg, helge.norberg@svt.se
 */
-
-#include "stdafx.h"
-
 #include "filesystem.h"
 #include "except.h"
 

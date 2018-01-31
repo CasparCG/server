@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "stdafx.h"
-
 #include "log.h"
 
 #include "except.h"
@@ -52,7 +49,6 @@
 
 #include <boost/core/null_deleter.hpp>
 #include <boost/lambda/lambda.hpp>
-#include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
