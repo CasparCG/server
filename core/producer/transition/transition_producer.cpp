@@ -67,6 +67,10 @@ public:
 
 	draw_frame receive_impl() override
 	{
+        if (source_producer_ == core::frame_producer::empty()) {
+            return dest_producer_->receive();
+        }
+
 		auto dest = draw_frame::empty();
 		auto source = draw_frame::empty();
 
