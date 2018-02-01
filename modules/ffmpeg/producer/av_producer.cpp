@@ -920,8 +920,6 @@ struct AVProducer::Impl
                         buffer_eof_ = false;
                     }
                 }
-            } catch (tbb::user_abort&) {
-                return;
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
