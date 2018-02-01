@@ -358,12 +358,12 @@ if(OS_WINDOWS)
     ${CEF_DEBUG_INFO_FLAG}
     )
   list(APPEND CEF_COMPILER_FLAGS_DEBUG
-    /MTd          # Multithreaded debug runtime
+    #/MTd          # Multithreaded debug runtime
     /RTC1         # Disable optimizations
     /Od           # Enable basic run-time checks
     )
   list(APPEND CEF_COMPILER_FLAGS_RELEASE
-    /MT           # Multithreaded release runtime
+    #/MT           # Multithreaded release runtime
     /O2           # Optimize for maximum speed
     /Ob2          # Inline any suitable function
     /GF           # Enable string pooling
