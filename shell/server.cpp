@@ -23,7 +23,6 @@
 
 #include "server.h"
 #include "included_modules.h"
-#include "default_audio_config.h"
 
 #include <accelerator/accelerator.h>
 
