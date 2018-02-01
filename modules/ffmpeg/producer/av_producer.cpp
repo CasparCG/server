@@ -820,7 +820,7 @@ struct AVProducer::Impl
         if (start_ != AV_NOPTS_VALUE) {
             seek(start_);
         } else {
-            reset(0);
+            reset_filters(0);
         }
 
         thread_ = std::thread([&]
@@ -865,7 +865,7 @@ struct AVProducer::Impl
                     // End of file. Reset filters.
                     if (!video_filter_.frame && !audio_filter_.frame) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset(start + input_.start_time());
+                        reset_filters(start + input_.start_time());
                         {
                             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                             buffer_eof_ = true;
@@ -902,7 +902,7 @@ struct AVProducer::Impl
                     // TODO (perf) Seek input as soon as possible.
                     if (loop_ && duration_ != AV_NOPTS_VALUE && frame.pts >= duration_) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset(start + input_.start_time());
+                        reset_filters(start + input_.start_time());
                         input_.seek(start, true);
                         input_.resume();
                         continue;
@@ -1053,7 +1053,7 @@ struct AVProducer::Impl
         }
     }
 
-    void reset(int64_t ts)
+    void reset_filters(int64_t ts)
     {
         video_filter_ = Filter(vfilter_, input_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
         audio_filter_ = Filter(afilter_, input_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
@@ -1150,7 +1150,7 @@ public:
 
             input_.seek(time);
             input_.resume();
-            reset(time);
+            reset_filters(time);
         }
 
         cond_.notify_all();
