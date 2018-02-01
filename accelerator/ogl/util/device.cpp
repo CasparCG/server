@@ -236,6 +236,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 buf = *tmp;
             } else {
                 buf = create_buffer(static_cast<int>(source.size()), true);
+                // TODO (perf) Copy inside a TBB worker.
                 std::memcpy(buf->data(), source.data(), source.size());
             }
 
