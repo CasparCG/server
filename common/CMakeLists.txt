@@ -20,12 +20,14 @@ if (MSVC)
 
 			os/windows/filesystem.cpp
 			os/windows/prec_timer.cpp
+			os/windows/thread.cpp
 			os/windows/windows.h
 	)
 else ()
 	set(OS_SPECIFIC_SOURCES
 			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
+			os/linux/thread.cpp
 	)
 endif ()
 set(HEADERS
@@ -34,6 +36,7 @@ set(HEADERS
 		gl/gl_check.h
 
 		os/filesystem.h
+		os/thread.h
 
 		array.h
 		assert.h

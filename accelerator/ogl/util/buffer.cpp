@@ -32,12 +32,12 @@ namespace caspar { namespace accelerator { namespace ogl {
 
 struct buffer::impl : boost::noncopyable
 {
-	GLuint     id_;
-	GLsizei    size_;
-    void*      data_;
-    bool       write_;
-    GLenum     target_;
-    GLbitfield flags_;
+	GLuint     id_ = 0;
+	GLsizei    size_ = 0;
+    void*      data_ = nullptr;
+    bool       write_ = false;
+    GLenum     target_ = 0;
+    GLbitfield flags_ = 0;
 
 public:
 	impl(int size, bool write)

@@ -23,6 +23,7 @@
 
 #include "except.h"
 #include "log.h"
+#include "os/thread.h"
 
 #include <tbb/concurrent_queue.h>
 
@@ -54,15 +55,7 @@ public:
 
     ~executor()
     {
-        CASPAR_LOG(debug) << L"Shutting down " << name_;
-
-        is_running_ = false;
-        queue_.abort();
-        thread_.join();
-    }
-
-    void join()
-    {
+        stop();
         thread_.join();
     }
 
@@ -107,7 +100,11 @@ public:
 
     void stop()
     {
+        if (!is_running_) {
+            return;
+        }
         is_running_ = false;
+        queue_.push(nullptr);
     }
 
     void wait()
@@ -154,16 +151,19 @@ private:
 
     void run()
     {
+        set_thread_name(name_);
+
         task_t task;
 
         while (is_running_) {
             try {
                 queue_.pop(task);
                 do {
+                    if (!task) {
+                        return;
+                    }
                     task();
                 } while (queue_.try_pop(task));
-            } catch (tbb::user_abort&) {
-                return;
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }

@@ -100,7 +100,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	~impl()
 	{
-        dispatch_sync([=]
+        post_sync([=]
 		{
 			for (auto& pool : host_pools_)
 				pool.clear();
@@ -147,6 +147,24 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 
     template<typename Func>
+    auto post_sync(Func&& func) -> decltype(func())
+    {
+        return post_async(std::forward<Func>(func)).get();
+    }
+
+    template<typename Func>
+    auto post_async(Func&& func)
+    {
+        typedef decltype(func())							result_type;
+        typedef std::packaged_task<result_type()>			task_type;
+
+        auto task = task_type(std::forward<Func>(func));
+        auto future = task.get_future();
+        boost::asio::post(service_, std::move(task));
+        return future;
+    }
+
+    template<typename Func>
     auto dispatch_sync(Func&& func) -> decltype(func())
     {
         return dispatch_async(std::forward<Func>(func)).get();
@@ -185,7 +203,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         auto ptr = tex.get();
-        return std::shared_ptr<texture>(ptr, [tex = std::move(tex), pool](texture*) mutable
+        return std::shared_ptr<texture>(ptr, [tex = std::move(tex), pool, self = shared_from_this()](texture*) mutable
         {
             pool->push(tex);
         });
@@ -207,9 +225,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         auto ptr = buf.get();
-        return std::shared_ptr<buffer>(ptr, [=, buf = std::move(buf)](buffer*) mutable
+        return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), self = shared_from_this()](buffer*) mutable
         {
-            sync_queue_.emplace(std::move(buf));
+            self->sync_queue_.emplace(std::move(buf));
         });
 	}
 

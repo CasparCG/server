@@ -44,12 +44,7 @@ public:
 	void AddCommand(AMCPCommand::ptr_type pCommand);
 
 private:
-	executor				executor_;
-	mutable std::mutex   	running_command_mutex_;
-	bool					running_command_		= false;
-	std::wstring			running_command_name_;
-	std::wstring			running_command_params_;
-	caspar::timer			running_command_since_;
+	executor executor_;
 };
 
 }}}
