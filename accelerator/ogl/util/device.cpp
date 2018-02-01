@@ -206,7 +206,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
             // TODO (perf) Avoid blocking in create_array.
             dispatch_sync([&]
             {
-                flush();
                 buf = std::make_shared<buffer>(size, write);
             });
         }
@@ -250,11 +249,20 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
         return spawn_async([=](yield_context yield)
         {
-            flush();
-
             auto buf = create_buffer(source->size(), false);
             source->copy_to(*buf);
+            
+            std::vector<std::shared_ptr<buffer>> buffers; 
+            {
+                std::shared_ptr<buffer> buf;
+                while (sync_queue_.try_pop(buf)) {
+                    buffers.push_back(std::move(buf));
+                }
+            }
+
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+            glFlush();
 
             deadline_timer timer(service_);
             for (auto n = 0; true; ++n) {
@@ -262,10 +270,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 timer.expires_from_now(boost::posix_time::milliseconds(2));
                 timer.async_wait(yield);
 
-                auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+                auto wait = glClientWaitSync(fence, 0, 1);
                 if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
                     break;
                 }
+            }
+
+            // TODO (fix) Buffers will only be gc:d after copy_async.
+            for (auto& buf2 : buffers) {
+                auto pool = &host_pools_[static_cast<int>(buf2->write() ? 1 : 0)][buf2->size()];
+                pool->push(std::move(buf2));
             }
 
             auto ptr = reinterpret_cast<uint8_t*>(buf->data());
@@ -273,27 +287,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
             return array<const uint8_t>(ptr, size, true, std::move(buf));
         });
 	}
-
-    void flush()
-    {
-        if (sync_fence_) {
-            auto wait = glClientWaitSync(sync_fence_, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
-            if (wait != GL_ALREADY_SIGNALED && wait != GL_CONDITION_SATISFIED) {
-                return;
-            }
-            glDeleteSync(sync_fence_);
-            sync_fence_ = 0;
-
-            std::shared_ptr<buffer> buf;
-            while (sync_queue_.try_pop(buf) && buf) {
-                auto pool = &host_pools_[static_cast<int>(buf->write() ? 1 : 0)][buf->size()];
-                pool->push(std::move(buf));
-            }
-        }
-
-        sync_queue_.push(nullptr);
-        sync_fence_ = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    }
 };
 
 device::device() : impl_(new impl()) {}
