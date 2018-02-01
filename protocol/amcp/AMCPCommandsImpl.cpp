@@ -877,6 +877,9 @@ std::wstring mixer_blend_command(command_context& ctx)
 	if (ctx.parameters.empty())
 		return reply_value(ctx, [](const frame_transform& t) { return get_blend_mode(t.image_transform.blend_mode); });
 
+	if (!env::properties().get(L"configuration.mixer.blend-modes", false))
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Straight alpha is turned off by config"));
+
 	transforms_applier transforms(ctx);
 	auto value = get_blend_mode(ctx.parameters.at(0));
 	transforms.add(stage::transform_tuple_t(ctx.layer_index(), [=](frame_transform transform) -> frame_transform
@@ -1192,6 +1195,9 @@ std::wstring mixer_straight_alpha_command(command_context& ctx)
 		bool state = ctx.channel.channel->mixer().get_straight_alpha_output();
 		return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(state) + L"\r\n";
 	}
+
+	if (!env::properties().get(L"configuration.mixer.straight-alpha", false))
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Straight alpha is turned off by config"));
 
 	bool state = boost::lexical_cast<bool>(ctx.parameters.at(0));
 	ctx.channel.channel->mixer().set_straight_alpha_output(state);
