@@ -782,9 +782,10 @@ struct AVProducer::Impl
     std::mutex                                      buffer_mutex_;
     std::condition_variable                         buffer_cond_;
     std::deque<Frame>                               buffer_;
-    int                                             buffer_capacity_;
+    int                                             buffer_capacity_ = 2;
+    bool                                            buffer_eof_ = true;
+    bool                                            buffer_flush_ = true;
 
-    std::atomic<bool>                               flush_ = true;
     std::atomic<bool>                               abort_request_ = false;
     std::thread                                     thread_;
 
@@ -832,8 +833,6 @@ struct AVProducer::Impl
                         buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
                     }
 
-                    // TODO (perf) Wait on !input_.paused()?
-
                     std::unique_lock<std::mutex> lock(mutex_);
 
                     if (abort_request_) {
@@ -844,6 +843,8 @@ struct AVProducer::Impl
                         auto time = start_ != AV_NOPTS_VALUE ? start_ : 0;
                         input_.seek(time + input_.start_time(), false);
                         input_.resume();
+
+                        // TODO (fix) Interlaced looping.
                         continue;
                     }
 
@@ -863,6 +864,10 @@ struct AVProducer::Impl
                     if (!video_filter_.frame && !audio_filter_.frame) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
                         reset(start + input_.start_time());
+                        {
+                            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+                            buffer_eof_ = true;
+                        }
                         // TODO (fix) Set duration_?
                         continue;
                     }
@@ -912,6 +917,7 @@ struct AVProducer::Impl
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                         buffer_.push_back(std::move(frame));
+                        buffer_eof_ = false;
                     }
                 }
             } catch (tbb::user_abort&) {
@@ -949,7 +955,8 @@ struct AVProducer::Impl
         {
             if (!packet) {
                 for (auto& p : input_) {
-                    CASPAR_ENSURE(p.second.try_push(nullptr));
+                    // NOTE: Should never fail.
+                    p.second.try_push(nullptr);
                 }
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = input_.find(packet->stream_index);
@@ -1003,6 +1010,7 @@ struct AVProducer::Impl
                     result = true;
                 }
 
+                // End Of File
                 if (frame && !frame->data[0]) {
                     sources_.erase(p.first);
                 }
@@ -1064,31 +1072,19 @@ struct AVProducer::Impl
                 p.second.flush();
             }
         }
-
-        // TODO (fix)
-        if (loop_ && format_desc_.field_count == 2)
-        {
-            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
-
-            if (buffer_.size() % 2 != 0) {
-                buffer_.pop_front();
-            }
-        }
     }
 
 public:
     core::draw_frame prev_frame()
     {
-        if (flush_ || frame_ == core::draw_frame::late()) {
+        {
             std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
-            if (buffer_.empty()) {
-                return frame_;
+            if (!buffer_.empty() && (buffer_flush_ || frame_ == core::draw_frame::late())) {
+                frame_ = core::draw_frame::still(buffer_[0].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                buffer_flush_ = false;
             }
-
-            frame_ = core::draw_frame::still(buffer_[0].frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            flush_ = false;
         }
 
         graph_->set_text(u16(print()));
@@ -1102,25 +1098,27 @@ public:
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
 
-            if (buffer_.size() < format_desc_.field_count) {
+            if (!buffer_eof_ && buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame::late();
             }
 
-            if (format_desc_.field_count == 2) {
+            if (format_desc_.field_count == 2 && buffer_.size() >= 2) {
                 result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
                 frame_ = core::draw_frame::still(buffer_[1].frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
                 buffer_.pop_front();
                 buffer_.pop_front();
-            } else {
+            } else if (buffer_.size() >= 1) {
                 result = buffer_[0].frame;
                 frame_ = core::draw_frame::still(buffer_[0].frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration;
                 buffer_.pop_front();
+            } else {
+                result = frame_;
             }
 
-            flush_ = false;
+            buffer_flush_ = false;
         }
         buffer_cond_.notify_all();
 
@@ -1139,6 +1137,8 @@ public:
             {
                 std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                 buffer_.clear();
+                buffer_eof_ = false;
+                buffer_flush_ = true;
             }
             buffer_cond_.notify_all();
 
@@ -1147,7 +1147,6 @@ public:
             input_.seek(time);
             input_.resume();
             reset(time);
-            flush_ = true;
         }
 
         cond_.notify_all();
