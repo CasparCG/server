@@ -1227,20 +1227,6 @@ public:
 
         return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
     }
-
-    int width() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        return video_filter_.sink ? av_buffersink_get_w(video_filter_.sink) : 0;
-    }
-
-    int height() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        return audio_filter_.sink ? av_buffersink_get_h(audio_filter_.sink) : 0;
-    }
 };
 
 AVProducer::AVProducer(
@@ -1318,16 +1304,6 @@ AVProducer& AVProducer::duration(int64_t duration)
 int64_t AVProducer::duration() const
 {
     return impl_->duration().value_or(std::numeric_limits<int64_t>::max());
-}
-
-int AVProducer::width() const
-{
-    return impl_->width();
-}
-
-int AVProducer::height() const
-{
-    return impl_->height();
 }
 
 }  // namespace ffmpeg
