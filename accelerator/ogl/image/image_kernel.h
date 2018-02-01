@@ -30,7 +30,7 @@
 #include <core/frame/geometry.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
-	
+
 enum class keyer
 {
 	linear = 0,
@@ -61,7 +61,7 @@ public:
 
 	// Constructors
 
-	image_kernel(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted);
+	image_kernel(const spl::shared_ptr<class device>& ogl);
 	~image_kernel();
 
 	// Methods

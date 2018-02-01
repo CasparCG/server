@@ -34,8 +34,6 @@ namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader>	g_shader;
 std::mutex				g_shader_mutex;
-bool					g_blend_modes		= false;
-bool					g_post_processing	= false;
 
 std::string get_blend_color_func()
 {
@@ -101,22 +99,6 @@ std::string get_blend_color_func()
 		)shader";
 }
 
-std::string get_simple_blend_color_func()
-{
-	return
-
-		get_adjustement_glsl()
-
-		+
-
-		R"shader(
-				vec4 blend(vec4 fore)
-				{
-					return fore;
-				}
-		)shader";
-}
-
 std::string get_chroma_func()
 {
 	return
@@ -144,11 +126,6 @@ std::string get_post_process()
 	)shader";
 }
 
-std::string get_no_post_process()
-{
-	return "";
-}
-
 std::string get_vertex()
 {
 	return R"shader(
@@ -165,7 +142,7 @@ std::string get_vertex()
 	)shader";
 }
 
-std::string get_fragment(bool blend_modes, bool post_processing)
+std::string get_fragment()
 {
 	return R"shader(
 
@@ -211,7 +188,7 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 
 	+
 
-	(blend_modes ? get_blend_color_func() : get_simple_blend_color_func())
+    get_blend_color_func()
 
 	+
 
@@ -351,7 +328,7 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 
 	+
 
-	(post_processing ? get_post_process() : get_no_post_process())
+	get_post_process()
 
 	+
 
@@ -376,20 +353,13 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 	)shader";
 }
 
-std::shared_ptr<shader> get_image_shader(
-		const spl::shared_ptr<device>& ogl,
-		bool& blend_modes,
-		bool blend_modes_wanted,
-		bool& post_processing,
-		bool straight_alpha_wanted)
+std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
 {
 	std::lock_guard<std::mutex> lock(g_shader_mutex);
 	auto existing_shader = g_shader.lock();
 
 	if(existing_shader)
 	{
-		blend_modes = g_blend_modes;
-		post_processing = g_post_processing;
 		return existing_shader;
 	}
 
@@ -409,31 +379,10 @@ std::shared_ptr<shader> get_image_shader(
         }
 	};
 
-	try
-	{
-		g_blend_modes  = glTextureBarrier ? blend_modes_wanted : false;
-		g_post_processing = straight_alpha_wanted;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
+	existing_shader.reset(new shader(get_vertex(), get_fragment()), deleter);
 
-		g_blend_modes = false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
-	}
-
-	//if(!g_blend_modes)
-	//{
-	//	ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-	//	CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
-	//}
-
-
-	blend_modes = g_blend_modes;
-	post_processing = g_post_processing;
 	g_shader = existing_shader;
+
 	return existing_shader;
 }
 
