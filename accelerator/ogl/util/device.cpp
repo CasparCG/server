@@ -204,6 +204,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         std::shared_ptr<buffer> buf;
         if (!pool->try_pop(buf)) {
+            // TODO (perf) Avoid blocking in create_array.
             dispatch_sync([&]
             {
                 flush();
@@ -260,6 +261,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             deadline_timer timer(service_);
             for (auto n = 0; true; ++n) {
+                // TODO (perf) Smarter non-polling solution?
                 timer.expires_from_now(boost::posix_time::milliseconds(2));
                 timer.async_wait(yield);
 
