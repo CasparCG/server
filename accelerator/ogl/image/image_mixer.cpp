@@ -89,11 +89,6 @@ public:
 
 		return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
-            CASPAR_SCOPE_EXIT
-            {
-                ogl_->flush();
-            };
-
 			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 
 			if (format_desc.field_mode != core::field_mode::progressive)
