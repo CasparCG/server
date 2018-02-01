@@ -39,10 +39,10 @@
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/os/filesystem.h>
+#include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/timer.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -112,6 +112,7 @@ public:
 		graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.1f, 0.1f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -146,9 +147,28 @@ public:
 		}
 	}
 
-	CefRefPtr<CefBrowserHost> get_browser_host()
+	bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
+		const CefString& target_url,
+		const CefString& target_frame_name,
+		WindowOpenDisposition target_disposition,
+		bool user_gesture,
+		const CefPopupFeatures& popupFeatures,
+		CefWindowInfo& windowInfo,
+		CefRefPtr<CefClient>& client,
+		CefBrowserSettings& settings,
+		bool* no_javascript_access) override
 	{
-		return browser_->GetHost();
+		// This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon closing
+		return true;
+	}
+	
+
+	CefRefPtr<CefBrowserHost> get_browser_host() const
+	{
+		if (browser_)
+			return browser_->GetHost();
+		return nullptr;
 	}
 
 	void close()
@@ -198,10 +218,13 @@ private:
 		paint_timer_.restart();
 		CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
+		if (type != PET_VIEW)
+			return;
+
 		core::pixel_format_desc pixel_desc;
-			pixel_desc.format = core::pixel_format::bgra;
-			pixel_desc.planes.push_back(
-				core::pixel_format_desc::plane(width, height, 4));
+		pixel_desc.format = core::pixel_format::bgra;
+		pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+
 		auto frame = frame_factory_->create_frame(this, pixel_desc);
 		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
@@ -231,6 +254,7 @@ private:
 	{
 		CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
+		removed_ = true;
 		browser_ = nullptr;
 	}
 
@@ -383,6 +407,7 @@ private:
 
 			timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
 			invoke_requested_animation_frames();
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 		}
 		else
 		{
@@ -390,6 +415,8 @@ private:
                 std::lock_guard<std::mutex> lock(last_frame_mutex_);
                 last_frame_ = last_progressive_frame_;
             }
+
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 		}
 	}
 
@@ -440,13 +467,20 @@ public:
 			client_ = new html_client(frame_factory, format_desc, url_);
 
 			CefWindowInfo window_info;
+			window_info.width = format_desc.square_width;
+			window_info.height = format_desc.square_height;
+			window_info.windowless_rendering_enabled = true;
 
-			window_info.SetTransparentPainting(true);
-			window_info.SetAsOffScreen(nullptr);
-			//window_info.SetAsWindowless(nullptr, true);
+			const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
 
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
+			browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
+			double fps = format_desc.fps;
+			if (format_desc.field_mode != core::field_mode::progressive) {
+				fps *= 2.0;
+			}
+			browser_settings.windowless_frame_rate = int(ceil(fps));
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
 		});
 	}
@@ -514,7 +548,7 @@ public:
 
 	bool collides(double x, double y) const override
 	{
-		return true;
+		return client_ != nullptr;
 	}
 
 	core::draw_frame receive_impl() override
@@ -555,6 +589,27 @@ public:
 		return monitor_subject_;
 	}
 };
+
+spl::shared_ptr<core::frame_producer> create_cg_producer(
+	const core::frame_producer_dependencies& dependencies,
+	const std::vector<std::wstring>& params)
+{
+	const auto filename = env::template_folder() + params.at(0) + L".html";
+	const auto found_filename = find_case_insensitive(filename);
+	const auto http_prefix = boost::algorithm::istarts_with(params.at(0), L"http:") || boost::algorithm::istarts_with(params.at(0), L"https:");
+
+	if (!found_filename && !http_prefix)
+		return core::frame_producer::empty();
+
+	const auto url = found_filename
+		? L"file://" + *found_filename
+		: params.at(0);
+
+	return core::create_destroy_proxy(spl::make_shared<html_producer>(
+		dependencies.frame_factory,
+		dependencies.format_desc,
+		url));
+}
 
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
