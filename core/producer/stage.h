@@ -30,7 +30,6 @@
 #include <common/tweener.h>
 
 #include <boost/optional.hpp>
-#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <future>
 #include <functional>
@@ -98,8 +97,6 @@ public:
 	std::future<std::shared_ptr<frame_producer>>	foreground(int index);
 	std::future<std::shared_ptr<frame_producer>>	background(int index);
 
-	std::future<boost::property_tree::wptree>		info() const;
-	std::future<boost::property_tree::wptree>		info(int index) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

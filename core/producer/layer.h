@@ -30,7 +30,6 @@
 #include <common/forward.h>
 #include <common/memory.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/optional.hpp>
 
 #include <string>
@@ -76,8 +75,6 @@ public:
 
 	spl::shared_ptr<frame_producer>	foreground() const;
 	spl::shared_ptr<frame_producer>	background() const;
-
-	boost::property_tree::wptree	info() const;
 
 private:
 	struct impl;

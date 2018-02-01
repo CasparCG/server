@@ -112,14 +112,6 @@ public:
 		return L"color";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"color");
-		info.add(L"color", color_str_);
-		return info;
-	}
-
 	monitor::subject& monitor_output() override {return monitor_subject_;}
 };
 

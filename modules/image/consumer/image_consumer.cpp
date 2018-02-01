@@ -133,13 +133,6 @@ public:
 		return L"image";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"image");
-		return info;
-	}
-
 	int buffer_depth() const override
 	{
 		return -1;

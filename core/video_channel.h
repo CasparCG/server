@@ -28,8 +28,6 @@
 
 #include "monitor/monitor.h"
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 #include <functional>
 
 namespace caspar { namespace core {
@@ -70,7 +68,6 @@ public:
 
 	spl::shared_ptr<core::frame_factory>	frame_factory();
 
-	boost::property_tree::wptree			info() const;
 	int										index() const;
 private:
 	struct impl;

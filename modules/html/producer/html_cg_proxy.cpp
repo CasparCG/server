@@ -92,14 +92,4 @@ std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
 	return impl_->producer->call({ javascript }).get();
 }
 
-std::wstring html_cg_proxy::description(int layer)
-{
-	return L"";
-}
-
-std::wstring html_cg_proxy::template_host_info()
-{
-	return L"";
-}
-
 }}

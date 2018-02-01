@@ -4,8 +4,6 @@
 
 #include <common/memory.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 #include <future>
 
 namespace caspar { namespace core {
@@ -38,7 +36,6 @@ public:
 	std::wstring print() const;
 	int buffer_depth() const;
 	bool has_synchronization_clock() const;
-	boost::property_tree::wptree info() const;
 	spl::shared_ptr<const frame_consumer> consumer() const;
 private:
 	struct impl;

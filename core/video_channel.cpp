@@ -41,7 +41,6 @@
 #include <core/mixer/image/image_mixer.h>
 #include <core/diagnostics/call_context.h>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <mutex>
@@ -188,22 +187,6 @@ public:
 		return index_;
 	}
 
-	boost::property_tree::wptree info() const
-	{
-		boost::property_tree::wptree info;
-
-		auto stage_info  = stage_.info();
-		auto mixer_info  = mixer_.info();
-		auto output_info = output_.info();
-
-		info.add(L"video-mode", video_format_desc().name);
-		info.add_child(L"stage", stage_info.get());
-		info.add_child(L"mixer", mixer_info.get());
-		info.add_child(L"output", output_info.get());
-
-		return info;
-	}
-
 	std::shared_ptr<void> add_tick_listener(std::function<void()> listener)
 	{
         std::lock_guard<std::mutex> lock(tick_listeners_mutex_);
@@ -233,7 +216,6 @@ output& video_channel::output() { return impl_->output_;}
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->image_mixer_;}
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
-boost::property_tree::wptree video_channel::info() const{return impl_->info();}
 int video_channel::index() const { return impl_->index(); }
 monitor::subject& video_channel::monitor_output(){ return *impl_->monitor_subject_; }
 std::shared_ptr<void> video_channel::add_tick_listener(std::function<void()> listener) { return impl_->add_tick_listener(std::move(listener)); }

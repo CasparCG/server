@@ -152,28 +152,6 @@ public:
 		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
 		return flash_producer_->call(std::move(params)).get();
 	}
-
-	std::wstring description(int layer) override
-	{
-		verify_flash_player();
-
-		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking description-command: " << str;
-		std::vector<std::wstring> params;
-		params.push_back(std::move(str));
-		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
-		return flash_producer_->call(std::move(params)).get();
-	}
-
-	std::wstring template_host_info() override
-	{
-		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
-		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking info-command: " << str;
-		std::vector<std::wstring> params;
-		params.push_back(std::move(str));
-		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
-		return flash_producer_->call(std::move(params)).get();
-	}
 };
 
 spl::shared_ptr<core::frame_producer> create_ct_producer(

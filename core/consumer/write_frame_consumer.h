@@ -26,21 +26,19 @@
 #include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
 #include <string>
 #include <vector>
 
 namespace caspar { namespace core {
-	
+
 struct write_frame_consumer : boost::noncopyable
 {
 	virtual ~write_frame_consumer() {}
-	
+
 	virtual void send(const draw_frame& frame) = 0;
 	virtual std::wstring print() const = 0;
-	//virtual boost::property_tree::wptree info() const = 0;
 };
 
 }}

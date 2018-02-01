@@ -449,15 +449,6 @@ struct image_scroll_producer : public core::frame_producer_base
 		return L"image-scroll";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"image-scroll");
-		info.add(L"filename", filename_);
-		info.add(L"speed", speed_.fetch());
-		return info;
-	}
-
 	uint32_t nb_frames() const override
 	{
 		if(width_ == format_desc_.width)

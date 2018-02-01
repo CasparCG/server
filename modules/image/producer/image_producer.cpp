@@ -112,14 +112,6 @@ struct image_producer : public core::frame_producer_base
 		return L"image";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"image");
-		info.add(L"location", description_);
-		return info;
-	}
-
 	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;

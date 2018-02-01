@@ -312,13 +312,6 @@ public:
 		return L"system-audio";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"system-audio");
-		return info;
-	}
-
 	bool has_synchronization_clock() const override
 	{
 		return false;

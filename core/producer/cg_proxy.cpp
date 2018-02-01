@@ -37,8 +37,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/optional.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <future>
 #include <map>
@@ -57,15 +55,11 @@ const spl::shared_ptr<cg_proxy>& cg_proxy::empty()
 		void next(int) override {}
 		void update(int, const std::wstring&) override {}
 		std::wstring invoke(int, const std::wstring&) override { return L""; }
-		std::wstring description(int) override { return L"empty cg producer"; }
-		std::wstring template_host_info() override { return L"empty cg producer"; }
 	};
 
 	static spl::shared_ptr<cg_proxy> instance = spl::make_shared<empty_proxy>();
 	return instance;
 }
-
-using namespace boost::multi_index;
 
 struct cg_producer_registry::impl
 {
