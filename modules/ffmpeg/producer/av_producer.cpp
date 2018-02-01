@@ -681,10 +681,13 @@ struct Filter
                 AV_PIX_FMT_ABGR,
                 AV_PIX_FMT_YUV444P,
                 AV_PIX_FMT_YUV422P,
+                AV_PIX_FMT_YUV420P,
+                AV_PIX_FMT_YUV410P,
                 AV_PIX_FMT_YUVA444P,
                 AV_PIX_FMT_YUVA422P,
+                AV_PIX_FMT_YUVA420P,
                 // NOTE CasparCG does not properly handle interlaced vertical chrome subsampling.
-                // Use only YUV444 and YUV422 formats.
+                // However, that is not a problem since we never send out interlaced frames.
                 AV_PIX_FMT_NONE
             };
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
@@ -702,6 +705,8 @@ struct Filter
                 AV_SAMPLE_FMT_NONE
             };
             FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+
+            // TODO Always output 8 channels and remove hack in make_frame.
 
             const int sample_rates[] = {
                 format_desc.audio_sample_rate,
