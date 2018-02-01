@@ -90,7 +90,7 @@ public:
 
         if (current_frame_ >= info_.duration) {
             source_producer_ = core::frame_producer::empty();
-            return dest_producer_->receive();
+            return dest;
         }
 
         current_frame_ += 1;
