@@ -27,24 +27,27 @@
 
 #include <common/param.h>
 #include <common/env.h>
-#include <common/diagnostics/graph.h>
-#include <common/future.h>
-#include <common/timer.h>
 #include <common/os/filesystem.h>
 
-#include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
+#include <core/frame/draw_frame.h>
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
-#include <tbb/concurrent_queue.h>
+#pragma warning(push, 1)
 
-#include <atomic>
-#include <future>
-#include <queue>
-#include <thread>
+extern "C"
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+}
+
+#pragma warning(pop)
+
 
 namespace caspar { namespace ffmpeg {
 
