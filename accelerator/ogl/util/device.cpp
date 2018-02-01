@@ -128,7 +128,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template<typename Func>
     auto spawn_async(Func&& func)
     {
-        typedef decltype(func(std::declval<yield_context>()))  result_type;
+        typedef decltype(func(std::declval<yield_context>())) result_type;
         typedef std::packaged_task<result_type(yield_context)> task_type;
 
         auto task = task_type(std::forward<Func>(func));
@@ -140,8 +140,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template<typename Func>
     auto dispatch_async(Func&& func)
     {
-        typedef decltype(func())							result_type;
-        typedef std::packaged_task<result_type()>			task_type;
+        typedef decltype(func()) result_type;
+        typedef std::packaged_task<result_type()> task_type;
 
         auto task = task_type(std::forward<Func>(func));
         auto future = task.get_future();
@@ -298,12 +298,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 };
 
-device::device() : impl_(new impl()){}
+device::device() : impl_(new impl()) {}
 device::~device() {}
-std::shared_ptr<texture>					device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
-array<uint8_t>							    device::create_array(int size) { return impl_->create_array(size); }
-std::future<std::shared_ptr<texture>>		device::copy_async(const array<const uint8_t>& source, int width, int height, int stride) { return impl_->copy_async(source, width, height, stride); }
-std::future<array<const uint8_t>>		    device::copy_async(const std::shared_ptr<texture>& source) { return impl_->copy_async(source); }
-void                                        device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
-std::wstring								device::version() const { return impl_->version(); }
+std::shared_ptr<texture> device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
+array<uint8_t> device::create_array(int size) { return impl_->create_array(size); }
+std::future<std::shared_ptr<texture>> device::copy_async(const array<const uint8_t>& source, int width, int height, int stride) { return impl_->copy_async(source, width, height, stride); }
+std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source) { return impl_->copy_async(source); }
+void device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
+std::wstring device::version() const { return impl_->version(); }
 }}}
