@@ -27,12 +27,12 @@
 #include <boost/asio/dispatch.hpp>
 
 #include <future>
+#include <functional>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
 class device final : public std::enable_shared_from_this<device>
 {
-    boost::asio::io_context service_;
 public:
 
 	// Static Members
@@ -54,17 +54,18 @@ public:
 	std::future<std::shared_ptr<class texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride);
 	std::future<array<const uint8_t>>           copy_async(const std::shared_ptr<class texture>& source);
 
-    void flush();
-
     template<typename Func>
     auto dispatch_async(Func&& func)
     {
         typedef decltype(func())                  result_type;
         typedef std::packaged_task<result_type()> task_type;
 
-        auto task = task_type(std::forward<Func>(func));
-        auto future = task.get_future();
-        boost::asio::dispatch(service_, std::move(task));
+        auto task = std::make_shared<task_type>(std::forward<Func>(func));
+        auto future = task->get_future();
+        dispatch([=]
+        {
+            (*task)();
+        });
         return future;
     }
 
@@ -79,6 +80,7 @@ public:
 	std::wstring					version() const;
 
 private:
+    void dispatch(std::function<void()> func);
 	struct impl;
 	std::shared_ptr<impl> impl_;
 };

@@ -234,7 +234,9 @@ private:
 
 		window_->display();
 		display_time_.restart();
-		executor_.begin_invoke([this]{tick();});
+        if (executor_.is_running()) {
+            executor_.begin_invoke([this] { tick(); });
+        }
 	}
 
 	void render(sf::RenderTarget& target, sf::RenderStates states)
