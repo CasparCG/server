@@ -22,7 +22,6 @@
 #pragma once
 
 #include <memory>
-#include <cstddef>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
