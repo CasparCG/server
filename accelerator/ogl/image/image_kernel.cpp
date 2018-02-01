@@ -405,6 +405,8 @@ struct image_kernel::impl
 			}
 		}
 
+        params.background->attach();
+
 		// Draw
 		switch(params.geometry.type())
         {

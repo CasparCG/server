@@ -346,7 +346,8 @@ std::string get_fragment()
 					if(has_layer_key)
 						color *= texture2D(layer_key, gl_TexCoord[1].st).r;
 					color *= opacity;
-					color = blend(color);
+                    if (blend_mode != 0)
+					    color = blend(color);
 					gl_FragColor = color.bgra;
 				}
 			}
