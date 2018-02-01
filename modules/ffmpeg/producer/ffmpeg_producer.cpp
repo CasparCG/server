@@ -50,36 +50,9 @@ namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
 
-typedef std::vector<std::pair<std::string, std::string>> ffmpeg_options;
-
-// HACK
-std::wstring get_relative_or_original(const std::wstring& filename, const boost::filesystem::path& relative_to)
-{
-	boost::filesystem::path file(filename);
-	auto result = file.filename().wstring();
-
-	boost::filesystem::path current_path = file;
-
-	while (true)
-	{
-		current_path = current_path.parent_path();
-
-		if (boost::filesystem::equivalent(current_path, relative_to))
-			break;
-
-		if (current_path.empty())
-			return filename;
-
-		result = current_path.filename().wstring() + L"/" + result;
-	}
-
-	return result;
-}
-
 struct ffmpeg_producer : public core::frame_producer_base
 {
 	const std::wstring 									filename_;
-	const std::wstring 									path_relative_to_media_ = get_relative_or_original(filename_, env::media_folder());
 	spl::shared_ptr<core::frame_factory> 				frame_factory_;
 	core::video_format_desc								format_desc_;
 
@@ -132,7 +105,6 @@ public:
             << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) % (producer_.duration() / format_desc_.fps)
             << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) % static_cast<int32_t>(producer_.duration())
             << core::monitor::message("/file/fps") % format_desc_.fps
-            << core::monitor::message("/file/path") % path_relative_to_media_
             << core::monitor::message("/loop") % producer_.loop();
     }
 
@@ -325,9 +297,9 @@ std::wstring probe_stem(const std::wstring& stem)
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(
-		const core::frame_producer_dependencies& dependencies,
-		const std::vector<std::wstring>& params)
-{
+	const core::frame_producer_dependencies& dependencies,
+	const std::vector<std::wstring>& params
+) {
 	auto file_or_url = params.at(0);
 
 	if (!boost::contains(file_or_url, L"://")) {
@@ -351,26 +323,10 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	out = get_param(L"OUT", params, out);
 
 	auto filter_str = get_param(L"FILTER", params, L"");
-	auto custom_channel_order = get_param(L"CHANNEL_LAYOUT", params, L"");
 
 	boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
 	boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-
-	ffmpeg_options vid_params;
-	bool haveFFMPEGStartIndicator = false;
-	for (size_t i = 0; i < params.size() - 1; ++i)
-	{
-		if (!haveFFMPEGStartIndicator && params[i] == L"--") {
-			haveFFMPEGStartIndicator = true;
-			continue;
-		} if (haveFFMPEGStartIndicator)
-		{
-			auto name = u8(params.at(i++)).substr(1);
-			auto value = u8(params.at(i));
-			vid_params.push_back(std::make_pair(name, value));
-		}
-	}
 
 	const auto in_tb = AVRational{ dependencies.format_desc.duration,  dependencies.format_desc.time_scale };
 	const auto out_tb = AVRational{ 1, AV_TIME_BASE };
@@ -385,8 +341,6 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	if (out != std::numeric_limits<uint32_t>::max()) {
 		duration = av_rescale_q(static_cast<int64_t>(out - in), in_tb, out_tb);
 	}
-
-	vid_params;
 
 	auto vfilter = get_param(L"VF", params, filter_str);
 	auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
