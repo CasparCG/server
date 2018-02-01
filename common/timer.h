@@ -21,13 +21,13 @@
 
 #pragma once
 
-#include <boost/chrono/system_clocks.hpp>
+#include <chrono>
 
 namespace caspar {
 
 class timer
 {
-	boost::int_least64_t start_time_;
+	std::int_least64_t start_time_;
 public:
 	timer()
 	{
@@ -44,9 +44,9 @@ public:
 		return static_cast<double>(now() - start_time_) / 1000.0;
 	}
 private:
-	static boost::int_least64_t now()
+	static std::int_least64_t now()
 	{
-		using namespace boost::chrono;
+		using namespace std::chrono;
 
 		return duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
 	}
