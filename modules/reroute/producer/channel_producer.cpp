@@ -123,14 +123,6 @@ public:
 		return L"[channel-consumer|" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"channel-consumer");
-		info.add(L"channel-index", channel_index_);
-		return info;
-	}
-
 	bool has_synchronization_clock() const override
 	{
 		return false;
@@ -227,13 +219,6 @@ public:
 	std::wstring print() const override
 	{
 		return L"channel-producer[]";
-	}
-
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"channel-producer");
-		return info;
 	}
 
 	core::monitor::subject& monitor_output() override

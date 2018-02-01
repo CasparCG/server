@@ -122,7 +122,6 @@ public:
 	void initialize(const video_format_desc& format_desc, int channel_index) override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																								{return consumer_->print();}
 	std::wstring name() const override																								{return consumer_->name();}
-	boost::property_tree::wptree info() const override 																				{return consumer_->info();}
 	bool has_synchronization_clock() const override																					{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																								{return consumer_->buffer_depth();}
 	int index() const override																										{return consumer_->index();}
@@ -155,7 +154,6 @@ public:
 	}
 	std::wstring print() const override																								{return consumer_->print();}
 	std::wstring name() const override																								{return consumer_->name();}
-	boost::property_tree::wptree info() const override 																				{return consumer_->info();}
 	bool has_synchronization_clock() const override																					{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																								{return consumer_->buffer_depth();}
 	int index() const override																										{return consumer_->index();}
@@ -206,7 +204,6 @@ public:
 
 	std::wstring print() const override										{return consumer_->print();}
 	std::wstring name() const override										{return consumer_->name();}
-	boost::property_tree::wptree info() const override 						{return consumer_->info();}
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
@@ -258,7 +255,6 @@ public:
 
 	std::wstring print() const override										{return consumer_->print();}
 	std::wstring name() const override										{return consumer_->name();}
-	boost::property_tree::wptree info() const override 						{return consumer_->info();}
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
@@ -330,12 +326,6 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 		int buffer_depth() const override {return 0;};
 		int index() const override {return -1;}
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}
-		boost::property_tree::wptree info() const override
-		{
-			boost::property_tree::wptree info;
-			info.add(L"type", L"empty");
-			return info;
-		}
 	};
 	static spl::shared_ptr<frame_consumer> consumer = spl::make_shared<empty_frame_consumer>();
 	return consumer;

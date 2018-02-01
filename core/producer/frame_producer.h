@@ -36,8 +36,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 namespace caspar { namespace core {
 
 // Interface
@@ -75,7 +73,6 @@ public:
 	virtual void								paused(bool value) = 0;
 	virtual std::wstring						print() const = 0;
 	virtual std::wstring						name() const = 0;
-	virtual boost::property_tree::wptree		info() const = 0;
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
 	virtual draw_frame							last_frame() = 0;

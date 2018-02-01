@@ -37,7 +37,6 @@
 
 #include <core/frame/frame_transform.h>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
@@ -55,13 +54,13 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 {
 	int																		channel_index_;
 	spl::shared_ptr<diagnostics::graph>										graph_;
-	spl::shared_ptr<monitor::subject>										monitor_subject_	= spl::make_shared<monitor::subject>("/stage");
+	spl::shared_ptr<monitor::subject>										monitor_subject_ = spl::make_shared<monitor::subject>("/stage");
 	std::map<int, layer>													layers_;
 	std::map<int, tweened_transform>										tweens_;
 	interaction_aggregator													aggregator_;
 	// map of layer -> map of tokens (src ref) -> layer_consumer
 	std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>>	layer_consumers_;
-	executor																executor_			{ L"stage " + boost::lexical_cast<std::wstring>(channel_index_) };
+	executor																executor_ { L"stage " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
 	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
 		: channel_index_(channel_index)
@@ -110,8 +109,6 @@ public:
 
 			return frames;
 		});
-
-		//frames_subject_ << frames;
 
 		graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		*monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
@@ -388,26 +385,6 @@ public:
 		});
 	}
 
-	std::future<boost::property_tree::wptree> info()
-	{
-		return executor_.begin_invoke([this]() -> boost::property_tree::wptree
-		{
-			boost::property_tree::wptree info;
-			for (auto& layer : layers_)
-				info.add_child(L"layers.layer", layer.second.info())
-					.add(L"index", layer.first);
-			return info;
-		});
-	}
-
-	std::future<boost::property_tree::wptree> info(int index)
-	{
-		return executor_.begin_invoke([=]
-		{
-			return get_layer(index).info();
-		});
-	}
-
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
 		return flatten(executor_.begin_invoke([=]
@@ -465,8 +442,6 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 void stage::add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer){ impl_->add_layer_consumer(token, layer, layer_consumer); }
 void stage::remove_layer_consumer(void* token, int layer){ impl_->remove_layer_consumer(token, layer); }std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::future<boost::property_tree::wptree> stage::info() const{ return impl_->info(); }
-std::future<boost::property_tree::wptree> stage::info(int index) const{ return impl_->info(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc){ return (*impl_)(format_desc); }
 monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }

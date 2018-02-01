@@ -204,13 +204,6 @@ public:
 		return L"layer-producer";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"layer-producer");
-		return info;
-	}
-
 	core::monitor::subject& monitor_output() override
 	{
 		return monitor_subject_;

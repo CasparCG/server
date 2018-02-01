@@ -27,8 +27,6 @@
 #include <common/forward.h>
 #include <common/memory.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 #include <future>
 
 FORWARD2(caspar, diagnostics, class graph);
@@ -61,7 +59,6 @@ public:
 
 	// Properties
 
-	std::future<boost::property_tree::wptree> info() const;
 	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
 
 private:

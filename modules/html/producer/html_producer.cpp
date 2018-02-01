@@ -550,13 +550,6 @@ public:
 		return L"html[" + url_ + L"]";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"html-producer");
-		return info;
-	}
-
 	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;

@@ -103,7 +103,6 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	field_mode							 = field_mode & other.field_mode;
 	is_key								|= other.is_key;
 	is_mix								|= other.is_mix;
-	use_mipmap							|= other.use_mipmap;
 	blend_mode							 = std::max(blend_mode, other.blend_mode);
 	layer_depth							+= other.layer_depth;
 
@@ -175,7 +174,6 @@ image_transform image_transform::tween(double time, const image_transform& sourc
 	result.field_mode						= source.field_mode & dest.field_mode;
 	result.is_key							= source.is_key | dest.is_key;
 	result.is_mix							= source.is_mix | dest.is_mix;
-	result.use_mipmap						= source.use_mipmap | dest.use_mipmap;
 	result.blend_mode						= std::max(source.blend_mode, dest.blend_mode);
 	result.layer_depth						= dest.layer_depth;
 
@@ -222,7 +220,6 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
 		lhs.field_mode == rhs.field_mode &&
 		lhs.is_key == rhs.is_key &&
 		lhs.is_mix == rhs.is_mix &&
-		lhs.use_mipmap == rhs.use_mipmap &&
 		lhs.blend_mode == rhs.blend_mode &&
 		lhs.layer_depth == rhs.layer_depth &&
 		lhs.chroma.enable == rhs.chroma.enable &&

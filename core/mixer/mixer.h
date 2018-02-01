@@ -63,8 +63,6 @@ public:
 
 	// Properties
 
-	std::future<boost::property_tree::wptree> info() const;
-
 	monitor::subject& monitor_output();
 
 private:
