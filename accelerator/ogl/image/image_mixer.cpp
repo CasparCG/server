@@ -73,9 +73,9 @@ class image_renderer
 	spl::shared_ptr<device>	ogl_;
 	image_kernel			kernel_;
 public:
-	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
+	image_renderer(const spl::shared_ptr<device>& ogl)
 		: ogl_(ogl)
-		, kernel_(ogl_, blend_modes_wanted, straight_alpha_wanted)
+		, kernel_(ogl_)
 	{
 	}
 
@@ -127,27 +127,6 @@ private:
 			  const core::video_format_desc&	format_desc,
 			  core::field_mode					field_mode)
 	{
-		// REMOVED: This is done in frame_muxer.
-		// Fix frames
-		//BOOST_FOREACH(auto& item, layer.items)
-		//{
-			//if(std::abs(item.transform.fill_scale[1]-1.0) > 1.0/target_texture->height() ||
-			//   std::abs(item.transform.fill_translation[1]) > 1.0/target_texture->height())
-			//	CASPAR_LOG(warning) << L"[image_mixer] Frame should be deinterlaced. Send FILTER DEINTERLACE_BOB when creating producer.";
-
-			//if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
-			//{
-			//	item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
-			//	item.transform.fill_scale[1] *= 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
-			//}
-
-			//// Fix field-order if needed
-			//if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
-			//	item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
-			//else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
-			//	item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
-		//}
-
 		// Mask out fields
 		for (auto& item : layer.items)
 			item.transform.field_mode &= field_mode;
@@ -263,9 +242,9 @@ struct image_mixer::impl : public core::frame_factory
 	std::vector<layer>					layers_; // layer/stream/items
 	std::vector<layer*>					layer_stack_;
 public:
-	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted, int channel_id)
+	impl(const spl::shared_ptr<device>& ogl, int channel_id)
 		: ogl_(ogl)
-		, renderer_(ogl, blend_modes_wanted, straight_alpha_wanted)
+		, renderer_(ogl)
 		, transform_stack_(1)
 	{
 		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
@@ -338,7 +317,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted, int channel_id) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted, channel_id)){}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id) : impl_(new impl(ogl, channel_id)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}

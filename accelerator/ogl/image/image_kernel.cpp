@@ -133,16 +133,11 @@ struct image_kernel::impl
 {
 	spl::shared_ptr<device>	ogl_;
 	spl::shared_ptr<shader>	shader_;
-	bool					blend_modes_;
-	bool					post_processing_;
-	bool					supports_texture_barrier_	= glTextureBarrierNV != 0;
 
-	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
+	impl(const spl::shared_ptr<device>& ogl)
 		: ogl_(ogl)
-		, shader_(ogl_->dispatch_sync([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted, post_processing_, straight_alpha_wanted); }))
+		, shader_(ogl_->dispatch_sync([&]{return get_image_shader(ogl); }))
 	{
-		if (!supports_texture_barrier_)
-			CASPAR_LOG(warning) << L"[image_mixer] TextureBarrierNV not supported. Post processing will not be available";
 	}
 
 	void draw(draw_params params)
@@ -151,16 +146,19 @@ struct image_kernel::impl
 
 		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
-		if(params.textures.empty() || !params.background)
-			return;
+        if (params.textures.empty() || !params.background) {
+            return;
+        }
 
-		if(params.transform.opacity < epsilon)
-			return;
+        if (params.transform.opacity < epsilon) {
+            return;
+        }
 
 		auto coords = params.geometry.data();
 
-		if (coords.empty())
-			return;
+        if (coords.empty()) {
+            return;
+        }
 
 		// Calculate transforms
 		auto f_p = params.transform.fill_translation;
@@ -180,9 +178,10 @@ struct image_kernel::impl
 
 		auto do_crop = [&](core::frame_geometry::coord& coord)
 		{
-			if (!is_default_geometry)
-				// TODO implement support for non-default geometry.
-				return;
+            if (!is_default_geometry) {
+                // TODO implement support for non-default geometry.
+                return;
+            }
 
 			coord.vertex_x = std::max(coord.vertex_x, crop.ul[0]);
 			coord.vertex_x = std::min(coord.vertex_x, crop.lr[0]);
@@ -195,9 +194,10 @@ struct image_kernel::impl
 		};
 		auto do_perspective = [=](core::frame_geometry::coord& coord, const boost::array<double, 2>& pers_corner)
 		{
-			if (!is_default_geometry)
-				// TODO implement support for non-default geometry.
-				return;
+            if (!is_default_geometry) {
+                // TODO implement support for non-default geometry.
+                return;
+            }
 
 			coord.vertex_x += pers_corner[0];
 			coord.vertex_y += pers_corner[1];
@@ -217,98 +217,79 @@ struct image_kernel::impl
 		};
 
 		int corner = 0;
-		for (auto& coord : coords)
-		{
+		for (auto& coord : coords) {
 			do_crop(coord);
 			do_perspective(coord, pers_corners.at(corner));
 			rotate(coord);
 			move(coord);
 
-			if (++corner == 4)
-				corner = 0;
+            if (++corner == 4) {
+                corner = 0;
+            }
 		}
 
 		// Skip drawing if all the coordinates will be outside the screen.
-		if (is_outside_screen(coords))
-			return;
+        if (is_outside_screen(coords)) {
+            return;
+        }
 
 		// Bind textures
 
-		for(int n = 0; n < params.textures.size(); ++n)
-			params.textures[n]->bind(n);
+        for (int n = 0; n < params.textures.size(); ++n) {
+            params.textures[n]->bind(n);
+        }
 
-		if(params.local_key)
-			params.local_key->bind(static_cast<int>(texture_id::local_key));
+        if (params.local_key) {
+            params.local_key->bind(static_cast<int>(texture_id::local_key));
+        }
 
-		if(params.layer_key)
-			params.layer_key->bind(static_cast<int>(texture_id::layer_key));
+        if (params.layer_key) {
+            params.layer_key->bind(static_cast<int>(texture_id::layer_key));
+        }
 
 		// Setup shader
 
 		shader_->use();
 
 		shader_->set("post_processing",	false);
-		shader_->set("plane[0]",		texture_id::plane0);
-		shader_->set("plane[1]",		texture_id::plane1);
-		shader_->set("plane[2]",		texture_id::plane2);
-		shader_->set("plane[3]",		texture_id::plane3);
-		for (int n = 0; n < params.textures.size(); ++n)
-			shader_->set("plane_size[" + boost::lexical_cast<std::string>(n) + "]",
-						 static_cast<float>(params.textures[n]->width()),
-						 static_cast<float>(params.textures[n]->height()));
+		shader_->set("plane[0]", texture_id::plane0);
+		shader_->set("plane[1]", texture_id::plane1);
+		shader_->set("plane[2]", texture_id::plane2);
+		shader_->set("plane[3]", texture_id::plane3);
+		shader_->set("local_key", texture_id::local_key);
+		shader_->set("layer_key", texture_id::layer_key);
+		shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+		shader_->set("has_local_key", static_cast<bool>(params.local_key));
+		shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
+		shader_->set("pixel_format", params.pix_desc.format);
+		shader_->set("opacity", params.transform.is_key ? 1.0 : params.transform.opacity);
 
-		shader_->set("local_key",		texture_id::local_key);
-		shader_->set("layer_key",		texture_id::layer_key);
-		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-		shader_->set("has_local_key",	static_cast<bool>(params.local_key));
-		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
-		shader_->set("pixel_format",		params.pix_desc.format);
-		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);
-
-		if (params.transform.chroma.enable)
-		{
-			shader_->set("chroma",						true);
-
-			shader_->set("chroma_show_mask",						params.transform.chroma.show_mask);
-			shader_->set("chroma_target_hue",					params.transform.chroma.target_hue / 360.0);
-			shader_->set("chroma_hue_width",						params.transform.chroma.hue_width);
-			shader_->set("chroma_min_saturation",				params.transform.chroma.min_saturation);
-			shader_->set("chroma_min_brightness",				params.transform.chroma.min_brightness);
-			shader_->set("chroma_softness",						1.0 + params.transform.chroma.softness);
-			shader_->set("chroma_spill_suppress",				params.transform.chroma.spill_suppress / 360.0);
-			shader_->set("chroma_spill_suppress_saturation",		params.transform.chroma.spill_suppress_saturation);
-		}
-		else
-			shader_->set("chroma", false);
+		if (params.transform.chroma.enable)	{
+			shader_->set("chroma", true);
+			shader_->set("chroma_show_mask", params.transform.chroma.show_mask);
+			shader_->set("chroma_target_hue", params.transform.chroma.target_hue / 360.0);
+			shader_->set("chroma_hue_width", params.transform.chroma.hue_width);
+			shader_->set("chroma_min_saturation", params.transform.chroma.min_saturation);
+			shader_->set("chroma_min_brightness", params.transform.chroma.min_brightness);
+			shader_->set("chroma_softness", 1.0 + params.transform.chroma.softness);
+			shader_->set("chroma_spill_suppress", params.transform.chroma.spill_suppress / 360.0);
+			shader_->set("chroma_spill_suppress_saturation", params.transform.chroma.spill_suppress_saturation);
+		} else {
+            shader_->set("chroma", false);
+        }
 
 
 		// Setup blend_func
 
-		if(params.transform.is_key)
-			params.blend_mode = core::blend_mode::normal;
+        if (params.transform.is_key) {
+            params.blend_mode = core::blend_mode::normal;
+        }
 
-		if(blend_modes_)
-		{
-			params.background->bind(static_cast<int>(texture_id::background));
+		params.background->bind(static_cast<int>(texture_id::background));
 
-			shader_->set("background",	texture_id::background);
-			shader_->set("blend_mode",	params.blend_mode);
-			shader_->set("keyer",		params.keyer);
-		}
-		else
-		{
-			GL(glEnable(GL_BLEND));
-
-			switch(params.keyer)
-			{
-			case keyer::additive:
-				GL(glBlendFunc(GL_ONE, GL_ONE));
-				break;
-			case keyer::linear:
-			default:
-				GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
-			}
-		}
+		shader_->set("background",	texture_id::background);
+		shader_->set("blend_mode",	params.blend_mode);
+		shader_->set("keyer",		params.keyer);
 
 		// Setup image-adjustements
 
@@ -316,35 +297,35 @@ struct image_kernel::impl
 			params.transform.levels.max_input  < 1.0-epsilon	||
 			params.transform.levels.min_output > epsilon		||
 			params.transform.levels.max_output < 1.0-epsilon	||
-			std::abs(params.transform.levels.gamma - 1.0) > epsilon)
-		{
+			std::abs(params.transform.levels.gamma - 1.0) > epsilon
+        ) {
 			shader_->set("levels", true);
-			shader_->set("min_input",	params.transform.levels.min_input);
-			shader_->set("max_input",	params.transform.levels.max_input);
-			shader_->set("min_output",	params.transform.levels.min_output);
-			shader_->set("max_output",	params.transform.levels.max_output);
-			shader_->set("gamma",		params.transform.levels.gamma);
+			shader_->set("min_input", params.transform.levels.min_input);
+			shader_->set("max_input", params.transform.levels.max_input);
+			shader_->set("min_output", params.transform.levels.min_output);
+			shader_->set("max_output", params.transform.levels.max_output);
+			shader_->set("gamma", params.transform.levels.gamma);
 		}
-		else
-			shader_->set("levels", false);
+        else {
+            shader_->set("levels", false);
+        }
 
 		if (std::abs(params.transform.brightness - 1.0) > epsilon ||
 			std::abs(params.transform.saturation - 1.0) > epsilon ||
-			std::abs(params.transform.contrast - 1.0)   > epsilon)
-		{
+			std::abs(params.transform.contrast - 1.0)   > epsilon
+        ) {
 			shader_->set("csb",	true);
 
 			shader_->set("brt", params.transform.brightness);
 			shader_->set("sat", params.transform.saturation);
 			shader_->set("con", params.transform.contrast);
-		}
-		else
-			shader_->set("csb",	false);
+        } else {
+            shader_->set("csb", false);
+        }
 
 		// Setup interlacing
 
-		if (params.transform.field_mode != core::field_mode::progressive)
-		{
+		if (params.transform.field_mode != core::field_mode::progressive) {
 			GL(glEnable(GL_POLYGON_STIPPLE));
 
 			if(params.transform.field_mode == core::field_mode::upper)
@@ -361,11 +342,10 @@ struct image_kernel::impl
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
 
-		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()			|| m_p[1] > std::numeric_limits<double>::epsilon() ||
-					   m_s[0] < (1.0 - std::numeric_limits<double>::epsilon())	|| m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
+		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon() || m_p[1] > std::numeric_limits<double>::epsilon() ||
+					   m_s[0] < (1.0 - std::numeric_limits<double>::epsilon()) || m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
 
-		if (scissor)
-		{
+		if (scissor) {
 			double w = static_cast<double>(params.background->width());
 			double h = static_cast<double>(params.background->height());
 
@@ -387,8 +367,8 @@ struct image_kernel::impl
 				pers.ll[0] + crop.ul[0], pers.ll[1] + crop.lr[1],
 				diagonal_intersection_x,
 				diagonal_intersection_y) &&
-			is_default_geometry)
-		{
+			is_default_geometry
+        ) {
 			// http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
 			auto d0 = hypotenuse(pers.ll[0] + crop.ul[0], pers.ll[1] + crop.lr[1], diagonal_intersection_x, diagonal_intersection_y);
 			auto d1 = hypotenuse(pers.lr[0] + crop.lr[0], pers.lr[1] + crop.lr[1], diagonal_intersection_x, diagonal_intersection_y);
@@ -403,8 +383,7 @@ struct image_kernel::impl
 			std::vector<double> q_values = { ulq, urq, lrq, llq };
 
 			corner = 0;
-			for (auto& coord : coords)
-			{
+			for (auto& coord : coords) {
 				coord.texture_q = q_values[corner];
 				coord.texture_x *= q_values[corner];
 				coord.texture_y *= q_values[corner];
@@ -416,10 +395,9 @@ struct image_kernel::impl
 
 		// Draw
 		switch(params.geometry.type())
-		{
+        {
 		case core::frame_geometry::geometry_type::quad:
-		case core::frame_geometry::geometry_type::quad_list:
-			{
+		case core::frame_geometry::geometry_type::quad_list: {
 				glClientActiveTexture(GL_TEXTURE0);
 
 				glDisableClientState(GL_EDGE_FLAG_ARRAY);
@@ -440,24 +418,15 @@ struct image_kernel::impl
 				glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
 				glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
 
-				if (blend_modes_)
-				{
-					for (int i = 0; i < coords.size(); i += 4)
-					{
-						// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
-						// This allows us to use framebuffer (background) both as source and target while blending.
-						glTextureBarrierNV();
-						glDrawArrays(GL_QUADS, i, 4);
-					}
+				for (auto i = 0; i < coords.size(); i += 4) {
+					glTextureBarrier();
+					glDrawArrays(GL_QUADS, i, 4);
 				}
-				else
-					glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
-
 
 				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 				glDisableClientState(GL_VERTEX_ARRAY);
-			}
-			break;
+                break;
+		}
 		default:
 			break;
 		}
@@ -470,16 +439,10 @@ struct image_kernel::impl
 
 	void post_process(const std::shared_ptr<texture>& background, bool straighten_alpha)
 	{
-		bool should_post_process =
-				supports_texture_barrier_
-				&& straighten_alpha
-				&& post_processing_;
-
-		if (!should_post_process)
+		if (!straighten_alpha)
 			return;
 
 		background->attach();
-
 		background->bind(static_cast<int>(texture_id::background));
 
 		shader_->use();
@@ -496,14 +459,13 @@ struct image_kernel::impl
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0.0, 1.0);
 		glEnd();
 
-		glTextureBarrierNV();
+		glTextureBarrier();
 	}
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted)){}
+image_kernel::image_kernel(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
 image_kernel::~image_kernel(){}
 void image_kernel::draw(const draw_params& params){impl_->draw(params);}
 void image_kernel::post_process(const std::shared_ptr<texture>& background, bool straighten_alpha) { impl_->post_process(background, straighten_alpha);}
-bool image_kernel::has_blend_modes() const{return impl_->blend_modes_;}
 
 }}}
