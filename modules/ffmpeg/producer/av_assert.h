@@ -1,14 +1,11 @@
 #pragma once
 
-#include <boost/exception/all.hpp>
-
-#include <exception>
-#include <string>
+#include <common/except.h>
 
 namespace caspar {
 namespace ffmpeg {
 
-struct ffmpeg_error_t : virtual boost::exception, virtual std::exception {};
+struct ffmpeg_error_t : virtual caspar_exception {};
 
 }  // namespace ffmpeg
 }  // namespace caspar
@@ -18,7 +15,7 @@ struct ffmpeg_error_t : virtual boost::exception, virtual std::exception {};
 
 #define FF_RET(ret, func)                                         \
   if (ret < 0) {                                                  \
-    BOOST_THROW_EXCEPTION(caspar::ffmpeg::ffmpeg_error_t()       \
+    CASPAR_THROW_EXCEPTION(caspar::ffmpeg::ffmpeg_error_t()       \
         << boost::errinfo_api_function(func)                      \
         << boost::errinfo_errno(AVUNERROR(static_cast<int>(ret))) \
     );                                                            \

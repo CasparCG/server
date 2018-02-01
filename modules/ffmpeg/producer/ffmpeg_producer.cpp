@@ -48,7 +48,6 @@ extern "C"
 
 #pragma warning(pop)
 
-
 namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
