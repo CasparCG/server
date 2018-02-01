@@ -38,9 +38,6 @@ public:
 
     AVProducer& duration(int64_t duration);
     int64_t duration() const;
-
-    int width() const;
-    int height() const;
 private:
     struct Impl;
     std::shared_ptr<Impl> impl_;
