@@ -34,10 +34,10 @@ static GLenum INTERNAL_FORMAT[] = { 0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 
 struct texture::impl : boost::noncopyable
 {
-	GLuint	id_;
-	GLsizei width_;
-    GLsizei height_;
-    GLsizei stride_;
+	GLuint	id_ = 0;
+	GLsizei width_ = 0;
+    GLsizei height_ = 0;
+    GLsizei stride_ = 0;
 public:
 	impl(int width, int height, int stride)
 		: width_(width)
