@@ -1148,6 +1148,7 @@ public:
 
             time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time();
 
+            // TODO (fix) Dont seek if time is close future.
             input_.seek(time);
             input_.resume();
             reset_filters(time);
