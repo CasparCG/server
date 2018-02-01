@@ -250,8 +250,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
         return spawn_async([=](yield_context yield)
         {
-            glFlush();
-
             flush();
 
             auto buf = create_buffer(source->size(), false);
