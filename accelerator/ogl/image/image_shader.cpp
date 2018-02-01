@@ -172,7 +172,6 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			#version 130
 			uniform sampler2D	background;
 			uniform sampler2D	plane[4];
-			uniform vec2		plane_size[4];
 			uniform sampler2D	local_key;
 			uniform sampler2D	layer_key;
 
@@ -182,7 +181,6 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			uniform int			blend_mode;
 			uniform int			keyer;
 			uniform int			pixel_format;
-			uniform int			deinterlace;
 
 			uniform float		opacity;
 			uniform bool		levels;
@@ -222,6 +220,45 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 	+
 
 	R"shader(
+            vec4 cubic(float v){
+                vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+                vec4 s = n * n * n;
+                float x = s.x;
+                float y = s.y - 4.0 * s.x;
+                float z = s.z - 4.0 * s.y + 6.0 * s.x;
+                float w = 6.0 - x - y - z;
+                return vec4(x, y, z, w) * (1.0/6.0);
+            }
+
+            vec4 textureBicubic(sampler2D sampler, vec2 texCoords) {
+                vec2 texSize = textureSize(sampler, 0);
+                vec2 invTexSize = 1.0 / texSize;
+
+                texCoords = texCoords * texSize - 0.5;
+
+                vec2 fxy = fract(texCoords);
+                texCoords -= fxy;
+
+                vec4 xcubic = cubic(fxy.x);
+                vec4 ycubic = cubic(fxy.y);
+
+                vec4 c = texCoords.xxyy + vec2 (-0.5, +1.5).xyxy;
+
+                vec4 s = vec4(xcubic.xz + xcubic.yw, ycubic.xz + ycubic.yw);
+                vec4 offset = c + vec4 (xcubic.yw, ycubic.yw) / s;
+
+                offset *= invTexSize.xxyy;
+
+                vec4 sample0 = texture(sampler, offset.xz);
+                vec4 sample1 = texture(sampler, offset.yz);
+                vec4 sample2 = texture(sampler, offset.xw);
+                vec4 sample3 = texture(sampler, offset.yw);
+
+                float sx = s.x / (s.x + s.y);
+                float sy = s.z / (s.z + s.w);
+
+                return mix(mix(sample3, sample2, sx), mix(sample1, sample0, sx), sy);
+            }
 
 			vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)
 			{
@@ -251,17 +288,9 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 					return ycbcra_to_rgba_sd(y, cb, cr, a);
 			}
 
-			vec4 get_sample(sampler2D sampler, vec2 coords, vec2 size)
+			vec4 get_sample(sampler2D sampler, vec2 coords)
 			{
-				switch(deinterlace)
-				{
-				case 1: // upper
-					return texture2D(sampler, coords);
-				case 2: // lower
-					return texture2D(sampler, coords);
-				default:
-					return texture2D(sampler, coords);
-				}
+				return textureBicubic(sampler, coords);
 			}
 
 			vec4 get_rgba_color()
@@ -269,39 +298,39 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 				switch(pixel_format)
 				{
 				case 0:		//gray
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rrr, 1.0);
 				case 1:		//bgra,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgra;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).bgra;
 				case 2:		//rgba,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgba;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rgba;
 				case 3:		//argb,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).argb;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).argb;
 				case 4:		//abgr,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).gbar;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).gbar;
 				case 5:		//ycbcr,
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
 						return ycbcra_to_rgba(y, cb, cr, 1.0);
 					}
 				case 6:		//ycbcra
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
-						float a  = get_sample(plane[3], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float a  = get_sample(plane[3], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
 						return ycbcra_to_rgba(y, cb, cr, a);
 					}
 				case 7:		//luma
 					{
-						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr;
+						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rrr;
 						return vec4((y3-0.065)/0.859, 1.0);
 					}
 				case 8:		//bgr,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).bgr, 1.0);
 				case 9:		//rgb,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgb, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rgb, 1.0);
 				}
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
