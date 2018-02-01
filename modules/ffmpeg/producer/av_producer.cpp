@@ -1118,13 +1118,13 @@ public:
                 result = frame_;
             }
 
-            auto tick_time = tick_timer_.elapsed()*format_desc_.fps * 0.5;
-            graph_->set_value("tick-time", tick_time);
-            tick_timer_.restart();
-
             buffer_flush_ = false;
         }
         buffer_cond_.notify_all();
+
+        auto tick_time = tick_timer_.elapsed()*format_desc_.fps * 0.5;
+        graph_->set_value("tick-time", tick_time);
+        tick_timer_.restart();
 
         graph_->set_text(u16(print()));
 
