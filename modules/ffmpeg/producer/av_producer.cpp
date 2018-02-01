@@ -341,18 +341,19 @@ struct Input
                     // TODO (perf) non blocking av_read_frame when possible
                     auto ret = av_read_frame(format_.get(), packet.get());
 
-                    if (ret == AVERROR_EXIT) {
-                        break;
-                    } else if (ret == AVERROR_EOF) {
-                        packet = nullptr;
-                    } else {
-                        FF_RET(ret, "av_read_frame");
-                    }
-
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
-                        eof_ = packet == nullptr;
-                        paused_ = eof_;
+
+                        if (ret == AVERROR_EXIT) {
+                            break;
+                        } else if (ret == AVERROR_EOF) {
+                            packet = nullptr;
+                            eof_ = true;
+                            paused_ = true;
+                        } else {
+                            FF_RET(ret, "av_read_frame");
+                        }
+
                         output_.push(std::move(packet));
 
                         graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
@@ -775,8 +776,6 @@ struct AVProducer::Impl
     mutable std::mutex                              mutex_;
     std::condition_variable                         cond_;
 
-    // TODO (perf) Avoid this mutex.
-    mutable std::mutex                              frame_mutex_;
     int64_t                                         frame_time_ = 0;
     core::draw_frame                                frame_ = core::draw_frame::late();
 
@@ -785,6 +784,7 @@ struct AVProducer::Impl
     std::deque<Frame>                               buffer_;
     int                                             buffer_capacity_;
 
+    std::atomic<bool>                               flush_ = true;
     std::atomic<bool>                               abort_request_ = false;
     std::thread                                     thread_;
 
@@ -1035,7 +1035,6 @@ struct AVProducer::Impl
                 }
             } else if (ret == AVERROR_EOF) {
                 filter.eof = true;
-                // TODO (fix) null frame with pts
                 filter.frame = nullptr;
                 return true;
             } else {
@@ -1080,20 +1079,18 @@ struct AVProducer::Impl
 public:
     core::draw_frame prev_frame()
     {
-        {
-            std::lock_guard<std::mutex> lock(frame_mutex_);
+        if (flush_ || frame_ == core::draw_frame::late()) {
+            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
-            if (frame_ == core::draw_frame::late()) {
-                std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
-
-                if (buffer_.empty()) {
-                    return core::draw_frame::late();
-                }
-
-                frame_ = core::draw_frame::still(buffer_[0].frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+            if (buffer_.empty()) {
+                return frame_;
             }
+
+            frame_ = core::draw_frame::still(buffer_[0].frame);
+            frame_time_ = buffer_[0].pts + buffer_[0].duration;
+            flush_ = false;
         }
+
         graph_->set_text(u16(print()));
 
         return frame_;
@@ -1103,40 +1100,33 @@ public:
     {
         core::draw_frame result;
         {
-            std::lock_guard<std::mutex> lock(frame_mutex_);
+            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
 
-            {
-                std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-
-                if (buffer_.size() < format_desc_.field_count) {
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                    return core::draw_frame::late();
-                }
-
-                if (format_desc_.field_count == 2) {
-                    result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
-                    frame_ = core::draw_frame::still(buffer_[1].frame);
-                    frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
-                    buffer_.pop_front();
-                    buffer_.pop_front();
-                } else {
-                    result = buffer_[0].frame;
-                    frame_ = core::draw_frame::still(buffer_[0].frame);
-                    frame_time_ = buffer_[0].pts + buffer_[0].duration;
-                    buffer_.pop_front();
-                }
+            if (buffer_.size() < format_desc_.field_count) {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                return core::draw_frame::late();
             }
-            buffer_cond_.notify_all();
+
+            if (format_desc_.field_count == 2) {
+                result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
+                frame_ = core::draw_frame::still(buffer_[1].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
+                buffer_.pop_front();
+                buffer_.pop_front();
+            } else {
+                result = buffer_[0].frame;
+                frame_ = core::draw_frame::still(buffer_[0].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                buffer_.pop_front();
+            }
+
+            flush_ = false;
         }
+        buffer_cond_.notify_all();
+
         graph_->set_text(u16(print()));
 
         return result;
-    }
-
-    int64_t time() const
-    {
-        // TODO (fix) How to handle NOPTS case?
-        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void seek(int64_t time)
@@ -1150,20 +1140,23 @@ public:
                 std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                 buffer_.clear();
             }
+            buffer_cond_.notify_all();
 
             time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time();
+
             input_.seek(time);
             input_.resume();
             reset(time);
+            flush_ = true;
         }
-        cond_.notify_all();
 
-        {
-            std::lock_guard<std::mutex> lock(frame_mutex_);
-            // XXX
-            // TODO (fix) Keep frame until next one is available. Still needs to flush!
-            frame_ = core::draw_frame::late();
-        }
+        cond_.notify_all();
+    }
+
+    int64_t time() const
+    {
+        // TODO (fix) How to handle NOPTS case?
+        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void loop(bool loop)
