@@ -94,13 +94,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				auto print = pCurrentCommand->print();
 				auto params = boost::join(pCurrentCommand->parameters(), L" ");
 
-				{
-					std::lock_guard<std::mutex> lock(running_command_mutex_);
-					running_command_ = true;
-					running_command_name_ = print;
-					running_command_params_ = std::move(params);
-					running_command_since_.restart();
-				}
+                CASPAR_LOG(debug) << "Executing command: " << print;
 
 				if (pCurrentCommand->Execute())
 					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
@@ -146,9 +140,6 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			pCurrentCommand->SendReply();
 
 			CASPAR_LOG(trace) << "Ready for a new command";
-
-            std::lock_guard<std::mutex> lock(running_command_mutex_);
-			running_command_ = false;
 		}
 		catch(...)
 		{
