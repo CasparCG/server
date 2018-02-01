@@ -481,7 +481,6 @@ struct Input
                 p.second.flush();
             }
         }
-
         cond_.notify_all();
 
         graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
@@ -779,6 +778,8 @@ struct AVProducer::Impl
     int64_t                                         frame_time_ = 0;
     core::draw_frame                                frame_ = core::draw_frame::late();
 
+    caspar::timer                                   tick_timer_;
+
     std::mutex                                      buffer_mutex_;
     std::condition_variable                         buffer_cond_;
     std::deque<Frame>                               buffer_;
@@ -813,6 +814,7 @@ struct AVProducer::Impl
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
+        graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_text(u16(print()));
 
         if (start_ != AV_NOPTS_VALUE) {
@@ -1115,6 +1117,10 @@ public:
             } else {
                 result = frame_;
             }
+
+            auto tick_time = tick_timer_.elapsed()*format_desc_.fps * 0.5;
+            graph_->set_value("tick-time", tick_time);
+            tick_timer_.restart();
 
             buffer_flush_ = false;
         }
