@@ -36,7 +36,6 @@
 #include <SFML/Window/Context.hpp>
 
 #include <boost/asio/deadline_timer.hpp>
-#include <boost/asio/post.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/spawn.hpp>
 
