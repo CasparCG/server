@@ -225,27 +225,20 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		return array<uint8_t>(ptr, buf->size(), false, buf);
 	}
 
-	template<typename T>
-	std::shared_ptr<buffer> copy_to_buf(const T& source)
-	{
-		std::shared_ptr<buffer> buf;
-
-        auto tmp = source.template storage<std::shared_ptr<buffer>>();
-        if (tmp) {
-            buf = *tmp;
-        } else {
-            buf = create_buffer(static_cast<int>(source.size()), true);
-            std::memcpy(buf->data(), source.data(), source.size());
-        }
-
-		return buf;
-	}
-
 	std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride)
 	{
-		auto buf = copy_to_buf(source);
-		return dispatch_async([=, buf = std::move(buf)]
+		return dispatch_async([=]
 		{
+            std::shared_ptr<buffer> buf;
+
+            auto tmp = source.template storage<std::shared_ptr<buffer>>();
+            if (tmp) {
+                buf = *tmp;
+            } else {
+                buf = create_buffer(static_cast<int>(source.size()), true);
+                std::memcpy(buf->data(), source.data(), source.size());
+            }
+
 			auto tex = create_texture(width, height, stride, false);
             tex->copy_from(*buf);
 			return tex;
