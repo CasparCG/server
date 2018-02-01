@@ -179,20 +179,6 @@ public:
         return promise.get_future();
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree pt;
-        pt.add(L"type", L"ffmpeg-producer");
-        pt.add(L"filename", filename_);
-        pt.add(L"progressive", format_desc_.field_mode == core::field_mode::progressive);
-        pt.add(L"fps", format_desc_.fps);
-        pt.add(L"loop", producer_.loop());
-        pt.add(L"file-frame-number", producer_.time());
-        pt.add(L"file-nb-frames", producer_.duration());
-
-        return pt;
-	}
-
 	std::wstring print() const override
 	{
 		return L"ffmpeg[" +

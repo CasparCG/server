@@ -714,27 +714,6 @@ std::wstring cg_invoke_command(command_context& ctx)
 	return replyString.str();
 }
 
-std::wstring cg_info_command(command_context& ctx)
-{
-	std::wstringstream replyString;
-	replyString << L"201 CG OK\r\n";
-
-	if (ctx.parameters.empty())
-	{
-		auto info = get_expected_cg_proxy(ctx)->template_host_info();
-		replyString << info << L"\r\n";
-	}
-	else
-	{
-		int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
-		auto desc = get_expected_cg_proxy(ctx)->description(layer);
-
-		replyString << desc << L"\r\n";
-	}
-
-	return replyString.str();
-}
-
 // Mixer Commands
 
 core::frame_transform get_current_transform(command_context& ctx)
@@ -1184,23 +1163,6 @@ std::wstring mixer_perspective_command(command_context& ctx)
 	return L"202 MIXER OK\r\n";
 }
 
-std::wstring mixer_mipmap_command(command_context& ctx)
-{
-	if (ctx.parameters.empty())
-		return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.use_mipmap ? 1 : 0; });
-
-	transforms_applier transforms(ctx);
-	bool value = boost::lexical_cast<int>(ctx.parameters.at(0));
-	transforms.add(stage::transform_tuple_t(ctx.layer_index(), [=](frame_transform transform) -> frame_transform
-	{
-		transform.image_transform.use_mipmap = value;
-		return transform;
-	}, 0, tweener(L"linear")));
-	transforms.apply();
-
-	return L"202 MIXER OK\r\n";
-}
-
 std::wstring mixer_volume_command(command_context& ctx)
 {
 	return single_double_animatable_mixer_command(
@@ -1533,7 +1495,6 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Template Commands", L"CG CLEAR", cg_clear_command, 0);
     repo.register_channel_command(L"Template Commands", L"CG UPDATE", cg_update_command, 2);
     repo.register_channel_command(L"Template Commands", L"CG INVOKE", cg_invoke_command, 2);
-    repo.register_channel_command(L"Template Commands", L"CG INFO", cg_info_command, 0);
 
     repo.register_channel_command(L"Mixer Commands", L"MIXER KEYER", mixer_keyer_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER CHROMA", mixer_chroma_command, 0);
@@ -1549,7 +1510,6 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Mixer Commands", L"MIXER CROP", mixer_crop_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER ROTATION", mixer_rotation_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER PERSPECTIVE", mixer_perspective_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER MIPMAP", mixer_mipmap_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER STRAIGHT_ALPHA_OUTPUT", mixer_straight_alpha_command, 0);

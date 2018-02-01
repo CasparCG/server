@@ -395,13 +395,6 @@ public:
 		return L"decklink";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"decklink");
-		return info;
-	}
-
 	boost::rational<int> get_out_framerate() const
 	{
 		return producer_->get_out_framerate();

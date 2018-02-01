@@ -109,15 +109,6 @@ public:
 		return L"separated";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"separated-producer");
-		info.add_child(L"fill.producer",	fill_producer_->info());
-		info.add_child(L"key.producer",	key_producer_->info());
-		return info;
-	}
-
 	monitor::subject& monitor_output() { return *monitor_subject_; }
 };
 

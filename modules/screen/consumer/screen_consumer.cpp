@@ -547,17 +547,6 @@ public:
 		return L"screen";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"screen");
-		info.add(L"key-only", config_.key_only);
-		info.add(L"windowed", config_.windowed);
-		info.add(L"auto-deinterlace", config_.auto_deinterlace);
-		info.add(L"vsync", config_.vsync);
-		return info;
-	}
-
 	bool has_synchronization_clock() const override
 	{
 		return false;

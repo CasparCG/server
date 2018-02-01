@@ -29,7 +29,6 @@
 
 #include <boost/array.hpp>
 #include <boost/optional.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 
@@ -100,7 +99,6 @@ struct image_transform final
 	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
-	bool					use_mipmap			= false;
 	core::blend_mode		blend_mode			= core::blend_mode::normal;
 	int						layer_depth			= 0;
 
@@ -159,7 +157,6 @@ public:
 		: duration_(0)
 		, time_(0)
 	{
-		dest_.image_transform.use_mipmap = env::properties().get(L"configuration.mixer.mipmapping-default-on", false);
 	}
 
 	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)

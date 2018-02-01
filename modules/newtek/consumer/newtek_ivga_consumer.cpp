@@ -160,14 +160,6 @@ public:
 		return L"newtek-ivga";
 	}
 
-	virtual boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"newtek-ivga-consumer");
-		info.add(L"connected", connected_ ? L"true" : L"false");
-		return info;
-	}
-
 	virtual int buffer_depth() const override
 	{
 		return -1;

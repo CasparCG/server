@@ -45,7 +45,6 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <functional>
 
@@ -251,20 +250,6 @@ public:
 		return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
 
-	std::future<boost::property_tree::wptree> info()
-	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
-		{
-			boost::property_tree::wptree info;
-			for (auto& port : ports_)
-			{
-				info.add_child(L"consumers.consumer", port.second.info())
-					.add(L"index", port.first);
-			}
-			return info;
-		}));
-	}
-
 	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()
 	{
 		return executor_.invoke([=]
@@ -284,7 +269,6 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){imp
 void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
-std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 std::vector<spl::shared_ptr<const frame_consumer>> output::get_consumers() const { return impl_->get_consumers(); }
 std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc){ return (*impl_)(std::move(frame), format_desc); }
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}

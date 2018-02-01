@@ -49,11 +49,7 @@ public:
 	impl(int index)
 		: monitor_subject_(spl::make_shared<monitor::subject>(
 				"/layer/" + boost::lexical_cast<std::string>(index)))
-//		, foreground_event_subject_("")
-//		, background_event_subject_("background")
 	{
-//		foreground_event_subject_.subscribe(event_subject_);
-//		background_event_subject_.subscribe(event_subject_);
 	}
 
 	void set_foreground(spl::shared_ptr<frame_producer> producer)
@@ -77,9 +73,7 @@ public:
 
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{
-//		background_->unsubscribe(background_event_subject_);
 		background_ = std::move(producer);
-//		background_->subscribe(background_event_subject_);
 
 		auto_play_delta_ = auto_play_delta;
 
@@ -143,14 +137,6 @@ public:
 				}
 			}
 
-			//event_subject_	<< monitor::event("time")	% monitor::duration(foreground_->frame_number()/format_desc.fps)
-			//											% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
-			//				<< monitor::event("frame")	% static_cast<int64_t>(foreground_->frame_number())
-			//											% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
-
-			//foreground_event_subject_ << monitor::event("type") % foreground_->name();
-			//background_event_subject_ << monitor::event("type") % background_->name();
-
 			return frame;
 		}
 		catch(...)
@@ -159,21 +145,6 @@ public:
 			stop();
 			return core::draw_frame::empty();
 		}
-	}
-
-	boost::property_tree::wptree info() const
-	{
-		boost::property_tree::wptree info;
-		info.add(L"auto_delta",	(auto_play_delta_ ? boost::lexical_cast<std::wstring>(*auto_play_delta_) : L"null"));
-		info.add(L"frame-number", foreground_->frame_number());
-
-		auto nb_frames = foreground_->nb_frames();
-
-		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
-		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - foreground_->frame_number() - (auto_play_delta_ ? *auto_play_delta_ : 0)));
-		info.add_child(L"foreground.producer", foreground_->info());
-		info.add_child(L"background.producer", background_->info());
-		return info;
 	}
 
 	void on_interaction(const interaction_event::ptr& event)
@@ -206,8 +177,6 @@ void layer::stop(){impl_->stop();}
 draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->receive(format_desc);}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
-boost::property_tree::wptree layer::info() const{return impl_->info();}
-
 monitor::subject& layer::monitor_output() {return *impl_->monitor_subject_;}
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }

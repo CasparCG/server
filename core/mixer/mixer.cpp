@@ -41,7 +41,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -148,14 +147,6 @@ public:
 			return straighten_alpha_;
 		});
 	}
-
-	std::future<boost::property_tree::wptree> info() const
-	{
-		boost::property_tree::wptree info;
-		info.add(L"mix-time", current_mix_time_);
-
-		return make_ready_future(std::move(info));
-	}
 };
 
 mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
@@ -164,7 +155,6 @@ void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); 
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
 bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
-std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }

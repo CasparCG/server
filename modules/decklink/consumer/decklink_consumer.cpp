@@ -639,24 +639,6 @@ public:
 		return L"decklink";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"decklink");
-		info.add(L"key-only", config_.key_only);
-		info.add(L"device", config_.device_index);
-
-		if (config_.keyer == configuration::keyer_t::external_separate_device_keyer)
-		{
-			info.add(L"key-device", config_.key_device_index());
-		}
-
-		info.add(L"low-latency", config_.latency == configuration::latency_t::low_latency);
-		info.add(L"embedded-audio", config_.embedded_audio);
-		//info.add(L"internal-key", config_.internal_key);
-		return info;
-	}
-
 	int buffer_depth() const override
 	{
 		return config_.buffer_depth() + 2;

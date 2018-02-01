@@ -6,7 +6,6 @@
 #include "../frame/frame.h"
 
 #include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <future>
 
@@ -57,11 +56,6 @@ public:
 		return consumer_->has_synchronization_clock();
 	}
 
-	boost::property_tree::wptree info() const
-	{
-		return consumer_->info();
-	}
-
 	spl::shared_ptr<const frame_consumer> consumer() const
 	{
 		return consumer_;
@@ -78,6 +72,5 @@ void port::change_channel_format(const core::video_format_desc& format_desc){imp
 int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}
-boost::property_tree::wptree port::info() const{return impl_->info();}
 spl::shared_ptr<const frame_consumer> port::consumer() const { return impl_->consumer(); }
 }}

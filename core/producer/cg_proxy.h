@@ -47,8 +47,6 @@ public:
 	virtual void next(int layer) = 0;
 	virtual void update(int layer, const std::wstring& data) = 0;
 	virtual std::wstring invoke(int layer, const std::wstring& label) = 0;
-	virtual std::wstring description(int layer) = 0;
-	virtual std::wstring template_host_info() = 0;
 
 	static const spl::shared_ptr<cg_proxy>& empty();
 };

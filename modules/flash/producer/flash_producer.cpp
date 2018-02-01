@@ -469,13 +469,6 @@ public:
 		return L"flash";
 	}
 
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"flash");
-		return info;
-	}
-
 	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;

@@ -45,8 +45,6 @@ public:
 	void next(int layer) override;
 	void update(int layer, const std::wstring& data) override;
 	std::wstring invoke(int layer, const std::wstring& label) override;
-	std::wstring description(int layer) override;
-	std::wstring template_host_info() override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
