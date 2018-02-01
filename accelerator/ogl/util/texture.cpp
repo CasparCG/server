@@ -45,8 +45,8 @@ public:
 		, stride_(stride)
 	{
 		GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
-		GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-		GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+		GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 		GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[stride_], width_, height_));
