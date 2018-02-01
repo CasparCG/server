@@ -27,7 +27,6 @@ set(SOURCES
 		stdafx.cpp
 )
 set(HEADERS
-		default_audio_config.h
 		included_modules.h
 		platform_specific.h
 		server.h
