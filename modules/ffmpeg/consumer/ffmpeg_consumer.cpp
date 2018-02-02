@@ -54,13 +54,18 @@ extern "C" {
 namespace caspar {
 namespace ffmpeg {
 
+// TODO multiple output streams
+// TODO multiple output files
+
 struct Stream
 {
     std::shared_ptr<AVFilterGraph> graph = nullptr;
     AVFilterContext* sink = nullptr;
     AVFilterContext* source = nullptr;
+
     std::shared_ptr<AVCodecContext> enc = nullptr;
     AVStream* st  = nullptr;
+
     int64_t pts = 0;
 
     Stream(AVFormatContext* oc, std::string filter_spec, AVCodecID codec_id, const core::video_format_desc& format_desc)
@@ -325,6 +330,7 @@ public:
         }())
     {
         diagnostics::register_graph(graph_);
+        // TODO
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
     }
@@ -425,6 +431,7 @@ public:
                     FF(avio_closep(&oc->pb));
                 }
             } catch (...) {
+                // TODO
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
         });
