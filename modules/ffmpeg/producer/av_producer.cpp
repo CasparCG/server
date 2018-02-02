@@ -649,7 +649,6 @@ struct Filter
 #pragma warning (disable: 4245)
 #endif
             const AVPixelFormat pix_fmts[] = {
-                AV_PIX_FMT_GRAY8,
                 AV_PIX_FMT_RGB24,
                 AV_PIX_FMT_BGR24,
                 AV_PIX_FMT_BGRA,
