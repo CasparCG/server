@@ -67,12 +67,9 @@ public:
 	// Methods
 
 	void draw(const draw_params& params);
-	void post_process(
-			const std::shared_ptr<class texture>& background, bool straighten_alpha);
 
 	// Properties
 
-	bool has_blend_modes() const;
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

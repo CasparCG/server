@@ -56,8 +56,6 @@ public:
 
 	void set_master_volume(float volume);
 	float get_master_volume();
-	void set_straight_alpha_output(bool value);
-	bool get_straight_alpha_output();
 
 	mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
