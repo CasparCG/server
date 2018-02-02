@@ -319,7 +319,6 @@ struct Stream
         }
     }
 
-    // TODO concurrency
     void send(boost::optional<core::const_frame> in_frame, const core::video_format_desc& format_desc, std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         int ret;
@@ -479,7 +478,16 @@ public:
 
                 FF(avformat_write_header(oc, &options))
 
-                // TODO warn for remaining options
+                {
+                    AVDictionaryEntry* t = nullptr;
+                    while (options) {
+                        t = av_dict_get(options, "", t, AV_DICT_IGNORE_SUFFIX);
+                        if (!t) {
+                            break;
+                        }
+                        CASPAR_LOG(warning) << print() << " Unused option " << t->key << "=" << t->value;
+                    }
+                }
 
                 // TODO errors
 
