@@ -21,19 +21,12 @@
 
 #pragma once
 
-#include "blend_modes.h"
-
-#include <common/forward.h>
-#include <common/memory.h>
-
-#include <core/video_format.h>
 #include <core/frame/frame_visitor.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame.h>
 
+#include <future>
 #include <cstdint>
-
-FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace core {
 
@@ -58,7 +51,7 @@ public:
 	virtual void visit(const class const_frame& frame) = 0;
 	virtual void pop() = 0;
 
-	virtual std::future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc, bool straighten_alpha) = 0;
+	virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
 	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
 

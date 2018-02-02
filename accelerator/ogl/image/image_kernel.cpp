@@ -251,7 +251,6 @@ struct image_kernel::impl
 
 		shader_->use();
 
-		shader_->set("post_processing",	false);
 		shader_->set("plane[0]", texture_id::plane0);
 		shader_->set("plane[1]", texture_id::plane1);
 		shader_->set("plane[2]", texture_id::plane2);
@@ -454,36 +453,10 @@ struct image_kernel::impl
 		GL(glDisable(GL_POLYGON_STIPPLE));
 		GL(glDisable(GL_BLEND));
 	}
-
-	void post_process(const std::shared_ptr<texture>& background, bool straighten_alpha)
-	{
-		if (!straighten_alpha)
-			return;
-
-		background->attach();
-		background->bind(static_cast<int>(texture_id::background));
-
-		shader_->use();
-		shader_->set("background", texture_id::background);
-		shader_->set("post_processing", true);
-		shader_->set("straighten_alpha", straighten_alpha);
-
-		GL(glViewport(0, 0, background->width(), background->height()));
-
-		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0.0, 0.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1.0, 0.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1.0, 1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0.0, 1.0);
-		glEnd();
-
-		glTextureBarrier();
-	}
 };
 
 image_kernel::image_kernel(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
 image_kernel::~image_kernel(){}
 void image_kernel::draw(const draw_params& params){impl_->draw(params);}
-void image_kernel::post_process(const std::shared_ptr<texture>& background, bool straighten_alpha) { impl_->post_process(background, straighten_alpha);}
 
 }}}

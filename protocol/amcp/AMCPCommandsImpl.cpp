@@ -1185,20 +1185,6 @@ std::wstring mixer_mastervolume_command(command_context& ctx)
 	return L"202 MIXER OK\r\n";
 }
 
-std::wstring mixer_straight_alpha_command(command_context& ctx)
-{
-	if (ctx.parameters.empty())
-	{
-		bool state = ctx.channel.channel->mixer().get_straight_alpha_output();
-		return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(state) + L"\r\n";
-	}
-
-	bool state = boost::lexical_cast<bool>(ctx.parameters.at(0));
-	ctx.channel.channel->mixer().set_straight_alpha_output(state);
-
-	return L"202 MIXER OK\r\n";
-}
-
 std::wstring mixer_grid_command(command_context& ctx)
 {
 	transforms_applier transforms(ctx);
@@ -1512,7 +1498,6 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Mixer Commands", L"MIXER PERSPECTIVE", mixer_perspective_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER STRAIGHT_ALPHA_OUTPUT", mixer_straight_alpha_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
     repo.register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
