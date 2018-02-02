@@ -197,7 +197,6 @@ struct server::impl : boost::noncopyable
 			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id));
 
 			channel->monitor_output().attach_parent(monitor_subject_);
-			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
 			channels_.push_back(channel);
 		}
 

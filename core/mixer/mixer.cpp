@@ -60,9 +60,6 @@ struct mixer::impl : boost::noncopyable
 	spl::shared_ptr<monitor::subject>	monitor_subject_	= spl::make_shared<monitor::subject>("/mixer");
 	audio_mixer							audio_mixer_		{ graph_ };
 	spl::shared_ptr<image_mixer>		image_mixer_;
-
-	bool								straighten_alpha_	= false;
-
 	executor							executor_			{ L"mixer " + boost::lexical_cast<std::wstring>(channel_index_) };
 
 public:
@@ -95,7 +92,7 @@ public:
 					frame.second.accept(*image_mixer_);
 				}
 
-				auto image = (*image_mixer_)(format_desc, straighten_alpha_);
+				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
 
 				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
@@ -131,30 +128,12 @@ public:
 			return audio_mixer_.get_master_volume();
 		});
 	}
-
-	void set_straight_alpha_output(bool value)
-	{
-		executor_.begin_invoke([=]
-		{
-			straighten_alpha_ = value;
-		});
-	}
-
-	bool get_straight_alpha_output()
-	{
-		return executor_.invoke([=]
-		{
-			return straighten_alpha_;
-		});
-	}
 };
 
 mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
 	: impl_(new impl(channel_index, std::move(graph), std::move(image_mixer))){}
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
-void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
-bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }

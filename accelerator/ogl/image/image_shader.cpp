@@ -115,17 +115,6 @@ std::string get_chroma_func()
 		)shader";
 }
 
-std::string get_post_process()
-{
-	return R"shader(
-		if (post_processing)
-		{
-			gl_FragColor = post_process().bgra;
-		}
-		else
-	)shader";
-}
-
 std::string get_vertex()
 {
 	return R"shader(
@@ -171,9 +160,6 @@ std::string get_fragment()
 			uniform float		brt;
 			uniform float		sat;
 			uniform float		con;
-
-			uniform bool		post_processing;
-			uniform bool		straighten_alpha;
 
 			uniform bool		chroma;
 			uniform bool		chroma_show_mask;
@@ -312,28 +298,8 @@ std::string get_fragment()
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
 
-			vec4 post_process()
-			{
-				vec4 color = texture2D(background, gl_TexCoord[0].st).bgra;
-
-				if (straighten_alpha)
-					color.rgb /= color.a + 0.0000001;
-
-				return color;
-			}
-
 			void main()
 			{
-	)shader"
-
-	+
-
-	get_post_process()
-
-	+
-
-	R"shader(
-				{
 					vec4 color = get_rgba_color();
 					if (chroma)
 						color = chroma_key(color);
@@ -349,7 +315,6 @@ std::string get_fragment()
                     if (blend_mode != 0)
 					    color = blend(color);
 					gl_FragColor = color.bgra;
-				}
 			}
 	)shader";
 }

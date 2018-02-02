@@ -79,7 +79,7 @@ public:
 	{
 	}
 
-	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc, bool straighten_alpha)
+	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
@@ -98,8 +98,6 @@ public:
 			}
 			else
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
-
-			kernel_.post_process(target_texture, straighten_alpha);
 
 			return ogl_->copy_async(target_texture);
 		}));
@@ -302,9 +300,9 @@ public:
 		layer_stack_.resize(transform_stack_.back().layer_depth);
 	}
 
-	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc, bool straighten_alpha)
+	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
-		return renderer_(std::move(layers_), format_desc, straighten_alpha);
+		return renderer_(std::move(layers_), format_desc);
 	}
 
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
@@ -322,7 +320,7 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool straighten_alpha){return impl_->render(format_desc, straighten_alpha);}
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

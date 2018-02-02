@@ -61,6 +61,7 @@ set(HEADERS
 		mixer/audio/audio_mixer.h
 
 		mixer/image/blend_modes.h
+		mixer/image/image_mixer.h
 
 		mixer/mixer.h
 
