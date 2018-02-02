@@ -161,18 +161,8 @@ struct Stream
 
                             // TODO (fix) is this always best?
                             frame->pts = frame->best_effort_timestamp;
-
-                            auto frame_duration = frame->pkt_duration;
-
-                            if (decoder_->codec_type == AVMEDIA_TYPE_VIDEO) {
-                                frame_duration = frame->pkt_duration > 0
-                                    ? frame->pkt_duration
-                                    : av_rescale_q(1, decoder_->time_base, decoder_->pkt_timebase);
-                            } else if (decoder_->codec_type == AVMEDIA_TYPE_AUDIO) {
-                                frame_duration = av_rescale_q(frame->nb_samples, { 1, frame->sample_rate }, decoder_->pkt_timebase);
-                            }
-
-                            next_pts_ = frame->pts + frame_duration;
+                            // TODO (fix) is this always best?
+                            next_pts_ = frame->pts + frame->pkt_duration;
                         }
 
                         {
