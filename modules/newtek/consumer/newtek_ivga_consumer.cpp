@@ -31,7 +31,6 @@
 
 #include <common/assert.h>
 #include <common/future.h>
-#include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/timer.h>
 #include <common/param.h>
@@ -50,21 +49,17 @@ struct newtek_ivga_consumer : public core::frame_consumer
     core::video_format_desc             format_desc_;
 	core::monitor::subject				monitor_subject_;
 	std::shared_ptr<void>				air_send_;
-	std::atomic<bool>					connected_;
+	std::atomic<bool>					connected_ = false;
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	timer								tick_timer_;
-	timer								frame_timer_;
-    executor							executor_;
 
 public:
 
 	newtek_ivga_consumer()
-		: executor_(print())
 	{
-		if (!airsend::is_available())
-			CASPAR_THROW_EXCEPTION(not_supported() << msg_info(airsend::dll_name() + L" not available"));
-
-		connected_ = false;
+        if (!airsend::is_available()) {
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info(airsend::dll_name() + L" not available"));
+        }
 
 		graph_->set_text(print());
 		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
@@ -79,7 +74,7 @@ public:
 
 	// frame_consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
         format_desc_ = format_desc;
 
@@ -95,82 +90,62 @@ public:
                 format_desc.audio_channels,
 				format_desc.audio_sample_rate
             ),
-				airsend::destroy
+			airsend::destroy
           );
 
 		CASPAR_VERIFY(air_send_);
-
-		format_desc_	= format_desc;
 	}
 
-	std::future<bool> schedule_send(core::const_frame frame)
-	{
-		return executor_.begin_invoke([=]() -> bool
-		{
-			graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
-			tick_timer_.restart();
-			frame_timer_.restart();
-
-			// AUDIO
-
-			auto audio_buffer = core::audio_32_to_16(frame.audio_data());
-
-			airsend::add_audio(air_send_.get(), audio_buffer.data(), static_cast<int>(audio_buffer.size()) / format_desc_.audio_channels);
-
-			// VIDEO
-
-			connected_ = airsend::add_frame_bgra(air_send_.get(), frame.image_data().begin());
-
-			graph_->set_text(print());
-			graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
-
-			return true;
-		});
-	}
-
-	virtual std::future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data().size());
 
-		if (executor_.size() > 0)
-		{
-			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+        tick_timer_.restart();
 
-			return make_ready_future(true);
-		}
+        caspar::timer frame_timer;
 
-		schedule_send(std::move(frame));
+        {
+            auto audio_buffer = core::audio_32_to_16(frame.audio_data());
+            airsend::add_audio(air_send_.get(), audio_buffer.data(), static_cast<int>(audio_buffer.size()) / format_desc_.audio_channels);
+        }
+
+        {
+            connected_ = airsend::add_frame_bgra(air_send_.get(), frame.image_data().begin());
+        }
+
+        graph_->set_text(print());
+        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
 
 		return make_ready_future(true);
 	}
 
-	virtual core::monitor::subject& monitor_output() override
+	core::monitor::subject& monitor_output() override
 	{
 		return monitor_subject_;
 	}
 
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
-		return connected_ ?
-				L"newtek-ivga[connected]" : L"newtek-ivga[not connected]";
+		return connected_ ? L"newtek-ivga[connected]" : L"newtek-ivga[not connected]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"newtek-ivga";
 	}
 
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return -1;
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 900;
 	}
 
-	virtual bool has_synchronization_clock() const override
+	bool has_synchronization_clock() const override
 	{
 		return false;
 	}
