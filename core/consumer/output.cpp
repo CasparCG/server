@@ -140,6 +140,9 @@ public:
 
         std::pair<int, int> minmax = std::make_pair(INT_MAX, 0);
         for (auto& port : ports_) {
+            if (port.second.buffer_depth() < 0) {
+                continue;
+            }
             minmax.first = std::min<int>(minmax.first, port.second.buffer_depth());
             minmax.second = std::max<int>(minmax.second, port.second.buffer_depth());
         }
