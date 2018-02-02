@@ -35,8 +35,8 @@ extern "C" {
 #pragma warning (pop)
 #endif
 
-#include "av_assert.h"
-#include "av_util.h"
+#include "../util/av_assert.h"
+#include "../util/av_util.h"
 
 #include <algorithm>
 #include <atomic>
@@ -57,22 +57,6 @@ namespace ffmpeg {
 using namespace std::chrono_literals;
 
 const AVRational TIME_BASE_Q = { 1, AV_TIME_BASE };
-
-std::shared_ptr<AVFrame> alloc_frame()
-{
-    const auto frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame *ptr) { av_frame_free(&ptr); });
-    if (!frame)
-        FF_RET(AVERROR(ENOMEM), "av_frame_alloc");
-    return frame;
-}
-
-std::shared_ptr<AVPacket> alloc_packet()
-{
-    const auto packet = std::shared_ptr<AVPacket>(av_packet_alloc(), [](AVPacket *ptr) { av_packet_free(&ptr); });
-    if (!packet)
-        FF_RET(AVERROR(ENOMEM), "av_packet_alloc");
-    return packet;
-}
 
 struct Frame
 {
