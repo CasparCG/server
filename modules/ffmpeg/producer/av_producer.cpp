@@ -287,7 +287,7 @@ struct Input
         FF(avformat_find_stream_info(format_.get(), nullptr));
 
         for (auto n = 0ULL; n < format_->nb_streams; ++n) {
-            // TODO lazy load decoders?
+            // TODO (perf) Lazy load decoders?
             try {
                 streams_.try_emplace(static_cast<int>(n), format_->streams[n]);
             } catch (...) {
@@ -312,7 +312,7 @@ struct Input
 
                     auto packet = alloc_packet();
 
-                    // TODO (perf) non blocking av_read_frame when possible
+                    // TODO (perf) Non blocking av_read_frame when possible.
                     auto ret = av_read_frame(format_.get(), packet.get());
 
                     {
@@ -431,7 +431,6 @@ struct Input
         {
             std::lock_guard<std::mutex> lock(mutex_);
             paused_ = false;
-            eof_ = false;
         }
         cond_.notify_all();
     }
@@ -449,11 +448,15 @@ struct Input
                 while (!output_.empty()) {
                     output_.pop();
                 }
+                eof_ = false;
             }
 
             for (auto& p : streams_) {
                 p.second.flush();
             }
+        } else {
+            std::lock_guard<std::mutex> output_lock(mutex_);
+            eof_ = false;
         }
         cond_.notify_all();
 
