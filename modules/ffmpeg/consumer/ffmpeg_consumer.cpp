@@ -122,7 +122,7 @@ struct Stream
 
         std::string filter_spec = "";
         {
-            const auto filter_opt = stream_options ? av_dict_get(stream_options, "filter", nullptr, 0) : nullptr;
+            const auto filter_opt = av_dict_get(stream_options, "filter", nullptr, 0);
             if (filter_opt) {
                 filter_spec = filter_opt->value;
                 FF(av_dict_set(&stream_options, "filter", nullptr, 0));
@@ -131,7 +131,7 @@ struct Stream
 
         auto codec = avcodec_find_encoder(codec_id);
         {
-            const auto codec_opt = stream_options ? av_dict_get(stream_options, "codec", nullptr, 0) : nullptr;
+            const auto codec_opt = av_dict_get(stream_options, "codec", nullptr, 0);
             if (codec_opt) {
                 codec = avcodec_find_encoder_by_name(codec_opt->value);
                 FF(av_dict_set(&stream_options, "codec", nullptr, 0));
@@ -454,7 +454,7 @@ public:
                 AVFormatContext* oc = nullptr;
 
                 {
-                    const auto format_opt = options ? av_dict_get(options, "format", nullptr, 0) : nullptr;
+                    const auto format_opt = av_dict_get(options, "format", nullptr, 0);
                     FF(avformat_alloc_output_context2(&oc, nullptr, format_opt ? format_opt->value : nullptr, path_.c_str()));
                     FF(av_dict_set(&options, "format", nullptr, 0));
                 }
