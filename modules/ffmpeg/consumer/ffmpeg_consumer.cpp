@@ -584,7 +584,6 @@ public:
 
     int buffer_depth() const override
     {
-        // TODO is this safe?
         return -1;
     }
 
