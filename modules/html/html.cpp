@@ -57,8 +57,7 @@ void caspar_log(
 		boost::log::trivial::severity_level level,
 		const std::string& message)
 {
-	if (browser)
-	{
+	if (browser) {
 		auto msg = CefProcessMessage::Create(LOG_MESSAGE_NAME);
 		msg->GetArgumentList()->SetInt(0, level);
 		msg->GetArgumentList()->SetString(1, message);
@@ -76,18 +75,17 @@ public:
 	}
 
 	bool Execute(
-			const CefString& name,
-			CefRefPtr<CefV8Value> object,
-			const CefV8ValueList& arguments,
-			CefRefPtr<CefV8Value>& retval,
-			CefString& exception) override
+		const CefString& name,
+		CefRefPtr<CefV8Value> object,
+		const CefV8ValueList& arguments,
+		CefRefPtr<CefV8Value>& retval,
+		CefString& exception) override
 	{
-		if (!CefCurrentlyOn(TID_RENDERER))
-			return false;
+        if (!CefCurrentlyOn(TID_RENDERER)) {
+            return false;
+        }
 
-		browser_->SendProcessMessage(
-				PID_BROWSER,
-				CefProcessMessage::Create(REMOVE_MESSAGE_NAME));
+		browser_->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(REMOVE_MESSAGE_NAME));
 
 		return true;
 	}
@@ -115,26 +113,20 @@ public:
 			CefRefPtr<CefFrame> frame,
 			CefRefPtr<CefV8Context> context) override
 	{
-		caspar_log(browser, boost::log::trivial::trace,
-				"context for frame "
-				+ boost::lexical_cast<std::string>(frame->GetIdentifier())
-				+ " created");
+		caspar_log(browser, boost::log::trivial::trace, "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " created");
 		contexts_.push_back(context);
 
 		auto window = context->GetGlobal();
 
-		window->SetValue(
-				"remove",
-				CefV8Value::CreateFunction(
-						"remove",
-						new remove_handler(browser)),
-				V8_PROPERTY_ATTRIBUTE_NONE);
+		window->SetValue("remove", CefV8Value::CreateFunction("remove",	new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
 
 		CefRefPtr<CefV8Value> ret;
 		CefRefPtr<CefV8Exception> exception;
 		bool injected = context->Eval(R"(
 			var requestedAnimationFrames	= {};
 			var currentAnimationFrameId		= 0;
+
+            window.caspar = {};
 
 			window.requestAnimationFrame = function(callback) {
 				requestedAnimationFrames[++currentAnimationFrameId] = callback;
@@ -156,8 +148,9 @@ public:
 			}
 		)", CefString(), 1, ret, exception);
 
-		if (!injected)
-			caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
+        if (!injected) {
+            caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
+        }
 	}
 
 	void OnContextReleased(
@@ -165,42 +158,41 @@ public:
 			CefRefPtr<CefFrame> frame,
 			CefRefPtr<CefV8Context> context)
 	{
-		auto removed = boost::remove_if(
-				contexts_, [&](const CefRefPtr<CefV8Context>& c)
-				{
-					return c->IsSame(context);
-				});
+		auto removed = boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c)
+		{
+			return c->IsSame(context);
+		});
 
-		if (removed != contexts_.end())
-			caspar_log(browser, boost::log::trivial::trace,
-					"context for frame "
-					+ boost::lexical_cast<std::string>(frame->GetIdentifier())
-					+ " released");
-		else
-			caspar_log(browser, boost::log::trivial::warning,
-					"context for frame "
-					+ boost::lexical_cast<std::string>(frame->GetIdentifier())
-					+ " released, but not found");
+        if (removed != contexts_.end()) {
+            caspar_log(browser, boost::log::trivial::trace,
+                "context for frame "
+                + boost::lexical_cast<std::string>(frame->GetIdentifier())
+                + " released");
+        } else {
+            caspar_log(browser, boost::log::trivial::warning,
+                "context for frame "
+                + boost::lexical_cast<std::string>(frame->GetIdentifier())
+                + " released, but not found");
+        }
 	}
 
 	void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) override
 	{
 		contexts_.clear();
 	}
-	
+
 	void OnBeforeCommandLineProcessing(
 		const CefString& process_type,
 		CefRefPtr<CefCommandLine> command_line) override
 	{
-		//command_line->AppendSwitch("ignore-gpu-blacklist");
-		if (enable_gpu_)
-			command_line->AppendSwitch("enable-webgl");
+		if (enable_gpu_) {
+            command_line->AppendSwitch("enable-webgl");
+        }
 
 		command_line->AppendSwitch("enable-begin-frame-scheduling");
 		command_line->AppendSwitch("enable-media-stream");
 
-		if (process_type.empty() && !enable_gpu_)
-		{
+		if (process_type.empty() && !enable_gpu_) {
 			// This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run smoothly
 			command_line->AppendSwitch("disable-gpu");
 			command_line->AppendSwitch("disable-gpu-compositing");
@@ -213,19 +205,15 @@ public:
 			CefProcessId source_process,
 			CefRefPtr<CefProcessMessage> message) override
 	{
-		if (message->GetName().ToString() == TICK_MESSAGE_NAME)
-		{
-			for (auto& context : contexts_)
-			{
+		if (message->GetName().ToString() == TICK_MESSAGE_NAME)	{
+			for (auto& context : contexts_) {
 				CefRefPtr<CefV8Value> ret;
 				CefRefPtr<CefV8Exception> exception;
 				context->Eval("tickAnimations()", CefString(), 1, ret, exception);
 			}
 
 			return true;
-		}
-		else
-		{
+		} else {
 			return false;
 		}
 	}
@@ -241,10 +229,7 @@ bool intercept_command_line(int argc, char** argv)
 	CefMainArgs main_args(argc, argv);
 #endif
 
-	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0)
-		return true;
-
-	return false;
+	return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0;
 }
 
 void init(core::module_dependencies dependencies)
@@ -268,21 +253,21 @@ void init(core::module_dependencies dependencies)
 		CefRunMessageLoop();
 	});
 	dependencies.cg_registry->register_cg_producer(
-			L"html",
-			{ L".html" },
-			[](const std::wstring& filename)
-			{
-				return "";
-			},
-			[](const spl::shared_ptr<core::frame_producer>& producer)
-			{
-				return spl::make_shared<html_cg_proxy>(producer);
-			},
-			[](const core::frame_producer_dependencies& dependencies, const std::wstring& filename)
-			{
-				return html::create_cg_producer(dependencies, { filename });
-			},
-			false
+		L"html",
+		{ L".html" },
+		[](const std::wstring& filename)
+		{
+			return "";
+		},
+		[](const spl::shared_ptr<core::frame_producer>& producer)
+		{
+			return spl::make_shared<html_cg_proxy>(producer);
+		},
+		[](const core::frame_producer_dependencies& dependencies, const std::wstring& filename)
+		{
+			return html::create_cg_producer(dependencies, { filename });
+		},
+		false
 	);
 
 	auto cef_version_major =	boost::lexical_cast<std::wstring>(cef_version_info(0));
@@ -310,9 +295,9 @@ class cef_task : public CefTask
 {
 private:
 	std::promise<void> promise_;
-	std::function<void ()> function_;
+	std::function<void()> function_;
 public:
-	cef_task(const std::function<void ()>& function)
+	cef_task(const std::function<void()>& function)
 		: function_(function)
 	{
 	}
@@ -321,14 +306,11 @@ public:
 	{
 		CASPAR_LOG_CALL(trace) << "[cef_task] executing task";
 
-		try
-		{
+		try	{
 			function_();
 			promise_.set_value();
 			CASPAR_LOG_CALL(trace) << "[cef_task] task succeeded";
-		}
-		catch (...)
-		{
+		} catch (...) {
 			promise_.set_exception(std::current_exception());
 			CASPAR_LOG(warning) << "[cef_task] task failed";
 		}
@@ -351,18 +333,18 @@ std::future<void> begin_invoke(const std::function<void()>& func)
 {
 	CefRefPtr<cef_task> task = new cef_task(func);
 
-	if (CefCurrentlyOn(TID_UI))
-	{
+	if (CefCurrentlyOn(TID_UI))	{
 		// Avoid deadlock.
 		task->Execute();
 		return task->future();
 	}
 
-	if (CefPostTask(TID_UI, task.get()))
-		return task->future();
-	else
-		CASPAR_THROW_EXCEPTION(caspar_exception()
-				<< msg_info("[cef_executor] Could not post task"));
+    if (CefPostTask(TID_UI, task.get())) {
+        return task->future();
+    } else {
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+            << msg_info("[cef_executor] Could not post task"));
+    }
 }
 
 }}
