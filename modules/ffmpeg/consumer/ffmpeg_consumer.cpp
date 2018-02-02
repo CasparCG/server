@@ -519,7 +519,9 @@ public:
                 CASPAR_SCOPE_EXIT
                 {
                     if (packet_thread.joinable()) {
+                        // TODO Is nullptr needed?
                         packet_buffer.push(nullptr);
+                        packet_buffer.abort();
                         packet_thread.join();
                     }
                 };
