@@ -67,17 +67,17 @@ extern "C" {
 #pragma warning (pop)
 #endif
 
-#include <queue>
+#include <tbb/concurrent_queue.h>
+
 #include <memory>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 
 namespace caspar {
 namespace ffmpeg {
 
 // TODO multiple output streams
 // TODO multiple output files
+// TODO run video filter, video encoder, audio filter, audio encoder in separate threads.
 
 struct Stream
 {
@@ -224,8 +224,8 @@ struct Stream
 #pragma warning (push)
 #pragma warning (disable: 4245)
 #endif
-            // codec->profiles
-            //FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 }, AV_OPT_SEARCH_CHILDREN));
+            // TODO codec->profiles
+            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 }, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning (pop)
@@ -236,7 +236,7 @@ struct Stream
 #pragma warning (push)
 #pragma warning (disable: 4245)
 #endif
-            // codec->profiles
+            // TODO codec->profiles
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
@@ -320,7 +320,7 @@ struct Stream
     }
 
     // TODO concurrency
-    void send(AVFormatContext* oc, boost::optional<core::const_frame> in_frame, const core::video_format_desc& format_desc)
+    void send(boost::optional<core::const_frame> in_frame, const core::video_format_desc& format_desc, std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         int ret;
         std::shared_ptr<AVFrame> frame;
@@ -364,7 +364,7 @@ struct Stream
                 FF_RET(ret, "avcodec_receive_packet");
                 pkt->stream_index = st->index;
                 av_packet_rescale_ts(pkt.get(), enc->time_base, st->time_base);
-                FF(av_interleaved_write_frame(oc, pkt.get()));
+                cb(std::move(pkt));
             }
         }
     }
@@ -381,10 +381,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::string                                     path_;
     std::string                                     args_;
 
-    std::mutex                                      buffer_mutex_;
-    std::condition_variable                         buffer_cond_;
-    std::queue<boost::optional<core::const_frame>>  buffer_;
-    std::thread                                     thread_;
+    tbb::concurrent_bounded_queue<boost::optional<core::const_frame>>  frame_buffer_;
+    std::thread                                                        frame_thread_;
 
 public:
     ffmpeg_consumer(std::string path, std::string args)
@@ -397,19 +395,18 @@ public:
             return result.checksum();
         }())
     {
+        frame_buffer_.set_capacity(128);
+
         diagnostics::register_graph(graph_);
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+        graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
     }
 
     ~ffmpeg_consumer()
     {
-        if (thread_.joinable()) {
-            {
-                std::lock_guard<std::mutex> lock(buffer_mutex_);
-                buffer_.push(boost::none);
-            }
-            buffer_cond_.notify_all();
-            thread_.join();
+        if (frame_thread_.joinable()) {
+            frame_buffer_.try_push(boost::none);
+            frame_thread_.join();
         }
     }
 
@@ -417,7 +414,7 @@ public:
 
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
-        if (thread_.joinable()) {
+        if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
         }
 
@@ -426,9 +423,7 @@ public:
 
         graph_->set_text(print());
 
-        // TODO reinit
-
-        thread_ = std::thread([=]
+        frame_thread_ = std::thread([=]
         {
             AVDictionary* options = nullptr;
             {
@@ -486,26 +481,58 @@ public:
 
                 // TODO warn for remaining options
 
+                // TODO errors
+
+                tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
+                packet_buffer.set_capacity(128);
+                auto packet_thread = std::thread([&]
+                {
+                    try {
+                        std::shared_ptr<AVPacket> pkt;
+                        while (true) {
+                            packet_buffer.pop(pkt);
+                            if (!pkt) {
+                                break;
+                            }
+                            FF(av_interleaved_write_frame(oc, pkt.get()));
+                        }
+                    } catch (...) {
+                        // TODO
+                    }
+                });
+                CASPAR_SCOPE_EXIT
+                {
+                    if (packet_thread.joinable()) {
+                        packet_buffer.push(nullptr);
+                        packet_thread.join();
+                    }
+                };
+
+                auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt)
+                {
+                    packet_buffer.push(std::move(pkt));
+                };
+
                 while (true) {
                     boost::optional<core::const_frame> frame;
-                    {
-                        std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return !buffer_.empty(); });
-                        frame = std::move(buffer_.front());
-                        buffer_.pop();
-                    }
+                    frame_buffer_.pop(frame);
+
                     caspar::timer frame_timer;
                     if (video_stream) {
-                        video_stream->send(oc, frame, format_desc);
+                        video_stream->send(frame, format_desc, packet_cb);
                     }
                     if (audio_stream) {
-                        audio_stream->send(oc, frame, format_desc);
+                        audio_stream->send(frame, format_desc, packet_cb);
                     }
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
+
                     if (!frame) {
+                        packet_buffer.push(nullptr);
                         break;
                     }
                 }
+
+                packet_thread.join();
 
                 FF(av_write_trailer(oc));
 
@@ -521,15 +548,11 @@ public:
 
     std::future<bool> send(core::const_frame frame) override
     {
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-            if (buffer_.size() > 128) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            } else {
-                buffer_.push(std::move(frame));
-            }
+        if (!frame_buffer_.try_push(std::move(frame))) {
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+        } else {
+            frame_buffer_.push(std::move(frame));
         }
-        buffer_cond_.notify_all();
 
         return make_ready_future(true);
     }
