@@ -145,7 +145,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
     }
 }
 
-std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame)
+std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_desc)
 {
     auto av_frame = alloc_frame();
 
@@ -154,8 +154,15 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame)
     auto planes = pix_desc.planes;
     auto format = pix_desc.format;
 
-    av_frame->width = planes[0].width;
-    av_frame->height = planes[0].height;
+    const auto sar =
+        boost::rational<int>(format_desc.square_width, format_desc.square_height) /
+        boost::rational<int>(format_desc.width, format_desc.height);
+
+    av_frame->sample_aspect_ratio = { sar.numerator(), sar.denominator() };
+    av_frame->width = format_desc.width;
+    av_frame->height = format_desc.height;
+    av_frame->interlaced_frame = format_desc.field_mode != core::field_mode::progressive ? 1 : 0;
+    av_frame->top_field_first = format_desc.field_mode == core::field_mode::upper ? 1 : 0;
 
     switch (format) {
     case core::pixel_format::rgb:
@@ -216,16 +223,16 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame)
     return av_frame;
 }
 
-std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame)
+std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_desc)
 {
     auto av_frame = alloc_frame();
 
     const auto& buffer = frame.audio_data();
 
     // TODO (fix) Use sample_format_desc.
-    av_frame->channels = 8;
+    av_frame->channels = format_desc.audio_channels;
     av_frame->channel_layout = av_get_default_channel_layout(av_frame->channels);
-    av_frame->sample_rate = 48000;
+    av_frame->sample_rate = format_desc.audio_sample_rate;
     av_frame->format = AV_SAMPLE_FMT_S32;
     av_frame->nb_samples = static_cast<int>(buffer.size() / av_frame->channels);
     FF(av_frame_get_buffer(av_frame.get(), 32));
