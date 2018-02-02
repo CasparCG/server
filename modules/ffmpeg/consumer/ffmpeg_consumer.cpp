@@ -475,6 +475,7 @@ public:
                 }
 
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                    // TODO (fix) interrupt_cb
                     FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &options));
                 }
 
