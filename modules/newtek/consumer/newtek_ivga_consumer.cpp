@@ -50,11 +50,11 @@ struct newtek_ivga_consumer : public core::frame_consumer
     core::video_format_desc             format_desc_;
 	core::monitor::subject				monitor_subject_;
 	std::shared_ptr<void>				air_send_;
-	executor							executor_;
 	std::atomic<bool>					connected_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	timer								tick_timer_;
 	timer								frame_timer_;
+    executor							executor_;
 
 public:
 
