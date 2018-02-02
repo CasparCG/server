@@ -295,8 +295,6 @@ struct Stream
             enc->sample_aspect_ratio = av_buffersink_get_sample_aspect_ratio(sink);
             enc->time_base = st->time_base;
             enc->pix_fmt = static_cast<AVPixelFormat>(av_buffersink_get_format(sink));
-
-            // TODO tick_per_frame
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             st->time_base = { 1, av_buffersink_get_sample_rate(sink) };
 
@@ -306,7 +304,11 @@ struct Stream
             enc->channel_layout = av_buffersink_get_channel_layout(sink);
             enc->time_base = st->time_base;
 
-            // TODO check channels & channel_layout
+            if (!enc->channels) {
+                enc->channels = av_get_channel_layout_nb_channels(enc->channel_layout);
+            } else if (!enc->channel_layout) {
+                enc->channel_layout = av_get_default_channel_layout(enc->channels);
+            }
         } else {
             // TODO
         }
@@ -489,8 +491,6 @@ public:
                     }
                 }
 
-                // TODO errors
-
                 tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
                 packet_buffer.set_capacity(128);
                 auto packet_thread = std::thread([&]
@@ -504,8 +504,16 @@ public:
                             }
                             FF(av_interleaved_write_frame(oc, pkt.get()));
                         }
+
+                        FF(av_write_trailer(oc));
+
+                        if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                            FF(avio_closep(&oc->pb));
+                        }
                     } catch (...) {
+                        CASPAR_LOG_CURRENT_EXCEPTION();
                         // TODO
+                        packet_buffer.abort();
                     }
                 });
                 CASPAR_SCOPE_EXIT
@@ -541,15 +549,9 @@ public:
                 }
 
                 packet_thread.join();
-
-                FF(av_write_trailer(oc));
-
-                if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                    FF(avio_closep(&oc->pb));
-                }
             } catch (...) {
-                // TODO
                 CASPAR_LOG_CURRENT_EXCEPTION();
+                // TODO
             }
         });
     }
