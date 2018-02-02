@@ -251,12 +251,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         {
             auto buf = create_buffer(source->size(), false);
             source->copy_to(*buf);
-            
-            std::vector<std::shared_ptr<buffer>> buffers; 
+
+            std::vector<std::shared_ptr<buffer>> buffers;
             {
-                std::shared_ptr<buffer> buf;
-                while (sync_queue_.try_pop(buf)) {
-                    buffers.push_back(std::move(buf));
+                std::shared_ptr<buffer> buf2;
+                while (sync_queue_.try_pop(buf2)) {
+                    buffers.push_back(std::move(buf2));
                 }
             }
 
