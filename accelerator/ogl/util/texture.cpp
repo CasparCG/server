@@ -22,7 +22,6 @@
 
 #include "buffer.h"
 
-#include <common/except.h>
 #include <common/gl/gl_check.h>
 
 #include <GL/glew.h>
