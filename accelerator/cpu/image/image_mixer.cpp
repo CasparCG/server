@@ -140,7 +140,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 class image_renderer
 {
 	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
-	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>												temp_buffers_;
 	core::video_format_desc																				format_desc_;
 public:
 	std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
@@ -394,7 +394,7 @@ public:
 		std::vector<array<std::uint8_t>> buffers;
 		for (auto& plane : desc.planes)
 		{
-			auto buf = spl::make_shared<buffer>(plane.size);
+			auto buf = std::make_shared<buffer>(plane.size);
 			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, buf));
 		}
         return core::mutable_frame(tag, std::move(buffers), array<int32_t>{}, desc);
