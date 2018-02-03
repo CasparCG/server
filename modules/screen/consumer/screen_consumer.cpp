@@ -301,14 +301,48 @@ public:
 						}
 					}
 
-					core::const_frame frame;
-					frame_buffer_.pop(frame);
+					core::const_frame in_frame;
+					frame_buffer_.pop(in_frame);
 
-					perf_timer_.restart();
-					render(frame);
-					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
+                    // Display
+                    {
+                        auto& frame = frames_[2];
 
-					window_.display();
+                        GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+                        GL(glClear(GL_COLOR_BUFFER_BIT));
+
+                        glBegin(GL_QUADS);
+                        glTexCoord2f(0.0f, 1.0f); glVertex2f(-width_, -height_);
+                        glTexCoord2f(1.0f, 1.0f); glVertex2f(width_, -height_);
+                        glTexCoord2f(1.0f, 0.0f); glVertex2f(width_, height_);
+                        glTexCoord2f(0.0f, 0.0f); glVertex2f(-width_, height_);
+                        glEnd();
+
+                        GL(glBindTexture(GL_TEXTURE_2D, 0));
+                    }
+
+                    // Upload
+                    {
+                        auto& frame = frames_[0];
+
+                        // TODO (fix) Wait for sync before re-using pbo?
+
+                        if (config_.key_only) {
+                            for (int n = 0; n < format_desc_.height; ++n) {
+                                aligned_memshfl(frame.ptr + n * format_desc_.width * 4, in_frame.image_data(0).begin() + n * format_desc_.width * 4, format_desc_.width * 4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+                            }
+                        } else {
+                            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
+                        }
+
+                        GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
+                        GL(glTextureSubImage2D(frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+                        GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
+                    }
+
+                    window_.display();
+
+                    std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
 
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 					tick_timer_.restart();
@@ -322,47 +356,6 @@ public:
 		} catch(...) {
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-	}
-
-	void render(core::const_frame input_frame)
-	{
-        // Upload
-        {
-            auto& frame = frames_[0];
-
-            // TODO (fix) Wait for sync before re-using pbo?
-
-            if (config_.key_only) {
-                for (int n = 0; n < format_desc_.height; ++n) {
-                    aligned_memshfl(frame.ptr + n * format_desc_.width * 4, input_frame.image_data(0).begin() + n * format_desc_.width * 4, format_desc_.width * 4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-                }
-            } else {
-                std::memcpy(frame.ptr, input_frame.image_data(0).begin(), format_desc_.size);
-            }
-
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-        }
-
-        // Display
-        {
-            auto& frame = frames_[2];
-
-            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
-            GL(glClear(GL_COLOR_BUFFER_BIT));
-
-            glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-width_, -height_);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f(width_, -height_);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f(width_, height_);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-width_, height_);
-            glEnd();
-
-            GL(glBindTexture(GL_TEXTURE_2D, 0));
-        }
-
-		std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
 	}
 
 	std::future<bool> send(core::const_frame frame)
