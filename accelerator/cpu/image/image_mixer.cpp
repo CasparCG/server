@@ -401,7 +401,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(int channel_id) : impl_(new impl(channel_id)){}
+image_mixer::image_mixer(int channel_id) : impl_(std::make_unique<impl>(channel_id)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
