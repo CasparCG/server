@@ -79,21 +79,21 @@ public:
 
 	void clear()
 	{
-        GL(glClearTexImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+        GL(glClearTexImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, nullptr));
 	}
 
 	void copy_from(buffer& src)
 	{
         src.bind();
         // TODO (fix) This fails on weird dimensions.
-		GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+		GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, nullptr));
         src.unbind();
 	}
 
 	void copy_to(buffer& dst)
 	{
         dst.bind();
-        GL(glGetTextureImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, width_ * height_ * stride_, NULL));
+        GL(glGetTextureImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, width_ * height_ * stride_, nullptr));
         dst.unbind();
 	}
 };
