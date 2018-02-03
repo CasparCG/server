@@ -73,7 +73,6 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
 {
     switch (pix_fmt)
     {
-    case AV_PIX_FMT_GRAY8:       return core::pixel_format::gray;
     case AV_PIX_FMT_RGB24:       return core::pixel_format::rgb;
     case AV_PIX_FMT_BGR24:       return core::pixel_format::bgr;
     case AV_PIX_FMT_BGRA:        return core::pixel_format::bgra;
@@ -102,12 +101,6 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
 
     switch (desc.format)
     {
-    case core::pixel_format::gray:
-    case core::pixel_format::luma:
-    {
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
-        return desc;
-    }
     case core::pixel_format::bgr:
     case core::pixel_format::rgb:
     {
@@ -166,25 +159,22 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
 
     switch (format) {
     case core::pixel_format::rgb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
+        av_frame->format = AV_PIX_FMT_RGB24;
         break;
     case core::pixel_format::bgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
+        av_frame->format = AV_PIX_FMT_BGR24;
         break;
     case core::pixel_format::rgba:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
+        av_frame->format = AV_PIX_FMT_RGBA;
         break;
     case core::pixel_format::argb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
+        av_frame->format = AV_PIX_FMT_ARGB;
         break;
     case core::pixel_format::bgra:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
+        av_frame->format = AV_PIX_FMT_BGRA;
         break;
     case core::pixel_format::abgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
-        break;
-    case core::pixel_format::gray:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
+        av_frame->format = AV_PIX_FMT_ABGR;
         break;
     case core::pixel_format::ycbcr:
     {
@@ -194,15 +184,15 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
         int c_h = planes[1].height;
 
         if (c_h == y_h && c_w == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
+            av_frame->format = AV_PIX_FMT_YUV444P;
         else if (c_h == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
+            av_frame->format = AV_PIX_FMT_YUV422P;
         else if (c_h == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
+            av_frame->format = AV_PIX_FMT_YUV411P;
         else if (c_h * 2 == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+            av_frame->format = AV_PIX_FMT_YUV420P;
         else if (c_h * 2 == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
+            av_frame->format = AV_PIX_FMT_YUV410P;
 
         break;
     }
