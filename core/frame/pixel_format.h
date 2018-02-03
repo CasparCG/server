@@ -21,22 +21,18 @@
 
 #pragma once
 
-#include "../video_format.h"
-
 #include <vector>
 
 namespace caspar { namespace core {
 
 enum class pixel_format
 {
-	gray = 0,
 	bgra,
 	rgba,
 	argb,
 	abgr,
 	ycbcr,
 	ycbcra,
-	luma,
 	bgr,
 	rgb,
 	count,
@@ -47,26 +43,19 @@ struct pixel_format_desc final
 {
 	struct plane
 	{
-		int linesize;
-		int width;
-		int height;
-		int size;
-		int stride;
+		int linesize = 0;
+		int width = 0;
+		int height = 0;
+		int size = 0;
+		int stride = 0;
 
-		plane()
-			: linesize(0)
-			, width(0)
-			, height(0)
-			, size(0)
-			, stride(0)
-		{
-		}
+        plane() = default;
 
 		plane(int width, int height, int stride)
-			: linesize(width*stride)
+			: linesize(width * stride)
 			, width(width)
 			, height(height)
-			, size(width*height*stride)
+			, size(width * height * stride)
 			, stride(stride)
 		{
 		}
