@@ -250,7 +250,7 @@ struct Input
     mutable std::mutex                              format_mutex_;
     std::shared_ptr<AVFormatContext>                format_;
 
-    std::map<int, Stream>                           streams_;
+    std::vector<AVStream*>                          streams_;
 
     mutable std::mutex                              mutex_;
     std::condition_variable                         cond_;
@@ -287,13 +287,8 @@ struct Input
 
         FF(avformat_find_stream_info(format_.get(), nullptr));
 
-        for (auto n = 0ULL; n < format_->nb_streams; ++n) {
-            // TODO (perf) Lazy load decoders?
-            try {
-                streams_.try_emplace(static_cast<int>(n), format_->streams[n]);
-            } catch (...) {
-                CASPAR_LOG(warning) << "[ffmpeg] " << "Failed to open stream #" << n << ".";
-            }
+        for (unsigned n = 0; n < format_->nb_streams; ++n) {
+            streams_.push_back(format_->streams[n]);
         }
 
         thread_ = std::thread([&]
@@ -382,31 +377,6 @@ struct Input
         return format_.get();
     }
 
-    auto find(int n)
-    {
-        return streams_.find(n);
-    }
-
-    auto begin()
-    {
-        return streams_.begin();
-    }
-
-    auto end()
-    {
-        return streams_.end();
-    }
-
-    auto begin() const
-    {
-        return streams_.begin();
-    }
-
-    auto end() const
-    {
-        return streams_.end();
-    }
-
     int64_t start_time() const
     {
         return format_->start_time != AV_NOPTS_VALUE ? format_->start_time : 0;
@@ -442,23 +412,14 @@ struct Input
 
         FF(avformat_seek_file(format_.get(), -1, INT64_MIN, ts, ts, 0));
 
-        if (flush)
         {
-            {
-                std::lock_guard<std::mutex> output_lock(mutex_);
-                while (!output_.empty()) {
-                    output_.pop();
-                }
-                eof_ = false;
-            }
-
-            for (auto& p : streams_) {
-                p.second.flush();
-            }
-        } else {
             std::lock_guard<std::mutex> output_lock(mutex_);
+            while (flush && !output_.empty()) {
+                output_.pop();
+            }
             eof_ = false;
         }
+
         cond_.notify_all();
 
         graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
@@ -478,7 +439,7 @@ struct Filter
 
     }
 
-    Filter(std::string filter_spec, const Input& input, int64_t start_time, AVMediaType media_type, const core::video_format_desc& format_desc)
+    Filter(std::string filter_spec, const Input& input, std::map<int, Stream>& streams, int64_t start_time, AVMediaType media_type, const core::video_format_desc& format_desc)
     {
         if (media_type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -547,8 +508,8 @@ struct Filter
 
         if (audio_input_count == 1) {
             int count = 0;
-            for (auto& p : input) {
-                if (p.second->codec_type == AVMEDIA_TYPE_AUDIO) {
+            for (unsigned n = 0; n < input->nb_streams; ++n) {
+                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
                     count += 1;
                 }
             }
@@ -557,8 +518,8 @@ struct Filter
             }
         } else if (video_input_count == 1) {
             int count = 0;
-            for (auto& p : input) {
-                if (p.second->codec_type == AVMEDIA_TYPE_VIDEO) {
+            for (unsigned n = 0; n < input->nb_streams; ++n) {
+                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
                     count += 1;
                 }
             }
@@ -580,21 +541,27 @@ struct Filter
                     );
                 }
 
+                unsigned index = 0;
+
                 // TODO find stream based on link name
                 // TODO share stream decoders between graphs
-                const auto it = std::find_if(input.begin(), input.end(), [&](const auto& p)
-                {
-                    return p.second->codec_type == type && sources.find(static_cast<int>(p.first)) == sources.end();
-                });
+                while (true) {
+                    if (index == input->nb_streams) {
+                        graph = nullptr;
+                        return;
+                    }
+                    if (input->streams[index]->codecpar->codec_type == type && sources.find(static_cast<int>(index)) == sources.end()) {
+                        break;
+                    }
+                    index++;
+                }
+                auto it = streams.find(index);
 
-                if (it == input.end()) {
-                    graph = nullptr;
-                    // TODO warn?
-                    return;
+                if (it == streams.end()) {
+                    it = streams.emplace(index, input->streams[index]).first;
                 }
 
                 auto& st = it->second;
-                auto index = it->first;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d")
@@ -737,6 +704,7 @@ struct AVProducer::Impl
     std::vector<int>                                audio_cadence_;
 
     Input                                           input_;
+    std::map<int, Stream>                           streams_;
     Filter                                          video_filter_;
     Filter                                          audio_filter_;
 
@@ -931,13 +899,13 @@ struct AVProducer::Impl
         input_([&](std::shared_ptr<AVPacket>& packet)
         {
             if (!packet) {
-                for (auto& p : input_) {
+                for (auto& p : streams_) {
                     // NOTE: Should never fail.
                     p.second.try_push(nullptr);
                 }
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
-                auto it = input_.find(packet->stream_index);
-                if (it != input_.end() && !it->second.try_push(packet)) {
+                auto it = streams_.find(packet->stream_index);
+                if (it != streams_.end() && !it->second.try_push(packet)) {
                     return false;
                 }
             }
@@ -957,8 +925,8 @@ struct AVProducer::Impl
         auto sources = sources_;
 
         for (auto& p : sources) {
-            auto it = input_.find(p.first);
-            if (it == input_.end()) {
+            auto it = streams_.find(p.first);
+            if (it == streams_.end()) {
                 continue;
             }
 
@@ -1032,8 +1000,8 @@ struct AVProducer::Impl
 
     void reset_filters(int64_t ts)
     {
-        video_filter_ = Filter(vfilter_, input_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
+        video_filter_ = Filter(vfilter_, input_, streams_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_ = Filter(afilter_, input_, streams_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
@@ -1044,7 +1012,7 @@ struct AVProducer::Impl
         }
 
         // Flush unused inputs.
-        for (auto& p : input_) {
+        for (auto& p : streams_) {
             if (sources_.find(p.first) == sources_.end()) {
                 p.second.flush();
             }
@@ -1128,6 +1096,11 @@ public:
             // TODO (fix) Dont seek if time is close future.
             input_.seek(time);
             input_.resume();
+
+            for (auto& p : streams_) {
+                p.second.flush();
+            }
+
             reset_filters(time);
         }
 
