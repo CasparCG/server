@@ -97,12 +97,17 @@ class subject : public sink
 {
 private:
 	std::weak_ptr<sink> parent_;
-	const std::string path_;
+	std::string path_;
 public:
 	subject(std::string path = "")
 		: path_(std::move(path))
 	{
 		CASPAR_ASSERT(path.empty() || path[0] == '/');
+	}
+
+	void update_path(std::string path)
+	{
+		path_ = std::move(path);
 	}
 
 	void attach_parent(spl::shared_ptr<sink> parent)
