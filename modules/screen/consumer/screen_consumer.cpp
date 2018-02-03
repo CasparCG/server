@@ -314,6 +314,8 @@ public:
                         GL(glBindTexture(GL_TEXTURE_2D, 0));
                     }
 
+                    glFlush();
+
                     // Upload
                     {
                         auto& frame = frames_[0];
