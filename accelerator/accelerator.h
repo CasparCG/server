@@ -1,24 +1,23 @@
 #pragma once
 
-#include <common/forward.h>
-#include <common/memory.h>
-
-#include <core/fwd.h>
-
-#include <boost/noncopyable.hpp>
+#include <memory>
+#include <string>
 
 namespace caspar { namespace accelerator {
 
-class accelerator : boost::noncopyable
+class accelerator
 {
 public:
 	accelerator(const std::wstring& path);
+    accelerator(accelerator&) = delete;
 	~accelerator();
+
+    accelerator& operator=(accelerator&) = delete;
 
 	std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id);
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
 }}
