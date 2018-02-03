@@ -78,6 +78,7 @@ namespace ffmpeg {
 // TODO multiple output streams
 // TODO multiple output files
 // TODO run video filter, video encoder, audio filter, audio encoder in separate threads.
+// TODO realtime with smaller buffer?
 
 struct Stream
 {
