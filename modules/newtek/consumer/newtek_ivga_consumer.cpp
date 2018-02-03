@@ -98,7 +98,7 @@ public:
 
 	std::future<bool> send(core::const_frame frame) override
 	{
-		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data().size());
+		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data(0).size());
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
@@ -111,7 +111,7 @@ public:
         }
 
         {
-            connected_ = airsend::add_frame_bgra(air_send_.get(), frame.image_data().begin());
+            connected_ = airsend::add_frame_bgra(air_send_.get(), frame.image_data(0).begin());
         }
 
         graph_->set_text(print());

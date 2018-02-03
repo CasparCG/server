@@ -124,14 +124,13 @@ public:
 
 			*monitor_subject_ << monitor::message("/profiler/time") % produce_time % (1.0 / format_desc.fps);
 
-			if(frame == core::draw_frame::late())
-				return foreground_->last_frame();
+            if (!frame) {
+                return foreground_->last_frame();
+            }
 
-			if(auto_play_delta_)
-			{
+			if (auto_play_delta_) {
 				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() - static_cast<int64_t>(*auto_play_delta_);
-				if(frames_left < 1)
-				{
+				if(frames_left < 1) {
 					play();
 					return receive(format_desc);
 				}
@@ -143,7 +142,7 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			stop();
-			return core::draw_frame::empty();
+            return draw_frame{};
 		}
 	}
 

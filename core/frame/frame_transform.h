@@ -27,8 +27,9 @@
 #include <core/video_format.h>
 #include <core/mixer/image/blend_modes.h>
 
-#include <boost/array.hpp>
 #include <boost/optional.hpp>
+
+#include <array>
 
 namespace caspar { namespace core {
 
@@ -63,16 +64,16 @@ struct levels final
 
 struct corners final
 {
-	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
-	boost::array<double, 2> ur = boost::array<double, 2> { { 1.0, 0.0 } };
-	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
-	boost::array<double, 2> ll = boost::array<double, 2> { { 0.0, 1.0 } };
+	std::array<double, 2> ul = { 0.0, 0.0 };
+	std::array<double, 2> ur = { 1.0, 0.0 };
+	std::array<double, 2> lr = { 1.0, 1.0 };
+	std::array<double, 2> ll = { 0.0, 1.0 };
 };
 
 struct rectangle final
 {
-	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
-	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
+	std::array<double, 2> ul = { 0.0, 0.0 };
+	std::array<double, 2> lr = { 1.0, 1.0 };
 };
 
 struct image_transform final
@@ -82,24 +83,21 @@ struct image_transform final
 	double					brightness			= 1.0;
 	double					saturation			= 1.0;
 
-	// A bug in VS 2013 prevents us from writing:
-	// boost::array<double, 2> fill_translation = { { 0.0, 0.0 } };
-	// See http://blogs.msdn.com/b/vcblog/archive/2014/08/19/the-future-of-non-static-data-member-initialization.aspx
-	boost::array<double, 2>	anchor				= boost::array<double, 2> { { 0.0, 0.0 } };
-	boost::array<double, 2>	fill_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
-	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
-	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
-	boost::array<double, 2>	clip_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
+	std::array<double, 2>	anchor				= { 0.0, 0.0 };
+	std::array<double, 2>	fill_translation	= { 0.0, 0.0 };
+	std::array<double, 2>	fill_scale			= { 1.0, 1.0 };
+	std::array<double, 2>	clip_translation	= { 0.0, 0.0 };
+	std::array<double, 2>	clip_scale			= { 1.0, 1.0 };
 	double					angle				= 0.0;
 	rectangle				crop;
 	corners					perspective;
-	core::levels			levels;
-	core::chroma			chroma;
+    levels			        levels;
+	chroma			        chroma;
 
-	core::field_mode		field_mode			= core::field_mode::progressive;
+	field_mode		        field_mode			= field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
-	core::blend_mode		blend_mode			= core::blend_mode::normal;
+	blend_mode		        blend_mode			= blend_mode::normal;
 	int						layer_depth			= 0;
 
 	image_transform& operator*=(const image_transform &other);
@@ -125,7 +123,6 @@ struct audio_transform final
 bool operator==(const audio_transform& lhs, const audio_transform& rhs);
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
-//__declspec(align(16))
 struct frame_transform final
 {
 public:
@@ -133,8 +130,6 @@ public:
 
 	core::image_transform image_transform;
 	core::audio_transform audio_transform;
-
-	//char padding[(sizeof(core::image_transform) + sizeof(core::audio_transform)) % 16];
 
 	frame_transform& operator*=(const frame_transform &other);
 	frame_transform operator*(const frame_transform &other) const;
@@ -149,47 +144,20 @@ class tweened_transform
 {
 	frame_transform source_;
 	frame_transform dest_;
-	int duration_;
-	int time_;
+	int duration_ = 0;
+	int time_ = 0;
 	tweener tweener_;
 public:
-	tweened_transform()
-		: duration_(0)
-		, time_(0)
-	{
-	}
+    tweened_transform() = default;
 
-	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
-		: source_(source)
-		, dest_(dest)
-		, duration_(duration)
-		, time_(0)
-		, tweener_(tween)
-	{
-	}
+    tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween);
 
-	const frame_transform& dest() const
-	{
-		return dest_;
-	}
+    const frame_transform& dest() const;
 
-	frame_transform fetch()
-	{
-		return time_ == duration_ ? dest_ : frame_transform::tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
-	}
-
-	frame_transform fetch_and_tick(int num)
-	{
-		time_ = std::min(time_+num, duration_);
-		return fetch();
-	}
+    frame_transform fetch();
+    frame_transform fetch_and_tick(int num);
 };
 
 boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str);
 
-namespace detail {
-
-void set_current_aspect_ratio(double aspect_ratio);
-double get_current_aspect_ratio();
-
-}}}
+}}

@@ -307,11 +307,12 @@ public:
 
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{
-		std::vector<array<std::uint8_t>> buffers;
-		for (auto& plane : desc.planes)
-			buffers.push_back(ogl_->create_array(plane.size));
+		std::vector<array<std::uint8_t>> image_data;
+        for (auto& plane : desc.planes) {
+            image_data.push_back(ogl_->create_array(plane.size));
+        }
 
-		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc);
+        return core::mutable_frame(tag, std::move(image_data), array<int32_t>{}, desc);
 	}
 };
 

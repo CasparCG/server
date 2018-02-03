@@ -54,7 +54,7 @@ struct image_producer : public core::frame_producer_base
 	const std::wstring							description_;
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
 	const uint32_t								length_;
-	core::draw_frame							frame_ = core::draw_frame::empty();
+	core::draw_frame							frame_;
 
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, uint32_t length)
 		: description_(description)
@@ -84,7 +84,7 @@ struct image_producer : public core::frame_producer_base
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
 		auto frame = frame_factory_->create_frame(this, desc);
 
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data().size(), frame.image_data().begin());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
 		frame_ = core::draw_frame(std::move(frame));
 	}
 

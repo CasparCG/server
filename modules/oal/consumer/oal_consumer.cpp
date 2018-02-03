@@ -26,6 +26,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/log.h>
 #include <common/utf.h>
+#include <common/timer.h>
 #include <common/env.h>
 #include <common/future.h>
 #include <common/param.h>

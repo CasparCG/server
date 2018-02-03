@@ -8,6 +8,7 @@
 
 #include <common/scope_exit.h>
 #include <common/except.h>
+#include <common/timer.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/frame/draw_frame.h>
@@ -60,9 +61,9 @@ const AVRational TIME_BASE_Q = { 1, AV_TIME_BASE };
 
 struct Frame
 {
-    core::draw_frame         frame = core::draw_frame::empty();
-    int64_t                  pts;
-    int64_t                  duration;
+    core::draw_frame frame;
+    int64_t          pts = AV_NOPTS_VALUE;
+    int64_t          duration = 0;
 };
 
 // TODO (fix) ts discontinuities
@@ -752,7 +753,7 @@ struct AVProducer::Impl
     std::condition_variable                         cond_;
 
     int64_t                                         frame_time_ = 0;
-    core::draw_frame                                frame_ = core::draw_frame::late();
+    core::draw_frame                                frame_;
 
     caspar::timer                                   tick_timer_;
 
@@ -1056,7 +1057,7 @@ public:
         {
             std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
-            if (!buffer_.empty() && (buffer_flush_ || frame_ == core::draw_frame::late())) {
+            if (!buffer_.empty() && (buffer_flush_ || !frame_)) {
                 frame_ = core::draw_frame::still(buffer_[0].frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration;
                 buffer_flush_ = false;
@@ -1076,7 +1077,7 @@ public:
 
             if (!buffer_eof_ && buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                return core::draw_frame::late();
+                return core::draw_frame{};
             }
 
             if (format_desc_.field_count == 2 && buffer_.size() >= 2) {

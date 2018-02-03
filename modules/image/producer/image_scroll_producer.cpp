@@ -347,7 +347,7 @@ struct image_scroll_producer : public core::frame_producer_base
 	core::draw_frame render_frame(bool allow_eof)
 	{
 		if(frames_.empty())
-			return core::draw_frame::empty();
+            return core::draw_frame{};
 
 		core::draw_frame result(get_visible());
 		auto& fill_translation = result.transform().image_transform.fill_translation;
@@ -355,7 +355,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		if (width_ == format_desc_.width)
 		{
 			if (static_cast<size_t>(std::abs(delta_)) >= height_ + format_desc_.height && allow_eof)
-				return core::draw_frame::empty();
+                return core::draw_frame{};
 
 			fill_translation[1] =
 				static_cast<double>(start_offset_y_) / static_cast<double>(format_desc_.height)
@@ -364,7 +364,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		else
 		{
 			if (static_cast<size_t>(std::abs(delta_)) >= width_ + format_desc_.width && allow_eof)
-				return core::draw_frame::empty();
+                return core::draw_frame{};
 
 			fill_translation[0] =
 				static_cast<double>(start_offset_x_) / static_cast<double>(format_desc_.width)
@@ -420,12 +420,9 @@ struct image_scroll_producer : public core::frame_producer_base
 			auto field1 = render_frame(true, true);
 			auto field2 = render_frame(true, false);
 
-			if (field1 != core::draw_frame::empty() && field2 == core::draw_frame::empty())
-			{
+			if (field1 && !field2) {
 				field2 = render_frame(false, true);
-			}
-			else
-			{
+			} else {
 				advance();
 			}
 

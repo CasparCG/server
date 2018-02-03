@@ -35,8 +35,6 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 
-typedef caspar::array<const int32_t> audio_buffer;
-
 class audio_mixer final : public frame_visitor
 {
 	audio_mixer(const audio_mixer&);
@@ -51,7 +49,7 @@ public:
 
 	// Methods
 
-	audio_buffer operator()(const struct video_format_desc& format_desc);
+	array<int32_t> operator()(const struct video_format_desc& format_desc);
 	void set_master_volume(float volume);
 	float get_master_volume();
 	monitor::subject& monitor_output();

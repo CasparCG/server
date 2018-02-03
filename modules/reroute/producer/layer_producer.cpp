@@ -26,8 +26,10 @@
 #include <core/consumer/write_frame_consumer.h>
 #include <core/consumer/output.h>
 #include <core/video_channel.h>
+#include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/frame_visitor.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/stage.h>
 
@@ -72,7 +74,7 @@ public:
 
 	core::draw_frame receive()
 	{
-		auto frame = core::draw_frame::late();
+        auto frame = core::draw_frame{};
         frame_buffer_.try_pop(frame);
 		return frame;
 	}
@@ -143,7 +145,6 @@ public:
 		: layer_(layer)
 		, consumer_(spl::make_shared<layer_consumer>(frames_delay))
 		, channel_(channel)
-		, last_frame_(core::draw_frame::late())
 	{
 		channel->stage().add_layer_consumer(this, layer_, consumer_);
 		double_framerate_ = false;
@@ -164,8 +165,7 @@ public:
 
 	core::draw_frame receive_impl() override
 	{
-		if (!frame_buffer_.empty())
-		{
+		if (!frame_buffer_.empty()) {
 			last_frame_ = frame_buffer_.front();
 			frame_buffer_.pop();
 			return last_frame_;
@@ -173,18 +173,21 @@ public:
 
 		auto channel = channel_.lock();
 
-		if (!channel)
-			return last_frame_;
+        if (!channel) {
+            return last_frame_;
+        }
 
 		auto consumer_frame = consumer_->receive();
-		if (consumer_frame == core::draw_frame::late())
-			return last_frame_;
+        if (!consumer_frame) {
+            return last_frame_;
+        }
 
 		auto actual_frames = extract_actual_frames(std::move(consumer_frame), channel->video_format_desc().field_mode);
 		double_framerate_ = actual_frames.size() == 2;
 
-		for (auto& frame : actual_frames)
-			frame_buffer_.push(std::move(frame));
+        for (auto& frame : actual_frames) {
+            frame_buffer_.push(std::move(frame));
+        }
 
 		return receive_impl();
 	}

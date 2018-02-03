@@ -23,11 +23,10 @@
 
 #include "../video_format.h"
 
-#include <cstddef>
 #include <vector>
 
 namespace caspar { namespace core {
-		
+
 enum class pixel_format
 {
 	gray = 0,
@@ -54,7 +53,7 @@ struct pixel_format_desc final
 		int size;
 		int stride;
 
-		plane() 
+		plane()
 			: linesize(0)
 			, width(0)
 			, height(0)
@@ -73,12 +72,14 @@ struct pixel_format_desc final
 		}
 	};
 
-	pixel_format_desc(pixel_format format = core::pixel_format::invalid) 
+    pixel_format_desc() = default;
+
+	pixel_format_desc(pixel_format format)
 		: format(format)
 	{
 	}
-	
-	pixel_format		format;
+
+	pixel_format        format = pixel_format::invalid;
 	std::vector<plane>	planes;
 };
 

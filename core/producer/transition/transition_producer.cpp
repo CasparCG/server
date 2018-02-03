@@ -71,24 +71,26 @@ public:
             return dest_producer_->receive();
         }
 
-		auto dest = draw_frame::empty();
-		auto source = draw_frame::empty();
+        auto dest = draw_frame{};
+        auto source = draw_frame{};
 
 		tbb::parallel_invoke(
 		[&]
 		{
 			dest = dest_producer_->receive();
-			if(dest == core::draw_frame::late())
-				dest = dest_producer_->last_frame();
+            if (!dest) {
+                dest = dest_producer_->last_frame();
+            }
 		},
 		[&]
 		{
 			source = source_producer_->receive();
-			if(source == core::draw_frame::late())
-				source = source_producer_->last_frame();
+            if (!source) {
+                source = source_producer_->last_frame();
+            }
 		});
 
-        if (dest == core::draw_frame::late()) {
+        if (!dest) {
             return source;
         }
 

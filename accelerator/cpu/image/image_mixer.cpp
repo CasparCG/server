@@ -167,7 +167,7 @@ public:
 
 		temp_buffers_.clear();
 
-		return make_ready_future(array<const std::uint8_t>(result.get(), format_desc.size, true, result));
+		return make_ready_future(array<const std::uint8_t>(result.get(), format_desc.size, result));
 	}
 
 private:
@@ -395,9 +395,9 @@ public:
 		for (auto& plane : desc.planes)
 		{
 			auto buf = spl::make_shared<buffer>(plane.size);
-			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, true, buf));
+			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, buf));
 		}
-		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc);
+        return core::mutable_frame(tag, std::move(buffers), array<int32_t>{}, desc);
 	}
 };
 

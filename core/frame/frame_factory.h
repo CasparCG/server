@@ -21,30 +21,24 @@
 
 #pragma once
 
-#include "frame.h"
-#include "../fwd.h"
-
-#include <common/memory.h>
-
 namespace caspar { namespace core {
 
-class frame_factory : boost::noncopyable
+class frame_factory
 {
-	frame_factory(const frame_factory&);
-	frame_factory& operator=(const frame_factory&);
 public:
 	// Static Members
 
 	// Constructors
 
-	frame_factory(){}
-	virtual ~frame_factory(){}
+    frame_factory() = default;
+    frame_factory& operator=(const frame_factory&) = delete;
+    virtual ~frame_factory() = default;
 
 	// Methods
 
-	virtual mutable_frame create_frame(
-			const void* video_stream_tag,
-			const pixel_format_desc& desc) = 0;
+    frame_factory(const frame_factory&) = delete;
+
+	virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
 	// Properties
 };
