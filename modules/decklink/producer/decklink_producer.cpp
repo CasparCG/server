@@ -45,6 +45,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
@@ -94,7 +95,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
-	core::draw_frame								last_frame_			= core::draw_frame::empty();
+	core::draw_frame								last_frame_;
 
     std::shared_ptr<SwsContext>                     sws_;
 
@@ -175,8 +176,7 @@ public:
 		if(!video)
 			return S_OK;
 
-		try
-		{
+		try {
 			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
@@ -201,28 +201,26 @@ public:
 
 			// Audio
 
-			std::shared_ptr<core::mutable_audio_buffer>	audio_buffer;
-			void*										audio_bytes		= nullptr;
+			std::shared_ptr<std::vector<int32_t>> audio_buffer;
+            void*								  audio_bytes = nullptr;
 
 			// It is assumed that audio is always equal or ahead of video.
-			if (audio && SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes)
-			{
+			if (audio && SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(audio_bytes);
 
-				audio_buffer = std::make_shared<core::mutable_audio_buffer>(
+				audio_buffer = std::make_shared<std::vector<int32_t>>(
 					audio_data,
 					audio_data + sample_frame_count * format_desc_.audio_channels);
-			}
-			else
-				audio_buffer = std::make_shared<core::mutable_audio_buffer>(audio_cadence_.front() * format_desc_.audio_channels, 0);
+            } else {
+                audio_buffer = std::make_shared<std::vector<int32_t>>(audio_cadence_.front() * format_desc_.audio_channels, 0);
+            }
 
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
 			sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);
-			if(!boost::range::equal(sync_buffer_, audio_cadence_))
-			{
+			if (!boost::range::equal(sync_buffer_, audio_cadence_)) {
 				CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: " << to_string(sync_buffer_);
 				return S_OK;
 			}
@@ -277,9 +275,8 @@ public:
                 return core::draw_frame(std::move(frame));
             }();
 
-            if (!frame_buffer_.try_push(frame))
-            {
-            	auto dummy = core::draw_frame::empty();
+            if (!frame_buffer_.try_push(frame)) {
+                auto dummy = core::draw_frame{};
             	frame_buffer_.try_pop(dummy);
 
             	frame_buffer_.try_push(frame);
@@ -292,9 +289,7 @@ public:
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 			monitor_subject_ << core::monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
-		}
-		catch(...)
-		{
+		} catch(...) {
 			exception_ = std::current_exception();
 			return E_FAIL;
 		}

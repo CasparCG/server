@@ -77,7 +77,6 @@ struct frame_producer_base::impl
 
 	impl(frame_producer_base& self)
 		: self_(self)
-		, last_frame_(draw_frame::empty())
 	{
 		frame_number_ = 0;
 		paused_ = false;
@@ -89,8 +88,9 @@ struct frame_producer_base::impl
 			return self_.last_frame();
 
 		auto frame = self_.receive_impl();
-		if(frame == draw_frame::late())
-			return self_.last_frame();
+        if (!frame) {
+            return self_.last_frame();
+        }
 
 		++frame_number_;
 
@@ -148,19 +148,20 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	class empty_frame_producer : public frame_producer
 	{
 	public:
-		empty_frame_producer(){}
-		draw_frame receive() override{return draw_frame::empty();}
-		void paused(bool value) override{}
-		uint32_t nb_frames() const override {return 0;}
-		std::wstring print() const override { return L"empty";}
-		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}
-		std::wstring name() const override {return L"empty";}
-		uint32_t frame_number() const override {return 0;}
-		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{
-			CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
-			return make_ready_future(std::wstring(L""));
-		}
-		draw_frame last_frame() {return draw_frame::empty();}
+        empty_frame_producer() {}
+        draw_frame receive() override { return draw_frame{}; }
+        void paused(bool value) override {}
+        uint32_t nb_frames() const override { return 0; }
+        std::wstring print() const override { return L"empty"; }
+        monitor::subject& monitor_output() override { static monitor::subject monitor_subject(""); return monitor_subject; }
+        std::wstring name() const override { return L"empty"; }
+        uint32_t frame_number() const override { return 0; }
+        std::future<std::wstring> call(const std::vector<std::wstring>& params) override
+        {
+            CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
+            return make_ready_future(std::wstring(L""));
+        }
+        draw_frame last_frame() { return draw_frame{}; }
 	};
 
 	static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();

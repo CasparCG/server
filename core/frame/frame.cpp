@@ -18,10 +18,10 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../StdAfx.h"
-
 #include "frame.h"
+
+#include "geometry.h"
+#include "pixel_format.h"
 
 #include <common/except.h>
 #include <common/array.h>
@@ -42,207 +42,151 @@ namespace caspar { namespace core {
 
 struct mutable_frame::impl : boost::noncopyable
 {
-	std::vector<array<std::uint8_t>>			buffers_;
-	core::mutable_audio_buffer					audio_data_;
-	const core::pixel_format_desc				desc_;
-	const void*									tag_;
-	core::frame_geometry						geometry_				= frame_geometry::get_default();
-	caspar::timer								since_created_timer_;
+    std::vector<array<std::uint8_t>>     image_data_;
+    array<std::int32_t>                  audio_data_;
+    const core::pixel_format_desc        desc_;
+    const void*                          tag_;
+    frame_geometry                       geometry_ = frame_geometry::get_default();
 
-	impl(
-			std::vector<array<std::uint8_t>> buffers,
-			mutable_audio_buffer audio_data,
-			const void* tag,
-			const core::pixel_format_desc& desc)
-		: buffers_(std::move(buffers))
+    impl(const void* tag,
+         std::vector<array<std::uint8_t>> image_data,
+         array<std::int32_t> audio_data,
+         const core::pixel_format_desc& desc)
+		: tag_(tag)
+        , image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
 		, desc_(desc)
-		, tag_(tag)
 	{
-		for (auto& buffer : buffers_)
-			if(!buffer.data())
-				CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("mutable_frame: null argument"));
 	}
 };
 
-mutable_frame::mutable_frame(
-		std::vector<array<std::uint8_t>> image_buffers,
-		mutable_audio_buffer audio_data,
-		const void* tag,
-		const core::pixel_format_desc& desc)
-	: impl_(new impl(std::move(image_buffers), std::move(audio_data), tag, desc)){}
-mutable_frame::~mutable_frame(){}
+mutable_frame::mutable_frame(const void* tag,
+                             std::vector<array<std::uint8_t>> image_data,
+                             array<int32_t> audio_data,
+                             const core::pixel_format_desc& desc)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
+{
+}
 mutable_frame::mutable_frame(mutable_frame&& other) : impl_(std::move(other.impl_)){}
+mutable_frame::~mutable_frame() {}
 mutable_frame& mutable_frame::operator=(mutable_frame&& other)
 {
 	impl_ = std::move(other.impl_);
 	return *this;
 }
-void mutable_frame::swap(mutable_frame& other){impl_.swap(other.impl_);}
-const core::pixel_format_desc& mutable_frame::pixel_format_desc() const{return impl_->desc_;}
-const array<std::uint8_t>& mutable_frame::image_data(std::size_t index) const{return impl_->buffers_.at(index);}
-const core::mutable_audio_buffer& mutable_frame::audio_data() const{return impl_->audio_data_;}
-array<std::uint8_t>& mutable_frame::image_data(std::size_t index){return impl_->buffers_.at(index);}
-core::mutable_audio_buffer& mutable_frame::audio_data(){return impl_->audio_data_;}
-std::size_t mutable_frame::width() const{return impl_->desc_.planes.at(0).width;}
-std::size_t mutable_frame::height() const{return impl_->desc_.planes.at(0).height;}
-const void* mutable_frame::stream_tag()const{return impl_->tag_;}
+void mutable_frame::swap(mutable_frame& other) { impl_.swap(other.impl_); }
+const core::pixel_format_desc& mutable_frame::pixel_format_desc() const { return impl_->desc_; }
+const array<std::uint8_t>& mutable_frame::image_data(std::size_t index) const { return impl_->image_data_.at(index); }
+const array<std::int32_t>& mutable_frame::audio_data() const { return impl_->audio_data_; }
+array<std::uint8_t>& mutable_frame::image_data(std::size_t index) { return impl_->image_data_.at(index); }
+array<std::int32_t>& mutable_frame::audio_data() { return impl_->audio_data_; }
+std::size_t mutable_frame::width() const { return impl_->desc_.planes.at(0).width; }
+std::size_t mutable_frame::height() const { return impl_->desc_.planes.at(0).height; }
+const void* mutable_frame::stream_tag()const { return impl_->tag_; }
 const frame_geometry& mutable_frame::geometry() const { return impl_->geometry_; }
-void mutable_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
-caspar::timer mutable_frame::since_created() const { return impl_->since_created_timer_; }
-
-const const_frame& const_frame::empty()
-{
-	static int dummy;
-	static const_frame empty(&dummy);
-	return empty;
-}
+frame_geometry& mutable_frame::geometry() { return impl_->geometry_; }
 
 struct const_frame::impl : boost::noncopyable
 {
-	mutable std::vector<std::shared_future<array<const std::uint8_t>>>	future_buffers_;
-	mutable core::audio_buffer											audio_data_;
-	const core::pixel_format_desc										desc_;
-	const void*															tag_;
-	core::frame_geometry												geometry_;
-	mutable std::atomic<int64_t>										recorded_age_;
-	std::shared_future<array<const std::uint8_t>>						key_only_on_demand_;
+    const void*                                  tag_ = nullptr;
+	const std::vector<array<const std::uint8_t>> image_data_;
+	const array<const std::int32_t>              audio_data_;
+	const core::pixel_format_desc                desc_ = pixel_format::invalid;
+	const frame_geometry                         geometry_ = frame_geometry::get_default();
 
 	impl(const void* tag)
-		: audio_data_(0, 0, true, 0)
-		, desc_(core::pixel_format::invalid)
-		, tag_(tag)
-		, geometry_(frame_geometry::get_default())
+		: tag_(tag)
 	{
 	}
 
-	impl(const impl& other)
-		: future_buffers_(other.future_buffers_)
-		, audio_data_(other.audio_data_)
-		, desc_(other.desc_)
-		, tag_(other.tag_)
-		, geometry_(other.geometry_)
-		, key_only_on_demand_(other.key_only_on_demand_)
-	{
-	}
-
-    impl(
-        std::shared_future<array<const std::uint8_t>> image,
-        audio_buffer audio_data,
-        const void* tag,
-        const core::pixel_format_desc& desc,
-        caspar::timer since_created_timer = caspar::timer())
-        : audio_data_(std::move(audio_data))
+    impl(const void* tag,
+         std::vector<array<const std::uint8_t>> image_data,
+         array<const std::int32_t> audio_data,
+         const core::pixel_format_desc& desc)
+        : tag_(tag)
+        , image_data_(std::move(image_data))
+        , audio_data_(std::move(audio_data))
         , desc_(desc)
-        , tag_(tag)
-        , geometry_(frame_geometry::get_default())
 	{
-		if (desc.format != core::pixel_format::bgra)
-			CASPAR_THROW_EXCEPTION(not_implemented());
-
-		future_buffers_.push_back(image);
-
-		key_only_on_demand_ = std::async(std::launch::deferred, [image]
-		{
-			auto fill	= image.get();
-			auto key	= std::vector<std::uint8_t>(fill.size());
-
-			aligned_memshfl(key.data(), fill.data(), fill.size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-
-			return array<const std::uint8_t>(key.data(), key.size(), false, std::move(key));
-		}).share();
 	}
 
-	impl(mutable_frame&& other)
-		: audio_data_(0, 0, true, 0) // Complex init done in body instead.
-		, desc_(other.pixel_format_desc())
-		, tag_(other.stream_tag())
-		, geometry_(other.geometry())
-	{
-		spl::shared_ptr<mutable_audio_buffer> shared_audio_data(new mutable_audio_buffer(std::move(other.audio_data())));
-		// pointer returned by vector::data() should be the same after move, but just to be safe.
-		audio_data_ = audio_buffer(shared_audio_data->data(), shared_audio_data->size(), true, std::move(shared_audio_data));
+    impl(const void* tag,
+         std::vector<array<std::uint8_t>>&& image_data,
+         array<const std::int32_t> audio_data,
+         const core::pixel_format_desc& desc)
+        : tag_(tag)
+        , image_data_(std::make_move_iterator(image_data.begin()), std::make_move_iterator(image_data.end()))
+        , audio_data_(std::move(audio_data))
+        , desc_(desc)
+    {
+    }
 
-		for (std::size_t n = 0; n < desc_.planes.size(); ++n)
-		{
-			future_buffers_.push_back(make_ready_future<array<const std::uint8_t>>(std::move(other.image_data(n))).share());
-		}
+    impl(mutable_frame&& other)
+        : tag_(other.impl_->tag_)
+        , image_data_(std::make_move_iterator(other.impl_->image_data_.begin()), std::make_move_iterator(other.impl_->image_data_.end()))
+        , audio_data_(std::move(other.impl_->audio_data_))
+        , desc_(std::move(other.impl_->desc_))
+        , geometry_(std::move(other.impl_->geometry_))
+	{
 	}
 
-	array<const std::uint8_t> image_data(int index) const
+	const array<const std::uint8_t>& image_data(std::size_t index) const
 	{
-		return tag_ != empty().stream_tag() ? future_buffers_.at(index).get() : array<const std::uint8_t>(nullptr, 0, true, 0);
-	}
-
-	spl::shared_ptr<impl> key_only() const
-	{
-		return spl::make_shared<impl>(key_only_on_demand_, audio_data_, tag_, desc_);
+        static auto empty = array<const std::uint8_t>{};
+		return tag_  ? image_data_.at(index) : empty;
 	}
 
 	std::size_t width() const
 	{
-		return tag_ != empty().stream_tag() ? desc_.planes.at(0).width : 0;
+		return tag_ ? desc_.planes.at(0).width : 0;
 	}
 
 	std::size_t height() const
 	{
-		return tag_ != empty().stream_tag() ? desc_.planes.at(0).height : 0;
+		return tag_ ? desc_.planes.at(0).height : 0;
 	}
 
     std::size_t size() const
     {
-        return tag_ != empty().stream_tag() ? desc_.planes.at(0).size : 0;
+        return tag_ ? desc_.planes.at(0).size : 0;
     }
 };
 
-const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
-const_frame::const_frame(
-		std::shared_future<array<const std::uint8_t>> image,
-		audio_buffer audio_data,
-		const void* tag,
-		const core::pixel_format_desc& desc)
-	: impl_(new impl(std::move(image), std::move(audio_data), tag, desc)){}
-const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))){}
-const_frame::~const_frame(){}
-const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)){}
-const_frame& const_frame::operator=(const_frame&& other)
+const_frame::const_frame(const void* tag) : impl_(new impl(tag)) {}
+const_frame::const_frame(const void* tag,
+                         std::vector<array<const std::uint8_t>> image_data,
+                         array<const std::int32_t> audio_data,
+                         const core::pixel_format_desc& desc)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
-	impl_ = std::move(other.impl_);
-	return *this;
 }
-const_frame::const_frame(const const_frame& other) : impl_(other.impl_){}
-const_frame::const_frame(const const_frame::impl& other) : impl_(new impl(other)) {}
-const_frame& const_frame::operator=(const const_frame& other)
+const_frame::const_frame(const void* tag,
+                          std::vector<array<std::uint8_t>>&& image_data,
+                          array<const std::int32_t> audio_data,
+                          const core::pixel_format_desc& desc)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
-	impl_ = other.impl_;
-	return *this;
 }
-bool const_frame::operator==(const const_frame& other){return impl_ == other.impl_;}
-bool const_frame::operator!=(const const_frame& other){return !(*this == other);}
-bool const_frame::operator<(const const_frame& other){return impl_ < other.impl_;}
-bool const_frame::operator>(const const_frame& other){return impl_ > other.impl_;}
-const core::pixel_format_desc& const_frame::pixel_format_desc()const{return impl_->desc_;}
-array<const std::uint8_t> const_frame::image_data(int index)const{return impl_->image_data(index);}
-const core::audio_buffer& const_frame::audio_data()const{return impl_->audio_data_;}
-std::size_t const_frame::width()const{return impl_->width();}
-std::size_t const_frame::height()const{return impl_->height();}
-std::size_t const_frame::size()const{return impl_->size();}
-const void* const_frame::stream_tag()const{return impl_->tag_;}
+const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)) {}
+const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))) {}
+const_frame::const_frame(const const_frame& other) : impl_(other.impl_) {}
+const_frame::~const_frame() {}
+const_frame& const_frame::operator=(const_frame other)
+{
+    impl_ = std::move(other.impl_);
+    return *this;
+}
+bool const_frame::operator==(const const_frame& other) const { return impl_ == other.impl_; }
+bool const_frame::operator!=(const const_frame& other) const { return !(*this == other); }
+bool const_frame::operator<(const const_frame& other) const { return impl_ < other.impl_; }
+bool const_frame::operator>(const const_frame& other) const { return impl_ > other.impl_; }
+const pixel_format_desc& const_frame::pixel_format_desc() const { return impl_->desc_; }
+const array<const std::uint8_t>& const_frame::image_data(std::size_t index) const { return impl_->image_data(index); }
+const array<const std::int32_t>& const_frame::audio_data()const { return impl_->audio_data_; }
+std::size_t const_frame::width()const { return impl_->width(); }
+std::size_t const_frame::height()const { return impl_->height(); }
+std::size_t const_frame::size()const { return impl_->size(); }
+const void* const_frame::stream_tag()const { return impl_->tag_; }
 const frame_geometry& const_frame::geometry() const { return impl_->geometry_; }
-const_frame const_frame::with_geometry(const frame_geometry& g) const
-{
-	const_frame copy(*impl_);
-
-	copy.impl_->geometry_ = g;
-
-	return copy;
-}
-const_frame const_frame::key_only() const
-{
-	auto result		= const_frame();
-	result.impl_	= impl_->key_only();
-
-	return result;
-}
-
+const_frame::operator bool() const { return impl_->tag_ != nullptr; }
 }}

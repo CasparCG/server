@@ -81,10 +81,6 @@ public:
 		{
 			try
 			{
-				detail::set_current_aspect_ratio(
-						static_cast<double>(format_desc.square_width)
-						/ static_cast<double>(format_desc.square_height));
-
 				for (auto& frame : frames)
 				{
 					frame.second.accept(audio_mixer_);
@@ -95,14 +91,16 @@ public:
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
 
-				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
-				desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-				return const_frame(std::move(image), std::move(audio), this, desc);
+				auto desc = pixel_format_desc(pixel_format::bgra);
+				desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+                std::vector<array<const uint8_t>> image_data;
+                image_data.emplace_back(std::move(image.get()));
+				return const_frame(this, std::move(image_data), std::move(audio), desc);
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				return const_frame::empty();
+                return const_frame{};
 			}
 		});
 
@@ -135,6 +133,6 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
-mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
+mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }
 }}

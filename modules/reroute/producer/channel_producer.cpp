@@ -152,7 +152,7 @@ public:
 
     core::draw_frame receive()
 	{
-		auto frame = core::draw_frame::late();
+        auto frame = core::draw_frame{};
         frame_buffer_.try_pop(frame);
 		return frame;
 	}

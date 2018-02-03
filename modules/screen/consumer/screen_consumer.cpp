@@ -196,7 +196,7 @@ public:
 	~screen_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(core::const_frame::empty());
+        frame_buffer_.try_push(core::const_frame{});
 		thread_.join();
 	}
 

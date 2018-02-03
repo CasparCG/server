@@ -42,9 +42,9 @@ namespace caspar { namespace core {
 
 struct audio_item
 {
-	const void*				tag				= nullptr;
-	audio_transform			transform;
-	audio_buffer			audio_data;
+	const void*          tag = nullptr;
+	audio_transform      transform;
+	array<const int32_t> audio_data;
 
 	audio_item()
 	{
@@ -62,9 +62,9 @@ typedef std::vector<double> audio_buffer_ps;
 
 struct audio_stream
 {
-	audio_transform							prev_transform;
-	audio_buffer_ps							audio_data;
-	bool									is_still			= false;
+	audio_transform  prev_transform;
+	audio_buffer_ps  audio_data;
+	bool             is_still = false;
 };
 
 struct audio_mixer::impl : boost::noncopyable
@@ -94,13 +94,13 @@ public:
 
 	void visit(const const_frame& frame)
 	{
-		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
+		if(transform_stack_.top().volume < 0.002 || !frame.audio_data())
 			return;
 
 		audio_item item;
-		item.tag			= frame.stream_tag();
-		item.transform		= transform_stack_.top();
-		item.audio_data		= frame.audio_data();
+		item.tag        = frame.stream_tag();
+		item.transform  = transform_stack_.top();
+		item.audio_data = frame.audio_data();
 
 		if(item.transform.is_still)
 			item.transform.volume = 0.0;
@@ -123,7 +123,7 @@ public:
 		return master_volume_;
 	}
 
-	audio_buffer mix(const video_format_desc& format_desc)
+	array<int32_t> mix(const video_format_desc& format_desc)
 	{
 		if (format_desc_ != format_desc)
 		{
@@ -159,7 +159,7 @@ public:
 			}
 
 			// Skip it if there is no existing audio stream and item has no audio-data.
-			if(!found && item.audio_data.empty())
+			if(!found && !item.audio_data)
 				continue;
 
 			const double prev_volume = prev_transform.volume * previous_master_volume_;
@@ -205,8 +205,7 @@ public:
 
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-		auto result_owner = spl::make_shared<mutable_audio_buffer>();
-		auto& result = *result_owner;
+        auto result = std::vector<int32_t>{};
 		result.reserve(result_ps.size());
 		const int32_t min_amplitude = std::numeric_limits<int32_t>::min();
 		const int32_t max_amplitude = std::numeric_limits<int32_t>::max();
@@ -256,7 +255,7 @@ public:
 
 		graph_->set_value("volume", static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
 
-		return caspar::array<int32_t>(result.data(), result.size(), true, std::move(result_owner));
+		return array<int32_t>(std::move(result));
 	}
 
 	size_t audio_size(size_t num_samples) const
@@ -271,7 +270,7 @@ void audio_mixer::visit(const const_frame& frame){impl_->visit(frame);}
 void audio_mixer::pop(){impl_->pop();}
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
-audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){ return impl_->mix(format_desc); }
+array<int32_t> audio_mixer::operator()(const video_format_desc& format_desc){ return impl_->mix(format_desc); }
 monitor::subject& audio_mixer::monitor_output(){ return impl_->monitor_subject_; }
 
 }}

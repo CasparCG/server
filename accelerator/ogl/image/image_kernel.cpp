@@ -42,6 +42,7 @@
 #include <GL/glew.h>
 
 #include <cmath>
+#include <array>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -174,7 +175,7 @@ struct image_kernel::impl
 		pers.lr[0] -= 1.0;
 		pers.lr[1] -= 1.0;
 		pers.ll[1] -= 1.0;
-		std::vector<boost::array<double, 2>> pers_corners = { pers.ul, pers.ur, pers.lr, pers.ll };
+		std::vector<std::array<double, 2>> pers_corners = { pers.ul, pers.ur, pers.lr, pers.ll };
 
 		auto do_crop = [&](core::frame_geometry::coord& coord)
 		{
@@ -192,7 +193,7 @@ struct image_kernel::impl
 			coord.texture_y = std::max(coord.texture_y, crop.ul[1]);
 			coord.texture_y = std::min(coord.texture_y, crop.lr[1]);
 		};
-		auto do_perspective = [=](core::frame_geometry::coord& coord, const boost::array<double, 2>& pers_corner)
+		auto do_perspective = [=](core::frame_geometry::coord& coord, const std::array<double, 2>& pers_corner)
 		{
             if (!is_default_geometry) {
                 // TODO implement support for non-default geometry.
