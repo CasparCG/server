@@ -56,7 +56,7 @@ core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, st
 
     if (audio) {
         // TODO This is a bit of a hack
-        frame.audio_data() = core::mutable_audio_buffer(audio->nb_samples * 8, 0);
+        frame.audio_data() = std::vector<int32_t>(audio->nb_samples * 8, 0);
         auto dst = frame.audio_data().data();
         auto src = reinterpret_cast<int32_t*>(audio->data[0]);
         for (auto i = 0; i < audio->nb_samples; ++i) {
@@ -88,7 +88,7 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
     case AV_PIX_FMT_YUVA420P:    return core::pixel_format::ycbcra;
     case AV_PIX_FMT_YUVA422P:    return core::pixel_format::ycbcra;
     case AV_PIX_FMT_YUVA444P:    return core::pixel_format::ycbcra;
-    default:                                    return core::pixel_format::invalid;
+    default:                     return core::pixel_format::invalid;
     }
 }
 

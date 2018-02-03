@@ -105,8 +105,6 @@ public:
 		: url_(url)
 		, frame_factory_(std::move(frame_factory))
 		, format_desc_(format_desc)
-		, last_frame_(core::draw_frame::empty())
-		, last_progressive_frame_(core::draw_frame::empty())
 		, executor_(L"html_producer")
 	{
 		graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -162,7 +160,7 @@ public:
 		// This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon closing
 		return true;
 	}
-	
+
 
 	CefRefPtr<CefBrowserHost> get_browser_host() const
 	{
@@ -226,7 +224,7 @@ private:
 		pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
 
 		auto frame = frame_factory_->create_frame(this, pixel_desc);
-		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
+		std::memcpy(frame.image_data(0).begin(), buffer, width * height * 4);
 
 		{
             std::lock_guard<std::mutex> lock(frames_mutex_);
@@ -558,13 +556,13 @@ public:
 			if (client_->is_removed())
 			{
 				client_ = nullptr;
-				return core::draw_frame::empty();
+                return core::draw_frame{};
 			}
 
 			return client_->receive();
 		}
 
-		return core::draw_frame::empty();
+        return core::draw_frame{};
 	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override

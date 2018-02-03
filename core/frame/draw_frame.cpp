@@ -18,139 +18,139 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../StdAfx.h"
-
 #include "draw_frame.h"
+
 #include "frame.h"
 #include "frame_transform.h"
+#include "frame_visitor.h"
+
+#include <boost/variant.hpp>
 
 namespace caspar { namespace core {
 
-enum class tags
-{
-	frame_tag = 0,
-	empty_tag,
-	eof_tag,
-	late_tag
-};
-
 struct draw_frame::impl
 {
-	std::shared_ptr<const_frame>	frame_;
-	std::vector<draw_frame>			frames_;
-	core::frame_transform			frame_transform_;
+    boost::variant<boost::blank, const_frame, std::vector<draw_frame>> frame_;
+	frame_transform transform_;
 public:
 
 	impl()
 	{
 	}
 
-	impl(const_frame&& frame)
-		: frame_(new const_frame(std::move(frame)))
+	impl(const_frame frame)
+		: frame_(std::move(frame))
 	{
-	}
+    }
 
-	impl(mutable_frame&& frame)
-		: frame_(new const_frame(std::move(frame)))
-	{
-	}
+    impl(std::vector<draw_frame> frames)
+        : frame_(std::move(frames))
+    {
+    }
 
-	impl(std::vector<draw_frame> frames)
-		: frames_(std::move(frames))
-	{
-	}
+    impl(const impl& other)
+        : frame_(other.frame_)
+        , transform_(other.transform_)
+    {
+    }
 
-	impl(const impl& other)
-		: frames_(other.frames_)
-		, frame_(other.frame_)
-		, frame_transform_(other.frame_transform_)
-	{
-	}
+    void accept(frame_visitor& visitor) const
+    {
+        struct accept_visitor : public boost::static_visitor<void>
+        {
+            frame_visitor& visitor;
 
-	void accept(frame_visitor& visitor) const
-	{
-		visitor.push(frame_transform_);
-		if(frame_)
-		{
-			visitor.visit(*frame_);
-		}
-		else
-		{
-			for (auto& frame : frames_)
-				frame.accept(visitor);
-		}
-		visitor.pop();
-	}
+            accept_visitor(frame_visitor& visitor)
+                : visitor(visitor)
+            {
+            }
 
-	bool operator==(const impl& other)
-	{
-		return	frames_				== other.frames_ &&
-				frame_				== other.frame_ &&
-				frame_transform_	== other.frame_transform_;
-	}
+            void operator()(boost::blank) const
+            {
+            }
+
+            void operator()(const const_frame& frame) const
+            {
+                visitor.visit(frame);
+            }
+
+            void operator()(const std::vector<draw_frame>& frames) const
+            {
+                for (auto& frame : frames) {
+                    frame.accept(visitor);
+                }
+            }
+        };
+        visitor.push(transform_);
+        boost::apply_visitor(accept_visitor{ visitor }, frame_);
+        visitor.pop();
+    }
+
+    bool operator==(const impl& other)
+    {
+        return frame_ == other.frame_ && transform_ == other.transform_;
+    }
 };
 
-draw_frame::draw_frame() : impl_(new impl()){}
-draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
-draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
-draw_frame::draw_frame(const_frame&& frame)  : impl_(new impl(std::move(frame))){}
-draw_frame::draw_frame(mutable_frame&& frame)  : impl_(new impl(std::move(frame))){}
-draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)){}
-draw_frame::~draw_frame(){}
+draw_frame::draw_frame() : impl_(new impl()) {}
+draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)) {}
+draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)) {}
+draw_frame::draw_frame(const_frame&& frame) : impl_(new impl(std::move(frame))) {}
+draw_frame::draw_frame(mutable_frame&& frame) : impl_(new impl(std::move(frame))) {}
+draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)) {}
+draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
-	other.swap(*this);
-	return *this;
+    other.swap(*this);
+    return *this;
 }
-void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
+void draw_frame::swap(draw_frame& other) { impl_.swap(other.impl_); }
+const frame_transform& draw_frame::transform() const { return impl_->transform_; }
+frame_transform& draw_frame::transform() { return impl_->transform_; }
+void draw_frame::accept(frame_visitor& visitor) const { impl_->accept(visitor); }
+bool draw_frame::operator==(const draw_frame& other)const { return *impl_ == *other.impl_; }
+bool draw_frame::operator!=(const draw_frame& other)const { return !(*this == other); }
 
-const core::frame_transform& draw_frame::transform() const { return impl_->frame_transform_;}
-core::frame_transform& draw_frame::transform() { return impl_->frame_transform_;}
-void draw_frame::accept(frame_visitor& visitor) const{impl_->accept(visitor);}
-bool draw_frame::operator==(const draw_frame& other)const{return *impl_ == *other.impl_;}
-bool draw_frame::operator!=(const draw_frame& other)const{return !(*this == other);}
-
-draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode)
+draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, field_mode mode)
 {
-	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
-		return draw_frame::empty();
+    if (!frame1 && !frame2) {
+        return draw_frame{};
+    }
 
-	if(frame1 == frame2 || mode == field_mode::progressive)
-		return frame2;
+    if (frame1 == frame2 || mode == field_mode::progressive)
+        return frame2;
 
-	if(mode == field_mode::upper)
-	{
-		frame1.transform().image_transform.field_mode = field_mode::upper;
-		frame2.transform().image_transform.field_mode = field_mode::lower;
-	}
-	else
-	{
-		frame1.transform().image_transform.field_mode = field_mode::lower;
-		frame2.transform().image_transform.field_mode = field_mode::upper;
-	}
+    if (mode == field_mode::upper) {
+        frame1.transform().image_transform.field_mode = field_mode::upper;
+        frame2.transform().image_transform.field_mode = field_mode::lower;
+    } else {
+        frame1.transform().image_transform.field_mode = field_mode::lower;
+        frame2.transform().image_transform.field_mode = field_mode::upper;
+    }
 
-	std::vector<draw_frame> frames;
-	frames.push_back(std::move(frame1));
-	frames.push_back(std::move(frame2));
-	return draw_frame(std::move(frames));
+    std::vector<draw_frame> frames;
+    frames.push_back(std::move(frame1));
+    frames.push_back(std::move(frame2));
+    return draw_frame(std::move(frames));
 }
 
 draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 {
-	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
-		return draw_frame::empty();
+    if (!frame1 && !frame2) {
+        return draw_frame{};
+    }
 
-	std::vector<draw_frame> frames;
-	frames.push_back(std::move(frame1));
-	frames.push_back(std::move(frame2));
-	return draw_frame(std::move(frames));
+    std::vector<draw_frame> frames;
+    frames.push_back(std::move(frame1));
+    frames.push_back(std::move(frame2));
+    return draw_frame(std::move(frames));
 }
 
 draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
 {
-	if(fill == draw_frame::empty() || key == draw_frame::empty())
-		return draw_frame::empty();
+    if (!fill || !key) {
+        return draw_frame{};
+    }
 
 	std::vector<draw_frame> frames;
 	key.transform().image_transform.is_key = true;
@@ -166,25 +166,15 @@ draw_frame draw_frame::push(draw_frame frame)
 	return draw_frame(std::move(frames));
 }
 
-draw_frame eof_frame(const_frame(0));
-draw_frame empty_frame(const_frame(0));
-draw_frame late_frame(const_frame(0));
-
 draw_frame draw_frame::still(draw_frame frame)
 {
 	frame.transform().audio_transform.is_still = true;
 	return frame;
 }
 
-const draw_frame& draw_frame::empty()
+draw_frame::operator bool() const
 {
-	return empty_frame;
+    return impl_->frame_.which() != 0;
 }
-
-const draw_frame& draw_frame::late()
-{
-	return late_frame;
-}
-
 
 }}

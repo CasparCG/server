@@ -56,7 +56,7 @@ void write_cropped_png(
 {
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(width, height, 32), FreeImage_Unload);
 	image_view<bgra_pixel> destination_view(FreeImage_GetBits(bitmap.get()), width, height);
-	image_view<bgra_pixel> complete_frame(const_cast<uint8_t*>(frame.image_data().begin()), format_desc.width, format_desc.height);
+	image_view<bgra_pixel> complete_frame(const_cast<uint8_t*>(frame.image_data(0).begin()), format_desc.width, format_desc.height);
 	auto thumbnail_view = complete_frame.subview(0, 0, width, height);
 
 	std::copy(thumbnail_view.begin(), thumbnail_view.end(), destination_view.begin());
@@ -101,7 +101,7 @@ public:
 					filename2 = env::media_folder() + filename2 + L".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
-				std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
+				std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data(0).begin(), frame.image_data(0).size());
 
 				image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), static_cast<int>(frame.width()), static_cast<int>(frame.height()));
 				unmultiply(original_view);

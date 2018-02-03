@@ -18,13 +18,9 @@
 *
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
-
-
-#include "../StdAfx.h"
+#include "geometry.h"
 
 #include <common/except.h>
-
-#include "geometry.h"
 
 namespace caspar { namespace core {
 

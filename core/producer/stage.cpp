@@ -86,7 +86,7 @@ public:
 				for (auto& layer : layers_)
 				{
 					// Prevent race conditions in parallel for each later
-					frames[layer.first] = draw_frame::empty();
+                    frames[layer.first];
 					tweens_[layer.first];
 					layer_consumers_[layer.first];
 

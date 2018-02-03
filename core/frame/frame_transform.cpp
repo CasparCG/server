@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../StdAfx.h"
-
 #include "frame_transform.h"
 
 #include <boost/range/algorithm/equal.hpp>
@@ -48,7 +45,7 @@ void transform_corners(corners& self, const corners& other)
 	self.ll[0] += other.ll[0];
 	self.ll[1] *= other.ll[1];
 
-	// TODO: figure out the math to compose perspective transforms correctly.
+	// TODO (fix) figure out the math to compose perspective transforms correctly.
 }
 
 image_transform& image_transform::operator*=(const image_transform &other)
@@ -58,12 +55,10 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	contrast				*= other.contrast;
 	saturation				*= other.saturation;
 
-	// TODO: can this be done in any way without knowing the aspect ratio of the
-	// actual video mode? Thread local to the rescue
-	auto aspect_ratio		 = detail::get_current_aspect_ratio();
-	aspect_ratio			*= fill_scale[0] / fill_scale[1];
+	// TODO (fix)
+    auto aspect_ratio = 1.0;
 
-	boost::array<double, 2> rotated;
+	std::array<double, 2> rotated;
 
 	auto orig_x				 = other.fill_translation[0];
 	auto orig_y				 = other.fill_translation[1] / aspect_ratio;
@@ -257,8 +252,8 @@ audio_transform audio_transform::operator*(const audio_transform &other) const
 audio_transform audio_transform::tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener& tween)
 {
 	audio_transform result;
-	result.is_still			= source.is_still | dest.is_still;
-	result.volume			= do_tween(time, source.volume,				dest.volume,			duration, tween);
+	result.is_still = source.is_still | dest.is_still;
+	result.volume = do_tween(time, source.volume, dest.volume, duration, tween);
 
 	return result;
 }
@@ -300,8 +295,9 @@ frame_transform frame_transform::tween(double time, const frame_transform& sourc
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 {
-	return	lhs.image_transform == rhs.image_transform &&
-			lhs.audio_transform == rhs.audio_transform;
+	return
+        lhs.image_transform == rhs.image_transform &&
+		lhs.audio_transform == rhs.audio_transform;
 }
 
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
@@ -309,31 +305,41 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 	return !(lhs == rhs);
 }
 
-
-boost::optional<core::chroma::legacy_type> get_chroma_mode(const std::wstring& str)
+tweened_transform::tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
+    : source_(source)
+    , dest_(dest)
+    , duration_(duration)
+    , tweener_(tween)
 {
-	if (boost::iequals(str, L"none"))
-		return core::chroma::legacy_type::none;
-	else if (boost::iequals(str, L"green"))
-		return core::chroma::legacy_type::green;
-	else if (boost::iequals(str, L"blue"))
-		return core::chroma::legacy_type::blue;
-	else
-		return boost::none;
 }
 
-thread_local double aspect_ratio = 1.0;
-
-namespace detail {
-void set_current_aspect_ratio(double value)
+const frame_transform& tweened_transform::dest() const
 {
-    aspect_ratio = value;
+    return dest_;
 }
 
-double get_current_aspect_ratio()
+frame_transform tweened_transform::fetch()
 {
-    return aspect_ratio;
+    return time_ == duration_ ? dest_ : frame_transform::tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
 }
+
+frame_transform tweened_transform::fetch_and_tick(int num)
+{
+    time_ = std::min(time_ + num, duration_);
+    return fetch();
+}
+
+boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
+{
+	if (boost::iequals(str, L"none")) {
+		return chroma::legacy_type::none;
+    }  else if (boost::iequals(str, L"green")) {
+		return chroma::legacy_type::green;
+    }  else if (boost::iequals(str, L"blue")) {
+		return chroma::legacy_type::blue;
+    }  else {
+        return boost::none;
+    }
 }
 
 }}

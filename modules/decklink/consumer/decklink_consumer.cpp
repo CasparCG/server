@@ -199,12 +199,12 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
 	{
 		try {
-			if (static_cast<int>(frame_.image_data().size()) != format_desc_.size) {
+			if (static_cast<int>(frame_.image_data(0).size()) != format_desc_.size) {
 				std::memset(data_, 0, format_desc_.size);
 			} else if(key_only_) {
-				aligned_memshfl(data_, frame_.image_data().begin(), format_desc_.size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(data_, frame_.image_data(0).begin(), format_desc_.size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			} else {
-				std::memcpy(data_, frame_.image_data().begin(), format_desc_.size);
+				std::memcpy(data_, frame_.image_data(0).begin(), format_desc_.size);
 			}
 			*buffer = data_;
 		} catch(...) {
@@ -220,7 +220,7 @@ public:
 
 	// decklink_frame
 
-	const core::audio_buffer& audio_data()
+	const array<const std::int32_t>& audio_data()
 	{
 		return frame_.audio_data();
 	}
@@ -378,15 +378,15 @@ public:
 		for (int n = 0; n < buffer_size_; ++n)
 		{
 			if (config.embedded_audio)
-				schedule_next_audio(core::mutable_audio_buffer(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
+				schedule_next_audio(std::vector<int32_t>(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
 
-			schedule_next_video(core::const_frame::empty());
+            schedule_next_video(core::const_frame{});
 		}
 
 		if (config.embedded_audio)
 		{
 			// Preroll one extra frame worth of audio
-			schedule_next_audio(core::mutable_audio_buffer(format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
+			schedule_next_audio(std::vector<int32_t>(format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
 			output_->EndAudioPreroll();
 		}
 
@@ -396,7 +396,7 @@ public:
 	~decklink_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(core::const_frame::empty());
+        frame_buffer_.try_push(core::const_frame{});
 
 		if(output_ != nullptr)
 		{
@@ -494,7 +494,7 @@ public:
 				graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
 			}
 
-			auto frame = core::const_frame::empty();
+            auto frame = core::const_frame{};
 
 			if (!frame_buffer_.try_pop(frame)) {
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");

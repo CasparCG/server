@@ -221,7 +221,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		auto buf = create_buffer(size, true);
         auto ptr = reinterpret_cast<uint8_t*>(buf->data());
-		return array<uint8_t>(ptr, buf->size(), false, buf);
+		return array<uint8_t>(ptr, buf->size(), buf);
 	}
 
 	std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride)
@@ -280,7 +280,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto ptr = reinterpret_cast<uint8_t*>(buf->data());
             auto size = buf->size();
-            return array<const uint8_t>(ptr, size, true, std::move(buf));
+            return array<const uint8_t>(ptr, size, std::move(buf));
         });
 	}
 };

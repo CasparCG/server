@@ -25,7 +25,6 @@
 #include <atomic>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/array.hpp>
 #include <boost/chrono/duration.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/core/noncopyable.hpp>

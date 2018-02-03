@@ -40,8 +40,8 @@ class separated_producer : public frame_producer_base
 
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
-	draw_frame						fill_						= core::draw_frame::late();
-	draw_frame						key_						= core::draw_frame::late();
+	draw_frame						fill_;
+	draw_frame						key_;
 
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
@@ -61,24 +61,27 @@ public:
 	draw_frame receive_impl() override
 	{
 		tbb::parallel_invoke(
-		[&]
-		{
-			if(fill_ == core::draw_frame::late())
-				fill_ = fill_producer_->receive();
-		},
-		[&]
-		{
-			if(key_ == core::draw_frame::late())
-				key_ = key_producer_->receive();
-		});
+		    [&]
+		    {
+                if (!fill_) {
+                    fill_ = fill_producer_->receive();
+                }
+		    },
+		    [&]
+		    {
+                if (!key_) {
+                    key_ = key_producer_->receive();
+                }
+		    });
 
-		if(fill_ == core::draw_frame::late() || key_ == core::draw_frame::late()) // One of the producers is lagging, keep them in sync.
-			return core::draw_frame::late();
+        if (!fill_ || !key_) {
+            return core::draw_frame{};
+        }
 
 		auto frame = draw_frame::mask(fill_, key_);
 
-		fill_ = draw_frame::late();
-		key_  = draw_frame::late();
+        fill_ = draw_frame{};
+        key_ = draw_frame{};
 
 		return frame;
 	}

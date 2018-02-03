@@ -42,6 +42,7 @@
 
 #include <common/env.h>
 #include <common/executor.h>
+#include <common/timer.h>
 #include <common/future.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
@@ -186,7 +187,7 @@ class flash_renderer
 	const std::shared_ptr<core::frame_factory>		frame_factory_;
 
 	CComObject<caspar::flash::FlashAxContainer>*	ax_					= nullptr;
-	core::draw_frame								head_				= core::draw_frame::late();
+	core::draw_frame								head_;
 	bitmap											bmp_				{ width_, height_ };
 	prec_timer										timer_;
 	caspar::timer									tick_timer_;
@@ -277,7 +278,7 @@ public:
 			return head_;
 
 		if (is_empty())
-			return core::draw_frame::empty();
+            return core::draw_frame{};
 
 		if (sync > 0.00001)
 			timer_.tick(frame_time*sync); // This will block the thread.
@@ -351,7 +352,7 @@ struct flash_producer : public core::frame_producer_base
 	std::queue<core::draw_frame>					frame_buffer_;
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
 
-	core::draw_frame								last_frame_			= core::draw_frame::empty();
+	core::draw_frame								last_frame_;
 
 	std::unique_ptr<flash_renderer>					renderer_;
 	std::atomic<bool>								has_renderer_;
@@ -524,16 +525,14 @@ public:
 	bool next(bool allow_faster_rendering)
 	{
 		if (!renderer_)
-			frame_buffer_.push(core::draw_frame::empty());
+            frame_buffer_.push(core::draw_frame{});
 
 		if (frame_buffer_.empty())
 		{
 			if (abs(renderer_->fps() / 2.0 - format_desc_.fps) < 2.0) // flash == 2 * format -> interlace
 			{
 				auto frame1 = render_frame(allow_faster_rendering);
-
-				if (frame1 != core::draw_frame::late())
-				{
+				if (frame1)	{
 					auto frame2 = render_frame(allow_faster_rendering);
 					frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode));
 				}
@@ -541,9 +540,7 @@ public:
 			else if (abs(renderer_->fps() - format_desc_.fps / 2.0) < 2.0) // format == 2 * flash -> duplicate
 			{
 				auto frame = render_frame(allow_faster_rendering);
-
-				if (frame != core::draw_frame::late())
-				{
+				if (frame) {
 					frame_buffer_.push(frame);
 					frame_buffer_.push(frame);
 				}
@@ -551,9 +548,9 @@ public:
 			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
 			{
 				auto frame = render_frame(allow_faster_rendering);
-
-				if (frame != core::draw_frame::late())
-					frame_buffer_.push(frame);
+                if (frame) {
+                   frame_buffer_.push(frame);
+                }
 			}
 
 			fps_ = static_cast<int>(renderer_->fps() * 100.0);

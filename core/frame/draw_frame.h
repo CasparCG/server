@@ -18,14 +18,9 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
 #pragma once
 
-#include "frame_visitor.h"
-#include "../fwd.h"
-
-#include <common/memory.h>
-
+#include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -35,25 +30,22 @@ class draw_frame final
 public:
 	// Static Members
 
-	static draw_frame interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode);
+	static draw_frame interlace(draw_frame frame1, draw_frame frame2, enum class field_mode mode);
 	static draw_frame over(draw_frame frame1, draw_frame frame2);
 	static draw_frame mask(draw_frame fill, draw_frame key);
 	static draw_frame still(draw_frame frame);
 	static draw_frame push(draw_frame frame);
 
-	static const draw_frame& empty();
-	static const draw_frame& late();
-
 	// Constructors
 
-	draw_frame();
+    draw_frame();
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);
-	explicit draw_frame(const_frame&& frame);
-	explicit draw_frame(mutable_frame&& frame);
-	explicit draw_frame(std::vector<draw_frame> frames);
+	draw_frame(class const_frame&& frame);
+	draw_frame(class mutable_frame&& frame);
+	draw_frame(std::vector<draw_frame> frames);
 
-	~draw_frame();
+    ~draw_frame();
 
 	// Methods
 
@@ -61,19 +53,21 @@ public:
 
 	void swap(draw_frame& other);
 
-	void accept(frame_visitor& visitor) const;
+	void accept(class frame_visitor& visitor) const;
 
 	bool operator==(const draw_frame& other) const;
 	bool operator!=(const draw_frame& other) const;
 
 	// Properties
 
-	const core::frame_transform&	transform() const;
-	core::frame_transform&			transform();
+	const struct frame_transform& transform() const;
+    struct frame_transform& transform();
+
+    explicit operator bool() const;
 
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::shared_ptr<impl> impl_;
 };
 
 
