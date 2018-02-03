@@ -37,8 +37,6 @@
 #include <common/param.h>
 #include <common/scope_exit.h>
 
-//#include <windows.h>
-
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
