@@ -1,10 +1,11 @@
 #pragma once
 
+#include <common/array.h>
+
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>
-
 #include <core/frame/frame.h>
-#include <core/frame/frame_visitor.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 #include <memory>
@@ -20,9 +21,13 @@ public:
 	// Constructors
 
 	image_mixer(int channel_id);
+    image_mixer(const image_mixer&) = delete;
+
 	~image_mixer();
 
 	// Methods
+
+    image_mixer& operator=(const image_mixer&) = delete;
 
 	virtual void push(const core::frame_transform& frame);
 	virtual void visit(const core::const_frame& frame);

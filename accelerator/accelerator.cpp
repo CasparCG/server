@@ -27,29 +27,27 @@ struct accelerator::impl
 
 	std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id)
 	{
-		try
-		{
-			if(path_ == L"gpu" || path_ == L"ogl" || path_ == L"auto" || path_ == L"default")
-			{
+		try	{
+			if (path_ == L"gpu" || path_ == L"ogl" || path_ == L"auto" || path_ == L"default") {
 				std::lock_guard<std::mutex> lock(mutex_);
 
-				if(!ogl_device_)
-					ogl_device_.reset(new ogl::device());
+                if (!ogl_device_) {
+                    ogl_device_.reset(new ogl::device());
+                }
 
-				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(spl::make_shared_ptr(ogl_device_), channel_id));
+				return std::make_unique<ogl::image_mixer>(spl::make_shared_ptr(ogl_device_), channel_id);
 			}
+		} catch(...) {
+            if (path_ == L"gpu" || path_ == L"ogl") {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
 		}
-		catch(...)
-		{
-			if(path_ == L"gpu" || path_ == L"ogl")
-				CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		return std::unique_ptr<core::image_mixer>(new cpu::image_mixer(channel_id));
+		return std::make_unique<cpu::image_mixer>(channel_id);
 	}
 };
 
 accelerator::accelerator(const std::wstring& path)
-	: impl_(new impl(path))
+	: impl_(std::make_unique<impl>(path))
 {
 }
 
