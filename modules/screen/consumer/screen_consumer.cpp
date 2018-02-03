@@ -50,7 +50,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/parallel_for.h>
 
 #include <atomic>
 #include <algorithm>
