@@ -42,15 +42,12 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/interaction/interaction_sink.h>
 
-#include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
 
-#include <atomic>
-#include <algorithm>
 #include <vector>
 
 namespace caspar { namespace screen {
@@ -110,7 +107,6 @@ struct screen_consumer : boost::noncopyable
 
 	sf::Window											window_;
 	std::atomic<bool>									polling_event_;
-	std::int64_t										pts_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										perf_timer_;
@@ -132,7 +128,6 @@ public:
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
-		, pts_(0)
 		, sink_(sink)
 	{
 		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3) {
