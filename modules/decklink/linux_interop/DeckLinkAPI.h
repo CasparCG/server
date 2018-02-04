@@ -838,7 +838,6 @@ class IDeckLinkDiscovery : public IUnknown
 
 extern "C"
 {
-
     IDeckLinkIterator*              CreateDeckLinkIteratorInstance(void);
     IDeckLinkDiscovery*             CreateDeckLinkDiscoveryInstance(void);
     IDeckLinkAPIInformation*        CreateDeckLinkAPIInformationInstance(void);

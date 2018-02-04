@@ -770,7 +770,6 @@ std::wstring mixer_chroma_command(command_context& ctx)
     auto legacy_mode = core::get_chroma_mode(ctx.parameters.at(0));
 
     if (legacy_mode) {
-
         duration = ctx.parameters.size() > 4 ? boost::lexical_cast<int>(ctx.parameters.at(4)) : 0;
         tween    = ctx.parameters.size() > 5 ? ctx.parameters.at(5) : L"linear";
 
