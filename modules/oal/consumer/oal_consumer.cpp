@@ -1,199 +1,191 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
-*
-* This file is part of CasparCG (www.casparcg.com).
-*
-* CasparCG is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* CasparCG is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
-*
-* Author: Robert Nagy, ronag89@gmail.com
-*/
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Robert Nagy, ronag89@gmail.com
+ */
 
 #include "oal_consumer.h"
 
+#include <common/diagnostics/graph.h>
+#include <common/env.h>
 #include <common/except.h>
 #include <common/executor.h>
-#include <common/diagnostics/graph.h>
-#include <common/log.h>
-#include <common/utf.h>
-#include <common/timer.h>
-#include <common/env.h>
 #include <common/future.h>
+#include <common/log.h>
 #include <common/param.h>
+#include <common/timer.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
-#include <core/mixer/audio/audio_util.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
 
 #if defined(_MSC_VER)
-#pragma warning (push)
-#pragma warning (disable : 4244)
+#pragma warning(push)
+#pragma warning(disable : 4244)
 #endif
 extern "C"
 {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
-#include <libswresample/swresample.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/channel_layout.h>
+#include <libswresample/swresample.h>
 }
 #if defined(_MSC_VER)
-#pragma warning (pop)
+#pragma warning(pop)
 #endif
 
 #include <vector>
 
-#include <AL/alc.h>
 #include <AL/al.h>
+#include <AL/alc.h>
 
 namespace caspar { namespace oal {
 
 class device
 {
-	ALCdevice*		device_		= nullptr;
-	ALCcontext*		context_	= nullptr;
+    ALCdevice*  device_  = nullptr;
+    ALCcontext* context_ = nullptr;
 
-public:
-	device()
-	{
-		device_ = alcOpenDevice(nullptr);
+  public:
+    device()
+    {
+        device_ = alcOpenDevice(nullptr);
 
-		if(!device_)
-			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
+        if (!device_)
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
-		context_ = alcCreateContext(device_, nullptr);
+        context_ = alcCreateContext(device_, nullptr);
 
-		if(!context_)
-			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
+        if (!context_)
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
 
-		if(alcMakeContextCurrent(context_) == ALC_FALSE)
-			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
-	}
+        if (alcMakeContextCurrent(context_) == ALC_FALSE)
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
+    }
 
-	~device()
-	{
-		alcMakeContextCurrent(nullptr);
+    ~device()
+    {
+        alcMakeContextCurrent(nullptr);
 
-		if(context_)
-			alcDestroyContext(context_);
+        if (context_)
+            alcDestroyContext(context_);
 
-		if(device_)
-			alcCloseDevice(device_);
-	}
+        if (device_)
+            alcCloseDevice(device_);
+    }
 
-	ALCdevice* get()
-	{
-		return device_;
-	}
+    ALCdevice* get() { return device_; }
 };
 
 void init_device()
 {
-	static std::unique_ptr<device> instance;
-	static std::once_flag f;
+    static std::unique_ptr<device> instance;
+    static std::once_flag          f;
 
-	std::call_once(f, []{instance.reset(new device());});
+    std::call_once(f, [] { instance.reset(new device()); });
 }
 
 struct oal_consumer : public core::frame_consumer
 {
-	core::monitor::subject							monitor_subject_;
+    core::monitor::subject monitor_subject_;
 
-	spl::shared_ptr<diagnostics::graph>				graph_;
-    caspar::timer									perf_timer_;
-	int												channel_index_ = -1;
+    spl::shared_ptr<diagnostics::graph> graph_;
+    caspar::timer                       perf_timer_;
+    int                                 channel_index_ = -1;
 
-	core::video_format_desc							format_desc_;
+    core::video_format_desc format_desc_;
 
-	ALuint											source_ = 0;
-	std::vector<ALuint>								buffers_;
-    bool                                            started_ = false;
-    int                                             duration_ = 1920;
+    ALuint              source_ = 0;
+    std::vector<ALuint> buffers_;
+    bool                started_  = false;
+    int                 duration_ = 1920;
 
-    std::shared_ptr<SwrContext>                     swr_;
+    std::shared_ptr<SwrContext> swr_;
 
-	executor										executor_			{ L"oal_consumer" };
+    executor executor_{L"oal_consumer"};
 
-public:
-	oal_consumer()
-	{
-		init_device();
+  public:
+    oal_consumer()
+    {
+        init_device();
 
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
-		diagnostics::register_graph(graph_);
-	}
+        graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+        graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+        graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+        diagnostics::register_graph(graph_);
+    }
 
-	~oal_consumer()
-	{
-		executor_.invoke([=]
-		{
-			if(source_)
-			{
-				alSourceStop(source_);
-				alDeleteSources(1, &source_);
-			}
+    ~oal_consumer()
+    {
+        executor_.invoke([=] {
+            if (source_) {
+                alSourceStop(source_);
+                alDeleteSources(1, &source_);
+            }
 
-			for (auto& buffer : buffers_)
-			{
-				if(buffer)
-					alDeleteBuffers(1, &buffer);
-			};
-		});
-	}
+            for (auto& buffer : buffers_) {
+                if (buffer)
+                    alDeleteBuffers(1, &buffer);
+            };
+        });
+    }
 
-	// frame consumer
+    // frame consumer
 
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override
-	{
-		format_desc_	= format_desc;
-		channel_index_	= channel_index;
-		graph_->set_text(print());
+    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    {
+        format_desc_   = format_desc;
+        channel_index_ = channel_index;
+        graph_->set_text(print());
 
-		executor_.begin_invoke([=]
-		{
+        executor_.begin_invoke([=] {
             duration_ = format_desc_.audio_cadence[0];
-			buffers_.resize(8);
-			alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
-			alGenSources(1, &source_);
+            buffers_.resize(8);
+            alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+            alGenSources(1, &source_);
 
-			alSourcei(source_, AL_LOOPING, AL_FALSE);
-		});
-	}
+            alSourcei(source_, AL_LOOPING, AL_FALSE);
+        });
+    }
 
-	std::future<bool> send(core::const_frame frame) override
-	{
-		// Will only block if the default executor queue capacity of 512 is
-		// exhausted, which should not happen
-		executor_.begin_invoke([=]
-		{
-            auto dst = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            dst->format = AV_SAMPLE_FMT_S16;
-            dst->sample_rate = format_desc_.audio_sample_rate;
-            dst->channels = 2;
+    std::future<bool> send(core::const_frame frame) override
+    {
+        // Will only block if the default executor queue capacity of 512 is
+        // exhausted, which should not happen
+        executor_.begin_invoke([=] {
+            auto dst            = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+            dst->format         = AV_SAMPLE_FMT_S16;
+            dst->sample_rate    = format_desc_.audio_sample_rate;
+            dst->channels       = 2;
             dst->channel_layout = av_get_default_channel_layout(dst->channels);
-            dst->nb_samples = duration_;
+            dst->nb_samples     = duration_;
             if (av_frame_get_buffer(dst.get(), 32) < 0) {
                 // TODO FF error
                 CASPAR_THROW_EXCEPTION(invalid_argument());
@@ -212,14 +204,14 @@ public:
                 return;
             }
 
-            auto src = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            src->format = AV_SAMPLE_FMT_S32;
-            src->sample_rate = format_desc_.audio_sample_rate;
-            src->channels = format_desc_.audio_channels;
-            src->channel_layout = av_get_default_channel_layout(src->channels);
-            src->nb_samples = static_cast<int>(frame.audio_data().size() / src->channels);
+            auto src              = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+            src->format           = AV_SAMPLE_FMT_S32;
+            src->sample_rate      = format_desc_.audio_sample_rate;
+            src->channels         = format_desc_.audio_channels;
+            src->channel_layout   = av_get_default_channel_layout(src->channels);
+            src->nb_samples       = static_cast<int>(frame.audio_data().size() / src->channels);
             src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
-            src->linesize[0] = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
+            src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
 
             if (av_frame_get_buffer(dst.get(), 0) < 0) {
                 // TODO FF error
@@ -249,9 +241,9 @@ public:
             ALint processed = 0;
             alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
 
-            auto in_duration = swr_get_delay(swr_.get(), 48000);
+            auto in_duration  = swr_get_delay(swr_.get(), 48000);
             auto out_duration = static_cast<int64_t>(processed * duration_);
-            auto delta = static_cast<int>(out_duration - in_duration);
+            auto delta        = static_cast<int>(out_duration - in_duration);
 
             ALenum state;
             alGetSourcei(source_, AL_SOURCE_STATE, &state);
@@ -296,59 +288,39 @@ public:
                 alSourceQueueBuffers(source_, 1, &buffer);
             }
 
-			graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-			perf_timer_.restart();
-		});
+            graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
+            perf_timer_.restart();
+        });
 
-		return make_ready_future(true);
-	}
+        return make_ready_future(true);
+    }
 
-	std::wstring print() const override
-	{
-		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
-	}
+    std::wstring print() const override { return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]"; }
 
-	std::wstring name() const override
-	{
-		return L"system-audio";
-	}
+    std::wstring name() const override { return L"system-audio"; }
 
-	bool has_synchronization_clock() const override
-	{
-		return false;
-	}
+    bool has_synchronization_clock() const override { return false; }
 
-	int buffer_depth() const override
-	{
-		return static_cast<int>(buffers_.size());
-	}
+    int buffer_depth() const override { return static_cast<int>(buffers_.size()); }
 
-	int index() const override
-	{
-		return 500;
-	}
+    int index() const override { return 500; }
 
-	core::monitor::subject& monitor_output()
-	{
-		return monitor_subject_;
-	}
+    core::monitor::subject& monitor_output() { return monitor_subject_; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer>
+create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
-	if(params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
-		return core::frame_consumer::empty();
+    if (params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
+        return core::frame_consumer::empty();
 
-	return spl::make_shared<oal_consumer>();
+    return spl::make_shared<oal_consumer>();
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
-		const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer>
+create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
-	return spl::make_shared<oal_consumer>();
+    return spl::make_shared<oal_consumer>();
 }
 
-
-
-}}
+}} // namespace caspar::oal
