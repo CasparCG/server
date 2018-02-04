@@ -48,7 +48,8 @@ std::map<std::wstring, AMCPCommandQueue*>& get_instances()
 
 } // namespace
 
-AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name) : executor_(L"AMCPCommandQueue " + name)
+AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name)
+    : executor_(L"AMCPCommandQueue " + name)
 {
     std::lock_guard<std::mutex> lock(get_global_mutex());
 

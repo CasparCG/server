@@ -34,7 +34,8 @@ struct shader::impl : boost::noncopyable
     std::unordered_map<std::string, GLint> locations_;
 
   public:
-    impl(const std::string& vertex_source_str, const std::string& fragment_source_str) : program_(0)
+    impl(const std::string& vertex_source_str, const std::string& fragment_source_str)
+        : program_(0)
     {
         GLint success;
 
@@ -120,7 +121,10 @@ struct shader::impl : boost::noncopyable
     void use() { GL(glUseProgramObjectARB(program_)); }
 };
 
-shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str) : impl_(new impl(vertex_source_str, fragment_source_str)) {}
+shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str)
+    : impl_(new impl(vertex_source_str, fragment_source_str))
+{
+}
 shader::~shader() {}
 void shader::set(const std::string& name, bool value) { impl_->set(name, value); }
 void shader::set(const std::string& name, int value) { impl_->set(name, value); }

@@ -62,7 +62,10 @@ struct layer
     std::vector<item>  items;
     core::blend_mode   blend_mode;
 
-    layer(core::blend_mode blend_mode) : blend_mode(blend_mode) {}
+    layer(core::blend_mode blend_mode)
+        : blend_mode(blend_mode)
+    {
+    }
 };
 
 class image_renderer
@@ -71,7 +74,11 @@ class image_renderer
     image_kernel            kernel_;
 
   public:
-    image_renderer(const spl::shared_ptr<device>& ogl) : ogl_(ogl), kernel_(ogl_) {}
+    image_renderer(const spl::shared_ptr<device>& ogl)
+        : ogl_(ogl)
+        , kernel_(ogl_)
+    {
+    }
 
     std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
     {
@@ -214,7 +221,10 @@ struct image_mixer::impl : public core::frame_factory
     std::vector<layer*>                layer_stack_;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl, int channel_id) : ogl_(ogl), renderer_(ogl), transform_stack_(1)
+    impl(const spl::shared_ptr<device>& ogl, int channel_id)
+        : ogl_(ogl)
+        , renderer_(ogl)
+        , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
     }
@@ -280,7 +290,10 @@ struct image_mixer::impl : public core::frame_factory
     }
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id) : impl_(std::make_unique<impl>(ogl, channel_id)) {}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id)
+    : impl_(std::make_unique<impl>(ogl, channel_id))
+{
+}
 image_mixer::~image_mixer() {}
 void                                   image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
 void                                   image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }

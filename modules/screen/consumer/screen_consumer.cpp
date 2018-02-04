@@ -122,7 +122,10 @@ struct screen_consumer : boost::noncopyable
 
   public:
     screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, core::interaction_sink* sink)
-        : config_(config), format_desc_(format_desc), channel_index_(channel_index), sink_(sink)
+        : config_(config)
+        , format_desc_(format_desc)
+        , channel_index_(channel_index)
+        , sink_(sink)
     {
         if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3) {
             // Use default values which are 4:3.
@@ -417,7 +420,11 @@ struct screen_consumer_proxy : public core::frame_consumer
     core::interaction_sink*          sink_;
 
   public:
-    screen_consumer_proxy(const configuration& config, core::interaction_sink* sink) : config_(config), sink_(sink) {}
+    screen_consumer_proxy(const configuration& config, core::interaction_sink* sink)
+        : config_(config)
+        , sink_(sink)
+    {
+    }
 
     // frame_consumer
 

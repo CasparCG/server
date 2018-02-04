@@ -418,7 +418,11 @@ tweener_t get_tweener(std::wstring name)
     return [=](double t, double b, double c, double d) { return tween(t, b, c, d, params); };
 };
 
-tweener::tweener(const std::wstring& name) : func_(get_tweener(name)), name_(name) {}
+tweener::tweener(const std::wstring& name)
+    : func_(get_tweener(name))
+    , name_(name)
+{
+}
 
 double tweener::operator()(double t, double b, double c, double d) const { return func_(t, b, c, d); }
 

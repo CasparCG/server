@@ -51,7 +51,8 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
 
   public:
     CLKProtocolStrategy(const IO::client_connection<wchar_t>::ptr& client_connection, clk_command_processor& command_processor)
-        : command_processor_(command_processor), client_connection_(client_connection)
+        : command_processor_(command_processor)
+        , client_connection_(client_connection)
     {
     }
 

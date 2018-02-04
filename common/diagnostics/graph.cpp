@@ -107,7 +107,10 @@ struct graph::impl
     impl& operator=(impl&);
 };
 
-graph::graph() : impl_(new impl) {}
+graph::graph()
+    : impl_(new impl)
+{
+}
 
 void graph::set_text(const std::wstring& value) { impl_->set_text(value); }
 void graph::set_value(const std::string& name, double value) { impl_->set_value(name, value); }

@@ -75,7 +75,12 @@ class channel_consumer : public core::frame_consumer
     int                                             frames_delay_;
 
   public:
-    channel_consumer(int frames_delay) : consumer_index_(next_consumer_index()), frames_delay_(frames_delay) { frame_buffer_.set_capacity(3 + frames_delay); }
+    channel_consumer(int frames_delay)
+        : consumer_index_(next_consumer_index())
+        , frames_delay_(frames_delay)
+    {
+        frame_buffer_.set_capacity(3 + frames_delay);
+    }
 
     static int next_consumer_index()
     {

@@ -76,7 +76,10 @@ struct amcp_command_repository::impl
          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
          const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
          std::function<void(bool)>                                   shutdown_server_now)
-        : cg_registry(cg_registry), producer_registry(producer_registry), consumer_registry(consumer_registry), shutdown_server_now(shutdown_server_now)
+        : cg_registry(cg_registry)
+        , producer_registry(producer_registry)
+        , consumer_registry(consumer_registry)
+        , shutdown_server_now(shutdown_server_now)
     {
         int index = 0;
         for (const auto& channel : channels) {

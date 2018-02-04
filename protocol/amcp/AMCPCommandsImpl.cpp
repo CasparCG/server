@@ -700,7 +700,8 @@ class transforms_applier
     bool                                  defer_;
 
   public:
-    transforms_applier(command_context& ctx) : ctx_(ctx)
+    transforms_applier(command_context& ctx)
+        : ctx_(ctx)
     {
         defer_ = !ctx.parameters.empty() && boost::iequals(ctx.parameters.back(), L"DEFER");
 

@@ -463,9 +463,14 @@ void ReceivedMessageArgumentIterator::Advance()
 
 //------------------------------------------------------------------------------
 
-ReceivedMessage::ReceivedMessage(const ReceivedPacket& packet) : addressPattern_(packet.Contents()) { Init(packet.Contents(), packet.Size()); }
+ReceivedMessage::ReceivedMessage(const ReceivedPacket& packet)
+    : addressPattern_(packet.Contents())
+{
+    Init(packet.Contents(), packet.Size());
+}
 
-ReceivedMessage::ReceivedMessage(const ReceivedBundleElement& bundleElement) : addressPattern_(bundleElement.Contents())
+ReceivedMessage::ReceivedMessage(const ReceivedBundleElement& bundleElement)
+    : addressPattern_(bundleElement.Contents())
 {
     Init(bundleElement.Contents(), bundleElement.Size());
 }
@@ -590,9 +595,17 @@ void ReceivedMessage::Init(const char* message, unsigned long size)
 
 //------------------------------------------------------------------------------
 
-ReceivedBundle::ReceivedBundle(const ReceivedPacket& packet) : elementCount_(0) { Init(packet.Contents(), packet.Size()); }
+ReceivedBundle::ReceivedBundle(const ReceivedPacket& packet)
+    : elementCount_(0)
+{
+    Init(packet.Contents(), packet.Size());
+}
 
-ReceivedBundle::ReceivedBundle(const ReceivedBundleElement& bundleElement) : elementCount_(0) { Init(bundleElement.Contents(), bundleElement.Size()); }
+ReceivedBundle::ReceivedBundle(const ReceivedBundleElement& bundleElement)
+    : elementCount_(0)
+{
+    Init(bundleElement.Contents(), bundleElement.Size());
+}
 
 void ReceivedBundle::Init(const char* bundle, unsigned long size)
 {
