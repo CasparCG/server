@@ -19,8 +19,6 @@
  * Author: Helge Norberg, helge.norberg@svt.se
  */
 
-#include "stdafx.h"
-
 #include "platform_specific.h"
 
 #include <common/log.h>
