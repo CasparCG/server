@@ -405,59 +405,59 @@ void ReceivedMessageArgumentIterator::Advance()
         return;
 
     switch (*value_.typeTag_++) {
-    case '\0':
-        // don't advance past end
-        --value_.typeTag_;
-        break;
+        case '\0':
+            // don't advance past end
+            --value_.typeTag_;
+            break;
 
-    case TRUE_TYPE_TAG:
-    case FALSE_TYPE_TAG:
-    case NIL_TYPE_TAG:
-    case INFINITUM_TYPE_TAG:
+        case TRUE_TYPE_TAG:
+        case FALSE_TYPE_TAG:
+        case NIL_TYPE_TAG:
+        case INFINITUM_TYPE_TAG:
 
-        // zero length
-        break;
+            // zero length
+            break;
 
-    case INT32_TYPE_TAG:
-    case FLOAT_TYPE_TAG:
-    case CHAR_TYPE_TAG:
-    case RGBA_COLOR_TYPE_TAG:
-    case MIDI_MESSAGE_TYPE_TAG:
+        case INT32_TYPE_TAG:
+        case FLOAT_TYPE_TAG:
+        case CHAR_TYPE_TAG:
+        case RGBA_COLOR_TYPE_TAG:
+        case MIDI_MESSAGE_TYPE_TAG:
 
-        value_.argument_ += 4;
-        break;
+            value_.argument_ += 4;
+            break;
 
-    case INT64_TYPE_TAG:
-    case TIME_TAG_TYPE_TAG:
-    case DOUBLE_TYPE_TAG:
+        case INT64_TYPE_TAG:
+        case TIME_TAG_TYPE_TAG:
+        case DOUBLE_TYPE_TAG:
 
-        value_.argument_ += 8;
-        break;
+            value_.argument_ += 8;
+            break;
 
-    case STRING_TYPE_TAG:
-    case SYMBOL_TYPE_TAG:
+        case STRING_TYPE_TAG:
+        case SYMBOL_TYPE_TAG:
 
-        // we use the unsafe function FindStr4End(char*) here because all of
-        // the arguments have already been validated in
-        // ReceivedMessage::Init() below.
+            // we use the unsafe function FindStr4End(char*) here because all of
+            // the arguments have already been validated in
+            // ReceivedMessage::Init() below.
 
-        value_.argument_ = FindStr4End(value_.argument_);
-        break;
+            value_.argument_ = FindStr4End(value_.argument_);
+            break;
 
-    case BLOB_TYPE_TAG: {
-        uint32 blobSize  = ToUInt32(value_.argument_);
-        value_.argument_ = value_.argument_ + 4 + RoundUp4((unsigned long)blobSize);
-    } break;
+        case BLOB_TYPE_TAG: {
+            uint32 blobSize  = ToUInt32(value_.argument_);
+            value_.argument_ = value_.argument_ + 4 + RoundUp4((unsigned long)blobSize);
+        } break;
 
-    default: // unknown type tag
-        // don't advance
-        --value_.typeTag_;
-        break;
+        default: // unknown type tag
+            // don't advance
+            --value_.typeTag_;
+            break;
 
-        //    not handled:
-        //    [ Indicates the beginning of an array. The tags following are for
-        //        data in the Array until a close brace tag is reached.
-        //    ] Indicates the end of an array.
+            //    not handled:
+            //    [ Indicates the beginning of an array. The tags following are for
+            //        data in the Array until a close brace tag is reached.
+            //    ] Indicates the end of an array.
     }
 }
 
@@ -526,65 +526,65 @@ void ReceivedMessage::Init(const char* message, unsigned long size)
 
             do {
                 switch (*typeTag) {
-                case TRUE_TYPE_TAG:
-                case FALSE_TYPE_TAG:
-                case NIL_TYPE_TAG:
-                case INFINITUM_TYPE_TAG:
+                    case TRUE_TYPE_TAG:
+                    case FALSE_TYPE_TAG:
+                    case NIL_TYPE_TAG:
+                    case INFINITUM_TYPE_TAG:
 
-                    // zero length
-                    break;
+                        // zero length
+                        break;
 
-                case INT32_TYPE_TAG:
-                case FLOAT_TYPE_TAG:
-                case CHAR_TYPE_TAG:
-                case RGBA_COLOR_TYPE_TAG:
-                case MIDI_MESSAGE_TYPE_TAG:
+                    case INT32_TYPE_TAG:
+                    case FLOAT_TYPE_TAG:
+                    case CHAR_TYPE_TAG:
+                    case RGBA_COLOR_TYPE_TAG:
+                    case MIDI_MESSAGE_TYPE_TAG:
 
-                    if (argument == end)
-                        throw MalformedMessageException("arguments exceed message size");
-                    argument += 4;
-                    if (argument > end)
-                        throw MalformedMessageException("arguments exceed message size");
-                    break;
+                        if (argument == end)
+                            throw MalformedMessageException("arguments exceed message size");
+                        argument += 4;
+                        if (argument > end)
+                            throw MalformedMessageException("arguments exceed message size");
+                        break;
 
-                case INT64_TYPE_TAG:
-                case TIME_TAG_TYPE_TAG:
-                case DOUBLE_TYPE_TAG:
+                    case INT64_TYPE_TAG:
+                    case TIME_TAG_TYPE_TAG:
+                    case DOUBLE_TYPE_TAG:
 
-                    if (argument == end)
-                        throw MalformedMessageException("arguments exceed message size");
-                    argument += 8;
-                    if (argument > end)
-                        throw MalformedMessageException("arguments exceed message size");
-                    break;
+                        if (argument == end)
+                            throw MalformedMessageException("arguments exceed message size");
+                        argument += 8;
+                        if (argument > end)
+                            throw MalformedMessageException("arguments exceed message size");
+                        break;
 
-                case STRING_TYPE_TAG:
-                case SYMBOL_TYPE_TAG:
+                    case STRING_TYPE_TAG:
+                    case SYMBOL_TYPE_TAG:
 
-                    if (argument == end)
-                        throw MalformedMessageException("arguments exceed message size");
-                    argument = FindStr4End(argument, end);
-                    if (argument == 0)
-                        throw MalformedMessageException("unterminated string argument");
-                    break;
+                        if (argument == end)
+                            throw MalformedMessageException("arguments exceed message size");
+                        argument = FindStr4End(argument, end);
+                        if (argument == 0)
+                            throw MalformedMessageException("unterminated string argument");
+                        break;
 
-                case BLOB_TYPE_TAG: {
-                    if (argument + 4 > end)
-                        throw MalformedMessageException("arguments exceed message size");
+                    case BLOB_TYPE_TAG: {
+                        if (argument + 4 > end)
+                            throw MalformedMessageException("arguments exceed message size");
 
-                    uint32 blobSize = ToUInt32(argument);
-                    argument        = argument + 4 + RoundUp4((unsigned long)blobSize);
-                    if (argument > end)
-                        throw MalformedMessageException("arguments exceed message size");
-                } break;
+                        uint32 blobSize = ToUInt32(argument);
+                        argument        = argument + 4 + RoundUp4((unsigned long)blobSize);
+                        if (argument > end)
+                            throw MalformedMessageException("arguments exceed message size");
+                    } break;
 
-                default:
-                    throw MalformedMessageException("unknown type tag");
+                    default:
+                        throw MalformedMessageException("unknown type tag");
 
-                    //    not handled:
-                    //    [ Indicates the beginning of an array. The tags following are for
-                    //        data in the Array until a close brace tag is reached.
-                    //    ] Indicates the end of an array.
+                        //    not handled:
+                        //    [ Indicates the beginning of an array. The tags following are for
+                        //        data in the Array until a close brace tag is reached.
+                        //    ] Indicates the end of an array.
                 }
 
             } while (*++typeTag != '\0');

@@ -68,36 +68,36 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
 
             if (currentByte != 0) {
                 switch (currentState_) {
-                case ParserState::ExpectingNewCommand:
-                    if (currentByte == 1)
-                        currentState_ = ParserState::ExpectingCommand;
-                    // just throw anything else away
-                    break;
-                case ParserState::ExpectingCommand:
-                    if (currentByte == 2)
-                        currentState_ = ParserState::ExpectingParameter;
-                    else
-                        command_name_ += currentByte;
-                    break;
-                case ParserState::ExpectingParameter:
-                    // allocate new parameter
-                    if (parameters_.size() == 0 || currentByte == 2)
-                        parameters_.push_back(std::wstring());
-
-                    // add the character to end end of the last parameter
-                    if (currentByte != 2) {
-                        // add the character to end end of the last parameter
-                        if (currentByte == L'<')
-                            parameters_.back() += L"&lt;";
-                        else if (currentByte == L'>')
-                            parameters_.back() += L"&gt;";
-                        else if (currentByte == L'\"')
-                            parameters_.back() += L"&quot;";
+                    case ParserState::ExpectingNewCommand:
+                        if (currentByte == 1)
+                            currentState_ = ParserState::ExpectingCommand;
+                        // just throw anything else away
+                        break;
+                    case ParserState::ExpectingCommand:
+                        if (currentByte == 2)
+                            currentState_ = ParserState::ExpectingParameter;
                         else
-                            parameters_.back() += currentByte;
-                    }
+                            command_name_ += currentByte;
+                        break;
+                    case ParserState::ExpectingParameter:
+                        // allocate new parameter
+                        if (parameters_.size() == 0 || currentByte == 2)
+                            parameters_.push_back(std::wstring());
 
-                    break;
+                        // add the character to end end of the last parameter
+                        if (currentByte != 2) {
+                            // add the character to end end of the last parameter
+                            if (currentByte == L'<')
+                                parameters_.back() += L"&lt;";
+                            else if (currentByte == L'>')
+                                parameters_.back() += L"&gt;";
+                            else if (currentByte == L'\"')
+                                parameters_.back() += L"&quot;";
+                            else
+                                parameters_.back() += currentByte;
+                        }
+
+                        break;
                 }
             } else {
                 boost::to_upper(command_name_);

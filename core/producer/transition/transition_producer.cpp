@@ -99,18 +99,18 @@ class transition_producer : public frame_producer_base
         *monitor_subject_ << monitor::message("/transition/frame") % current_frame_ % info_.duration
                           << monitor::message("/transition/type") % [&]() -> std::string {
             switch (info_.type) {
-            case transition_type::mix:
-                return "mix";
-            case transition_type::wipe:
-                return "wipe";
-            case transition_type::slide:
-                return "slide";
-            case transition_type::push:
-                return "push";
-            case transition_type::cut:
-                return "cut";
-            default:
-                return "n/a";
+                case transition_type::mix:
+                    return "mix";
+                case transition_type::wipe:
+                    return "wipe";
+                case transition_type::slide:
+                    return "slide";
+                case transition_type::push:
+                    return "push";
+                case transition_type::cut:
+                    return "cut";
+                default:
+                    return "n/a";
             }
         }();
 

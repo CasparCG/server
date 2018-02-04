@@ -55,12 +55,12 @@ class graph_to_log_sink : public caspar::diagnostics::spi::graph_sink
         std::lock_guard<std::mutex> lock(mutex_);
 
         switch (severity) {
-        case caspar::diagnostics::tag_severity::INFO:
-            CASPAR_LOG(trace) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
-            break;
-        case caspar::diagnostics::tag_severity::WARNING:
-            CASPAR_LOG(debug) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
-            break;
+            case caspar::diagnostics::tag_severity::INFO:
+                CASPAR_LOG(trace) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
+                break;
+            case caspar::diagnostics::tag_severity::WARNING:
+                CASPAR_LOG(debug) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
+                break;
         }
     }
 

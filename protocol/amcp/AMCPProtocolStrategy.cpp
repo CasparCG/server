@@ -134,24 +134,24 @@ struct AMCPProtocolStrategy::impl
                 answer << L"RES " << result.request_id << L" ";
 
             switch (result.error) {
-            case error_state::command_error:
-                answer << L"400 ERROR\r\n" << message << "\r\n";
-                break;
-            case error_state::channel_error:
-                answer << L"401 " << result.command_name << " ERROR\r\n";
-                break;
-            case error_state::parameters_error:
-                answer << L"402 " << result.command_name << " ERROR\r\n";
-                break;
-            case error_state::access_error:
-                answer << L"503 " << result.command_name << " FAILED\r\n";
-                break;
-            case error_state::unknown_error:
-                answer << L"500 FAILED\r\n";
-                break;
-            default:
-                CASPAR_THROW_EXCEPTION(programming_error() << msg_info(L"Unhandled error_state enum constant " +
-                                                                       boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
+                case error_state::command_error:
+                    answer << L"400 ERROR\r\n" << message << "\r\n";
+                    break;
+                case error_state::channel_error:
+                    answer << L"401 " << result.command_name << " ERROR\r\n";
+                    break;
+                case error_state::parameters_error:
+                    answer << L"402 " << result.command_name << " ERROR\r\n";
+                    break;
+                case error_state::access_error:
+                    answer << L"503 " << result.command_name << " FAILED\r\n";
+                    break;
+                case error_state::unknown_error:
+                    answer << L"500 FAILED\r\n";
+                    break;
+                default:
+                    CASPAR_THROW_EXCEPTION(programming_error() << msg_info(L"Unhandled error_state enum constant " +
+                                                                           boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
             }
             client->send(answer.str());
         }
@@ -274,17 +274,17 @@ struct AMCPProtocolStrategy::impl
             if (getSpecialCode) {
                 // insert code-handling here
                 switch (message[charIndex]) {
-                case L'\\':
-                    currentToken += L"\\";
-                    break;
-                case L'\"':
-                    currentToken += L"\"";
-                    break;
-                case L'n':
-                    currentToken += L"\n";
-                    break;
-                default:
-                    break;
+                    case L'\\':
+                        currentToken += L"\\";
+                        break;
+                    case L'\"':
+                        currentToken += L"\"";
+                        break;
+                    case L'n':
+                        currentToken += L"\n";
+                        break;
+                    default:
+                        break;
                 };
                 getSpecialCode = false;
                 continue;

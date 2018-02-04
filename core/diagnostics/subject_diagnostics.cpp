@@ -93,12 +93,12 @@ class subject_graph : public caspar::diagnostics::spi::graph_sink
         std::string severity_path;
 
         switch (severity) {
-        case caspar::diagnostics::tag_severity::INFO:
-            severity_path = "info/";
-            break;
-        case caspar::diagnostics::tag_severity::WARNING:
-            severity_path = "warning/";
-            break;
+            case caspar::diagnostics::tag_severity::INFO:
+                severity_path = "info/";
+                break;
+            case caspar::diagnostics::tag_severity::WARNING:
+                severity_path = "warning/";
+                break;
         }
 
         *subject_ << monitor::message("/tag/" + severity_path + name);
