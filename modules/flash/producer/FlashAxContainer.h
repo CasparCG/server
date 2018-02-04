@@ -90,7 +90,6 @@ class ATL_NO_VTABLE FlashAxContainer
     , public IDispatchImpl<IDispatch>
     , public IDispEventSimpleImpl<0, FlashAxContainer, &DIID__IShockwaveFlashEvents>
 {
-
   public:
     FlashAxContainer();
     virtual ~FlashAxContainer();

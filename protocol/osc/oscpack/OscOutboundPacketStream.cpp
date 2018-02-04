@@ -152,7 +152,6 @@ OutboundPacketStream::~OutboundPacketStream() {}
 char* OutboundPacketStream::BeginElement(char* beginPtr)
 {
     if (elementSizePtr_ == 0) {
-
         elementSizePtr_ = reinterpret_cast<uint32*>(data_);
 
         return beginPtr;
@@ -173,7 +172,6 @@ void OutboundPacketStream::EndElement(char* endPtr)
     assert(elementSizePtr_ != 0);
 
     if (elementSizePtr_ == reinterpret_cast<uint32*>(data_)) {
-
         elementSizePtr_ = 0;
 
     } else {
@@ -322,7 +320,6 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const MessageTerminator& 
     int typeTagsCount = static_cast<int>(end_ - typeTagsCurrent_);
 
     if (typeTagsCount) {
-
         char* tempTypeTags = (char*)alloca(typeTagsCount);
         memcpy(tempTypeTags, typeTagsCurrent_, typeTagsCount);
 
