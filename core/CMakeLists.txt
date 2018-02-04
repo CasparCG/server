@@ -112,13 +112,9 @@ source_group(sources\\producer\\separated producer/separated/*)
 if (MSVC)
 	target_link_libraries(core
 			common
-
-			freetype.lib
 	)
 else()
 	target_link_libraries(core
 			common
-
-			freetype
 	)
 endif()
