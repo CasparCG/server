@@ -2,6 +2,7 @@
 
 #include <common/array.h>
 
+#include <memory>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -46,7 +47,7 @@ class mutable_frame final
 
   private:
     struct impl;
-    std::shared_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 };
 
 class const_frame final

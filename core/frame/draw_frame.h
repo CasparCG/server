@@ -61,7 +61,7 @@ class draw_frame final
 
   private:
     struct impl;
-    std::shared_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 };
 
 }} // namespace caspar::core
