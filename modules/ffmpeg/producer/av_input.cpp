@@ -119,23 +119,16 @@ AVFormatContext* Input::operator->() { return ic_.get(); }
 
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
-int64_t Input::start_time() const { return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : 0; }
+boost::optional<int64_t> Input::start_time() const { return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>(); }
 
 bool Input::paused() const { return paused_; }
 
+void Input::paused(bool value)
+{
+    paused_ = value;
+    cond_.notify_all();
+}
 bool Input::eof() const { return eof_; }
-
-void Input::pause()
-{
-    paused_ = true;
-    cond_.notify_all();
-}
-
-void Input::resume()
-{
-    paused_ = false;
-    cond_.notify_all();
-}
 
 void Input::seek(int64_t ts, bool flush)
 {
