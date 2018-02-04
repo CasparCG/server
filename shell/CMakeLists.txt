@@ -36,16 +36,6 @@ set(HEADERS
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
-# Temporarily disabling docs generation
-#add_executable(generate_docs generate_docs.cpp included_modules.h)
-#target_link_libraries(generate_docs
-#		protocol
-#		accelerator
-#
-#		"${CASPARCG_MODULE_PROJECTS}"
-#)
-
-
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
@@ -54,7 +44,88 @@ source_group(sources ./*)
 
 if (MSVC)
 	target_link_libraries(casparcg
+		#jpeg.lib
+		#sndfile.lib
+		Winmm.lib
+		Ws2_32.lib
+		optimized tbb.lib
+		debug tbb_debug.lib
+		OpenGL32.lib
+		glew32.lib
+		openal32.lib
 		zlibstat.lib
+		debug sfml-graphics-d.lib
+		debug sfml-window-d.lib
+		debug sfml-system-d.lib
+		optimized sfml-graphics.lib
+		optimized sfml-window.lib
+		optimized sfml-system.lib
+
+		avformat.lib
+		avcodec.lib
+		avutil.lib
+		avfilter.lib
+		avdevice.lib
+		swscale.lib
+		swresample.lib
+	)
+else ()
+	target_link_libraries(casparcg
+		${Boost_LIBRARIES}
+		${TBB_LIBRARIES}
+		${TBB_MALLOC_LIBRARIES}
+		${SFML_LIBRARIES}
+		${GLEW_LIBRARIES}
+		${OPENGL_gl_LIBRARY}
+		${X11_LIBRARIES}
+		${JPEG_LIBRARIES}
+		${SNDFILE_LIBRARIES}
+		${FREETYPE_LIBRARIES}
+		dl
+		icui18n
+		icuuc
+		z
+		pthread
+
+		-Wl,--start-group
+		avformat.so
+		avcodec.so
+		avutil.so
+		avfilter.so
+		avdevice.so
+		swscale.so
+		swresample.so
+		postproc.so
+
+		ass
+		bluray
+		crypto
+		expat
+		fontconfig
+		fribidi
+		gmp
+		gnutls
+		gsm
+		hogweed
+		modplug
+		mp3lame
+		nettle
+		ogg
+		opencore-amrnb
+		opencore-amrwb
+		opus
+		rtmp
+		ssl
+		tasn1
+		theoradec
+		theoraenc
+		vorbis
+		vorbisenc
+		vpx
+		x264
+		xvidcore
+		z
+		-Wl,--end-group
 	)
 endif ()
 

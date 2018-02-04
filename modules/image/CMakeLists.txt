@@ -62,10 +62,3 @@ casparcg_add_include_statement("modules/image/image.h")
 casparcg_add_init_statement("image::init" "image")
 casparcg_add_uninit_statement("image::uninit")
 casparcg_add_module_project("image")
-
-if(MSVC)
-	casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImage.dll")
-	casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImaged.dll")
-else()
-
-endif()
