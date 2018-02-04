@@ -138,18 +138,18 @@ Y\<213><243>\\										Play. H�r kommer ett lagerID ocks� att skickas med
 CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
 {
     switch (name[0]) {
-    case L'M':
-        return std::make_shared<MediaCommand>(this);
-    case L'W':
-        return std::make_shared<WriteCommand>(this);
-    case L'T':
-        return std::make_shared<ImagestoreCommand>(this);
-    case L'V':
-        return std::make_shared<MiscellaneousCommand>(this);
-    case L'Y':
-        return std::make_shared<KeydataCommand>(this);
-    default:
-        return nullptr;
+        case L'M':
+            return std::make_shared<MediaCommand>(this);
+        case L'W':
+            return std::make_shared<WriteCommand>(this);
+        case L'T':
+            return std::make_shared<ImagestoreCommand>(this);
+        case L'V':
+            return std::make_shared<MiscellaneousCommand>(this);
+        case L'Y':
+            return std::make_shared<KeydataCommand>(this);
+        default:
+            return nullptr;
     }
 }
 

@@ -61,25 +61,25 @@ int ffmpeg_lock_callback(void** mutex, enum AVLockOp op)
     auto my_mutex = reinterpret_cast<std::recursive_mutex*>(*mutex);
 
     switch (op) {
-    case AV_LOCK_CREATE: {
-        *mutex = new std::recursive_mutex();
-        break;
-    }
-    case AV_LOCK_OBTAIN: {
-        if (my_mutex)
-            my_mutex->lock();
-        break;
-    }
-    case AV_LOCK_RELEASE: {
-        if (my_mutex)
-            my_mutex->unlock();
-        break;
-    }
-    case AV_LOCK_DESTROY: {
-        delete my_mutex;
-        *mutex = nullptr;
-        break;
-    }
+        case AV_LOCK_CREATE: {
+            *mutex = new std::recursive_mutex();
+            break;
+        }
+        case AV_LOCK_OBTAIN: {
+            if (my_mutex)
+                my_mutex->lock();
+            break;
+        }
+        case AV_LOCK_RELEASE: {
+            if (my_mutex)
+                my_mutex->unlock();
+            break;
+        }
+        case AV_LOCK_DESTROY: {
+            delete my_mutex;
+            *mutex = nullptr;
+            break;
+        }
     }
     return 0;
 }
