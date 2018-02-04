@@ -54,51 +54,396 @@
 // Interface ID Declarations
 
 BMD_CONST REFIID IID_IDeckLinkVideoOutputCallback =
-    /* 20AA5225-1958-47CB-820B-80A8D521A6EE */ {0x20, 0xAA, 0x52, 0x25, 0x19, 0x58, 0x47, 0xCB, 0x82, 0x0B, 0x80, 0xA8, 0xD5, 0x21, 0xA6, 0xEE};
+    /* 20AA5225-1958-47CB-820B-80A8D521A6EE */ {0x20,
+                                                0xAA,
+                                                0x52,
+                                                0x25,
+                                                0x19,
+                                                0x58,
+                                                0x47,
+                                                0xCB,
+                                                0x82,
+                                                0x0B,
+                                                0x80,
+                                                0xA8,
+                                                0xD5,
+                                                0x21,
+                                                0xA6,
+                                                0xEE};
 BMD_CONST REFIID IID_IDeckLinkInputCallback =
-    /* DD04E5EC-7415-42AB-AE4A-E80C4DFC044A */ {0xDD, 0x04, 0xE5, 0xEC, 0x74, 0x15, 0x42, 0xAB, 0xAE, 0x4A, 0xE8, 0x0C, 0x4D, 0xFC, 0x04, 0x4A};
+    /* DD04E5EC-7415-42AB-AE4A-E80C4DFC044A */ {0xDD,
+                                                0x04,
+                                                0xE5,
+                                                0xEC,
+                                                0x74,
+                                                0x15,
+                                                0x42,
+                                                0xAB,
+                                                0xAE,
+                                                0x4A,
+                                                0xE8,
+                                                0x0C,
+                                                0x4D,
+                                                0xFC,
+                                                0x04,
+                                                0x4A};
 BMD_CONST REFIID IID_IDeckLinkMemoryAllocator =
-    /* B36EB6E7-9D29-4AA8-92EF-843B87A289E8 */ {0xB3, 0x6E, 0xB6, 0xE7, 0x9D, 0x29, 0x4A, 0xA8, 0x92, 0xEF, 0x84, 0x3B, 0x87, 0xA2, 0x89, 0xE8};
+    /* B36EB6E7-9D29-4AA8-92EF-843B87A289E8 */ {0xB3,
+                                                0x6E,
+                                                0xB6,
+                                                0xE7,
+                                                0x9D,
+                                                0x29,
+                                                0x4A,
+                                                0xA8,
+                                                0x92,
+                                                0xEF,
+                                                0x84,
+                                                0x3B,
+                                                0x87,
+                                                0xA2,
+                                                0x89,
+                                                0xE8};
 BMD_CONST REFIID IID_IDeckLinkAudioOutputCallback =
-    /* 403C681B-7F46-4A12-B993-2BB127084EE6 */ {0x40, 0x3C, 0x68, 0x1B, 0x7F, 0x46, 0x4A, 0x12, 0xB9, 0x93, 0x2B, 0xB1, 0x27, 0x08, 0x4E, 0xE6};
+    /* 403C681B-7F46-4A12-B993-2BB127084EE6 */ {0x40,
+                                                0x3C,
+                                                0x68,
+                                                0x1B,
+                                                0x7F,
+                                                0x46,
+                                                0x4A,
+                                                0x12,
+                                                0xB9,
+                                                0x93,
+                                                0x2B,
+                                                0xB1,
+                                                0x27,
+                                                0x08,
+                                                0x4E,
+                                                0xE6};
 BMD_CONST REFIID IID_IDeckLinkIterator =
-    /* 50FB36CD-3063-4B73-BDBB-958087F2D8BA */ {0x50, 0xFB, 0x36, 0xCD, 0x30, 0x63, 0x4B, 0x73, 0xBD, 0xBB, 0x95, 0x80, 0x87, 0xF2, 0xD8, 0xBA};
+    /* 50FB36CD-3063-4B73-BDBB-958087F2D8BA */ {0x50,
+                                                0xFB,
+                                                0x36,
+                                                0xCD,
+                                                0x30,
+                                                0x63,
+                                                0x4B,
+                                                0x73,
+                                                0xBD,
+                                                0xBB,
+                                                0x95,
+                                                0x80,
+                                                0x87,
+                                                0xF2,
+                                                0xD8,
+                                                0xBA};
 BMD_CONST REFIID IID_IDeckLinkAPIInformation =
-    /* 7BEA3C68-730D-4322-AF34-8A7152B532A4 */ {0x7B, 0xEA, 0x3C, 0x68, 0x73, 0x0D, 0x43, 0x22, 0xAF, 0x34, 0x8A, 0x71, 0x52, 0xB5, 0x32, 0xA4};
+    /* 7BEA3C68-730D-4322-AF34-8A7152B532A4 */ {0x7B,
+                                                0xEA,
+                                                0x3C,
+                                                0x68,
+                                                0x73,
+                                                0x0D,
+                                                0x43,
+                                                0x22,
+                                                0xAF,
+                                                0x34,
+                                                0x8A,
+                                                0x71,
+                                                0x52,
+                                                0xB5,
+                                                0x32,
+                                                0xA4};
 BMD_CONST REFIID IID_IDeckLinkOutput =
-    /* CC5C8A6E-3F2F-4B3A-87EA-FD78AF300564 */ {0xCC, 0x5C, 0x8A, 0x6E, 0x3F, 0x2F, 0x4B, 0x3A, 0x87, 0xEA, 0xFD, 0x78, 0xAF, 0x30, 0x05, 0x64};
+    /* CC5C8A6E-3F2F-4B3A-87EA-FD78AF300564 */ {0xCC,
+                                                0x5C,
+                                                0x8A,
+                                                0x6E,
+                                                0x3F,
+                                                0x2F,
+                                                0x4B,
+                                                0x3A,
+                                                0x87,
+                                                0xEA,
+                                                0xFD,
+                                                0x78,
+                                                0xAF,
+                                                0x30,
+                                                0x05,
+                                                0x64};
 BMD_CONST REFIID IID_IDeckLinkInput =
-    /* AF22762B-DFAC-4846-AA79-FA8883560995 */ {0xAF, 0x22, 0x76, 0x2B, 0xDF, 0xAC, 0x48, 0x46, 0xAA, 0x79, 0xFA, 0x88, 0x83, 0x56, 0x09, 0x95};
+    /* AF22762B-DFAC-4846-AA79-FA8883560995 */ {0xAF,
+                                                0x22,
+                                                0x76,
+                                                0x2B,
+                                                0xDF,
+                                                0xAC,
+                                                0x48,
+                                                0x46,
+                                                0xAA,
+                                                0x79,
+                                                0xFA,
+                                                0x88,
+                                                0x83,
+                                                0x56,
+                                                0x09,
+                                                0x95};
 BMD_CONST REFIID IID_IDeckLinkVideoFrame =
-    /* 3F716FE0-F023-4111-BE5D-EF4414C05B17 */ {0x3F, 0x71, 0x6F, 0xE0, 0xF0, 0x23, 0x41, 0x11, 0xBE, 0x5D, 0xEF, 0x44, 0x14, 0xC0, 0x5B, 0x17};
+    /* 3F716FE0-F023-4111-BE5D-EF4414C05B17 */ {0x3F,
+                                                0x71,
+                                                0x6F,
+                                                0xE0,
+                                                0xF0,
+                                                0x23,
+                                                0x41,
+                                                0x11,
+                                                0xBE,
+                                                0x5D,
+                                                0xEF,
+                                                0x44,
+                                                0x14,
+                                                0xC0,
+                                                0x5B,
+                                                0x17};
 BMD_CONST REFIID IID_IDeckLinkMutableVideoFrame =
-    /* 69E2639F-40DA-4E19-B6F2-20ACE815C390 */ {0x69, 0xE2, 0x63, 0x9F, 0x40, 0xDA, 0x4E, 0x19, 0xB6, 0xF2, 0x20, 0xAC, 0xE8, 0x15, 0xC3, 0x90};
+    /* 69E2639F-40DA-4E19-B6F2-20ACE815C390 */ {0x69,
+                                                0xE2,
+                                                0x63,
+                                                0x9F,
+                                                0x40,
+                                                0xDA,
+                                                0x4E,
+                                                0x19,
+                                                0xB6,
+                                                0xF2,
+                                                0x20,
+                                                0xAC,
+                                                0xE8,
+                                                0x15,
+                                                0xC3,
+                                                0x90};
 BMD_CONST REFIID IID_IDeckLinkVideoFrame3DExtensions =
-    /* DA0F7E4A-EDC7-48A8-9CDD-2DB51C729CD7 */ {0xDA, 0x0F, 0x7E, 0x4A, 0xED, 0xC7, 0x48, 0xA8, 0x9C, 0xDD, 0x2D, 0xB5, 0x1C, 0x72, 0x9C, 0xD7};
+    /* DA0F7E4A-EDC7-48A8-9CDD-2DB51C729CD7 */ {0xDA,
+                                                0x0F,
+                                                0x7E,
+                                                0x4A,
+                                                0xED,
+                                                0xC7,
+                                                0x48,
+                                                0xA8,
+                                                0x9C,
+                                                0xDD,
+                                                0x2D,
+                                                0xB5,
+                                                0x1C,
+                                                0x72,
+                                                0x9C,
+                                                0xD7};
 BMD_CONST REFIID IID_IDeckLinkVideoInputFrame =
-    /* 05CFE374-537C-4094-9A57-680525118F44 */ {0x05, 0xCF, 0xE3, 0x74, 0x53, 0x7C, 0x40, 0x94, 0x9A, 0x57, 0x68, 0x05, 0x25, 0x11, 0x8F, 0x44};
+    /* 05CFE374-537C-4094-9A57-680525118F44 */ {0x05,
+                                                0xCF,
+                                                0xE3,
+                                                0x74,
+                                                0x53,
+                                                0x7C,
+                                                0x40,
+                                                0x94,
+                                                0x9A,
+                                                0x57,
+                                                0x68,
+                                                0x05,
+                                                0x25,
+                                                0x11,
+                                                0x8F,
+                                                0x44};
 BMD_CONST REFIID IID_IDeckLinkVideoFrameAncillary =
-    /* 732E723C-D1A4-4E29-9E8E-4A88797A0004 */ {0x73, 0x2E, 0x72, 0x3C, 0xD1, 0xA4, 0x4E, 0x29, 0x9E, 0x8E, 0x4A, 0x88, 0x79, 0x7A, 0x00, 0x04};
+    /* 732E723C-D1A4-4E29-9E8E-4A88797A0004 */ {0x73,
+                                                0x2E,
+                                                0x72,
+                                                0x3C,
+                                                0xD1,
+                                                0xA4,
+                                                0x4E,
+                                                0x29,
+                                                0x9E,
+                                                0x8E,
+                                                0x4A,
+                                                0x88,
+                                                0x79,
+                                                0x7A,
+                                                0x00,
+                                                0x04};
 BMD_CONST REFIID IID_IDeckLinkAudioInputPacket =
-    /* E43D5870-2894-11DE-8C30-0800200C9A66 */ {0xE4, 0x3D, 0x58, 0x70, 0x28, 0x94, 0x11, 0xDE, 0x8C, 0x30, 0x08, 0x00, 0x20, 0x0C, 0x9A, 0x66};
+    /* E43D5870-2894-11DE-8C30-0800200C9A66 */ {0xE4,
+                                                0x3D,
+                                                0x58,
+                                                0x70,
+                                                0x28,
+                                                0x94,
+                                                0x11,
+                                                0xDE,
+                                                0x8C,
+                                                0x30,
+                                                0x08,
+                                                0x00,
+                                                0x20,
+                                                0x0C,
+                                                0x9A,
+                                                0x66};
 BMD_CONST REFIID IID_IDeckLinkScreenPreviewCallback =
-    /* B1D3F49A-85FE-4C5D-95C8-0B5D5DCCD438 */ {0xB1, 0xD3, 0xF4, 0x9A, 0x85, 0xFE, 0x4C, 0x5D, 0x95, 0xC8, 0x0B, 0x5D, 0x5D, 0xCC, 0xD4, 0x38};
+    /* B1D3F49A-85FE-4C5D-95C8-0B5D5DCCD438 */ {0xB1,
+                                                0xD3,
+                                                0xF4,
+                                                0x9A,
+                                                0x85,
+                                                0xFE,
+                                                0x4C,
+                                                0x5D,
+                                                0x95,
+                                                0xC8,
+                                                0x0B,
+                                                0x5D,
+                                                0x5D,
+                                                0xCC,
+                                                0xD4,
+                                                0x38};
 BMD_CONST REFIID IID_IDeckLinkGLScreenPreviewHelper =
-    /* 504E2209-CAC7-4C1A-9FB4-C5BB6274D22F */ {0x50, 0x4E, 0x22, 0x09, 0xCA, 0xC7, 0x4C, 0x1A, 0x9F, 0xB4, 0xC5, 0xBB, 0x62, 0x74, 0xD2, 0x2F};
+    /* 504E2209-CAC7-4C1A-9FB4-C5BB6274D22F */ {0x50,
+                                                0x4E,
+                                                0x22,
+                                                0x09,
+                                                0xCA,
+                                                0xC7,
+                                                0x4C,
+                                                0x1A,
+                                                0x9F,
+                                                0xB4,
+                                                0xC5,
+                                                0xBB,
+                                                0x62,
+                                                0x74,
+                                                0xD2,
+                                                0x2F};
 BMD_CONST REFIID IID_IDeckLinkNotificationCallback =
-    /* B002A1EC-070D-4288-8289-BD5D36E5FF0D */ {0xB0, 0x02, 0xA1, 0xEC, 0x07, 0x0D, 0x42, 0x88, 0x82, 0x89, 0xBD, 0x5D, 0x36, 0xE5, 0xFF, 0x0D};
+    /* B002A1EC-070D-4288-8289-BD5D36E5FF0D */ {0xB0,
+                                                0x02,
+                                                0xA1,
+                                                0xEC,
+                                                0x07,
+                                                0x0D,
+                                                0x42,
+                                                0x88,
+                                                0x82,
+                                                0x89,
+                                                0xBD,
+                                                0x5D,
+                                                0x36,
+                                                0xE5,
+                                                0xFF,
+                                                0x0D};
 BMD_CONST REFIID IID_IDeckLinkNotification =
-    /* 0A1FB207-E215-441B-9B19-6FA1575946C5 */ {0x0A, 0x1F, 0xB2, 0x07, 0xE2, 0x15, 0x44, 0x1B, 0x9B, 0x19, 0x6F, 0xA1, 0x57, 0x59, 0x46, 0xC5};
+    /* 0A1FB207-E215-441B-9B19-6FA1575946C5 */ {0x0A,
+                                                0x1F,
+                                                0xB2,
+                                                0x07,
+                                                0xE2,
+                                                0x15,
+                                                0x44,
+                                                0x1B,
+                                                0x9B,
+                                                0x19,
+                                                0x6F,
+                                                0xA1,
+                                                0x57,
+                                                0x59,
+                                                0x46,
+                                                0xC5};
 BMD_CONST REFIID IID_IDeckLinkAttributes =
-    /* ABC11843-D966-44CB-96E2-A1CB5D3135C4 */ {0xAB, 0xC1, 0x18, 0x43, 0xD9, 0x66, 0x44, 0xCB, 0x96, 0xE2, 0xA1, 0xCB, 0x5D, 0x31, 0x35, 0xC4};
+    /* ABC11843-D966-44CB-96E2-A1CB5D3135C4 */ {0xAB,
+                                                0xC1,
+                                                0x18,
+                                                0x43,
+                                                0xD9,
+                                                0x66,
+                                                0x44,
+                                                0xCB,
+                                                0x96,
+                                                0xE2,
+                                                0xA1,
+                                                0xCB,
+                                                0x5D,
+                                                0x31,
+                                                0x35,
+                                                0xC4};
 BMD_CONST REFIID IID_IDeckLinkKeyer =
-    /* 89AFCAF5-65F8-421E-98F7-96FE5F5BFBA3 */ {0x89, 0xAF, 0xCA, 0xF5, 0x65, 0xF8, 0x42, 0x1E, 0x98, 0xF7, 0x96, 0xFE, 0x5F, 0x5B, 0xFB, 0xA3};
+    /* 89AFCAF5-65F8-421E-98F7-96FE5F5BFBA3 */ {0x89,
+                                                0xAF,
+                                                0xCA,
+                                                0xF5,
+                                                0x65,
+                                                0xF8,
+                                                0x42,
+                                                0x1E,
+                                                0x98,
+                                                0xF7,
+                                                0x96,
+                                                0xFE,
+                                                0x5F,
+                                                0x5B,
+                                                0xFB,
+                                                0xA3};
 BMD_CONST REFIID IID_IDeckLinkVideoConversion =
-    /* 3BBCB8A2-DA2C-42D9-B5D8-88083644E99A */ {0x3B, 0xBC, 0xB8, 0xA2, 0xDA, 0x2C, 0x42, 0xD9, 0xB5, 0xD8, 0x88, 0x08, 0x36, 0x44, 0xE9, 0x9A};
+    /* 3BBCB8A2-DA2C-42D9-B5D8-88083644E99A */ {0x3B,
+                                                0xBC,
+                                                0xB8,
+                                                0xA2,
+                                                0xDA,
+                                                0x2C,
+                                                0x42,
+                                                0xD9,
+                                                0xB5,
+                                                0xD8,
+                                                0x88,
+                                                0x08,
+                                                0x36,
+                                                0x44,
+                                                0xE9,
+                                                0x9A};
 BMD_CONST REFIID IID_IDeckLinkDeviceNotificationCallback =
-    /* 4997053B-0ADF-4CC8-AC70-7A50C4BE728F */ {0x49, 0x97, 0x05, 0x3B, 0x0A, 0xDF, 0x4C, 0xC8, 0xAC, 0x70, 0x7A, 0x50, 0xC4, 0xBE, 0x72, 0x8F};
+    /* 4997053B-0ADF-4CC8-AC70-7A50C4BE728F */ {0x49,
+                                                0x97,
+                                                0x05,
+                                                0x3B,
+                                                0x0A,
+                                                0xDF,
+                                                0x4C,
+                                                0xC8,
+                                                0xAC,
+                                                0x70,
+                                                0x7A,
+                                                0x50,
+                                                0xC4,
+                                                0xBE,
+                                                0x72,
+                                                0x8F};
 BMD_CONST REFIID IID_IDeckLinkDiscovery =
-    /* CDBF631C-BC76-45FA-B44D-C55059BC6101 */ {0xCD, 0xBF, 0x63, 0x1C, 0xBC, 0x76, 0x45, 0xFA, 0xB4, 0x4D, 0xC5, 0x50, 0x59, 0xBC, 0x61, 0x01};
+    /* CDBF631C-BC76-45FA-B44D-C55059BC6101 */ {0xCD,
+                                                0xBF,
+                                                0x63,
+                                                0x1C,
+                                                0xBC,
+                                                0x76,
+                                                0x45,
+                                                0xFA,
+                                                0xB4,
+                                                0x4D,
+                                                0xC5,
+                                                0x50,
+                                                0x59,
+                                                0xBC,
+                                                0x61,
+                                                0x01};
 
 /* Enum BMDVideoOutputFlags - Flags to control the output of ancillary data along with video. */
 
@@ -135,8 +480,8 @@ enum _BMDVideoInputFlags
     bmdVideoInputDualStream3D          = 1 << 1
 };
 
-/* Enum BMDVideoInputFormatChangedEvents - Bitmask passed to the VideoInputFormatChanged notification to identify the properties of the input signal that have
- * changed */
+/* Enum BMDVideoInputFormatChangedEvents - Bitmask passed to the VideoInputFormatChanged notification to identify the
+ * properties of the input signal that have changed */
 
 typedef uint32_t BMDVideoInputFormatChangedEvents;
 enum _BMDVideoInputFormatChangedEvents
@@ -146,7 +491,8 @@ enum _BMDVideoInputFormatChangedEvents
     bmdVideoInputColorspaceChanged     = 1 << 2
 };
 
-/* Enum BMDDetectedVideoInputFormatFlags - Flags passed to the VideoInputFormatChanged notification to describe the detected video input signal */
+/* Enum BMDDetectedVideoInputFormatFlags - Flags passed to the VideoInputFormatChanged notification to describe the
+ * detected video input signal */
 
 typedef uint32_t BMDDetectedVideoInputFormatFlags;
 enum _BMDDetectedVideoInputFormatFlags
@@ -156,8 +502,8 @@ enum _BMDDetectedVideoInputFormatFlags
     bmdDetectedVideoInputDualStream3D = 1 << 2
 };
 
-/* Enum BMDDeckLinkCapturePassthroughMode - Enumerates whether the video output is electrically connected to the video input or if the clean switching mode is
- * enabled */
+/* Enum BMDDeckLinkCapturePassthroughMode - Enumerates whether the video output is electrically connected to the video
+ * input or if the clean switching mode is enabled */
 
 typedef uint32_t BMDDeckLinkCapturePassthroughMode;
 enum _BMDDeckLinkCapturePassthroughMode
@@ -229,10 +575,12 @@ typedef uint32_t BMDTimecodeFormat;
 enum _BMDTimecodeFormat
 {
     bmdTimecodeRP188VITC1 = /* 'rpv1' */ 0x72707631, // RP188 timecode where DBB1 equals VITC1 (line 9)
-    bmdTimecodeRP188VITC2 = /* 'rp12' */ 0x72703132, // RP188 timecode where DBB1 equals VITC2 (line 9 for progressive or line 571 for interlaced/PsF)
-    bmdTimecodeRP188LTC   = /* 'rplt' */ 0x72706C74, // RP188 timecode where DBB1 equals LTC (line 10)
+    bmdTimecodeRP188VITC2 = /* 'rp12' */ 0x72703132, // RP188 timecode where DBB1 equals VITC2 (line 9 for progressive
+                                                     // or line 571 for interlaced/PsF)
+    bmdTimecodeRP188LTC = /* 'rplt' */ 0x72706C74,   // RP188 timecode where DBB1 equals LTC (line 10)
     bmdTimecodeRP188Any =
-        /* 'rp18' */ 0x72703138, // For capture: return the first valid timecode in {VITC1, LTC ,VITC2} - For playback: set the timecode as VITC1
+        /* 'rp18' */ 0x72703138, // For capture: return the first valid timecode in {VITC1, LTC ,VITC2} - For playback:
+                                 // set the timecode as VITC1
     bmdTimecodeVITC       = /* 'vitc' */ 0x76697463,
     bmdTimecodeVITCField2 = /* 'vit2' */ 0x76697432,
     bmdTimecodeSerial     = /* 'seri' */ 0x73657269
@@ -444,8 +792,9 @@ class IDeckLinkDiscovery;
 class IDeckLinkVideoOutputCallback : public IUnknown
 {
   public:
-    virtual HRESULT ScheduledFrameCompleted(/* in */ IDeckLinkVideoFrame* completedFrame, /* in */ BMDOutputFrameCompletionResult result) = 0;
-    virtual HRESULT ScheduledPlaybackHasStopped(void)                                                                                     = 0;
+    virtual HRESULT ScheduledFrameCompleted(/* in */ IDeckLinkVideoFrame*           completedFrame,
+                                            /* in */ BMDOutputFrameCompletionResult result) = 0;
+    virtual HRESULT ScheduledPlaybackHasStopped(void)                                       = 0;
 
   protected:
     virtual ~IDeckLinkVideoOutputCallback() {} // call Release method to drop reference count
@@ -458,8 +807,9 @@ class IDeckLinkInputCallback : public IUnknown
   public:
     virtual HRESULT VideoInputFormatChanged(/* in */ BMDVideoInputFormatChangedEvents notificationEvents,
                                             /* in */ IDeckLinkDisplayMode*            newDisplayMode,
-                                            /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)                                 = 0;
-    virtual HRESULT VideoInputFrameArrived(/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket) = 0;
+                                            /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags) = 0;
+    virtual HRESULT VideoInputFrameArrived(/* in */ IDeckLinkVideoInputFrame*  videoFrame,
+                                           /* in */ IDeckLinkAudioInputPacket* audioPacket)                = 0;
 
   protected:
     virtual ~IDeckLinkInputCallback() {} // call Release method to drop reference count
@@ -526,14 +876,15 @@ class IDeckLinkOutput : public IUnknown
     virtual HRESULT EnableVideoOutput(/* in */ BMDDisplayMode displayMode, /* in */ BMDVideoOutputFlags flags) = 0;
     virtual HRESULT DisableVideoOutput(void)                                                                   = 0;
 
-    virtual HRESULT SetVideoOutputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator)                          = 0;
+    virtual HRESULT SetVideoOutputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator) = 0;
     virtual HRESULT CreateVideoFrame(/* in */ int32_t                       width,
                                      /* in */ int32_t                       height,
                                      /* in */ int32_t                       rowBytes,
                                      /* in */ BMDPixelFormat                pixelFormat,
                                      /* in */ BMDFrameFlags                 flags,
-                                     /* out */ IDeckLinkMutableVideoFrame** outFrame)                                            = 0;
-    virtual HRESULT CreateAncillaryData(/* in */ BMDPixelFormat pixelFormat, /* out */ IDeckLinkVideoFrameAncillary** outBuffer) = 0;
+                                     /* out */ IDeckLinkMutableVideoFrame** outFrame)                   = 0;
+    virtual HRESULT CreateAncillaryData(/* in */ BMDPixelFormat                  pixelFormat,
+                                        /* out */ IDeckLinkVideoFrameAncillary** outBuffer)             = 0;
 
     virtual HRESULT DisplayVideoFrameSync(/* in */ IDeckLinkVideoFrame* theFrame)                           = 0;
     virtual HRESULT ScheduleVideoFrame(/* in */ IDeckLinkVideoFrame* theFrame,
@@ -551,7 +902,9 @@ class IDeckLinkOutput : public IUnknown
                                       /* in */ BMDAudioOutputStreamType streamType) = 0;
     virtual HRESULT DisableAudioOutput(void)                                        = 0;
 
-    virtual HRESULT WriteAudioSamplesSync(/* in */ void* buffer, /* in */ uint32_t sampleFrameCount, /* out */ uint32_t* sampleFramesWritten) = 0;
+    virtual HRESULT WriteAudioSamplesSync(/* in */ void*      buffer,
+                                          /* in */ uint32_t   sampleFrameCount,
+                                          /* out */ uint32_t* sampleFramesWritten) = 0;
 
     virtual HRESULT BeginAudioPreroll(void)                                       = 0;
     virtual HRESULT EndAudioPreroll(void)                                         = 0;
@@ -568,12 +921,17 @@ class IDeckLinkOutput : public IUnknown
 
     /* Output Control */
 
-    virtual HRESULT StartScheduledPlayback(/* in */ BMDTimeValue playbackStartTime, /* in */ BMDTimeScale timeScale, /* in */ double playbackSpeed) = 0;
-    virtual HRESULT
-                    StopScheduledPlayback(/* in */ BMDTimeValue stopPlaybackAtTime, /* out */ BMDTimeValue* actualStopTime, /* in */ BMDTimeScale timeScale) = 0;
-    virtual HRESULT IsScheduledPlaybackRunning(/* out */ bool* active)                                                                                  = 0;
-    virtual HRESULT GetScheduledStreamTime(/* in */ BMDTimeScale desiredTimeScale, /* out */ BMDTimeValue* streamTime, /* out */ double* playbackSpeed) = 0;
-    virtual HRESULT GetReferenceStatus(/* out */ BMDReferenceStatus* referenceStatus)                                                                   = 0;
+    virtual HRESULT StartScheduledPlayback(/* in */ BMDTimeValue playbackStartTime,
+                                           /* in */ BMDTimeScale timeScale,
+                                           /* in */ double       playbackSpeed)             = 0;
+    virtual HRESULT StopScheduledPlayback(/* in */ BMDTimeValue   stopPlaybackAtTime,
+                                          /* out */ BMDTimeValue* actualStopTime,
+                                          /* in */ BMDTimeScale   timeScale)            = 0;
+    virtual HRESULT IsScheduledPlaybackRunning(/* out */ bool* active)                = 0;
+    virtual HRESULT GetScheduledStreamTime(/* in */ BMDTimeScale   desiredTimeScale,
+                                           /* out */ BMDTimeValue* streamTime,
+                                           /* out */ double*       playbackSpeed)           = 0;
+    virtual HRESULT GetReferenceStatus(/* out */ BMDReferenceStatus* referenceStatus) = 0;
 
     /* Hardware Timing */
 
@@ -605,16 +963,20 @@ class IDeckLinkInput : public IUnknown
 
     /* Video Input */
 
-    virtual HRESULT EnableVideoInput(/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoInputFlags flags) = 0;
-    virtual HRESULT DisableVideoInput(void)                                                                                                       = 0;
-    virtual HRESULT GetAvailableVideoFrameCount(/* out */ uint32_t* availableFrameCount)                                                          = 0;
-    virtual HRESULT SetVideoInputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator)                                            = 0;
+    virtual HRESULT EnableVideoInput(/* in */ BMDDisplayMode     displayMode,
+                                     /* in */ BMDPixelFormat     pixelFormat,
+                                     /* in */ BMDVideoInputFlags flags)                                = 0;
+    virtual HRESULT DisableVideoInput(void)                                                            = 0;
+    virtual HRESULT GetAvailableVideoFrameCount(/* out */ uint32_t* availableFrameCount)               = 0;
+    virtual HRESULT SetVideoInputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator) = 0;
 
     /* Audio Input */
 
-    virtual HRESULT EnableAudioInput(/* in */ BMDAudioSampleRate sampleRate, /* in */ BMDAudioSampleType sampleType, /* in */ uint32_t channelCount) = 0;
-    virtual HRESULT DisableAudioInput(void)                                                                                                          = 0;
-    virtual HRESULT GetAvailableAudioSampleFrameCount(/* out */ uint32_t* availableSampleFrameCount)                                                 = 0;
+    virtual HRESULT EnableAudioInput(/* in */ BMDAudioSampleRate sampleRate,
+                                     /* in */ BMDAudioSampleType sampleType,
+                                     /* in */ uint32_t           channelCount)                                 = 0;
+    virtual HRESULT DisableAudioInput(void)                                                          = 0;
+    virtual HRESULT GetAvailableAudioSampleFrameCount(/* out */ uint32_t* availableSampleFrameCount) = 0;
 
     /* Input Control */
 
@@ -675,7 +1037,8 @@ class IDeckLinkMutableVideoFrame : public IDeckLinkVideoFrame
     virtual ~IDeckLinkMutableVideoFrame() {} // call Release method to drop reference count
 };
 
-/* Interface IDeckLinkVideoFrame3DExtensions - Optional interface implemented on IDeckLinkVideoFrame to support 3D frames */
+/* Interface IDeckLinkVideoFrame3DExtensions - Optional interface implemented on IDeckLinkVideoFrame to support 3D
+ * frames */
 
 class IDeckLinkVideoFrame3DExtensions : public IUnknown
 {
@@ -692,9 +1055,12 @@ class IDeckLinkVideoFrame3DExtensions : public IUnknown
 class IDeckLinkVideoInputFrame : public IDeckLinkVideoFrame
 {
   public:
-    virtual HRESULT GetStreamTime(/* out */ BMDTimeValue* frameTime, /* out */ BMDTimeValue* frameDuration, /* in */ BMDTimeScale timeScale) = 0;
-    virtual HRESULT
-    GetHardwareReferenceTimestamp(/* in */ BMDTimeScale timeScale, /* out */ BMDTimeValue* frameTime, /* out */ BMDTimeValue* frameDuration) = 0;
+    virtual HRESULT GetStreamTime(/* out */ BMDTimeValue* frameTime,
+                                  /* out */ BMDTimeValue* frameDuration,
+                                  /* in */ BMDTimeScale   timeScale)                       = 0;
+    virtual HRESULT GetHardwareReferenceTimestamp(/* in */ BMDTimeScale   timeScale,
+                                                  /* out */ BMDTimeValue* frameTime,
+                                                  /* out */ BMDTimeValue* frameDuration) = 0;
 
   protected:
     virtual ~IDeckLinkVideoInputFrame() {} // call Release method to drop reference count
@@ -766,8 +1132,9 @@ class IDeckLinkNotificationCallback : public IUnknown
 class IDeckLinkNotification : public IUnknown
 {
   public:
-    virtual HRESULT Subscribe(/* in */ BMDNotifications topic, /* in */ IDeckLinkNotificationCallback* theCallback)   = 0;
-    virtual HRESULT Unsubscribe(/* in */ BMDNotifications topic, /* in */ IDeckLinkNotificationCallback* theCallback) = 0;
+    virtual HRESULT Subscribe(/* in */ BMDNotifications topic, /* in */ IDeckLinkNotificationCallback* theCallback) = 0;
+    virtual HRESULT Unsubscribe(/* in */ BMDNotifications               topic,
+                                /* in */ IDeckLinkNotificationCallback* theCallback)                                = 0;
 };
 
 /* Interface IDeckLinkAttributes - DeckLink Attribute interface */
@@ -827,8 +1194,9 @@ class IDeckLinkDeviceNotificationCallback : public IUnknown
 class IDeckLinkDiscovery : public IUnknown
 {
   public:
-    virtual HRESULT InstallDeviceNotifications(/* in */ IDeckLinkDeviceNotificationCallback* deviceNotificationCallback) = 0;
-    virtual HRESULT UninstallDeviceNotifications(void)                                                                   = 0;
+    virtual HRESULT
+                    InstallDeviceNotifications(/* in */ IDeckLinkDeviceNotificationCallback* deviceNotificationCallback) = 0;
+    virtual HRESULT UninstallDeviceNotifications(void) = 0;
 
   protected:
     virtual ~IDeckLinkDiscovery() {} // call Release method to drop reference count

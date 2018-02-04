@@ -30,7 +30,8 @@ namespace caspar { namespace protocol { namespace log {
 class tcp_logger_protocol_strategy : public IO::protocol_strategy<char>
 {
     spl::shared_ptr<IO::client_connection<char>> client_connection_;
-    std::shared_ptr<void> log_sink_ = caspar::log::add_preformatted_line_sink([=](std::string line) { handle_log_line(std::move(line)); });
+    std::shared_ptr<void>                        log_sink_ =
+        caspar::log::add_preformatted_line_sink([=](std::string line) { handle_log_line(std::move(line)); });
 
   public:
     tcp_logger_protocol_strategy(spl::shared_ptr<IO::client_connection<char>> client_connection)
@@ -47,7 +48,8 @@ class tcp_logger_protocol_strategy : public IO::protocol_strategy<char>
     void parse(const std::string& data) override {}
 };
 
-spl::shared_ptr<IO::protocol_strategy<char>> tcp_logger_protocol_strategy_factory::create(const spl::shared_ptr<IO::client_connection<char>>& client_connection)
+spl::shared_ptr<IO::protocol_strategy<char>>
+tcp_logger_protocol_strategy_factory::create(const spl::shared_ptr<IO::client_connection<char>>& client_connection)
 {
     return spl::make_shared<tcp_logger_protocol_strategy>(client_connection);
 }

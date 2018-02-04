@@ -107,7 +107,8 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     std::wstringstream                                      str;
     boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
     boost::property_tree::write_xml(str, env::properties(), w);
-    CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
+    CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n"
+                     << str.str() << L"-----------------------------------------";
 
     caspar_server->start();
 
@@ -119,7 +120,8 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
         spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
             L"\r\n",
             spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
-                spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(L"Console", caspar_server->get_amcp_command_repository())))
+                spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(L"Console",
+                                                                       caspar_server->get_amcp_command_repository())))
             ->create(console_client);
 
     // Use separate thread for the blocking console input, will be terminated
@@ -130,7 +132,8 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
             if (!std::getline(std::wcin, wcmd)) // TODO: It's blocking...
                 wcmd = L"EXIT";                 // EOF, handle as EXIT
 
-            if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE")) {
+            if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
+                boost::iequals(wcmd, L"BYE")) {
                 CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
                 should_wait_for_keypress = true;
                 shutdown(false); // false to not restart
@@ -214,7 +217,7 @@ int main(int argc, char** argv)
         env::configure(config_file_name);
 
         log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
-        auto                   log_categories_str = env::properties().get(L"configuration.log-categories", L"communication");
+        auto log_categories_str = env::properties().get(L"configuration.log-categories", L"communication");
         std::set<std::wstring> log_categories;
         boost::split(log_categories, log_categories_str, boost::is_any_of(L", "));
         for (auto& log_category : {L"calltrace", L"communication"})
@@ -224,8 +227,10 @@ int main(int argc, char** argv)
             wait_for_remote_debugging();
 
         // Start logging to file.
-        log::add_file_sink(env::log_folder() + L"caspar", caspar::log::category != caspar::log::log_category::calltrace);
-        log::add_file_sink(env::log_folder() + L"calltrace", caspar::log::category == caspar::log::log_category::calltrace);
+        log::add_file_sink(env::log_folder() + L"caspar",
+                           caspar::log::category != caspar::log::log_category::calltrace);
+        log::add_file_sink(env::log_folder() + L"calltrace",
+                           caspar::log::category == caspar::log::log_category::calltrace);
         std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 
         // Once logging to file, log configuration warnings.
@@ -244,17 +249,19 @@ int main(int argc, char** argv)
         if (should_wait_for_keypress)
             wait_for_keypress();
     } catch (boost::property_tree::file_parser_error& e) {
-        CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message() << ". Please check the configuration file ("
-                          << u8(config_file_name) << ") for errors.";
+        CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message()
+                          << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
         wait_for_keypress();
     } catch (user_error&) {
         CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
         wait_for_keypress();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
+        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums "
+                             L"(www.casparcg.com/forum).";
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
+        std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file "
+                      L"folder for more information.\n\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(4000));
     }
 

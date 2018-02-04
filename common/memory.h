@@ -66,7 +66,8 @@ class unique_ptr
     }
 
     template <typename T2, typename D2>
-    explicit unique_ptr(std::unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit unique_ptr(std::unique_ptr<T2, D2>&& p,
+                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -82,7 +83,9 @@ class unique_ptr
     }
 
     template <typename T2>
-    explicit unique_ptr(T2* p, typename std::remove_reference<D>::type&& d, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit unique_ptr(T2*                                       p,
+                        typename std::remove_reference<D>::type&& d,
+                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p, d)
     {
         if (!p_)
@@ -297,14 +300,19 @@ unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
 template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
 unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
 {
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
+    return unique_ptr<T>(new T(
+        std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
 }
 
 template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
 unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
 {
-    return unique_ptr<T>(
-        new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
+    return unique_ptr<T>(new T(std::forward<P0>(p0),
+                               std::forward<P1>(p1),
+                               std::forward<P2>(p2),
+                               std::forward<P3>(p3),
+                               std::forward<P4>(p4),
+                               std::forward<P5>(p5)));
 }
 
 // shared_ptr
@@ -336,7 +344,8 @@ class shared_ptr
     }
 
     template <typename T2>
-    explicit shared_ptr(std::unique_ptr<T2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(std::unique_ptr<T2>&& p,
+                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -344,7 +353,8 @@ class shared_ptr
     }
 
     template <typename T2>
-    explicit shared_ptr(spl::unique_ptr<T2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(spl::unique_ptr<T2>&& p,
+                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p.release(), p.get_deleter())
     {
         if (!p_)
@@ -352,7 +362,8 @@ class shared_ptr
     }
 
     template <typename T2>
-    explicit shared_ptr(std::shared_ptr<T2> p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(std::shared_ptr<T2> p,
+                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -587,7 +598,10 @@ class enable_shared_from_this : public std::enable_shared_from_this<T>
   public:
     shared_ptr<T> shared_from_this() { return shared_ptr<T>(std::enable_shared_from_this<T>::shared_from_this()); }
 
-    shared_ptr<T const> shared_from_this() const { return shared_ptr<T const>(std::enable_shared_from_this<T>::shared_from_this()); }
+    shared_ptr<T const> shared_from_this() const
+    {
+        return shared_ptr<T const>(std::enable_shared_from_this<T>::shared_from_this());
+    }
 
   protected:
     enable_shared_from_this() {}
@@ -644,20 +658,26 @@ shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2)
 template <typename T, typename P0, typename P1, typename P2, typename P3>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
 {
-    return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
+    return shared_ptr<T>(
+        std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
 }
 
 template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
 {
-    return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
+    return shared_ptr<T>(std::make_shared<T>(
+        std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
 }
 
 template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
 {
-    return shared_ptr<T>(std::make_shared<T>(
-        std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
+    return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
+                                             std::forward<P1>(p1),
+                                             std::forward<P2>(p2),
+                                             std::forward<P3>(p3),
+                                             std::forward<P4>(p4),
+                                             std::forward<P5>(p5)));
 }
 
 template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
@@ -672,7 +692,15 @@ shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, 
                                              std::forward<P6>(p6)));
 }
 
-template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+template <typename T,
+          typename P0,
+          typename P1,
+          typename P2,
+          typename P3,
+          typename P4,
+          typename P5,
+          typename P6,
+          typename P7>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7)
 {
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
@@ -685,7 +713,16 @@ shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, 
                                              std::forward<P7>(p7)));
 }
 
-template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+template <typename T,
+          typename P0,
+          typename P1,
+          typename P2,
+          typename P3,
+          typename P4,
+          typename P5,
+          typename P6,
+          typename P7,
+          typename P8>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8)
 {
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
@@ -699,7 +736,17 @@ shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, 
                                              std::forward<P8>(p8)));
 }
 
-template <typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+template <typename T,
+          typename P0,
+          typename P1,
+          typename P2,
+          typename P3,
+          typename P4,
+          typename P5,
+          typename P6,
+          typename P7,
+          typename P8,
+          typename P9>
 shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8, P9&& p9)
 {
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
@@ -726,7 +773,8 @@ template <typename T,
           typename P8,
           typename P9,
           typename P10>
-shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8, P9&& p9, P10&& p10)
+shared_ptr<T>
+make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8, P9&& p9, P10&& p10)
 {
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
                                              std::forward<P1>(p1),
@@ -754,7 +802,18 @@ template <typename T,
           typename P9,
           typename P10,
           typename P11>
-shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8, P9&& p9, P10&& p10, P11&& p11)
+shared_ptr<T> make_shared(P0&&  p0,
+                          P1&&  p1,
+                          P2&&  p2,
+                          P3&&  p3,
+                          P4&&  p4,
+                          P5&&  p5,
+                          P6&&  p6,
+                          P7&&  p7,
+                          P8&&  p8,
+                          P9&&  p9,
+                          P10&& p10,
+                          P11&& p11)
 {
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0),
                                              std::forward<P1>(p1),

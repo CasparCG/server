@@ -71,7 +71,8 @@ std::vector<unsigned char> from_base64(const std::string& data)
 {
     // The boost base64 iterator will over-iterate the string if not a multiple
     // of 4, so we have to short circuit before.
-    auto length = std::count_if(data.begin(), data.end(), [](char c) { return !std::isspace(static_cast<unsigned char>(c)); });
+    auto length =
+        std::count_if(data.begin(), data.end(), [](char c) { return !std::isspace(static_cast<unsigned char>(c)); });
 
     if (length % 4 != 0)
         CASPAR_THROW_EXCEPTION(user_error() << msg_info("The length of a base64 sequence must be a multiple of 4"));
@@ -79,7 +80,8 @@ std::vector<unsigned char> from_base64(const std::string& data)
     int         padding = 0;
     std::string zero_padding;
 
-    // binary_from_base64 does not support padding characters so we have to append base64 0 -> 'A' and then remove it after decoding
+    // binary_from_base64 does not support padding characters so we have to append base64 0 -> 'A' and then remove it
+    // after decoding
     if (data.length() >= 2) {
         if (data[data.length() - 1] == '=') {
             ++padding;
@@ -93,13 +95,16 @@ std::vector<unsigned char> from_base64(const std::string& data)
     }
 
     if (padding > 0) {
-        auto concatenated =
-            boost::join(data | boost::adaptors::sliced(0, data.length() - padding), boost::make_iterator_range(zero_padding.cbegin(), zero_padding.cend()));
+        auto concatenated = boost::join(data | boost::adaptors::sliced(0, data.length() - padding),
+                                        boost::make_iterator_range(zero_padding.cbegin(), zero_padding.cend()));
 
         // From https://svn.boost.org/trac/boost/ticket/5624
-        typedef boost::archive::iterators::
-            transform_width<boost::archive::iterators::binary_from_base64<boost::archive::iterators::remove_whitespace<decltype(concatenated.begin())>>, 8, 6>
-                base64_iterator;
+        typedef boost::archive::iterators::transform_width<
+            boost::archive::iterators::binary_from_base64<
+                boost::archive::iterators::remove_whitespace<decltype(concatenated.begin())>>,
+            8,
+            6>
+            base64_iterator;
 
         std::vector<unsigned char> result(base64_iterator(concatenated.begin()), base64_iterator(concatenated.end()));
 
@@ -108,8 +113,11 @@ std::vector<unsigned char> from_base64(const std::string& data)
         return std::move(result);
     } else {
         // From https://svn.boost.org/trac/boost/ticket/5624
-        typedef boost::archive::iterators::
-            transform_width<boost::archive::iterators::binary_from_base64<boost::archive::iterators::remove_whitespace<std::string::const_iterator>>, 8, 6>
+        typedef boost::archive::iterators::transform_width<
+            boost::archive::iterators::binary_from_base64<
+                boost::archive::iterators::remove_whitespace<std::string::const_iterator>>,
+            8,
+            6>
                                    base64_iterator;
         std::vector<unsigned char> result(base64_iterator(data.begin()), base64_iterator(data.end()));
 

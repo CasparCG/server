@@ -50,7 +50,8 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
     IO::client_connection<wchar_t>::ptr client_connection_;
 
   public:
-    CLKProtocolStrategy(const IO::client_connection<wchar_t>::ptr& client_connection, clk_command_processor& command_processor)
+    CLKProtocolStrategy(const IO::client_connection<wchar_t>::ptr& client_connection,
+                        clk_command_processor&                     command_processor)
         : command_processor_(command_processor)
         , client_connection_(client_connection)
     {
@@ -127,14 +128,16 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
     }
 };
 
-clk_protocol_strategy_factory::clk_protocol_strategy_factory(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
-                                                             const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
-                                                             const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
+clk_protocol_strategy_factory::clk_protocol_strategy_factory(
+    const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
+    const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
 {
     add_command_handlers(command_processor_, channels, channels.at(0), cg_registry, producer_registry);
 }
 
-IO::protocol_strategy<wchar_t>::ptr clk_protocol_strategy_factory::create(const IO::client_connection<wchar_t>::ptr& client_connection)
+IO::protocol_strategy<wchar_t>::ptr
+clk_protocol_strategy_factory::create(const IO::client_connection<wchar_t>::ptr& client_connection)
 {
     return spl::make_shared<CLKProtocolStrategy>(client_connection, command_processor_);
 }

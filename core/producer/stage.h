@@ -54,8 +54,9 @@ class stage final : public interaction_sink
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc);
 
-    std::future<void>            apply_transforms(const std::vector<transform_tuple_t>& transforms);
-    std::future<void>            apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration, const tweener& tween);
+    std::future<void> apply_transforms(const std::vector<transform_tuple_t>& transforms);
+    std::future<void>
+                                 apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration, const tweener& tween);
     std::future<void>            clear_transforms(int index);
     std::future<void>            clear_transforms();
     std::future<frame_transform> get_current_transform(int index);

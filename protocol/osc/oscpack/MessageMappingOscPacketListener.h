@@ -44,7 +44,10 @@ class MessageMappingOscPacketListener : public OscPacketListener
     typedef void (T::*function_type)(const osc::ReceivedMessage&, const IpEndpointName&);
 
   protected:
-    void RegisterMessageFunction(const char* addressPattern, function_type f) { functions_.insert(std::make_pair(addressPattern, f)); }
+    void RegisterMessageFunction(const char* addressPattern, function_type f)
+    {
+        functions_.insert(std::make_pair(addressPattern, f));
+    }
 
     virtual void ProcessMessage(const osc::ReceivedMessage& m, const IpEndpointName& remoteEndpoint)
     {

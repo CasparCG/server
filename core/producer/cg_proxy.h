@@ -40,8 +40,11 @@ class cg_proxy
 
     virtual ~cg_proxy() {}
 
-    virtual void
-                         add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& start_from_label = L"", const std::wstring& data = L"") = 0;
+    virtual void         add(int                 layer,
+                             const std::wstring& template_name,
+                             bool                play_on_load,
+                             const std::wstring& start_from_label = L"",
+                             const std::wstring& data             = L"")            = 0;
     virtual void         remove(int layer)                              = 0;
     virtual void         play(int layer)                                = 0;
     virtual void         stop(int layer, unsigned int mix_out_duration) = 0;
@@ -52,9 +55,11 @@ class cg_proxy
     static const spl::shared_ptr<cg_proxy>& empty();
 };
 
-typedef std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)>                                     cg_proxy_factory;
-typedef std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies, const std::wstring& filename)> cg_producer_factory;
-typedef std::function<std::string(const std::wstring& filename)>                                                                      meta_info_extractor;
+typedef std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)> cg_proxy_factory;
+typedef std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
+                                                      const std::wstring&                filename)>
+                                                                 cg_producer_factory;
+typedef std::function<std::string(const std::wstring& filename)> meta_info_extractor;
 
 class cg_producer_registry : boost::noncopyable
 {
@@ -68,16 +73,19 @@ class cg_producer_registry : boost::noncopyable
                               cg_producer_factory    producer_factory,
                               bool                   reusable_producer_instance);
 
-    spl::shared_ptr<frame_producer> create_producer(const frame_producer_dependencies& dependencies, const std::wstring& filename) const;
-    spl::shared_ptr<cg_proxy>       get_proxy(const spl::shared_ptr<frame_producer>& producer) const;
-    spl::shared_ptr<cg_proxy>       get_proxy(const spl::shared_ptr<video_channel>& video_channel, int render_layer) const;
-    spl::shared_ptr<cg_proxy>       get_or_create_proxy(const spl::shared_ptr<video_channel>& video_channel,
-                                                        const frame_producer_dependencies&    dependencies,
-                                                        int                                   render_layer,
-                                                        const std::wstring&                   filename) const;
-    std::string                     read_meta_info(const std::wstring& filename) const;
-    bool                            is_cg_extension(const std::wstring& extension) const;
-    std::wstring                    get_cg_producer_name(const std::wstring& filename) const;
+    spl::shared_ptr<frame_producer> create_producer(const frame_producer_dependencies& dependencies,
+                                                    const std::wstring&                filename) const;
+
+    spl::shared_ptr<cg_proxy> get_proxy(const spl::shared_ptr<frame_producer>& producer) const;
+    spl::shared_ptr<cg_proxy> get_proxy(const spl::shared_ptr<video_channel>& video_channel, int render_layer) const;
+    spl::shared_ptr<cg_proxy> get_or_create_proxy(const spl::shared_ptr<video_channel>& video_channel,
+                                                  const frame_producer_dependencies&    dependencies,
+                                                  int                                   render_layer,
+                                                  const std::wstring&                   filename) const;
+
+    std::string  read_meta_info(const std::wstring& filename) const;
+    bool         is_cg_extension(const std::wstring& extension) const;
+    std::wstring get_cg_producer_name(const std::wstring& filename) const;
 
   private:
     struct impl;

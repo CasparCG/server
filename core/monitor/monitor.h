@@ -32,7 +32,9 @@
 
 namespace caspar { namespace core { namespace monitor {
 
-typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring, std::vector<std::int8_t>> data_t;
+typedef boost::
+    variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring, std::vector<std::int8_t>>
+        data_t;
 
 class message
 {

@@ -33,7 +33,11 @@ class html_cg_proxy : public core::cg_proxy
     html_cg_proxy(spl::shared_ptr<core::frame_producer> producer);
     ~html_cg_proxy();
 
-    void         add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& start_from_label, const std::wstring& data) override;
+    void         add(int                 layer,
+                     const std::wstring& template_name,
+                     bool                play_on_load,
+                     const std::wstring& start_from_label,
+                     const std::wstring& data) override;
     void         remove(int layer) override;
     void         play(int layer) override;
     void         stop(int layer, unsigned int mix_out_duration) override;

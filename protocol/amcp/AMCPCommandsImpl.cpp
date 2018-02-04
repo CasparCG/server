@@ -152,7 +152,8 @@ std::wstring read_latin1_file(const boost::filesystem::path& file)
     std::wstring widened_result;
 
     // The first 255 codepoints in unicode is the same as in latin1
-    boost::copy(result | boost::adaptors::transformed([](char c) { return static_cast<unsigned char>(c); }), std::back_inserter(widened_result));
+    boost::copy(result | boost::adaptors::transformed([](char c) { return static_cast<unsigned char>(c); }),
+                std::back_inserter(widened_result));
 
     return widened_result;
 }
@@ -201,9 +202,14 @@ std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_con
     return result;
 }
 
-core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel, const command_context& ctx)
+core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel,
+                                                            const command_context&                      ctx)
 {
-    return core::frame_producer_dependencies(channel->frame_factory(), get_channels(ctx), channel->video_format_desc(), ctx.producer_registry, ctx.cg_registry);
+    return core::frame_producer_dependencies(channel->frame_factory(),
+                                             get_channels(ctx),
+                                             channel->video_format_desc(),
+                                             ctx.producer_registry,
+                                             ctx.cg_registry);
 }
 
 // Basic Commands
@@ -276,7 +282,8 @@ std::wstring load_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
-    auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
+    auto pFP =
+        ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
     ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
 
     return L"202 LOAD OK\r\n";
@@ -371,7 +378,8 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
+    auto consumer =
+        ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
     ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
@@ -384,7 +392,8 @@ std::wstring remove_command(command_context& ctx)
     if (index == std::numeric_limits<int>::min()) {
         replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
 
-        index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx))->index();
+        index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx))
+                    ->index();
     }
 
     ctx.channel.channel->output().remove(index);
@@ -394,7 +403,8 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({L"IMAGE"}, &ctx.channel.channel->stage(), get_channels(ctx)));
+    ctx.channel.channel->output().add(
+        ctx.consumer_registry->create_consumer({L"IMAGE"}, &ctx.channel.channel->stage(), get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -508,7 +518,9 @@ std::wstring data_list_command(command_context& ctx)
     std::wstringstream replyString;
     replyString << L"200 DATA LIST OK\r\n";
 
-    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::data_folder(), sub_directory)), end; itr != end; ++itr) {
+    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::data_folder(), sub_directory)), end;
+         itr != end;
+         ++itr) {
         if (boost::filesystem::is_regular_file(itr->path())) {
             if (!boost::iequals(itr->path().extension().wstring(), L".ftd"))
                 continue;
@@ -603,14 +615,17 @@ std::wstring cg_add_command(command_context& ctx)
 std::wstring cg_play_command(command_context& ctx)
 {
     int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
-    ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->play(layer);
+    ctx.cg_registry
+        ->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
+        ->play(layer);
 
     return L"202 CG OK\r\n";
 }
 
 spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 {
-    auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
+    auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel),
+                                            ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
 
     if (proxy == cg_proxy::empty())
         CASPAR_THROW_EXCEPTION(expected_user_error() << msg_info(L"No CG proxy running on layer"));
@@ -681,7 +696,10 @@ std::wstring cg_invoke_command(command_context& ctx)
 
 // Mixer Commands
 
-core::frame_transform get_current_transform(command_context& ctx) { return ctx.channel.channel->stage().get_current_transform(ctx.layer_index()).get(); }
+core::frame_transform get_current_transform(command_context& ctx)
+{
+    return ctx.channel.channel->stage().get_current_transform(ctx.layer_index()).get();
+}
 
 template <typename Func>
 std::wstring reply_value(command_context& ctx, const Func& extractor)
@@ -754,10 +772,14 @@ std::wstring mixer_chroma_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
         auto chroma = get_current_transform(ctx).image_transform.chroma;
-        return L"201 MIXER OK\r\n" + std::wstring(chroma.enable ? L"1 " : L"0 ") + boost::lexical_cast<std::wstring>(chroma.target_hue) + L" " +
-               boost::lexical_cast<std::wstring>(chroma.hue_width) + L" " + boost::lexical_cast<std::wstring>(chroma.min_saturation) + L" " +
-               boost::lexical_cast<std::wstring>(chroma.min_brightness) + L" " + boost::lexical_cast<std::wstring>(chroma.softness) + L" " +
-               boost::lexical_cast<std::wstring>(chroma.spill_suppress) + L" " + boost::lexical_cast<std::wstring>(chroma.spill_suppress_saturation) + L" " +
+        return L"201 MIXER OK\r\n" + std::wstring(chroma.enable ? L"1 " : L"0 ") +
+               boost::lexical_cast<std::wstring>(chroma.target_hue) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.hue_width) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.min_saturation) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.min_brightness) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.softness) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.spill_suppress) + L" " +
+               boost::lexical_cast<std::wstring>(chroma.spill_suppress_saturation) + L" " +
                std::wstring(chroma.show_mask ? L"1" : L"0") + L"\r\n";
     }
 
@@ -776,11 +798,12 @@ std::wstring mixer_chroma_command(command_context& ctx)
         if (*legacy_mode == chroma::legacy_type::none) {
             chroma.enable = false;
         } else {
-            chroma.enable                    = true;
-            chroma.hue_width                 = 0.5 - boost::lexical_cast<double>(ctx.parameters.at(1)) * 0.5;
-            chroma.min_brightness            = boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.min_saturation            = boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.softness                  = boost::lexical_cast<double>(ctx.parameters.at(2)) - boost::lexical_cast<double>(ctx.parameters.at(1));
+            chroma.enable         = true;
+            chroma.hue_width      = 0.5 - boost::lexical_cast<double>(ctx.parameters.at(1)) * 0.5;
+            chroma.min_brightness = boost::lexical_cast<double>(ctx.parameters.at(1));
+            chroma.min_saturation = boost::lexical_cast<double>(ctx.parameters.at(1));
+            chroma.softness =
+                boost::lexical_cast<double>(ctx.parameters.at(2)) - boost::lexical_cast<double>(ctx.parameters.at(1));
             chroma.spill_suppress            = 180.0 - boost::lexical_cast<double>(ctx.parameters.at(3)) * 180.0;
             chroma.spill_suppress_saturation = 1;
 
@@ -864,35 +887,43 @@ std::wstring single_double_animatable_mixer_command(command_context& ctx, const 
 std::wstring mixer_opacity_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
-        ctx, [](const frame_transform& t) { return t.image_transform.opacity; }, [](frame_transform& t, double value) { t.image_transform.opacity = value; });
+        ctx,
+        [](const frame_transform& t) { return t.image_transform.opacity; },
+        [](frame_transform& t, double value) { t.image_transform.opacity = value; });
 }
 
 std::wstring mixer_brightness_command(command_context& ctx)
 {
-    return single_double_animatable_mixer_command(ctx,
-                                                  [](const frame_transform& t) { return t.image_transform.brightness; },
-                                                  [](frame_transform& t, double value) { t.image_transform.brightness = value; });
+    return single_double_animatable_mixer_command(
+        ctx,
+        [](const frame_transform& t) { return t.image_transform.brightness; },
+        [](frame_transform& t, double value) { t.image_transform.brightness = value; });
 }
 
 std::wstring mixer_saturation_command(command_context& ctx)
 {
-    return single_double_animatable_mixer_command(ctx,
-                                                  [](const frame_transform& t) { return t.image_transform.saturation; },
-                                                  [](frame_transform& t, double value) { t.image_transform.saturation = value; });
+    return single_double_animatable_mixer_command(
+        ctx,
+        [](const frame_transform& t) { return t.image_transform.saturation; },
+        [](frame_transform& t, double value) { t.image_transform.saturation = value; });
 }
 
 std::wstring mixer_contrast_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
-        ctx, [](const frame_transform& t) { return t.image_transform.contrast; }, [](frame_transform& t, double value) { t.image_transform.contrast = value; });
+        ctx,
+        [](const frame_transform& t) { return t.image_transform.contrast; },
+        [](frame_transform& t, double value) { t.image_transform.contrast = value; });
 }
 
 std::wstring mixer_levels_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
         auto levels = get_current_transform(ctx).image_transform.levels;
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(levels.min_input) + L" " + boost::lexical_cast<std::wstring>(levels.max_input) + L" " +
-               boost::lexical_cast<std::wstring>(levels.gamma) + L" " + boost::lexical_cast<std::wstring>(levels.min_output) + L" " +
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(levels.min_input) + L" " +
+               boost::lexical_cast<std::wstring>(levels.max_input) + L" " +
+               boost::lexical_cast<std::wstring>(levels.gamma) + L" " +
+               boost::lexical_cast<std::wstring>(levels.min_output) + L" " +
                boost::lexical_cast<std::wstring>(levels.max_output) + L"\r\n";
     }
 
@@ -924,8 +955,9 @@ std::wstring mixer_fill_command(command_context& ctx)
         auto transform   = get_current_transform(ctx).image_transform;
         auto translation = transform.fill_translation;
         auto scale       = transform.fill_scale;
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(translation[0]) + L" " + boost::lexical_cast<std::wstring>(translation[1]) + L" " +
-               boost::lexical_cast<std::wstring>(scale[0]) + L" " + boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n";
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(translation[0]) + L" " +
+               boost::lexical_cast<std::wstring>(translation[1]) + L" " + boost::lexical_cast<std::wstring>(scale[0]) +
+               L" " + boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n";
     }
 
     transforms_applier transforms(ctx);
@@ -958,8 +990,9 @@ std::wstring mixer_clip_command(command_context& ctx)
         auto translation = transform.clip_translation;
         auto scale       = transform.clip_scale;
 
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(translation[0]) + L" " + boost::lexical_cast<std::wstring>(translation[1]) + L" " +
-               boost::lexical_cast<std::wstring>(scale[0]) + L" " + boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n";
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(translation[0]) + L" " +
+               boost::lexical_cast<std::wstring>(translation[1]) + L" " + boost::lexical_cast<std::wstring>(scale[0]) +
+               L" " + boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n";
     }
 
     transforms_applier transforms(ctx);
@@ -990,7 +1023,8 @@ std::wstring mixer_anchor_command(command_context& ctx)
     if (ctx.parameters.empty()) {
         auto transform = get_current_transform(ctx).image_transform;
         auto anchor    = transform.anchor;
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(anchor[0]) + L" " + boost::lexical_cast<std::wstring>(anchor[1]) + L"\r\n";
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(anchor[0]) + L" " +
+               boost::lexical_cast<std::wstring>(anchor[1]) + L"\r\n";
     }
 
     transforms_applier transforms(ctx);
@@ -1016,8 +1050,9 @@ std::wstring mixer_crop_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
         auto crop = get_current_transform(ctx).image_transform.crop;
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(crop.ul[0]) + L" " + boost::lexical_cast<std::wstring>(crop.ul[1]) + L" " +
-               boost::lexical_cast<std::wstring>(crop.lr[0]) + L" " + boost::lexical_cast<std::wstring>(crop.lr[1]) + L"\r\n";
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(crop.ul[0]) + L" " +
+               boost::lexical_cast<std::wstring>(crop.ul[1]) + L" " + boost::lexical_cast<std::wstring>(crop.lr[0]) +
+               L" " + boost::lexical_cast<std::wstring>(crop.lr[1]) + L"\r\n";
     }
 
     transforms_applier transforms(ctx);
@@ -1047,19 +1082,24 @@ std::wstring mixer_rotation_command(command_context& ctx)
 {
     static const double PI = 3.141592653589793;
 
-    return single_double_animatable_mixer_command(ctx,
-                                                  [](const frame_transform& t) { return t.image_transform.angle / PI * 180.0; },
-                                                  [](frame_transform& t, double value) { t.image_transform.angle = value * PI / 180.0; });
+    return single_double_animatable_mixer_command(
+        ctx,
+        [](const frame_transform& t) { return t.image_transform.angle / PI * 180.0; },
+        [](frame_transform& t, double value) { t.image_transform.angle = value * PI / 180.0; });
 }
 
 std::wstring mixer_perspective_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
         auto perspective = get_current_transform(ctx).image_transform.perspective;
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(perspective.ul[0]) + L" " + boost::lexical_cast<std::wstring>(perspective.ul[1]) + L" " +
-               boost::lexical_cast<std::wstring>(perspective.ur[0]) + L" " + boost::lexical_cast<std::wstring>(perspective.ur[1]) + L" " +
-               boost::lexical_cast<std::wstring>(perspective.lr[0]) + L" " + boost::lexical_cast<std::wstring>(perspective.lr[1]) + L" " +
-               boost::lexical_cast<std::wstring>(perspective.ll[0]) + L" " + boost::lexical_cast<std::wstring>(perspective.ll[1]) + L"\r\n";
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(perspective.ul[0]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.ul[1]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.ur[0]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.ur[1]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.lr[0]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.lr[1]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.ll[0]) + L" " +
+               boost::lexical_cast<std::wstring>(perspective.ll[1]) + L"\r\n";
     }
 
     transforms_applier transforms(ctx);
@@ -1096,7 +1136,9 @@ std::wstring mixer_perspective_command(command_context& ctx)
 std::wstring mixer_volume_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
-        ctx, [](const frame_transform& t) { return t.audio_transform.volume; }, [](frame_transform& t, double value) { t.audio_transform.volume = value; });
+        ctx,
+        [](const frame_transform& t) { return t.audio_transform.volume; },
+        [](frame_transform& t, double value) { t.audio_transform.volume = value; });
 }
 
 std::wstring mixer_mastervolume_command(command_context& ctx)
@@ -1183,9 +1225,9 @@ std::wstring channel_grid_command(command_context& ctx)
     for (auto& channel : ctx.channels) {
         if (channel.channel != self.channel) {
             core::diagnostics::call_context::for_thread().layer = index;
-            auto producer =
-                ctx.producer_registry->create_producer(get_producer_dependencies(self.channel, ctx),
-                                                       L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()) + L" NO_AUTO_DEINTERLACE");
+            auto producer                                       = ctx.producer_registry->create_producer(
+                get_producer_dependencies(self.channel, ctx),
+                L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()) + L" NO_AUTO_DEINTERLACE");
             self.channel->stage().load(index, producer, false);
             self.channel->stage().play(index);
             index++;
@@ -1216,7 +1258,10 @@ std::wstring thumbnail_list_command(command_context& ctx)
     std::wstringstream replyString;
     replyString << L"200 THUMBNAIL LIST OK\r\n";
 
-    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::thumbnail_folder(), sub_directory)), end; itr != end; ++itr) {
+    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::thumbnail_folder(), sub_directory)),
+         end;
+         itr != end;
+         ++itr) {
         if (boost::filesystem::is_regular_file(itr->path())) {
             if (!boost::iequals(itr->path().extension().wstring(), L".png"))
                 continue;
@@ -1263,15 +1308,27 @@ std::wstring thumbnail_retrieve_command(command_context& ctx)
     return reply.str();
 }
 
-std::wstring thumbnail_generate_command(command_context& ctx) { CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off")); }
+std::wstring thumbnail_generate_command(command_context& ctx)
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+}
 
-std::wstring thumbnail_generateall_command(command_context& ctx) { CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off")); }
+std::wstring thumbnail_generateall_command(command_context& ctx)
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+}
 
 // Query Commands
 
-std::wstring cinf_command(command_context& ctx) { CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cinf turned off")); }
+std::wstring cinf_command(command_context& ctx)
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cinf turned off"));
+}
 
-std::wstring cls_command(command_context& ctx) { CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cls turned off")); }
+std::wstring cls_command(command_context& ctx)
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cls turned off"));
+}
 
 std::wstring fls_command(command_context& ctx)
 {
@@ -1283,7 +1340,10 @@ std::wstring fls_command(command_context& ctx)
     return replyString.str();
 }
 
-std::wstring tls_command(command_context& ctx) { CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"tls turned off")); }
+std::wstring tls_command(command_context& ctx)
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"tls turned off"));
+}
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
 

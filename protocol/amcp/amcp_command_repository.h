@@ -42,14 +42,19 @@ class amcp_command_repository : boost::noncopyable
                             const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
                             std::function<void(bool)>                                   shutdown_server_now);
 
-    AMCPCommand::ptr_type create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;
     AMCPCommand::ptr_type
-    create_channel_command(const std::wstring& s, IO::ClientInfoPtr client, unsigned int channel_index, int layer_index, std::list<std::wstring>& tokens) const;
+                          create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;
+    AMCPCommand::ptr_type create_channel_command(const std::wstring&      s,
+                                                 IO::ClientInfoPtr        client,
+                                                 unsigned int             channel_index,
+                                                 int                      layer_index,
+                                                 std::list<std::wstring>& tokens) const;
 
     const std::vector<channel_context>& channels() const;
 
     void register_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
-    void register_channel_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
+    void
+    register_channel_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
 
   private:
     struct impl;

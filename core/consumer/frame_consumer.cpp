@@ -57,7 +57,8 @@ void frame_consumer_registry::register_consumer_factory(const std::wstring& name
     impl_->consumer_factories.push_back(factory);
 }
 
-void frame_consumer_registry::register_preconfigured_consumer_factory(const std::wstring& element_name, const preconfigured_consumer_factory_t& factory)
+void frame_consumer_registry::register_preconfigured_consumer_factory(const std::wstring& element_name,
+                                                                      const preconfigured_consumer_factory_t& factory)
 {
     impl_->preconfigured_consumer_factories.insert(std::make_pair(element_name, factory));
 }
@@ -101,7 +102,8 @@ class destroy_consumer_proxy : public frame_consumer
 
             try {
                 if (!consumer->unique())
-                    CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
+                    CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: "
+                                      << consumer->use_count();
                 else
                     CASPAR_LOG(debug) << str << L" Destroying on asynchronous destruction thread.";
             } catch (...) {
@@ -114,13 +116,16 @@ class destroy_consumer_proxy : public frame_consumer
     }
 
     std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }
-    void              initialize(const video_format_desc& format_desc, int channel_index) override { return consumer_->initialize(format_desc, channel_index); }
-    std::wstring      print() const override { return consumer_->print(); }
-    std::wstring      name() const override { return consumer_->name(); }
-    bool              has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int               buffer_depth() const override { return consumer_->buffer_depth(); }
-    int               index() const override { return consumer_->index(); }
-    monitor::subject& monitor_output() override { return consumer_->monitor_output(); }
+    void              initialize(const video_format_desc& format_desc, int channel_index) override
+    {
+        return consumer_->initialize(format_desc, channel_index);
+    }
+    std::wstring          print() const override { return consumer_->print(); }
+    std::wstring          name() const override { return consumer_->name(); }
+    bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
+    int                   buffer_depth() const override { return consumer_->buffer_depth(); }
+    int                   index() const override { return consumer_->index(); }
+    monitor::subject&     monitor_output() override { return consumer_->monitor_output(); }
     const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
@@ -253,9 +258,10 @@ class cadence_guard : public frame_consumer
     const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
-spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(const std::vector<std::wstring>&            params,
-                                                                               interaction_sink*                           sink,
-                                                                               std::vector<spl::shared_ptr<video_channel>> channels) const
+spl::shared_ptr<core::frame_consumer>
+frame_consumer_registry::create_consumer(const std::vector<std::wstring>&            params,
+                                         interaction_sink*                           sink,
+                                         std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     if (params.empty())
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
@@ -274,23 +280,26 @@ spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(c
     if (consumer == frame_consumer::empty())
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
 
-    return spl::make_shared<destroy_consumer_proxy>(
-        spl::make_shared<print_consumer_proxy>(spl::make_shared<recover_consumer_proxy>(spl::make_shared<cadence_guard>(std::move(consumer)))));
+    return spl::make_shared<destroy_consumer_proxy>(spl::make_shared<print_consumer_proxy>(
+        spl::make_shared<recover_consumer_proxy>(spl::make_shared<cadence_guard>(std::move(consumer)))));
 }
 
-spl::shared_ptr<frame_consumer> frame_consumer_registry::create_consumer(const std::wstring&                         element_name,
-                                                                         const boost::property_tree::wptree&         element,
-                                                                         interaction_sink*                           sink,
-                                                                         std::vector<spl::shared_ptr<video_channel>> channels) const
+spl::shared_ptr<frame_consumer>
+frame_consumer_registry::create_consumer(const std::wstring&                         element_name,
+                                         const boost::property_tree::wptree&         element,
+                                         interaction_sink*                           sink,
+                                         std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     auto& preconfigured_consumer_factories = impl_->preconfigured_consumer_factories;
     auto  found                            = preconfigured_consumer_factories.find(element_name);
 
     if (found == preconfigured_consumer_factories.end())
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No consumer factory registered for element name " + element_name));
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info(L"No consumer factory registered for element name " + element_name));
 
-    return spl::make_shared<destroy_consumer_proxy>(spl::make_shared<print_consumer_proxy>(
-        spl::make_shared<recover_consumer_proxy>(spl::make_shared<cadence_guard>(found->second(element, sink, channels)))));
+    return spl::make_shared<destroy_consumer_proxy>(
+        spl::make_shared<print_consumer_proxy>(spl::make_shared<recover_consumer_proxy>(
+            spl::make_shared<cadence_guard>(found->second(element, sink, channels)))));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()

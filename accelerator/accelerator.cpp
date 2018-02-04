@@ -53,6 +53,9 @@ accelerator::accelerator(const std::wstring& path)
 
 accelerator::~accelerator() {}
 
-std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(int channel_id) { return impl_->create_image_mixer(channel_id); }
+std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(int channel_id)
+{
+    return impl_->create_image_mixer(channel_id);
+}
 
 }} // namespace caspar::accelerator

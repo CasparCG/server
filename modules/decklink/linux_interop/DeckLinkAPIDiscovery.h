@@ -41,7 +41,22 @@
 // Interface ID Declarations
 
 BMD_CONST REFIID IID_IDeckLink =
-    /* C418FBDD-0587-48ED-8FE5-640F0A14AF91 */ {0xC4, 0x18, 0xFB, 0xDD, 0x05, 0x87, 0x48, 0xED, 0x8F, 0xE5, 0x64, 0x0F, 0x0A, 0x14, 0xAF, 0x91};
+    /* C418FBDD-0587-48ED-8FE5-640F0A14AF91 */ {0xC4,
+                                                0x18,
+                                                0xFB,
+                                                0xDD,
+                                                0x05,
+                                                0x87,
+                                                0x48,
+                                                0xED,
+                                                0x8F,
+                                                0xE5,
+                                                0x64,
+                                                0x0F,
+                                                0x0A,
+                                                0x14,
+                                                0xAF,
+                                                0x91};
 
 // Forward Declarations
 

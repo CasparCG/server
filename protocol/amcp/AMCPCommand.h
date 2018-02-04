@@ -80,7 +80,10 @@ class AMCPCommand
     std::wstring      request_id_;
 
   public:
-    AMCPCommand(const command_context& ctx, const amcp_command_func& command, int min_num_params, const std::wstring& name)
+    AMCPCommand(const command_context&   ctx,
+                const amcp_command_func& command,
+                int                      min_num_params,
+                const std::wstring&      name)
         : ctx_(ctx)
         , command_(command)
         , min_num_params_(min_num_params)

@@ -44,7 +44,8 @@
 #include <ddraw.h>
 
 #ifndef DEFINE_GUID2
-#define DEFINE_GUID2(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) const GUID name = {l, w1, w2, {b1, b2, b3, b4, b5, b6, b7, b8}}
+#define DEFINE_GUID2(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)                                                  \
+    const GUID name = {l, w1, w2, {b1, b2, b3, b4, b5, b6, b7, b8}}
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IDirectDraw4, IID_IDirectDraw4);
@@ -121,7 +122,11 @@ class ATL_NO_VTABLE FlashAxContainer
 
     BEGIN_SINK_MAP(FlashAxContainer)
     SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, static_cast<DISPID>(0xc5), OnFlashCall, &fnInfoFlashCallEvent)
-    SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, static_cast<DISPID>(0xfffffd9f), OnReadyStateChange, &fnInfoReadyStateChangeEvent)
+    SINK_ENTRY_INFO(0,
+                    DIID__IShockwaveFlashEvents,
+                    static_cast<DISPID>(0xfffffd9f),
+                    OnReadyStateChange,
+                    &fnInfoReadyStateChangeEvent)
     END_SINK_MAP()
 
     void STDMETHODCALLTYPE OnFlashCall(BSTR request);
@@ -147,7 +152,11 @@ class ATL_NO_VTABLE FlashAxContainer
     STDMETHOD(OnUIActivate)();
     STDMETHOD(OnUIDeactivate)(BOOL fUndoable);
     STDMETHOD(GetWindowContext)
-    (IOleInPlaceFrame** ppFrame, IOleInPlaceUIWindow** ppDoc, LPRECT lprcPosRect, LPRECT lprcClipRect, LPOLEINPLACEFRAMEINFO pFrameInfo);
+    (IOleInPlaceFrame**    ppFrame,
+     IOleInPlaceUIWindow** ppDoc,
+     LPRECT                lprcPosRect,
+     LPRECT                lprcClipRect,
+     LPOLEINPLACEFRAMEINFO pFrameInfo);
     STDMETHOD(Scroll)(SIZE scrollExtant);
     STDMETHOD(DiscardUndoState)();
     STDMETHOD(DeactivateAndUndo)();
@@ -192,20 +201,27 @@ class ATL_NO_VTABLE FlashAxContainer
     STDMETHOD(QueryService)(REFGUID rsid, REFIID riid, void** ppvObj);
 
     // IOleContainer
-    STDMETHOD(ParseDisplayName)(IBindCtx*, LPOLESTR, ULONG*, IMoniker**) { ATLTRACENOTIMPL(_T("IOleContainer::ParseDisplayName")); }
+    STDMETHOD(ParseDisplayName)(IBindCtx*, LPOLESTR, ULONG*, IMoniker**)
+    {
+        ATLTRACENOTIMPL(_T("IOleContainer::ParseDisplayName"));
+    }
     STDMETHOD(EnumObjects)(DWORD, IEnumUnknown** ppenum)
     {
         if (ppenum == NULL)
             return E_POINTER;
         *ppenum = NULL;
-        typedef CComObject<CComEnum<IEnumUnknown, &__uuidof(IEnumUnknown), IUnknown*, _CopyInterface<IUnknown>>> enumunk;
-        enumunk*                                                                                                 p = NULL;
+        typedef CComObject<CComEnum<IEnumUnknown, &__uuidof(IEnumUnknown), IUnknown*, _CopyInterface<IUnknown>>>
+                 enumunk;
+        enumunk* p = NULL;
         ATLTRY(p = new enumunk);
         if (p == NULL)
             return E_OUTOFMEMORY;
         IUnknown* pTemp = m_spUnknown;
         // There is always only one object.
-        HRESULT hRes = p->Init(reinterpret_cast<IUnknown**>(&pTemp), reinterpret_cast<IUnknown**>(&pTemp + 1), GetControllingUnknown(), AtlFlagCopy);
+        HRESULT hRes = p->Init(reinterpret_cast<IUnknown**>(&pTemp),
+                               reinterpret_cast<IUnknown**>(&pTemp + 1),
+                               GetControllingUnknown(),
+                               AtlFlagCopy);
         if (SUCCEEDED(hRes))
             hRes = p->QueryInterface(__uuidof(IEnumUnknown), (void**)ppenum);
         if (FAILED(hRes))
@@ -220,7 +236,13 @@ class ATL_NO_VTABLE FlashAxContainer
     STDMETHOD(SetNamedTimerReference)(REFGUID rguidName, ITimer* pReferenceTimer);
 
     // ITimer
-    STDMETHOD(Advise)(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink* pTimerSink, DWORD* pdwCookie);
+    STDMETHOD(Advise)
+    (VARIANT     vtimeMin,
+     VARIANT     vtimeMax,
+     VARIANT     vtimeInterval,
+     DWORD       dwFlags,
+     ITimerSink* pTimerSink,
+     DWORD*      pdwCookie);
     STDMETHOD(Unadvise)(DWORD dwCookie);
     STDMETHOD(Freeze)(BOOL fFreeze);
     STDMETHOD(GetTime)(VARIANT* pvtime);
@@ -228,9 +250,11 @@ class ATL_NO_VTABLE FlashAxContainer
 
     void set_print(const std::function<std::wstring()>& print) { print_ = print; }
 
-    HRESULT CreateAxControl();
-    void    DestroyAxControl();
-    HRESULT QueryControl(REFIID iid, void** ppUnk);
+    HRESULT
+    CreateAxControl();
+    void DestroyAxControl();
+    HRESULT
+    QueryControl(REFIID iid, void** ppUnk);
 
     template <class Q>
     HRESULT QueryControl(Q** ppUnk)

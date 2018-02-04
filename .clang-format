@@ -45,7 +45,7 @@ BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeColon
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-ColumnLimit: 160
+ColumnLimit: 120
 CommentPragmas: '^ IWYU pragma:'
 CompactNamespaces: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
@@ -61,7 +61,7 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeCategories: 
-  - Regex: '^"(boost)/'
+  - Regex: '^"(llvm|llvm-c|clang|clang-c)/'
     Priority: 2
   - Regex: '^(<|"(gtest|gmock|isl|json)/)'
     Priority: 3

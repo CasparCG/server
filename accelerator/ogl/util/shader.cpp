@@ -116,7 +116,10 @@ struct shader::impl : boost::noncopyable
         GL(glUniform2f(get_location(name.c_str()), static_cast<float>(value0), static_cast<float>(value1)));
     }
 
-    void set(const std::string& name, double value) { GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value))); }
+    void set(const std::string& name, double value)
+    {
+        GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
+    }
 
     void use() { GL(glUseProgramObjectARB(program_)); }
 };

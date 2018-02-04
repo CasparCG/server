@@ -73,7 +73,8 @@ namespace caspar { namespace decklink {
 template <typename T>
 std::wstring to_string(const T& cadence)
 {
-    return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
+    return boost::join(
+        cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
 }
 
 class decklink_producer
@@ -129,15 +130,19 @@ class decklink_producer
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable video input.")
                                                       << boost::errinfo_api_function("EnableVideoInput"));
 
-        if (FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, static_cast<int>(format_desc_.audio_channels))))
+        if (FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz,
+                                            bmdAudioSampleType32bitInteger,
+                                            static_cast<int>(format_desc_.audio_channels))))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable audio input.")
                                                       << boost::errinfo_api_function("EnableAudioInput"));
 
         if (FAILED(input_->SetCallback(this)) != S_OK)
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input callback.") << boost::errinfo_api_function("SetCallback"));
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input callback.")
+                                                      << boost::errinfo_api_function("SetCallback"));
 
         if (FAILED(input_->StartStreams()))
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start input stream.") << boost::errinfo_api_function("StartStreams"));
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start input stream.")
+                                                      << boost::errinfo_api_function("StartStreams"));
 
         // Wait for first frame until returning or give up after 2 seconds.
         caspar::timer timeout_timer;
@@ -167,7 +172,8 @@ class decklink_producer
         return S_OK;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
+    virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*  video,
+                                                             IDeckLinkAudioInputPacket* audio)
     {
         if (!video)
             return S_OK;
@@ -184,14 +190,18 @@ class decklink_producer
             if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
                 return S_OK;
 
-            monitor_subject_ << core::monitor::message("/file/name") % model_name_ << core::monitor::message("/file/path") % device_index_
+            monitor_subject_ << core::monitor::message("/file/name") % model_name_
+                             << core::monitor::message("/file/path") % device_index_
                              << core::monitor::message("/file/video/width") % video->GetWidth()
                              << core::monitor::message("/file/video/height") % video->GetHeight()
-                             << core::monitor::message("/file/video/field") % u8(format_desc_.field_mode != core::field_mode::progressive
-                                                                                     ? "progressive"
-                                                                                     : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"))
-                             << core::monitor::message("/file/audio/sample-rate") % 48000 << core::monitor::message("/file/audio/channels") % 2
-                             << core::monitor::message("/file/audio/format") % u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
+                             << core::monitor::message("/file/video/field") %
+                                    u8(format_desc_.field_mode != core::field_mode::progressive
+                                           ? "progressive"
+                                           : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"))
+                             << core::monitor::message("/file/audio/sample-rate") % 48000
+                             << core::monitor::message("/file/audio/channels") % 2
+                             << core::monitor::message("/file/audio/format") %
+                                    u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
                              << core::monitor::message("/file/fps") % format_desc_.fps;
 
             // Audio
@@ -204,9 +214,11 @@ class decklink_producer
                 auto sample_frame_count = audio->GetSampleFrameCount();
                 auto audio_data         = reinterpret_cast<int32_t*>(audio_bytes);
 
-                audio_buffer = std::make_shared<std::vector<int32_t>>(audio_data, audio_data + sample_frame_count * format_desc_.audio_channels);
+                audio_buffer = std::make_shared<std::vector<int32_t>>(
+                    audio_data, audio_data + sample_frame_count * format_desc_.audio_channels);
             } else {
-                audio_buffer = std::make_shared<std::vector<int32_t>>(audio_cadence_.front() * format_desc_.audio_channels, 0);
+                audio_buffer =
+                    std::make_shared<std::vector<int32_t>>(audio_cadence_.front() * format_desc_.audio_channels, 0);
             }
 
             // Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
@@ -214,8 +226,8 @@ class decklink_producer
 
             sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);
             if (!boost::range::equal(sync_buffer_, audio_cadence_)) {
-                CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: "
-                                  << to_string(sync_buffer_);
+                CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_)
+                                  << L" Got cadence: " << to_string(sync_buffer_);
                 return S_OK;
             }
             boost::range::rotate(audio_cadence_, std::begin(audio_cadence_) + 1);
@@ -238,10 +250,10 @@ class decklink_producer
                 desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
                 desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
 
-                auto dst              = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-                dst->data[0]          = reinterpret_cast<uint8_t*>(frame.image_data(0).data());
-                dst->data[1]          = reinterpret_cast<uint8_t*>(frame.image_data(1).data());
-                dst->data[2]          = reinterpret_cast<uint8_t*>(frame.image_data(2).data());
+                auto dst     = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+                dst->data[0] = reinterpret_cast<uint8_t*>(frame.image_data(0).data());
+                dst->data[1] = reinterpret_cast<uint8_t*>(frame.image_data(1).data());
+                dst->data[2] = reinterpret_cast<uint8_t*>(frame.image_data(2).data());
                 dst->linesize[0]      = desc.planes[0].linesize;
                 dst->linesize[1]      = desc.planes[1].linesize;
                 dst->linesize[2]      = desc.planes[2].linesize;
@@ -285,7 +297,8 @@ class decklink_producer
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer.elapsed() % format_desc_.fps;
 
-            graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
+            graph_->set_value("output-buffer",
+                              static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
             monitor_subject_ << core::monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
         } catch (...) {
             exception_ = std::current_exception();
@@ -307,12 +320,16 @@ class decklink_producer
         else
             last_frame_ = frame;
 
-        graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
+        graph_->set_value("output-buffer",
+                          static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
 
         return frame;
     }
 
-    std::wstring print() const { return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]"; }
+    std::wstring print() const
+    {
+        return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
+    }
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 
@@ -365,7 +382,8 @@ class decklink_producer_proxy : public core::frame_producer_base
     boost::rational<int> get_out_framerate() const { return producer_->get_out_framerate(); }
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     if (params.empty() || !boost::iequals(params.at(0), "decklink"))
         return core::frame_producer::empty();
@@ -381,7 +399,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 
-    auto producer = spl::make_shared<decklink_producer_proxy>(dependencies.format_desc, dependencies.frame_factory, device_index, filter_str, length);
+    auto producer = spl::make_shared<decklink_producer_proxy>(
+        dependencies.format_desc, dependencies.frame_factory, device_index, filter_str, length);
     return core::create_destroy_proxy(producer);
 }
 }} // namespace caspar::decklink

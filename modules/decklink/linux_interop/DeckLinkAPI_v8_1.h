@@ -32,9 +32,9 @@
 
 // Interface ID Declarations
 
-#define IID_IDeckLinkDeckControlStatusCallback_v8_1 /* E5F693C1-4283-4716-B18F-C1431521955B */                                                                 \
+#define IID_IDeckLinkDeckControlStatusCallback_v8_1 /* E5F693C1-4283-4716-B18F-C1431521955B */                         \
     (REFIID) { 0xE5, 0xF6, 0x93, 0xC1, 0x42, 0x83, 0x47, 0x16, 0xB1, 0x8F, 0xC1, 0x43, 0x15, 0x21, 0x95, 0x5B }
-#define IID_IDeckLinkDeckControl_v8_1 /* 522A9E39-0F3C-4742-94EE-D80DE335DA1D */                                                                               \
+#define IID_IDeckLinkDeckControl_v8_1 /* 522A9E39-0F3C-4742-94EE-D80DE335DA1D */                                       \
     (REFIID) { 0x52, 0x2A, 0x9E, 0x39, 0x0F, 0x3C, 0x47, 0x42, 0x94, 0xEE, 0xD8, 0x0D, 0xE3, 0x35, 0xDA, 0x1D }
 
 /* Enum BMDDeckControlVTRControlState_v8_1 - VTR Control state */
@@ -55,10 +55,12 @@ enum _BMDDeckControlVTRControlState_v8_1
 class IDeckLinkDeckControlStatusCallback_v8_1 : public IUnknown
 {
   public:
-    virtual HRESULT TimecodeUpdate(/* in */ BMDTimecodeBCD currentTimecode)                                                          = 0;
-    virtual HRESULT VTRControlStateChanged(/* in */ BMDDeckControlVTRControlState_v8_1 newState, /* in */ BMDDeckControlError error) = 0;
-    virtual HRESULT DeckControlEventReceived(/* in */ BMDDeckControlEvent event, /* in */ BMDDeckControlError error)                 = 0;
-    virtual HRESULT DeckControlStatusChanged(/* in */ BMDDeckControlStatusFlags flags, /* in */ uint32_t mask)                       = 0;
+    virtual HRESULT TimecodeUpdate(/* in */ BMDTimecodeBCD currentTimecode)                                    = 0;
+    virtual HRESULT VTRControlStateChanged(/* in */ BMDDeckControlVTRControlState_v8_1 newState,
+                                           /* in */ BMDDeckControlError                error)                                 = 0;
+    virtual HRESULT DeckControlEventReceived(/* in */ BMDDeckControlEvent event,
+                                             /* in */ BMDDeckControlError error)                               = 0;
+    virtual HRESULT DeckControlStatusChanged(/* in */ BMDDeckControlStatusFlags flags, /* in */ uint32_t mask) = 0;
 
   protected:
     virtual ~IDeckLinkDeckControlStatusCallback_v8_1(){}; // call Release method to drop reference count
@@ -69,51 +71,56 @@ class IDeckLinkDeckControlStatusCallback_v8_1 : public IUnknown
 class IDeckLinkDeckControl_v8_1 : public IUnknown
 {
   public:
-    virtual HRESULT
-                    Open(/* in */ BMDTimeScale timeScale, /* in */ BMDTimeValue timeValue, /* in */ bool timecodeIsDropFrame, /* out */ BMDDeckControlError* error) = 0;
-    virtual HRESULT Close(/* in */ bool standbyOn)                                                                   = 0;
+    virtual HRESULT Open(/* in */ BMDTimeScale          timeScale,
+                         /* in */ BMDTimeValue          timeValue,
+                         /* in */ bool                  timecodeIsDropFrame,
+                         /* out */ BMDDeckControlError* error)                                                      = 0;
+    virtual HRESULT Close(/* in */ bool standbyOn)                                                                  = 0;
     virtual HRESULT GetCurrentState(/* out */ BMDDeckControlMode*                 mode,
                                     /* out */ BMDDeckControlVTRControlState_v8_1* vtrControlState,
-                                    /* out */ BMDDeckControlStatusFlags*          flags)                                      = 0;
-    virtual HRESULT SetStandby(/* in */ bool standbyOn)                                                              = 0;
+                                    /* out */ BMDDeckControlStatusFlags*          flags)                                     = 0;
+    virtual HRESULT SetStandby(/* in */ bool standbyOn)                                                             = 0;
     virtual HRESULT SendCommand(/* in */ uint8_t*              inBuffer,
                                 /* in */ uint32_t              inBufferSize,
                                 /* out */ uint8_t*             outBuffer,
                                 /* out */ uint32_t*            outDataSize,
                                 /* in */ uint32_t              outBufferSize,
-                                /* out */ BMDDeckControlError* error)                                                = 0;
-    virtual HRESULT Play(/* out */ BMDDeckControlError* error)                                                       = 0;
-    virtual HRESULT Stop(/* out */ BMDDeckControlError* error)                                                       = 0;
-    virtual HRESULT TogglePlayStop(/* out */ BMDDeckControlError* error)                                             = 0;
-    virtual HRESULT Eject(/* out */ BMDDeckControlError* error)                                                      = 0;
-    virtual HRESULT GoToTimecode(/* in */ BMDTimecodeBCD timecode, /* out */ BMDDeckControlError* error)             = 0;
-    virtual HRESULT FastForward(/* in */ bool viewTape, /* out */ BMDDeckControlError* error)                        = 0;
-    virtual HRESULT Rewind(/* in */ bool viewTape, /* out */ BMDDeckControlError* error)                             = 0;
-    virtual HRESULT StepForward(/* out */ BMDDeckControlError* error)                                                = 0;
-    virtual HRESULT StepBack(/* out */ BMDDeckControlError* error)                                                   = 0;
-    virtual HRESULT Jog(/* in */ double rate, /* out */ BMDDeckControlError* error)                                  = 0;
-    virtual HRESULT Shuttle(/* in */ double rate, /* out */ BMDDeckControlError* error)                              = 0;
-    virtual HRESULT GetTimecodeString(/* out */ const char** currentTimeCode, /* out */ BMDDeckControlError* error)  = 0;
-    virtual HRESULT GetTimecode(/* out */ IDeckLinkTimecode** currentTimecode, /* out */ BMDDeckControlError* error) = 0;
-    virtual HRESULT GetTimecodeBCD(/* out */ BMDTimecodeBCD* currentTimecode, /* out */ BMDDeckControlError* error)  = 0;
-    virtual HRESULT SetPreroll(/* in */ uint32_t prerollSeconds)                                                     = 0;
-    virtual HRESULT GetPreroll(/* out */ uint32_t* prerollSeconds)                                                   = 0;
-    virtual HRESULT SetExportOffset(/* in */ int32_t exportOffsetFields)                                             = 0;
-    virtual HRESULT GetExportOffset(/* out */ int32_t* exportOffsetFields)                                           = 0;
-    virtual HRESULT GetManualExportOffset(/* out */ int32_t* deckManualExportOffsetFields)                           = 0;
-    virtual HRESULT SetCaptureOffset(/* in */ int32_t captureOffsetFields)                                           = 0;
-    virtual HRESULT GetCaptureOffset(/* out */ int32_t* captureOffsetFields)                                         = 0;
+                                /* out */ BMDDeckControlError* error)                                               = 0;
+    virtual HRESULT Play(/* out */ BMDDeckControlError* error)                                                      = 0;
+    virtual HRESULT Stop(/* out */ BMDDeckControlError* error)                                                      = 0;
+    virtual HRESULT TogglePlayStop(/* out */ BMDDeckControlError* error)                                            = 0;
+    virtual HRESULT Eject(/* out */ BMDDeckControlError* error)                                                     = 0;
+    virtual HRESULT GoToTimecode(/* in */ BMDTimecodeBCD timecode, /* out */ BMDDeckControlError* error)            = 0;
+    virtual HRESULT FastForward(/* in */ bool viewTape, /* out */ BMDDeckControlError* error)                       = 0;
+    virtual HRESULT Rewind(/* in */ bool viewTape, /* out */ BMDDeckControlError* error)                            = 0;
+    virtual HRESULT StepForward(/* out */ BMDDeckControlError* error)                                               = 0;
+    virtual HRESULT StepBack(/* out */ BMDDeckControlError* error)                                                  = 0;
+    virtual HRESULT Jog(/* in */ double rate, /* out */ BMDDeckControlError* error)                                 = 0;
+    virtual HRESULT Shuttle(/* in */ double rate, /* out */ BMDDeckControlError* error)                             = 0;
+    virtual HRESULT GetTimecodeString(/* out */ const char** currentTimeCode, /* out */ BMDDeckControlError* error) = 0;
+    virtual HRESULT GetTimecode(/* out */ IDeckLinkTimecode**  currentTimecode,
+                                /* out */ BMDDeckControlError* error)                                               = 0;
+    virtual HRESULT GetTimecodeBCD(/* out */ BMDTimecodeBCD* currentTimecode, /* out */ BMDDeckControlError* error) = 0;
+    virtual HRESULT SetPreroll(/* in */ uint32_t prerollSeconds)                                                    = 0;
+    virtual HRESULT GetPreroll(/* out */ uint32_t* prerollSeconds)                                                  = 0;
+    virtual HRESULT SetExportOffset(/* in */ int32_t exportOffsetFields)                                            = 0;
+    virtual HRESULT GetExportOffset(/* out */ int32_t* exportOffsetFields)                                          = 0;
+    virtual HRESULT GetManualExportOffset(/* out */ int32_t* deckManualExportOffsetFields)                          = 0;
+    virtual HRESULT SetCaptureOffset(/* in */ int32_t captureOffsetFields)                                          = 0;
+    virtual HRESULT GetCaptureOffset(/* out */ int32_t* captureOffsetFields)                                        = 0;
     virtual HRESULT StartExport(/* in */ BMDTimecodeBCD                   inTimecode,
                                 /* in */ BMDTimecodeBCD                   outTimecode,
                                 /* in */ BMDDeckControlExportModeOpsFlags exportModeOps,
-                                /* out */ BMDDeckControlError*            error)                                                = 0;
-    virtual HRESULT
-                    StartCapture(/* in */ bool useVITC, /* in */ BMDTimecodeBCD inTimecode, /* in */ BMDTimecodeBCD outTimecode, /* out */ BMDDeckControlError* error) = 0;
-    virtual HRESULT GetDeviceID(/* out */ uint16_t* deviceId, /* out */ BMDDeckControlError* error) = 0;
-    virtual HRESULT Abort(void)                                                                     = 0;
-    virtual HRESULT CrashRecordStart(/* out */ BMDDeckControlError* error)                          = 0;
-    virtual HRESULT CrashRecordStop(/* out */ BMDDeckControlError* error)                           = 0;
-    virtual HRESULT SetCallback(/* in */ IDeckLinkDeckControlStatusCallback_v8_1* callback)         = 0;
+                                /* out */ BMDDeckControlError*            error)                                               = 0;
+    virtual HRESULT StartCapture(/* in */ bool                  useVITC,
+                                 /* in */ BMDTimecodeBCD        inTimecode,
+                                 /* in */ BMDTimecodeBCD        outTimecode,
+                                 /* out */ BMDDeckControlError* error)                                              = 0;
+    virtual HRESULT GetDeviceID(/* out */ uint16_t* deviceId, /* out */ BMDDeckControlError* error)                 = 0;
+    virtual HRESULT Abort(void)                                                                                     = 0;
+    virtual HRESULT CrashRecordStart(/* out */ BMDDeckControlError* error)                                          = 0;
+    virtual HRESULT CrashRecordStop(/* out */ BMDDeckControlError* error)                                           = 0;
+    virtual HRESULT SetCallback(/* in */ IDeckLinkDeckControlStatusCallback_v8_1* callback)                         = 0;
 
   protected:
     virtual ~IDeckLinkDeckControl_v8_1(){}; // call Release method to drop reference count

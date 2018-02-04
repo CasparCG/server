@@ -60,7 +60,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     interaction_aggregator              aggregator_;
     // map of layer -> map of tokens (src ref) -> layer_consumer
     std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>> layer_consumers_;
-    executor                                                              executor_{L"stage " + boost::lexical_cast<std::wstring>(channel_index_)};
+    executor executor_{L"stage " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
@@ -93,7 +93,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 aggregator_.translate_and_send();
 
-                tbb::parallel_for_each(indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
+                tbb::parallel_for_each(
+                    indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -118,7 +119,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
         if (!consumers.empty()) {
             auto consumer_it = consumers | boost::adaptors::map_values;
-            tbb::parallel_for_each(consumer_it.begin(), consumer_it.end(), [&](decltype(*consumer_it.begin()) layer_consumer) { layer_consumer->send(frame); });
+            tbb::parallel_for_each(consumer_it.begin(),
+                                   consumer_it.end(),
+                                   [&](decltype(*consumer_it.begin()) layer_consumer) { layer_consumer->send(frame); });
         }
 
         auto frame1 = frame;
@@ -129,7 +132,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             auto frame2 = frame;
             frame2.transform() *= tween.fetch_and_tick(1);
             frame2.transform().audio_transform.volume = 0.0;
-            frame1                                    = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
+            frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
         }
 
         frames[index] = frame1;
@@ -145,19 +148,24 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return it->second;
     }
 
-    std::future<void> apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
+    std::future<void>
+    apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
     {
         return executor_.begin_invoke([=] {
             for (auto& transform : transforms) {
-                auto& tween                     = tweens_[std::get<0>(transform)];
-                auto  src                       = tween.fetch();
-                auto  dst                       = std::get<1>(transform)(tween.dest());
-                tweens_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
+                auto& tween = tweens_[std::get<0>(transform)];
+                auto  src   = tween.fetch();
+                auto  dst   = std::get<1>(transform)(tween.dest());
+                tweens_[std::get<0>(transform)] =
+                    tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
             }
         });
     }
 
-    std::future<void> apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
+    std::future<void> apply_transform(int                            index,
+                                      const stage::transform_func_t& transform,
+                                      unsigned int                   mix_duration,
+                                      const tweener&                 tween)
     {
         return executor_.begin_invoke([=] {
             auto src       = tweens_[index].fetch();
@@ -181,7 +189,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { return tweens_[index].fetch(); });
     }
 
-    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+    std::future<void> load(int                                    index,
+                           const spl::shared_ptr<frame_producer>& producer,
+                           bool                                   preview,
+                           const boost::optional<int32_t>&        auto_play_delta)
     {
         return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play_delta); });
     }
@@ -307,12 +318,14 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index)
     {
-        return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return get_layer(index).foreground(); });
+        return executor_.begin_invoke(
+            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).foreground(); });
     }
 
     std::future<std::shared_ptr<frame_producer>> background(int index)
     {
-        return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return get_layer(index).background(); });
+        return executor_.begin_invoke(
+            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).background(); });
     }
 
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
@@ -331,8 +344,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             auto transform  = tweens_[layer.first].fetch();
             auto translated = translate(x, y, transform);
 
-            if (translated.first >= 0.0 && translated.first <= 1.0 && translated.second >= 0.0 && translated.second <= 1.0 &&
-                layer.second.collides(translated.first, translated.second)) {
+            if (translated.first >= 0.0 && translated.first <= 1.0 && translated.second >= 0.0 &&
+                translated.second <= 1.0 && layer.second.collides(translated.first, translated.second)) {
                 return std::make_pair(transform, static_cast<interaction_sink*>(&layer.second));
             }
         }
@@ -345,17 +358,28 @@ stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
     : impl_(new impl(channel_index, std::move(graph)))
 {
 }
-std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params) { return impl_->call(index, params); }
-std::future<void>         stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms) { return impl_->apply_transforms(transforms); }
-std::future<void>
-stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween)
+std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params)
+{
+    return impl_->call(index, params);
+}
+std::future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms)
+{
+    return impl_->apply_transforms(transforms);
+}
+std::future<void> stage::apply_transform(int                                                                index,
+                                         const std::function<core::frame_transform(core::frame_transform)>& transform,
+                                         unsigned int   mix_duration,
+                                         const tweener& tween)
 {
     return impl_->apply_transform(index, transform, mix_duration, tween);
 }
 std::future<void>            stage::clear_transforms(int index) { return impl_->clear_transforms(index); }
 std::future<void>            stage::clear_transforms() { return impl_->clear_transforms(); }
 std::future<frame_transform> stage::get_current_transform(int index) { return impl_->get_current_transform(index); }
-std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+std::future<void>            stage::load(int                                    index,
+                              const spl::shared_ptr<frame_producer>& producer,
+                              bool                                   preview,
+                              const boost::optional<int32_t>&        auto_play_delta)
 {
     return impl_->load(index, producer, preview, auto_play_delta);
 }
@@ -365,8 +389,14 @@ std::future<void> stage::play(int index) { return impl_->play(index); }
 std::future<void> stage::stop(int index) { return impl_->stop(index); }
 std::future<void> stage::clear(int index) { return impl_->clear(index); }
 std::future<void> stage::clear() { return impl_->clear(); }
-std::future<void> stage::swap_layers(stage& other, bool swap_transforms) { return impl_->swap_layers(other, swap_transforms); }
-std::future<void> stage::swap_layer(int index, int other_index, bool swap_transforms) { return impl_->swap_layer(index, other_index, swap_transforms); }
+std::future<void> stage::swap_layers(stage& other, bool swap_transforms)
+{
+    return impl_->swap_layers(other, swap_transforms);
+}
+std::future<void> stage::swap_layer(int index, int other_index, bool swap_transforms)
+{
+    return impl_->swap_layer(index, other_index, swap_transforms);
+}
 std::future<void> stage::swap_layer(int index, int other_index, stage& other, bool swap_transforms)
 {
     return impl_->swap_layer(index, other_index, other, swap_transforms);
@@ -375,10 +405,10 @@ void stage::add_layer_consumer(void* token, int layer, const spl::shared_ptr<wri
 {
     impl_->add_layer_consumer(token, layer, layer_consumer);
 }
-void                                         stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_consumer(token, layer); }
+void stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_consumer(token, layer); }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
 monitor::subject&                stage::monitor_output() { return *impl_->monitor_subject_; }
-void                             stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
+void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }} // namespace caspar::core

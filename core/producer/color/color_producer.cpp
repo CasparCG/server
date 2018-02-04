@@ -39,7 +39,8 @@
 
 namespace caspar { namespace core {
 
-draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<uint32_t>& values)
+draw_frame
+create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<uint32_t>& values)
 {
     core::pixel_format_desc desc(pixel_format::bgra);
     desc.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(values.size()), 1, 4));
@@ -58,7 +59,9 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
     return create_color_frame(tag, frame_factory, values);
 }
 
-draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& strs)
+draw_frame create_color_frame(void*                                 tag,
+                              const spl::shared_ptr<frame_factory>& frame_factory,
+                              const std::vector<std::wstring>&      strs)
 {
     std::vector<uint32_t> values(strs.size());
 
@@ -163,12 +166,14 @@ bool try_get_color(const std::wstring& str, uint32_t& value)
 
     return true;
 }
-spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
+                                                      uint32_t                              value)
 {
     return spl::make_shared<color_producer>(frame_factory, value);
 }
 
-spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
+                                                      const std::vector<std::wstring>&      params)
 {
     if (params.size() < 0)
         return core::frame_producer::empty();

@@ -71,7 +71,8 @@ struct AMCPProtocolStrategy::impl
         commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"General Queue for " + name));
 
         for (int i = 0; i < repo_->channels().size(); ++i) {
-            commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"Channel " + boost::lexical_cast<std::wstring>(i + 1) + L" for " + name));
+            commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(
+                L"Channel " + boost::lexical_cast<std::wstring>(i + 1) + L" for " + name));
         }
     }
 
@@ -117,7 +118,8 @@ struct AMCPProtocolStrategy::impl
             return;
         }
 
-        CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
+        CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message
+                                       << L"\\r\\n";
 
         command_interpreter_result result;
         if (interpret_command_string(tokens, result, client)) {
@@ -150,15 +152,17 @@ struct AMCPProtocolStrategy::impl
                     answer << L"500 FAILED\r\n";
                     break;
                 default:
-                    CASPAR_THROW_EXCEPTION(programming_error() << msg_info(L"Unhandled error_state enum constant " +
-                                                                           boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
+                    CASPAR_THROW_EXCEPTION(programming_error() << msg_info(
+                                               L"Unhandled error_state enum constant " +
+                                               boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
             }
             client->send(answer.str());
         }
     }
 
   private:
-    bool interpret_command_string(std::list<std::wstring> tokens, command_interpreter_result& result, ClientInfoPtr client)
+    bool
+    interpret_command_string(std::list<std::wstring> tokens, command_interpreter_result& result, ClientInfoPtr client)
     {
         try {
             // Discard GetSwitch
@@ -214,7 +218,8 @@ struct AMCPProtocolStrategy::impl
 
             // Create command instance
             if (is_channel_command) {
-                result.command = repo_->create_channel_command(result.command_name, client, channel_index, layer_index, tokens);
+                result.command =
+                    repo_->create_channel_command(result.command_name, client, channel_index, layer_index, tokens);
 
                 if (result.command) {
                     result.lock  = repo_->channels().at(channel_index).lock;
@@ -263,7 +268,8 @@ struct AMCPProtocolStrategy::impl
     std::size_t tokenize(const std::wstring& message, C& pTokenVector)
     {
         // split on whitespace but keep strings within quotationmarks
-        // treat \ as the start of an escape-sequence: the following char will indicate what to actually put in the string
+        // treat \ as the start of an escape-sequence: the following char will indicate what to actually put in the
+        // string
 
         std::wstring currentToken;
 
@@ -325,11 +331,15 @@ struct AMCPProtocolStrategy::impl
     }
 };
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::wstring&                             name,
+                                           const spl::shared_ptr<amcp_command_repository>& repo)
     : impl_(spl::make_unique<impl>(name, repo))
 {
 }
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
-void AMCPProtocolStrategy::Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) { impl_->Parse(msg, pClientInfo); }
+void AMCPProtocolStrategy::Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo)
+{
+    impl_->Parse(msg, pClientInfo);
+}
 
 }}} // namespace caspar::protocol::amcp

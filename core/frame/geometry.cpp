@@ -34,8 +34,8 @@ frame_geometry::coord::coord(double vertex_x, double vertex_y, double texture_x,
 
 bool frame_geometry::coord::operator==(const frame_geometry::coord& other) const
 {
-    return vertex_x == other.vertex_x && vertex_y == other.vertex_y && texture_x == other.texture_x && texture_y == other.texture_y &&
-           texture_r == other.texture_r && texture_q == other.texture_q;
+    return vertex_x == other.vertex_x && vertex_y == other.vertex_y && texture_x == other.texture_x &&
+           texture_y == other.texture_y && texture_r == other.texture_r && texture_q == other.texture_q;
 }
 
 struct frame_geometry::impl
@@ -48,7 +48,8 @@ struct frame_geometry::impl
 
         if (type == geometry_type::quad_list) {
             if (data.size() % 4 != 0)
-                CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be a multiple of 4"));
+                CASPAR_THROW_EXCEPTION(invalid_argument()
+                                       << msg_info("The number of coordinates needs to be a multiple of 4"));
         }
 
         data_ = std::move(data);

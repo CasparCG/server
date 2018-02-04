@@ -157,9 +157,15 @@ class ReceivedBundleElementIterator
     bool IsEqualTo(const ReceivedBundleElementIterator& rhs) const { return value_.size_ == rhs.value_.size_; }
 };
 
-inline bool operator==(const ReceivedBundleElementIterator& lhs, const ReceivedBundleElementIterator& rhs) { return lhs.IsEqualTo(rhs); }
+inline bool operator==(const ReceivedBundleElementIterator& lhs, const ReceivedBundleElementIterator& rhs)
+{
+    return lhs.IsEqualTo(rhs);
+}
 
-inline bool operator!=(const ReceivedBundleElementIterator& lhs, const ReceivedBundleElementIterator& rhs) { return !(lhs == rhs); }
+inline bool operator!=(const ReceivedBundleElementIterator& lhs, const ReceivedBundleElementIterator& rhs)
+{
+    return !(lhs == rhs);
+}
 
 class ReceivedMessageArgument
 {
@@ -269,14 +275,21 @@ class ReceivedMessageArgumentIterator
     bool IsEqualTo(const ReceivedMessageArgumentIterator& rhs) const { return value_.typeTag_ == rhs.value_.typeTag_; }
 };
 
-inline bool operator==(const ReceivedMessageArgumentIterator& lhs, const ReceivedMessageArgumentIterator& rhs) { return lhs.IsEqualTo(rhs); }
+inline bool operator==(const ReceivedMessageArgumentIterator& lhs, const ReceivedMessageArgumentIterator& rhs)
+{
+    return lhs.IsEqualTo(rhs);
+}
 
-inline bool operator!=(const ReceivedMessageArgumentIterator& lhs, const ReceivedMessageArgumentIterator& rhs) { return !(lhs == rhs); }
+inline bool operator!=(const ReceivedMessageArgumentIterator& lhs, const ReceivedMessageArgumentIterator& rhs)
+{
+    return !(lhs == rhs);
+}
 
 class ReceivedMessageArgumentStream
 {
     friend class ReceivedMessage;
-    ReceivedMessageArgumentStream(const ReceivedMessageArgumentIterator& begin, const ReceivedMessageArgumentIterator& end)
+    ReceivedMessageArgumentStream(const ReceivedMessageArgumentIterator& begin,
+                                  const ReceivedMessageArgumentIterator& end)
         : p_(begin)
         , end_(end)
     {
@@ -428,11 +441,17 @@ class ReceivedMessage
 
     typedef ReceivedMessageArgumentIterator const_iterator;
 
-    ReceivedMessageArgumentIterator ArgumentsBegin() const { return ReceivedMessageArgumentIterator(typeTagsBegin_, arguments_); }
+    ReceivedMessageArgumentIterator ArgumentsBegin() const
+    {
+        return ReceivedMessageArgumentIterator(typeTagsBegin_, arguments_);
+    }
 
     ReceivedMessageArgumentIterator ArgumentsEnd() const { return ReceivedMessageArgumentIterator(typeTagsEnd_, 0); }
 
-    ReceivedMessageArgumentStream ArgumentStream() const { return ReceivedMessageArgumentStream(ArgumentsBegin(), ArgumentsEnd()); }
+    ReceivedMessageArgumentStream ArgumentStream() const
+    {
+        return ReceivedMessageArgumentStream(ArgumentsBegin(), ArgumentsEnd());
+    }
 
   private:
     const char* addressPattern_;

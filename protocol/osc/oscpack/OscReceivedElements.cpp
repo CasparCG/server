@@ -615,8 +615,8 @@ void ReceivedBundle::Init(const char* bundle, unsigned long size)
     if ((size & 0x03L) != 0)
         throw MalformedBundleException("bundle size must be multiple of four");
 
-    if (bundle[0] != '#' || bundle[1] != 'b' || bundle[2] != 'u' || bundle[3] != 'n' || bundle[4] != 'd' || bundle[5] != 'l' || bundle[6] != 'e' ||
-        bundle[7] != '\0')
+    if (bundle[0] != '#' || bundle[1] != 'b' || bundle[2] != 'u' || bundle[3] != 'n' || bundle[4] != 'd' ||
+        bundle[5] != 'l' || bundle[6] != 'e' || bundle[7] != '\0')
         throw MalformedBundleException("bad bundle address pattern");
 
     end_ = bundle + size;

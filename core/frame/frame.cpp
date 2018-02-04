@@ -48,7 +48,10 @@ struct mutable_frame::impl : boost::noncopyable
     const void*                      tag_;
     frame_geometry                   geometry_ = frame_geometry::get_default();
 
-    impl(const void* tag, std::vector<array<std::uint8_t>> image_data, array<std::int32_t> audio_data, const core::pixel_format_desc& desc)
+    impl(const void*                      tag,
+         std::vector<array<std::uint8_t>> image_data,
+         array<std::int32_t>              audio_data,
+         const core::pixel_format_desc&   desc)
         : tag_(tag)
         , image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
@@ -57,7 +60,10 @@ struct mutable_frame::impl : boost::noncopyable
     }
 };
 
-mutable_frame::mutable_frame(const void* tag, std::vector<array<std::uint8_t>> image_data, array<int32_t> audio_data, const core::pixel_format_desc& desc)
+mutable_frame::mutable_frame(const void*                      tag,
+                             std::vector<array<std::uint8_t>> image_data,
+                             array<int32_t>                   audio_data,
+                             const core::pixel_format_desc&   desc)
     : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
 }
@@ -73,15 +79,15 @@ mutable_frame& mutable_frame::operator=(mutable_frame&& other)
 }
 void                           mutable_frame::swap(mutable_frame& other) { impl_.swap(other.impl_); }
 const core::pixel_format_desc& mutable_frame::pixel_format_desc() const { return impl_->desc_; }
-const array<std::uint8_t>&     mutable_frame::image_data(std::size_t index) const { return impl_->image_data_.at(index); }
-const array<std::int32_t>&     mutable_frame::audio_data() const { return impl_->audio_data_; }
-array<std::uint8_t>&           mutable_frame::image_data(std::size_t index) { return impl_->image_data_.at(index); }
-array<std::int32_t>&           mutable_frame::audio_data() { return impl_->audio_data_; }
-std::size_t                    mutable_frame::width() const { return impl_->desc_.planes.at(0).width; }
-std::size_t                    mutable_frame::height() const { return impl_->desc_.planes.at(0).height; }
-const void*                    mutable_frame::stream_tag() const { return impl_->tag_; }
-const frame_geometry&          mutable_frame::geometry() const { return impl_->geometry_; }
-frame_geometry&                mutable_frame::geometry() { return impl_->geometry_; }
+const array<std::uint8_t>& mutable_frame::image_data(std::size_t index) const { return impl_->image_data_.at(index); }
+const array<std::int32_t>& mutable_frame::audio_data() const { return impl_->audio_data_; }
+array<std::uint8_t>&       mutable_frame::image_data(std::size_t index) { return impl_->image_data_.at(index); }
+array<std::int32_t>&       mutable_frame::audio_data() { return impl_->audio_data_; }
+std::size_t                mutable_frame::width() const { return impl_->desc_.planes.at(0).width; }
+std::size_t                mutable_frame::height() const { return impl_->desc_.planes.at(0).height; }
+const void*                mutable_frame::stream_tag() const { return impl_->tag_; }
+const frame_geometry&      mutable_frame::geometry() const { return impl_->geometry_; }
+frame_geometry&            mutable_frame::geometry() { return impl_->geometry_; }
 
 struct const_frame::impl : boost::noncopyable
 {
@@ -96,7 +102,10 @@ struct const_frame::impl : boost::noncopyable
     {
     }
 
-    impl(const void* tag, std::vector<array<const std::uint8_t>> image_data, array<const std::int32_t> audio_data, const core::pixel_format_desc& desc)
+    impl(const void*                            tag,
+         std::vector<array<const std::uint8_t>> image_data,
+         array<const std::int32_t>              audio_data,
+         const core::pixel_format_desc&         desc)
         : tag_(tag)
         , image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
@@ -104,7 +113,10 @@ struct const_frame::impl : boost::noncopyable
     {
     }
 
-    impl(const void* tag, std::vector<array<std::uint8_t>>&& image_data, array<const std::int32_t> audio_data, const core::pixel_format_desc& desc)
+    impl(const void*                        tag,
+         std::vector<array<std::uint8_t>>&& image_data,
+         array<const std::int32_t>          audio_data,
+         const core::pixel_format_desc&     desc)
         : tag_(tag)
         , image_data_(std::make_move_iterator(image_data.begin()), std::make_move_iterator(image_data.end()))
         , audio_data_(std::move(audio_data))
@@ -114,7 +126,8 @@ struct const_frame::impl : boost::noncopyable
 
     impl(mutable_frame&& other)
         : tag_(other.impl_->tag_)
-        , image_data_(std::make_move_iterator(other.impl_->image_data_.begin()), std::make_move_iterator(other.impl_->image_data_.end()))
+        , image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
+                      std::make_move_iterator(other.impl_->image_data_.end()))
         , audio_data_(std::move(other.impl_->audio_data_))
         , desc_(std::move(other.impl_->desc_))
         , geometry_(std::move(other.impl_->geometry_))

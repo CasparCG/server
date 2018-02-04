@@ -41,7 +41,22 @@
 // Interface ID Declarations
 
 BMD_CONST REFIID IID_IDeckLinkConfiguration =
-    /* 1E69FCF6-4203-4936-8076-2A9F4CFD50CB */ {0x1E, 0x69, 0xFC, 0xF6, 0x42, 0x03, 0x49, 0x36, 0x80, 0x76, 0x2A, 0x9F, 0x4C, 0xFD, 0x50, 0xCB};
+    /* 1E69FCF6-4203-4936-8076-2A9F4CFD50CB */ {0x1E,
+                                                0x69,
+                                                0xFC,
+                                                0xF6,
+                                                0x42,
+                                                0x03,
+                                                0x49,
+                                                0x36,
+                                                0x80,
+                                                0x76,
+                                                0x2A,
+                                                0x9F,
+                                                0x4C,
+                                                0xFD,
+                                                0x50,
+                                                0xCB};
 
 /* Enum BMDDeckLinkConfigurationID - DeckLink Configuration ID */
 
@@ -98,8 +113,9 @@ enum _BMDDeckLinkConfigurationID
 
     /* Video Input Flags */
 
-    bmdDeckLinkConfigVideoInputScanning   = /* 'visc' */ 0x76697363, // Applicable to H264 Pro Recorder only
-    bmdDeckLinkConfigUseDedicatedLTCInput = /* 'dltc' */ 0x646C7463, // Use timecode from LTC input instead of SDI stream
+    bmdDeckLinkConfigVideoInputScanning = /* 'visc' */ 0x76697363, // Applicable to H264 Pro Recorder only
+    bmdDeckLinkConfigUseDedicatedLTCInput =
+        /* 'dltc' */ 0x646C7463, // Use timecode from LTC input instead of SDI stream
 
     /* Video Input Integers */
 

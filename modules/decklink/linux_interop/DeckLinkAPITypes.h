@@ -46,7 +46,22 @@ typedef uint32_t BMDTimecodeUserBits;
 // Interface ID Declarations
 
 BMD_CONST REFIID IID_IDeckLinkTimecode =
-    /* BC6CFBD3-8317-4325-AC1C-1216391E9340 */ {0xBC, 0x6C, 0xFB, 0xD3, 0x83, 0x17, 0x43, 0x25, 0xAC, 0x1C, 0x12, 0x16, 0x39, 0x1E, 0x93, 0x40};
+    /* BC6CFBD3-8317-4325-AC1C-1216391E9340 */ {0xBC,
+                                                0x6C,
+                                                0xFB,
+                                                0xD3,
+                                                0x83,
+                                                0x17,
+                                                0x43,
+                                                0x25,
+                                                0xAC,
+                                                0x1C,
+                                                0x12,
+                                                0x16,
+                                                0x39,
+                                                0x1E,
+                                                0x93,
+                                                0x40};
 
 /* Enum BMDTimecodeFlags - Timecode flags */
 
@@ -92,11 +107,14 @@ class IDeckLinkTimecode;
 class IDeckLinkTimecode : public IUnknown
 {
   public:
-    virtual BMDTimecodeBCD   GetBCD(void)                                                                                                               = 0;
-    virtual HRESULT          GetComponents(/* out */ uint8_t* hours, /* out */ uint8_t* minutes, /* out */ uint8_t* seconds, /* out */ uint8_t* frames) = 0;
-    virtual HRESULT          GetString(/* out */ const char** timecode)                                                                                 = 0;
-    virtual BMDTimecodeFlags GetFlags(void)                                                                                                             = 0;
-    virtual HRESULT          GetTimecodeUserBits(/* out */ BMDTimecodeUserBits* userBits)                                                               = 0;
+    virtual BMDTimecodeBCD   GetBCD(void)                                                 = 0;
+    virtual HRESULT          GetComponents(/* out */ uint8_t* hours,
+                                           /* out */ uint8_t* minutes,
+                                           /* out */ uint8_t* seconds,
+                                           /* out */ uint8_t* frames)                     = 0;
+    virtual HRESULT          GetString(/* out */ const char** timecode)                   = 0;
+    virtual BMDTimecodeFlags GetFlags(void)                                               = 0;
+    virtual HRESULT          GetTimecodeUserBits(/* out */ BMDTimecodeUserBits* userBits) = 0;
 
   protected:
     virtual ~IDeckLinkTimecode() {} // call Release method to drop reference count

@@ -49,13 +49,17 @@ frame_producer_registry::frame_producer_registry()
 {
 }
 
-void frame_producer_registry::register_producer_factory(std::wstring name, const producer_factory_t& factory) { impl_->producer_factories.push_back(factory); }
+void frame_producer_registry::register_producer_factory(std::wstring name, const producer_factory_t& factory)
+{
+    impl_->producer_factories.push_back(factory);
+}
 
-frame_producer_dependencies::frame_producer_dependencies(const spl::shared_ptr<core::frame_factory>&          frame_factory,
-                                                         const std::vector<spl::shared_ptr<video_channel>>&   channels,
-                                                         const video_format_desc&                             format_desc,
-                                                         const spl::shared_ptr<const frame_producer_registry> producer_registry,
-                                                         const spl::shared_ptr<const cg_producer_registry>    cg_registry)
+frame_producer_dependencies::frame_producer_dependencies(
+    const spl::shared_ptr<core::frame_factory>&          frame_factory,
+    const std::vector<spl::shared_ptr<video_channel>>&   channels,
+    const video_format_desc&                             format_desc,
+    const spl::shared_ptr<const frame_producer_registry> producer_registry,
+    const spl::shared_ptr<const cg_producer_registry>    cg_registry)
     : frame_factory(frame_factory)
     , channels(channels)
     , format_desc(format_desc)
@@ -109,7 +113,10 @@ void frame_producer_base::paused(bool value) { impl_->paused(value); }
 
 draw_frame frame_producer_base::last_frame() { return impl_->last_frame(); }
 
-std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) { CASPAR_THROW_EXCEPTION(not_supported()); }
+std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&)
+{
+    CASPAR_THROW_EXCEPTION(not_supported());
+}
 
 uint32_t frame_producer_base::nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
 
@@ -200,7 +207,8 @@ class destroy_producer_proxy : public frame_producer
             auto                                             str = (*producer)->print();
             try {
                 if (!producer->unique())
-                    CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
+                    CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: "
+                                      << producer->use_count();
                 else
                     CASPAR_LOG(debug) << str << L" Destroying on asynchronous destruction thread.";
             } catch (...) {
@@ -221,12 +229,15 @@ class destroy_producer_proxy : public frame_producer
     std::wstring              name() const override { return producer_->name(); }
     uint32_t                  frame_number() const override { return producer_->frame_number(); }
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override { return producer_->call(params); }
-    void                      leading_producer(const spl::shared_ptr<frame_producer>& producer) override { return producer_->leading_producer(producer); }
-    uint32_t                  nb_frames() const override { return producer_->nb_frames(); }
-    draw_frame                last_frame() { return producer_->last_frame(); }
-    monitor::subject&         monitor_output() override { return producer_->monitor_output(); }
-    bool                      collides(double x, double y) const override { return producer_->collides(x, y); }
-    void                      on_interaction(const interaction_event::ptr& event) override { return producer_->on_interaction(event); }
+    void                      leading_producer(const spl::shared_ptr<frame_producer>& producer) override
+    {
+        return producer_->leading_producer(producer);
+    }
+    uint32_t          nb_frames() const override { return producer_->nb_frames(); }
+    draw_frame        last_frame() { return producer_->last_frame(); }
+    monitor::subject& monitor_output() override { return producer_->monitor_output(); }
+    bool              collides(double x, double y) const override { return producer_->collides(x, y); }
+    void on_interaction(const interaction_event::ptr& event) override { return producer_->on_interaction(event); }
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)
@@ -266,8 +277,9 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
     return producer;
 }
 
-spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
-                                                                               const std::vector<std::wstring>&   params) const
+spl::shared_ptr<core::frame_producer>
+frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
+                                         const std::vector<std::wstring>&   params) const
 {
     auto& producer_factories = impl_->producer_factories;
     auto  producer           = do_create_producer(dependencies, params, producer_factories);
@@ -296,14 +308,16 @@ spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(c
         std::wstring str;
         for (auto& param : params)
             str += param + L" ";
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
+        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.")
+                                                << arg_value_info(u8(str)));
     }
 
     return producer;
 }
 
-spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
-                                                                               const std::wstring&                params) const
+spl::shared_ptr<core::frame_producer>
+frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
+                                         const std::wstring&                params) const
 {
     std::wstringstream                                                              iss(params);
     std::vector<std::wstring>                                                       tokens;

@@ -90,16 +90,19 @@ struct amcp_command_repository::impl
     }
 };
 
-amcp_command_repository::amcp_command_repository(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
-                                                 const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
-                                                 const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
-                                                 const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-                                                 std::function<void(bool)>                                   shutdown_server_now)
+amcp_command_repository::amcp_command_repository(
+    const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
+    const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
+    const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+    std::function<void(bool)>                                   shutdown_server_now)
     : impl_(new impl(channels, cg_registry, producer_registry, consumer_registry, shutdown_server_now))
 {
 }
 
-AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const
+AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring&      s,
+                                                              IO::ClientInfoPtr        client,
+                                                              std::list<std::wstring>& tokens) const
 {
     auto& self = *impl_;
 
@@ -151,13 +154,19 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(const std:
     return nullptr;
 }
 
-void amcp_command_repository::register_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params)
+void amcp_command_repository::register_command(std::wstring      category,
+                                               std::wstring      name,
+                                               amcp_command_func command,
+                                               int               min_num_params)
 {
     auto& self = *impl_;
     self.commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
 }
 
-void amcp_command_repository::register_channel_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params)
+void amcp_command_repository::register_channel_command(std::wstring      category,
+                                                       std::wstring      name,
+                                                       amcp_command_func command,
+                                                       int               min_num_params)
 {
     auto& self = *impl_;
     self.channel_commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
