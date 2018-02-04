@@ -84,7 +84,6 @@ enum class field_mode
     progressive = 3 // NOTE: progressive == lower | upper;
 };
 ENUM_ENABLE_BITWISE(field_mode);
-// static_assert((field_mode::lower | field_mode::upper) == field_mode::progressive, "");
 
 struct video_format_desc final
 {

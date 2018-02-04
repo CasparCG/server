@@ -28,16 +28,10 @@ namespace caspar { namespace accelerator { namespace ogl {
 class texture final
 {
   public:
-    // Static Members
-
-    // Constructors
-
     texture(int width, int height, int stride);
     texture(const texture&) = delete;
     texture(texture&& other);
     ~texture();
-
-    // Methods
 
     texture& operator=(const texture&) = delete;
     texture& operator                  =(texture&& other);
@@ -49,8 +43,6 @@ class texture final
     void clear();
     void bind(int index);
     void unbind();
-
-    // Properties
 
     int width() const;
     int height() const;

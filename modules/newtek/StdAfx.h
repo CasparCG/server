@@ -38,7 +38,6 @@
 #include <vector>
 
 #include <common/memory.h>
-//#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
 #include <common/except.h>
 #include <common/log.h>
