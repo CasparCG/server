@@ -91,13 +91,13 @@ struct image_transform final
     double                angle            = 0.0;
     rectangle             crop;
     corners               perspective;
-    levels                levels;
-    chroma                chroma;
+    core::levels          levels;
+    core::chroma          chroma;
 
-    field_mode field_mode  = field_mode::progressive;
+    core::field_mode field_mode  = field_mode::progressive;
     bool       is_key      = false;
     bool       is_mix      = false;
-    blend_mode blend_mode  = blend_mode::normal;
+    core::blend_mode blend_mode  = blend_mode::normal;
     int        layer_depth = 0;
 
     image_transform& operator*=(const image_transform& other);
