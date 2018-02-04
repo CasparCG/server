@@ -123,7 +123,7 @@ struct Stream
 
         FF(avcodec_open2(decoder_.get(), codec, nullptr));
 
-        thread_ = std::thread([&] {
+        thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
                     {
@@ -287,7 +287,7 @@ struct Input
             streams_.push_back(format_->streams[n]);
         }
 
-        thread_ = std::thread([&] {
+        thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
                     {
@@ -738,7 +738,7 @@ struct AVProducer::Impl
             reset_filters(0);
         }
 
-        thread_ = std::thread([&] {
+        thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
                     // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801,
