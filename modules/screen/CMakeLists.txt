@@ -2,14 +2,14 @@ cmake_minimum_required (VERSION 2.6)
 project (screen)
 
 set(SOURCES
-		consumer/screen_consumer.cpp
+	consumer/screen_consumer.cpp
 
-		screen.cpp
+	screen.cpp
 )
 set(HEADERS
-		consumer/screen_consumer.h
+	consumer/screen_consumer.h
 
-		screen.h
+	screen.h
 )
 
 add_library(screen ${SOURCES} ${HEADERS})

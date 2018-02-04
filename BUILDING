@@ -18,38 +18,18 @@ of Windows might also work.
 
 Prerequisites:
 
-1. Install Visual Studio 2015.
+1. Install Visual Studio 2017.
 
 2. Install CMake (http://www.cmake.org/download/).
-
-3. Install 7Zip (www.7-zip.org/download.html).
-
-Building a distribution
------------------------
-
-1. Go to the build-scripts folder.
-
-2. If you have installed Visual Studio and 7Zip in the default locations, just
-   run set-variables-and-build-windows.bat, otherwise either edit it to suit
-   your needs or set the envirnoment variables and the run build-windows.bat
-
-3. The distribution .zip file can be found under build/
 
 Development using Visual Studio
 -------------------------------
 
-1. Unpack dependencies64/large_files_win32.7z
+1. cmake -G "Visual Studio 14 2015" -A x64 
 
-2. Create an empty directory called build in the source code root.
+2. Open CasparCG Server.sln
 
-3. From the build directory type:
-
-   cmake -G "Visual Studio 14 2015" -A x64 ..
-
-4. CasparCG Server.sln has now been generated and can be opened in Visual
-   Studio 2015 and built as usual from inside the IDE. Debug and
-   ReleaseWithDebInfo are the most useful configurations. Set "casparcg" as
-   startup project.
+3. Right click on solution and choose "Restore NuGet Packages"
 
 Linux
 =====
