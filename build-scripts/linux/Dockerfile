@@ -133,7 +133,6 @@ COPY version.h /source/version.h
 COPY version.tmpl /source/version.tmpl
 COPY CHANGELOG /source/CHANGELOG
 COPY LICENSE /source/LICENSE
-COPY build-scripts/linux/files/RxCpp/include/ /usr/local/include/
 WORKDIR /build
 ENV BOOST_ROOT=/opt/boost
 ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
