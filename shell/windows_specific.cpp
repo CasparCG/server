@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "stdafx.h"
-
 #include "platform_specific.h"
 #include "resource.h"
 

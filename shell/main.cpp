@@ -22,11 +22,7 @@
 // tbbmalloc_proxy:
 // Replace the standard memory allocation routines in Microsoft* C/C++ RTL
 // (malloc/free, global new/delete, etc.) with the TBB memory allocator.
-
-#include "stdafx.h"
-
 #include <tbb/task_scheduler_init.h>
-#include <tbb/task_scheduler_observer.h>
 
 #if defined _DEBUG && defined _MSC_VER
 #define _CRTDBG_MAP_ALLOC
