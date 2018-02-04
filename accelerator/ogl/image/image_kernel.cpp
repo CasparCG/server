@@ -272,12 +272,12 @@ struct image_kernel::impl
             GL(glEnable(GL_BLEND));
 
             switch (params.keyer) {
-            case keyer::additive:
-                GL(glBlendFunc(GL_ONE, GL_ONE));
-                break;
-            case keyer::linear:
-                GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
-                break;
+                case keyer::additive:
+                    GL(glBlendFunc(GL_ONE, GL_ONE));
+                    break;
+                case keyer::linear:
+                    GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+                    break;
             }
         } else {
             params.background->bind(static_cast<int>(texture_id::background));
@@ -390,43 +390,43 @@ struct image_kernel::impl
 
         // Draw
         switch (params.geometry.type()) {
-        case core::frame_geometry::geometry_type::quad:
-        case core::frame_geometry::geometry_type::quad_list: {
-            glClientActiveTexture(GL_TEXTURE0);
+            case core::frame_geometry::geometry_type::quad:
+            case core::frame_geometry::geometry_type::quad_list: {
+                glClientActiveTexture(GL_TEXTURE0);
 
-            glDisableClientState(GL_EDGE_FLAG_ARRAY);
-            glDisableClientState(GL_COLOR_ARRAY);
-            glDisableClientState(GL_INDEX_ARRAY);
-            glDisableClientState(GL_NORMAL_ARRAY);
+                glDisableClientState(GL_EDGE_FLAG_ARRAY);
+                glDisableClientState(GL_COLOR_ARRAY);
+                glDisableClientState(GL_INDEX_ARRAY);
+                glDisableClientState(GL_NORMAL_ARRAY);
 
-            glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-            glEnableClientState(GL_VERTEX_ARRAY);
+                glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+                glEnableClientState(GL_VERTEX_ARRAY);
 
-            auto stride               = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
-            auto vertex_coord_member  = &core::frame_geometry::coord::vertex_x;
-            auto texture_coord_member = &core::frame_geometry::coord::texture_x;
-            auto data_ptr             = coords.data();
-            auto vertex_coord_ptr     = &(data_ptr->*vertex_coord_member);
-            auto texture_coord_ptr    = &(data_ptr->*texture_coord_member);
+                auto stride               = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
+                auto vertex_coord_member  = &core::frame_geometry::coord::vertex_x;
+                auto texture_coord_member = &core::frame_geometry::coord::texture_x;
+                auto data_ptr             = coords.data();
+                auto vertex_coord_ptr     = &(data_ptr->*vertex_coord_member);
+                auto texture_coord_ptr    = &(data_ptr->*texture_coord_member);
 
-            glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
-            glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
+                glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
+                glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
 
-            if (params.blend_mode == core::blend_mode::normal) {
-                glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
-            } else {
-                for (auto i = 0; i < coords.size(); i += 4) {
-                    glTextureBarrier();
-                    glDrawArrays(GL_QUADS, i, 4);
+                if (params.blend_mode == core::blend_mode::normal) {
+                    glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
+                } else {
+                    for (auto i = 0; i < coords.size(); i += 4) {
+                        glTextureBarrier();
+                        glDrawArrays(GL_QUADS, i, 4);
+                    }
                 }
-            }
 
-            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-            glDisableClientState(GL_VERTEX_ARRAY);
-            break;
-        }
-        default:
-            break;
+                glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+                glDisableClientState(GL_VERTEX_ARRAY);
+                break;
+            }
+            default:
+                break;
         }
 
         // Cleanup

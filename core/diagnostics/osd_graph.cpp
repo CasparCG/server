@@ -152,32 +152,32 @@ class context : public drawable
         sf::Event e;
         while (window_->pollEvent(e)) {
             switch (e.type) {
-            case sf::Event::Closed:
-                window_.reset();
-                return;
-            case sf::Event::Resized:
-                calculate_view_ = true;
-                break;
-            case sf::Event::MouseButtonPressed:
-                dragging_     = true;
-                last_mouse_y_ = e.mouseButton.y;
-                break;
-            case sf::Event::MouseButtonReleased:
-                dragging_ = false;
-                break;
-            case sf::Event::MouseMoved:
-                if (dragging_) {
-                    auto delta_y = e.mouseMove.y - last_mouse_y_;
-                    scroll_position_ += delta_y;
-                    last_mouse_y_   = e.mouseMove.y;
+                case sf::Event::Closed:
+                    window_.reset();
+                    return;
+                case sf::Event::Resized:
                     calculate_view_ = true;
-                }
+                    break;
+                case sf::Event::MouseButtonPressed:
+                    dragging_     = true;
+                    last_mouse_y_ = e.mouseButton.y;
+                    break;
+                case sf::Event::MouseButtonReleased:
+                    dragging_ = false;
+                    break;
+                case sf::Event::MouseMoved:
+                    if (dragging_) {
+                        auto delta_y = e.mouseMove.y - last_mouse_y_;
+                        scroll_position_ += delta_y;
+                        last_mouse_y_   = e.mouseMove.y;
+                        calculate_view_ = true;
+                    }
 
-                break;
-            case sf::Event::MouseWheelMoved:
-                scroll_position_ += e.mouseWheel.delta * 15;
-                calculate_view_ = true;
-                break;
+                    break;
+                case sf::Event::MouseWheelMoved:
+                    scroll_position_ += e.mouseWheel.delta * 15;
+                    calculate_view_ = true;
+                    break;
             }
         }
 

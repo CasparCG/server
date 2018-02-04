@@ -294,62 +294,62 @@ struct image_mixer::impl : boost::noncopyable
         }
 
         switch (pix_desc.format) {
-        case core::pixel_format::abgr:
-            in_frame->format = AV_PIX_FMT_ABGR;
-            break;
-        case core::pixel_format::bgra:
-            in_frame->format = AV_PIX_FMT_BGRA;
-            break;
-        case core::pixel_format::rgba:
-            in_frame->format = AV_PIX_FMT_RGBA;
-            break;
-        case core::pixel_format::argb:
-            in_frame->format = AV_PIX_FMT_ARGB;
-            break;
-        case core::pixel_format::ycbcr: {
-            int y_w = pix_desc.planes[0].width;
-            int y_h = pix_desc.planes[0].height;
-            int c_w = pix_desc.planes[1].width;
-            int c_h = pix_desc.planes[1].height;
+            case core::pixel_format::abgr:
+                in_frame->format = AV_PIX_FMT_ABGR;
+                break;
+            case core::pixel_format::bgra:
+                in_frame->format = AV_PIX_FMT_BGRA;
+                break;
+            case core::pixel_format::rgba:
+                in_frame->format = AV_PIX_FMT_RGBA;
+                break;
+            case core::pixel_format::argb:
+                in_frame->format = AV_PIX_FMT_ARGB;
+                break;
+            case core::pixel_format::ycbcr: {
+                int y_w = pix_desc.planes[0].width;
+                int y_h = pix_desc.planes[0].height;
+                int c_w = pix_desc.planes[1].width;
+                int c_h = pix_desc.planes[1].height;
 
-            if (c_h == y_h && c_w == y_w)
-                in_frame->format = AV_PIX_FMT_YUV444P;
-            else if (c_h == y_h && c_w * 2 == y_w)
-                in_frame->format = AV_PIX_FMT_YUV422P;
-            else if (c_h == y_h && c_w * 4 == y_w)
-                in_frame->format = AV_PIX_FMT_YUV411P;
-            else if (c_h * 2 == y_h && c_w * 2 == y_w)
-                in_frame->format = AV_PIX_FMT_YUV420P;
-            else if (c_h * 2 == y_h && c_w * 4 == y_w)
-                in_frame->format = AV_PIX_FMT_YUV410P;
-            else
-                return;
+                if (c_h == y_h && c_w == y_w)
+                    in_frame->format = AV_PIX_FMT_YUV444P;
+                else if (c_h == y_h && c_w * 2 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUV422P;
+                else if (c_h == y_h && c_w * 4 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUV411P;
+                else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUV420P;
+                else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUV410P;
+                else
+                    return;
 
-            break;
-        }
-        case core::pixel_format::ycbcra: {
-            int y_w = pix_desc.planes[0].width;
-            int y_h = pix_desc.planes[0].height;
-            int c_w = pix_desc.planes[1].width;
-            int c_h = pix_desc.planes[1].height;
+                break;
+            }
+            case core::pixel_format::ycbcra: {
+                int y_w = pix_desc.planes[0].width;
+                int y_h = pix_desc.planes[0].height;
+                int c_w = pix_desc.planes[1].width;
+                int c_h = pix_desc.planes[1].height;
 
-            if (c_h == y_h && c_w == y_w)
-                in_frame->format = AV_PIX_FMT_YUVA444P;
-            else if (c_h == y_h && c_w * 2 == y_w)
-                in_frame->format = AV_PIX_FMT_YUVA422P;
-            else if (c_h == y_h && c_w * 4 == y_w)
-                return;
-            else if (c_h * 2 == y_h && c_w * 2 == y_w)
-                in_frame->format = AV_PIX_FMT_YUVA420P;
-            else if (c_h * 2 == y_h && c_w * 4 == y_w)
-                return;
-            else
-                return;
+                if (c_h == y_h && c_w == y_w)
+                    in_frame->format = AV_PIX_FMT_YUVA444P;
+                else if (c_h == y_h && c_w * 2 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUVA422P;
+                else if (c_h == y_h && c_w * 4 == y_w)
+                    return;
+                else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                    in_frame->format = AV_PIX_FMT_YUVA420P;
+                else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                    return;
+                else
+                    return;
 
-            break;
-        }
-        default:
-            return;
+                break;
+            }
+            default:
+                return;
         }
 
         in_frame->width  = pix_desc.planes[0].width;

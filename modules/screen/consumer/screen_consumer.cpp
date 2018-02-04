@@ -249,30 +249,30 @@ struct screen_consumer : boost::noncopyable
                             is_running_ = false;
                         } else if (config_.interactive && sink_) {
                             switch (e.type) {
-                            case sf::Event::MouseMoved: {
-                                auto& mouse_move = e.mouseMove;
-                                sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                                    1, static_cast<double>(mouse_move.x) / screen_width_, static_cast<double>(mouse_move.y) / screen_height_));
-                                break;
-                            }
-                            case sf::Event::MouseButtonPressed:
-                            case sf::Event::MouseButtonReleased: {
-                                auto& mouse_button = e.mouseButton;
-                                sink_->on_interaction(spl::make_shared<core::mouse_button_event>(1,
-                                                                                                 static_cast<double>(mouse_button.x) / screen_width_,
-                                                                                                 static_cast<double>(mouse_button.y) / screen_height_,
-                                                                                                 static_cast<int>(mouse_button.button),
-                                                                                                 e.type == sf::Event::MouseButtonPressed));
-                                break;
-                            }
-                            case sf::Event::MouseWheelMoved: {
-                                auto& wheel_moved = e.mouseWheel;
-                                sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(1,
-                                                                                                static_cast<double>(wheel_moved.x) / screen_width_,
-                                                                                                static_cast<double>(wheel_moved.y) / screen_height_,
-                                                                                                wheel_moved.delta));
-                                break;
-                            }
+                                case sf::Event::MouseMoved: {
+                                    auto& mouse_move = e.mouseMove;
+                                    sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
+                                        1, static_cast<double>(mouse_move.x) / screen_width_, static_cast<double>(mouse_move.y) / screen_height_));
+                                    break;
+                                }
+                                case sf::Event::MouseButtonPressed:
+                                case sf::Event::MouseButtonReleased: {
+                                    auto& mouse_button = e.mouseButton;
+                                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(1,
+                                                                                                     static_cast<double>(mouse_button.x) / screen_width_,
+                                                                                                     static_cast<double>(mouse_button.y) / screen_height_,
+                                                                                                     static_cast<int>(mouse_button.button),
+                                                                                                     e.type == sf::Event::MouseButtonPressed));
+                                    break;
+                                }
+                                case sf::Event::MouseWheelMoved: {
+                                    auto& wheel_moved = e.mouseWheel;
+                                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(1,
+                                                                                                    static_cast<double>(wheel_moved.x) / screen_width_,
+                                                                                                    static_cast<double>(wheel_moved.y) / screen_height_,
+                                                                                                    wheel_moved.delta));
+                                    break;
+                                }
                             }
                         }
                     }

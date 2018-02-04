@@ -68,38 +68,38 @@ core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, st
 core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
 {
     switch (pix_fmt) {
-    case AV_PIX_FMT_GRAY8:
-        return core::pixel_format::gray;
-    case AV_PIX_FMT_RGB24:
-        return core::pixel_format::rgb;
-    case AV_PIX_FMT_BGR24:
-        return core::pixel_format::bgr;
-    case AV_PIX_FMT_BGRA:
-        return core::pixel_format::bgra;
-    case AV_PIX_FMT_ARGB:
-        return core::pixel_format::argb;
-    case AV_PIX_FMT_RGBA:
-        return core::pixel_format::rgba;
-    case AV_PIX_FMT_ABGR:
-        return core::pixel_format::abgr;
-    case AV_PIX_FMT_YUV444P:
-        return core::pixel_format::ycbcr;
-    case AV_PIX_FMT_YUV422P:
-        return core::pixel_format::ycbcr;
-    case AV_PIX_FMT_YUV420P:
-        return core::pixel_format::ycbcr;
-    case AV_PIX_FMT_YUV411P:
-        return core::pixel_format::ycbcr;
-    case AV_PIX_FMT_YUV410P:
-        return core::pixel_format::ycbcr;
-    case AV_PIX_FMT_YUVA420P:
-        return core::pixel_format::ycbcra;
-    case AV_PIX_FMT_YUVA422P:
-        return core::pixel_format::ycbcra;
-    case AV_PIX_FMT_YUVA444P:
-        return core::pixel_format::ycbcra;
-    default:
-        return core::pixel_format::invalid;
+        case AV_PIX_FMT_GRAY8:
+            return core::pixel_format::gray;
+        case AV_PIX_FMT_RGB24:
+            return core::pixel_format::rgb;
+        case AV_PIX_FMT_BGR24:
+            return core::pixel_format::bgr;
+        case AV_PIX_FMT_BGRA:
+            return core::pixel_format::bgra;
+        case AV_PIX_FMT_ARGB:
+            return core::pixel_format::argb;
+        case AV_PIX_FMT_RGBA:
+            return core::pixel_format::rgba;
+        case AV_PIX_FMT_ABGR:
+            return core::pixel_format::abgr;
+        case AV_PIX_FMT_YUV444P:
+            return core::pixel_format::ycbcr;
+        case AV_PIX_FMT_YUV422P:
+            return core::pixel_format::ycbcr;
+        case AV_PIX_FMT_YUV420P:
+            return core::pixel_format::ycbcr;
+        case AV_PIX_FMT_YUV411P:
+            return core::pixel_format::ycbcr;
+        case AV_PIX_FMT_YUV410P:
+            return core::pixel_format::ycbcr;
+        case AV_PIX_FMT_YUVA420P:
+            return core::pixel_format::ycbcra;
+        case AV_PIX_FMT_YUVA422P:
+            return core::pixel_format::ycbcra;
+        case AV_PIX_FMT_YUVA444P:
+            return core::pixel_format::ycbcra;
+        default:
+            return core::pixel_format::invalid;
     }
 }
 
@@ -112,41 +112,41 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
     core::pixel_format_desc desc = get_pixel_format(pix_fmt);
 
     switch (desc.format) {
-    case core::pixel_format::gray:
-    case core::pixel_format::luma: {
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
-        return desc;
-    }
-    case core::pixel_format::bgr:
-    case core::pixel_format::rgb: {
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 3, height, 3));
-        return desc;
-    }
-    case core::pixel_format::bgra:
-    case core::pixel_format::argb:
-    case core::pixel_format::rgba:
-    case core::pixel_format::abgr: {
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 4, height, 4));
-        return desc;
-    }
-    case core::pixel_format::ycbcr:
-    case core::pixel_format::ycbcra: {
-        // Find chroma height
-        auto size2 = static_cast<int>(dummy_pict.data[2] - dummy_pict.data[1]);
-        auto h2    = size2 / dummy_pict.linesize[1];
+        case core::pixel_format::gray:
+        case core::pixel_format::luma: {
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
+            return desc;
+        }
+        case core::pixel_format::bgr:
+        case core::pixel_format::rgb: {
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 3, height, 3));
+            return desc;
+        }
+        case core::pixel_format::bgra:
+        case core::pixel_format::argb:
+        case core::pixel_format::rgba:
+        case core::pixel_format::abgr: {
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 4, height, 4));
+            return desc;
+        }
+        case core::pixel_format::ycbcr:
+        case core::pixel_format::ycbcra: {
+            // Find chroma height
+            auto size2 = static_cast<int>(dummy_pict.data[2] - dummy_pict.data[1]);
+            auto h2    = size2 / dummy_pict.linesize[1];
 
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
-        desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
 
-        if (desc.format == core::pixel_format::ycbcra)
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));
+            if (desc.format == core::pixel_format::ycbcra)
+                desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));
 
-        return desc;
-    }
-    default:
-        desc.format = core::pixel_format::invalid;
-        return desc;
+            return desc;
+        }
+        default:
+            desc.format = core::pixel_format::invalid;
+            return desc;
     }
 }
 
@@ -168,49 +168,49 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     av_frame->top_field_first     = format_desc.field_mode == core::field_mode::upper ? 1 : 0;
 
     switch (format) {
-    case core::pixel_format::rgb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
-        break;
-    case core::pixel_format::bgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
-        break;
-    case core::pixel_format::rgba:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
-        break;
-    case core::pixel_format::argb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
-        break;
-    case core::pixel_format::bgra:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
-        break;
-    case core::pixel_format::abgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
-        break;
-    case core::pixel_format::gray:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
-        break;
-    case core::pixel_format::ycbcr: {
-        int y_w = planes[0].width;
-        int y_h = planes[0].height;
-        int c_w = planes[1].width;
-        int c_h = planes[1].height;
+        case core::pixel_format::rgb:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
+            break;
+        case core::pixel_format::bgr:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
+            break;
+        case core::pixel_format::rgba:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
+            break;
+        case core::pixel_format::argb:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
+            break;
+        case core::pixel_format::bgra:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
+            break;
+        case core::pixel_format::abgr:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
+            break;
+        case core::pixel_format::gray:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
+            break;
+        case core::pixel_format::ycbcr: {
+            int y_w = planes[0].width;
+            int y_h = planes[0].height;
+            int c_w = planes[1].width;
+            int c_h = planes[1].height;
 
-        if (c_h == y_h && c_w == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
-        else if (c_h == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
-        else if (c_h == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
-        else if (c_h * 2 == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
-        else if (c_h * 2 == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
+            if (c_h == y_h && c_w == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
+            else if (c_h == y_h && c_w * 2 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
+            else if (c_h == y_h && c_w * 4 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
+            else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+            else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
 
-        break;
-    }
-    case core::pixel_format::ycbcra:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
-        break;
+            break;
+        }
+        case core::pixel_format::ycbcra:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
+            break;
     }
 
     FF(av_frame_get_buffer(av_frame.get(), 32));
