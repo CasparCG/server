@@ -1,53 +1,53 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
-*
-* This file is part of CasparCG (www.casparcg.com).
-*
-* CasparCG is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* CasparCG is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
-*
-* Author: Robert Nagy, ronag89@gmail.com
-*/
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Robert Nagy, ronag89@gmail.com
+ */
 #include "image_shader.h"
 
-#include "../util/shader.h"
 #include "../util/device.h"
+#include "../util/shader.h"
 
 #include "blending_glsl.h"
 
 #include <GL/glew.h>
 
-#include <common/gl/gl_check.h>
 #include <common/env.h>
+#include <common/gl/gl_check.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-std::weak_ptr<shader>	g_shader;
-std::mutex				g_shader_mutex;
+std::weak_ptr<shader> g_shader;
+std::mutex            g_shader_mutex;
 
 std::string get_blend_color_func()
 {
-	return
+    return
 
-		get_adjustement_glsl()
+        get_adjustement_glsl()
 
-		+
+        +
 
-		get_blend_glsl()
+        get_blend_glsl()
 
-		+
+        +
 
-		R"shader(
+        R"shader(
 				vec3 get_blend_color(vec3 back, vec3 fore)
 				{
 					switch(blend_mode)
@@ -101,13 +101,13 @@ std::string get_blend_color_func()
 
 std::string get_chroma_func()
 {
-	return
+    return
 
-		get_chroma_glsl()
+        get_chroma_glsl()
 
-		+
+        +
 
-		R"shader(
+        R"shader(
 				vec4 chroma_key(vec4 c)
 				{
 					return ChromaOnCustomColor(c.bgra).bgra;
@@ -117,7 +117,7 @@ std::string get_chroma_func()
 
 std::string get_vertex()
 {
-	return R"shader(
+    return R"shader(
 			void main()
 			{
 				gl_TexCoord[0] = gl_MultiTexCoord0;
@@ -133,7 +133,7 @@ std::string get_vertex()
 
 std::string get_fragment()
 {
-	return R"shader(
+    return R"shader(
 
 			#version 130
 			uniform sampler2D	background;
@@ -172,17 +172,17 @@ std::string get_fragment()
 			uniform float		chroma_spill_suppress_saturation;
 	)shader"
 
-	+
+           +
 
-    get_blend_color_func()
+           get_blend_color_func()
 
-	+
+           +
 
-	get_chroma_func()
+           get_chroma_func()
 
-	+
+           +
 
-	R"shader(
+           R"shader(
             vec4 cubic(float v){
                 vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
                 vec4 s = n * n * n;
@@ -321,35 +321,30 @@ std::string get_fragment()
 
 std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
 {
-	std::lock_guard<std::mutex> lock(g_shader_mutex);
-	auto existing_shader = g_shader.lock();
+    std::lock_guard<std::mutex> lock(g_shader_mutex);
+    auto                        existing_shader = g_shader.lock();
 
-	if(existing_shader)
-	{
-		return existing_shader;
-	}
+    if (existing_shader) {
+        return existing_shader;
+    }
 
-	// The deleter is alive until the weak pointer is destroyed, so we have
-	// to weakly reference ogl, to not keep it alive until atexit
-	std::weak_ptr<device> weak_ogl = ogl;
+    // The deleter is alive until the weak pointer is destroyed, so we have
+    // to weakly reference ogl, to not keep it alive until atexit
+    std::weak_ptr<device> weak_ogl = ogl;
 
-	auto deleter = [weak_ogl](shader* p)
-	{
-		auto ogl = weak_ogl.lock();
+    auto deleter = [weak_ogl](shader* p) {
+        auto ogl = weak_ogl.lock();
 
         if (ogl) {
-            ogl->dispatch_async([=]
-            {
-                delete p;
-            });
+            ogl->dispatch_async([=] { delete p; });
         }
-	};
+    };
 
-	existing_shader.reset(new shader(get_vertex(), get_fragment()), deleter);
+    existing_shader.reset(new shader(get_vertex(), get_fragment()), deleter);
 
-	g_shader = existing_shader;
+    g_shader = existing_shader;
 
-	return existing_shader;
+    return existing_shader;
 }
 
-}}}
+}}} // namespace caspar::accelerator::ogl

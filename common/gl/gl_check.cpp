@@ -23,8 +23,8 @@
 ///////////////////////////
 #include "gl_check.h"
 
-#include "../log.h"
 #include "../except.h"
+#include "../log.h"
 
 #include <GL/glew.h>
 
@@ -32,63 +32,43 @@ namespace caspar { namespace gl {
 
 void SMFL_GLCheckError(const std::string&, const char* func, const char* file, unsigned int line)
 {
-	// Get the last error
-	GLenum LastErrorCode = GL_NO_ERROR;
+    // Get the last error
+    GLenum LastErrorCode = GL_NO_ERROR;
 
-	for(GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError())
-	{
-		CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << glewGetErrorString(ErrorCode);
-		LastErrorCode = ErrorCode;
-	}
+    for (GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError()) {
+        CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << glewGetErrorString(ErrorCode);
+        LastErrorCode = ErrorCode;
+    }
 
-	if (LastErrorCode != GL_NO_ERROR)
-	{
-		// Decode the error code
-		switch (LastErrorCode)
-		{
-			case GL_INVALID_ENUM :
-                CASPAR_THROW_EXCEPTION(
-					ogl_invalid_enum()
-						<< msg_info("an unacceptable value has been specified for an enumerated argument")
-						<< error_info("GL_INVALID_ENUM"));
+    if (LastErrorCode != GL_NO_ERROR) {
+        // Decode the error code
+        switch (LastErrorCode) {
+        case GL_INVALID_ENUM:
+            CASPAR_THROW_EXCEPTION(ogl_invalid_enum() << msg_info("an unacceptable value has been specified for an enumerated argument")
+                                                      << error_info("GL_INVALID_ENUM"));
 
-			case GL_INVALID_VALUE :
-                CASPAR_THROW_EXCEPTION(
-					ogl_invalid_value()
-						<< msg_info("a numeric argument is out of range")
-						<< error_info("GL_INVALID_VALUE"));
+        case GL_INVALID_VALUE:
+            CASPAR_THROW_EXCEPTION(ogl_invalid_value() << msg_info("a numeric argument is out of range") << error_info("GL_INVALID_VALUE"));
 
-			case GL_INVALID_OPERATION :
-                CASPAR_THROW_EXCEPTION(
-                    ogl_invalid_operation()
-                        << msg_info("the specified operation is not allowed in the current state")
-                        << error_info("GL_INVALID_OPERATION"));
+        case GL_INVALID_OPERATION:
+            CASPAR_THROW_EXCEPTION(ogl_invalid_operation()
+                                   << msg_info("the specified operation is not allowed in the current state") << error_info("GL_INVALID_OPERATION"));
 
-			case GL_STACK_OVERFLOW :
-                CASPAR_THROW_EXCEPTION(
-					ogl_stack_overflow()
-						<< msg_info("this command would cause a stack overflow")
-						<< error_info("GL_STACK_OVERFLOW"));
+        case GL_STACK_OVERFLOW:
+            CASPAR_THROW_EXCEPTION(ogl_stack_overflow() << msg_info("this command would cause a stack overflow") << error_info("GL_STACK_OVERFLOW"));
 
-			case GL_STACK_UNDERFLOW :
-                CASPAR_THROW_EXCEPTION(
-                    ogl_stack_underflow()
-                        << msg_info("this command would cause a stack underflow")
-                        << error_info("GL_STACK_UNDERFLOW"));
+        case GL_STACK_UNDERFLOW:
+            CASPAR_THROW_EXCEPTION(ogl_stack_underflow() << msg_info("this command would cause a stack underflow") << error_info("GL_STACK_UNDERFLOW"));
 
-			case GL_OUT_OF_MEMORY :
-                CASPAR_THROW_EXCEPTION(
-					ogl_out_of_memory()
-						<< msg_info("there is not enough memory left to execute the command")
-						<< error_info("GL_OUT_OF_MEMORY"));
+        case GL_OUT_OF_MEMORY:
+            CASPAR_THROW_EXCEPTION(ogl_out_of_memory() << msg_info("there is not enough memory left to execute the command") << error_info("GL_OUT_OF_MEMORY"));
 
-			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
-				 CASPAR_THROW_EXCEPTION(
-					ogl_invalid_framebuffer_operation_ext()
-						<< msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
-						<< error_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT"));
-		}
-	}
+        case GL_INVALID_FRAMEBUFFER_OPERATION_EXT:
+            CASPAR_THROW_EXCEPTION(ogl_invalid_framebuffer_operation_ext()
+                                   << msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
+                                   << error_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT"));
+        }
+    }
 }
 
-}}
+}} // namespace caspar::gl
