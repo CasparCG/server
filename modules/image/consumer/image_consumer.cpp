@@ -47,27 +47,6 @@
 
 namespace caspar { namespace image {
 
-void write_cropped_png(
-		const core::const_frame& frame,
-		const core::video_format_desc& format_desc,
-		const boost::filesystem::path& output_file,
-		int width,
-		int height)
-{
-	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(width, height, 32), FreeImage_Unload);
-	image_view<bgra_pixel> destination_view(FreeImage_GetBits(bitmap.get()), width, height);
-	image_view<bgra_pixel> complete_frame(const_cast<uint8_t*>(frame.image_data(0).begin()), format_desc.width, format_desc.height);
-	auto thumbnail_view = complete_frame.subview(0, 0, width, height);
-
-	std::copy(thumbnail_view.begin(), thumbnail_view.end(), destination_view.begin());
-	FreeImage_FlipVertical(bitmap.get());
-#ifdef WIN32
-	FreeImage_SaveU(FIF_PNG, bitmap.get(), output_file.wstring().c_str(), 0);
-#else
-	FreeImage_Save(FIF_PNG, bitmap.get(), u8(output_file.wstring()).c_str(), 0);
-#endif
-}
-
 struct image_consumer : public core::frame_consumer
 {
 	core::monitor::subject	monitor_subject_;

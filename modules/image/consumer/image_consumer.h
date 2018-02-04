@@ -31,18 +31,11 @@
 #include <string>
 #include <vector>
 
-namespace caspar {
-
-namespace image {
-
-void write_cropped_png(
-		const class core::const_frame& frame,
-		const core::video_format_desc& format_desc,
-		const boost::filesystem::path& output_file,
-		int width,
-		int height);
+namespace caspar { namespace image {
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, struct core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels);
+	const std::vector<std::wstring>& params, 
+	struct core::interaction_sink*, 
+	std::vector<spl::shared_ptr<core::video_channel>> channels);
 
 }}
