@@ -3,6 +3,8 @@ project (ffmpeg)
 
 set(SOURCES
 	producer/av_producer.cpp
+	producer/av_decoder.cpp
+	producer/av_input.cpp
 	util/av_util.cpp
 	producer/ffmpeg_producer.cpp
 	consumer/ffmpeg_consumer.cpp
@@ -13,6 +15,8 @@ set(SOURCES
 set(HEADERS
 	util/av_assert.h
 	producer/av_producer.h
+	producer/av_decoder.h
+	producer/av_input.h
 	util/av_util.h
 	producer/ffmpeg_producer.h
 	consumer/ffmpeg_consumer.cpp
