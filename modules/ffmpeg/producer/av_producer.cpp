@@ -8,8 +8,10 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
+#include <common/assert.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
+#include <common/os/thread.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
@@ -70,7 +72,7 @@ struct Frame
 // TODO (feat) filter preset
 // TODO (feat) forward options
 
-struct Stream
+struct Decoder
 {
     mutable std::mutex              decoder_mutex_;
     std::shared_ptr<AVCodecContext> decoder_;
@@ -78,7 +80,7 @@ struct Stream
     mutable std::mutex      mutex_;
     std::condition_variable cond_;
 
-    int64_t next_pts_;
+    int64_t next_pts_ = 0;
 
     int                                   input_capacity_ = 256;
     std::queue<std::shared_ptr<AVPacket>> input_;
@@ -89,7 +91,7 @@ struct Stream
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
 
-    Stream(AVStream* stream)
+    Decoder(AVStream* stream)
         : next_pts_(stream->start_time)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
@@ -125,7 +127,11 @@ struct Stream
 
         thread_ = std::thread([=] {
             try {
+                set_thread_name(L"[ffmpeg::av_producer::Stream]");
+
                 while (!abort_request_) {
+                    CASPAR_ASSERT(next_pts_ >= 0);
+
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
                         cond_.wait(lock, [&] {
@@ -181,7 +187,7 @@ struct Stream
         });
     }
 
-    ~Stream()
+    ~Decoder()
     {
         abort_request_ = true;
         cond_.notify_all();
@@ -246,7 +252,7 @@ struct Input
     mutable std::mutex               format_mutex_;
     std::shared_ptr<AVFormatContext> format_;
 
-    std::vector<AVStream*> streams_;
+    std::vector<AVStream*> decoders_;
 
     mutable std::mutex      mutex_;
     std::condition_variable cond_;
@@ -284,11 +290,13 @@ struct Input
         FF(avformat_find_stream_info(format_.get(), nullptr));
 
         for (unsigned n = 0; n < format_->nb_streams; ++n) {
-            streams_.push_back(format_->streams[n]);
+            decoders_.push_back(format_->streams[n]);
         }
 
         thread_ = std::thread([=] {
             try {
+                set_thread_name(L"[ffmpeg::av_producer::Input]");
+
                 while (!abort_request_) {
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
@@ -425,7 +433,7 @@ struct Filter
 
     Filter(std::string                    filter_spec,
            const Input&                   input,
-           std::map<int, Stream>&         streams,
+           const std::map<int, std::unique_ptr<Decoder>>&         streams,
            int64_t                        start_time,
            AVMediaType                    media_type,
            const core::video_format_desc& format_desc)
@@ -543,13 +551,8 @@ struct Filter
                     }
                     index++;
                 }
-                auto it = streams.find(index);
 
-                if (it == streams.end()) {
-                    it = streams.emplace(index, input->streams[index]).first;
-                }
-
-                auto& st = it->second;
+                auto& st = *streams.find(index)->second;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
@@ -675,7 +678,7 @@ struct AVProducer::Impl
     std::vector<int> audio_cadence_;
 
     Input                 input_;
-    std::map<int, Stream> streams_;
+    std::map<int, std::unique_ptr<Decoder>> decoders_;
     Filter                video_filter_;
     Filter                audio_filter_;
 
@@ -732,6 +735,10 @@ struct AVProducer::Impl
         graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_text(u16(print()));
 
+        for (unsigned n = 0; n < input_->nb_streams; ++n) {
+            decoders_[n] = std::make_unique<Decoder>(input_->streams[n]);
+        }
+
         if (start_ != AV_NOPTS_VALUE) {
             seek(start_);
         } else {
@@ -740,6 +747,8 @@ struct AVProducer::Impl
 
         thread_ = std::thread([=] {
             try {
+                set_thread_name(L"[ffmpeg::av_producer]");
+
                 while (!abort_request_) {
                     // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801,
                     // 800)
@@ -873,13 +882,13 @@ struct AVProducer::Impl
 
         input_([&](std::shared_ptr<AVPacket>& packet) {
             if (!packet) {
-                for (auto& p : streams_) {
+                for (auto& p : decoders_) {
                     // NOTE: Should never fail.
-                    p.second.try_push(nullptr);
+                    p.second->try_push(nullptr);
                 }
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
-                auto it = streams_.find(packet->stream_index);
-                if (it != streams_.end() && !it->second.try_push(packet)) {
+                auto it = decoders_.find(packet->stream_index);
+                if (it != decoders_.end() && !it->second->try_push(packet)) {
                     return false;
                 }
             }
@@ -899,8 +908,8 @@ struct AVProducer::Impl
         auto sources = sources_;
 
         for (auto& p : sources) {
-            auto it = streams_.find(p.first);
-            if (it == streams_.end()) {
+            auto it = decoders_.find(p.first);
+            if (it == decoders_.end()) {
                 continue;
             }
 
@@ -913,7 +922,7 @@ struct AVProducer::Impl
                 continue;
             }
 
-            it->second([&](std::shared_ptr<AVFrame>& frame) {
+            (*it->second)([&](std::shared_ptr<AVFrame>& frame) {
                 if (nb_requests == 0) {
                     return false;
                 }
@@ -972,8 +981,8 @@ struct AVProducer::Impl
 
     void reset_filters(int64_t ts)
     {
-        video_filter_ = Filter(vfilter_, input_, streams_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, streams_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
+        video_filter_ = Filter(vfilter_, input_, decoders_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_ = Filter(afilter_, input_, decoders_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
@@ -984,9 +993,9 @@ struct AVProducer::Impl
         }
 
         // Flush unused inputs.
-        for (auto& p : streams_) {
+        for (auto& p : decoders_) {
             if (sources_.find(p.first) == sources_.end()) {
-                p.second.flush();
+                p.second->flush();
             }
         }
     }
@@ -1069,8 +1078,8 @@ struct AVProducer::Impl
             input_.seek(time);
             input_.resume();
 
-            for (auto& p : streams_) {
-                p.second.flush();
+            for (auto& p : decoders_) {
+                p.second->flush();
             }
 
             reset_filters(time);
