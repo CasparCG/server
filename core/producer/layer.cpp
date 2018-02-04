@@ -126,7 +126,8 @@ struct layer::impl
             }
 
             if (auto_play_delta_) {
-                auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() - static_cast<int64_t>(*auto_play_delta_);
+                auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() -
+                                   static_cast<int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
                     return receive(format_desc);
@@ -160,18 +161,20 @@ layer& layer::operator=(layer&& other)
     return *this;
 }
 void layer::swap(layer& other) { impl_.swap(other.impl_); }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+void layer::load(spl::shared_ptr<frame_producer> frame_producer,
+                 bool                            preview,
+                 const boost::optional<int32_t>& auto_play_delta)
 {
     return impl_->load(std::move(frame_producer), preview, auto_play_delta);
 }
-void                            layer::play() { impl_->play(); }
-void                            layer::pause() { impl_->pause(); }
-void                            layer::resume() { impl_->resume(); }
-void                            layer::stop() { impl_->stop(); }
-draw_frame                      layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
+void       layer::play() { impl_->play(); }
+void       layer::pause() { impl_->pause(); }
+void       layer::resume() { impl_->resume(); }
+void       layer::stop() { impl_->stop(); }
+draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 monitor::subject&               layer::monitor_output() { return *impl_->monitor_subject_; }
-void                            layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
-bool                            layer::collides(double x, double y) const { return impl_->collides(x, y); }
+void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
+bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }} // namespace caspar::core

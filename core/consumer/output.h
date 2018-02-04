@@ -39,7 +39,9 @@ class output final
     output& operator=(const output&);
 
   public:
-    explicit output(spl::shared_ptr<caspar::diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
+    explicit output(spl::shared_ptr<caspar::diagnostics::graph> graph,
+                    const video_format_desc&                    format_desc,
+                    int                                         channel_index);
 
     // Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
     std::future<void> operator()(const_frame frame, const video_format_desc& format_desc);

@@ -25,7 +25,8 @@
 
 namespace caspar { namespace protocol { namespace CLK {
 
-clk_command_processor& clk_command_processor::add_handler(const std::wstring& command_name, const clk_command_handler& handler)
+clk_command_processor& clk_command_processor::add_handler(const std::wstring&        command_name,
+                                                          const clk_command_handler& handler)
 {
     handlers_.insert(std::make_pair(command_name, handler));
 

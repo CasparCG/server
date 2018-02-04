@@ -81,7 +81,8 @@ std::wstring resolve_or_create(const std::wstring& folder)
         boost::filesystem::create_directories(folder, ec);
 
         if (ec)
-            CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 
         return folder;
     }
@@ -110,15 +111,19 @@ void configure(const std::wstring& filename)
         initial = clean_path(boost::filesystem::initial_path().wstring());
 
         boost::filesystem::wifstream file(initial + L"/" + filename);
-        boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+        boost::property_tree::read_xml(file,
+                                       pt,
+                                       boost::property_tree::xml_parser::trim_whitespace |
+                                           boost::property_tree::xml_parser::no_comments);
 
         auto paths = pt.get_child(L"configuration.paths");
         media      = clean_path(paths.get(L"media-path", initial + L"/media/"));
         log        = clean_path(paths.get(L"log-path", initial + L"/log/"));
-        ftemplate  = clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
-        data       = clean_path(paths.get(L"data-path", initial + L"/data/"));
-        font       = clean_path(paths.get(L"font-path", initial + L"/font/"));
-        thumbnail  = clean_path(paths.get(L"thumbnail-path", paths.get(L"thumbnails-path", initial + L"/thumbnail/")));
+        ftemplate =
+            clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
+        data      = clean_path(paths.get(L"data-path", initial + L"/data/"));
+        font      = clean_path(paths.get(L"font-path", initial + L"/font/"));
+        thumbnail = clean_path(paths.get(L"thumbnail-path", paths.get(L"thumbnails-path", initial + L"/thumbnail/")));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;
@@ -184,8 +189,8 @@ const std::wstring& thumbnail_folder()
 
 const std::wstring& version()
 {
-    static std::wstring ver = u16(EXPAND_AND_QUOTE(CASPAR_GEN) "." EXPAND_AND_QUOTE(CASPAR_MAYOR) "." EXPAND_AND_QUOTE(CASPAR_MINOR) "." EXPAND_AND_QUOTE(
-        CASPAR_REV) " " CASPAR_HASH " " CASPAR_TAG);
+    static std::wstring ver = u16(EXPAND_AND_QUOTE(CASPAR_GEN) "." EXPAND_AND_QUOTE(CASPAR_MAYOR) "." EXPAND_AND_QUOTE(
+        CASPAR_MINOR) "." EXPAND_AND_QUOTE(CASPAR_REV) " " CASPAR_HASH " " CASPAR_TAG);
     return ver;
 }
 
@@ -201,7 +206,8 @@ void log_configuration_warnings()
         return;
 
     if (pt.get_optional<std::wstring>(L"configuration.paths.thumbnails-path"))
-        CASPAR_LOG(warning) << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
+        CASPAR_LOG(warning)
+            << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
 }
 
 }} // namespace caspar::env

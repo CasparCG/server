@@ -14,9 +14,10 @@ namespace caspar { namespace core {
 struct port::impl
 {
     int                               index_;
-    spl::shared_ptr<monitor::subject> monitor_subject_ = spl::make_shared<monitor::subject>("/port/" + boost::lexical_cast<std::string>(index_));
-    spl::shared_ptr<frame_consumer>   consumer_;
-    int                               channel_index_;
+    spl::shared_ptr<monitor::subject> monitor_subject_ =
+        spl::make_shared<monitor::subject>("/port/" + boost::lexical_cast<std::string>(index_));
+    spl::shared_ptr<frame_consumer> consumer_;
+    int                             channel_index_;
 
   public:
     impl(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
@@ -27,7 +28,10 @@ struct port::impl
         consumer_->monitor_output().attach_parent(monitor_subject_);
     }
 
-    void change_channel_format(const core::video_format_desc& format_desc) { consumer_->initialize(format_desc, index_); }
+    void change_channel_format(const core::video_format_desc& format_desc)
+    {
+        consumer_->initialize(format_desc, index_);
+    }
 
     std::future<bool> send(const_frame frame)
     {
@@ -59,11 +63,14 @@ port& port::operator=(port&& other)
     impl_ = std::move(other.impl_);
     return *this;
 }
-std::future<bool>                     port::send(const_frame frame) { return impl_->send(std::move(frame)); }
-monitor::subject&                     port::monitor_output() { return *impl_->monitor_subject_; }
-void                                  port::change_channel_format(const core::video_format_desc& format_desc) { impl_->change_channel_format(format_desc); }
-int                                   port::buffer_depth() const { return impl_->buffer_depth(); }
-std::wstring                          port::print() const { return impl_->print(); }
-bool                                  port::has_synchronization_clock() const { return impl_->has_synchronization_clock(); }
+std::future<bool> port::send(const_frame frame) { return impl_->send(std::move(frame)); }
+monitor::subject& port::monitor_output() { return *impl_->monitor_subject_; }
+void              port::change_channel_format(const core::video_format_desc& format_desc)
+{
+    impl_->change_channel_format(format_desc);
+}
+int          port::buffer_depth() const { return impl_->buffer_depth(); }
+std::wstring port::print() const { return impl_->print(); }
+bool         port::has_synchronization_clock() const { return impl_->has_synchronization_clock(); }
 spl::shared_ptr<const frame_consumer> port::consumer() const { return impl_->consumer(); }
 }} // namespace caspar::core

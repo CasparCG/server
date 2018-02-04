@@ -591,14 +591,16 @@ extern "C"
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_Scale)(IShockwaveFlash* This,
                                                                               /* [in] */ BSTR  pVal);
 
-        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_DeviceFont)(IShockwaveFlash*                  This,
-                                                                                   /* [retval][out] */ VARIANT_BOOL* pVal);
+        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_DeviceFont)(
+            IShockwaveFlash*                  This,
+            /* [retval][out] */ VARIANT_BOOL* pVal);
 
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_DeviceFont)(IShockwaveFlash*        This,
                                                                                    /* [in] */ VARIANT_BOOL pVal);
 
-        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_EmbedMovie)(IShockwaveFlash*                  This,
-                                                                                   /* [retval][out] */ VARIANT_BOOL* pVal);
+        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_EmbedMovie)(
+            IShockwaveFlash*                  This,
+            /* [retval][out] */ VARIANT_BOOL* pVal);
 
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_EmbedMovie)(IShockwaveFlash*        This,
                                                                                    /* [in] */ VARIANT_BOOL pVal);
@@ -694,8 +696,9 @@ extern "C"
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_FlashVars)(IShockwaveFlash* This,
                                                                                   /* [in] */ BSTR  pVal);
 
-        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_AllowScriptAccess)(IShockwaveFlash*          This,
-                                                                                          /* [retval][out] */ BSTR* pVal);
+        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_AllowScriptAccess)(
+            IShockwaveFlash*          This,
+            /* [retval][out] */ BSTR* pVal);
 
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_AllowScriptAccess)(IShockwaveFlash* This,
                                                                                           /* [in] */ BSTR  pVal);
@@ -706,14 +709,16 @@ extern "C"
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_MovieData)(IShockwaveFlash* This,
                                                                                   /* [in] */ BSTR  pVal);
 
-        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_InlineData)(IShockwaveFlash*               This,
-                                                                                   /* [retval][out] */ IUnknown** ppIUnknown);
+        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_InlineData)(
+            IShockwaveFlash*               This,
+            /* [retval][out] */ IUnknown** ppIUnknown);
 
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_InlineData)(IShockwaveFlash*     This,
                                                                                    /* [in] */ IUnknown* ppIUnknown);
 
-        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_SeamlessTabbing)(IShockwaveFlash*                  This,
-                                                                                        /* [retval][out] */ VARIANT_BOOL* pVal);
+        /* [helpstring][propget][id] */ HRESULT(STDMETHODCALLTYPE* get_SeamlessTabbing)(
+            IShockwaveFlash*                  This,
+            /* [retval][out] */ VARIANT_BOOL* pVal);
 
         /* [helpstring][propput][id] */ HRESULT(STDMETHODCALLTYPE* put_SeamlessTabbing)(IShockwaveFlash*        This,
                                                                                         /* [in] */ VARIANT_BOOL pVal);
@@ -774,12 +779,13 @@ extern "C"
 
 #define IShockwaveFlash_GetTypeInfoCount(This, pctinfo) (This)->lpVtbl->GetTypeInfoCount(This, pctinfo)
 
-#define IShockwaveFlash_GetTypeInfo(This, iTInfo, lcid, ppTInfo) (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
+#define IShockwaveFlash_GetTypeInfo(This, iTInfo, lcid, ppTInfo)                                                       \
+    (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
 
-#define IShockwaveFlash_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                                                                           \
+#define IShockwaveFlash_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                                   \
     (This)->lpVtbl->GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)
 
-#define IShockwaveFlash_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                                          \
+#define IShockwaveFlash_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)  \
     (This)->lpVtbl->Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)
 
 #define IShockwaveFlash_get_ReadyState(This, pVal) (This)->lpVtbl->get_ReadyState(This, pVal)
@@ -818,7 +824,8 @@ extern "C"
 
 #define IShockwaveFlash_put_FrameNum(This, pVal) (This)->lpVtbl->put_FrameNum(This, pVal)
 
-#define IShockwaveFlash_SetZoomRect(This, left, top, right, bottom) (This)->lpVtbl->SetZoomRect(This, left, top, right, bottom)
+#define IShockwaveFlash_SetZoomRect(This, left, top, right, bottom)                                                    \
+    (This)->lpVtbl->SetZoomRect(This, left, top, right, bottom)
 
 #define IShockwaveFlash_Zoom(This, factor) (This)->lpVtbl->Zoom(This, factor)
 
@@ -902,19 +909,24 @@ extern "C"
 
 #define IShockwaveFlash_GetVariable(This, name, pVal) (This)->lpVtbl->GetVariable(This, name, pVal)
 
-#define IShockwaveFlash_TSetProperty(This, target, property, value) (This)->lpVtbl->TSetProperty(This, target, property, value)
+#define IShockwaveFlash_TSetProperty(This, target, property, value)                                                    \
+    (This)->lpVtbl->TSetProperty(This, target, property, value)
 
-#define IShockwaveFlash_TGetProperty(This, target, property, pVal) (This)->lpVtbl->TGetProperty(This, target, property, pVal)
+#define IShockwaveFlash_TGetProperty(This, target, property, pVal)                                                     \
+    (This)->lpVtbl->TGetProperty(This, target, property, pVal)
 
 #define IShockwaveFlash_TCallFrame(This, target, FrameNum) (This)->lpVtbl->TCallFrame(This, target, FrameNum)
 
 #define IShockwaveFlash_TCallLabel(This, target, label) (This)->lpVtbl->TCallLabel(This, target, label)
 
-#define IShockwaveFlash_TSetPropertyNum(This, target, property, value) (This)->lpVtbl->TSetPropertyNum(This, target, property, value)
+#define IShockwaveFlash_TSetPropertyNum(This, target, property, value)                                                 \
+    (This)->lpVtbl->TSetPropertyNum(This, target, property, value)
 
-#define IShockwaveFlash_TGetPropertyNum(This, target, property, pVal) (This)->lpVtbl->TGetPropertyNum(This, target, property, pVal)
+#define IShockwaveFlash_TGetPropertyNum(This, target, property, pVal)                                                  \
+    (This)->lpVtbl->TGetPropertyNum(This, target, property, pVal)
 
-#define IShockwaveFlash_TGetPropertyAsNumber(This, target, property, pVal) (This)->lpVtbl->TGetPropertyAsNumber(This, target, property, pVal)
+#define IShockwaveFlash_TGetPropertyAsNumber(This, target, property, pVal)                                             \
+    (This)->lpVtbl->TGetPropertyAsNumber(This, target, property, pVal)
 
 #define IShockwaveFlash_get_SWRemote(This, pVal) (This)->lpVtbl->get_SWRemote(This, pVal)
 
@@ -972,40 +984,45 @@ extern "C"
 
 #endif /* C style interface */
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_ReadyState_Proxy(IShockwaveFlash*          This,
-                                                                                                   /* [retval][out] */ long* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_ReadyState_Proxy(IShockwaveFlash*          This,
+                                                                                 /* [retval][out] */ long* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_ReadyState_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_TotalFrames_Proxy(IShockwaveFlash*          This,
-                                                                                                    /* [retval][out] */ long* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_TotalFrames_Proxy(IShockwaveFlash*          This,
+                                                                                  /* [retval][out] */ long* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_TotalFrames_Stub(IRpcStubBuffer*    This,
                                                          IRpcChannelBuffer* _pRpcChannelBuffer,
                                                          PRPC_MESSAGE       _pRpcMessage,
                                                          DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Playing_Proxy(IShockwaveFlash*                  This,
-                                                                                                /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Playing_Proxy(IShockwaveFlash*                  This,
+                                                                              /* [retval][out] */ VARIANT_BOOL* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Playing_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_Playing_Proxy(IShockwaveFlash*        This,
-                                                                                                /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_Playing_Proxy(IShockwaveFlash*        This,
+                                                                              /* [in] */ VARIANT_BOOL pVal);
 
     void __RPC_STUB IShockwaveFlash_put_Playing_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Quality_Proxy(IShockwaveFlash*         This,
-                                                                                                /* [retval][out] */ int* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Quality_Proxy(IShockwaveFlash*         This,
+                                                                              /* [retval][out] */ int* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Quality_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1020,8 +1037,9 @@ extern "C"
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_ScaleMode_Proxy(IShockwaveFlash*         This,
-                                                                                                  /* [retval][out] */ int* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_ScaleMode_Proxy(IShockwaveFlash*         This,
+                                                                                /* [retval][out] */ int* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_ScaleMode_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1029,15 +1047,16 @@ extern "C"
                                                        DWORD*             _pdwStubPhase);
 
     /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_ScaleMode_Proxy(IShockwaveFlash* This,
-                                                                                                  /* [in] */ int   pVal);
+                                                                                                  /* [in] */ int pVal);
 
     void __RPC_STUB IShockwaveFlash_put_ScaleMode_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_AlignMode_Proxy(IShockwaveFlash*         This,
-                                                                                                  /* [retval][out] */ int* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_AlignMode_Proxy(IShockwaveFlash*         This,
+                                                                                /* [retval][out] */ int* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_AlignMode_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1045,41 +1064,52 @@ extern "C"
                                                        DWORD*             _pdwStubPhase);
 
     /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_AlignMode_Proxy(IShockwaveFlash* This,
-                                                                                                  /* [in] */ int   pVal);
+                                                                                                  /* [in] */ int pVal);
 
     void __RPC_STUB IShockwaveFlash_put_AlignMode_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_BackgroundColor_Proxy(IShockwaveFlash*          This,
-                                                                                                        /* [retval][out] */ long* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_BackgroundColor_Proxy(IShockwaveFlash*          This,
+                                                                                      /* [retval][out] */ long* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_BackgroundColor_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_BackgroundColor_Proxy(IShockwaveFlash* This,
-                                                                                                        /* [in] */ long  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_BackgroundColor_Proxy(IShockwaveFlash* This,
+                                                                                      /* [in] */ long  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_BackgroundColor_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Loop_Proxy(IShockwaveFlash*                  This,
-                                                                                             /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Loop_Proxy(IShockwaveFlash*                  This,
+                                                                           /* [retval][out] */ VARIANT_BOOL* pVal);
 
-    void __RPC_STUB IShockwaveFlash_get_Loop_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_get_Loop_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_Loop_Proxy(IShockwaveFlash*        This,
-                                                                                             /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_Loop_Proxy(IShockwaveFlash*        This,
+                                                                           /* [in] */ VARIANT_BOOL pVal);
 
-    void __RPC_STUB IShockwaveFlash_put_Loop_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_put_Loop_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Movie_Proxy(IShockwaveFlash*          This,
-                                                                                              /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Movie_Proxy(IShockwaveFlash*          This,
+                                                                            /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Movie_Stub(IRpcStubBuffer*    This,
                                                    IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1094,8 +1124,9 @@ extern "C"
                                                    PRPC_MESSAGE       _pRpcMessage,
                                                    DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_receiveNum_Proxy(IShockwaveFlash*          This,
-                                                                                               /* [retval][out] */ long* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_receiveNum_Proxy(IShockwaveFlash*          This,
+                                                                             /* [retval][out] */ long* pVal);
 
     void __RPC_STUB IShockwaveFlash_receiveNum_Stub(IRpcStubBuffer*    This,
                                                     IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1124,38 +1155,62 @@ extern "C"
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Zoom_Proxy(IShockwaveFlash* This,
                                                                                 /* [in] */ int   factor);
 
-    void __RPC_STUB IShockwaveFlash_Zoom_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Zoom_Stub(IRpcStubBuffer*    This,
+                                              IRpcChannelBuffer* _pRpcChannelBuffer,
+                                              PRPC_MESSAGE       _pRpcMessage,
+                                              DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Pan_Proxy(IShockwaveFlash* This,
                                                                                /* [in] */ long  x,
                                                                                /* [in] */ long  y,
                                                                                /* [in] */ int   mode);
 
-    void __RPC_STUB IShockwaveFlash_Pan_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Pan_Stub(IRpcStubBuffer*    This,
+                                             IRpcChannelBuffer* _pRpcChannelBuffer,
+                                             PRPC_MESSAGE       _pRpcMessage,
+                                             DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Play_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_Play_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Play_Stub(IRpcStubBuffer*    This,
+                                              IRpcChannelBuffer* _pRpcChannelBuffer,
+                                              PRPC_MESSAGE       _pRpcMessage,
+                                              DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Stop_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_Stop_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Stop_Stub(IRpcStubBuffer*    This,
+                                              IRpcChannelBuffer* _pRpcChannelBuffer,
+                                              PRPC_MESSAGE       _pRpcMessage,
+                                              DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Back_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_Back_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Back_Stub(IRpcStubBuffer*    This,
+                                              IRpcChannelBuffer* _pRpcChannelBuffer,
+                                              PRPC_MESSAGE       _pRpcMessage,
+                                              DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Forward_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_Forward_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Forward_Stub(IRpcStubBuffer*    This,
+                                                 IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                 PRPC_MESSAGE       _pRpcMessage,
+                                                 DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_Rewind_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_Rewind_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_Rewind_Stub(IRpcStubBuffer*    This,
+                                                IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                PRPC_MESSAGE       _pRpcMessage,
+                                                DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_StopPlay_Proxy(IShockwaveFlash* This);
 
-    void __RPC_STUB IShockwaveFlash_StopPlay_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_StopPlay_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_GotoFrame_Proxy(IShockwaveFlash* This,
                                                                                      /* [in] */ long  FrameNum);
@@ -1165,49 +1220,55 @@ extern "C"
                                                    PRPC_MESSAGE       _pRpcMessage,
                                                    DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_CurrentFrame_Proxy(IShockwaveFlash*          This,
-                                                                                        /* [retval][out] */ long* FrameNum);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_CurrentFrame_Proxy(IShockwaveFlash*          This,
+                                                                      /* [retval][out] */ long* FrameNum);
 
     void __RPC_STUB IShockwaveFlash_CurrentFrame_Stub(IRpcStubBuffer*    This,
                                                       IRpcChannelBuffer* _pRpcChannelBuffer,
                                                       PRPC_MESSAGE       _pRpcMessage,
                                                       DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_IsPlaying_Proxy(IShockwaveFlash*                  This,
-                                                                                     /* [retval][out] */ VARIANT_BOOL* Playing);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_IsPlaying_Proxy(IShockwaveFlash*                  This,
+                                                                   /* [retval][out] */ VARIANT_BOOL* Playing);
 
     void __RPC_STUB IShockwaveFlash_IsPlaying_Stub(IRpcStubBuffer*    This,
                                                    IRpcChannelBuffer* _pRpcChannelBuffer,
                                                    PRPC_MESSAGE       _pRpcMessage,
                                                    DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_PercentLoaded_Proxy(IShockwaveFlash*          This,
-                                                                                         /* [retval][out] */ long* percent);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_PercentLoaded_Proxy(IShockwaveFlash*          This,
+                                                                       /* [retval][out] */ long* percent);
 
     void __RPC_STUB IShockwaveFlash_PercentLoaded_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_FrameLoaded_Proxy(IShockwaveFlash*                  This,
-                                                                                       /* [in] */ long                   FrameNum,
-                                                                                       /* [retval][out] */ VARIANT_BOOL* loaded);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_FrameLoaded_Proxy(IShockwaveFlash*                  This,
+                                                                     /* [in] */ long                   FrameNum,
+                                                                     /* [retval][out] */ VARIANT_BOOL* loaded);
 
     void __RPC_STUB IShockwaveFlash_FrameLoaded_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_FlashVersion_Proxy(IShockwaveFlash*          This,
-                                                                                        /* [retval][out] */ long* version);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_FlashVersion_Proxy(IShockwaveFlash*          This,
+                                                                      /* [retval][out] */ long* version);
 
     void __RPC_STUB IShockwaveFlash_FlashVersion_Stub(IRpcStubBuffer*    This,
                                                       IRpcChannelBuffer* _pRpcChannelBuffer,
                                                       PRPC_MESSAGE       _pRpcMessage,
                                                       DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_WMode_Proxy(IShockwaveFlash*          This,
-                                                                                              /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_WMode_Proxy(IShockwaveFlash*          This,
+                                                                            /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_WMode_Stub(IRpcStubBuffer*    This,
                                                    IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1222,8 +1283,9 @@ extern "C"
                                                    PRPC_MESSAGE       _pRpcMessage,
                                                    DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_SAlign_Proxy(IShockwaveFlash*          This,
-                                                                                               /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_SAlign_Proxy(IShockwaveFlash*          This,
+                                                                             /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_SAlign_Stub(IRpcStubBuffer*    This,
                                                     IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1238,28 +1300,44 @@ extern "C"
                                                     PRPC_MESSAGE       _pRpcMessage,
                                                     DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Menu_Proxy(IShockwaveFlash*                  This,
-                                                                                             /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Menu_Proxy(IShockwaveFlash*                  This,
+                                                                           /* [retval][out] */ VARIANT_BOOL* pVal);
 
-    void __RPC_STUB IShockwaveFlash_get_Menu_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_get_Menu_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_Menu_Proxy(IShockwaveFlash*        This,
-                                                                                             /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_Menu_Proxy(IShockwaveFlash*        This,
+                                                                           /* [in] */ VARIANT_BOOL pVal);
 
-    void __RPC_STUB IShockwaveFlash_put_Menu_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_put_Menu_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Base_Proxy(IShockwaveFlash*          This,
-                                                                                             /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Base_Proxy(IShockwaveFlash*          This,
+                                                                           /* [retval][out] */ BSTR* pVal);
 
-    void __RPC_STUB IShockwaveFlash_get_Base_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_get_Base_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
     /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_Base_Proxy(IShockwaveFlash* This,
                                                                                              /* [in] */ BSTR  pVal);
 
-    void __RPC_STUB IShockwaveFlash_put_Base_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_put_Base_Stub(IRpcStubBuffer*    This,
+                                                  IRpcChannelBuffer* _pRpcChannelBuffer,
+                                                  PRPC_MESSAGE       _pRpcMessage,
+                                                  DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Scale_Proxy(IShockwaveFlash*          This,
-                                                                                              /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Scale_Proxy(IShockwaveFlash*          This,
+                                                                            /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Scale_Stub(IRpcStubBuffer*    This,
                                                    IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1274,40 +1352,45 @@ extern "C"
                                                    PRPC_MESSAGE       _pRpcMessage,
                                                    DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_DeviceFont_Proxy(IShockwaveFlash*                  This,
-                                                                                                   /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_DeviceFont_Proxy(IShockwaveFlash*                  This,
+                                                                                 /* [retval][out] */ VARIANT_BOOL* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_DeviceFont_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_DeviceFont_Proxy(IShockwaveFlash*        This,
-                                                                                                   /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_DeviceFont_Proxy(IShockwaveFlash*        This,
+                                                                                 /* [in] */ VARIANT_BOOL pVal);
 
     void __RPC_STUB IShockwaveFlash_put_DeviceFont_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_EmbedMovie_Proxy(IShockwaveFlash*                  This,
-                                                                                                   /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_EmbedMovie_Proxy(IShockwaveFlash*                  This,
+                                                                                 /* [retval][out] */ VARIANT_BOOL* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_EmbedMovie_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_EmbedMovie_Proxy(IShockwaveFlash*        This,
-                                                                                                   /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_EmbedMovie_Proxy(IShockwaveFlash*        This,
+                                                                                 /* [in] */ VARIANT_BOOL pVal);
 
     void __RPC_STUB IShockwaveFlash_put_EmbedMovie_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_BGColor_Proxy(IShockwaveFlash*          This,
-                                                                                                /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_BGColor_Proxy(IShockwaveFlash*          This,
+                                                                              /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_BGColor_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1322,8 +1405,9 @@ extern "C"
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Quality2_Proxy(IShockwaveFlash*          This,
-                                                                                                 /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Quality2_Proxy(IShockwaveFlash*          This,
+                                                                               /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Quality2_Stub(IRpcStubBuffer*    This,
                                                       IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1365,18 +1449,20 @@ extern "C"
                                                     PRPC_MESSAGE       _pRpcMessage,
                                                     DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TCurrentFrame_Proxy(IShockwaveFlash*          This,
-                                                                                         /* [in] */ BSTR           target,
-                                                                                         /* [retval][out] */ long* FrameNum);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_TCurrentFrame_Proxy(IShockwaveFlash*          This,
+                                                                       /* [in] */ BSTR           target,
+                                                                       /* [retval][out] */ long* FrameNum);
 
     void __RPC_STUB IShockwaveFlash_TCurrentFrame_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TCurrentLabel_Proxy(IShockwaveFlash*          This,
-                                                                                         /* [in] */ BSTR           target,
-                                                                                         /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_TCurrentLabel_Proxy(IShockwaveFlash*          This,
+                                                                       /* [in] */ BSTR           target,
+                                                                       /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_TCurrentLabel_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1386,7 +1472,10 @@ extern "C"
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TPlay_Proxy(IShockwaveFlash* This,
                                                                                  /* [in] */ BSTR  target);
 
-    void __RPC_STUB IShockwaveFlash_TPlay_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IShockwaveFlash_TPlay_Stub(IRpcStubBuffer*    This,
+                                               IRpcChannelBuffer* _pRpcChannelBuffer,
+                                               PRPC_MESSAGE       _pRpcMessage,
+                                               DWORD*             _pdwStubPhase);
 
     /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TStopPlay_Proxy(IShockwaveFlash* This,
                                                                                      /* [in] */ BSTR  target);
@@ -1424,9 +1513,9 @@ extern "C"
                                                       PRPC_MESSAGE       _pRpcMessage,
                                                       DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TGetProperty_Proxy(IShockwaveFlash*          This,
-                                                                                        /* [in] */ BSTR           target,
-                                                                                        /* [in] */ int            property,
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TGetProperty_Proxy(IShockwaveFlash* This,
+                                                                                        /* [in] */ BSTR  target,
+                                                                                        /* [in] */ int   property,
                                                                                         /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_TGetProperty_Stub(IRpcStubBuffer*    This,
@@ -1462,28 +1551,31 @@ extern "C"
                                                          PRPC_MESSAGE       _pRpcMessage,
                                                          DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TGetPropertyNum_Proxy(IShockwaveFlash*            This,
-                                                                                           /* [in] */ BSTR             target,
-                                                                                           /* [in] */ int              property,
-                                                                                           /* [retval][out] */ double* pVal);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_TGetPropertyNum_Proxy(IShockwaveFlash*            This,
+                                                                         /* [in] */ BSTR             target,
+                                                                         /* [in] */ int              property,
+                                                                         /* [retval][out] */ double* pVal);
 
     void __RPC_STUB IShockwaveFlash_TGetPropertyNum_Stub(IRpcStubBuffer*    This,
                                                          IRpcChannelBuffer* _pRpcChannelBuffer,
                                                          PRPC_MESSAGE       _pRpcMessage,
                                                          DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_TGetPropertyAsNumber_Proxy(IShockwaveFlash*            This,
-                                                                                                /* [in] */ BSTR             target,
-                                                                                                /* [in] */ int              property,
-                                                                                                /* [retval][out] */ double* pVal);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_TGetPropertyAsNumber_Proxy(IShockwaveFlash*            This,
+                                                                              /* [in] */ BSTR             target,
+                                                                              /* [in] */ int              property,
+                                                                              /* [retval][out] */ double* pVal);
 
     void __RPC_STUB IShockwaveFlash_TGetPropertyAsNumber_Stub(IRpcStubBuffer*    This,
                                                               IRpcChannelBuffer* _pRpcChannelBuffer,
                                                               PRPC_MESSAGE       _pRpcMessage,
                                                               DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_SWRemote_Proxy(IShockwaveFlash*          This,
-                                                                                                 /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_SWRemote_Proxy(IShockwaveFlash*          This,
+                                                                               /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_SWRemote_Stub(IRpcStubBuffer*    This,
                                                       IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1498,8 +1590,9 @@ extern "C"
                                                       PRPC_MESSAGE       _pRpcMessage,
                                                       DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_FlashVars_Proxy(IShockwaveFlash*          This,
-                                                                                                  /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_FlashVars_Proxy(IShockwaveFlash*          This,
+                                                                                /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_FlashVars_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1507,31 +1600,34 @@ extern "C"
                                                        DWORD*             _pdwStubPhase);
 
     /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_FlashVars_Proxy(IShockwaveFlash* This,
-                                                                                                  /* [in] */ BSTR  pVal);
+                                                                                                  /* [in] */ BSTR pVal);
 
     void __RPC_STUB IShockwaveFlash_put_FlashVars_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_AllowScriptAccess_Proxy(IShockwaveFlash*          This,
-                                                                                                          /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_AllowScriptAccess_Proxy(IShockwaveFlash*          This,
+                                                                                        /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_AllowScriptAccess_Stub(IRpcStubBuffer*    This,
                                                                IRpcChannelBuffer* _pRpcChannelBuffer,
                                                                PRPC_MESSAGE       _pRpcMessage,
                                                                DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_AllowScriptAccess_Proxy(IShockwaveFlash* This,
-                                                                                                          /* [in] */ BSTR  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_AllowScriptAccess_Proxy(IShockwaveFlash* This,
+                                                                                        /* [in] */ BSTR  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_AllowScriptAccess_Stub(IRpcStubBuffer*    This,
                                                                IRpcChannelBuffer* _pRpcChannelBuffer,
                                                                PRPC_MESSAGE       _pRpcMessage,
                                                                DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_MovieData_Proxy(IShockwaveFlash*          This,
-                                                                                                  /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_MovieData_Proxy(IShockwaveFlash*          This,
+                                                                                /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_MovieData_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1539,39 +1635,43 @@ extern "C"
                                                        DWORD*             _pdwStubPhase);
 
     /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_MovieData_Proxy(IShockwaveFlash* This,
-                                                                                                  /* [in] */ BSTR  pVal);
+                                                                                                  /* [in] */ BSTR pVal);
 
     void __RPC_STUB IShockwaveFlash_put_MovieData_Stub(IRpcStubBuffer*    This,
                                                        IRpcChannelBuffer* _pRpcChannelBuffer,
                                                        PRPC_MESSAGE       _pRpcMessage,
                                                        DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_InlineData_Proxy(IShockwaveFlash*               This,
-                                                                                                   /* [retval][out] */ IUnknown** ppIUnknown);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_InlineData_Proxy(IShockwaveFlash*               This,
+                                                                                 /* [retval][out] */ IUnknown** ppIUnknown);
 
     void __RPC_STUB IShockwaveFlash_get_InlineData_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_InlineData_Proxy(IShockwaveFlash*     This,
-                                                                                                   /* [in] */ IUnknown* ppIUnknown);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_InlineData_Proxy(IShockwaveFlash*     This,
+                                                                                 /* [in] */ IUnknown* ppIUnknown);
 
     void __RPC_STUB IShockwaveFlash_put_InlineData_Stub(IRpcStubBuffer*    This,
                                                         IRpcChannelBuffer* _pRpcChannelBuffer,
                                                         PRPC_MESSAGE       _pRpcMessage,
                                                         DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_SeamlessTabbing_Proxy(IShockwaveFlash*                  This,
-                                                                                                        /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_SeamlessTabbing_Proxy(IShockwaveFlash*                  This,
+                                                                                      /* [retval][out] */ VARIANT_BOOL* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_SeamlessTabbing_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_SeamlessTabbing_Proxy(IShockwaveFlash*        This,
-                                                                                                        /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_SeamlessTabbing_Proxy(IShockwaveFlash*        This,
+                                                                                      /* [in] */ VARIANT_BOOL pVal);
 
     void __RPC_STUB IShockwaveFlash_put_SeamlessTabbing_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1585,57 +1685,64 @@ extern "C"
                                                               PRPC_MESSAGE       _pRpcMessage,
                                                               DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_Profile_Proxy(IShockwaveFlash*                  This,
-                                                                                                /* [retval][out] */ VARIANT_BOOL* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_Profile_Proxy(IShockwaveFlash*                  This,
+                                                                              /* [retval][out] */ VARIANT_BOOL* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_Profile_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_Profile_Proxy(IShockwaveFlash*        This,
-                                                                                                /* [in] */ VARIANT_BOOL pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_Profile_Proxy(IShockwaveFlash*        This,
+                                                                              /* [in] */ VARIANT_BOOL pVal);
 
     void __RPC_STUB IShockwaveFlash_put_Profile_Stub(IRpcStubBuffer*    This,
                                                      IRpcChannelBuffer* _pRpcChannelBuffer,
                                                      PRPC_MESSAGE       _pRpcMessage,
                                                      DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_ProfileAddress_Proxy(IShockwaveFlash*          This,
-                                                                                                       /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_ProfileAddress_Proxy(IShockwaveFlash*          This,
+                                                                                     /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_ProfileAddress_Stub(IRpcStubBuffer*    This,
                                                             IRpcChannelBuffer* _pRpcChannelBuffer,
                                                             PRPC_MESSAGE       _pRpcMessage,
                                                             DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_ProfileAddress_Proxy(IShockwaveFlash* This,
-                                                                                                       /* [in] */ BSTR  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_ProfileAddress_Proxy(IShockwaveFlash* This,
+                                                                                     /* [in] */ BSTR  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_ProfileAddress_Stub(IRpcStubBuffer*    This,
                                                             IRpcChannelBuffer* _pRpcChannelBuffer,
                                                             PRPC_MESSAGE       _pRpcMessage,
                                                             DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_ProfilePort_Proxy(IShockwaveFlash*          This,
-                                                                                                    /* [retval][out] */ long* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_ProfilePort_Proxy(IShockwaveFlash*          This,
+                                                                                  /* [retval][out] */ long* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_ProfilePort_Stub(IRpcStubBuffer*    This,
                                                          IRpcChannelBuffer* _pRpcChannelBuffer,
                                                          PRPC_MESSAGE       _pRpcMessage,
                                                          DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_ProfilePort_Proxy(IShockwaveFlash* This,
-                                                                                                    /* [in] */ long  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_ProfilePort_Proxy(IShockwaveFlash* This,
+                                                                                  /* [in] */ long  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_ProfilePort_Stub(IRpcStubBuffer*    This,
                                                          IRpcChannelBuffer* _pRpcChannelBuffer,
                                                          PRPC_MESSAGE       _pRpcMessage,
                                                          DWORD*             _pdwStubPhase);
 
-    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_CallFunction_Proxy(IShockwaveFlash*          This,
-                                                                                        /* [in] */ BSTR           request,
-                                                                                        /* [retval][out] */ BSTR* response);
+    /* [helpstring][id] */ HRESULT STDMETHODCALLTYPE
+                                   IShockwaveFlash_CallFunction_Proxy(IShockwaveFlash*          This,
+                                                                      /* [in] */ BSTR           request,
+                                                                      /* [retval][out] */ BSTR* response);
 
     void __RPC_STUB IShockwaveFlash_CallFunction_Stub(IRpcStubBuffer*    This,
                                                       IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1657,32 +1764,36 @@ extern "C"
                                                               PRPC_MESSAGE       _pRpcMessage,
                                                               DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_AllowNetworking_Proxy(IShockwaveFlash*          This,
-                                                                                                        /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_AllowNetworking_Proxy(IShockwaveFlash*          This,
+                                                                                      /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_AllowNetworking_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_AllowNetworking_Proxy(IShockwaveFlash* This,
-                                                                                                        /* [in] */ BSTR  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_AllowNetworking_Proxy(IShockwaveFlash* This,
+                                                                                      /* [in] */ BSTR  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_AllowNetworking_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_AllowFullScreen_Proxy(IShockwaveFlash*          This,
-                                                                                                        /* [retval][out] */ BSTR* pVal);
+    /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_get_AllowFullScreen_Proxy(IShockwaveFlash*          This,
+                                                                                      /* [retval][out] */ BSTR* pVal);
 
     void __RPC_STUB IShockwaveFlash_get_AllowFullScreen_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
                                                              PRPC_MESSAGE       _pRpcMessage,
                                                              DWORD*             _pdwStubPhase);
 
-    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_put_AllowFullScreen_Proxy(IShockwaveFlash* This,
-                                                                                                        /* [in] */ BSTR  pVal);
+    /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE
+                                            IShockwaveFlash_put_AllowFullScreen_Proxy(IShockwaveFlash* This,
+                                                                                      /* [in] */ BSTR  pVal);
 
     void __RPC_STUB IShockwaveFlash_put_AllowFullScreen_Stub(IRpcStubBuffer*    This,
                                                              IRpcChannelBuffer* _pRpcChannelBuffer,
@@ -1754,7 +1865,8 @@ extern "C"
 
 #ifdef COBJMACROS
 
-#define _IShockwaveFlashEvents_QueryInterface(This, riid, ppvObject) (This)->lpVtbl->QueryInterface(This, riid, ppvObject)
+#define _IShockwaveFlashEvents_QueryInterface(This, riid, ppvObject)                                                   \
+    (This)->lpVtbl->QueryInterface(This, riid, ppvObject)
 
 #define _IShockwaveFlashEvents_AddRef(This) (This)->lpVtbl->AddRef(This)
 
@@ -1762,12 +1874,14 @@ extern "C"
 
 #define _IShockwaveFlashEvents_GetTypeInfoCount(This, pctinfo) (This)->lpVtbl->GetTypeInfoCount(This, pctinfo)
 
-#define _IShockwaveFlashEvents_GetTypeInfo(This, iTInfo, lcid, ppTInfo) (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
+#define _IShockwaveFlashEvents_GetTypeInfo(This, iTInfo, lcid, ppTInfo)                                                \
+    (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
 
-#define _IShockwaveFlashEvents_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                                                                    \
+#define _IShockwaveFlashEvents_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                            \
     (This)->lpVtbl->GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)
 
-#define _IShockwaveFlashEvents_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                                   \
+#define _IShockwaveFlashEvents_Invoke(                                                                                 \
+    This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                             \
     (This)->lpVtbl->Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)
 
 #endif /* COBJMACROS */
@@ -1935,7 +2049,8 @@ extern "C"
 
 #ifdef COBJMACROS
 
-#define IFlashObjectInterface_QueryInterface(This, riid, ppvObject) (This)->lpVtbl->QueryInterface(This, riid, ppvObject)
+#define IFlashObjectInterface_QueryInterface(This, riid, ppvObject)                                                    \
+    (This)->lpVtbl->QueryInterface(This, riid, ppvObject)
 
 #define IFlashObjectInterface_AddRef(This) (This)->lpVtbl->AddRef(This)
 
@@ -1943,24 +2058,31 @@ extern "C"
 
 #define IFlashObjectInterface_GetTypeInfoCount(This, pctinfo) (This)->lpVtbl->GetTypeInfoCount(This, pctinfo)
 
-#define IFlashObjectInterface_GetTypeInfo(This, iTInfo, lcid, ppTInfo) (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
+#define IFlashObjectInterface_GetTypeInfo(This, iTInfo, lcid, ppTInfo)                                                 \
+    (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
 
-#define IFlashObjectInterface_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                                                                     \
+#define IFlashObjectInterface_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                             \
     (This)->lpVtbl->GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)
 
-#define IFlashObjectInterface_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                                    \
+#define IFlashObjectInterface_Invoke(                                                                                  \
+    This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                             \
     (This)->lpVtbl->Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)
 
-#define IFlashObjectInterface_GetDispID(This, bstrName, grfdex, pid) (This)->lpVtbl->GetDispID(This, bstrName, grfdex, pid)
+#define IFlashObjectInterface_GetDispID(This, bstrName, grfdex, pid)                                                   \
+    (This)->lpVtbl->GetDispID(This, bstrName, grfdex, pid)
 
-#define IFlashObjectInterface_RemoteInvokeEx(This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)                        \
-    (This)->lpVtbl->RemoteInvokeEx(This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)
+#define IFlashObjectInterface_RemoteInvokeEx(                                                                          \
+    This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)                         \
+    (This)->lpVtbl->RemoteInvokeEx(                                                                                    \
+        This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)
 
-#define IFlashObjectInterface_DeleteMemberByName(This, bstrName, grfdex) (This)->lpVtbl->DeleteMemberByName(This, bstrName, grfdex)
+#define IFlashObjectInterface_DeleteMemberByName(This, bstrName, grfdex)                                               \
+    (This)->lpVtbl->DeleteMemberByName(This, bstrName, grfdex)
 
 #define IFlashObjectInterface_DeleteMemberByDispID(This, id) (This)->lpVtbl->DeleteMemberByDispID(This, id)
 
-#define IFlashObjectInterface_GetMemberProperties(This, id, grfdexFetch, pgrfdex) (This)->lpVtbl->GetMemberProperties(This, id, grfdexFetch, pgrfdex)
+#define IFlashObjectInterface_GetMemberProperties(This, id, grfdexFetch, pgrfdex)                                      \
+    (This)->lpVtbl->GetMemberProperties(This, id, grfdexFetch, pgrfdex)
 
 #define IFlashObjectInterface_GetMemberName(This, id, pbstrName) (This)->lpVtbl->GetMemberName(This, id, pbstrName)
 
@@ -2139,21 +2261,26 @@ extern "C"
 
 #define IDispatchEx_GetTypeInfo(This, iTInfo, lcid, ppTInfo) (This)->lpVtbl->GetTypeInfo(This, iTInfo, lcid, ppTInfo)
 
-#define IDispatchEx_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId) (This)->lpVtbl->GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)
+#define IDispatchEx_GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)                                       \
+    (This)->lpVtbl->GetIDsOfNames(This, riid, rgszNames, cNames, lcid, rgDispId)
 
-#define IDispatchEx_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)                                              \
+#define IDispatchEx_Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)      \
     (This)->lpVtbl->Invoke(This, dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr)
 
 #define IDispatchEx_GetDispID(This, bstrName, grfdex, pid) (This)->lpVtbl->GetDispID(This, bstrName, grfdex, pid)
 
-#define IDispatchEx_RemoteInvokeEx(This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)                                  \
-    (This)->lpVtbl->RemoteInvokeEx(This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)
+#define IDispatchEx_RemoteInvokeEx(                                                                                    \
+    This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)                         \
+    (This)->lpVtbl->RemoteInvokeEx(                                                                                    \
+        This, id, lcid, dwFlags, pdp, pvarRes, pei, pspCaller, cvarRefArg, rgiRefArg, rgvarRefArg)
 
-#define IDispatchEx_DeleteMemberByName(This, bstrName, grfdex) (This)->lpVtbl->DeleteMemberByName(This, bstrName, grfdex)
+#define IDispatchEx_DeleteMemberByName(This, bstrName, grfdex)                                                         \
+    (This)->lpVtbl->DeleteMemberByName(This, bstrName, grfdex)
 
 #define IDispatchEx_DeleteMemberByDispID(This, id) (This)->lpVtbl->DeleteMemberByDispID(This, id)
 
-#define IDispatchEx_GetMemberProperties(This, id, grfdexFetch, pgrfdex) (This)->lpVtbl->GetMemberProperties(This, id, grfdexFetch, pgrfdex)
+#define IDispatchEx_GetMemberProperties(This, id, grfdexFetch, pgrfdex)                                                \
+    (This)->lpVtbl->GetMemberProperties(This, id, grfdexFetch, pgrfdex)
 
 #define IDispatchEx_GetMemberName(This, id, pbstrName) (This)->lpVtbl->GetMemberName(This, id, pbstrName)
 
@@ -2170,7 +2297,10 @@ extern "C"
                                                   /* [in] */ unsigned long grfdex,
                                                   /* [out] */ long*        pid);
 
-    void __RPC_STUB IDispatchEx_GetDispID_Stub(IRpcStubBuffer* This, IRpcChannelBuffer* _pRpcChannelBuffer, PRPC_MESSAGE _pRpcMessage, DWORD* _pdwStubPhase);
+    void __RPC_STUB IDispatchEx_GetDispID_Stub(IRpcStubBuffer*    This,
+                                               IRpcChannelBuffer* _pRpcChannelBuffer,
+                                               PRPC_MESSAGE       _pRpcMessage,
+                                               DWORD*             _pdwStubPhase);
 
     HRESULT __stdcall IDispatchEx_RemoteInvokeEx_Proxy(IDispatchEx*                 This,
                                                        /* [in] */ long              id,
@@ -2299,7 +2429,8 @@ extern "C"
 
 #define IServiceProvider_Release(This) (This)->lpVtbl->Release(This)
 
-#define IServiceProvider_RemoteQueryService(This, guidService, riid, ppvObject) (This)->lpVtbl->RemoteQueryService(This, guidService, riid, ppvObject)
+#define IServiceProvider_RemoteQueryService(This, guidService, riid, ppvObject)                                        \
+    (This)->lpVtbl->RemoteQueryService(This, guidService, riid, ppvObject)
 
 #endif /* COBJMACROS */
 

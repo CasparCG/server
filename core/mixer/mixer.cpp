@@ -123,7 +123,13 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 }
 void        mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float       mixer::get_master_volume() { return impl_->get_master_volume(); }
-const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc) { return (*impl_)(std::move(frames), format_desc); }
-mutable_frame      mixer::create_frame(const void* tag, const pixel_format_desc& desc) { return impl_->image_mixer_->create_frame(tag, desc); }
-monitor::subject&  mixer::monitor_output() { return *impl_->monitor_subject_; }
+const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
+{
+    return (*impl_)(std::move(frames), format_desc);
+}
+mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc)
+{
+    return impl_->image_mixer_->create_frame(tag, desc);
+}
+monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }
 }} // namespace caspar::core

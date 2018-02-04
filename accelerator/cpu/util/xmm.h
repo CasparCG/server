@@ -500,7 +500,22 @@ s8_x::s8_x(char b3, char b2, char b1, char b0)
 {
 }
 
-s8_x::s8_x(char b15, char b14, char b13, char b12, char b11, char b10, char b9, char b8, char b7, char b6, char b5, char b4, char b3, char b2, char b1, char b0)
+s8_x::s8_x(char b15,
+           char b14,
+           char b13,
+           char b12,
+           char b11,
+           char b10,
+           char b9,
+           char b8,
+           char b7,
+           char b6,
+           char b5,
+           char b4,
+           char b3,
+           char b2,
+           char b1,
+           char b0)
     : value_(_mm_set_epi8(b15, b14, b13, b12, b11, b10, b9, b8, b7, b6, b5, b4, b3, b2, b1, b0))
 {
 }
@@ -549,7 +564,10 @@ inline s8_x operator-(const s8_x& lhs, const s8_x& rhs) { return s8_x(lhs) -= rh
 
 s8_x s8_x::shuffle(const s8_x& lhs, const s8_x& rhs) { return _mm_shuffle_epi8(lhs.value_, rhs.value_); }
 
-s8_x s8_x::blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask) { return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_); }
+s8_x s8_x::blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask)
+{
+    return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_);
+}
 
 // u8_x
 
@@ -585,7 +603,22 @@ u8_x::u8_x(char b3, char b2, char b1, char b0)
 {
 }
 
-u8_x::u8_x(char b15, char b14, char b13, char b12, char b11, char b10, char b9, char b8, char b7, char b6, char b5, char b4, char b3, char b2, char b1, char b0)
+u8_x::u8_x(char b15,
+           char b14,
+           char b13,
+           char b12,
+           char b11,
+           char b10,
+           char b9,
+           char b8,
+           char b7,
+           char b6,
+           char b5,
+           char b4,
+           char b3,
+           char b2,
+           char b1,
+           char b0)
     : value_(_mm_set_epi8(b15, b14, b13, b12, b11, b10, b9, b8, b7, b6, b5, b4, b3, b2, b1, b0))
 {
 }
@@ -614,7 +647,10 @@ u8_x u8_x::min(const u8_x& lhs, const u8_x& rhs) { return _mm_min_epu8(lhs.value
 
 u8_x u8_x::shuffle(const u8_x& lhs, const u8_x& rhs) { return _mm_shuffle_epi8(lhs.value_, rhs.value_); }
 
-u8_x u8_x::blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask) { return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_); }
+u8_x u8_x::blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask)
+{
+    return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_);
+}
 
 // xmm_cast
 

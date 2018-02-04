@@ -103,7 +103,11 @@ struct image_transform final
     image_transform& operator*=(const image_transform& other);
     image_transform  operator*(const image_transform& other) const;
 
-    static image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener& tween);
+    static image_transform tween(double                 time,
+                                 const image_transform& source,
+                                 const image_transform& dest,
+                                 double                 duration,
+                                 const tweener&         tween);
 };
 
 bool operator==(const image_transform& lhs, const image_transform& rhs);
@@ -117,7 +121,11 @@ struct audio_transform final
     audio_transform& operator*=(const audio_transform& other);
     audio_transform  operator*(const audio_transform& other) const;
 
-    static audio_transform tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener& tween);
+    static audio_transform tween(double                 time,
+                                 const audio_transform& source,
+                                 const audio_transform& dest,
+                                 double                 duration,
+                                 const tweener&         tween);
 };
 
 bool operator==(const audio_transform& lhs, const audio_transform& rhs);
@@ -134,7 +142,11 @@ struct frame_transform final
     frame_transform& operator*=(const frame_transform& other);
     frame_transform  operator*(const frame_transform& other) const;
 
-    static frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween);
+    static frame_transform tween(double                 time,
+                                 const frame_transform& source,
+                                 const frame_transform& dest,
+                                 double                 duration,
+                                 const tweener&         tween);
 };
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs);

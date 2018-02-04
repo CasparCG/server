@@ -32,7 +32,7 @@
 
 // Interface ID Declarations
 
-#define IID_IDeckLinkOutput_v9_9 /* A3EF0963-0862-44ED-92A9-EE89ABF431C7 */                                                                                    \
+#define IID_IDeckLinkOutput_v9_9 /* A3EF0963-0862-44ED-92A9-EE89ABF431C7 */                                            \
     (REFIID) { 0xA3, 0xEF, 0x09, 0x63, 0x08, 0x62, 0x44, 0xED, 0x92, 0xA9, 0xEE, 0x89, 0xAB, 0xF4, 0x31, 0xC7 }
 
 #if defined(__cplusplus)
@@ -56,14 +56,15 @@ class IDeckLinkOutput_v9_9 : public IUnknown
     virtual HRESULT EnableVideoOutput(/* in */ BMDDisplayMode displayMode, /* in */ BMDVideoOutputFlags flags) = 0;
     virtual HRESULT DisableVideoOutput(void)                                                                   = 0;
 
-    virtual HRESULT SetVideoOutputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator)                          = 0;
+    virtual HRESULT SetVideoOutputFrameMemoryAllocator(/* in */ IDeckLinkMemoryAllocator* theAllocator) = 0;
     virtual HRESULT CreateVideoFrame(/* in */ int32_t                       width,
                                      /* in */ int32_t                       height,
                                      /* in */ int32_t                       rowBytes,
                                      /* in */ BMDPixelFormat                pixelFormat,
                                      /* in */ BMDFrameFlags                 flags,
-                                     /* out */ IDeckLinkMutableVideoFrame** outFrame)                                            = 0;
-    virtual HRESULT CreateAncillaryData(/* in */ BMDPixelFormat pixelFormat, /* out */ IDeckLinkVideoFrameAncillary** outBuffer) = 0;
+                                     /* out */ IDeckLinkMutableVideoFrame** outFrame)                   = 0;
+    virtual HRESULT CreateAncillaryData(/* in */ BMDPixelFormat                  pixelFormat,
+                                        /* out */ IDeckLinkVideoFrameAncillary** outBuffer)             = 0;
 
     virtual HRESULT DisplayVideoFrameSync(/* in */ IDeckLinkVideoFrame* theFrame)                           = 0;
     virtual HRESULT ScheduleVideoFrame(/* in */ IDeckLinkVideoFrame* theFrame,
@@ -81,7 +82,9 @@ class IDeckLinkOutput_v9_9 : public IUnknown
                                       /* in */ BMDAudioOutputStreamType streamType) = 0;
     virtual HRESULT DisableAudioOutput(void)                                        = 0;
 
-    virtual HRESULT WriteAudioSamplesSync(/* in */ void* buffer, /* in */ uint32_t sampleFrameCount, /* out */ uint32_t* sampleFramesWritten) = 0;
+    virtual HRESULT WriteAudioSamplesSync(/* in */ void*      buffer,
+                                          /* in */ uint32_t   sampleFrameCount,
+                                          /* out */ uint32_t* sampleFramesWritten) = 0;
 
     virtual HRESULT BeginAudioPreroll(void)                                       = 0;
     virtual HRESULT EndAudioPreroll(void)                                         = 0;
@@ -98,12 +101,17 @@ class IDeckLinkOutput_v9_9 : public IUnknown
 
     /* Output Control */
 
-    virtual HRESULT StartScheduledPlayback(/* in */ BMDTimeValue playbackStartTime, /* in */ BMDTimeScale timeScale, /* in */ double playbackSpeed) = 0;
-    virtual HRESULT
-                    StopScheduledPlayback(/* in */ BMDTimeValue stopPlaybackAtTime, /* out */ BMDTimeValue* actualStopTime, /* in */ BMDTimeScale timeScale) = 0;
-    virtual HRESULT IsScheduledPlaybackRunning(/* out */ bool* active)                                                                                  = 0;
-    virtual HRESULT GetScheduledStreamTime(/* in */ BMDTimeScale desiredTimeScale, /* out */ BMDTimeValue* streamTime, /* out */ double* playbackSpeed) = 0;
-    virtual HRESULT GetReferenceStatus(/* out */ BMDReferenceStatus* referenceStatus)                                                                   = 0;
+    virtual HRESULT StartScheduledPlayback(/* in */ BMDTimeValue playbackStartTime,
+                                           /* in */ BMDTimeScale timeScale,
+                                           /* in */ double       playbackSpeed)             = 0;
+    virtual HRESULT StopScheduledPlayback(/* in */ BMDTimeValue   stopPlaybackAtTime,
+                                          /* out */ BMDTimeValue* actualStopTime,
+                                          /* in */ BMDTimeScale   timeScale)            = 0;
+    virtual HRESULT IsScheduledPlaybackRunning(/* out */ bool* active)                = 0;
+    virtual HRESULT GetScheduledStreamTime(/* in */ BMDTimeScale   desiredTimeScale,
+                                           /* out */ BMDTimeValue* streamTime,
+                                           /* out */ double*       playbackSpeed)           = 0;
+    virtual HRESULT GetReferenceStatus(/* out */ BMDReferenceStatus* referenceStatus) = 0;
 
     /* Hardware Timing */
 

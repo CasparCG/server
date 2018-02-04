@@ -44,7 +44,8 @@ class to_unicode_adapter_factory : public protocol_strategy_factory<char>
     protocol_strategy_factory<wchar_t>::ptr unicode_strategy_factory_;
 
   public:
-    to_unicode_adapter_factory(const std::string& codepage, const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory);
+    to_unicode_adapter_factory(const std::string&                             codepage,
+                               const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory);
 
     virtual protocol_strategy<char>::ptr create(const client_connection<char>::ptr& client_connection);
 };
@@ -62,7 +63,8 @@ class delimiter_based_chunking_strategy : public protocol_strategy<CharT>
     typename protocol_strategy<CharT>::ptr strategy_;
 
   public:
-    delimiter_based_chunking_strategy(const std::basic_string<CharT>& delimiter, const typename protocol_strategy<CharT>::ptr& strategy)
+    delimiter_based_chunking_strategy(const std::basic_string<CharT>&               delimiter,
+                                      const typename protocol_strategy<CharT>::ptr& strategy)
         : delimiter_(delimiter)
         , strategy_(strategy)
     {
@@ -89,15 +91,18 @@ class delimiter_based_chunking_strategy_factory : public protocol_strategy_facto
     typename protocol_strategy_factory<CharT>::ptr strategy_factory_;
 
   public:
-    delimiter_based_chunking_strategy_factory(const std::basic_string<CharT>& delimiter, const typename protocol_strategy_factory<CharT>::ptr& strategy_factory)
+    delimiter_based_chunking_strategy_factory(const std::basic_string<CharT>&                       delimiter,
+                                              const typename protocol_strategy_factory<CharT>::ptr& strategy_factory)
         : delimiter_(delimiter)
         , strategy_factory_(strategy_factory)
     {
     }
 
-    virtual typename protocol_strategy<CharT>::ptr create(const typename client_connection<CharT>::ptr& client_connection)
+    virtual typename protocol_strategy<CharT>::ptr
+    create(const typename client_connection<CharT>::ptr& client_connection)
     {
-        return spl::make_shared<delimiter_based_chunking_strategy<CharT>>(delimiter_, strategy_factory_->create(client_connection));
+        return spl::make_shared<delimiter_based_chunking_strategy<CharT>>(delimiter_,
+                                                                          strategy_factory_->create(client_connection));
     }
 };
 
@@ -130,6 +135,7 @@ class legacy_strategy_adapter_factory : public protocol_strategy_factory<wchar_t
  *
  * @return the adapted strategy.
  */
-protocol_strategy_factory<char>::ptr wrap_legacy_protocol(const std::string& delimiter, const ProtocolStrategyPtr& strategy);
+protocol_strategy_factory<char>::ptr wrap_legacy_protocol(const std::string&         delimiter,
+                                                          const ProtocolStrategyPtr& strategy);
 
 }} // namespace caspar::IO

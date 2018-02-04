@@ -83,8 +83,9 @@ static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr, bool optional = false)
     com_iface_ptr<I> result = ptr;
 
     if (!optional && !result)
-        CASPAR_THROW_EXCEPTION(not_supported() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() +
-                                                           ". This is probably due to old Decklink drivers."));
+        CASPAR_THROW_EXCEPTION(not_supported()
+                               << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " +
+                                           typeid(I).name() + ". This is probably due to old Decklink drivers."));
 
     return result;
 }

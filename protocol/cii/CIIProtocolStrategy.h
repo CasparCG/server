@@ -53,12 +53,17 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
     spl::shared_ptr<const core::frame_producer_registry> get_producer_registry() const { return producer_registry_; }
     core::frame_producer_dependencies                    get_dependencies() const
     {
-        return core::frame_producer_dependencies(GetChannel()->frame_factory(), channels_, GetChannel()->video_format_desc(), producer_registry_, cg_registry_);
+        return core::frame_producer_dependencies(GetChannel()->frame_factory(),
+                                                 channels_,
+                                                 GetChannel()->video_format_desc(),
+                                                 producer_registry_,
+                                                 cg_registry_);
     }
 
     void DisplayMediaFile(const std::wstring& filename);
     void DisplayTemplate(const std::wstring& titleName);
-    void WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData);
+    void
+    WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData);
 
   public:
     struct TitleHolder
@@ -96,7 +101,7 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
     typedef std::list<TitleHolder>        TitleList;
     TitleList                             titles_;
     spl::shared_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
-    void                                  PutPreparedTemplate(const std::wstring& name, const spl::shared_ptr<core::frame_producer>& pframe_producer);
+    void PutPreparedTemplate(const std::wstring& name, const spl::shared_ptr<core::frame_producer>& pframe_producer);
 
     static const wchar_t      TokenDelimiter;
     static const std::wstring MessageDelimiter;

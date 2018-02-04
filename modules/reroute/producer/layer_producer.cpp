@@ -98,7 +98,8 @@ std::vector<core::draw_frame> extract_actual_frames(core::draw_frame original, c
         {
             if (visiting_mode == field_order_first && fields.size() == 0)
                 fields.push_back(core::draw_frame(core::const_frame(frame)));
-            else if (visiting_mode != core::field_mode::progressive && visiting_mode != field_order_first && fields.size() == 1)
+            else if (visiting_mode != core::field_mode::progressive && visiting_mode != field_order_first &&
+                     fields.size() == 1)
                 fields.push_back(core::draw_frame(core::const_frame(frame)));
         }
 
@@ -183,7 +184,10 @@ class layer_producer : public core::frame_producer_base
 
     core::draw_frame last_frame() override { return last_frame_; }
 
-    std::wstring print() const override { return L"layer-producer[" + boost::lexical_cast<std::wstring>(layer_) + L"]"; }
+    std::wstring print() const override
+    {
+        return L"layer-producer[" + boost::lexical_cast<std::wstring>(layer_) + L"]";
+    }
 
     std::wstring name() const override { return L"layer-producer"; }
 
@@ -196,14 +200,17 @@ class layer_producer : public core::frame_producer_base
         if (!channel)
             return last_frame_rate_;
 
-        last_frame_rate_ = double_framerate_ ? channel->video_format_desc().framerate * 2 : channel->video_format_desc().framerate;
+        last_frame_rate_ =
+            double_framerate_ ? channel->video_format_desc().framerate * 2 : channel->video_format_desc().framerate;
 
         return last_frame_rate_;
     }
 };
 
-spl::shared_ptr<core::frame_producer>
-create_layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer, int frames_delay, const core::video_format_desc& destination_mode)
+spl::shared_ptr<core::frame_producer> create_layer_producer(const spl::shared_ptr<core::video_channel>& channel,
+                                                            int                                         layer,
+                                                            int                                         frames_delay,
+                                                            const core::video_format_desc& destination_mode)
 {
     return spl::make_shared<layer_producer>(channel, layer, frames_delay);
 }

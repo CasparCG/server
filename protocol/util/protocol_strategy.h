@@ -66,8 +66,8 @@ class client_connection
     virtual void         disconnect()                                                 = 0;
     virtual std::wstring address() const                                              = 0;
 
-    virtual void                  add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) = 0;
-    virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)                                            = 0;
+    virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) = 0;
+    virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)                           = 0;
 };
 
 /**
@@ -85,7 +85,8 @@ class protocol_strategy_factory
     typedef spl::shared_ptr<protocol_strategy_factory<CharT>> ptr;
 
     virtual ~protocol_strategy_factory() {}
-    virtual typename protocol_strategy<CharT>::ptr create(const typename client_connection<CharT>::ptr& client_connection) = 0;
+    virtual typename protocol_strategy<CharT>::ptr
+    create(const typename client_connection<CharT>::ptr& client_connection) = 0;
 };
 
 }} // namespace caspar::IO

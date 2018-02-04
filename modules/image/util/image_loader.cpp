@@ -71,7 +71,8 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 
     // PNG-images need to be premultiplied with their alpha
     if (fif == FIF_PNG) {
-        image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+        image_view<bgra_pixel> original_view(
+            FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
         premultiply(original_view);
     }
 
@@ -83,7 +84,8 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
     FREE_IMAGE_FORMAT fif = FIF_PNG;
 
     auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
-        FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)), FreeImage_CloseMemory);
+        FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
+        FreeImage_CloseMemory);
     auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), 0), FreeImage_Unload);
 
     if (FreeImage_GetBPP(bitmap.get()) != 32) {
@@ -95,7 +97,8 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 
     // PNG-images need to be premultiplied with their alpha
     if (fif == FIF_PNG) {
-        image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+        image_view<bgra_pixel> original_view(
+            FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
         premultiply(original_view);
     }
 

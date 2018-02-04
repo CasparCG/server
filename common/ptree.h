@@ -87,7 +87,8 @@ class scope_aware_ptree_child_range
     typedef std::pair<const typename Ptree::key_type, Ptree> type;
 
   public:
-    class scoped_const_iterator : public boost::iterator_facade<scoped_const_iterator, type const, boost::forward_traversal_tag>
+    class scoped_const_iterator
+        : public boost::iterator_facade<scoped_const_iterator, type const, boost::forward_traversal_tag>
     {
         typename Ptree::const_iterator wrapped_;
 
@@ -165,7 +166,8 @@ template <typename Key, typename Ptree, typename Str>
 void ptree_verify_element_name(const std::pair<const Key, Ptree>& elem, const Str& expected)
 {
     if (elem.first != expected)
-        CASPAR_THROW_EXCEPTION(ptree_exception() << msg_info("Expected element named " + u8(expected) + ". Was " + u8(elem.first)));
+        CASPAR_THROW_EXCEPTION(ptree_exception()
+                               << msg_info("Expected element named " + u8(expected) + ". Was " + u8(elem.first)));
 }
 
 } // namespace caspar

@@ -79,7 +79,10 @@ struct mouse_move_event : public position_event
     }
 
   protected:
-    virtual interaction_event::ptr clone(double new_x, double new_y) const override { return spl::make_shared<mouse_move_event>(source_id, new_x, new_y); }
+    virtual interaction_event::ptr clone(double new_x, double new_y) const override
+    {
+        return spl::make_shared<mouse_move_event>(source_id, new_x, new_y);
+    }
 };
 
 struct mouse_wheel_event : public position_event

@@ -33,9 +33,12 @@ namespace caspar { namespace core {
 
 bool try_get_color(const std::wstring& str, uint32_t& value);
 
-spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value);
-spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-draw_frame                      create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value);
-draw_frame                      create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color);
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
+                                                      uint32_t                              value);
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
+                                                      const std::vector<std::wstring>&      params);
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value);
+draw_frame
+create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color);
 
 }} // namespace caspar::core

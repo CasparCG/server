@@ -79,7 +79,8 @@ get_param(const std::wstring& name, C&& params, T fail_value = T())
 
         return boost::lexical_cast<typename std::decay<T>::type>(*it);
     } catch (...) {
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Failed to parse param " + name) << nested_exception(std::current_exception()));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Failed to parse param " + name)
+                                            << nested_exception(std::current_exception()));
     }
 }
 
@@ -96,7 +97,8 @@ std::wstring get_param(const std::wstring& name, C&& params, const std::wstring&
 
         return *it;
     } catch (...) {
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Failed to parse param " + name) << nested_exception(std::current_exception()));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Failed to parse param " + name)
+                                            << nested_exception(std::current_exception()));
     }
 }
 

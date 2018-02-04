@@ -359,7 +359,10 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::AdjustRect(LPRECT prc)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE FlashAxContainer::OnDefWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT* plResult)
+HRESULT STDMETHODCALLTYPE FlashAxContainer::OnDefWindowMessage(UINT     msg,
+                                                               WPARAM   wParam,
+                                                               LPARAM   lParam,
+                                                               LRESULT* plResult)
 {
     ATLTRACE(_T("IOleInPlaceSiteWindowless::OnDefWindowMessage"));
     return S_OK;
@@ -416,9 +419,15 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::ShowPropertyFrame()
 /////////
 // IAdviseSink
 /////////
-void STDMETHODCALLTYPE FlashAxContainer::OnDataChange(FORMATETC* pFormatetc, STGMEDIUM* pStgmed) { ATLTRACE(_T("IAdviseSink::OnDataChange\n")); }
+void STDMETHODCALLTYPE FlashAxContainer::OnDataChange(FORMATETC* pFormatetc, STGMEDIUM* pStgmed)
+{
+    ATLTRACE(_T("IAdviseSink::OnDataChange\n"));
+}
 
-void STDMETHODCALLTYPE FlashAxContainer::OnViewChange(DWORD dwAspect, LONG lindex) { ATLTRACE(_T("IAdviseSink::OnViewChange\n")); }
+void STDMETHODCALLTYPE FlashAxContainer::OnViewChange(DWORD dwAspect, LONG lindex)
+{
+    ATLTRACE(_T("IAdviseSink::OnViewChange\n"));
+}
 
 void STDMETHODCALLTYPE FlashAxContainer::OnRename(IMoniker* pmk) { ATLTRACE(_T("IAdviseSink::OnRename\n")); }
 
@@ -442,7 +451,8 @@ DEFINE_GUID2(IID_IDirectDraw7, 0x15e65ec0, 0x3b9c, 0x11d2, 0xb9, 0x2f, 0x00, 0x6
 HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService(REFGUID rsid, REFIID riid, void** ppvObj)
 {
     //	ATLTRACE(_T("IServiceProvider::QueryService\n"));
-    // the flashcontrol asks for an interface {618F8AD4-8B7A-11D0-8FCC-00C04FD9189D}, this is IID for a DirectDraw3 object
+    // the flashcontrol asks for an interface {618F8AD4-8B7A-11D0-8FCC-00C04FD9189D}, this is IID for a DirectDraw3
+    // object
 
     ATLASSERT(ppvObj != NULL);
     if (ppvObj == NULL)
@@ -511,8 +521,12 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::SetNamedTimerReference(REFGUID rguid
 //////
 // ITimer
 //////
-HRESULT STDMETHODCALLTYPE
-        FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink* pTimerSink, DWORD* pdwCookie)
+HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT     vtimeMin,
+                                                   VARIANT     vtimeMax,
+                                                   VARIANT     vtimeInterval,
+                                                   DWORD       dwFlags,
+                                                   ITimerSink* pTimerSink,
+                                                   DWORD*      pdwCookie)
 {
     ATLTRACE(_T("Timer::Advise\n"));
 
@@ -620,12 +634,14 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
     }
     // else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
     //{
-    //	CASPAR_LOG(error) << print_() << L" TemplateDescription: \n-------------------------------------------\n" << str <<
+    //	CASPAR_LOG(error) << print_() << L" TemplateDescription: \n-------------------------------------------\n" << str
+    //<<
     // L"\n-------------------------------------------";
     //}
     // else if(str.find(TEXT("OnGetInfo")) != std::wstring::npos)
     //{
-    //	CASPAR_LOG(error) << print_() << L" Info: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+    //	CASPAR_LOG(error) << print_() << L" Info: \n-------------------------------------------\n" << str <<
+    // L"\n-------------------------------------------";
     //}
     // else
     //{
@@ -686,7 +702,8 @@ bool FlashAxContainer::CheckForFlashSupport()
     return SUCCEEDED(CLSIDFromString((LPOLESTR)flashGUID_, &clsid));
 }
 
-HRESULT FlashAxContainer::CreateAxControl()
+HRESULT
+FlashAxContainer::CreateAxControl()
 {
     CLSID   clsid;
     HRESULT hr = CLSIDFromString((LPOLESTR)flashGUID_, &clsid);
@@ -805,7 +822,8 @@ void FlashAxContainer::SetSize(size_t width, size_t height)
     }
 }
 
-HRESULT FlashAxContainer::QueryControl(REFIID iid, void** ppUnk)
+HRESULT
+FlashAxContainer::QueryControl(REFIID iid, void** ppUnk)
 {
     ATLASSERT(ppUnk != NULL);
     if (ppUnk == NULL)
@@ -819,12 +837,12 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 {
     //	ATLTRACE(_T("FlashAxContainer::DrawControl\n"));
     DVASPECTINFO aspectInfo = {sizeof(DVASPECTINFO), DVASPECTINFOFLAG_CANOPTIMIZE};
-    HRESULT      hr         = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
-    bInvalidRect_           = false;
+    HRESULT hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
+    bInvalidRect_ = false;
     /*	const video_format_desc& fmtDesc = video_format_desc::FormatDescriptions[format_];
 
-        //Trying to redraw just the dirty rectangles. Doesn't seem to work when the movie uses "filters", such as glow, dropshadow etc.
-        std::vector<flash::DirtyRect>::iterator it = bDirtyRects_.begin();
+        //Trying to redraw just the dirty rectangles. Doesn't seem to work when the movie uses "filters", such as glow,
+       dropshadow etc. std::vector<flash::DirtyRect>::iterator it = bDirtyRects_.begin();
         std::vector<flash::DirtyRect>::iterator end = bDirtyRects_.end();
         for(; it != end; ++it) {
             flash::DirtyRect& dirtyRect = (*it);

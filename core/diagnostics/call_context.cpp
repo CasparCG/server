@@ -38,7 +38,8 @@ std::wstring call_context::to_string() const
     else if (layer == -1)
         return L"[ch=" + boost::lexical_cast<std::wstring>(video_channel) + L"]";
     else
-        return L"[ch=" + boost::lexical_cast<std::wstring>(video_channel) + L"; layer=" + boost::lexical_cast<std::wstring>(layer) + L"]";
+        return L"[ch=" + boost::lexical_cast<std::wstring>(video_channel) + L"; layer=" +
+               boost::lexical_cast<std::wstring>(layer) + L"]";
 }
 
 }}} // namespace caspar::core::diagnostics

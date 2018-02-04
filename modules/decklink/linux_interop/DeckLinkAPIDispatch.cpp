@@ -66,13 +66,16 @@ void InitDeckLinkAPI(void)
     gCreateIteratorFunc = (CreateIteratorFunc)dlsym(libraryHandle, "CreateDeckLinkIteratorInstance_0002");
     if (!gCreateIteratorFunc)
         fprintf(stderr, "%s\n", dlerror());
-    gCreateAPIInformationFunc = (CreateAPIInformationFunc)dlsym(libraryHandle, "CreateDeckLinkAPIInformationInstance_0001");
+    gCreateAPIInformationFunc =
+        (CreateAPIInformationFunc)dlsym(libraryHandle, "CreateDeckLinkAPIInformationInstance_0001");
     if (!gCreateAPIInformationFunc)
         fprintf(stderr, "%s\n", dlerror());
-    gCreateVideoConversionFunc = (CreateVideoConversionInstanceFunc)dlsym(libraryHandle, "CreateVideoConversionInstance_0001");
+    gCreateVideoConversionFunc =
+        (CreateVideoConversionInstanceFunc)dlsym(libraryHandle, "CreateVideoConversionInstance_0001");
     if (!gCreateVideoConversionFunc)
         fprintf(stderr, "%s\n", dlerror());
-    gCreateDeckLinkDiscoveryFunc = (CreateDeckLinkDiscoveryInstanceFunc)dlsym(libraryHandle, "CreateDeckLinkDiscoveryInstance_0001");
+    gCreateDeckLinkDiscoveryFunc =
+        (CreateDeckLinkDiscoveryInstanceFunc)dlsym(libraryHandle, "CreateDeckLinkDiscoveryInstance_0001");
     if (!gCreateDeckLinkDiscoveryFunc)
         fprintf(stderr, "%s\n", dlerror());
 }
@@ -86,7 +89,8 @@ void InitDeckLinkPreviewAPI(void)
         fprintf(stderr, "%s\n", dlerror());
         return;
     }
-    gCreateOpenGLPreviewFunc = (CreateOpenGLScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGLScreenPreviewHelper_0001");
+    gCreateOpenGLPreviewFunc =
+        (CreateOpenGLScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGLScreenPreviewHelper_0001");
     if (!gCreateOpenGLPreviewFunc)
         fprintf(stderr, "%s\n", dlerror());
 }

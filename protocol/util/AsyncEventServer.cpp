@@ -123,7 +123,8 @@ class connection : public spl::enable_shared_from_this<connection>
                                               const protocol_strategy_factory<char>::ptr& protocol,
                                               spl::shared_ptr<connection_set>             connection_set)
     {
-        spl::shared_ptr<connection> con(new connection(std::move(service), std::move(socket), std::move(protocol), std::move(connection_set)));
+        spl::shared_ptr<connection> con(
+            new connection(std::move(service), std::move(socket), std::move(protocol), std::move(connection_set)));
         con->init();
         con->read_some();
         return con;
@@ -137,7 +138,10 @@ class connection : public spl::enable_shared_from_this<connection>
 
     std::wstring address() const { return u16(socket_->local_endpoint().address().to_string()); }
 
-    std::wstring ipv4_address() const { return socket_->is_open() ? u16(socket_->remote_endpoint().address().to_string()) : L"no-address"; }
+    std::wstring ipv4_address() const
+    {
+        return socket_->is_open() ? u16(socket_->remote_endpoint().address().to_string()) : L"no-address";
+    }
 
     void send(std::string&& data)
     {
@@ -189,7 +193,8 @@ class connection : public spl::enable_shared_from_this<connection>
     {
         connection_set_->erase(shared_from_this());
 
-        CASPAR_LOG(info) << print() << L" Client " << ipv4_address() << L" disconnected (" << connection_set_->size() << L" connections).";
+        CASPAR_LOG(info) << print() << L" Client " << ipv4_address() << L" disconnected (" << connection_set_->size()
+                         << L" connections).";
 
         boost::system::error_code ec;
         socket_->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
@@ -202,15 +207,18 @@ class connection : public spl::enable_shared_from_this<connection>
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
         , service_(service)
-        , listen_port_(socket_->is_open() ? boost::lexical_cast<std::wstring>(socket_->local_endpoint().port()) : L"no-port")
+        , listen_port_(socket_->is_open() ? boost::lexical_cast<std::wstring>(socket_->local_endpoint().port())
+                                          : L"no-port")
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
         , is_writing_(false)
     {
-        CASPAR_LOG(info) << print() << L" Accepted connection from " << ipv4_address() << L" (" << (connection_set_->size() + 1) << L" connections).";
+        CASPAR_LOG(info) << print() << L" Accepted connection from " << ipv4_address() << L" ("
+                         << (connection_set_->size() + 1) << L" connections).";
     }
 
-    void handle_read(const boost::system::error_code& error, size_t bytes_transferred) // always called from the asio-service-thread
+    void handle_read(const boost::system::error_code& error,
+                     size_t                           bytes_transferred) // always called from the asio-service-thread
     {
         if (!error) {
             try {
@@ -228,13 +236,17 @@ class connection : public spl::enable_shared_from_this<connection>
 
     void handle_write(const spl::shared_ptr<std::string>& str,
                       const boost::system::error_code&    error,
-                      size_t                              bytes_transferred) // always called from the asio-service-thread
+                      size_t bytes_transferred) // always called from the asio-service-thread
     {
         if (!error) {
             if (bytes_transferred != str->size()) {
                 str->assign(str->substr(bytes_transferred));
                 socket_->async_write_some(boost::asio::buffer(str->data(), str->size()),
-                                          std::bind(&connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
+                                          std::bind(&connection::handle_write,
+                                                    shared_from_this(),
+                                                    str,
+                                                    std::placeholders::_1,
+                                                    std::placeholders::_2));
             } else {
                 is_writing_ = false;
                 do_write();
@@ -245,16 +257,19 @@ class connection : public spl::enable_shared_from_this<connection>
 
     void read_some() // always called from the asio-service-thread
     {
-        socket_->async_read_some(boost::asio::buffer(data_.data(), data_.size()),
-                                 std::bind(&connection::handle_read, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+        socket_->async_read_some(
+            boost::asio::buffer(data_.data(), data_.size()),
+            std::bind(&connection::handle_read, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
 
     void write_some(std::string&& data) // always called from the asio-service-thread
     {
         is_writing_ = true;
         auto str    = spl::make_shared<std::string>(std::move(data));
-        socket_->async_write_some(boost::asio::buffer(str->data(), str->size()),
-                                  std::bind(&connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
+        socket_->async_write_some(
+            boost::asio::buffer(str->data(), str->size()),
+            std::bind(
+                &connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
     }
 
     friend struct AsyncEventServer::implementation;
@@ -269,7 +284,9 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     std::vector<lifecycle_factory_t>         lifecycle_factories_;
     tbb::mutex                               mutex_;
 
-    implementation(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
+    implementation(std::shared_ptr<boost::asio::io_service>    service,
+                   const protocol_strategy_factory<char>::ptr& protocol,
+                   unsigned short                              port)
         : service_(std::move(service))
         , acceptor_(*service_, tcp::endpoint(tcp::v4(), port))
         , protocol_factory_(protocol)
@@ -300,7 +317,8 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     void start_accept()
     {
         spl::shared_ptr<tcp::socket> socket(new tcp::socket(*service_));
-        acceptor_.async_accept(*socket, std::bind(&implementation::handle_accept, shared_from_this(), socket, std::placeholders::_1));
+        acceptor_.async_accept(
+            *socket, std::bind(&implementation::handle_accept, shared_from_this(), socket, std::placeholders::_1));
     }
 
     void handle_accept(const spl::shared_ptr<tcp::socket>& socket, const boost::system::error_code& error)
@@ -326,7 +344,10 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
         start_accept();
     }
 
-    std::wstring print() const { return L"async_event_server[:" + boost::lexical_cast<std::wstring>(acceptor_.local_endpoint().port()) + L"]"; }
+    std::wstring print() const
+    {
+        return L"async_event_server[:" + boost::lexical_cast<std::wstring>(acceptor_.local_endpoint().port()) + L"]";
+    }
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
     {
@@ -335,7 +356,9 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     }
 };
 
-AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
+AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_service>    service,
+                                   const protocol_strategy_factory<char>::ptr& protocol,
+                                   unsigned short                              port)
     : impl_(new implementation(std::move(service), protocol, port))
 {
     impl_->start_accept();
@@ -343,6 +366,9 @@ AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_service> serv
 
 AsyncEventServer::~AsyncEventServer() { impl_->stop(); }
 
-void AsyncEventServer::add_client_lifecycle_object_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_object_factory(factory); }
+void AsyncEventServer::add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
+{
+    impl_->add_client_lifecycle_object_factory(factory);
+}
 
 }} // namespace caspar::IO

@@ -52,7 +52,9 @@ namespace caspar { namespace html {
 
 std::unique_ptr<executor> g_cef_executor;
 
-void caspar_log(const CefRefPtr<CefBrowser>& browser, boost::log::trivial::severity_level level, const std::string& message)
+void caspar_log(const CefRefPtr<CefBrowser>&        browser,
+                boost::log::trivial::severity_level level,
+                const std::string&                  message)
 {
     if (browser) {
         auto msg = CefProcessMessage::Create(LOG_MESSAGE_NAME);
@@ -72,8 +74,11 @@ class remove_handler : public CefV8Handler
     {
     }
 
-    bool
-    Execute(const CefString& name, CefRefPtr<CefV8Value> object, const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception) override
+    bool Execute(const CefString&       name,
+                 CefRefPtr<CefV8Value>  object,
+                 const CefV8ValueList&  arguments,
+                 CefRefPtr<CefV8Value>& retval,
+                 CefString&             exception) override
     {
         if (!CefCurrentlyOn(TID_RENDERER)) {
             return false;
@@ -102,14 +107,18 @@ class renderer_application
 
     CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
 
-    void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
+    void
+    OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
     {
-        caspar_log(browser, boost::log::trivial::trace, "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " created");
+        caspar_log(browser,
+                   boost::log::trivial::trace,
+                   "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " created");
         contexts_.push_back(context);
 
         auto window = context->GetGlobal();
 
-        window->SetValue("remove", CefV8Value::CreateFunction("remove", new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
+        window->SetValue(
+            "remove", CefV8Value::CreateFunction("remove", new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
 
         CefRefPtr<CefV8Value>     ret;
         CefRefPtr<CefV8Exception> exception;
@@ -150,14 +159,18 @@ class renderer_application
 
     void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context)
     {
-        auto removed = boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c) { return c->IsSame(context); });
+        auto removed =
+            boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c) { return c->IsSame(context); });
 
         if (removed != contexts_.end()) {
-            caspar_log(browser, boost::log::trivial::trace, "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " released");
+            caspar_log(browser,
+                       boost::log::trivial::trace,
+                       "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " released");
         } else {
             caspar_log(browser,
                        boost::log::trivial::warning,
-                       "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " released, but not found");
+                       "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) +
+                           " released, but not found");
         }
     }
 
@@ -173,14 +186,17 @@ class renderer_application
         command_line->AppendSwitch("enable-media-stream");
 
         if (process_type.empty() && !enable_gpu_) {
-            // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run smoothly
+            // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
+            // smoothly
             command_line->AppendSwitch("disable-gpu");
             command_line->AppendSwitch("disable-gpu-compositing");
             command_line->AppendSwitchWithValue("disable-gpu-vsync", "gpu");
         }
     }
 
-    bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) override
+    bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefProcessId                 source_process,
+                                  CefRefPtr<CefProcessMessage> message) override
     {
         if (message->GetName().ToString() == TICK_MESSAGE_NAME) {
             for (auto& context : contexts_) {
@@ -230,7 +246,9 @@ void init(core::module_dependencies dependencies)
         {L".html"},
         [](const std::wstring& filename) { return ""; },
         [](const spl::shared_ptr<core::frame_producer>& producer) { return spl::make_shared<html_cg_proxy>(producer); },
-        [](const core::frame_producer_dependencies& dependencies, const std::wstring& filename) { return html::create_cg_producer(dependencies, {filename}); },
+        [](const core::frame_producer_dependencies& dependencies, const std::wstring& filename) {
+            return html::create_cg_producer(dependencies, {filename});
+        },
         false);
 
     auto cef_version_major = boost::lexical_cast<std::wstring>(cef_version_info(0));

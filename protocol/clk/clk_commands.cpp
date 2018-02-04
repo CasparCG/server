@@ -63,7 +63,8 @@ class command_context
         if (!clock_loaded_) {
             core::frame_producer_dependencies dependencies(
                 channel_->frame_factory(), channels_, channel_->video_format_desc(), producer_registry_, cg_registry_);
-            cg_registry_->get_or_create_proxy(channel_, dependencies, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")
+            cg_registry_
+                ->get_or_create_proxy(channel_, dependencies, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")
                 ->add(0, L"hawrysklocka/clock", true, L"", data);
             clock_loaded_ = true;
         } else {
@@ -96,7 +97,8 @@ T require_param(std::vector<std::wstring>::const_iterator&       params_current,
     return std::move(value);
 }
 
-std::wstring get_xml(const std::wstring& command_name, bool has_clock_id, bool has_time, const std::vector<std::wstring>& parameters)
+std::wstring
+get_xml(const std::wstring& command_name, bool has_clock_id, bool has_time, const std::vector<std::wstring>& parameters)
 {
     std::wstringstream stream;
 
@@ -133,10 +135,14 @@ std::wstring get_xml(const std::wstring& command_name, bool has_clock_id, bool h
     return stream.str();
 }
 
-clk_command_handler
-create_send_xml_handler(const std::wstring& command_name, bool expect_clock, bool expect_time, const spl::shared_ptr<command_context>& context)
+clk_command_handler create_send_xml_handler(const std::wstring&                     command_name,
+                                            bool                                    expect_clock,
+                                            bool                                    expect_time,
+                                            const spl::shared_ptr<command_context>& context)
 {
-    return [=](const std::vector<std::wstring>& params) { context->send_to_flash(get_xml(command_name, expect_clock, expect_time, params)); };
+    return [=](const std::vector<std::wstring>& params) {
+        context->send_to_flash(get_xml(command_name, expect_clock, expect_time, params));
+    };
 }
 
 void add_command_handlers(clk_command_processor&                                      processor,

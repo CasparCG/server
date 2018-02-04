@@ -97,7 +97,8 @@ struct Stream
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
         }
 
-        decoder_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec), [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+        decoder_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                                   [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
         if (!decoder_) {
             FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
         }
@@ -127,7 +128,9 @@ struct Stream
                 while (!abort_request_) {
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return (!input_.empty() && output_.size() < output_capacity_) || abort_request_; });
+                        cond_.wait(lock, [&] {
+                            return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
+                        });
                     }
 
                     if (abort_request_) {
@@ -289,7 +292,8 @@ struct Input
                 while (!abort_request_) {
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return (!paused_ && output_.size() < output_capacity_) || abort_request_; });
+                        cond_.wait(lock,
+                                   [&] { return (!paused_ && output_.size() < output_capacity_) || abort_request_; });
                     }
 
                     if (abort_request_) {
@@ -433,7 +437,8 @@ struct Filter
 
             filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
 
-            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % (format_desc.framerate.numerator() * format_desc.field_count) %
+            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
+                            (format_desc.framerate.numerator() * format_desc.field_count) %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
@@ -441,9 +446,10 @@ struct Filter
                 filter_spec = "anull";
             }
 
-            filter_spec += (boost::format(",aresample=sample_rate=%d:async=2000:first_pts=%d") % format_desc.audio_sample_rate %
-                            av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}))
-                               .str();
+            filter_spec +=
+                (boost::format(",aresample=sample_rate=%d:async=2000:first_pts=%d") % format_desc.audio_sample_rate %
+                 av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}))
+                    .str();
         }
 
         AVFilterInOut* outputs = nullptr;
@@ -482,7 +488,8 @@ struct Filter
             }
         }
 
-        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(), [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
+        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
+                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
 
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
@@ -517,7 +524,8 @@ struct Filter
             for (auto cur = inputs; cur; cur = cur->next) {
                 const auto type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
                 if (type != AVMEDIA_TYPE_VIDEO && type != AVMEDIA_TYPE_AUDIO) {
-                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("only video and audio filters supported"));
+                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                            << msg_info_t("only video and audio filters supported"));
                 }
 
                 unsigned index = 0;
@@ -529,7 +537,8 @@ struct Filter
                         graph = nullptr;
                         return;
                     }
-                    if (input->streams[index]->codecpar->codec_type == type && sources.find(static_cast<int>(index)) == sources.end()) {
+                    if (input->streams[index]->codecpar->codec_type == type &&
+                        sources.find(static_cast<int>(index)) == sources.end()) {
                         break;
                     }
                     index++;
@@ -543,13 +552,15 @@ struct Filter
                 auto& st = it->second;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height % st->pix_fmt % st->pkt_timebase.num %
-                                 st->pkt_timebase.den)
+                    auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
+                                 st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
                     auto name = (boost::format("in_%d") % index).str();
 
                     if (st->sample_aspect_ratio.num > 0 && st->sample_aspect_ratio.den > 0) {
-                        args += (boost::format(":sar=%d/%d") % st->sample_aspect_ratio.num % st->sample_aspect_ratio.den).str();
+                        args +=
+                            (boost::format(":sar=%d/%d") % st->sample_aspect_ratio.num % st->sample_aspect_ratio.den)
+                                .str();
                     }
 
                     if (st->framerate.num > 0 && st->framerate.den > 0) {
@@ -557,54 +568,61 @@ struct Filter
                     }
 
                     AVFilterContext* source = nullptr;
-                    FF(avfilter_graph_create_filter(&source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                    FF(avfilter_graph_create_filter(
+                        &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
                     sources.emplace(index, source);
                 } else if (st->codec_type == AVMEDIA_TYPE_AUDIO) {
-                    auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % st->pkt_timebase.num %
-                                 st->pkt_timebase.den % st->sample_rate % av_get_sample_fmt_name(st->sample_fmt) % st->channel_layout)
+                    auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") %
+                                 st->pkt_timebase.num % st->pkt_timebase.den % st->sample_rate %
+                                 av_get_sample_fmt_name(st->sample_fmt) % st->channel_layout)
                                     .str();
                     auto name = (boost::format("in_%d") % index).str();
 
                     AVFilterContext* source = nullptr;
-                    FF(avfilter_graph_create_filter(&source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                    FF(avfilter_graph_create_filter(
+                        &source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
                     sources.emplace(index, source);
                 } else {
-                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter input media type"));
+                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                            << msg_info_t("invalid filter input media type"));
                 }
             }
         }
 
         if (media_type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(&sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            FF(avfilter_graph_create_filter(
+                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGB24,
-                                              AV_PIX_FMT_BGR24,
-                                              AV_PIX_FMT_BGRA,
-                                              AV_PIX_FMT_ARGB,
-                                              AV_PIX_FMT_RGBA,
-                                              AV_PIX_FMT_ABGR,
-                                              AV_PIX_FMT_YUV444P,
-                                              AV_PIX_FMT_YUV422P,
-                                              AV_PIX_FMT_YUV420P,
-                                              AV_PIX_FMT_YUV410P,
-                                              AV_PIX_FMT_YUVA444P,
-                                              AV_PIX_FMT_YUVA422P,
-                                              AV_PIX_FMT_YUVA420P,
-                                              // NOTE CasparCG does not properly handle interlaced vertical chrome subsampling.
-                                              // However, that is not a problem since we never send out interlaced frames.
-                                              AV_PIX_FMT_NONE};
+            const AVPixelFormat pix_fmts[] = {
+                AV_PIX_FMT_RGB24,
+                AV_PIX_FMT_BGR24,
+                AV_PIX_FMT_BGRA,
+                AV_PIX_FMT_ARGB,
+                AV_PIX_FMT_RGBA,
+                AV_PIX_FMT_ABGR,
+                AV_PIX_FMT_YUV444P,
+                AV_PIX_FMT_YUV422P,
+                AV_PIX_FMT_YUV420P,
+                AV_PIX_FMT_YUV410P,
+                AV_PIX_FMT_YUVA444P,
+                AV_PIX_FMT_YUVA422P,
+                AV_PIX_FMT_YUVA420P,
+                // NOTE CasparCG does not properly handle interlaced vertical chrome subsampling.
+                // However, that is not a problem since we never send out interlaced frames.
+                AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(&sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            FF(avfilter_graph_create_filter(
+                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
@@ -620,7 +638,8 @@ struct Filter
 #pragma warning(pop)
 #endif
         } else {
-            CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
+            CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
+                                   << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
 
         // output
@@ -628,11 +647,13 @@ struct Filter
             const auto cur = outputs;
 
             if (!cur || cur->next) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter graph output count"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter graph output count"));
             }
 
             if (avfilter_pad_get_type(cur->filter_ctx->output_pads, cur->pad_idx) != media_type) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter output media type"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter output media type"));
             }
 
             FF(avfilter_link(cur->filter_ctx, cur->pad_idx, sink, 0));
@@ -720,7 +741,8 @@ struct AVProducer::Impl
         thread_ = std::thread([&] {
             try {
                 while (!abort_request_) {
-                    // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801, 800)
+                    // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801,
+                    // 800)
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
                     {
@@ -749,7 +771,8 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    if (!audio_filter_.frame && !filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count)) {
+                    if (!audio_filter_.frame &&
+                        !filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count)) {
                         // TODO (perf) Avoid polling.
                         cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
                         continue;
@@ -785,11 +808,17 @@ struct AVProducer::Impl
                     // TODO (fix) ensure pts != AV_NOPTS_VALUE
 
                     if (video) {
-                        frame.pts      = av_rescale_q(video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(1, av_inv_q(av_buffersink_get_frame_rate(video_filter_.sink)), TIME_BASE_Q);
+                        frame.pts =
+                            av_rescale_q(video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) -
+                            start_time;
+                        frame.duration =
+                            av_rescale_q(1, av_inv_q(av_buffersink_get_frame_rate(video_filter_.sink)), TIME_BASE_Q);
                     } else if (audio) {
-                        frame.pts      = av_rescale_q(audio->pts, av_buffersink_get_time_base(audio_filter_.sink), TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(audio->nb_samples, {1, av_buffersink_get_sample_rate(audio_filter_.sink)}, TIME_BASE_Q);
+                        frame.pts =
+                            av_rescale_q(audio->pts, av_buffersink_get_time_base(audio_filter_.sink), TIME_BASE_Q) -
+                            start_time;
+                        frame.duration = av_rescale_q(
+                            audio->nb_samples, {1, av_buffersink_get_sample_rate(audio_filter_.sink)}, TIME_BASE_Q);
                     }
 
                     // TODO (perf) Seek input as soon as possible.
@@ -832,7 +861,8 @@ struct AVProducer::Impl
     std::string print() const
     {
         std::ostringstream str;
-        str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|" << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
+        str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|"
+            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
             << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
         return str.str();
     }
@@ -921,7 +951,8 @@ struct AVProducer::Impl
 
         while (true) {
             auto frame = alloc_frame();
-            auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples) : av_buffersink_get_frame(filter.sink, frame.get());
+            auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+                                       : av_buffersink_get_frame(filter.sink, frame.get());
 
             if (ret == AVERROR(EAGAIN)) {
                 if (!schedule_filters()) {
@@ -1078,7 +1109,10 @@ struct AVProducer::Impl
         cond_.notify_all();
     }
 
-    boost::optional<int64_t> start() const { return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>(); }
+    boost::optional<int64_t> start() const
+    {
+        return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
+    }
 
     void duration(int64_t duration)
     {

@@ -41,7 +41,8 @@ boost::filesystem::path get_relative(const boost::filesystem::path& file, const 
             break;
 
         if (current_path.empty())
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("File " + file.string() + " not relative to folder " + relative_to.string()));
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("File " + file.string() + " not relative to folder " +
+                                                                  relative_to.string()));
 
         result = current_path.filename() / result;
     }
@@ -49,7 +50,8 @@ boost::filesystem::path get_relative(const boost::filesystem::path& file, const 
     return result;
 }
 
-boost::filesystem::path get_relative_without_extension(const boost::filesystem::path& file, const boost::filesystem::path& relative_to)
+boost::filesystem::path get_relative_without_extension(const boost::filesystem::path& file,
+                                                       const boost::filesystem::path& relative_to)
 {
     return get_relative(file.parent_path() / file.stem(), relative_to);
 }

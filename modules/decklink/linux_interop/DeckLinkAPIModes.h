@@ -41,9 +41,39 @@
 // Interface ID Declarations
 
 BMD_CONST REFIID IID_IDeckLinkDisplayModeIterator =
-    /* 9C88499F-F601-4021-B80B-032E4EB41C35 */ {0x9C, 0x88, 0x49, 0x9F, 0xF6, 0x01, 0x40, 0x21, 0xB8, 0x0B, 0x03, 0x2E, 0x4E, 0xB4, 0x1C, 0x35};
+    /* 9C88499F-F601-4021-B80B-032E4EB41C35 */ {0x9C,
+                                                0x88,
+                                                0x49,
+                                                0x9F,
+                                                0xF6,
+                                                0x01,
+                                                0x40,
+                                                0x21,
+                                                0xB8,
+                                                0x0B,
+                                                0x03,
+                                                0x2E,
+                                                0x4E,
+                                                0xB4,
+                                                0x1C,
+                                                0x35};
 BMD_CONST REFIID IID_IDeckLinkDisplayMode =
-    /* 3EB2C1AB-0A3D-4523-A3AD-F40D7FB14E78 */ {0x3E, 0xB2, 0xC1, 0xAB, 0x0A, 0x3D, 0x45, 0x23, 0xA3, 0xAD, 0xF4, 0x0D, 0x7F, 0xB1, 0x4E, 0x78};
+    /* 3EB2C1AB-0A3D-4523-A3AD-F40D7FB14E78 */ {0x3E,
+                                                0xB2,
+                                                0xC1,
+                                                0xAB,
+                                                0x0A,
+                                                0x3D,
+                                                0x45,
+                                                0x23,
+                                                0xA3,
+                                                0xAD,
+                                                0xF4,
+                                                0x0D,
+                                                0x7F,
+                                                0xB1,
+                                                0x4E,
+                                                0x78};
 
 /* Enum BMDDisplayMode - Video display modes */
 
@@ -130,13 +160,16 @@ enum _BMDFieldDominance
 typedef uint32_t BMDPixelFormat;
 enum _BMDPixelFormat
 {
-    bmdFormat8BitYUV     = /* '2vuy' */ 0x32767579,
-    bmdFormat10BitYUV    = /* 'v210' */ 0x76323130,
-    bmdFormat8BitARGB    = 32,
-    bmdFormat8BitBGRA    = /* 'BGRA' */ 0x42475241,
-    bmdFormat10BitRGB    = /* 'r210' */ 0x72323130, // Big-endian RGB 10-bit per component with SMPTE video levels (64-960). Packed as 2:10:10:10
-    bmdFormat12BitRGB    = /* 'R12B' */ 0x52313242, // Big-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
-    bmdFormat12BitRGBLE  = /* 'R12L' */ 0x5231324C, // Little-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
+    bmdFormat8BitYUV  = /* '2vuy' */ 0x32767579,
+    bmdFormat10BitYUV = /* 'v210' */ 0x76323130,
+    bmdFormat8BitARGB = 32,
+    bmdFormat8BitBGRA = /* 'BGRA' */ 0x42475241,
+    bmdFormat10BitRGB = /* 'r210' */ 0x72323130, // Big-endian RGB 10-bit per component with SMPTE video levels
+                                                 // (64-960). Packed as 2:10:10:10
+    bmdFormat12BitRGB = /* 'R12B' */ 0x52313242, // Big-endian RGB 12-bit per component with full range (0-4095). Packed
+                                                 // as 12-bit per component
+    bmdFormat12BitRGBLE = /* 'R12L' */ 0x5231324C,  // Little-endian RGB 12-bit per component with full range (0-4095).
+                                                    // Packed as 12-bit per component
     bmdFormat10BitRGBXLE = /* 'R10l' */ 0x5231306C, // Little-endian 10-bit RGB with SMPTE video levels (64-940)
     bmdFormat10BitRGBX   = /* 'R10b' */ 0x52313062  // Big-endian 10-bit RGB with SMPTE video levels (64-940)
 };
@@ -172,13 +205,13 @@ class IDeckLinkDisplayModeIterator : public IUnknown
 class IDeckLinkDisplayMode : public IUnknown
 {
   public:
-    virtual HRESULT             GetName(/* out */ const char** name)                                                   = 0;
-    virtual BMDDisplayMode      GetDisplayMode(void)                                                                   = 0;
-    virtual long                GetWidth(void)                                                                         = 0;
-    virtual long                GetHeight(void)                                                                        = 0;
-    virtual HRESULT             GetFrameRate(/* out */ BMDTimeValue* frameDuration, /* out */ BMDTimeScale* timeScale) = 0;
-    virtual BMDFieldDominance   GetFieldDominance(void)                                                                = 0;
-    virtual BMDDisplayModeFlags GetFlags(void)                                                                         = 0;
+    virtual HRESULT        GetName(/* out */ const char** name)                                                   = 0;
+    virtual BMDDisplayMode GetDisplayMode(void)                                                                   = 0;
+    virtual long           GetWidth(void)                                                                         = 0;
+    virtual long           GetHeight(void)                                                                        = 0;
+    virtual HRESULT        GetFrameRate(/* out */ BMDTimeValue* frameDuration, /* out */ BMDTimeScale* timeScale) = 0;
+    virtual BMDFieldDominance   GetFieldDominance(void)                                                           = 0;
+    virtual BMDDisplayModeFlags GetFlags(void)                                                                    = 0;
 
   protected:
     virtual ~IDeckLinkDisplayMode() {} // call Release method to drop reference count

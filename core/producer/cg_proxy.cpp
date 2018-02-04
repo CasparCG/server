@@ -87,14 +87,19 @@ struct cg_producer_registry::impl
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        record rec{std::move(cg_producer_name), std::move(info_extractor), std::move(proxy_factory), std::move(producer_factory), reusable_producer_instance};
+        record rec{std::move(cg_producer_name),
+                   std::move(info_extractor),
+                   std::move(proxy_factory),
+                   std::move(producer_factory),
+                   reusable_producer_instance};
 
         for (auto& extension : file_extensions) {
             records_by_extension_.insert(std::make_pair(extension, rec));
         }
     }
 
-    spl::shared_ptr<frame_producer> create_producer(const frame_producer_dependencies& dependencies, const std::wstring& filename) const
+    spl::shared_ptr<frame_producer> create_producer(const frame_producer_dependencies& dependencies,
+                                                    const std::wstring&                filename) const
     {
         auto found = find_record(filename);
 
@@ -240,14 +245,19 @@ void cg_producer_registry::register_cg_producer(std::wstring           cg_produc
                                 reusable_producer_instance);
 }
 
-spl::shared_ptr<frame_producer> cg_producer_registry::create_producer(const frame_producer_dependencies& dependencies, const std::wstring& filename) const
+spl::shared_ptr<frame_producer> cg_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
+                                                                      const std::wstring&                filename) const
 {
     return impl_->create_producer(dependencies, filename);
 }
 
-spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(const spl::shared_ptr<frame_producer>& producer) const { return impl_->get_proxy(producer); }
+spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(const spl::shared_ptr<frame_producer>& producer) const
+{
+    return impl_->get_proxy(producer);
+}
 
-spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(const spl::shared_ptr<video_channel>& video_channel, int render_layer) const
+spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(const spl::shared_ptr<video_channel>& video_channel,
+                                                          int                                   render_layer) const
 {
     return impl_->get_proxy(video_channel, render_layer);
 }
@@ -255,16 +265,25 @@ spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(const spl::shared_ptr<
 spl::shared_ptr<cg_proxy> cg_producer_registry::get_or_create_proxy(const spl::shared_ptr<video_channel>& video_channel,
                                                                     const frame_producer_dependencies&    dependencies,
                                                                     int                                   render_layer,
-                                                                    const std::wstring&                   filename) const
+                                                                    const std::wstring& filename) const
 {
     return impl_->get_or_create_proxy(video_channel, dependencies, render_layer, filename);
 }
 
-std::string cg_producer_registry::read_meta_info(const std::wstring& filename) const { return impl_->read_meta_info(filename); }
+std::string cg_producer_registry::read_meta_info(const std::wstring& filename) const
+{
+    return impl_->read_meta_info(filename);
+}
 
-bool cg_producer_registry::is_cg_extension(const std::wstring& extension) const { return impl_->is_cg_extension(extension); }
+bool cg_producer_registry::is_cg_extension(const std::wstring& extension) const
+{
+    return impl_->is_cg_extension(extension);
+}
 
-std::wstring cg_producer_registry::get_cg_producer_name(const std::wstring& filename) const { return impl_->get_cg_producer_name(filename); }
+std::wstring cg_producer_registry::get_cg_producer_name(const std::wstring& filename) const
+{
+    return impl_->get_cg_producer_name(filename);
+}
 
 void init_cg_proxy_as_producer(core::module_dependencies dependencies) {}
 

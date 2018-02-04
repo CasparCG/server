@@ -155,7 +155,8 @@ struct video_channel::impl final
             auto frame_time = frame_timer.elapsed() * format_desc.fps * 0.5;
             graph_->set_value("tick-time", frame_time);
 
-            *monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0 / video_format_desc().fps)
+            *monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() %
+                                     (1.0 / video_format_desc().fps)
                               << monitor::message("/format") % format_desc.name;
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
@@ -165,7 +166,10 @@ struct video_channel::impl final
             executor_.begin_invoke([=] { tick(); });
     }
 
-    std::wstring print() const { return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" + video_format_desc().name + L"]"; }
+    std::wstring print() const
+    {
+        return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" + video_format_desc().name + L"]";
+    }
 
     int index() const { return index_; }
 
@@ -183,7 +187,9 @@ struct video_channel::impl final
     }
 };
 
-video_channel::video_channel(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)
+video_channel::video_channel(int                            index,
+                             const core::video_format_desc& format_desc,
+                             std::unique_ptr<image_mixer>   image_mixer)
     : impl_(new impl(index, format_desc, std::move(image_mixer)))
 {
 }
@@ -196,9 +202,15 @@ const output&                  video_channel::output() const { return impl_->out
 output&                        video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->image_mixer_; }
 core::video_format_desc        video_channel::video_format_desc() const { return impl_->video_format_desc(); }
-void                           core::video_channel::video_format_desc(const core::video_format_desc& format_desc) { impl_->video_format_desc(format_desc); }
-int                            video_channel::index() const { return impl_->index(); }
-monitor::subject&              video_channel::monitor_output() { return *impl_->monitor_subject_; }
-std::shared_ptr<void>          video_channel::add_tick_listener(std::function<void()> listener) { return impl_->add_tick_listener(std::move(listener)); }
+void                           core::video_channel::video_format_desc(const core::video_format_desc& format_desc)
+{
+    impl_->video_format_desc(format_desc);
+}
+int                   video_channel::index() const { return impl_->index(); }
+monitor::subject&     video_channel::monitor_output() { return *impl_->monitor_subject_; }
+std::shared_ptr<void> video_channel::add_tick_listener(std::function<void()> listener)
+{
+    return impl_->add_tick_listener(std::move(listener));
+}
 
 }} // namespace caspar::core

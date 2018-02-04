@@ -128,7 +128,8 @@ class context : public drawable
     {
         if (value) {
             if (!window_) {
-                window_.reset(new sf::RenderWindow(sf::VideoMode(RENDERING_WIDTH, RENDERING_WIDTH), "CasparCG Diagnostics"));
+                window_.reset(
+                    new sf::RenderWindow(sf::VideoMode(RENDERING_WIDTH, RENDERING_WIDTH), "CasparCG Diagnostics"));
                 window_->setPosition(sf::Vector2i(0, 0));
                 window_->setActive();
                 window_->setVerticalSyncEnabled(true);
@@ -300,9 +301,8 @@ class line : public drawable
         /*states.transform.translate(x_pos_, 0.f);
 
         if (line_data_.size() == res_)
-            x_pos_ = -get_insertion_xcoord() + 1.0 - x_delta_; // Otherwise the graph will drift because of floating point precision
-        else
-            x_pos_ -= x_delta_;*/
+            x_pos_ = -get_insertion_xcoord() + 1.0 - x_delta_; // Otherwise the graph will drift because of floating
+        point precision else x_pos_ -= x_delta_;*/
 
         for (auto& vertex : line_data_)
             vertex.position.x -= x_delta_;
@@ -316,7 +316,9 @@ class line : public drawable
 
         auto color = get_sfml_color(color_);
         color.a    = 255 * 0.8;
-        line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))), color));
+        line_data_.push_back(sf::Vertex(
+            sf::Vector2f(get_insertion_xcoord(), std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))),
+            color));
 
         if (tick_tag_) {
             sf::VertexArray vertical_dash(sf::LinesStrip);
@@ -331,7 +333,8 @@ class line : public drawable
         if (tick_data_ > -0.5) {
             auto array_one = line_data_.array_one();
             auto array_two = line_data_.array_two();
-            // since boost::circular_buffer guarantees two contigous views of the buffer we can provide raw access to SFML, which can use glDrawArrays.
+            // since boost::circular_buffer guarantees two contigous views of the buffer we can provide raw access to
+            // SFML, which can use glDrawArrays.
             target.draw(array_one.first, static_cast<unsigned int>(array_one.second), sf::LinesStrip, states);
             target.draw(array_two.first, static_cast<unsigned int>(array_two.second), sf::LinesStrip, states);
 
@@ -383,9 +386,15 @@ struct graph
         text_ = std::move(temp);
     }
 
-    void set_value(const std::string& name, double value) override { lines_[name].set_value(static_cast<float>(value)); }
+    void set_value(const std::string& name, double value) override
+    {
+        lines_[name].set_value(static_cast<float>(value));
+    }
 
-    void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override { lines_[name].set_tag(); }
+    void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override
+    {
+        lines_[name].set_tag();
+    }
 
     void set_color(const std::string& name, int color) override { lines_[name].set_color(color); }
 
@@ -450,7 +459,9 @@ struct graph
         target.draw(rect, states);
 
         states.transform.translate(0, text_offset)
-            .scale(RENDERING_WIDTH, RENDERING_HEIGHT * (static_cast<float>(RENDERING_HEIGHT - text_offset) / static_cast<float>(RENDERING_HEIGHT)));
+            .scale(RENDERING_WIDTH,
+                   RENDERING_HEIGHT *
+                       (static_cast<float>(RENDERING_HEIGHT - text_offset) / static_cast<float>(RENDERING_HEIGHT)));
 
         static const sf::Color       guide_color(255, 255, 255, 127);
         static const sf::VertexArray middle_guide = []() {

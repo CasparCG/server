@@ -110,7 +110,10 @@ class channel_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"channel-consumer"; }
 
-    std::wstring print() const override { return L"[channel-consumer|" + boost::lexical_cast<std::wstring>(channel_index_) + L"]"; }
+    std::wstring print() const override
+    {
+        return L"[channel-consumer|" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
+    }
 
     bool has_synchronization_clock() const override { return false; }
 
@@ -193,7 +196,7 @@ class channel_producer : public core::frame_producer_base
 spl::shared_ptr<core::frame_producer> create_channel_producer(const core::frame_producer_dependencies&    dependencies,
                                                               const spl::shared_ptr<core::video_channel>& channel,
                                                               int                                         frames_delay,
-                                                              bool                                        no_auto_deinterlace)
+                                                              bool no_auto_deinterlace)
 {
     auto producer = spl::make_shared<channel_producer>(dependencies, channel, frames_delay, no_auto_deinterlace);
     return core::create_destroy_proxy(producer);

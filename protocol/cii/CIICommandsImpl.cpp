@@ -60,7 +60,8 @@ void WriteCommand::Setup(const std::vector<std::wstring>& parameters)
 
             std::vector<std::wstring>::size_type end = parameters.size();
             for (std::vector<std::wstring>::size_type i = 3; i < end; ++i)
-                dataStream << L"<componentData id=\"field" << i - 2 << L"\"><data id=\"text\" value=\"" << parameters[i] << L"\" /></componentData>";
+                dataStream << L"<componentData id=\"field" << i - 2 << L"\"><data id=\"text\" value=\"" << parameters[i]
+                           << L"\" /></componentData>";
 
             dataStream << L"</templateData>";
             xmlData_ = dataStream.str();
@@ -110,7 +111,8 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
             dataStream << L"<templateData>";
             std::vector<std::wstring>::size_type end = parameters.size();
             for (std::vector<std::wstring>::size_type i = 7; i < end; ++i) {
-                dataStream << L"<componentData id=\"f" << i - 7 << L"\"><data id=\"text\" value=\"" << parameters[i] << L"\" /></componentData>";
+                dataStream << L"<componentData id=\"f" << i - 7 << L"\"><data id=\"text\" value=\"" << parameters[i]
+                           << L"\" /></componentData>";
             }
             dataStream << L"</templateData>";
 
@@ -134,8 +136,8 @@ void MiscellaneousCommand::Execute()
 
     // TODO: Need to be checked for validity
     else if (state_ == 1) {
-        // HACK fix. The data sent is UTF8, however the protocol is implemented for ISO-8859-1. Instead of doing risky changes we simply convert into proper
-        // encoding when leaving protocol code.
+        // HACK fix. The data sent is UTF8, however the protocol is implemented for ISO-8859-1. Instead of doing risky
+        // changes we simply convert into proper encoding when leaving protocol code.
         auto xmlData2 = boost::locale::conv::utf_to_utf<wchar_t, char>(std::string(xmlData_.begin(), xmlData_.end()));
         auto proxy    = pCIIStrategy_->get_cg_registry()->get_or_create_proxy(
             pCIIStrategy_->GetChannel(), pCIIStrategy_->get_dependencies(), core::cg_proxy::DEFAULT_LAYER, filename_);
@@ -198,7 +200,8 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters)
 
     if (parameters[1].at(0) == 27) // NEPTUNE:	Y\<27>\X			Stop layer X.
         state_ = 1;
-    else if (static_cast<unsigned char>(parameters[1].at(1)) == 190) // NEPTUNE:	Y\<254>			Clear Canvas.
+    else if (static_cast<unsigned char>(parameters[1].at(1)) == 190) // NEPTUNE:	Y\<254>
+                                                                     // Clear Canvas.
         state_ = 2;
     else if (static_cast<unsigned char>(parameters[1].at(1)) == 149) // NEPTUNE:	Y\<213><243>\X	Play layer X.
         state_ = 3; // UPDATE 2011-05-09: These char-codes are aparently not valid after converting to wide-chars

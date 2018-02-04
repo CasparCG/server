@@ -1395,7 +1395,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkTimecode_GetBCD(This) ((This)->lpVtbl->GetBCD(This))
 
-#define IDeckLinkTimecode_GetComponents(This, hours, minutes, seconds, frames) ((This)->lpVtbl->GetComponents(This, hours, minutes, seconds, frames))
+#define IDeckLinkTimecode_GetComponents(This, hours, minutes, seconds, frames)                                         \
+    ((This)->lpVtbl->GetComponents(This, hours, minutes, seconds, frames))
 
 #define IDeckLinkTimecode_GetString(This, timecode) ((This)->lpVtbl->GetString(This, timecode))
 
@@ -1454,7 +1455,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayModeIterator_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayModeIterator_QueryInterface(This, riid, ppvObject)                                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayModeIterator_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -1542,7 +1544,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayMode_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayMode_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayMode_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -1556,7 +1559,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDisplayMode_GetHeight(This) ((This)->lpVtbl->GetHeight(This))
 
-#define IDeckLinkDisplayMode_GetFrameRate(This, frameDuration, timeScale) ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
+#define IDeckLinkDisplayMode_GetFrameRate(This, frameDuration, timeScale)                                              \
+    ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
 
 #define IDeckLinkDisplayMode_GetFieldDominance(This) ((This)->lpVtbl->GetFieldDominance(This))
 
@@ -1750,7 +1754,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkConfiguration_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkConfiguration_QueryInterface(This, riid, ppvObject)                                                   \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkConfiguration_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -1772,7 +1777,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkConfiguration_GetString(This, cfgID, value) ((This)->lpVtbl->GetString(This, cfgID, value))
 
-#define IDeckLinkConfiguration_WriteConfigurationToPreferences(This) ((This)->lpVtbl->WriteConfigurationToPreferences(This))
+#define IDeckLinkConfiguration_WriteConfigurationToPreferences(This)                                                   \
+    ((This)->lpVtbl->WriteConfigurationToPreferences(This))
 
 #endif /* COBJMACROS */
 
@@ -1852,19 +1858,24 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeckControlStatusCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeckControlStatusCallback_QueryInterface(This, riid, ppvObject)                                       \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeckControlStatusCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeckControlStatusCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeckControlStatusCallback_TimecodeUpdate(This, currentTimecode) ((This)->lpVtbl->TimecodeUpdate(This, currentTimecode))
+#define IDeckLinkDeckControlStatusCallback_TimecodeUpdate(This, currentTimecode)                                       \
+    ((This)->lpVtbl->TimecodeUpdate(This, currentTimecode))
 
-#define IDeckLinkDeckControlStatusCallback_VTRControlStateChanged(This, newState, error) ((This)->lpVtbl->VTRControlStateChanged(This, newState, error))
+#define IDeckLinkDeckControlStatusCallback_VTRControlStateChanged(This, newState, error)                               \
+    ((This)->lpVtbl->VTRControlStateChanged(This, newState, error))
 
-#define IDeckLinkDeckControlStatusCallback_DeckControlEventReceived(This, event, error) ((This)->lpVtbl->DeckControlEventReceived(This, event, error))
+#define IDeckLinkDeckControlStatusCallback_DeckControlEventReceived(This, event, error)                                \
+    ((This)->lpVtbl->DeckControlEventReceived(This, event, error))
 
-#define IDeckLinkDeckControlStatusCallback_DeckControlStatusChanged(This, flags, mask) ((This)->lpVtbl->DeckControlStatusChanged(This, flags, mask))
+#define IDeckLinkDeckControlStatusCallback_DeckControlStatusChanged(This, flags, mask)                                 \
+    ((This)->lpVtbl->DeckControlStatusChanged(This, flags, mask))
 
 #endif /* COBJMACROS */
 
@@ -2188,22 +2199,24 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeckControl_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeckControl_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeckControl_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeckControl_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeckControl_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                                                                      \
+#define IDeckLinkDeckControl_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                              \
     ((This)->lpVtbl->Open(This, timeScale, timeValue, timecodeIsDropFrame, error))
 
 #define IDeckLinkDeckControl_Close(This, standbyOn) ((This)->lpVtbl->Close(This, standbyOn))
 
-#define IDeckLinkDeckControl_GetCurrentState(This, mode, vtrControlState, flags) ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
+#define IDeckLinkDeckControl_GetCurrentState(This, mode, vtrControlState, flags)                                       \
+    ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
 
 #define IDeckLinkDeckControl_SetStandby(This, standbyOn) ((This)->lpVtbl->SetStandby(This, standbyOn))
 
-#define IDeckLinkDeckControl_SendCommand(This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error)                                           \
+#define IDeckLinkDeckControl_SendCommand(This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error)   \
     ((This)->lpVtbl->SendCommand(This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error))
 
 #define IDeckLinkDeckControl_Play(This, error) ((This)->lpVtbl->Play(This, error))
@@ -2228,31 +2241,38 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDeckControl_Shuttle(This, rate, error) ((This)->lpVtbl->Shuttle(This, rate, error))
 
-#define IDeckLinkDeckControl_GetTimecodeString(This, currentTimeCode, error) ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
+#define IDeckLinkDeckControl_GetTimecodeString(This, currentTimeCode, error)                                           \
+    ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
 
-#define IDeckLinkDeckControl_GetTimecode(This, currentTimecode, error) ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
+#define IDeckLinkDeckControl_GetTimecode(This, currentTimecode, error)                                                 \
+    ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
 
-#define IDeckLinkDeckControl_GetTimecodeBCD(This, currentTimecode, error) ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
+#define IDeckLinkDeckControl_GetTimecodeBCD(This, currentTimecode, error)                                              \
+    ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
 
 #define IDeckLinkDeckControl_SetPreroll(This, prerollSeconds) ((This)->lpVtbl->SetPreroll(This, prerollSeconds))
 
 #define IDeckLinkDeckControl_GetPreroll(This, prerollSeconds) ((This)->lpVtbl->GetPreroll(This, prerollSeconds))
 
-#define IDeckLinkDeckControl_SetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_SetExportOffset(This, exportOffsetFields)                                                 \
+    ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_GetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_GetExportOffset(This, exportOffsetFields)                                                 \
+    ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_GetManualExportOffset(This, deckManualExportOffsetFields)                                                                         \
+#define IDeckLinkDeckControl_GetManualExportOffset(This, deckManualExportOffsetFields)                                 \
     ((This)->lpVtbl->GetManualExportOffset(This, deckManualExportOffsetFields))
 
-#define IDeckLinkDeckControl_SetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_SetCaptureOffset(This, captureOffsetFields)                                               \
+    ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_GetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_GetCaptureOffset(This, captureOffsetFields)                                               \
+    ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                                                                  \
+#define IDeckLinkDeckControl_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                          \
     ((This)->lpVtbl->StartExport(This, inTimecode, outTimecode, exportModeOps, error))
 
-#define IDeckLinkDeckControl_StartCapture(This, useVITC, inTimecode, outTimecode, error)                                                                       \
+#define IDeckLinkDeckControl_StartCapture(This, useVITC, inTimecode, outTimecode, error)                               \
     ((This)->lpVtbl->StartCapture(This, useVITC, inTimecode, outTimecode, error))
 
 #define IDeckLinkDeckControl_GetDeviceID(This, deviceId, error) ((This)->lpVtbl->GetDeviceID(This, deviceId, error))
@@ -2328,21 +2348,28 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IBMDStreamingDeviceNotificationCallbackVtbl;
 
-    interface IBMDStreamingDeviceNotificationCallback { CONST_VTBL struct IBMDStreamingDeviceNotificationCallbackVtbl* lpVtbl; };
+    interface IBMDStreamingDeviceNotificationCallback
+    {
+        CONST_VTBL struct IBMDStreamingDeviceNotificationCallbackVtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingDeviceNotificationCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingDeviceNotificationCallback_QueryInterface(This, riid, ppvObject)                                  \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingDeviceNotificationCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingDeviceNotificationCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceArrived(This, device) ((This)->lpVtbl->StreamingDeviceArrived(This, device))
+#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceArrived(This, device)                                   \
+    ((This)->lpVtbl->StreamingDeviceArrived(This, device))
 
-#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceRemoved(This, device) ((This)->lpVtbl->StreamingDeviceRemoved(This, device))
+#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceRemoved(This, device)                                   \
+    ((This)->lpVtbl->StreamingDeviceRemoved(This, device))
 
-#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceModeChanged(This, device, mode) ((This)->lpVtbl->StreamingDeviceModeChanged(This, device, mode))
+#define IBMDStreamingDeviceNotificationCallback_StreamingDeviceModeChanged(This, device, mode)                         \
+    ((This)->lpVtbl->StreamingDeviceModeChanged(This, device, mode))
 
 #endif /* COBJMACROS */
 
@@ -2421,21 +2448,27 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingH264InputCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingH264InputCallback_QueryInterface(This, riid, ppvObject)                                           \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingH264InputCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingH264InputCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingH264InputCallback_H264NALPacketArrived(This, nalPacket) ((This)->lpVtbl->H264NALPacketArrived(This, nalPacket))
+#define IBMDStreamingH264InputCallback_H264NALPacketArrived(This, nalPacket)                                           \
+    ((This)->lpVtbl->H264NALPacketArrived(This, nalPacket))
 
-#define IBMDStreamingH264InputCallback_H264AudioPacketArrived(This, audioPacket) ((This)->lpVtbl->H264AudioPacketArrived(This, audioPacket))
+#define IBMDStreamingH264InputCallback_H264AudioPacketArrived(This, audioPacket)                                       \
+    ((This)->lpVtbl->H264AudioPacketArrived(This, audioPacket))
 
-#define IBMDStreamingH264InputCallback_MPEG2TSPacketArrived(This, tsPacket) ((This)->lpVtbl->MPEG2TSPacketArrived(This, tsPacket))
+#define IBMDStreamingH264InputCallback_MPEG2TSPacketArrived(This, tsPacket)                                            \
+    ((This)->lpVtbl->MPEG2TSPacketArrived(This, tsPacket))
 
-#define IBMDStreamingH264InputCallback_H264VideoInputConnectorScanningChanged(This) ((This)->lpVtbl->H264VideoInputConnectorScanningChanged(This))
+#define IBMDStreamingH264InputCallback_H264VideoInputConnectorScanningChanged(This)                                    \
+    ((This)->lpVtbl->H264VideoInputConnectorScanningChanged(This))
 
-#define IBMDStreamingH264InputCallback_H264VideoInputConnectorChanged(This) ((This)->lpVtbl->H264VideoInputConnectorChanged(This))
+#define IBMDStreamingH264InputCallback_H264VideoInputConnectorChanged(This)                                            \
+    ((This)->lpVtbl->H264VideoInputConnectorChanged(This))
 
 #define IBMDStreamingH264InputCallback_H264VideoInputModeChanged(This) ((This)->lpVtbl->H264VideoInputModeChanged(This))
 
@@ -2494,13 +2527,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingDiscovery_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingDiscovery_QueryInterface(This, riid, ppvObject)                                                   \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingDiscovery_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingDiscovery_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingDiscovery_InstallDeviceNotifications(This, theCallback) ((This)->lpVtbl->InstallDeviceNotifications(This, theCallback))
+#define IBMDStreamingDiscovery_InstallDeviceNotifications(This, theCallback)                                           \
+    ((This)->lpVtbl->InstallDeviceNotifications(This, theCallback))
 
 #define IBMDStreamingDiscovery_UninstallDeviceNotifications(This) ((This)->lpVtbl->UninstallDeviceNotifications(This))
 
@@ -2626,7 +2661,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingVideoEncodingMode_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingVideoEncodingMode_QueryInterface(This, riid, ppvObject)                                           \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingVideoEncodingMode_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -2656,7 +2692,7 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IBMDStreamingVideoEncodingMode_GetString(This, cfgID, value) ((This)->lpVtbl->GetString(This, cfgID, value))
 
-#define IBMDStreamingVideoEncodingMode_CreateMutableVideoEncodingMode(This, newEncodingMode)                                                                   \
+#define IBMDStreamingVideoEncodingMode_CreateMutableVideoEncodingMode(This, newEncodingMode)                           \
     ((This)->lpVtbl->CreateMutableVideoEncodingMode(This, newEncodingMode))
 
 #endif /* COBJMACROS */
@@ -2799,11 +2835,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IBMDStreamingMutableVideoEncodingModeVtbl;
 
-    interface IBMDStreamingMutableVideoEncodingMode { CONST_VTBL struct IBMDStreamingMutableVideoEncodingModeVtbl* lpVtbl; };
+    interface IBMDStreamingMutableVideoEncodingMode
+    {
+        CONST_VTBL struct IBMDStreamingMutableVideoEncodingModeVtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingMutableVideoEncodingMode_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingMutableVideoEncodingMode_QueryInterface(This, riid, ppvObject)                                    \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingMutableVideoEncodingMode_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -2829,24 +2869,30 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IBMDStreamingMutableVideoEncodingMode_GetInt(This, cfgID, value) ((This)->lpVtbl->GetInt(This, cfgID, value))
 
-#define IBMDStreamingMutableVideoEncodingMode_GetFloat(This, cfgID, value) ((This)->lpVtbl->GetFloat(This, cfgID, value))
+#define IBMDStreamingMutableVideoEncodingMode_GetFloat(This, cfgID, value)                                             \
+    ((This)->lpVtbl->GetFloat(This, cfgID, value))
 
-#define IBMDStreamingMutableVideoEncodingMode_GetString(This, cfgID, value) ((This)->lpVtbl->GetString(This, cfgID, value))
+#define IBMDStreamingMutableVideoEncodingMode_GetString(This, cfgID, value)                                            \
+    ((This)->lpVtbl->GetString(This, cfgID, value))
 
-#define IBMDStreamingMutableVideoEncodingMode_CreateMutableVideoEncodingMode(This, newEncodingMode)                                                            \
+#define IBMDStreamingMutableVideoEncodingMode_CreateMutableVideoEncodingMode(This, newEncodingMode)                    \
     ((This)->lpVtbl->CreateMutableVideoEncodingMode(This, newEncodingMode))
 
-#define IBMDStreamingMutableVideoEncodingMode_SetSourceRect(This, posX, posY, width, height) ((This)->lpVtbl->SetSourceRect(This, posX, posY, width, height))
+#define IBMDStreamingMutableVideoEncodingMode_SetSourceRect(This, posX, posY, width, height)                           \
+    ((This)->lpVtbl->SetSourceRect(This, posX, posY, width, height))
 
-#define IBMDStreamingMutableVideoEncodingMode_SetDestSize(This, width, height) ((This)->lpVtbl->SetDestSize(This, width, height))
+#define IBMDStreamingMutableVideoEncodingMode_SetDestSize(This, width, height)                                         \
+    ((This)->lpVtbl->SetDestSize(This, width, height))
 
 #define IBMDStreamingMutableVideoEncodingMode_SetFlag(This, cfgID, value) ((This)->lpVtbl->SetFlag(This, cfgID, value))
 
 #define IBMDStreamingMutableVideoEncodingMode_SetInt(This, cfgID, value) ((This)->lpVtbl->SetInt(This, cfgID, value))
 
-#define IBMDStreamingMutableVideoEncodingMode_SetFloat(This, cfgID, value) ((This)->lpVtbl->SetFloat(This, cfgID, value))
+#define IBMDStreamingMutableVideoEncodingMode_SetFloat(This, cfgID, value)                                             \
+    ((This)->lpVtbl->SetFloat(This, cfgID, value))
 
-#define IBMDStreamingMutableVideoEncodingMode_SetString(This, cfgID, value) ((This)->lpVtbl->SetString(This, cfgID, value))
+#define IBMDStreamingMutableVideoEncodingMode_SetString(This, cfgID, value)                                            \
+    ((This)->lpVtbl->SetString(This, cfgID, value))
 
 #endif /* COBJMACROS */
 
@@ -2895,17 +2941,22 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IBMDStreamingVideoEncodingModePresetIteratorVtbl;
 
-    interface IBMDStreamingVideoEncodingModePresetIterator { CONST_VTBL struct IBMDStreamingVideoEncodingModePresetIteratorVtbl* lpVtbl; };
+    interface IBMDStreamingVideoEncodingModePresetIterator
+    {
+        CONST_VTBL struct IBMDStreamingVideoEncodingModePresetIteratorVtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingVideoEncodingModePresetIterator_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingVideoEncodingModePresetIterator_QueryInterface(This, riid, ppvObject)                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingVideoEncodingModePresetIterator_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingVideoEncodingModePresetIterator_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingVideoEncodingModePresetIterator_Next(This, videoEncodingMode) ((This)->lpVtbl->Next(This, videoEncodingMode))
+#define IBMDStreamingVideoEncodingModePresetIterator_Next(This, videoEncodingMode)                                     \
+    ((This)->lpVtbl->Next(This, videoEncodingMode))
 
 #endif /* COBJMACROS */
 
@@ -3032,29 +3083,36 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingDeviceInput_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingDeviceInput_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingDeviceInput_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingDeviceInput_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingDeviceInput_DoesSupportVideoInputMode(This, inputMode, result) ((This)->lpVtbl->DoesSupportVideoInputMode(This, inputMode, result))
+#define IBMDStreamingDeviceInput_DoesSupportVideoInputMode(This, inputMode, result)                                    \
+    ((This)->lpVtbl->DoesSupportVideoInputMode(This, inputMode, result))
 
-#define IBMDStreamingDeviceInput_GetVideoInputModeIterator(This, iterator) ((This)->lpVtbl->GetVideoInputModeIterator(This, iterator))
+#define IBMDStreamingDeviceInput_GetVideoInputModeIterator(This, iterator)                                             \
+    ((This)->lpVtbl->GetVideoInputModeIterator(This, iterator))
 
 #define IBMDStreamingDeviceInput_SetVideoInputMode(This, inputMode) ((This)->lpVtbl->SetVideoInputMode(This, inputMode))
 
-#define IBMDStreamingDeviceInput_GetCurrentDetectedVideoInputMode(This, detectedMode) ((This)->lpVtbl->GetCurrentDetectedVideoInputMode(This, detectedMode))
+#define IBMDStreamingDeviceInput_GetCurrentDetectedVideoInputMode(This, detectedMode)                                  \
+    ((This)->lpVtbl->GetCurrentDetectedVideoInputMode(This, detectedMode))
 
-#define IBMDStreamingDeviceInput_GetVideoEncodingMode(This, encodingMode) ((This)->lpVtbl->GetVideoEncodingMode(This, encodingMode))
+#define IBMDStreamingDeviceInput_GetVideoEncodingMode(This, encodingMode)                                              \
+    ((This)->lpVtbl->GetVideoEncodingMode(This, encodingMode))
 
-#define IBMDStreamingDeviceInput_GetVideoEncodingModePresetIterator(This, inputMode, iterator)                                                                 \
+#define IBMDStreamingDeviceInput_GetVideoEncodingModePresetIterator(This, inputMode, iterator)                         \
     ((This)->lpVtbl->GetVideoEncodingModePresetIterator(This, inputMode, iterator))
 
-#define IBMDStreamingDeviceInput_DoesSupportVideoEncodingMode(This, inputMode, encodingMode, result, changedEncodingMode)                                      \
+#define IBMDStreamingDeviceInput_DoesSupportVideoEncodingMode(                                                         \
+    This, inputMode, encodingMode, result, changedEncodingMode)                                                        \
     ((This)->lpVtbl->DoesSupportVideoEncodingMode(This, inputMode, encodingMode, result, changedEncodingMode))
 
-#define IBMDStreamingDeviceInput_SetVideoEncodingMode(This, encodingMode) ((This)->lpVtbl->SetVideoEncodingMode(This, encodingMode))
+#define IBMDStreamingDeviceInput_SetVideoEncodingMode(This, encodingMode)                                              \
+    ((This)->lpVtbl->SetVideoEncodingMode(This, encodingMode))
 
 #define IBMDStreamingDeviceInput_StartCapture(This) ((This)->lpVtbl->StartCapture(This))
 
@@ -3140,7 +3198,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingH264NALPacket_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingH264NALPacket_QueryInterface(This, riid, ppvObject)                                               \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingH264NALPacket_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -3150,9 +3209,11 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IBMDStreamingH264NALPacket_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IBMDStreamingH264NALPacket_GetBytesWithSizePrefix(This, buffer) ((This)->lpVtbl->GetBytesWithSizePrefix(This, buffer))
+#define IBMDStreamingH264NALPacket_GetBytesWithSizePrefix(This, buffer)                                                \
+    ((This)->lpVtbl->GetBytesWithSizePrefix(This, buffer))
 
-#define IBMDStreamingH264NALPacket_GetDisplayTime(This, requestedTimeScale, displayTime) ((This)->lpVtbl->GetDisplayTime(This, requestedTimeScale, displayTime))
+#define IBMDStreamingH264NALPacket_GetDisplayTime(This, requestedTimeScale, displayTime)                               \
+    ((This)->lpVtbl->GetDisplayTime(This, requestedTimeScale, displayTime))
 
 #define IBMDStreamingH264NALPacket_GetPacketIndex(This, packetIndex) ((This)->lpVtbl->GetPacketIndex(This, packetIndex))
 
@@ -3231,7 +3292,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingAudioPacket_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingAudioPacket_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingAudioPacket_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -3243,7 +3305,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IBMDStreamingAudioPacket_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IBMDStreamingAudioPacket_GetPlayTime(This, requestedTimeScale, playTime) ((This)->lpVtbl->GetPlayTime(This, requestedTimeScale, playTime))
+#define IBMDStreamingAudioPacket_GetPlayTime(This, requestedTimeScale, playTime)                                       \
+    ((This)->lpVtbl->GetPlayTime(This, requestedTimeScale, playTime))
 
 #define IBMDStreamingAudioPacket_GetPacketIndex(This, packetIndex) ((This)->lpVtbl->GetPacketIndex(This, packetIndex))
 
@@ -3302,7 +3365,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingMPEG2TSPacket_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingMPEG2TSPacket_QueryInterface(This, riid, ppvObject)                                               \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingMPEG2TSPacket_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -3383,17 +3447,20 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IBMDStreamingH264NALParser_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IBMDStreamingH264NALParser_QueryInterface(This, riid, ppvObject)                                               \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IBMDStreamingH264NALParser_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IBMDStreamingH264NALParser_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IBMDStreamingH264NALParser_IsNALSequenceParameterSet(This, nal) ((This)->lpVtbl->IsNALSequenceParameterSet(This, nal))
+#define IBMDStreamingH264NALParser_IsNALSequenceParameterSet(This, nal)                                                \
+    ((This)->lpVtbl->IsNALSequenceParameterSet(This, nal))
 
-#define IBMDStreamingH264NALParser_IsNALPictureParameterSet(This, nal) ((This)->lpVtbl->IsNALPictureParameterSet(This, nal))
+#define IBMDStreamingH264NALParser_IsNALPictureParameterSet(This, nal)                                                 \
+    ((This)->lpVtbl->IsNALPictureParameterSet(This, nal))
 
-#define IBMDStreamingH264NALParser_GetProfileAndLevelFromSPS(This, nal, profileIdc, profileCompatability, levelIdc)                                            \
+#define IBMDStreamingH264NALParser_GetProfileAndLevelFromSPS(This, nal, profileIdc, profileCompatability, levelIdc)    \
     ((This)->lpVtbl->GetProfileAndLevelFromSPS(This, nal, profileIdc, profileCompatability, levelIdc))
 
 #endif /* COBJMACROS */
@@ -3467,16 +3534,18 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoOutputCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoOutputCallback_QueryInterface(This, riid, ppvObject)                                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoOutputCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoOutputCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoOutputCallback_ScheduledFrameCompleted(This, completedFrame, result)                                                                     \
+#define IDeckLinkVideoOutputCallback_ScheduledFrameCompleted(This, completedFrame, result)                             \
     ((This)->lpVtbl->ScheduledFrameCompleted(This, completedFrame, result))
 
-#define IDeckLinkVideoOutputCallback_ScheduledPlaybackHasStopped(This) ((This)->lpVtbl->ScheduledPlaybackHasStopped(This))
+#define IDeckLinkVideoOutputCallback_ScheduledPlaybackHasStopped(This)                                                 \
+    ((This)->lpVtbl->ScheduledPlaybackHasStopped(This))
 
 #endif /* COBJMACROS */
 
@@ -3542,16 +3611,18 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInputCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInputCallback_QueryInterface(This, riid, ppvObject)                                                   \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInputCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInputCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInputCallback_VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags)                                          \
+#define IDeckLinkInputCallback_VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags)  \
     ((This)->lpVtbl->VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags))
 
-#define IDeckLinkInputCallback_VideoInputFrameArrived(This, videoFrame, audioPacket) ((This)->lpVtbl->VideoInputFrameArrived(This, videoFrame, audioPacket))
+#define IDeckLinkInputCallback_VideoInputFrameArrived(This, videoFrame, audioPacket)                                   \
+    ((This)->lpVtbl->VideoInputFrameArrived(This, videoFrame, audioPacket))
 
 #endif /* COBJMACROS */
 
@@ -3621,13 +3692,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkMemoryAllocator_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkMemoryAllocator_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkMemoryAllocator_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkMemoryAllocator_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkMemoryAllocator_AllocateBuffer(This, bufferSize, allocatedBuffer) ((This)->lpVtbl->AllocateBuffer(This, bufferSize, allocatedBuffer))
+#define IDeckLinkMemoryAllocator_AllocateBuffer(This, bufferSize, allocatedBuffer)                                     \
+    ((This)->lpVtbl->AllocateBuffer(This, bufferSize, allocatedBuffer))
 
 #define IDeckLinkMemoryAllocator_ReleaseBuffer(This, buffer) ((This)->lpVtbl->ReleaseBuffer(This, buffer))
 
@@ -3686,13 +3759,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkAudioOutputCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkAudioOutputCallback_QueryInterface(This, riid, ppvObject)                                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkAudioOutputCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkAudioOutputCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkAudioOutputCallback_RenderAudioSamples(This, preroll) ((This)->lpVtbl->RenderAudioSamples(This, preroll))
+#define IDeckLinkAudioOutputCallback_RenderAudioSamples(This, preroll)                                                 \
+    ((This)->lpVtbl->RenderAudioSamples(This, preroll))
 
 #endif /* COBJMACROS */
 
@@ -3833,7 +3908,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkAPIInformation_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkAPIInformation_QueryInterface(This, riid, ppvObject)                                                  \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkAPIInformation_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -4146,72 +4222,82 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkOutput_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkOutput_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)                                                 \
+#define IDeckLinkOutput_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)         \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode))
 
 #define IDeckLinkOutput_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkOutput_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkOutput_SetScreenPreviewCallback(This, previewCallback)                                                \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkOutput_EnableVideoOutput(This, displayMode, flags) ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
+#define IDeckLinkOutput_EnableVideoOutput(This, displayMode, flags)                                                    \
+    ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
 
 #define IDeckLinkOutput_DisableVideoOutput(This) ((This)->lpVtbl->DisableVideoOutput(This))
 
-#define IDeckLinkOutput_SetVideoOutputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkOutput_SetVideoOutputFrameMemoryAllocator(This, theAllocator)                                         \
+    ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkOutput_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                                                          \
+#define IDeckLinkOutput_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                  \
     ((This)->lpVtbl->CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_CreateAncillaryData(This, pixelFormat, outBuffer) ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
+#define IDeckLinkOutput_CreateAncillaryData(This, pixelFormat, outBuffer)                                              \
+    ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
 
 #define IDeckLinkOutput_DisplayVideoFrameSync(This, theFrame) ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
 
-#define IDeckLinkOutput_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                                                            \
+#define IDeckLinkOutput_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                    \
     ((This)->lpVtbl->ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale))
 
-#define IDeckLinkOutput_SetScheduledFrameCompletionCallback(This, theCallback) ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
+#define IDeckLinkOutput_SetScheduledFrameCompletionCallback(This, theCallback)                                         \
+    ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
 
-#define IDeckLinkOutput_GetBufferedVideoFrameCount(This, bufferedFrameCount) ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
+#define IDeckLinkOutput_GetBufferedVideoFrameCount(This, bufferedFrameCount)                                           \
+    ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
 
-#define IDeckLinkOutput_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                                                              \
+#define IDeckLinkOutput_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                      \
     ((This)->lpVtbl->EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType))
 
 #define IDeckLinkOutput_DisableAudioOutput(This) ((This)->lpVtbl->DisableAudioOutput(This))
 
-#define IDeckLinkOutput_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                                                             \
+#define IDeckLinkOutput_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                     \
     ((This)->lpVtbl->WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten))
 
 #define IDeckLinkOutput_BeginAudioPreroll(This) ((This)->lpVtbl->BeginAudioPreroll(This))
 
 #define IDeckLinkOutput_EndAudioPreroll(This) ((This)->lpVtbl->EndAudioPreroll(This))
 
-#define IDeckLinkOutput_ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                       \
+#define IDeckLinkOutput_ScheduleAudioSamples(                                                                          \
+    This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                        \
     ((This)->lpVtbl->ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten))
 
-#define IDeckLinkOutput_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                                                                       \
+#define IDeckLinkOutput_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                               \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount))
 
 #define IDeckLinkOutput_FlushBufferedAudioSamples(This) ((This)->lpVtbl->FlushBufferedAudioSamples(This))
 
 #define IDeckLinkOutput_SetAudioCallback(This, theCallback) ((This)->lpVtbl->SetAudioCallback(This, theCallback))
 
-#define IDeckLinkOutput_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                                                              \
+#define IDeckLinkOutput_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                      \
     ((This)->lpVtbl->StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed))
 
-#define IDeckLinkOutput_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                                                             \
+#define IDeckLinkOutput_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                     \
     ((This)->lpVtbl->StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale))
 
-#define IDeckLinkOutput_IsScheduledPlaybackRunning(This, active) ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
+#define IDeckLinkOutput_IsScheduledPlaybackRunning(This, active)                                                       \
+    ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
 
-#define IDeckLinkOutput_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                                                              \
+#define IDeckLinkOutput_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                      \
     ((This)->lpVtbl->GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed))
 
-#define IDeckLinkOutput_GetReferenceStatus(This, referenceStatus) ((This)->lpVtbl->GetReferenceStatus(This, referenceStatus))
+#define IDeckLinkOutput_GetReferenceStatus(This, referenceStatus)                                                      \
+    ((This)->lpVtbl->GetReferenceStatus(This, referenceStatus))
 
-#define IDeckLinkOutput_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                            \
+#define IDeckLinkOutput_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)    \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
-#define IDeckLinkOutput_GetFrameCompletionReferenceTimestamp(This, theFrame, desiredTimeScale, frameCompletionTimestamp)                                       \
+#define IDeckLinkOutput_GetFrameCompletionReferenceTimestamp(                                                          \
+    This, theFrame, desiredTimeScale, frameCompletionTimestamp)                                                        \
     ((This)->lpVtbl->GetFrameCompletionReferenceTimestamp(This, theFrame, desiredTimeScale, frameCompletionTimestamp))
 
 #endif /* COBJMACROS */
@@ -4380,27 +4466,31 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkInput_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInput_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)                                                  \
+#define IDeckLinkInput_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)          \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode))
 
 #define IDeckLinkInput_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkInput_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkInput_SetScreenPreviewCallback(This, previewCallback)                                                 \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkInput_EnableVideoInput(This, displayMode, pixelFormat, flags) ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
+#define IDeckLinkInput_EnableVideoInput(This, displayMode, pixelFormat, flags)                                         \
+    ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
 
 #define IDeckLinkInput_DisableVideoInput(This) ((This)->lpVtbl->DisableVideoInput(This))
 
-#define IDeckLinkInput_GetAvailableVideoFrameCount(This, availableFrameCount) ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
+#define IDeckLinkInput_GetAvailableVideoFrameCount(This, availableFrameCount)                                          \
+    ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
 
-#define IDeckLinkInput_SetVideoInputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoInputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkInput_SetVideoInputFrameMemoryAllocator(This, theAllocator)                                           \
+    ((This)->lpVtbl->SetVideoInputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkInput_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                                                            \
+#define IDeckLinkInput_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                    \
     ((This)->lpVtbl->EnableAudioInput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkInput_DisableAudioInput(This) ((This)->lpVtbl->DisableAudioInput(This))
 
-#define IDeckLinkInput_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                                                                      \
+#define IDeckLinkInput_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                              \
     ((This)->lpVtbl->GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount))
 
 #define IDeckLinkInput_StartStreams(This) ((This)->lpVtbl->StartStreams(This))
@@ -4413,7 +4503,7 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkInput_SetCallback(This, theCallback) ((This)->lpVtbl->SetCallback(This, theCallback))
 
-#define IDeckLinkInput_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                             \
+#define IDeckLinkInput_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)     \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
 #endif /* COBJMACROS */
@@ -4503,7 +4593,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoFrame_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoFrame_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoFrame_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -4641,7 +4732,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkMutableVideoFrame_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkMutableVideoFrame_QueryInterface(This, riid, ppvObject)                                               \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkMutableVideoFrame_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -4659,20 +4751,23 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkMutableVideoFrame_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkMutableVideoFrame_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkMutableVideoFrame_GetTimecode(This, format, timecode)                                                 \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
 #define IDeckLinkMutableVideoFrame_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
 #define IDeckLinkMutableVideoFrame_SetFlags(This, newFlags) ((This)->lpVtbl->SetFlags(This, newFlags))
 
-#define IDeckLinkMutableVideoFrame_SetTimecode(This, format, timecode) ((This)->lpVtbl->SetTimecode(This, format, timecode))
+#define IDeckLinkMutableVideoFrame_SetTimecode(This, format, timecode)                                                 \
+    ((This)->lpVtbl->SetTimecode(This, format, timecode))
 
-#define IDeckLinkMutableVideoFrame_SetTimecodeFromComponents(This, format, hours, minutes, seconds, frames, flags)                                             \
+#define IDeckLinkMutableVideoFrame_SetTimecodeFromComponents(This, format, hours, minutes, seconds, frames, flags)     \
     ((This)->lpVtbl->SetTimecodeFromComponents(This, format, hours, minutes, seconds, frames, flags))
 
 #define IDeckLinkMutableVideoFrame_SetAncillaryData(This, ancillary) ((This)->lpVtbl->SetAncillaryData(This, ancillary))
 
-#define IDeckLinkMutableVideoFrame_SetTimecodeUserBits(This, format, userBits) ((This)->lpVtbl->SetTimecodeUserBits(This, format, userBits))
+#define IDeckLinkMutableVideoFrame_SetTimecodeUserBits(This, format, userBits)                                         \
+    ((This)->lpVtbl->SetTimecodeUserBits(This, format, userBits))
 
 #endif /* COBJMACROS */
 
@@ -4729,7 +4824,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoFrame3DExtensions_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoFrame3DExtensions_QueryInterface(This, riid, ppvObject)                                          \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoFrame3DExtensions_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -4737,7 +4833,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoFrame3DExtensions_Get3DPackingFormat(This) ((This)->lpVtbl->Get3DPackingFormat(This))
 
-#define IDeckLinkVideoFrame3DExtensions_GetFrameForRightEye(This, rightEyeFrame) ((This)->lpVtbl->GetFrameForRightEye(This, rightEyeFrame))
+#define IDeckLinkVideoFrame3DExtensions_GetFrameForRightEye(This, rightEyeFrame)                                       \
+    ((This)->lpVtbl->GetFrameForRightEye(This, rightEyeFrame))
 
 #endif /* COBJMACROS */
 
@@ -4828,7 +4925,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoInputFrame_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoInputFrame_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoInputFrame_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -4846,14 +4944,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoInputFrame_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkVideoInputFrame_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkVideoInputFrame_GetTimecode(This, format, timecode)                                                   \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
 #define IDeckLinkVideoInputFrame_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
-#define IDeckLinkVideoInputFrame_GetStreamTime(This, frameTime, frameDuration, timeScale)                                                                      \
+#define IDeckLinkVideoInputFrame_GetStreamTime(This, frameTime, frameDuration, timeScale)                              \
     ((This)->lpVtbl->GetStreamTime(This, frameTime, frameDuration, timeScale))
 
-#define IDeckLinkVideoInputFrame_GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration)                                                      \
+#define IDeckLinkVideoInputFrame_GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration)              \
     ((This)->lpVtbl->GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration))
 
 #endif /* COBJMACROS */
@@ -4917,13 +5016,14 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoFrameAncillary_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoFrameAncillary_QueryInterface(This, riid, ppvObject)                                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoFrameAncillary_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoFrameAncillary_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoFrameAncillary_GetBufferForVerticalBlankingLine(This, lineNumber, buffer)                                                                \
+#define IDeckLinkVideoFrameAncillary_GetBufferForVerticalBlankingLine(This, lineNumber, buffer)                        \
     ((This)->lpVtbl->GetBufferForVerticalBlankingLine(This, lineNumber, buffer))
 
 #define IDeckLinkVideoFrameAncillary_GetPixelFormat(This) ((This)->lpVtbl->GetPixelFormat(This))
@@ -4994,7 +5094,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkAudioInputPacket_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkAudioInputPacket_QueryInterface(This, riid, ppvObject)                                                \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkAudioInputPacket_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5004,7 +5105,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkAudioInputPacket_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkAudioInputPacket_GetPacketTime(This, packetTime, timeScale) ((This)->lpVtbl->GetPacketTime(This, packetTime, timeScale))
+#define IDeckLinkAudioInputPacket_GetPacketTime(This, packetTime, timeScale)                                           \
+    ((This)->lpVtbl->GetPacketTime(This, packetTime, timeScale))
 
 #endif /* COBJMACROS */
 
@@ -5057,7 +5159,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkScreenPreviewCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkScreenPreviewCallback_QueryInterface(This, riid, ppvObject)                                           \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkScreenPreviewCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5131,7 +5234,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkGLScreenPreviewHelper_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkGLScreenPreviewHelper_QueryInterface(This, riid, ppvObject)                                           \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkGLScreenPreviewHelper_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5143,7 +5247,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkGLScreenPreviewHelper_SetFrame(This, theFrame) ((This)->lpVtbl->SetFrame(This, theFrame))
 
-#define IDeckLinkGLScreenPreviewHelper_Set3DPreviewFormat(This, previewFormat) ((This)->lpVtbl->Set3DPreviewFormat(This, previewFormat))
+#define IDeckLinkGLScreenPreviewHelper_Set3DPreviewFormat(This, previewFormat)                                         \
+    ((This)->lpVtbl->Set3DPreviewFormat(This, previewFormat))
 
 #endif /* COBJMACROS */
 
@@ -5217,7 +5322,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDX9ScreenPreviewHelper_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDX9ScreenPreviewHelper_QueryInterface(This, riid, ppvObject)                                          \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDX9ScreenPreviewHelper_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5229,7 +5335,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDX9ScreenPreviewHelper_SetFrame(This, theFrame) ((This)->lpVtbl->SetFrame(This, theFrame))
 
-#define IDeckLinkDX9ScreenPreviewHelper_Set3DPreviewFormat(This, previewFormat) ((This)->lpVtbl->Set3DPreviewFormat(This, previewFormat))
+#define IDeckLinkDX9ScreenPreviewHelper_Set3DPreviewFormat(This, previewFormat)                                        \
+    ((This)->lpVtbl->Set3DPreviewFormat(This, previewFormat))
 
 #endif /* COBJMACROS */
 
@@ -5286,13 +5393,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkNotificationCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkNotificationCallback_QueryInterface(This, riid, ppvObject)                                            \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkNotificationCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkNotificationCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkNotificationCallback_Notify(This, topic, param1, param2) ((This)->lpVtbl->Notify(This, topic, param1, param2))
+#define IDeckLinkNotificationCallback_Notify(This, topic, param1, param2)                                              \
+    ((This)->lpVtbl->Notify(This, topic, param1, param2))
 
 #endif /* COBJMACROS */
 
@@ -5356,7 +5465,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkNotification_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkNotification_QueryInterface(This, riid, ppvObject)                                                    \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkNotification_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5364,7 +5474,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkNotification_Subscribe(This, topic, theCallback) ((This)->lpVtbl->Subscribe(This, topic, theCallback))
 
-#define IDeckLinkNotification_Unsubscribe(This, topic, theCallback) ((This)->lpVtbl->Unsubscribe(This, topic, theCallback))
+#define IDeckLinkNotification_Unsubscribe(This, topic, theCallback)                                                    \
+    ((This)->lpVtbl->Unsubscribe(This, topic, theCallback))
 
 #endif /* COBJMACROS */
 
@@ -5446,7 +5557,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkAttributes_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkAttributes_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkAttributes_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5605,13 +5717,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoConversion_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoConversion_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoConversion_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoConversion_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoConversion_ConvertFrame(This, srcFrame, dstFrame) ((This)->lpVtbl->ConvertFrame(This, srcFrame, dstFrame))
+#define IDeckLinkVideoConversion_ConvertFrame(This, srcFrame, dstFrame)                                                \
+    ((This)->lpVtbl->ConvertFrame(This, srcFrame, dstFrame))
 
 #endif /* COBJMACROS */
 
@@ -5667,19 +5781,25 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IDeckLinkDeviceNotificationCallbackVtbl;
 
-    interface IDeckLinkDeviceNotificationCallback { CONST_VTBL struct IDeckLinkDeviceNotificationCallbackVtbl* lpVtbl; };
+    interface IDeckLinkDeviceNotificationCallback
+    {
+        CONST_VTBL struct IDeckLinkDeviceNotificationCallbackVtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeviceNotificationCallback_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeviceNotificationCallback_QueryInterface(This, riid, ppvObject)                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeviceNotificationCallback_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeviceNotificationCallback_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeviceNotificationCallback_DeckLinkDeviceArrived(This, deckLinkDevice) ((This)->lpVtbl->DeckLinkDeviceArrived(This, deckLinkDevice))
+#define IDeckLinkDeviceNotificationCallback_DeckLinkDeviceArrived(This, deckLinkDevice)                                \
+    ((This)->lpVtbl->DeckLinkDeviceArrived(This, deckLinkDevice))
 
-#define IDeckLinkDeviceNotificationCallback_DeckLinkDeviceRemoved(This, deckLinkDevice) ((This)->lpVtbl->DeckLinkDeviceRemoved(This, deckLinkDevice))
+#define IDeckLinkDeviceNotificationCallback_DeckLinkDeviceRemoved(This, deckLinkDevice)                                \
+    ((This)->lpVtbl->DeckLinkDeviceRemoved(This, deckLinkDevice))
 
 #endif /* COBJMACROS */
 
@@ -5742,7 +5862,7 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDiscovery_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDiscovery_InstallDeviceNotifications(This, deviceNotificationCallback)                                                                        \
+#define IDeckLinkDiscovery_InstallDeviceNotifications(This, deviceNotificationCallback)                                \
     ((This)->lpVtbl->InstallDeviceNotifications(This, deviceNotificationCallback))
 
 #define IDeckLinkDiscovery_UninstallDeviceNotifications(This) ((This)->lpVtbl->UninstallDeviceNotifications(This))
@@ -5909,7 +6029,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkConfiguration_v10_2_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkConfiguration_v10_2_QueryInterface(This, riid, ppvObject)                                             \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkConfiguration_v10_2_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -5931,7 +6052,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkConfiguration_v10_2_GetString(This, cfgID, value) ((This)->lpVtbl->GetString(This, cfgID, value))
 
-#define IDeckLinkConfiguration_v10_2_WriteConfigurationToPreferences(This) ((This)->lpVtbl->WriteConfigurationToPreferences(This))
+#define IDeckLinkConfiguration_v10_2_WriteConfigurationToPreferences(This)                                             \
+    ((This)->lpVtbl->WriteConfigurationToPreferences(This))
 
 #endif /* COBJMACROS */
 
@@ -6215,75 +6337,88 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkOutput_v9_9_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkOutput_v9_9_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkOutput_v9_9_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkOutput_v9_9_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkOutput_v9_9_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)                                            \
+#define IDeckLinkOutput_v9_9_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)    \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode))
 
-#define IDeckLinkOutput_v9_9_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkOutput_v9_9_GetDisplayModeIterator(This, iterator)                                                    \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkOutput_v9_9_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkOutput_v9_9_SetScreenPreviewCallback(This, previewCallback)                                           \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkOutput_v9_9_EnableVideoOutput(This, displayMode, flags) ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
+#define IDeckLinkOutput_v9_9_EnableVideoOutput(This, displayMode, flags)                                               \
+    ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
 
 #define IDeckLinkOutput_v9_9_DisableVideoOutput(This) ((This)->lpVtbl->DisableVideoOutput(This))
 
-#define IDeckLinkOutput_v9_9_SetVideoOutputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkOutput_v9_9_SetVideoOutputFrameMemoryAllocator(This, theAllocator)                                    \
+    ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkOutput_v9_9_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                                                     \
+#define IDeckLinkOutput_v9_9_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)             \
     ((This)->lpVtbl->CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_v9_9_CreateAncillaryData(This, pixelFormat, outBuffer) ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
+#define IDeckLinkOutput_v9_9_CreateAncillaryData(This, pixelFormat, outBuffer)                                         \
+    ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
 
-#define IDeckLinkOutput_v9_9_DisplayVideoFrameSync(This, theFrame) ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
+#define IDeckLinkOutput_v9_9_DisplayVideoFrameSync(This, theFrame)                                                     \
+    ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
 
-#define IDeckLinkOutput_v9_9_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                                                       \
+#define IDeckLinkOutput_v9_9_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)               \
     ((This)->lpVtbl->ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale))
 
-#define IDeckLinkOutput_v9_9_SetScheduledFrameCompletionCallback(This, theCallback) ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
+#define IDeckLinkOutput_v9_9_SetScheduledFrameCompletionCallback(This, theCallback)                                    \
+    ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
 
-#define IDeckLinkOutput_v9_9_GetBufferedVideoFrameCount(This, bufferedFrameCount) ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
+#define IDeckLinkOutput_v9_9_GetBufferedVideoFrameCount(This, bufferedFrameCount)                                      \
+    ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
 
-#define IDeckLinkOutput_v9_9_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                                                         \
+#define IDeckLinkOutput_v9_9_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                 \
     ((This)->lpVtbl->EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType))
 
 #define IDeckLinkOutput_v9_9_DisableAudioOutput(This) ((This)->lpVtbl->DisableAudioOutput(This))
 
-#define IDeckLinkOutput_v9_9_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                                                        \
+#define IDeckLinkOutput_v9_9_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                \
     ((This)->lpVtbl->WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten))
 
 #define IDeckLinkOutput_v9_9_BeginAudioPreroll(This) ((This)->lpVtbl->BeginAudioPreroll(This))
 
 #define IDeckLinkOutput_v9_9_EndAudioPreroll(This) ((This)->lpVtbl->EndAudioPreroll(This))
 
-#define IDeckLinkOutput_v9_9_ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                  \
+#define IDeckLinkOutput_v9_9_ScheduleAudioSamples(                                                                     \
+    This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                        \
     ((This)->lpVtbl->ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten))
 
-#define IDeckLinkOutput_v9_9_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                                                                  \
+#define IDeckLinkOutput_v9_9_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                          \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount))
 
 #define IDeckLinkOutput_v9_9_FlushBufferedAudioSamples(This) ((This)->lpVtbl->FlushBufferedAudioSamples(This))
 
 #define IDeckLinkOutput_v9_9_SetAudioCallback(This, theCallback) ((This)->lpVtbl->SetAudioCallback(This, theCallback))
 
-#define IDeckLinkOutput_v9_9_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v9_9_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                 \
     ((This)->lpVtbl->StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed))
 
-#define IDeckLinkOutput_v9_9_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                                                        \
+#define IDeckLinkOutput_v9_9_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                \
     ((This)->lpVtbl->StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale))
 
-#define IDeckLinkOutput_v9_9_IsScheduledPlaybackRunning(This, active) ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
+#define IDeckLinkOutput_v9_9_IsScheduledPlaybackRunning(This, active)                                                  \
+    ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
 
-#define IDeckLinkOutput_v9_9_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v9_9_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                 \
     ((This)->lpVtbl->GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed))
 
-#define IDeckLinkOutput_v9_9_GetReferenceStatus(This, referenceStatus) ((This)->lpVtbl->GetReferenceStatus(This, referenceStatus))
+#define IDeckLinkOutput_v9_9_GetReferenceStatus(This, referenceStatus)                                                 \
+    ((This)->lpVtbl->GetReferenceStatus(This, referenceStatus))
 
-#define IDeckLinkOutput_v9_9_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                       \
+#define IDeckLinkOutput_v9_9_GetHardwareReferenceClock(                                                                \
+    This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                                  \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
 #endif /* COBJMACROS */
@@ -6439,31 +6574,36 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInput_v9_2_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInput_v9_2_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInput_v9_2_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInput_v9_2_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInput_v9_2_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)                                             \
+#define IDeckLinkInput_v9_2_DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode)     \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, flags, result, resultDisplayMode))
 
-#define IDeckLinkInput_v9_2_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkInput_v9_2_GetDisplayModeIterator(This, iterator)                                                     \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkInput_v9_2_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkInput_v9_2_SetScreenPreviewCallback(This, previewCallback)                                            \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkInput_v9_2_EnableVideoInput(This, displayMode, pixelFormat, flags) ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
+#define IDeckLinkInput_v9_2_EnableVideoInput(This, displayMode, pixelFormat, flags)                                    \
+    ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
 
 #define IDeckLinkInput_v9_2_DisableVideoInput(This) ((This)->lpVtbl->DisableVideoInput(This))
 
-#define IDeckLinkInput_v9_2_GetAvailableVideoFrameCount(This, availableFrameCount) ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
+#define IDeckLinkInput_v9_2_GetAvailableVideoFrameCount(This, availableFrameCount)                                     \
+    ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
 
-#define IDeckLinkInput_v9_2_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                                                       \
+#define IDeckLinkInput_v9_2_EnableAudioInput(This, sampleRate, sampleType, channelCount)                               \
     ((This)->lpVtbl->EnableAudioInput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkInput_v9_2_DisableAudioInput(This) ((This)->lpVtbl->DisableAudioInput(This))
 
-#define IDeckLinkInput_v9_2_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                                                                 \
+#define IDeckLinkInput_v9_2_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                         \
     ((This)->lpVtbl->GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount))
 
 #define IDeckLinkInput_v9_2_StartStreams(This) ((This)->lpVtbl->StartStreams(This))
@@ -6476,7 +6616,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkInput_v9_2_SetCallback(This, theCallback) ((This)->lpVtbl->SetCallback(This, theCallback))
 
-#define IDeckLinkInput_v9_2_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                        \
+#define IDeckLinkInput_v9_2_GetHardwareReferenceClock(                                                                 \
+    This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                                  \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
 #endif /* COBJMACROS */
@@ -6553,23 +6694,31 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IDeckLinkDeckControlStatusCallback_v8_1Vtbl;
 
-    interface IDeckLinkDeckControlStatusCallback_v8_1 { CONST_VTBL struct IDeckLinkDeckControlStatusCallback_v8_1Vtbl* lpVtbl; };
+    interface IDeckLinkDeckControlStatusCallback_v8_1
+    {
+        CONST_VTBL struct IDeckLinkDeckControlStatusCallback_v8_1Vtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeckControlStatusCallback_v8_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeckControlStatusCallback_v8_1_QueryInterface(This, riid, ppvObject)                                  \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeckControlStatusCallback_v8_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeckControlStatusCallback_v8_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeckControlStatusCallback_v8_1_TimecodeUpdate(This, currentTimecode) ((This)->lpVtbl->TimecodeUpdate(This, currentTimecode))
+#define IDeckLinkDeckControlStatusCallback_v8_1_TimecodeUpdate(This, currentTimecode)                                  \
+    ((This)->lpVtbl->TimecodeUpdate(This, currentTimecode))
 
-#define IDeckLinkDeckControlStatusCallback_v8_1_VTRControlStateChanged(This, newState, error) ((This)->lpVtbl->VTRControlStateChanged(This, newState, error))
+#define IDeckLinkDeckControlStatusCallback_v8_1_VTRControlStateChanged(This, newState, error)                          \
+    ((This)->lpVtbl->VTRControlStateChanged(This, newState, error))
 
-#define IDeckLinkDeckControlStatusCallback_v8_1_DeckControlEventReceived(This, event, error) ((This)->lpVtbl->DeckControlEventReceived(This, event, error))
+#define IDeckLinkDeckControlStatusCallback_v8_1_DeckControlEventReceived(This, event, error)                           \
+    ((This)->lpVtbl->DeckControlEventReceived(This, event, error))
 
-#define IDeckLinkDeckControlStatusCallback_v8_1_DeckControlStatusChanged(This, flags, mask) ((This)->lpVtbl->DeckControlStatusChanged(This, flags, mask))
+#define IDeckLinkDeckControlStatusCallback_v8_1_DeckControlStatusChanged(This, flags, mask)                            \
+    ((This)->lpVtbl->DeckControlStatusChanged(This, flags, mask))
 
 #endif /* COBJMACROS */
 
@@ -6893,22 +7042,25 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeckControl_v8_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeckControl_v8_1_QueryInterface(This, riid, ppvObject)                                                \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeckControl_v8_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeckControl_v8_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeckControl_v8_1_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                                                                 \
+#define IDeckLinkDeckControl_v8_1_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                         \
     ((This)->lpVtbl->Open(This, timeScale, timeValue, timecodeIsDropFrame, error))
 
 #define IDeckLinkDeckControl_v8_1_Close(This, standbyOn) ((This)->lpVtbl->Close(This, standbyOn))
 
-#define IDeckLinkDeckControl_v8_1_GetCurrentState(This, mode, vtrControlState, flags) ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
+#define IDeckLinkDeckControl_v8_1_GetCurrentState(This, mode, vtrControlState, flags)                                  \
+    ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
 
 #define IDeckLinkDeckControl_v8_1_SetStandby(This, standbyOn) ((This)->lpVtbl->SetStandby(This, standbyOn))
 
-#define IDeckLinkDeckControl_v8_1_SendCommand(This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error)                                      \
+#define IDeckLinkDeckControl_v8_1_SendCommand(                                                                         \
+    This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error)                                        \
     ((This)->lpVtbl->SendCommand(This, inBuffer, inBufferSize, outBuffer, outDataSize, outBufferSize, error))
 
 #define IDeckLinkDeckControl_v8_1_Play(This, error) ((This)->lpVtbl->Play(This, error))
@@ -6919,9 +7071,11 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDeckControl_v8_1_Eject(This, error) ((This)->lpVtbl->Eject(This, error))
 
-#define IDeckLinkDeckControl_v8_1_GoToTimecode(This, timecode, error) ((This)->lpVtbl->GoToTimecode(This, timecode, error))
+#define IDeckLinkDeckControl_v8_1_GoToTimecode(This, timecode, error)                                                  \
+    ((This)->lpVtbl->GoToTimecode(This, timecode, error))
 
-#define IDeckLinkDeckControl_v8_1_FastForward(This, viewTape, error) ((This)->lpVtbl->FastForward(This, viewTape, error))
+#define IDeckLinkDeckControl_v8_1_FastForward(This, viewTape, error)                                                   \
+    ((This)->lpVtbl->FastForward(This, viewTape, error))
 
 #define IDeckLinkDeckControl_v8_1_Rewind(This, viewTape, error) ((This)->lpVtbl->Rewind(This, viewTape, error))
 
@@ -6933,34 +7087,42 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDeckControl_v8_1_Shuttle(This, rate, error) ((This)->lpVtbl->Shuttle(This, rate, error))
 
-#define IDeckLinkDeckControl_v8_1_GetTimecodeString(This, currentTimeCode, error) ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
+#define IDeckLinkDeckControl_v8_1_GetTimecodeString(This, currentTimeCode, error)                                      \
+    ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
 
-#define IDeckLinkDeckControl_v8_1_GetTimecode(This, currentTimecode, error) ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
+#define IDeckLinkDeckControl_v8_1_GetTimecode(This, currentTimecode, error)                                            \
+    ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
 
-#define IDeckLinkDeckControl_v8_1_GetTimecodeBCD(This, currentTimecode, error) ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
+#define IDeckLinkDeckControl_v8_1_GetTimecodeBCD(This, currentTimecode, error)                                         \
+    ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
 
 #define IDeckLinkDeckControl_v8_1_SetPreroll(This, prerollSeconds) ((This)->lpVtbl->SetPreroll(This, prerollSeconds))
 
 #define IDeckLinkDeckControl_v8_1_GetPreroll(This, prerollSeconds) ((This)->lpVtbl->GetPreroll(This, prerollSeconds))
 
-#define IDeckLinkDeckControl_v8_1_SetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_v8_1_SetExportOffset(This, exportOffsetFields)                                            \
+    ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_v8_1_GetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_v8_1_GetExportOffset(This, exportOffsetFields)                                            \
+    ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_v8_1_GetManualExportOffset(This, deckManualExportOffsetFields)                                                                    \
+#define IDeckLinkDeckControl_v8_1_GetManualExportOffset(This, deckManualExportOffsetFields)                            \
     ((This)->lpVtbl->GetManualExportOffset(This, deckManualExportOffsetFields))
 
-#define IDeckLinkDeckControl_v8_1_SetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_v8_1_SetCaptureOffset(This, captureOffsetFields)                                          \
+    ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_v8_1_GetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_v8_1_GetCaptureOffset(This, captureOffsetFields)                                          \
+    ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_v8_1_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                                                             \
+#define IDeckLinkDeckControl_v8_1_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                     \
     ((This)->lpVtbl->StartExport(This, inTimecode, outTimecode, exportModeOps, error))
 
-#define IDeckLinkDeckControl_v8_1_StartCapture(This, useVITC, inTimecode, outTimecode, error)                                                                  \
+#define IDeckLinkDeckControl_v8_1_StartCapture(This, useVITC, inTimecode, outTimecode, error)                          \
     ((This)->lpVtbl->StartCapture(This, useVITC, inTimecode, outTimecode, error))
 
-#define IDeckLinkDeckControl_v8_1_GetDeviceID(This, deviceId, error) ((This)->lpVtbl->GetDeviceID(This, deviceId, error))
+#define IDeckLinkDeckControl_v8_1_GetDeviceID(This, deviceId, error)                                                   \
+    ((This)->lpVtbl->GetDeviceID(This, deviceId, error))
 
 #define IDeckLinkDeckControl_v8_1_Abort(This) ((This)->lpVtbl->Abort(This))
 
@@ -7080,7 +7242,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkIterator_v8_0_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkIterator_v8_0_QueryInterface(This, riid, ppvObject)                                                   \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkIterator_v8_0_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -7400,18 +7563,20 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDeckControl_v7_9_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDeckControl_v7_9_QueryInterface(This, riid, ppvObject)                                                \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDeckControl_v7_9_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDeckControl_v7_9_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDeckControl_v7_9_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                                                                 \
+#define IDeckLinkDeckControl_v7_9_Open(This, timeScale, timeValue, timecodeIsDropFrame, error)                         \
     ((This)->lpVtbl->Open(This, timeScale, timeValue, timecodeIsDropFrame, error))
 
 #define IDeckLinkDeckControl_v7_9_Close(This, standbyOn) ((This)->lpVtbl->Close(This, standbyOn))
 
-#define IDeckLinkDeckControl_v7_9_GetCurrentState(This, mode, vtrControlState, flags) ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
+#define IDeckLinkDeckControl_v7_9_GetCurrentState(This, mode, vtrControlState, flags)                                  \
+    ((This)->lpVtbl->GetCurrentState(This, mode, vtrControlState, flags))
 
 #define IDeckLinkDeckControl_v7_9_SetStandby(This, standbyOn) ((This)->lpVtbl->SetStandby(This, standbyOn))
 
@@ -7423,9 +7588,11 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDeckControl_v7_9_Eject(This, error) ((This)->lpVtbl->Eject(This, error))
 
-#define IDeckLinkDeckControl_v7_9_GoToTimecode(This, timecode, error) ((This)->lpVtbl->GoToTimecode(This, timecode, error))
+#define IDeckLinkDeckControl_v7_9_GoToTimecode(This, timecode, error)                                                  \
+    ((This)->lpVtbl->GoToTimecode(This, timecode, error))
 
-#define IDeckLinkDeckControl_v7_9_FastForward(This, viewTape, error) ((This)->lpVtbl->FastForward(This, viewTape, error))
+#define IDeckLinkDeckControl_v7_9_FastForward(This, viewTape, error)                                                   \
+    ((This)->lpVtbl->FastForward(This, viewTape, error))
 
 #define IDeckLinkDeckControl_v7_9_Rewind(This, viewTape, error) ((This)->lpVtbl->Rewind(This, viewTape, error))
 
@@ -7437,34 +7604,42 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDeckControl_v7_9_Shuttle(This, rate, error) ((This)->lpVtbl->Shuttle(This, rate, error))
 
-#define IDeckLinkDeckControl_v7_9_GetTimecodeString(This, currentTimeCode, error) ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
+#define IDeckLinkDeckControl_v7_9_GetTimecodeString(This, currentTimeCode, error)                                      \
+    ((This)->lpVtbl->GetTimecodeString(This, currentTimeCode, error))
 
-#define IDeckLinkDeckControl_v7_9_GetTimecode(This, currentTimecode, error) ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
+#define IDeckLinkDeckControl_v7_9_GetTimecode(This, currentTimecode, error)                                            \
+    ((This)->lpVtbl->GetTimecode(This, currentTimecode, error))
 
-#define IDeckLinkDeckControl_v7_9_GetTimecodeBCD(This, currentTimecode, error) ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
+#define IDeckLinkDeckControl_v7_9_GetTimecodeBCD(This, currentTimecode, error)                                         \
+    ((This)->lpVtbl->GetTimecodeBCD(This, currentTimecode, error))
 
 #define IDeckLinkDeckControl_v7_9_SetPreroll(This, prerollSeconds) ((This)->lpVtbl->SetPreroll(This, prerollSeconds))
 
 #define IDeckLinkDeckControl_v7_9_GetPreroll(This, prerollSeconds) ((This)->lpVtbl->GetPreroll(This, prerollSeconds))
 
-#define IDeckLinkDeckControl_v7_9_SetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_v7_9_SetExportOffset(This, exportOffsetFields)                                            \
+    ((This)->lpVtbl->SetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_v7_9_GetExportOffset(This, exportOffsetFields) ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
+#define IDeckLinkDeckControl_v7_9_GetExportOffset(This, exportOffsetFields)                                            \
+    ((This)->lpVtbl->GetExportOffset(This, exportOffsetFields))
 
-#define IDeckLinkDeckControl_v7_9_GetManualExportOffset(This, deckManualExportOffsetFields)                                                                    \
+#define IDeckLinkDeckControl_v7_9_GetManualExportOffset(This, deckManualExportOffsetFields)                            \
     ((This)->lpVtbl->GetManualExportOffset(This, deckManualExportOffsetFields))
 
-#define IDeckLinkDeckControl_v7_9_SetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_v7_9_SetCaptureOffset(This, captureOffsetFields)                                          \
+    ((This)->lpVtbl->SetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_v7_9_GetCaptureOffset(This, captureOffsetFields) ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
+#define IDeckLinkDeckControl_v7_9_GetCaptureOffset(This, captureOffsetFields)                                          \
+    ((This)->lpVtbl->GetCaptureOffset(This, captureOffsetFields))
 
-#define IDeckLinkDeckControl_v7_9_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                                                             \
+#define IDeckLinkDeckControl_v7_9_StartExport(This, inTimecode, outTimecode, exportModeOps, error)                     \
     ((This)->lpVtbl->StartExport(This, inTimecode, outTimecode, exportModeOps, error))
 
-#define IDeckLinkDeckControl_v7_9_StartCapture(This, useVITC, inTimecode, outTimecode, error)                                                                  \
+#define IDeckLinkDeckControl_v7_9_StartCapture(This, useVITC, inTimecode, outTimecode, error)                          \
     ((This)->lpVtbl->StartCapture(This, useVITC, inTimecode, outTimecode, error))
 
-#define IDeckLinkDeckControl_v7_9_GetDeviceID(This, deviceId, error) ((This)->lpVtbl->GetDeviceID(This, deviceId, error))
+#define IDeckLinkDeckControl_v7_9_GetDeviceID(This, deviceId, error)                                                   \
+    ((This)->lpVtbl->GetDeviceID(This, deviceId, error))
 
 #define IDeckLinkDeckControl_v7_9_Abort(This) ((This)->lpVtbl->Abort(This))
 
@@ -7525,13 +7700,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayModeIterator_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayModeIterator_v7_6_QueryInterface(This, riid, ppvObject)                                        \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayModeIterator_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDisplayModeIterator_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDisplayModeIterator_v7_6_Next(This, deckLinkDisplayMode) ((This)->lpVtbl->Next(This, deckLinkDisplayMode))
+#define IDeckLinkDisplayModeIterator_v7_6_Next(This, deckLinkDisplayMode)                                              \
+    ((This)->lpVtbl->Next(This, deckLinkDisplayMode))
 
 #endif /* COBJMACROS */
 
@@ -7609,7 +7786,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayMode_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayMode_v7_6_QueryInterface(This, riid, ppvObject)                                                \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayMode_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -7623,7 +7801,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDisplayMode_v7_6_GetHeight(This) ((This)->lpVtbl->GetHeight(This))
 
-#define IDeckLinkDisplayMode_v7_6_GetFrameRate(This, frameDuration, timeScale) ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
+#define IDeckLinkDisplayMode_v7_6_GetFrameRate(This, frameDuration, timeScale)                                         \
+    ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
 
 #define IDeckLinkDisplayMode_v7_6_GetFieldDominance(This) ((This)->lpVtbl->GetFieldDominance(This))
 
@@ -7672,13 +7851,17 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
                                                            /* [out] */ IDeckLinkMutableVideoFrame_v7_6** outFrame) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE CreateAncillaryData(BMDPixelFormat pixelFormat,
-                                                              /* [out] */ IDeckLinkVideoFrameAncillary * *outBuffer) = 0;
+                                                              /* [out] */ IDeckLinkVideoFrameAncillary *
+                                                                  *outBuffer) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisplayVideoFrameSync(
             /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE ScheduleVideoFrame(
-            /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame, BMDTimeValue displayTime, BMDTimeValue displayDuration, BMDTimeScale timeScale) = 0;
+            /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame,
+            BMDTimeValue displayTime,
+            BMDTimeValue displayDuration,
+            BMDTimeScale timeScale) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE SetScheduledFrameCompletionCallback(
             /* [in] */ IDeckLinkVideoOutputCallback_v7_6 * theCallback) = 0;
@@ -7686,8 +7869,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE GetBufferedVideoFrameCount(
             /* [out] */ unsigned int* bufferedFrameCount) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(
-            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount, BMDAudioOutputStreamType streamType) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(BMDAudioSampleRate       sampleRate,
+                                                            BMDAudioSampleType       sampleType,
+                                                            unsigned int             channelCount,
+                                                            BMDAudioOutputStreamType streamType) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioOutput(void) = 0;
 
@@ -7715,7 +7900,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetAudioCallback(
             /* [in] */ IDeckLinkAudioOutputCallback * theCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
+        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(
+            BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE StopScheduledPlayback(BMDTimeValue stopPlaybackAtTime,
                                                                 /* [out] */ BMDTimeValue * actualStopTime,
@@ -7764,7 +7950,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         (IDeckLinkOutput_v7_6*                           This,
          /* [in] */ IDeckLinkScreenPreviewCallback_v7_6* previewCallback);
 
-        HRESULT(STDMETHODCALLTYPE* EnableVideoOutput)(IDeckLinkOutput_v7_6* This, BMDDisplayMode displayMode, BMDVideoOutputFlags flags);
+        HRESULT(STDMETHODCALLTYPE* EnableVideoOutput)
+        (IDeckLinkOutput_v7_6* This, BMDDisplayMode displayMode, BMDVideoOutputFlags flags);
 
         HRESULT(STDMETHODCALLTYPE* DisableVideoOutput)(IDeckLinkOutput_v7_6* This);
 
@@ -7875,73 +8062,85 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkOutput_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkOutput_v7_6_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkOutput_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkOutput_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkOutput_v7_6_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                      \
+#define IDeckLinkOutput_v7_6_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                              \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkOutput_v7_6_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkOutput_v7_6_GetDisplayModeIterator(This, iterator)                                                    \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkOutput_v7_6_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkOutput_v7_6_SetScreenPreviewCallback(This, previewCallback)                                           \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkOutput_v7_6_EnableVideoOutput(This, displayMode, flags) ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
+#define IDeckLinkOutput_v7_6_EnableVideoOutput(This, displayMode, flags)                                               \
+    ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
 
 #define IDeckLinkOutput_v7_6_DisableVideoOutput(This) ((This)->lpVtbl->DisableVideoOutput(This))
 
-#define IDeckLinkOutput_v7_6_SetVideoOutputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkOutput_v7_6_SetVideoOutputFrameMemoryAllocator(This, theAllocator)                                    \
+    ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkOutput_v7_6_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                                                     \
+#define IDeckLinkOutput_v7_6_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)             \
     ((This)->lpVtbl->CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_v7_6_CreateAncillaryData(This, pixelFormat, outBuffer) ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
+#define IDeckLinkOutput_v7_6_CreateAncillaryData(This, pixelFormat, outBuffer)                                         \
+    ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
 
-#define IDeckLinkOutput_v7_6_DisplayVideoFrameSync(This, theFrame) ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
+#define IDeckLinkOutput_v7_6_DisplayVideoFrameSync(This, theFrame)                                                     \
+    ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
 
-#define IDeckLinkOutput_v7_6_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                                                       \
+#define IDeckLinkOutput_v7_6_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)               \
     ((This)->lpVtbl->ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale))
 
-#define IDeckLinkOutput_v7_6_SetScheduledFrameCompletionCallback(This, theCallback) ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
+#define IDeckLinkOutput_v7_6_SetScheduledFrameCompletionCallback(This, theCallback)                                    \
+    ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_6_GetBufferedVideoFrameCount(This, bufferedFrameCount) ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
+#define IDeckLinkOutput_v7_6_GetBufferedVideoFrameCount(This, bufferedFrameCount)                                      \
+    ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
 
-#define IDeckLinkOutput_v7_6_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                                                         \
+#define IDeckLinkOutput_v7_6_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                 \
     ((This)->lpVtbl->EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType))
 
 #define IDeckLinkOutput_v7_6_DisableAudioOutput(This) ((This)->lpVtbl->DisableAudioOutput(This))
 
-#define IDeckLinkOutput_v7_6_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                                                        \
+#define IDeckLinkOutput_v7_6_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                \
     ((This)->lpVtbl->WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten))
 
 #define IDeckLinkOutput_v7_6_BeginAudioPreroll(This) ((This)->lpVtbl->BeginAudioPreroll(This))
 
 #define IDeckLinkOutput_v7_6_EndAudioPreroll(This) ((This)->lpVtbl->EndAudioPreroll(This))
 
-#define IDeckLinkOutput_v7_6_ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                  \
+#define IDeckLinkOutput_v7_6_ScheduleAudioSamples(                                                                     \
+    This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                        \
     ((This)->lpVtbl->ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten))
 
-#define IDeckLinkOutput_v7_6_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                                                                  \
+#define IDeckLinkOutput_v7_6_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                          \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount))
 
 #define IDeckLinkOutput_v7_6_FlushBufferedAudioSamples(This) ((This)->lpVtbl->FlushBufferedAudioSamples(This))
 
 #define IDeckLinkOutput_v7_6_SetAudioCallback(This, theCallback) ((This)->lpVtbl->SetAudioCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_6_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v7_6_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                 \
     ((This)->lpVtbl->StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed))
 
-#define IDeckLinkOutput_v7_6_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                                                        \
+#define IDeckLinkOutput_v7_6_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                \
     ((This)->lpVtbl->StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale))
 
-#define IDeckLinkOutput_v7_6_IsScheduledPlaybackRunning(This, active) ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
+#define IDeckLinkOutput_v7_6_IsScheduledPlaybackRunning(This, active)                                                  \
+    ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
 
-#define IDeckLinkOutput_v7_6_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v7_6_GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed)                 \
     ((This)->lpVtbl->GetScheduledStreamTime(This, desiredTimeScale, streamTime, playbackSpeed))
 
-#define IDeckLinkOutput_v7_6_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                       \
+#define IDeckLinkOutput_v7_6_GetHardwareReferenceClock(                                                                \
+    This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                                  \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
 #endif /* COBJMACROS */
@@ -7974,14 +8173,16 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetScreenPreviewCallback(
             /* [in] */ IDeckLinkScreenPreviewCallback_v7_6 * previewCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(
+            BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableVideoInput(void) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE GetAvailableVideoFrameCount(
             /* [out] */ unsigned int* availableFrameCount) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(
+            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioInput(void) = 0;
 
@@ -8045,7 +8246,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
          /* [out] */ unsigned int* availableFrameCount);
 
         HRESULT(STDMETHODCALLTYPE* EnableAudioInput)
-        (IDeckLinkInput_v7_6* This, BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount);
+        (IDeckLinkInput_v7_6* This,
+         BMDAudioSampleRate   sampleRate,
+         BMDAudioSampleType   sampleType,
+         unsigned int         channelCount);
 
         HRESULT(STDMETHODCALLTYPE* DisableAudioInput)(IDeckLinkInput_v7_6* This);
 
@@ -8079,31 +8283,36 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInput_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInput_v7_6_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInput_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInput_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInput_v7_6_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                       \
+#define IDeckLinkInput_v7_6_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                               \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkInput_v7_6_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkInput_v7_6_GetDisplayModeIterator(This, iterator)                                                     \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkInput_v7_6_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkInput_v7_6_SetScreenPreviewCallback(This, previewCallback)                                            \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkInput_v7_6_EnableVideoInput(This, displayMode, pixelFormat, flags) ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
+#define IDeckLinkInput_v7_6_EnableVideoInput(This, displayMode, pixelFormat, flags)                                    \
+    ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
 
 #define IDeckLinkInput_v7_6_DisableVideoInput(This) ((This)->lpVtbl->DisableVideoInput(This))
 
-#define IDeckLinkInput_v7_6_GetAvailableVideoFrameCount(This, availableFrameCount) ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
+#define IDeckLinkInput_v7_6_GetAvailableVideoFrameCount(This, availableFrameCount)                                     \
+    ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
 
-#define IDeckLinkInput_v7_6_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                                                       \
+#define IDeckLinkInput_v7_6_EnableAudioInput(This, sampleRate, sampleType, channelCount)                               \
     ((This)->lpVtbl->EnableAudioInput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkInput_v7_6_DisableAudioInput(This) ((This)->lpVtbl->DisableAudioInput(This))
 
-#define IDeckLinkInput_v7_6_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                                                                 \
+#define IDeckLinkInput_v7_6_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                         \
     ((This)->lpVtbl->GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount))
 
 #define IDeckLinkInput_v7_6_StartStreams(This) ((This)->lpVtbl->StartStreams(This))
@@ -8116,7 +8325,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkInput_v7_6_SetCallback(This, theCallback) ((This)->lpVtbl->SetCallback(This, theCallback))
 
-#define IDeckLinkInput_v7_6_GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                        \
+#define IDeckLinkInput_v7_6_GetHardwareReferenceClock(                                                                 \
+    This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame)                                                  \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, hardwareTime, timeInFrame, ticksPerFrame))
 
 #endif /* COBJMACROS */
@@ -8191,7 +8401,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkTimecode_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkTimecode_v7_6_QueryInterface(This, riid, ppvObject)                                                   \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkTimecode_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8199,7 +8410,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkTimecode_v7_6_GetBCD(This) ((This)->lpVtbl->GetBCD(This))
 
-#define IDeckLinkTimecode_v7_6_GetComponents(This, hours, minutes, seconds, frames) ((This)->lpVtbl->GetComponents(This, hours, minutes, seconds, frames))
+#define IDeckLinkTimecode_v7_6_GetComponents(This, hours, minutes, seconds, frames)                                    \
+    ((This)->lpVtbl->GetComponents(This, hours, minutes, seconds, frames))
 
 #define IDeckLinkTimecode_v7_6_GetString(This, timecode) ((This)->lpVtbl->GetString(This, timecode))
 
@@ -8291,7 +8503,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoFrame_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoFrame_v7_6_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoFrame_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8309,7 +8522,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoFrame_v7_6_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkVideoFrame_v7_6_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkVideoFrame_v7_6_GetTimecode(This, format, timecode)                                                   \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
 #define IDeckLinkVideoFrame_v7_6_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
@@ -8338,8 +8552,12 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetTimecode(BMDTimecodeFormat format,
                                                       /* [in] */ IDeckLinkTimecode_v7_6 * timecode) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE SetTimecodeFromComponents(
-            BMDTimecodeFormat format, unsigned char hours, unsigned char minutes, unsigned char seconds, unsigned char frames, BMDTimecodeFlags flags) = 0;
+        virtual HRESULT STDMETHODCALLTYPE SetTimecodeFromComponents(BMDTimecodeFormat format,
+                                                                    unsigned char     hours,
+                                                                    unsigned char     minutes,
+                                                                    unsigned char     seconds,
+                                                                    unsigned char     frames,
+                                                                    BMDTimecodeFlags  flags) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE SetAncillaryData(
             /* [in] */ IDeckLinkVideoFrameAncillary * ancillary) = 0;
@@ -8411,7 +8629,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkMutableVideoFrame_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkMutableVideoFrame_v7_6_QueryInterface(This, riid, ppvObject)                                          \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkMutableVideoFrame_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8429,18 +8648,23 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkMutableVideoFrame_v7_6_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkMutableVideoFrame_v7_6_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkMutableVideoFrame_v7_6_GetTimecode(This, format, timecode)                                            \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
-#define IDeckLinkMutableVideoFrame_v7_6_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
+#define IDeckLinkMutableVideoFrame_v7_6_GetAncillaryData(This, ancillary)                                              \
+    ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
 #define IDeckLinkMutableVideoFrame_v7_6_SetFlags(This, newFlags) ((This)->lpVtbl->SetFlags(This, newFlags))
 
-#define IDeckLinkMutableVideoFrame_v7_6_SetTimecode(This, format, timecode) ((This)->lpVtbl->SetTimecode(This, format, timecode))
+#define IDeckLinkMutableVideoFrame_v7_6_SetTimecode(This, format, timecode)                                            \
+    ((This)->lpVtbl->SetTimecode(This, format, timecode))
 
-#define IDeckLinkMutableVideoFrame_v7_6_SetTimecodeFromComponents(This, format, hours, minutes, seconds, frames, flags)                                        \
+#define IDeckLinkMutableVideoFrame_v7_6_SetTimecodeFromComponents(                                                     \
+    This, format, hours, minutes, seconds, frames, flags)                                                              \
     ((This)->lpVtbl->SetTimecodeFromComponents(This, format, hours, minutes, seconds, frames, flags))
 
-#define IDeckLinkMutableVideoFrame_v7_6_SetAncillaryData(This, ancillary) ((This)->lpVtbl->SetAncillaryData(This, ancillary))
+#define IDeckLinkMutableVideoFrame_v7_6_SetAncillaryData(This, ancillary)                                              \
+    ((This)->lpVtbl->SetAncillaryData(This, ancillary))
 
 #endif /* COBJMACROS */
 
@@ -8530,7 +8754,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoInputFrame_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoInputFrame_v7_6_QueryInterface(This, riid, ppvObject)                                            \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoInputFrame_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8548,14 +8773,16 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoInputFrame_v7_6_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkVideoInputFrame_v7_6_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkVideoInputFrame_v7_6_GetTimecode(This, format, timecode)                                              \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
-#define IDeckLinkVideoInputFrame_v7_6_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
+#define IDeckLinkVideoInputFrame_v7_6_GetAncillaryData(This, ancillary)                                                \
+    ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
-#define IDeckLinkVideoInputFrame_v7_6_GetStreamTime(This, frameTime, frameDuration, timeScale)                                                                 \
+#define IDeckLinkVideoInputFrame_v7_6_GetStreamTime(This, frameTime, frameDuration, timeScale)                         \
     ((This)->lpVtbl->GetStreamTime(This, frameTime, frameDuration, timeScale))
 
-#define IDeckLinkVideoInputFrame_v7_6_GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration)                                                 \
+#define IDeckLinkVideoInputFrame_v7_6_GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration)         \
     ((This)->lpVtbl->GetHardwareReferenceTimestamp(This, timeScale, frameTime, frameDuration))
 
 #endif /* COBJMACROS */
@@ -8605,11 +8832,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IDeckLinkScreenPreviewCallback_v7_6Vtbl;
 
-    interface IDeckLinkScreenPreviewCallback_v7_6 { CONST_VTBL struct IDeckLinkScreenPreviewCallback_v7_6Vtbl* lpVtbl; };
+    interface IDeckLinkScreenPreviewCallback_v7_6
+    {
+        CONST_VTBL struct IDeckLinkScreenPreviewCallback_v7_6Vtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IDeckLinkScreenPreviewCallback_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkScreenPreviewCallback_v7_6_QueryInterface(This, riid, ppvObject)                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkScreenPreviewCallback_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8672,11 +8903,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         END_INTERFACE
     } IDeckLinkGLScreenPreviewHelper_v7_6Vtbl;
 
-    interface IDeckLinkGLScreenPreviewHelper_v7_6 { CONST_VTBL struct IDeckLinkGLScreenPreviewHelper_v7_6Vtbl* lpVtbl; };
+    interface IDeckLinkGLScreenPreviewHelper_v7_6
+    {
+        CONST_VTBL struct IDeckLinkGLScreenPreviewHelper_v7_6Vtbl* lpVtbl;
+    };
 
 #ifdef COBJMACROS
 
-#define IDeckLinkGLScreenPreviewHelper_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkGLScreenPreviewHelper_v7_6_QueryInterface(This, riid, ppvObject)                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkGLScreenPreviewHelper_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -8741,13 +8976,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoConversion_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoConversion_v7_6_QueryInterface(This, riid, ppvObject)                                            \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoConversion_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoConversion_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoConversion_v7_6_ConvertFrame(This, srcFrame, dstFrame) ((This)->lpVtbl->ConvertFrame(This, srcFrame, dstFrame))
+#define IDeckLinkVideoConversion_v7_6_ConvertFrame(This, srcFrame, dstFrame)                                           \
+    ((This)->lpVtbl->ConvertFrame(This, srcFrame, dstFrame))
 
 #endif /* COBJMACROS */
 
@@ -9000,79 +9237,100 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkConfiguration_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkConfiguration_v7_6_QueryInterface(This, riid, ppvObject)                                              \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkConfiguration_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkConfiguration_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkConfiguration_v7_6_GetConfigurationValidator(This, configObject) ((This)->lpVtbl->GetConfigurationValidator(This, configObject))
+#define IDeckLinkConfiguration_v7_6_GetConfigurationValidator(This, configObject)                                      \
+    ((This)->lpVtbl->GetConfigurationValidator(This, configObject))
 
-#define IDeckLinkConfiguration_v7_6_WriteConfigurationToPreferences(This) ((This)->lpVtbl->WriteConfigurationToPreferences(This))
+#define IDeckLinkConfiguration_v7_6_WriteConfigurationToPreferences(This)                                              \
+    ((This)->lpVtbl->WriteConfigurationToPreferences(This))
 
-#define IDeckLinkConfiguration_v7_6_SetVideoOutputFormat(This, videoOutputConnection) ((This)->lpVtbl->SetVideoOutputFormat(This, videoOutputConnection))
+#define IDeckLinkConfiguration_v7_6_SetVideoOutputFormat(This, videoOutputConnection)                                  \
+    ((This)->lpVtbl->SetVideoOutputFormat(This, videoOutputConnection))
 
-#define IDeckLinkConfiguration_v7_6_IsVideoOutputActive(This, videoOutputConnection, active)                                                                   \
+#define IDeckLinkConfiguration_v7_6_IsVideoOutputActive(This, videoOutputConnection, active)                           \
     ((This)->lpVtbl->IsVideoOutputActive(This, videoOutputConnection, active))
 
-#define IDeckLinkConfiguration_v7_6_SetAnalogVideoOutputFlags(This, analogVideoFlags) ((This)->lpVtbl->SetAnalogVideoOutputFlags(This, analogVideoFlags))
+#define IDeckLinkConfiguration_v7_6_SetAnalogVideoOutputFlags(This, analogVideoFlags)                                  \
+    ((This)->lpVtbl->SetAnalogVideoOutputFlags(This, analogVideoFlags))
 
-#define IDeckLinkConfiguration_v7_6_GetAnalogVideoOutputFlags(This, analogVideoFlags) ((This)->lpVtbl->GetAnalogVideoOutputFlags(This, analogVideoFlags))
+#define IDeckLinkConfiguration_v7_6_GetAnalogVideoOutputFlags(This, analogVideoFlags)                                  \
+    ((This)->lpVtbl->GetAnalogVideoOutputFlags(This, analogVideoFlags))
 
-#define IDeckLinkConfiguration_v7_6_EnableFieldFlickerRemovalWhenPaused(This, enable) ((This)->lpVtbl->EnableFieldFlickerRemovalWhenPaused(This, enable))
+#define IDeckLinkConfiguration_v7_6_EnableFieldFlickerRemovalWhenPaused(This, enable)                                  \
+    ((This)->lpVtbl->EnableFieldFlickerRemovalWhenPaused(This, enable))
 
-#define IDeckLinkConfiguration_v7_6_IsEnabledFieldFlickerRemovalWhenPaused(This, enabled)                                                                      \
+#define IDeckLinkConfiguration_v7_6_IsEnabledFieldFlickerRemovalWhenPaused(This, enabled)                              \
     ((This)->lpVtbl->IsEnabledFieldFlickerRemovalWhenPaused(This, enabled))
 
-#define IDeckLinkConfiguration_v7_6_Set444And3GBpsVideoOutput(This, enable444VideoOutput, enable3GbsOutput)                                                    \
+#define IDeckLinkConfiguration_v7_6_Set444And3GBpsVideoOutput(This, enable444VideoOutput, enable3GbsOutput)            \
     ((This)->lpVtbl->Set444And3GBpsVideoOutput(This, enable444VideoOutput, enable3GbsOutput))
 
-#define IDeckLinkConfiguration_v7_6_Get444And3GBpsVideoOutput(This, is444VideoOutputEnabled, threeGbsOutputEnabled)                                            \
+#define IDeckLinkConfiguration_v7_6_Get444And3GBpsVideoOutput(This, is444VideoOutputEnabled, threeGbsOutputEnabled)    \
     ((This)->lpVtbl->Get444And3GBpsVideoOutput(This, is444VideoOutputEnabled, threeGbsOutputEnabled))
 
-#define IDeckLinkConfiguration_v7_6_SetVideoOutputConversionMode(This, conversionMode) ((This)->lpVtbl->SetVideoOutputConversionMode(This, conversionMode))
+#define IDeckLinkConfiguration_v7_6_SetVideoOutputConversionMode(This, conversionMode)                                 \
+    ((This)->lpVtbl->SetVideoOutputConversionMode(This, conversionMode))
 
-#define IDeckLinkConfiguration_v7_6_GetVideoOutputConversionMode(This, conversionMode) ((This)->lpVtbl->GetVideoOutputConversionMode(This, conversionMode))
+#define IDeckLinkConfiguration_v7_6_GetVideoOutputConversionMode(This, conversionMode)                                 \
+    ((This)->lpVtbl->GetVideoOutputConversionMode(This, conversionMode))
 
-#define IDeckLinkConfiguration_v7_6_Set_HD1080p24_to_HD1080i5994_Conversion(This, enable)                                                                      \
+#define IDeckLinkConfiguration_v7_6_Set_HD1080p24_to_HD1080i5994_Conversion(This, enable)                              \
     ((This)->lpVtbl->Set_HD1080p24_to_HD1080i5994_Conversion(This, enable))
 
-#define IDeckLinkConfiguration_v7_6_Get_HD1080p24_to_HD1080i5994_Conversion(This, enabled)                                                                     \
+#define IDeckLinkConfiguration_v7_6_Get_HD1080p24_to_HD1080i5994_Conversion(This, enabled)                             \
     ((This)->lpVtbl->Get_HD1080p24_to_HD1080i5994_Conversion(This, enabled))
 
-#define IDeckLinkConfiguration_v7_6_SetVideoInputFormat(This, videoInputFormat) ((This)->lpVtbl->SetVideoInputFormat(This, videoInputFormat))
+#define IDeckLinkConfiguration_v7_6_SetVideoInputFormat(This, videoInputFormat)                                        \
+    ((This)->lpVtbl->SetVideoInputFormat(This, videoInputFormat))
 
-#define IDeckLinkConfiguration_v7_6_GetVideoInputFormat(This, videoInputFormat) ((This)->lpVtbl->GetVideoInputFormat(This, videoInputFormat))
+#define IDeckLinkConfiguration_v7_6_GetVideoInputFormat(This, videoInputFormat)                                        \
+    ((This)->lpVtbl->GetVideoInputFormat(This, videoInputFormat))
 
-#define IDeckLinkConfiguration_v7_6_SetAnalogVideoInputFlags(This, analogVideoFlags) ((This)->lpVtbl->SetAnalogVideoInputFlags(This, analogVideoFlags))
+#define IDeckLinkConfiguration_v7_6_SetAnalogVideoInputFlags(This, analogVideoFlags)                                   \
+    ((This)->lpVtbl->SetAnalogVideoInputFlags(This, analogVideoFlags))
 
-#define IDeckLinkConfiguration_v7_6_GetAnalogVideoInputFlags(This, analogVideoFlags) ((This)->lpVtbl->GetAnalogVideoInputFlags(This, analogVideoFlags))
+#define IDeckLinkConfiguration_v7_6_GetAnalogVideoInputFlags(This, analogVideoFlags)                                   \
+    ((This)->lpVtbl->GetAnalogVideoInputFlags(This, analogVideoFlags))
 
-#define IDeckLinkConfiguration_v7_6_SetVideoInputConversionMode(This, conversionMode) ((This)->lpVtbl->SetVideoInputConversionMode(This, conversionMode))
+#define IDeckLinkConfiguration_v7_6_SetVideoInputConversionMode(This, conversionMode)                                  \
+    ((This)->lpVtbl->SetVideoInputConversionMode(This, conversionMode))
 
-#define IDeckLinkConfiguration_v7_6_GetVideoInputConversionMode(This, conversionMode) ((This)->lpVtbl->GetVideoInputConversionMode(This, conversionMode))
+#define IDeckLinkConfiguration_v7_6_GetVideoInputConversionMode(This, conversionMode)                                  \
+    ((This)->lpVtbl->GetVideoInputConversionMode(This, conversionMode))
 
-#define IDeckLinkConfiguration_v7_6_SetBlackVideoOutputDuringCapture(This, blackOutInCapture)                                                                  \
+#define IDeckLinkConfiguration_v7_6_SetBlackVideoOutputDuringCapture(This, blackOutInCapture)                          \
     ((This)->lpVtbl->SetBlackVideoOutputDuringCapture(This, blackOutInCapture))
 
-#define IDeckLinkConfiguration_v7_6_GetBlackVideoOutputDuringCapture(This, blackOutInCapture)                                                                  \
+#define IDeckLinkConfiguration_v7_6_GetBlackVideoOutputDuringCapture(This, blackOutInCapture)                          \
     ((This)->lpVtbl->GetBlackVideoOutputDuringCapture(This, blackOutInCapture))
 
-#define IDeckLinkConfiguration_v7_6_Set32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode)                                                            \
+#define IDeckLinkConfiguration_v7_6_Set32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode)                    \
     ((This)->lpVtbl->Set32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode))
 
-#define IDeckLinkConfiguration_v7_6_Get32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode)                                                            \
+#define IDeckLinkConfiguration_v7_6_Get32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode)                    \
     ((This)->lpVtbl->Get32PulldownSequenceInitialTimecodeFrame(This, aFrameTimecode))
 
-#define IDeckLinkConfiguration_v7_6_SetVancSourceLineMapping(This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource)                        \
-    ((This)->lpVtbl->SetVancSourceLineMapping(This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource))
+#define IDeckLinkConfiguration_v7_6_SetVancSourceLineMapping(                                                          \
+    This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource)                                         \
+    ((This)->lpVtbl->SetVancSourceLineMapping(                                                                         \
+        This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource))
 
-#define IDeckLinkConfiguration_v7_6_GetVancSourceLineMapping(This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource)                        \
-    ((This)->lpVtbl->GetVancSourceLineMapping(This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource))
+#define IDeckLinkConfiguration_v7_6_GetVancSourceLineMapping(                                                          \
+    This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource)                                         \
+    ((This)->lpVtbl->GetVancSourceLineMapping(                                                                         \
+        This, activeLine1VANCsource, activeLine2VANCsource, activeLine3VANCsource))
 
-#define IDeckLinkConfiguration_v7_6_SetAudioInputFormat(This, audioInputFormat) ((This)->lpVtbl->SetAudioInputFormat(This, audioInputFormat))
+#define IDeckLinkConfiguration_v7_6_SetAudioInputFormat(This, audioInputFormat)                                        \
+    ((This)->lpVtbl->SetAudioInputFormat(This, audioInputFormat))
 
-#define IDeckLinkConfiguration_v7_6_GetAudioInputFormat(This, audioInputFormat) ((This)->lpVtbl->GetAudioInputFormat(This, audioInputFormat))
+#define IDeckLinkConfiguration_v7_6_GetAudioInputFormat(This, audioInputFormat)                                        \
+    ((This)->lpVtbl->GetAudioInputFormat(This, audioInputFormat))
 
 #endif /* COBJMACROS */
 
@@ -9131,16 +9389,18 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoOutputCallback_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoOutputCallback_v7_6_QueryInterface(This, riid, ppvObject)                                        \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoOutputCallback_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoOutputCallback_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoOutputCallback_v7_6_ScheduledFrameCompleted(This, completedFrame, result)                                                                \
+#define IDeckLinkVideoOutputCallback_v7_6_ScheduledFrameCompleted(This, completedFrame, result)                        \
     ((This)->lpVtbl->ScheduledFrameCompleted(This, completedFrame, result))
 
-#define IDeckLinkVideoOutputCallback_v7_6_ScheduledPlaybackHasStopped(This) ((This)->lpVtbl->ScheduledPlaybackHasStopped(This))
+#define IDeckLinkVideoOutputCallback_v7_6_ScheduledPlaybackHasStopped(This)                                            \
+    ((This)->lpVtbl->ScheduledPlaybackHasStopped(This))
 
 #endif /* COBJMACROS */
 
@@ -9206,16 +9466,18 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInputCallback_v7_6_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInputCallback_v7_6_QueryInterface(This, riid, ppvObject)                                              \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInputCallback_v7_6_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInputCallback_v7_6_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInputCallback_v7_6_VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags)                                     \
+#define IDeckLinkInputCallback_v7_6_VideoInputFormatChanged(                                                           \
+    This, notificationEvents, newDisplayMode, detectedSignalFlags)                                                     \
     ((This)->lpVtbl->VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags))
 
-#define IDeckLinkInputCallback_v7_6_VideoInputFrameArrived(This, videoFrame, audioPacket)                                                                      \
+#define IDeckLinkInputCallback_v7_6_VideoInputFrameArrived(This, videoFrame, audioPacket)                              \
     ((This)->lpVtbl->VideoInputFrameArrived(This, videoFrame, audioPacket))
 
 #endif /* COBJMACROS */
@@ -9296,16 +9558,18 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInputCallback_v7_3_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInputCallback_v7_3_QueryInterface(This, riid, ppvObject)                                              \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInputCallback_v7_3_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInputCallback_v7_3_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInputCallback_v7_3_VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags)                                     \
+#define IDeckLinkInputCallback_v7_3_VideoInputFormatChanged(                                                           \
+    This, notificationEvents, newDisplayMode, detectedSignalFlags)                                                     \
     ((This)->lpVtbl->VideoInputFormatChanged(This, notificationEvents, newDisplayMode, detectedSignalFlags))
 
-#define IDeckLinkInputCallback_v7_3_VideoInputFrameArrived(This, videoFrame, audioPacket)                                                                      \
+#define IDeckLinkInputCallback_v7_3_VideoInputFrameArrived(This, videoFrame, audioPacket)                              \
     ((This)->lpVtbl->VideoInputFrameArrived(This, videoFrame, audioPacket))
 
 #endif /* COBJMACROS */
@@ -9353,13 +9617,17 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
                                                            /* [out] */ IDeckLinkMutableVideoFrame_v7_6** outFrame) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE CreateAncillaryData(BMDPixelFormat pixelFormat,
-                                                              /* [out] */ IDeckLinkVideoFrameAncillary * *outBuffer) = 0;
+                                                              /* [out] */ IDeckLinkVideoFrameAncillary *
+                                                                  *outBuffer) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisplayVideoFrameSync(
             /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE ScheduleVideoFrame(
-            /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame, BMDTimeValue displayTime, BMDTimeValue displayDuration, BMDTimeScale timeScale) = 0;
+            /* [in] */ IDeckLinkVideoFrame_v7_6 * theFrame,
+            BMDTimeValue displayTime,
+            BMDTimeValue displayDuration,
+            BMDTimeScale timeScale) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE SetScheduledFrameCompletionCallback(
             /* [in] */ IDeckLinkVideoOutputCallback * theCallback) = 0;
@@ -9367,8 +9635,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE GetBufferedVideoFrameCount(
             /* [out] */ unsigned int* bufferedFrameCount) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(
-            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount, BMDAudioOutputStreamType streamType) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(BMDAudioSampleRate       sampleRate,
+                                                            BMDAudioSampleType       sampleType,
+                                                            unsigned int             channelCount,
+                                                            BMDAudioOutputStreamType streamType) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioOutput(void) = 0;
 
@@ -9396,7 +9666,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetAudioCallback(
             /* [in] */ IDeckLinkAudioOutputCallback * theCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
+        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(
+            BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE StopScheduledPlayback(BMDTimeValue stopPlaybackAtTime,
                                                                 /* [out] */ BMDTimeValue * actualStopTime,
@@ -9406,7 +9677,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
             /* [out] */ BOOL * active) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE GetHardwareReferenceClock(BMDTimeScale desiredTimeScale,
-                                                                    /* [out] */ BMDTimeValue * elapsedTimeSinceSchedulerBegan) = 0;
+                                                                    /* [out] */ BMDTimeValue *
+                                                                        elapsedTimeSinceSchedulerBegan) = 0;
     };
 
 #else /* C style interface */
@@ -9439,7 +9711,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         (IDeckLinkOutput_v7_3*                      This,
          /* [in] */ IDeckLinkScreenPreviewCallback* previewCallback);
 
-        HRESULT(STDMETHODCALLTYPE* EnableVideoOutput)(IDeckLinkOutput_v7_3* This, BMDDisplayMode displayMode, BMDVideoOutputFlags flags);
+        HRESULT(STDMETHODCALLTYPE* EnableVideoOutput)
+        (IDeckLinkOutput_v7_3* This, BMDDisplayMode displayMode, BMDVideoOutputFlags flags);
 
         HRESULT(STDMETHODCALLTYPE* DisableVideoOutput)(IDeckLinkOutput_v7_3* This);
 
@@ -9542,70 +9815,81 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkOutput_v7_3_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkOutput_v7_3_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkOutput_v7_3_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkOutput_v7_3_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkOutput_v7_3_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                      \
+#define IDeckLinkOutput_v7_3_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                              \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkOutput_v7_3_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkOutput_v7_3_GetDisplayModeIterator(This, iterator)                                                    \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkOutput_v7_3_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkOutput_v7_3_SetScreenPreviewCallback(This, previewCallback)                                           \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkOutput_v7_3_EnableVideoOutput(This, displayMode, flags) ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
+#define IDeckLinkOutput_v7_3_EnableVideoOutput(This, displayMode, flags)                                               \
+    ((This)->lpVtbl->EnableVideoOutput(This, displayMode, flags))
 
 #define IDeckLinkOutput_v7_3_DisableVideoOutput(This) ((This)->lpVtbl->DisableVideoOutput(This))
 
-#define IDeckLinkOutput_v7_3_SetVideoOutputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkOutput_v7_3_SetVideoOutputFrameMemoryAllocator(This, theAllocator)                                    \
+    ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkOutput_v7_3_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                                                     \
+#define IDeckLinkOutput_v7_3_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)             \
     ((This)->lpVtbl->CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_v7_3_CreateAncillaryData(This, pixelFormat, outBuffer) ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
+#define IDeckLinkOutput_v7_3_CreateAncillaryData(This, pixelFormat, outBuffer)                                         \
+    ((This)->lpVtbl->CreateAncillaryData(This, pixelFormat, outBuffer))
 
-#define IDeckLinkOutput_v7_3_DisplayVideoFrameSync(This, theFrame) ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
+#define IDeckLinkOutput_v7_3_DisplayVideoFrameSync(This, theFrame)                                                     \
+    ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
 
-#define IDeckLinkOutput_v7_3_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                                                       \
+#define IDeckLinkOutput_v7_3_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)               \
     ((This)->lpVtbl->ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale))
 
-#define IDeckLinkOutput_v7_3_SetScheduledFrameCompletionCallback(This, theCallback) ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
+#define IDeckLinkOutput_v7_3_SetScheduledFrameCompletionCallback(This, theCallback)                                    \
+    ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_3_GetBufferedVideoFrameCount(This, bufferedFrameCount) ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
+#define IDeckLinkOutput_v7_3_GetBufferedVideoFrameCount(This, bufferedFrameCount)                                      \
+    ((This)->lpVtbl->GetBufferedVideoFrameCount(This, bufferedFrameCount))
 
-#define IDeckLinkOutput_v7_3_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                                                         \
+#define IDeckLinkOutput_v7_3_EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType)                 \
     ((This)->lpVtbl->EnableAudioOutput(This, sampleRate, sampleType, channelCount, streamType))
 
 #define IDeckLinkOutput_v7_3_DisableAudioOutput(This) ((This)->lpVtbl->DisableAudioOutput(This))
 
-#define IDeckLinkOutput_v7_3_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                                                        \
+#define IDeckLinkOutput_v7_3_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                \
     ((This)->lpVtbl->WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten))
 
 #define IDeckLinkOutput_v7_3_BeginAudioPreroll(This) ((This)->lpVtbl->BeginAudioPreroll(This))
 
 #define IDeckLinkOutput_v7_3_EndAudioPreroll(This) ((This)->lpVtbl->EndAudioPreroll(This))
 
-#define IDeckLinkOutput_v7_3_ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                  \
+#define IDeckLinkOutput_v7_3_ScheduleAudioSamples(                                                                     \
+    This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                        \
     ((This)->lpVtbl->ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten))
 
-#define IDeckLinkOutput_v7_3_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                                                                  \
+#define IDeckLinkOutput_v7_3_GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount)                          \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleFrameCount))
 
 #define IDeckLinkOutput_v7_3_FlushBufferedAudioSamples(This) ((This)->lpVtbl->FlushBufferedAudioSamples(This))
 
 #define IDeckLinkOutput_v7_3_SetAudioCallback(This, theCallback) ((This)->lpVtbl->SetAudioCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_3_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v7_3_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                 \
     ((This)->lpVtbl->StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed))
 
-#define IDeckLinkOutput_v7_3_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                                                        \
+#define IDeckLinkOutput_v7_3_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                \
     ((This)->lpVtbl->StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale))
 
-#define IDeckLinkOutput_v7_3_IsScheduledPlaybackRunning(This, active) ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
+#define IDeckLinkOutput_v7_3_IsScheduledPlaybackRunning(This, active)                                                  \
+    ((This)->lpVtbl->IsScheduledPlaybackRunning(This, active))
 
-#define IDeckLinkOutput_v7_3_GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan)                                                 \
+#define IDeckLinkOutput_v7_3_GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan)         \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan))
 
 #endif /* COBJMACROS */
@@ -9638,14 +9922,16 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetScreenPreviewCallback(
             /* [in] */ IDeckLinkScreenPreviewCallback * previewCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(
+            BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableVideoInput(void) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE GetAvailableVideoFrameCount(
             /* [out] */ unsigned int* availableFrameCount) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(
+            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioInput(void) = 0;
 
@@ -9704,7 +9990,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
          /* [out] */ unsigned int* availableFrameCount);
 
         HRESULT(STDMETHODCALLTYPE* EnableAudioInput)
-        (IDeckLinkInput_v7_3* This, BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount);
+        (IDeckLinkInput_v7_3* This,
+         BMDAudioSampleRate   sampleRate,
+         BMDAudioSampleType   sampleType,
+         unsigned int         channelCount);
 
         HRESULT(STDMETHODCALLTYPE* DisableAudioInput)(IDeckLinkInput_v7_3* This);
 
@@ -9731,31 +10020,36 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInput_v7_3_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInput_v7_3_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInput_v7_3_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInput_v7_3_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInput_v7_3_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                       \
+#define IDeckLinkInput_v7_3_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                               \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkInput_v7_3_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkInput_v7_3_GetDisplayModeIterator(This, iterator)                                                     \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkInput_v7_3_SetScreenPreviewCallback(This, previewCallback) ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
+#define IDeckLinkInput_v7_3_SetScreenPreviewCallback(This, previewCallback)                                            \
+    ((This)->lpVtbl->SetScreenPreviewCallback(This, previewCallback))
 
-#define IDeckLinkInput_v7_3_EnableVideoInput(This, displayMode, pixelFormat, flags) ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
+#define IDeckLinkInput_v7_3_EnableVideoInput(This, displayMode, pixelFormat, flags)                                    \
+    ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
 
 #define IDeckLinkInput_v7_3_DisableVideoInput(This) ((This)->lpVtbl->DisableVideoInput(This))
 
-#define IDeckLinkInput_v7_3_GetAvailableVideoFrameCount(This, availableFrameCount) ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
+#define IDeckLinkInput_v7_3_GetAvailableVideoFrameCount(This, availableFrameCount)                                     \
+    ((This)->lpVtbl->GetAvailableVideoFrameCount(This, availableFrameCount))
 
-#define IDeckLinkInput_v7_3_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                                                       \
+#define IDeckLinkInput_v7_3_EnableAudioInput(This, sampleRate, sampleType, channelCount)                               \
     ((This)->lpVtbl->EnableAudioInput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkInput_v7_3_DisableAudioInput(This) ((This)->lpVtbl->DisableAudioInput(This))
 
-#define IDeckLinkInput_v7_3_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                                                                 \
+#define IDeckLinkInput_v7_3_GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount)                         \
     ((This)->lpVtbl->GetAvailableAudioSampleFrameCount(This, availableSampleFrameCount))
 
 #define IDeckLinkInput_v7_3_StartStreams(This) ((This)->lpVtbl->StartStreams(This))
@@ -9846,7 +10140,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoInputFrame_v7_3_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoInputFrame_v7_3_QueryInterface(This, riid, ppvObject)                                            \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoInputFrame_v7_3_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -9864,11 +10159,13 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoInputFrame_v7_3_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkVideoInputFrame_v7_3_GetTimecode(This, format, timecode) ((This)->lpVtbl->GetTimecode(This, format, timecode))
+#define IDeckLinkVideoInputFrame_v7_3_GetTimecode(This, format, timecode)                                              \
+    ((This)->lpVtbl->GetTimecode(This, format, timecode))
 
-#define IDeckLinkVideoInputFrame_v7_3_GetAncillaryData(This, ancillary) ((This)->lpVtbl->GetAncillaryData(This, ancillary))
+#define IDeckLinkVideoInputFrame_v7_3_GetAncillaryData(This, ancillary)                                                \
+    ((This)->lpVtbl->GetAncillaryData(This, ancillary))
 
-#define IDeckLinkVideoInputFrame_v7_3_GetStreamTime(This, frameTime, frameDuration, timeScale)                                                                 \
+#define IDeckLinkVideoInputFrame_v7_3_GetStreamTime(This, frameTime, frameDuration, timeScale)                         \
     ((This)->lpVtbl->GetStreamTime(This, frameTime, frameDuration, timeScale))
 
 #endif /* COBJMACROS */
@@ -9922,13 +10219,15 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayModeIterator_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayModeIterator_v7_1_QueryInterface(This, riid, ppvObject)                                        \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayModeIterator_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkDisplayModeIterator_v7_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkDisplayModeIterator_v7_1_Next(This, deckLinkDisplayMode) ((This)->lpVtbl->Next(This, deckLinkDisplayMode))
+#define IDeckLinkDisplayModeIterator_v7_1_Next(This, deckLinkDisplayMode)                                              \
+    ((This)->lpVtbl->Next(This, deckLinkDisplayMode))
 
 #endif /* COBJMACROS */
 
@@ -10002,7 +10301,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkDisplayMode_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkDisplayMode_v7_1_QueryInterface(This, riid, ppvObject)                                                \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkDisplayMode_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -10016,7 +10316,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkDisplayMode_v7_1_GetHeight(This) ((This)->lpVtbl->GetHeight(This))
 
-#define IDeckLinkDisplayMode_v7_1_GetFrameRate(This, frameDuration, timeScale) ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
+#define IDeckLinkDisplayMode_v7_1_GetFrameRate(This, frameDuration, timeScale)                                         \
+    ((This)->lpVtbl->GetFrameRate(This, frameDuration, timeScale))
 
 #endif /* COBJMACROS */
 
@@ -10086,7 +10387,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoFrame_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoFrame_v7_1_QueryInterface(This, riid, ppvObject)                                                 \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoFrame_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -10124,7 +10426,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
     IDeckLinkVideoInputFrame_v7_1 : public IDeckLinkVideoFrame_v7_1
     {
       public:
-        virtual HRESULT STDMETHODCALLTYPE GetFrameTime(BMDTimeValue * frameTime, BMDTimeValue * frameDuration, BMDTimeScale timeScale) = 0;
+        virtual HRESULT STDMETHODCALLTYPE GetFrameTime(
+            BMDTimeValue * frameTime, BMDTimeValue * frameDuration, BMDTimeScale timeScale) = 0;
     };
 
 #else /* C style interface */
@@ -10156,7 +10459,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         HRESULT(STDMETHODCALLTYPE* GetBytes)(IDeckLinkVideoInputFrame_v7_1* This, void** buffer);
 
         HRESULT(STDMETHODCALLTYPE* GetFrameTime)
-        (IDeckLinkVideoInputFrame_v7_1* This, BMDTimeValue* frameTime, BMDTimeValue* frameDuration, BMDTimeScale timeScale);
+        (IDeckLinkVideoInputFrame_v7_1* This,
+         BMDTimeValue*                  frameTime,
+         BMDTimeValue*                  frameDuration,
+         BMDTimeScale                   timeScale);
 
         END_INTERFACE
     } IDeckLinkVideoInputFrame_v7_1Vtbl;
@@ -10165,7 +10471,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoInputFrame_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoInputFrame_v7_1_QueryInterface(This, riid, ppvObject)                                            \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoInputFrame_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -10183,7 +10490,7 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkVideoInputFrame_v7_1_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkVideoInputFrame_v7_1_GetFrameTime(This, frameTime, frameDuration, timeScale)                                                                  \
+#define IDeckLinkVideoInputFrame_v7_1_GetFrameTime(This, frameTime, frameDuration, timeScale)                          \
     ((This)->lpVtbl->GetFrameTime(This, frameTime, frameDuration, timeScale))
 
 #endif /* COBJMACROS */
@@ -10233,7 +10540,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
         HRESULT(STDMETHODCALLTYPE* GetBytes)(IDeckLinkAudioInputPacket_v7_1* This, void** buffer);
 
-        HRESULT(STDMETHODCALLTYPE* GetAudioPacketTime)(IDeckLinkAudioInputPacket_v7_1* This, BMDTimeValue* packetTime, BMDTimeScale timeScale);
+        HRESULT(STDMETHODCALLTYPE* GetAudioPacketTime)
+        (IDeckLinkAudioInputPacket_v7_1* This, BMDTimeValue* packetTime, BMDTimeScale timeScale);
 
         END_INTERFACE
     } IDeckLinkAudioInputPacket_v7_1Vtbl;
@@ -10242,7 +10550,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkAudioInputPacket_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkAudioInputPacket_v7_1_QueryInterface(This, riid, ppvObject)                                           \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkAudioInputPacket_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
@@ -10252,7 +10561,8 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #define IDeckLinkAudioInputPacket_v7_1_GetBytes(This, buffer) ((This)->lpVtbl->GetBytes(This, buffer))
 
-#define IDeckLinkAudioInputPacket_v7_1_GetAudioPacketTime(This, packetTime, timeScale) ((This)->lpVtbl->GetAudioPacketTime(This, packetTime, timeScale))
+#define IDeckLinkAudioInputPacket_v7_1_GetAudioPacketTime(This, packetTime, timeScale)                                 \
+    ((This)->lpVtbl->GetAudioPacketTime(This, packetTime, timeScale))
 
 #endif /* COBJMACROS */
 
@@ -10307,13 +10617,14 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkVideoOutputCallback_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkVideoOutputCallback_v7_1_QueryInterface(This, riid, ppvObject)                                        \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkVideoOutputCallback_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkVideoOutputCallback_v7_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkVideoOutputCallback_v7_1_ScheduledFrameCompleted(This, completedFrame, result)                                                                \
+#define IDeckLinkVideoOutputCallback_v7_1_ScheduledFrameCompleted(This, completedFrame, result)                        \
     ((This)->lpVtbl->ScheduledFrameCompleted(This, completedFrame, result))
 
 #endif /* COBJMACROS */
@@ -10369,13 +10680,14 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInputCallback_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInputCallback_v7_1_QueryInterface(This, riid, ppvObject)                                              \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInputCallback_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInputCallback_v7_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInputCallback_v7_1_VideoInputFrameArrived(This, videoFrame, audioPacket)                                                                      \
+#define IDeckLinkInputCallback_v7_1_VideoInputFrameArrived(This, videoFrame, audioPacket)                              \
     ((This)->lpVtbl->VideoInputFrameArrived(This, videoFrame, audioPacket))
 
 #endif /* COBJMACROS */
@@ -10412,21 +10724,33 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetVideoOutputFrameMemoryAllocator(
             /* [in] */ IDeckLinkMemoryAllocator * theAllocator) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE CreateVideoFrame(
-            int width, int height, int rowBytes, BMDPixelFormat pixelFormat, BMDFrameFlags flags, IDeckLinkVideoFrame_v7_1** outFrame) = 0;
+        virtual HRESULT STDMETHODCALLTYPE CreateVideoFrame(int                        width,
+                                                           int                        height,
+                                                           int                        rowBytes,
+                                                           BMDPixelFormat             pixelFormat,
+                                                           BMDFrameFlags              flags,
+                                                           IDeckLinkVideoFrame_v7_1** outFrame) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE CreateVideoFrameFromBuffer(
-            void* buffer, int width, int height, int rowBytes, BMDPixelFormat pixelFormat, BMDFrameFlags flags, IDeckLinkVideoFrame_v7_1** outFrame) = 0;
+        virtual HRESULT STDMETHODCALLTYPE CreateVideoFrameFromBuffer(void*                      buffer,
+                                                                     int                        width,
+                                                                     int                        height,
+                                                                     int                        rowBytes,
+                                                                     BMDPixelFormat             pixelFormat,
+                                                                     BMDFrameFlags              flags,
+                                                                     IDeckLinkVideoFrame_v7_1** outFrame) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisplayVideoFrameSync(IDeckLinkVideoFrame_v7_1 * theFrame) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE ScheduleVideoFrame(
-            IDeckLinkVideoFrame_v7_1 * theFrame, BMDTimeValue displayTime, BMDTimeValue displayDuration, BMDTimeScale timeScale) = 0;
+        virtual HRESULT STDMETHODCALLTYPE ScheduleVideoFrame(IDeckLinkVideoFrame_v7_1 * theFrame,
+                                                             BMDTimeValue displayTime,
+                                                             BMDTimeValue displayDuration,
+                                                             BMDTimeScale timeScale) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE SetScheduledFrameCompletionCallback(
             /* [in] */ IDeckLinkVideoOutputCallback_v7_1 * theCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioOutput(
+            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioOutput(void) = 0;
 
@@ -10452,11 +10776,14 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE SetAudioCallback(
             /* [in] */ IDeckLinkAudioOutputCallback * theCallback) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
+        virtual HRESULT STDMETHODCALLTYPE StartScheduledPlayback(
+            BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE StopScheduledPlayback(BMDTimeValue stopPlaybackAtTime, BMDTimeValue * actualStopTime, BMDTimeScale timeScale) = 0;
+        virtual HRESULT STDMETHODCALLTYPE StopScheduledPlayback(
+            BMDTimeValue stopPlaybackAtTime, BMDTimeValue * actualStopTime, BMDTimeScale timeScale) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE GetHardwareReferenceClock(BMDTimeScale desiredTimeScale, BMDTimeValue * elapsedTimeSinceSchedulerBegan) = 0;
+        virtual HRESULT STDMETHODCALLTYPE GetHardwareReferenceClock(BMDTimeScale desiredTimeScale,
+                                                                    BMDTimeValue * elapsedTimeSinceSchedulerBegan) = 0;
     };
 
 #else /* C style interface */
@@ -10494,7 +10821,13 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
          /* [in] */ IDeckLinkMemoryAllocator* theAllocator);
 
         HRESULT(STDMETHODCALLTYPE* CreateVideoFrame)
-        (IDeckLinkOutput_v7_1* This, int width, int height, int rowBytes, BMDPixelFormat pixelFormat, BMDFrameFlags flags, IDeckLinkVideoFrame_v7_1** outFrame);
+        (IDeckLinkOutput_v7_1*      This,
+         int                        width,
+         int                        height,
+         int                        rowBytes,
+         BMDPixelFormat             pixelFormat,
+         BMDFrameFlags              flags,
+         IDeckLinkVideoFrame_v7_1** outFrame);
 
         HRESULT(STDMETHODCALLTYPE* CreateVideoFrameFromBuffer)
         (IDeckLinkOutput_v7_1*      This,
@@ -10506,17 +10839,25 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
          BMDFrameFlags              flags,
          IDeckLinkVideoFrame_v7_1** outFrame);
 
-        HRESULT(STDMETHODCALLTYPE* DisplayVideoFrameSync)(IDeckLinkOutput_v7_1* This, IDeckLinkVideoFrame_v7_1* theFrame);
+        HRESULT(STDMETHODCALLTYPE* DisplayVideoFrameSync)
+        (IDeckLinkOutput_v7_1* This, IDeckLinkVideoFrame_v7_1* theFrame);
 
         HRESULT(STDMETHODCALLTYPE* ScheduleVideoFrame)
-        (IDeckLinkOutput_v7_1* This, IDeckLinkVideoFrame_v7_1* theFrame, BMDTimeValue displayTime, BMDTimeValue displayDuration, BMDTimeScale timeScale);
+        (IDeckLinkOutput_v7_1*     This,
+         IDeckLinkVideoFrame_v7_1* theFrame,
+         BMDTimeValue              displayTime,
+         BMDTimeValue              displayDuration,
+         BMDTimeScale              timeScale);
 
         HRESULT(STDMETHODCALLTYPE* SetScheduledFrameCompletionCallback)
         (IDeckLinkOutput_v7_1*                         This,
          /* [in] */ IDeckLinkVideoOutputCallback_v7_1* theCallback);
 
         HRESULT(STDMETHODCALLTYPE* EnableAudioOutput)
-        (IDeckLinkOutput_v7_1* This, BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount);
+        (IDeckLinkOutput_v7_1* This,
+         BMDAudioSampleRate    sampleRate,
+         BMDAudioSampleType    sampleType,
+         unsigned int          channelCount);
 
         HRESULT(STDMETHODCALLTYPE* DisableAudioOutput)(IDeckLinkOutput_v7_1* This);
 
@@ -10552,7 +10893,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         (IDeckLinkOutput_v7_1* This, BMDTimeValue playbackStartTime, BMDTimeScale timeScale, double playbackSpeed);
 
         HRESULT(STDMETHODCALLTYPE* StopScheduledPlayback)
-        (IDeckLinkOutput_v7_1* This, BMDTimeValue stopPlaybackAtTime, BMDTimeValue* actualStopTime, BMDTimeScale timeScale);
+        (IDeckLinkOutput_v7_1* This,
+         BMDTimeValue          stopPlaybackAtTime,
+         BMDTimeValue*         actualStopTime,
+         BMDTimeScale          timeScale);
 
         HRESULT(STDMETHODCALLTYPE* GetHardwareReferenceClock)
         (IDeckLinkOutput_v7_1* This, BMDTimeScale desiredTimeScale, BMDTimeValue* elapsedTimeSinceSchedulerBegan);
@@ -10564,65 +10908,72 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkOutput_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkOutput_v7_1_QueryInterface(This, riid, ppvObject)                                                     \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkOutput_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkOutput_v7_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkOutput_v7_1_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                      \
+#define IDeckLinkOutput_v7_1_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                              \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkOutput_v7_1_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkOutput_v7_1_GetDisplayModeIterator(This, iterator)                                                    \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
 #define IDeckLinkOutput_v7_1_EnableVideoOutput(This, displayMode) ((This)->lpVtbl->EnableVideoOutput(This, displayMode))
 
 #define IDeckLinkOutput_v7_1_DisableVideoOutput(This) ((This)->lpVtbl->DisableVideoOutput(This))
 
-#define IDeckLinkOutput_v7_1_SetVideoOutputFrameMemoryAllocator(This, theAllocator) ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
+#define IDeckLinkOutput_v7_1_SetVideoOutputFrameMemoryAllocator(This, theAllocator)                                    \
+    ((This)->lpVtbl->SetVideoOutputFrameMemoryAllocator(This, theAllocator))
 
-#define IDeckLinkOutput_v7_1_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)                                                     \
+#define IDeckLinkOutput_v7_1_CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame)             \
     ((This)->lpVtbl->CreateVideoFrame(This, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_v7_1_CreateVideoFrameFromBuffer(This, buffer, width, height, rowBytes, pixelFormat, flags, outFrame)                                   \
+#define IDeckLinkOutput_v7_1_CreateVideoFrameFromBuffer(                                                               \
+    This, buffer, width, height, rowBytes, pixelFormat, flags, outFrame)                                               \
     ((This)->lpVtbl->CreateVideoFrameFromBuffer(This, buffer, width, height, rowBytes, pixelFormat, flags, outFrame))
 
-#define IDeckLinkOutput_v7_1_DisplayVideoFrameSync(This, theFrame) ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
+#define IDeckLinkOutput_v7_1_DisplayVideoFrameSync(This, theFrame)                                                     \
+    ((This)->lpVtbl->DisplayVideoFrameSync(This, theFrame))
 
-#define IDeckLinkOutput_v7_1_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)                                                       \
+#define IDeckLinkOutput_v7_1_ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale)               \
     ((This)->lpVtbl->ScheduleVideoFrame(This, theFrame, displayTime, displayDuration, timeScale))
 
-#define IDeckLinkOutput_v7_1_SetScheduledFrameCompletionCallback(This, theCallback) ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
+#define IDeckLinkOutput_v7_1_SetScheduledFrameCompletionCallback(This, theCallback)                                    \
+    ((This)->lpVtbl->SetScheduledFrameCompletionCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_1_EnableAudioOutput(This, sampleRate, sampleType, channelCount)                                                                     \
+#define IDeckLinkOutput_v7_1_EnableAudioOutput(This, sampleRate, sampleType, channelCount)                             \
     ((This)->lpVtbl->EnableAudioOutput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkOutput_v7_1_DisableAudioOutput(This) ((This)->lpVtbl->DisableAudioOutput(This))
 
-#define IDeckLinkOutput_v7_1_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                                                        \
+#define IDeckLinkOutput_v7_1_WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten)                \
     ((This)->lpVtbl->WriteAudioSamplesSync(This, buffer, sampleFrameCount, sampleFramesWritten))
 
 #define IDeckLinkOutput_v7_1_BeginAudioPreroll(This) ((This)->lpVtbl->BeginAudioPreroll(This))
 
 #define IDeckLinkOutput_v7_1_EndAudioPreroll(This) ((This)->lpVtbl->EndAudioPreroll(This))
 
-#define IDeckLinkOutput_v7_1_ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                  \
+#define IDeckLinkOutput_v7_1_ScheduleAudioSamples(                                                                     \
+    This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten)                                        \
     ((This)->lpVtbl->ScheduleAudioSamples(This, buffer, sampleFrameCount, streamTime, timeScale, sampleFramesWritten))
 
-#define IDeckLinkOutput_v7_1_GetBufferedAudioSampleFrameCount(This, bufferedSampleCount)                                                                       \
+#define IDeckLinkOutput_v7_1_GetBufferedAudioSampleFrameCount(This, bufferedSampleCount)                               \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleCount))
 
 #define IDeckLinkOutput_v7_1_FlushBufferedAudioSamples(This) ((This)->lpVtbl->FlushBufferedAudioSamples(This))
 
 #define IDeckLinkOutput_v7_1_SetAudioCallback(This, theCallback) ((This)->lpVtbl->SetAudioCallback(This, theCallback))
 
-#define IDeckLinkOutput_v7_1_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                                                         \
+#define IDeckLinkOutput_v7_1_StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed)                 \
     ((This)->lpVtbl->StartScheduledPlayback(This, playbackStartTime, timeScale, playbackSpeed))
 
-#define IDeckLinkOutput_v7_1_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                                                        \
+#define IDeckLinkOutput_v7_1_StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale)                \
     ((This)->lpVtbl->StopScheduledPlayback(This, stopPlaybackAtTime, actualStopTime, timeScale))
 
-#define IDeckLinkOutput_v7_1_GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan)                                                 \
+#define IDeckLinkOutput_v7_1_GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan)         \
     ((This)->lpVtbl->GetHardwareReferenceClock(This, desiredTimeScale, elapsedTimeSinceSchedulerBegan))
 
 #endif /* COBJMACROS */
@@ -10652,11 +11003,13 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         virtual HRESULT STDMETHODCALLTYPE GetDisplayModeIterator(
             /* [out] */ IDeckLinkDisplayModeIterator_v7_1 * *iterator) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableVideoInput(
+            BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDVideoInputFlags flags) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableVideoInput(void) = 0;
 
-        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
+        virtual HRESULT STDMETHODCALLTYPE EnableAudioInput(
+            BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount) = 0;
 
         virtual HRESULT STDMETHODCALLTYPE DisableAudioInput(void) = 0;
 
@@ -10711,7 +11064,10 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
         HRESULT(STDMETHODCALLTYPE* DisableVideoInput)(IDeckLinkInput_v7_1* This);
 
         HRESULT(STDMETHODCALLTYPE* EnableAudioInput)
-        (IDeckLinkInput_v7_1* This, BMDAudioSampleRate sampleRate, BMDAudioSampleType sampleType, unsigned int channelCount);
+        (IDeckLinkInput_v7_1* This,
+         BMDAudioSampleRate   sampleRate,
+         BMDAudioSampleType   sampleType,
+         unsigned int         channelCount);
 
         HRESULT(STDMETHODCALLTYPE* DisableAudioInput)(IDeckLinkInput_v7_1* This);
 
@@ -10744,30 +11100,34 @@ typedef enum _BMDDeviceBusyState BMDDeviceBusyState;
 
 #ifdef COBJMACROS
 
-#define IDeckLinkInput_v7_1_QueryInterface(This, riid, ppvObject) ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
+#define IDeckLinkInput_v7_1_QueryInterface(This, riid, ppvObject)                                                      \
+    ((This)->lpVtbl->QueryInterface(This, riid, ppvObject))
 
 #define IDeckLinkInput_v7_1_AddRef(This) ((This)->lpVtbl->AddRef(This))
 
 #define IDeckLinkInput_v7_1_Release(This) ((This)->lpVtbl->Release(This))
 
-#define IDeckLinkInput_v7_1_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                                                                       \
+#define IDeckLinkInput_v7_1_DoesSupportVideoMode(This, displayMode, pixelFormat, result)                               \
     ((This)->lpVtbl->DoesSupportVideoMode(This, displayMode, pixelFormat, result))
 
-#define IDeckLinkInput_v7_1_GetDisplayModeIterator(This, iterator) ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
+#define IDeckLinkInput_v7_1_GetDisplayModeIterator(This, iterator)                                                     \
+    ((This)->lpVtbl->GetDisplayModeIterator(This, iterator))
 
-#define IDeckLinkInput_v7_1_EnableVideoInput(This, displayMode, pixelFormat, flags) ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
+#define IDeckLinkInput_v7_1_EnableVideoInput(This, displayMode, pixelFormat, flags)                                    \
+    ((This)->lpVtbl->EnableVideoInput(This, displayMode, pixelFormat, flags))
 
 #define IDeckLinkInput_v7_1_DisableVideoInput(This) ((This)->lpVtbl->DisableVideoInput(This))
 
-#define IDeckLinkInput_v7_1_EnableAudioInput(This, sampleRate, sampleType, channelCount)                                                                       \
+#define IDeckLinkInput_v7_1_EnableAudioInput(This, sampleRate, sampleType, channelCount)                               \
     ((This)->lpVtbl->EnableAudioInput(This, sampleRate, sampleType, channelCount))
 
 #define IDeckLinkInput_v7_1_DisableAudioInput(This) ((This)->lpVtbl->DisableAudioInput(This))
 
-#define IDeckLinkInput_v7_1_ReadAudioSamples(This, buffer, sampleFrameCount, sampleFramesRead, audioPacketTime, timeScale)                                     \
+#define IDeckLinkInput_v7_1_ReadAudioSamples(                                                                          \
+    This, buffer, sampleFrameCount, sampleFramesRead, audioPacketTime, timeScale)                                      \
     ((This)->lpVtbl->ReadAudioSamples(This, buffer, sampleFrameCount, sampleFramesRead, audioPacketTime, timeScale))
 
-#define IDeckLinkInput_v7_1_GetBufferedAudioSampleFrameCount(This, bufferedSampleCount)                                                                        \
+#define IDeckLinkInput_v7_1_GetBufferedAudioSampleFrameCount(This, bufferedSampleCount)                                \
     ((This)->lpVtbl->GetBufferedAudioSampleFrameCount(This, bufferedSampleCount))
 
 #define IDeckLinkInput_v7_1_StartStreams(This) ((This)->lpVtbl->StartStreams(This))

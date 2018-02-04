@@ -28,6 +28,9 @@
 
 namespace caspar { namespace reroute {
 
-void init(core::module_dependencies dependencies) { dependencies.producer_registry->register_producer_factory(L"Reroute Producer", reroute::create_producer); }
+void init(core::module_dependencies dependencies)
+{
+    dependencies.producer_registry->register_producer_factory(L"Reroute Producer", reroute::create_producer);
+}
 
 }} // namespace caspar::reroute

@@ -84,9 +84,9 @@ inline xmm::s8_x blend(xmm::s8_x d, xmm::s8_x s)
     // T(S, D) = S * D[A] + 0x80
 
     auto aaaa = s8_x::shuffle(d, s8_x(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
-    d         = s8_x(u8_x::min(
-        u8_x(d),
-        u8_x(aaaa))); // Overflow guard. Some source files have color values which incorrectly exceed pre-multiplied alpha values, e.g. red(255) > alpha(254).
+    d         = s8_x(u8_x::min(u8_x(d),
+                       u8_x(aaaa))); // Overflow guard. Some source files have color values which incorrectly exceed
+                                             // pre-multiplied alpha values, e.g. red(255) > alpha(254).
 
     auto xaxa = s16_x(aaaa) >> 8;
 
@@ -138,7 +138,8 @@ class image_renderer
     core::video_format_desc                                                                            format_desc_;
 
   public:
-    std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
+    std::future<array<const std::uint8_t>> operator()(std::vector<item>              items,
+                                                      const core::video_format_desc& format_desc)
     {
         if (format_desc != format_desc_) {
             format_desc_ = format_desc;
@@ -162,13 +163,15 @@ class image_renderer
     }
 
   private:
-    void draw(std::vector<item> items, uint8_t* dest, std::size_t width, std::size_t height, core::field_mode field_mode)
+    void
+    draw(std::vector<item> items, uint8_t* dest, std::size_t width, std::size_t height, core::field_mode field_mode)
     {
         for (auto& item : items)
             item.transform.field_mode &= field_mode;
 
         // Remove empty items.
-        boost::range::remove_erase_if(items, [&](const item& item) { return item.transform.field_mode == core::field_mode::empty; });
+        boost::range::remove_erase_if(
+            items, [&](const item& item) { return item.transform.field_mode == core::field_mode::empty; });
 
         if (items.empty())
             return;
@@ -183,19 +186,22 @@ class image_renderer
         // TODO: Add support for push transition.
         // TODO: Add support for wipe transition.
         // TODO: Add support for slide transition.
-        tbb::parallel_for(tbb::blocked_range<std::size_t>(0, height / step), [&](const tbb::blocked_range<std::size_t>& r) {
-            for (auto i = r.begin(); i != r.end(); ++i) {
-                auto y = i * step + start;
+        tbb::parallel_for(tbb::blocked_range<std::size_t>(0, height / step),
+                          [&](const tbb::blocked_range<std::size_t>& r) {
+                              for (auto i = r.begin(); i != r.end(); ++i) {
+                                  auto y = i * step + start;
 
-                for (std::size_t n = 0; n < items.size() - 1; ++n)
-                    kernel<xmm::temporal_tag>(dest + y * width * 4, items[n].frame->data[0] + y * width * 4, width * 4);
+                                  for (std::size_t n = 0; n < items.size() - 1; ++n)
+                                      kernel<xmm::temporal_tag>(
+                                          dest + y * width * 4, items[n].frame->data[0] + y * width * 4, width * 4);
 
-                std::size_t n = items.size() - 1;
-                kernel<xmm::nontemporal_tag>(dest + y * width * 4, items[n].frame->data[0] + y * width * 4, width * 4);
-            }
+                                  std::size_t n = items.size() - 1;
+                                  kernel<xmm::nontemporal_tag>(
+                                      dest + y * width * 4, items[n].frame->data[0] + y * width * 4, width * 4);
+                              }
 
-            _mm_mfence();
-        });
+                              _mm_mfence();
+                          });
     }
 
     void convert(std::vector<item>& source_items, int width, int height)
@@ -216,7 +222,8 @@ class image_renderer
                 CASPAR_THROW_EXCEPTION(bad_alloc());
             }
 
-            int64_t key = ((static_cast<int64_t>(in_frame->width) << 32) & 0xFFFF00000000) | ((static_cast<int64_t>(in_frame->height) << 16) & 0xFFFF0000) |
+            int64_t key = ((static_cast<int64_t>(in_frame->width) << 32) & 0xFFFF00000000) |
+                          ((static_cast<int64_t>(in_frame->height) << 16) & 0xFFFF0000) |
                           ((static_cast<int64_t>(in_frame->format) << 8) & 0xFF00);
 
             auto& pool = sws_devices_[key];
@@ -238,11 +245,17 @@ class image_renderer
             }
 
             if (!sws_device) {
-                CASPAR_THROW_EXCEPTION(operation_failed()
-                                       << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
+                CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.")
+                                                          << boost::errinfo_api_function("sws_getContext"));
             }
 
-            sws_scale(sws_device.get(), in_frame->data, in_frame->linesize, 0, in_frame->height, out_frame->data, out_frame->linesize);
+            sws_scale(sws_device.get(),
+                      in_frame->data,
+                      in_frame->linesize,
+                      0,
+                      in_frame->height,
+                      out_frame->data,
+                      out_frame->linesize);
             pool.push(sws_device);
 
             for (std::size_t n = 0; n < source_items.size(); ++n) {
@@ -266,10 +279,14 @@ struct image_mixer::impl : boost::noncopyable
     impl(int channel_id)
         : transform_stack_(1)
     {
-        CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer for channel " << channel_id;
+        CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer for channel "
+                         << channel_id;
     }
 
-    void push(const core::frame_transform& transform) { transform_stack_.push_back(transform_stack_.back() * transform.image_transform); }
+    void push(const core::frame_transform& transform)
+    {
+        transform_stack_.push_back(transform_stack_.back() * transform.image_transform);
+    }
 
     void visit(const core::const_frame& frame)
     {
@@ -365,7 +382,10 @@ struct image_mixer::impl : boost::noncopyable
 
     void pop() { transform_stack_.pop_back(); }
 
-    std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc) { return renderer_(std::move(items_), format_desc); }
+    std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+    {
+        return renderer_(std::move(items_), format_desc);
+    }
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
     {
@@ -383,10 +403,16 @@ image_mixer::image_mixer(int channel_id)
 {
 }
 image_mixer::~image_mixer() {}
-void                                   image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
-void                                   image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
-void                                   image_mixer::pop() { impl_->pop(); }
-std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc) { return impl_->render(format_desc); }
-core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) { return impl_->create_frame(tag, desc); }
+void image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
+void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
+void image_mixer::pop() { impl_->pop(); }
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc)
+{
+    return impl_->render(format_desc);
+}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
+{
+    return impl_->create_frame(tag, desc);
+}
 
 }}} // namespace caspar::accelerator::cpu

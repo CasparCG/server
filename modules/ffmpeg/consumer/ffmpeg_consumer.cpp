@@ -91,7 +91,11 @@ struct Stream
 
     int64_t pts = 0;
 
-    Stream(AVFormatContext* oc, std::string suffix, AVCodecID codec_id, const core::video_format_desc& format_desc, AVDictionary** options)
+    Stream(AVFormatContext*               oc,
+           std::string                    suffix,
+           AVCodecID                      codec_id,
+           const core::video_format_desc& format_desc,
+           AVDictionary**                 options)
     {
         AVDictionary* stream_options = nullptr;
         CASPAR_SCOPE_EXIT
@@ -152,7 +156,8 @@ struct Stream
             avfilter_inout_free(&outputs);
         };
 
-        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(), [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
+        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
+                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
 
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
@@ -174,49 +179,58 @@ struct Stream
             auto cur = inputs;
 
             if (!cur || cur->next) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter graph input count"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter graph input count"));
             }
 
             if (codec->type == AVMEDIA_TYPE_VIDEO) {
-                const auto sar =
-                    boost::rational<int>(format_desc.square_width, format_desc.square_height) / boost::rational<int>(format_desc.width, format_desc.height);
+                const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
+                                 boost::rational<int>(format_desc.width, format_desc.height);
 
-                auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") % format_desc.width % format_desc.height %
-                             AV_PIX_FMT_BGRA % format_desc.duration % format_desc.time_scale % sar.numerator() % sar.denominator() %
+                auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
+                             format_desc.width % format_desc.height % AV_PIX_FMT_BGRA % format_desc.duration %
+                             format_desc.time_scale % sar.numerator() % sar.denominator() %
                              format_desc.framerate.numerator() % format_desc.framerate.denominator())
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
-                FF(avfilter_graph_create_filter(&source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                FF(avfilter_graph_create_filter(
+                    &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                 FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
             } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-                auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % 1 % format_desc.audio_sample_rate %
-                             format_desc.audio_sample_rate % AV_SAMPLE_FMT_S32 % av_get_default_channel_layout(format_desc.audio_channels))
+                auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % 1 %
+                             format_desc.audio_sample_rate % format_desc.audio_sample_rate % AV_SAMPLE_FMT_S32 %
+                             av_get_default_channel_layout(format_desc.audio_channels))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
-                FF(avfilter_graph_create_filter(&source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                FF(avfilter_graph_create_filter(
+                    &source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                 FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
             } else {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter input media type"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter input media type"));
             }
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(&sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            FF(avfilter_graph_create_filter(
+                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
             // TODO codec->profiles
-            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 }, AV_OPT_SEARCH_CHILDREN));
+            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
+            // AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(&sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            FF(avfilter_graph_create_filter(
+                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
@@ -229,18 +243,21 @@ struct Stream
 #pragma warning(pop)
 #endif
         } else {
-            CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
+            CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
+                                   << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
 
         {
             const auto cur = outputs;
 
             if (!cur || cur->next) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter graph output count"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter graph output count"));
             }
 
             if (avfilter_pad_get_type(cur->filter_ctx->output_pads, cur->pad_idx) != codec->type) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL) << msg_info_t("invalid filter output media type"));
+                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                                        << msg_info_t("invalid filter output media type"));
             }
 
             FF(avfilter_link(cur->filter_ctx, cur->pad_idx, sink, 0));
@@ -253,7 +270,8 @@ struct Stream
             FF_RET(AVERROR(ENOMEM), "avformat_new_stream");
         }
 
-        enc = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec), [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+        enc = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                              [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
 
         if (!enc) {
             FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3")
@@ -294,7 +312,9 @@ struct Stream
         }
     }
 
-    void send(boost::optional<core::const_frame> in_frame, const core::video_format_desc& format_desc, std::function<void(std::shared_ptr<AVPacket>)> cb)
+    void send(boost::optional<core::const_frame>             in_frame,
+              const core::video_format_desc&                 format_desc,
+              std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         int                       ret;
         std::shared_ptr<AVFrame>  frame;
@@ -400,8 +420,13 @@ struct ffmpeg_consumer : public core::frame_consumer
             AVDictionary* options = nullptr;
             {
                 static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
-                for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp); it != boost::sregex_iterator(); ++it) {
-                    FF(av_dict_set(&options, (*it)["NAME"].str().c_str(), (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "", 0));
+                for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
+                     it != boost::sregex_iterator();
+                     ++it) {
+                    FF(av_dict_set(&options,
+                                   (*it)["NAME"].str().c_str(),
+                                   (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "",
+                                   0));
                 }
             }
 
@@ -426,7 +451,8 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 {
                     const auto format_opt = av_dict_get(options, "format", nullptr, 0);
-                    FF(avformat_alloc_output_context2(&oc, nullptr, format_opt ? format_opt->value : nullptr, path_.c_str()));
+                    FF(avformat_alloc_output_context2(
+                        &oc, nullptr, format_opt ? format_opt->value : nullptr, path_.c_str()));
                     FF(av_dict_set(&options, "format", nullptr, 0));
                 }
 
@@ -547,8 +573,9 @@ struct ffmpeg_consumer : public core::frame_consumer
     core::monitor::subject& monitor_output() { return monitor_subject_; }
 };
 
-spl::shared_ptr<core::frame_consumer>
-create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,
+                                                      core::interaction_sink*,
+                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
@@ -562,8 +589,11 @@ create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
+                              core::interaction_sink*,
+                              std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
-    return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")), u8(ptree.get<std::wstring>(L"args", L"")));
+    return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
+                                             u8(ptree.get<std::wstring>(L"args", L"")));
 }
 }} // namespace caspar::ffmpeg

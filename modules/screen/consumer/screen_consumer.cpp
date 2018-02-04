@@ -121,13 +121,17 @@ struct screen_consumer : boost::noncopyable
     std::atomic<bool> is_running_;
 
   public:
-    screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, core::interaction_sink* sink)
+    screen_consumer(const configuration&           config,
+                    const core::video_format_desc& format_desc,
+                    int                            channel_index,
+                    core::interaction_sink*        sink)
         : config_(config)
         , format_desc_(format_desc)
         , channel_index_(channel_index)
         , sink_(sink)
     {
-        if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3) {
+        if (format_desc_.format == core::video_format::ntsc &&
+            config_.aspect == configuration::aspect_ratio::aspect_4_3) {
             // Use default values which are 4:3.
         } else {
             if (config_.aspect == configuration::aspect_ratio::aspect_16_9) {
@@ -164,7 +168,9 @@ struct screen_consumer : boost::noncopyable
 
     void init()
     {
-        auto window_style = config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+        auto window_style = config_.borderless
+                                ? sf::Style::None
+                                : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
         window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
 
         if (config_.windowed) {
@@ -252,25 +258,29 @@ struct screen_consumer : boost::noncopyable
                                 case sf::Event::MouseMoved: {
                                     auto& mouse_move = e.mouseMove;
                                     sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                                        1, static_cast<double>(mouse_move.x) / screen_width_, static_cast<double>(mouse_move.y) / screen_height_));
+                                        1,
+                                        static_cast<double>(mouse_move.x) / screen_width_,
+                                        static_cast<double>(mouse_move.y) / screen_height_));
                                     break;
                                 }
                                 case sf::Event::MouseButtonPressed:
                                 case sf::Event::MouseButtonReleased: {
                                     auto& mouse_button = e.mouseButton;
-                                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(1,
-                                                                                                     static_cast<double>(mouse_button.x) / screen_width_,
-                                                                                                     static_cast<double>(mouse_button.y) / screen_height_,
-                                                                                                     static_cast<int>(mouse_button.button),
-                                                                                                     e.type == sf::Event::MouseButtonPressed));
+                                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
+                                        1,
+                                        static_cast<double>(mouse_button.x) / screen_width_,
+                                        static_cast<double>(mouse_button.y) / screen_height_,
+                                        static_cast<int>(mouse_button.button),
+                                        e.type == sf::Event::MouseButtonPressed));
                                     break;
                                 }
                                 case sf::Event::MouseWheelMoved: {
                                     auto& wheel_moved = e.mouseWheel;
-                                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(1,
-                                                                                                    static_cast<double>(wheel_moved.x) / screen_width_,
-                                                                                                    static_cast<double>(wheel_moved.y) / screen_height_,
-                                                                                                    wheel_moved.delta));
+                                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+                                        1,
+                                        static_cast<double>(wheel_moved.x) / screen_width_,
+                                        static_cast<double>(wheel_moved.y) / screen_height_,
+                                        wheel_moved.delta));
                                     break;
                                 }
                             }
@@ -324,7 +334,15 @@ struct screen_consumer : boost::noncopyable
                         }
 
                         GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-                        GL(glTextureSubImage2D(frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+                        GL(glTextureSubImage2D(frame.tex,
+                                               0,
+                                               0,
+                                               0,
+                                               format_desc_.width,
+                                               format_desc_.height,
+                                               GL_BGRA,
+                                               GL_UNSIGNED_BYTE,
+                                               nullptr));
                         GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
                     }
 
@@ -354,7 +372,10 @@ struct screen_consumer : boost::noncopyable
         return make_ready_future(is_running_.load());
     }
 
-    std::wstring channel_and_format() const { return L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]"; }
+    std::wstring channel_and_format() const
+    {
+        return L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+    }
 
     std::wstring print() const { return config_.name + L" " + channel_and_format(); }
 
@@ -449,8 +470,9 @@ struct screen_consumer_proxy : public core::frame_consumer
     core::monitor::subject& monitor_output() { return monitor_subject_; }
 };
 
-spl::shared_ptr<core::frame_consumer>
-create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
+                                                      core::interaction_sink*                           sink,
+                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
@@ -475,9 +497,10 @@ create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*
     return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                                                                    core::interaction_sink*                           sink,
-                                                                    std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer>
+create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
+                              core::interaction_sink*                           sink,
+                              std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;
     config.name             = ptree.get(L"name", config.name);

@@ -34,18 +34,23 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
-core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, std::shared_ptr<AVFrame> video, std::shared_ptr<AVFrame> audio)
+core::mutable_frame make_frame(void*                    tag,
+                               core::frame_factory&     frame_factory,
+                               std::shared_ptr<AVFrame> video,
+                               std::shared_ptr<AVFrame> audio)
 {
-    const auto pix_desc = video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height)
-                                : core::pixel_format_desc(core::pixel_format::invalid);
+    const auto pix_desc =
+        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height)
+              : core::pixel_format_desc(core::pixel_format::invalid);
 
     auto frame = frame_factory.create_frame(tag, pix_desc);
 
     if (video) {
         for (int n = 0; n < static_cast<int>(pix_desc.planes.size()); ++n) {
             for (int y = 0; y < pix_desc.planes[n].height; ++y) {
-                std::memcpy(
-                    frame.image_data(n).begin() + y * pix_desc.planes[n].linesize, video->data[n] + y * video->linesize[n], pix_desc.planes[n].linesize);
+                std::memcpy(frame.image_data(n).begin() + y * pix_desc.planes[n].linesize,
+                            video->data[n] + y * video->linesize[n],
+                            pix_desc.planes[n].linesize);
             }
         }
     }
@@ -159,7 +164,8 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     auto planes = pix_desc.planes;
     auto format = pix_desc.format;
 
-    const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) / boost::rational<int>(format_desc.width, format_desc.height);
+    const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
+                     boost::rational<int>(format_desc.width, format_desc.height);
 
     av_frame->sample_aspect_ratio = {sar.numerator(), sar.denominator()};
     av_frame->width               = format_desc.width;
@@ -218,7 +224,9 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     // TODO (perf) Avoid extra memcpy.
     for (int n = 0; n < planes.size(); ++n) {
         for (int y = 0; y < av_frame->height; ++y) {
-            std::memcpy(av_frame->data[n] + y * av_frame->linesize[n], frame.image_data(n).data() + y * planes[n].linesize, planes[n].linesize);
+            std::memcpy(av_frame->data[n] + y * av_frame->linesize[n],
+                        frame.image_data(n).data() + y * planes[n].linesize,
+                        planes[n].linesize);
         }
     }
 

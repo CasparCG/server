@@ -32,7 +32,8 @@ void init(core::module_dependencies dependencies)
 {
     try {
         dependencies.consumer_registry->register_consumer_factory(L"iVGA Consumer", create_ivga_consumer);
-        dependencies.consumer_registry->register_preconfigured_consumer_factory(L"newtek-ivga", create_preconfigured_ivga_consumer);
+        dependencies.consumer_registry->register_preconfigured_consumer_factory(L"newtek-ivga",
+                                                                                create_preconfigured_ivga_consumer);
     } catch (...) {
     }
 }
