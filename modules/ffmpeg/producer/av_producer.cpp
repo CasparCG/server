@@ -196,10 +196,8 @@ struct Filter
                 // TODO share stream decoders between graphs
                 while (true) {
                     if (index == input->nb_streams) {
-                        CASPAR_THROW_EXCEPTION(
-                            ffmpeg_error_t()
-                            << boost::errinfo_errno(EINVAL)
-                            << msg_info_t((boost::format("could not find input for: %s") % cur->name).str()));
+                        graph = nullptr;
+                        return;
                     }
                     if (input->streams[index]->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
