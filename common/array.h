@@ -69,7 +69,7 @@ class array final
     T*          end() const { return ptr_ + size_; }
     std::size_t size() const { return size_; }
 
-    explicit operator bool() const {return size_ == 0};
+    explicit operator bool() const { return size_ == 0; };
 
     template <typename S>
     S* storage() const
