@@ -47,8 +47,9 @@ if (MSVC)
 	)
 else()
 	target_link_libraries(ffmpeg
-		common
-		core
+			common
+			core
+			${FFMPEG_LIBRARIES}
 	)
 endif()
 

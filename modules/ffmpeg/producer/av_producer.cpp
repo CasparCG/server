@@ -364,7 +364,7 @@ struct AVProducer::Impl
     bool                    buffer_eof_      = true;
     bool                    buffer_flush_    = true;
 
-    std::atomic<bool> abort_request_ = false;
+    std::atomic<bool> abort_request_{ false };
     std::thread       thread_;
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
@@ -796,8 +796,8 @@ struct AVProducer::Impl
         auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
         auto duration = duration_;
 
-        if (duration == AV_NOPTS_VALUE && input_->duration != AV_NOPTS_VALUE) {
-            duration = input_->duration - start;
+        if (duration == AV_NOPTS_VALUE && input_.duration()) {
+            duration = *input_.duration() - start;
         }
 
         if (duration == AV_NOPTS_VALUE || duration < 0) {

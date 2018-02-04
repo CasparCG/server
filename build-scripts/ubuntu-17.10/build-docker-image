@@ -1,2 +1,0 @@
-#! /bin/bash
-docker build -t casparcg/server-build:ubuntu-17.10 $PWD/build-scripts/ubuntu-17.10
