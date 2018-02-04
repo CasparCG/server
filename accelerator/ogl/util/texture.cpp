@@ -39,7 +39,10 @@ struct texture::impl : boost::noncopyable
     GLsizei stride_ = 0;
 
   public:
-    impl(int width, int height, int stride) : width_(width), height_(height), stride_(stride)
+    impl(int width, int height, int stride)
+        : width_(width)
+        , height_(height)
+        , stride_(stride)
     {
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
         GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -81,8 +84,14 @@ struct texture::impl : boost::noncopyable
     }
 };
 
-texture::texture(int width, int height, int stride) : impl_(new impl(width, height, stride)) {}
-texture::texture(texture&& other) : impl_(std::move(other.impl_)) {}
+texture::texture(int width, int height, int stride)
+    : impl_(new impl(width, height, stride))
+{
+}
+texture::texture(texture&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 texture::~texture() {}
 texture& texture::operator=(texture&& other)
 {

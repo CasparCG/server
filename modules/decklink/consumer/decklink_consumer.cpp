@@ -136,7 +136,10 @@ class decklink_frame : public IDeckLinkVideoFrame
 
   public:
     decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
-        : frame_(frame), format_desc_(format_desc), key_only_(key_only), data_(scalable_aligned_malloc(format_desc_.size, 64))
+        : frame_(frame)
+        , format_desc_(format_desc)
+        , key_only_(key_only)
+        , data_(scalable_aligned_malloc(format_desc_.size, 64))
     {
         ref_count_ = 0;
     }
@@ -208,7 +211,8 @@ struct key_video_context
     com_iface_ptr<Configuration>       configuration_ = iface_cast<Configuration>(decklink_);
     std::atomic<int64_t>               scheduled_frames_completed_;
 
-    key_video_context(const configuration& config, const std::wstring& print) : config_(config)
+    key_video_context(const configuration& config, const std::wstring& print)
+        : config_(config)
     {
         scheduled_frames_completed_ = 0;
 
@@ -297,7 +301,10 @@ struct decklink_consumer
 
   public:
     decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
-        : channel_index_(channel_index), config_(config), format_desc_(format_desc), executor_(L"decklink")
+        : channel_index_(channel_index)
+        , config_(config)
+        , format_desc_(format_desc)
+        , executor_(L"decklink")
     {
         is_running_                 = true;
         scheduled_frames_completed_ = 0;
@@ -531,7 +538,8 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
   public:
     decklink_consumer_proxy(const configuration& config)
-        : config_(config), executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
+        : config_(config)
+        , executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.begin_invoke([=] {

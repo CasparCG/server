@@ -92,7 +92,8 @@ std::string read_template_meta_info(const std::wstring& filename)
     return std::string(beg_it, end_it + end_str.size());
 }
 
-swf_t::header_t::header_t(const std::wstring& filename) : valid(false)
+swf_t::header_t::header_t(const std::wstring& filename)
+    : valid(false)
 {
     auto stream = std::fstream();
     stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -155,7 +156,8 @@ swf_t::header_t::header_t(const std::wstring& filename) : valid(false)
     this->valid = true;
 }
 
-swf_t::swf_t(const std::wstring& filename) : header(filename)
+swf_t::swf_t(const std::wstring& filename)
+    : header(filename)
 {
     auto stream = std::fstream();
     stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);

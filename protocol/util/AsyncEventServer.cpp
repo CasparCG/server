@@ -67,7 +67,10 @@ class connection : public spl::enable_shared_from_this<connection>
         std::weak_ptr<connection> connection_;
 
       public:
-        explicit connection_holder(std::weak_ptr<connection> conn) : connection_(std::move(conn)) {}
+        explicit connection_holder(std::weak_ptr<connection> conn)
+            : connection_(std::move(conn))
+        {
+        }
 
         void send(std::basic_string<char>&& data, bool skip_log) override
         {
@@ -225,7 +228,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
     void handle_write(const spl::shared_ptr<std::string>& str,
                       const boost::system::error_code&    error,
-                      size_t bytes_transferred) // always called from the asio-service-thread
+                      size_t                              bytes_transferred) // always called from the asio-service-thread
     {
         if (!error) {
             if (bytes_transferred != str->size()) {
@@ -267,7 +270,9 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     tbb::mutex                               mutex_;
 
     implementation(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
-        : service_(std::move(service)), acceptor_(*service_, tcp::endpoint(tcp::v4(), port)), protocol_factory_(protocol)
+        : service_(std::move(service))
+        , acceptor_(*service_, tcp::endpoint(tcp::v4(), port))
+        , protocol_factory_(protocol)
     {
     }
 

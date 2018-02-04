@@ -33,7 +33,10 @@ class tcp_logger_protocol_strategy : public IO::protocol_strategy<char>
     std::shared_ptr<void> log_sink_ = caspar::log::add_preformatted_line_sink([=](std::string line) { handle_log_line(std::move(line)); });
 
   public:
-    tcp_logger_protocol_strategy(spl::shared_ptr<IO::client_connection<char>> client_connection) : client_connection_(std::move(client_connection)) {}
+    tcp_logger_protocol_strategy(spl::shared_ptr<IO::client_connection<char>> client_connection)
+        : client_connection_(std::move(client_connection))
+    {
+    }
 
     void handle_log_line(std::string line)
     {

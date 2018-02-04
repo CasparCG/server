@@ -360,7 +360,9 @@ struct ffmpeg_consumer : public core::frame_consumer
 
   public:
     ffmpeg_consumer(std::string path, std::string args)
-        : path_(std::move(path)), args_(std::move(args)), channel_index_([&] {
+        : path_(std::move(path))
+        , args_(std::move(args))
+        , channel_index_([&] {
             boost::crc_16_type result;
             result.process_bytes(path.data(), path.length());
             return result.checksum();

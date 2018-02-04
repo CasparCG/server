@@ -58,8 +58,14 @@ struct buffer::impl : boost::noncopyable
     void unbind() { GL(glBindBuffer(target_, 0)); }
 };
 
-buffer::buffer(int size, bool write) : impl_(new impl(size, write)) {}
-buffer::buffer(buffer&& other) : impl_(std::move(other.impl_)) {}
+buffer::buffer(int size, bool write)
+    : impl_(new impl(size, write))
+{
+}
+buffer::buffer(buffer&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 buffer::~buffer() {}
 buffer& buffer::operator=(buffer&& other)
 {

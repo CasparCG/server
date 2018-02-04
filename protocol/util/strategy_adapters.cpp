@@ -35,7 +35,8 @@ class to_unicode_adapter : public protocol_strategy<char>
 
   public:
     to_unicode_adapter(const std::string& codepage, const protocol_strategy<wchar_t>::ptr& unicode_strategy)
-        : codepage_(codepage), unicode_strategy_(unicode_strategy)
+        : codepage_(codepage)
+        , unicode_strategy_(unicode_strategy)
     {
     }
 
@@ -53,7 +54,11 @@ class from_unicode_client_connection : public client_connection<wchar_t>
     std::string                  codepage_;
 
   public:
-    from_unicode_client_connection(const client_connection<char>::ptr& client, const std::string& codepage) : client_(client), codepage_(codepage) {}
+    from_unicode_client_connection(const client_connection<char>::ptr& client, const std::string& codepage)
+        : client_(client)
+        , codepage_(codepage)
+    {
+    }
     ~from_unicode_client_connection() {}
 
     void send(std::basic_string<wchar_t>&& data, bool skip_log) override
@@ -85,7 +90,8 @@ class from_unicode_client_connection : public client_connection<wchar_t>
 };
 
 to_unicode_adapter_factory::to_unicode_adapter_factory(const std::string& codepage, const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory)
-    : codepage_(codepage), unicode_strategy_factory_(unicode_strategy_factory)
+    : codepage_(codepage)
+    , unicode_strategy_factory_(unicode_strategy_factory)
 {
 }
 
@@ -103,7 +109,8 @@ class legacy_strategy_adapter : public protocol_strategy<wchar_t>
 
   public:
     legacy_strategy_adapter(const ProtocolStrategyPtr& strategy, const client_connection<wchar_t>::ptr& client_connection)
-        : strategy_(strategy), client_info_(client_connection)
+        : strategy_(strategy)
+        , client_info_(client_connection)
     {
     }
     ~legacy_strategy_adapter() {}
@@ -111,7 +118,10 @@ class legacy_strategy_adapter : public protocol_strategy<wchar_t>
     void parse(const std::basic_string<wchar_t>& data) override { strategy_->Parse(data, client_info_); }
 };
 
-legacy_strategy_adapter_factory::legacy_strategy_adapter_factory(const ProtocolStrategyPtr& strategy) : strategy_(strategy) {}
+legacy_strategy_adapter_factory::legacy_strategy_adapter_factory(const ProtocolStrategyPtr& strategy)
+    : strategy_(strategy)
+{
+}
 
 protocol_strategy<wchar_t>::ptr legacy_strategy_adapter_factory::create(const client_connection<wchar_t>::ptr& client_connection)
 {

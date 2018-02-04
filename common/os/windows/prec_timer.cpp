@@ -31,7 +31,10 @@ using namespace boost::chrono;
 
 namespace caspar {
 
-prec_timer::prec_timer() : time_(0) {}
+prec_timer::prec_timer()
+    : time_(0)
+{
+}
 
 void prec_timer::tick_nanos(int64_t ticks_to_wait)
 {

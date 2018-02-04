@@ -50,7 +50,11 @@ class layer_consumer : public core::write_frame_consumer
     int                                             frames_delay_;
 
   public:
-    layer_consumer(int frames_delay) : frames_delay_(frames_delay) { frame_buffer_.set_capacity(2 + frames_delay); }
+    layer_consumer(int frames_delay)
+        : frames_delay_(frames_delay)
+    {
+        frame_buffer_.set_capacity(2 + frames_delay);
+    }
 
     ~layer_consumer() {}
 
@@ -79,7 +83,10 @@ std::vector<core::draw_frame> extract_actual_frames(core::draw_frame original, c
         core::field_mode              field_order_first;
         core::field_mode              visiting_mode = core::field_mode::progressive;
 
-        field_extractor(core::field_mode field_order_) : field_order_first(field_order_) {}
+        field_extractor(core::field_mode field_order_)
+            : field_order_first(field_order_)
+        {
+        }
 
         void push(const core::frame_transform& transform) override
         {
@@ -124,7 +131,9 @@ class layer_producer : public core::frame_producer_base
 
   public:
     explicit layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer, int frames_delay)
-        : layer_(layer), consumer_(spl::make_shared<layer_consumer>(frames_delay)), channel_(channel)
+        : layer_(layer)
+        , consumer_(spl::make_shared<layer_consumer>(frames_delay))
+        , channel_(channel)
     {
         channel->stage().add_layer_consumer(this, layer_, consumer_);
         double_framerate_ = false;

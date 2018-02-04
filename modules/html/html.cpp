@@ -67,7 +67,10 @@ class remove_handler : public CefV8Handler
     CefRefPtr<CefBrowser> browser_;
 
   public:
-    remove_handler(CefRefPtr<CefBrowser> browser) : browser_(browser) {}
+    remove_handler(CefRefPtr<CefBrowser> browser)
+        : browser_(browser)
+    {
+    }
 
     bool
     Execute(const CefString& name, CefRefPtr<CefV8Value> object, const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception) override
@@ -92,7 +95,10 @@ class renderer_application
     const bool                           enable_gpu_;
 
   public:
-    explicit renderer_application(const bool enable_gpu) : enable_gpu_(enable_gpu) {}
+    explicit renderer_application(const bool enable_gpu)
+        : enable_gpu_(enable_gpu)
+    {
+    }
 
     CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
 
@@ -249,7 +255,10 @@ class cef_task : public CefTask
     std::function<void()> function_;
 
   public:
-    cef_task(const std::function<void()>& function) : function_(function) {}
+    cef_task(const std::function<void()>& function)
+        : function_(function)
+    {
+    }
 
     void Execute() override
     {

@@ -72,7 +72,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::thread                         thread_;
 
     impl()
-        : work_(make_work_guard(service_)), thread_([&] {
+        : work_(make_work_guard(service_))
+        , thread_([&] {
             set_thread_name(L"OpenGL Device");
             service_.run();
         })
@@ -270,7 +271,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 };
 
-device::device() : impl_(new impl()) {}
+device::device()
+    : impl_(new impl())
+{
+}
 device::~device() {}
 std::shared_ptr<texture>              device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
 array<uint8_t>                        device::create_array(int size) { return impl_->create_array(size); }
