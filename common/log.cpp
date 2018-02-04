@@ -91,7 +91,7 @@ class column_writer
         int          read_width;
 
         while ((read_width = column_width_) < length &&
-               column_width_.compare_and_exchange_strong(length, read_width) != read_width)
+               column_width_.compare_exchange_strong(length, read_width) != read_width)
             ;
         read_width = column_width_;
 
