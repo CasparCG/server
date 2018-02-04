@@ -24,17 +24,14 @@ set(SOURCES
 		included_modules.tmpl
 		main.cpp
 		server.cpp
-		stdafx.cpp
 )
 set(HEADERS
 		included_modules.h
 		platform_specific.h
 		server.h
-		stdafx.h
 )
 
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
