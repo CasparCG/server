@@ -1,21 +1,20 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <queue>
-#include <condition_variable>
 
 struct AVPacket;
 struct AVFrame;
 struct AVStream;
 struct AVCodecContext;
 
-namespace caspar {
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 class Decoder
 {
-public:
+  public:
     Decoder(AVStream* stream);
 
     ~Decoder();
@@ -29,7 +28,8 @@ public:
     void operator()(std::function<bool(std::shared_ptr<AVFrame>&)> fn);
 
     void flush();
- private:
+
+  private:
     mutable std::mutex              ctx_mutex_;
     std::shared_ptr<AVCodecContext> ctx_;
 
@@ -46,4 +46,4 @@ public:
     std::thread       thread_;
 };
 
-} }
+}} // namespace caspar::ffmpeg

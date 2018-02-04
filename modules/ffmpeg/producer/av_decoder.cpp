@@ -4,8 +4,8 @@
 #include "../util/av_util.h"
 
 #include <common/except.h>
-#include <common/scope_exit.h>
 #include <common/os/thread.h>
+#include <common/scope_exit.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -16,15 +16,14 @@ extern "C"
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
-#include <libavutil/opt.h>
 #include <libavutil/error.h>
+#include <libavutil/opt.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-namespace caspar {
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 Decoder::Decoder(AVStream* stream)
     : next_pts_(AV_NOPTS_VALUE)
@@ -34,10 +33,8 @@ Decoder::Decoder(AVStream* stream)
         FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
     }
 
-    ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec), [](AVCodecContext* ptr)
-    {
-        avcodec_free_context(&ptr);
-    });
+    ctx_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                           [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
 
     if (!ctx_) {
         FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
@@ -50,7 +47,7 @@ Decoder::Decoder(AVStream* stream)
     ctx_->pkt_timebase = stream->time_base;
 
     if (ctx_->codec_type == AVMEDIA_TYPE_VIDEO) {
-        ctx_->framerate = av_guess_frame_rate(nullptr, stream, nullptr);
+        ctx_->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
         ctx_->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
     } else if (ctx_->codec_type == AVMEDIA_TYPE_AUDIO) {
         if (!ctx_->channel_layout && ctx_->channels) {
@@ -63,8 +60,7 @@ Decoder::Decoder(AVStream* stream)
 
     FF(avcodec_open2(ctx_.get(), codec, nullptr));
 
-    thread_ = std::thread([=]
-    {
+    thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Stream]");
 
@@ -72,10 +68,8 @@ Decoder::Decoder(AVStream* stream)
                 std::shared_ptr<AVPacket> packet;
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(lock, [&]
-                    {
-                        return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
-                    });
+                    cond_.wait(
+                        lock, [&] { return (!input_.empty() && output_.size() < output_capacity_) || abort_request_; });
 
                     if (abort_request_) {
                         break;
@@ -91,7 +85,7 @@ Decoder::Decoder(AVStream* stream)
 
                 while (true) {
                     auto frame = alloc_frame();
-                    auto ret = avcodec_receive_frame(ctx_.get(), frame.get());
+                    auto ret   = avcodec_receive_frame(ctx_.get(), frame.get());
 
                     if (ret == AVERROR(EAGAIN)) {
                         break;
@@ -127,13 +121,9 @@ Decoder::~Decoder()
     thread_.join();
 }
 
-AVCodecContext* Decoder::operator->() {
-    return ctx_.get();
-}
+AVCodecContext* Decoder::operator->() { return ctx_.get(); }
 
-const AVCodecContext* Decoder::operator->() const {
-    return ctx_.get();
-}
+const AVCodecContext* Decoder::operator->() const { return ctx_.get(); }
 
 bool Decoder::try_push(std::shared_ptr<AVPacket> packet)
 {
@@ -182,4 +172,4 @@ void Decoder::flush()
     cond_.notify_all();
 }
 
-} }
+}} // namespace caspar::ffmpeg
