@@ -4,8 +4,8 @@
 #include "../util/av_util.h"
 
 #include <common/except.h>
-#include <common/scope_exit.h>
 #include <common/os/thread.h>
+#include <common/scope_exit.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -19,8 +19,7 @@ extern "C"
 #pragma warning(pop)
 #endif
 
-namespace caspar {
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
     : graph_(graph)
@@ -29,35 +28,30 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
     AVDictionary* options = nullptr;
-    CASPAR_SCOPE_EXIT{ av_dict_free(&options); };
+    CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
     // TODO (fix) check if filename is http
-    FF(av_dict_set(&options, "reconnect", "1", 0)); // HTTP reconnect
-                                                    // TODO (fix) timeout?
+    FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
+                                                           // TODO (fix) timeout?
     FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
 
     AVFormatContext* ic = nullptr;
     FF(avformat_open_input(&ic, filename.c_str(), nullptr, &options));
-    ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx)
-    {
-        avformat_close_input(&ctx);
-    });
+    ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     ic_->interrupt_callback.callback = Input::interrupt_cb;
-    ic_->interrupt_callback.opaque = this;
+    ic_->interrupt_callback.opaque   = this;
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
 
-    thread_ = std::thread([=]
-    {
+    thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
             while (true) {
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(lock, [&]
-                    {
+                    cond_.wait(lock, [&] {
                         return ((!eof_ && !paused_) && output_.size() < output_capacity_) || abort_request_;
                     });
                 }
@@ -78,7 +72,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
-                        eof_ = true;
+                        eof_   = true;
                         packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
@@ -121,27 +115,15 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
     cond_.notify_all();
 }
 
-AVFormatContext* Input::operator->() {
-    return ic_.get();
-}
+AVFormatContext* Input::operator->() { return ic_.get(); }
 
-AVFormatContext* const Input::operator->() const {
-    return ic_.get();
-}
+AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
-int64_t Input::start_time() const {
-    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : 0;
-}
+int64_t Input::start_time() const { return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : 0; }
 
-bool Input::paused() const
-{
-    return paused_;
-}
+bool Input::paused() const { return paused_; }
 
-bool Input::eof() const
-{
-    return eof_;
-}
+bool Input::eof() const { return eof_; }
 
 void Input::pause()
 {
@@ -178,4 +160,4 @@ void Input::seek(int64_t ts, bool flush)
     graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 }
 
-} }
+}} // namespace caspar::ffmpeg

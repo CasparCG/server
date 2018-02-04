@@ -95,10 +95,10 @@ struct image_transform final
     core::chroma          chroma;
 
     core::field_mode field_mode  = field_mode::progressive;
-    bool       is_key      = false;
-    bool       is_mix      = false;
+    bool             is_key      = false;
+    bool             is_mix      = false;
     core::blend_mode blend_mode  = blend_mode::normal;
-    int        layer_depth = 0;
+    int              layer_depth = 0;
 
     image_transform& operator*=(const image_transform& other);
     image_transform  operator*(const image_transform& other) const;
