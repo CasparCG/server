@@ -1,29 +1,29 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
-*
-* This file is part of CasparCG (www.casparcg.com).
-*
-* CasparCG is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* CasparCG is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
-*
-* Author: Robert Nagy, ronag89@gmail.com
-*/
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Robert Nagy, ronag89@gmail.com
+ */
 
 #pragma once
 
 static std::string get_adjustement_glsl()
 {
-	return R"shader(
+    return R"shader(
 			/*
 			** Contrast, saturation, brightness
 			** Code of this function is from TGM's shader pack
@@ -74,7 +74,7 @@ static std::string get_adjustement_glsl()
 
 static std::string get_blend_glsl()
 {
-	static std::string glsl = R"shader(
+    static std::string glsl = R"shader(
 			/*
 			** Photoshop & misc math
 			** Blending modes, RGB/HSL/Contrast/Desaturate, levels control
@@ -273,12 +273,12 @@ static std::string get_blend_glsl()
 
 	)shader";
 
-	return glsl;
+    return glsl;
 }
 
 static std::string get_chroma_glsl()
 {
-	static std::string glsl = R"shader(
+    static std::string glsl = R"shader(
 		// Chroma keying
 		// Author: Tim Eves <timseves@googlemail.com>
 		//
@@ -381,5 +381,5 @@ static std::string get_chroma_glsl()
 		}
 	)shader";
 
-	return glsl;
+    return glsl;
 }

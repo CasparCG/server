@@ -101,12 +101,16 @@ video_format_desc::video_format_desc(video_format            format,
 {
 }
 
-video_format_desc::video_format_desc(video_format format) : format(video_format::invalid), field_mode(core::field_mode::empty)
+video_format_desc::video_format_desc(video_format format)
+    : format(video_format::invalid)
+    , field_mode(core::field_mode::empty)
 {
     *this = format_descs.at(static_cast<int>(format));
 }
 
-video_format_desc::video_format_desc(const std::wstring& name) : format(video_format::invalid), field_mode(core::field_mode::empty)
+video_format_desc::video_format_desc(const std::wstring& name)
+    : format(video_format::invalid)
+    , field_mode(core::field_mode::empty)
 {
     *this = video_format_desc(video_format::invalid);
     for (auto it = std::begin(format_descs); it != std::end(format_descs) - 1; ++it) {

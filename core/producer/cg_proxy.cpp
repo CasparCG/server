@@ -220,7 +220,10 @@ struct cg_producer_registry::impl
     }
 };
 
-cg_producer_registry::cg_producer_registry() : impl_(new impl) {}
+cg_producer_registry::cg_producer_registry()
+    : impl_(new impl)
+{
+}
 
 void cg_producer_registry::register_cg_producer(std::wstring           cg_producer_name,
                                                 std::set<std::wstring> file_extensions,

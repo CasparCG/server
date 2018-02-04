@@ -49,7 +49,10 @@ struct mutable_frame::impl : boost::noncopyable
     frame_geometry                   geometry_ = frame_geometry::get_default();
 
     impl(const void* tag, std::vector<array<std::uint8_t>> image_data, array<std::int32_t> audio_data, const core::pixel_format_desc& desc)
-        : tag_(tag), image_data_(std::move(image_data)), audio_data_(std::move(audio_data)), desc_(desc)
+        : tag_(tag)
+        , image_data_(std::move(image_data))
+        , audio_data_(std::move(audio_data))
+        , desc_(desc)
     {
     }
 };
@@ -58,7 +61,10 @@ mutable_frame::mutable_frame(const void* tag, std::vector<array<std::uint8_t>> i
     : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
 }
-mutable_frame::mutable_frame(mutable_frame&& other) : impl_(std::move(other.impl_)) {}
+mutable_frame::mutable_frame(mutable_frame&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 mutable_frame::~mutable_frame() {}
 mutable_frame& mutable_frame::operator=(mutable_frame&& other)
 {
@@ -85,10 +91,16 @@ struct const_frame::impl : boost::noncopyable
     const core::pixel_format_desc                desc_     = pixel_format::invalid;
     const frame_geometry                         geometry_ = frame_geometry::get_default();
 
-    impl(const void* tag) : tag_(tag) {}
+    impl(const void* tag)
+        : tag_(tag)
+    {
+    }
 
     impl(const void* tag, std::vector<array<const std::uint8_t>> image_data, array<const std::int32_t> audio_data, const core::pixel_format_desc& desc)
-        : tag_(tag), image_data_(std::move(image_data)), audio_data_(std::move(audio_data)), desc_(desc)
+        : tag_(tag)
+        , image_data_(std::move(image_data))
+        , audio_data_(std::move(audio_data))
+        , desc_(desc)
     {
     }
 
@@ -122,7 +134,10 @@ struct const_frame::impl : boost::noncopyable
     std::size_t size() const { return tag_ ? desc_.planes.at(0).size : 0; }
 };
 
-const_frame::const_frame(const void* tag) : impl_(new impl(tag)) {}
+const_frame::const_frame(const void* tag)
+    : impl_(new impl(tag))
+{
+}
 const_frame::const_frame(const void*                            tag,
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
@@ -137,9 +152,18 @@ const_frame::const_frame(const void*                        tag,
     : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
 }
-const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)) {}
-const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))) {}
-const_frame::const_frame(const const_frame& other) : impl_(other.impl_) {}
+const_frame::const_frame(const_frame&& other)
+    : impl_(std::move(other.impl_))
+{
+}
+const_frame::const_frame(mutable_frame&& other)
+    : impl_(new impl(std::move(other)))
+{
+}
+const_frame::const_frame(const const_frame& other)
+    : impl_(other.impl_)
+{
+}
 const_frame::~const_frame() {}
 const_frame& const_frame::operator=(const_frame other)
 {

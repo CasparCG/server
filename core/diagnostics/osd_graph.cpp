@@ -268,7 +268,8 @@ class line : public drawable
     double x_delta_ = 1.0 / (res_ - 1);
 
   public:
-    line() : res_(750)
+    line()
+        : res_(750)
     {
         tick_data_ = -1.0f;
         color_     = 0xFFFFFFFF;

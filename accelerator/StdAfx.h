@@ -3,6 +3,8 @@
 // TODO Move into cmake config
 #define _WIN32_WINNT 0x601
 
+#include <GL/glew.h>
+#include <SFML/Window/Context.hpp>
 #include <algorithm>
 #include <array>
 #include <boost/algorithm/cxx11/all_of.hpp>
@@ -39,11 +41,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
-#include <GL/glew.h>
 #include <memory>
 #include <mutex>
 #include <set>
-#include <SFML/Window/Context.hpp>
 #include <string>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
