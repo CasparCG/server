@@ -25,10 +25,12 @@
 
 namespace caspar { namespace core {
 
+enum class field_mode;
+
 class draw_frame final
 {
   public:
-    static draw_frame interlace(draw_frame frame1, draw_frame frame2, enum class field_mode mode);
+    static draw_frame interlace(draw_frame frame1, draw_frame frame2, field_mode mode);
     static draw_frame over(draw_frame frame1, draw_frame frame2);
     static draw_frame mask(draw_frame fill, draw_frame key);
     static draw_frame still(draw_frame frame);
