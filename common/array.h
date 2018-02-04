@@ -2,25 +2,26 @@
 
 #include <boost/any.hpp>
 
-#include <memory>
-#include <vector>
 #include <cstddef>
 #include <cstdlib>
+#include <memory>
+#include <vector>
 
 namespace caspar {
 
-template<typename T>
+template <typename T>
 class array final
 {
-	template<typename> friend class array;
-public:
+    template <typename>
+    friend class array;
 
-	// Static Members
+  public:
+    // Static Members
 
-    typedef T*			iterator;
-    typedef const T*	const_iterator;
+    typedef T*       iterator;
+    typedef const T* const_iterator;
 
-	// Constructors
+    // Constructors
 
     array() = default;
 
@@ -35,69 +36,69 @@ public:
         : size_(size)
     {
         auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
-        ptr_ = reinterpret_cast<T*>(storage.get());
-        storage_ = std::move(storage);
+        ptr_         = reinterpret_cast<T*>(storage.get());
+        storage_     = std::move(storage);
     }
 
-    template<typename S>
-	explicit array(T* ptr, std::size_t size, S&& storage)
-		: ptr_(ptr)
-		, size_(size)
-		, storage_(std::make_unique<boost::any>(std::forward<S>(storage)))
-	{
-	}
+    template <typename S>
+    explicit array(T* ptr, std::size_t size, S&& storage)
+        : ptr_(ptr)
+        , size_(size)
+        , storage_(std::make_unique<boost::any>(std::forward<S>(storage)))
+    {
+    }
 
     array(const array<T>&) = delete;
 
-	array(array&& other)
-		: ptr_(other.ptr_)
-		, size_(other.size_)
-		, storage_(std::move(other.storage_))
-	{
-	}
+    array(array&& other)
+        : ptr_(other.ptr_)
+        , size_(other.size_)
+        , storage_(std::move(other.storage_))
+    {
+    }
 
-	// Methods
+    // Methods
 
     array& operator=(const array<T>&) = delete;
 
-	array& operator=(array&& other)
-	{
-		std::swap(ptr_,	other.ptr_);
-		std::swap(size_, other.size_);
-		std::swap(storage_,	other.storage_);
+    array& operator=(array&& other)
+    {
+        std::swap(ptr_, other.ptr_);
+        std::swap(size_, other.size_);
+        std::swap(storage_, other.storage_);
 
-		return *this;
-	}
+        return *this;
+    }
 
-	// Properties
+    // Properties
 
-    T* begin() const { return ptr_; }
-    T* data() const { return ptr_; }
-    T* end() const { return ptr_ + size_; }
+    T*          begin() const { return ptr_; }
+    T*          data() const { return ptr_; }
+    T*          end() const { return ptr_ + size_; }
     std::size_t size() const { return size_; }
 
-    explicit operator bool() const { return size_ == 0 };
+    explicit operator bool() const {return size_ == 0};
 
-	template<typename S>
-	S* storage() const
-	{
-		return boost::any_cast<S>(storage_.get());
-	}
-private:
-	T* ptr_ = nullptr;
-	std::size_t size_ = 0;
-	std::unique_ptr<boost::any> storage_;
+    template <typename S>
+    S* storage() const
+    {
+        return boost::any_cast<S>(storage_.get());
+    }
+
+  private:
+    T*                          ptr_  = nullptr;
+    std::size_t                 size_ = 0;
+    std::unique_ptr<boost::any> storage_;
 };
 
-template<typename T>
+template <typename T>
 class array<const T> final
 {
-public:
-
+  public:
     // Static Members
 
-    typedef const T*	iterator;
-    typedef const T*	const_iterator;
+    typedef const T* iterator;
+    typedef const T* const_iterator;
 
     // Constructors
     array() = default;
@@ -113,11 +114,11 @@ public:
         : size_(size)
     {
         auto storage = std::vector<char>(size, 0);
-        ptr_ = reinterpret_cast<T*>(storage.data());
-        storage_ = std::move(storage);
+        ptr_         = reinterpret_cast<T*>(storage.data());
+        storage_     = std::move(storage);
     }
 
-    template<typename S>
+    template <typename S>
     explicit array(const T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
         , size_(size)
@@ -163,34 +164,33 @@ public:
 
     // Properties
 
-    const T* begin() const { return ptr_; }
-    const T* data() const { return ptr_; }
-    const T* end() const { return ptr_ + size_; }
+    const T*    begin() const { return ptr_; }
+    const T*    data() const { return ptr_; }
+    const T*    end() const { return ptr_ + size_; }
     std::size_t size() const { return size_; }
 
     explicit operator bool() const { return size_ == 0; }
 
-    template<typename S>
+    template <typename S>
     S* storage() const
     {
         return boost::any_cast<S>(storage_.get());
     }
 
-private:
-    const T* ptr_ = nullptr;
-    std::size_t size_ = 0;
-    std::shared_ptr<boost::any>	storage_;
+  private:
+    const T*                    ptr_  = nullptr;
+    std::size_t                 size_ = 0;
+    std::shared_ptr<boost::any> storage_;
 };
 
-}
+} // namespace caspar
 
 namespace std {
 
-template<typename T>
+template <typename T>
 void swap(caspar::array<const T>& lhs, caspar::array<const T>& rhs)
 {
-	lhs.swap(rhs);
+    lhs.swap(rhs);
 }
 
-}
-
+} // namespace std

@@ -8,19 +8,16 @@
 
 namespace caspar {
 
-template<typename F>
+template <typename F>
 auto flatten(F&& f)
 {
-    return std::async(std::launch::deferred, [](F&& f)
-    {
-        return f.get().get();
-    }, std::forward<F>(f));
+    return std::async(std::launch::deferred, [](F&& f) { return f.get().get(); }, std::forward<F>(f));
 }
 
-template<typename F>
+template <typename F>
 bool is_ready(const F& future)
 {
-	return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
 /**
@@ -33,23 +30,23 @@ bool is_ready(const F& future)
  *
  * @return The future with the result set.
  */
-template<class R>
+template <class R>
 std::future<R> make_ready_future(R&& value)
 {
-	std::promise<R> p;
+    std::promise<R> p;
 
-	p.set_value(value);
+    p.set_value(value);
 
-	return p.get_future();
+    return p.get_future();
 }
 
 static std::future<void> make_ready_future()
 {
-	std::promise<void> p;
+    std::promise<void> p;
 
-	p.set_value();
+    p.set_value();
 
-	return p.get_future();
+    return p.get_future();
 }
 
-}
+} // namespace caspar

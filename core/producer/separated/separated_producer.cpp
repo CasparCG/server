@@ -45,7 +45,8 @@ class separated_producer : public frame_producer_base
 
   public:
     explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
-        : fill_producer_(fill), key_producer_(key)
+        : fill_producer_(fill)
+        , key_producer_(key)
     {
         key_monitor_subject_->attach_parent(monitor_subject_);
 

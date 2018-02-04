@@ -1,23 +1,23 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
-*
-* This file is part of CasparCG (www.casparcg.com).
-*
-* CasparCG is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* CasparCG is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
-*
-* Author: Robert Nagy, ronag89@gmail.com
-*/
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Robert Nagy, ronag89@gmail.com
+ */
 
 #pragma once
 
@@ -41,12 +41,12 @@ class executor final
     typedef std::function<void()>                 task_t;
     typedef tbb::concurrent_bounded_queue<task_t> queue_t;
 
-    std::wstring        name_;
-    std::atomic<bool>	is_running_ = true;
-    queue_t	            queue_;
-    std::thread		    thread_;
+    std::wstring      name_;
+    std::atomic<bool> is_running_ = true;
+    queue_t           queue_;
+    std::thread       thread_;
 
-public:
+  public:
     executor(const std::wstring& name)
         : name_(name)
         , thread_(std::thread([this] { run(); }))
@@ -59,7 +59,7 @@ public:
         thread_.join();
     }
 
-    template<typename Func>
+    template <typename Func>
     auto begin_invoke(Func&& func)
     {
         if (!is_running_) {
@@ -69,34 +69,23 @@ public:
         return internal_begin_invoke(std::forward<Func>(func));
     }
 
-    template<typename Func>
+    template <typename Func>
     auto invoke(Func&& func)
     {
-        if (is_current()) {  // Avoids potential deadlock.
+        if (is_current()) { // Avoids potential deadlock.
             return func();
         }
 
         return begin_invoke(std::forward<Func>(func)).get();
     }
 
-    void yield()
-    {
-    }
+    void yield() {}
 
-    void set_capacity(queue_t::size_type capacity)
-    {
-        queue_.set_capacity(capacity);
-    }
+    void set_capacity(queue_t::size_type capacity) { queue_.set_capacity(capacity); }
 
-    queue_t::size_type capacity() const
-    {
-        return queue_.capacity();
-    }
+    queue_t::size_type capacity() const { return queue_.capacity(); }
 
-    void clear()
-    {
-        queue_.clear();
-    }
+    void clear() { queue_.clear(); }
 
     void stop()
     {
@@ -112,39 +101,23 @@ public:
         invoke([] {});
     }
 
-    queue_t::size_type size() const
-    {
-        return queue_.size();
-    }
+    queue_t::size_type size() const { return queue_.size(); }
 
-    bool is_running() const
-    {
-        return is_running_;
-    }
+    bool is_running() const { return is_running_; }
 
-    bool is_current() const
-    {
-        return std::this_thread::get_id() == thread_.get_id();
-    }
+    bool is_current() const { return std::this_thread::get_id() == thread_.get_id(); }
 
-    const std::wstring& name() const
-    {
-        return name_;
-    }
+    const std::wstring& name() const { return name_; }
 
-private:
-
-    template<typename Func>
+  private:
+    template <typename Func>
     auto internal_begin_invoke(Func&& func)
     {
-        typedef decltype(func())                  result_type;
+        typedef decltype(func()) result_type;
 
         auto task = std::make_shared<std::packaged_task<result_type()>>(std::forward<Func>(func));
 
-        queue_.push([=]() mutable
-        {
-            (*task)();
-        });
+        queue_.push([=]() mutable { (*task)(); });
 
         return task->get_future();
     }
@@ -171,4 +144,4 @@ private:
     }
 };
 
-}
+} // namespace caspar

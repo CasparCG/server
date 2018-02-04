@@ -8,19 +8,19 @@
 
 namespace caspar { namespace IO {
 
-	class lock_container : public boost::noncopyable
-	{
-	public:
-		lock_container(const std::wstring& lifecycle_key);
-		~lock_container();
+class lock_container : public boost::noncopyable
+{
+  public:
+    lock_container(const std::wstring& lifecycle_key);
+    ~lock_container();
 
-		bool check_access(client_connection<wchar_t>::ptr conn);
-		bool try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn);
-		void release_lock(client_connection<wchar_t>::ptr conn);
-		void clear_locks();
+    bool check_access(client_connection<wchar_t>::ptr conn);
+    bool try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn);
+    void release_lock(client_connection<wchar_t>::ptr conn);
+    void clear_locks();
 
-	private:
-		struct impl;
-		spl::unique_ptr<impl> impl_;
-	};
-}}
+  private:
+    struct impl;
+    spl::unique_ptr<impl> impl_;
+};
+}} // namespace caspar::IO

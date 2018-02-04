@@ -36,11 +36,21 @@ struct draw_frame::impl
   public:
     impl() {}
 
-    impl(const_frame frame) : frame_(std::move(frame)) {}
+    impl(const_frame frame)
+        : frame_(std::move(frame))
+    {
+    }
 
-    impl(std::vector<draw_frame> frames) : frame_(std::move(frames)) {}
+    impl(std::vector<draw_frame> frames)
+        : frame_(std::move(frames))
+    {
+    }
 
-    impl(const impl& other) : frame_(other.frame_), transform_(other.transform_) {}
+    impl(const impl& other)
+        : frame_(other.frame_)
+        , transform_(other.transform_)
+    {
+    }
 
     void accept(frame_visitor& visitor) const
     {
@@ -48,7 +58,10 @@ struct draw_frame::impl
         {
             frame_visitor& visitor;
 
-            accept_visitor(frame_visitor& visitor) : visitor(visitor) {}
+            accept_visitor(frame_visitor& visitor)
+                : visitor(visitor)
+            {
+            }
 
             void operator()(boost::blank) const {}
 
@@ -69,12 +82,30 @@ struct draw_frame::impl
     bool operator==(const impl& other) { return frame_ == other.frame_ && transform_ == other.transform_; }
 };
 
-draw_frame::draw_frame() : impl_(new impl()) {}
-draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)) {}
-draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)) {}
-draw_frame::draw_frame(const_frame&& frame) : impl_(new impl(std::move(frame))) {}
-draw_frame::draw_frame(mutable_frame&& frame) : impl_(new impl(std::move(frame))) {}
-draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)) {}
+draw_frame::draw_frame()
+    : impl_(new impl())
+{
+}
+draw_frame::draw_frame(const draw_frame& other)
+    : impl_(new impl(*other.impl_))
+{
+}
+draw_frame::draw_frame(draw_frame&& other)
+    : impl_(std::move(other.impl_))
+{
+}
+draw_frame::draw_frame(const_frame&& frame)
+    : impl_(new impl(std::move(frame)))
+{
+}
+draw_frame::draw_frame(mutable_frame&& frame)
+    : impl_(new impl(std::move(frame)))
+{
+}
+draw_frame::draw_frame(std::vector<draw_frame> frames)
+    : impl_(new impl(frames))
+{
+}
 draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
 {

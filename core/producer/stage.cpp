@@ -64,7 +64,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
   public:
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
-        : channel_index_(channel_index), graph_(std::move(graph)), aggregator_([=](double x, double y) { return collission_detect(x, y); })
+        : channel_index_(channel_index)
+        , graph_(std::move(graph))
+        , aggregator_([=](double x, double y) { return collission_detect(x, y); })
     {
         graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
     }
@@ -339,7 +341,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     }
 };
 
-stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(channel_index, std::move(graph))) {}
+stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
+    : impl_(new impl(channel_index, std::move(graph)))
+{
+}
 std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params) { return impl_->call(index, params); }
 std::future<void>         stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms) { return impl_->apply_transforms(transforms); }
 std::future<void>

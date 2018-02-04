@@ -47,7 +47,10 @@ struct layer::impl
     int64_t                  current_frame_age_ = 0;
 
   public:
-    impl(int index) : monitor_subject_(spl::make_shared<monitor::subject>("/layer/" + boost::lexical_cast<std::string>(index))) {}
+    impl(int index)
+        : monitor_subject_(spl::make_shared<monitor::subject>("/layer/" + boost::lexical_cast<std::string>(index)))
+    {
+    }
 
     void set_foreground(spl::shared_ptr<frame_producer> producer)
     {
@@ -143,8 +146,14 @@ struct layer::impl
     bool collides(double x, double y) const { return foreground_->collides(x, y); }
 };
 
-layer::layer(int index) : impl_(new impl(index)) {}
-layer::layer(layer&& other) : impl_(std::move(other.impl_)) {}
+layer::layer(int index)
+    : impl_(new impl(index))
+{
+}
+layer::layer(layer&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 layer& layer::operator=(layer&& other)
 {
     other.swap(*this);

@@ -48,7 +48,12 @@ struct audio_item
 
     audio_item() {}
 
-    audio_item(audio_item&& other) : tag(std::move(other.tag)), transform(std::move(other.transform)), audio_data(std::move(other.audio_data)) {}
+    audio_item(audio_item&& other)
+        : tag(std::move(other.tag))
+        , transform(std::move(other.transform))
+        , audio_data(std::move(other.audio_data))
+    {
+    }
 };
 
 typedef std::vector<double> audio_buffer_ps;
@@ -73,7 +78,8 @@ struct audio_mixer::impl : boost::noncopyable
     spl::shared_ptr<diagnostics::graph> graph_;
 
   public:
-    impl(spl::shared_ptr<diagnostics::graph> graph) : graph_(std::move(graph))
+    impl(spl::shared_ptr<diagnostics::graph> graph)
+        : graph_(std::move(graph))
     {
         graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
         graph_->set_color("audio-clipping", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -229,7 +235,10 @@ struct audio_mixer::impl : boost::noncopyable
     size_t audio_size(size_t num_samples) const { return num_samples * format_desc_.audio_channels; }
 };
 
-audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))) {}
+audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph)
+    : impl_(new impl(std::move(graph)))
+{
+}
 void           audio_mixer::push(const frame_transform& transform) { impl_->push(transform); }
 void           audio_mixer::visit(const const_frame& frame) { impl_->visit(frame); }
 void           audio_mixer::pop() { impl_->pop(); }

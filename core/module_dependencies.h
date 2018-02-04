@@ -38,7 +38,9 @@ struct module_dependencies
     module_dependencies(spl::shared_ptr<cg_producer_registry>    cg_registry,
                         spl::shared_ptr<frame_producer_registry> producer_registry,
                         spl::shared_ptr<frame_consumer_registry> consumer_registry)
-        : cg_registry(std::move(cg_registry)), producer_registry(std::move(producer_registry)), consumer_registry(std::move(consumer_registry))
+        : cg_registry(std::move(cg_registry))
+        , producer_registry(std::move(producer_registry))
+        , consumer_registry(std::move(consumer_registry))
     {
     }
 };
