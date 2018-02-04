@@ -89,7 +89,7 @@ class executor final
     typename std::enable_if<std::is_same<void, decltype(std::declval<Func>())>::value, void>::type invoke(Func&& func)
     {
         if (is_current()) { // Avoids potential deadlock.
-            return func();
+            func();
         }
 
         begin_invoke(std::forward<Func>(func)).wait();
