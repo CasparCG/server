@@ -22,7 +22,7 @@ IF (GIT_FOUND)
 ENDIF ()
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
-FIND_PACKAGE (Boost COMPONENTS system thread chrono filesystem log locale regex date_time REQUIRED)
+FIND_PACKAGE (Boost COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
 FIND_PACKAGE (FFmpeg REQUIRED)
 FIND_PACKAGE (OpenGL REQUIRED)
 FIND_PACKAGE (JPEG REQUIRED)
@@ -34,6 +34,8 @@ FIND_PACKAGE (SndFile REQUIRED)
 FIND_PACKAGE (OpenAL REQUIRED)
 FIND_PACKAGE (GLFW REQUIRED)
 FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
+
+LINK_DIRECTORIES( ${FFMPEG_LIBRARY_DIRS} )
 
 # TO CLEANUP!!
 
@@ -79,6 +81,7 @@ else()
 	add_compile_options( -std=c++14 ) # Needed for precompiled headers to work
 	add_compile_options( -O3 ) # Needed for precompiled headers to work
 	add_definitions( -DNDEBUG ) # Needed for precompiled headers to work
+	add_compile_options( -Wno-deprecated-declarations -Wno-write-strings -Wno-terminate -Wno-multichar -Wno-cpp )
 	add_compile_options( -msse3 )
 	add_compile_options( -mssse3 )
 	add_compile_options( -msse4.1 )

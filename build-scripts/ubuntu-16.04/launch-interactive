@@ -1,5 +1,0 @@
-#! /bin/bash
-docker run --rm -it \
-    -v $PWD:/source \
-    -v $PWD/products:/build/products \
-    casparcg/server-build:ubuntu-16.04 /bin/bash

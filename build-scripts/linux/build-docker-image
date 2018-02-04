@@ -1,0 +1,2 @@
+#! /bin/bash
+docker build -t casparcg/server -f $PWD/build-scripts/linux/Dockerfile $PWD
