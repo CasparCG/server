@@ -65,7 +65,8 @@ struct AMCPProtocolStrategy::impl
     spl::shared_ptr<amcp_command_repository> repo_;
 
   public:
-    impl(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo) : repo_(repo)
+    impl(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
+        : repo_(repo)
     {
         commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"General Queue for " + name));
 

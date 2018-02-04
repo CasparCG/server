@@ -108,7 +108,9 @@ class decklink_producer
                       int                                         device_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory,
                       const std::wstring&                         filter)
-        : device_index_(device_index), format_desc_(format_desc), frame_factory_(frame_factory)
+        : device_index_(device_index)
+        , format_desc_(format_desc)
+        , frame_factory_(frame_factory)
     {
         frame_buffer_.set_capacity(4);
 
@@ -329,7 +331,8 @@ class decklink_producer_proxy : public core::frame_producer_base
                                      int                                         device_index,
                                      const std::wstring&                         filter_str,
                                      uint32_t                                    length)
-        : executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]"), length_(length)
+        : executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+        , length_(length)
     {
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {

@@ -54,7 +54,10 @@ struct param_visitor : public boost::static_visitor<void>
 {
     T& o;
 
-    param_visitor(T& o) : o(o) {}
+    param_visitor(T& o)
+        : o(o)
+    {
+    }
 
     void operator()(const bool value) { o << value; }
     void operator()(const int32_t value) { o << static_cast<int64_t>(value); }
@@ -140,7 +143,10 @@ struct client::impl
     std::thread thread_;
 
   public:
-    impl(std::shared_ptr<boost::asio::io_service> service) : service_(std::move(service)), socket_(*service_, udp::v4()), thread_(boost::bind(&impl::run, this))
+    impl(std::shared_ptr<boost::asio::io_service> service)
+        : service_(std::move(service))
+        , socket_(*service_, udp::v4())
+        , thread_(boost::bind(&impl::run, this))
     {
     }
 
@@ -277,9 +283,15 @@ struct client::impl
     }
 };
 
-client::client(std::shared_ptr<boost::asio::io_context> service) : impl_(new impl(std::move(service))) {}
+client::client(std::shared_ptr<boost::asio::io_context> service)
+    : impl_(new impl(std::move(service)))
+{
+}
 
-client::client(client&& other) : impl_(std::move(other.impl_)) {}
+client::client(client&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 
 client& client::operator=(client&& other)
 {

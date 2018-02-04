@@ -47,7 +47,11 @@ const wchar_t      CIIProtocolStrategy::TokenDelimiter   = L'\\';
 CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
                                          const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                                          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
-    : executor_(L"CIIProtocolStrategy"), pChannel_(channels.at(0)), channels_(channels), cg_registry_(cg_registry), producer_registry_(producer_registry)
+    : executor_(L"CIIProtocolStrategy")
+    , pChannel_(channels.at(0))
+    , channels_(channels)
+    , cg_registry_(cg_registry)
+    , producer_registry_(producer_registry)
 {
 }
 

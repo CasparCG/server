@@ -123,7 +123,11 @@ struct image_kernel::impl
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
 
-    impl(const spl::shared_ptr<device>& ogl) : ogl_(ogl), shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); })) {}
+    impl(const spl::shared_ptr<device>& ogl)
+        : ogl_(ogl)
+        , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
+    {
+    }
 
     void draw(draw_params params)
     {
@@ -432,7 +436,10 @@ struct image_kernel::impl
     }
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)) {}
+image_kernel::image_kernel(const spl::shared_ptr<device>& ogl)
+    : impl_(new impl(ogl))
+{
+}
 image_kernel::~image_kernel() {}
 void image_kernel::draw(const draw_params& params) { impl_->draw(params); }
 

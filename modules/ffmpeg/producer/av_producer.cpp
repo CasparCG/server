@@ -89,7 +89,8 @@ struct Stream
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
 
-    Stream(AVStream* stream) : next_pts_(stream->start_time)
+    Stream(AVStream* stream)
+        : next_pts_(stream->start_time)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!codec) {
@@ -256,7 +257,8 @@ struct Input
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
 
-    Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph) : graph_(graph)
+    Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
+        : graph_(graph)
     {
         graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
         graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));

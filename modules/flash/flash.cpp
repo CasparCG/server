@@ -56,7 +56,8 @@ class flash_cg_proxy
 
   public:
     explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer, std::wstring base_folder = env::template_folder())
-        : flash_producer_(producer), base_folder_(base_folder)
+        : flash_producer_(producer)
+        , base_folder_(base_folder)
     {
     }
 

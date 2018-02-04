@@ -15,7 +15,10 @@ struct lock_container::impl
     mutable tbb::spin_rw_mutex                                                                                      mutex_;
 
   public:
-    impl(const std::wstring& lifecycle_key) : lifecycle_key_(lifecycle_key) {}
+    impl(const std::wstring& lifecycle_key)
+        : lifecycle_key_(lifecycle_key)
+    {
+    }
 
     bool check_access(client_connection<wchar_t>::ptr conn)
     {
@@ -95,7 +98,10 @@ struct lock_container::impl
     }
 };
 
-lock_container::lock_container(const std::wstring& lifecycle_key) : impl_(spl::make_unique<impl>(lifecycle_key)) {}
+lock_container::lock_container(const std::wstring& lifecycle_key)
+    : impl_(spl::make_unique<impl>(lifecycle_key))
+{
+}
 lock_container::~lock_container() {}
 
 bool lock_container::check_access(client_connection<wchar_t>::ptr conn) { return impl_->check_access(conn); }

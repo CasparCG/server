@@ -98,7 +98,10 @@ class html_client
 
   public:
     html_client(spl::shared_ptr<core::frame_factory> frame_factory, const core::video_format_desc& format_desc, const std::wstring& url)
-        : url_(url), frame_factory_(std::move(frame_factory)), format_desc_(format_desc), executor_(L"html_producer")
+        : url_(url)
+        , frame_factory_(std::move(frame_factory))
+        , format_desc_(format_desc)
+        , executor_(L"html_producer")
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -386,7 +389,8 @@ class html_producer : public core::frame_producer_base
 
   public:
     html_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& url)
-        : format_desc_(format_desc), url_(url)
+        : format_desc_(format_desc)
+        , url_(url)
     {
         html::invoke([&] {
             client_ = new html_client(frame_factory, format_desc, url_);

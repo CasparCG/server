@@ -40,7 +40,14 @@ _ATL_FUNC_INFO fnInfoFlashCallEvent        = {CC_STDCALL, VT_EMPTY, 1, {VT_BSTR}
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = {CC_STDCALL, VT_EMPTY, 1, {VT_I4}};
 
 FlashAxContainer::FlashAxContainer()
-    : bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false), m_lpDD4(0), timerCount_(0), bIsEmpty_(true)
+    : bInPlaceActive_(FALSE)
+    , pTimerHelper(0)
+    , bInvalidRect_(false)
+    , bReadyToRender_(false)
+    , bHasNewTiming_(false)
+    , m_lpDD4(0)
+    , timerCount_(0)
+    , bIsEmpty_(true)
 {
 }
 FlashAxContainer::~FlashAxContainer()
@@ -614,7 +621,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
     // else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
     //{
     //	CASPAR_LOG(error) << print_() << L" TemplateDescription: \n-------------------------------------------\n" << str <<
-    //L"\n-------------------------------------------";
+    // L"\n-------------------------------------------";
     //}
     // else if(str.find(TEXT("OnGetInfo")) != std::wstring::npos)
     //{
@@ -623,7 +630,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
     // else
     //{
     //	CASPAR_LOG(error) << print_() << L" Unknown: \n-------------------------------------------\n" << str <<
-    //L"\n-------------------------------------------";
+    // L"\n-------------------------------------------";
     //}
 
     CComPtr<IShockwaveFlash> spFlash;

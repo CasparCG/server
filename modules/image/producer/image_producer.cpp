@@ -57,7 +57,9 @@ struct image_producer : public core::frame_producer_base
     core::draw_frame                           frame_;
 
     image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, uint32_t length)
-        : description_(description), frame_factory_(frame_factory), length_(length)
+        : description_(description)
+        , frame_factory_(frame_factory)
+        , length_(length)
     {
         load(load_image(description_));
 
@@ -65,7 +67,9 @@ struct image_producer : public core::frame_producer_base
     }
 
     image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length)
-        : description_(L"png from memory"), frame_factory_(frame_factory), length_(length)
+        : description_(L"png from memory")
+        , frame_factory_(frame_factory)
+        , length_(length)
     {
         load(load_png_from_memory(png_data, size));
 
@@ -107,7 +111,10 @@ class ieq
     std::wstring test_;
 
   public:
-    ieq(const std::wstring& test) : test_(test) {}
+    ieq(const std::wstring& test)
+        : test_(test)
+    {
+    }
 
     bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
 };

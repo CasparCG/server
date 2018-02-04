@@ -20,7 +20,10 @@ struct accelerator::impl
     std::mutex                   mutex_;
     std::shared_ptr<ogl::device> ogl_device_;
 
-    impl(const std::wstring& path) : path_(path) {}
+    impl(const std::wstring& path)
+        : path_(path)
+    {
+    }
 
     std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id)
     {
@@ -43,7 +46,10 @@ struct accelerator::impl
     }
 };
 
-accelerator::accelerator(const std::wstring& path) : impl_(std::make_unique<impl>(path)) {}
+accelerator::accelerator(const std::wstring& path)
+    : impl_(std::make_unique<impl>(path))
+{
+}
 
 accelerator::~accelerator() {}
 

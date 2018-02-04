@@ -55,7 +55,10 @@ struct image_consumer : public core::frame_consumer
   public:
     // frame_consumer
 
-    image_consumer(const std::wstring& filename) : filename_(filename) {}
+    image_consumer(const std::wstring& filename)
+        : filename_(filename)
+    {
+    }
 
     void initialize(const core::video_format_desc&, int) override {}
 

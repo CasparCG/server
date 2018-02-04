@@ -293,7 +293,10 @@ struct server::impl : boost::noncopyable
     }
 };
 
-server::server(std::function<void(bool)> shutdown_server_now) : impl_(new impl(shutdown_server_now)) {}
+server::server(std::function<void(bool)> shutdown_server_now)
+    : impl_(new impl(shutdown_server_now))
+{
+}
 void                                                     server::start() { impl_->start(); }
 spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
 core::monitor::subject&                                  server::monitor_output() { return *impl_->monitor_subject_; }

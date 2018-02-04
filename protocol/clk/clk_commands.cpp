@@ -51,7 +51,10 @@ class command_context
                     const spl::shared_ptr<core::video_channel>&                 channel,
                     const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                     const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
-        : channels_(channels), channel_(channel), cg_registry_(cg_registry), producer_registry_(producer_registry)
+        : channels_(channels)
+        , channel_(channel)
+        , cg_registry_(cg_registry)
+        , producer_registry_(producer_registry)
     {
     }
 

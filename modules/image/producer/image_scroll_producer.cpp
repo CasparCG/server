@@ -68,7 +68,12 @@ class speed_tweener
 
   public:
     speed_tweener() = default;
-    speed_tweener(double source, double dest, int duration, const tweener& tween) : source_(source), dest_(dest), duration_(duration), time_(0), tweener_(tween)
+    speed_tweener(double source, double dest, int duration, const tweener& tween)
+        : source_(source)
+        , dest_(dest)
+        , duration_(duration)
+        , time_(0)
+        , tweener_(tween)
     {
     }
 
@@ -119,7 +124,10 @@ struct image_scroll_producer : public core::frame_producer_base
                                    int                                         motion_blur_px         = 0,
                                    bool                                        premultiply_with_alpha = false,
                                    bool                                        progressive            = false)
-        : filename_(filename), format_desc_(format_desc), end_time_(std::move(end_time)), progressive_(progressive)
+        : filename_(filename)
+        , format_desc_(format_desc)
+        , end_time_(std::move(end_time))
+        , progressive_(progressive)
     {
         double speed = s;
 

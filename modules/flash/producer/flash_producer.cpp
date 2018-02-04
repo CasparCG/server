@@ -62,7 +62,9 @@ namespace caspar { namespace flash {
 class bitmap
 {
   public:
-    bitmap(int width, int height) : bmp_data_(nullptr), hdc_(CreateCompatibleDC(0), DeleteDC)
+    bitmap(int width, int height)
+        : bmp_data_(nullptr)
+        , hdc_(CreateCompatibleDC(0), DeleteDC)
     {
         BITMAPINFO info;
         memset(&info, 0, sizeof(BITMAPINFO));
