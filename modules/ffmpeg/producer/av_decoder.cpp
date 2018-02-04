@@ -129,6 +129,7 @@ bool Decoder::try_push(std::shared_ptr<AVPacket> packet)
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
+
         if (input_.size() > input_capacity_ && packet) {
             return false;
         }
@@ -146,6 +147,7 @@ void Decoder::operator()(std::function<bool(std::shared_ptr<AVFrame>&)> fn)
 {
     {
         std::unique_lock<std::mutex> lock(mutex_);
+
         while (!output_.empty() && fn(output_.front())) {
             output_.pop();
         }
@@ -162,6 +164,7 @@ void Decoder::flush()
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
+
         while (!output_.empty()) {
             output_.pop();
         }
