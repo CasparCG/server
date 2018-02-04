@@ -471,17 +471,15 @@ struct AVProducer::Impl
                     // TODO (fix) ensure pts != AV_NOPTS_VALUE
 
                     if (video) {
-                        frame.pts =
-                            av_rescale_q(video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) -
-                            start_time;
-                        frame.duration =
-                            av_rescale_q(1, av_inv_q(av_buffersink_get_frame_rate(video_filter_.sink)), TIME_BASE_Q);
+                        auto tb = av_buffersink_get_time_base(video_filter_.sink);
+                        auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
+                        frame.pts = av_rescale_q(video->pts, tb, TIME_BASE_Q) - start_time;
+                        frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
                     } else if (audio) {
-                        frame.pts =
-                            av_rescale_q(audio->pts, av_buffersink_get_time_base(audio_filter_.sink), TIME_BASE_Q) -
-                            start_time;
-                        frame.duration = av_rescale_q(
-                            audio->nb_samples, {1, av_buffersink_get_sample_rate(audio_filter_.sink)}, TIME_BASE_Q);
+                        auto tb = av_buffersink_get_time_base(audio_filter_.sink);
+                        auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
+                        frame.pts = av_rescale_q(audio->pts, tb, TIME_BASE_Q) - start_time;
+                        frame.duration = av_rescale_q(audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
                     // TODO (perf) Seek input as soon as possible.
@@ -503,6 +501,7 @@ struct AVProducer::Impl
 
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+
                         buffer_.push_back(std::move(frame));
                         buffer_eof_ = false;
                     }
