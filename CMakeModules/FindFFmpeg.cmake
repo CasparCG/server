@@ -15,7 +15,6 @@
 #   - AVUTIL
 #   - POSTPROC
 #   - SWSCALE
-#   - SWRESAMPLE
 # the following variables will be defined
 #  <component>_FOUND        - System has <component>
 #  <component>_INCLUDE_DIRS - Include directory necessary for using the <component> headers
@@ -64,7 +63,7 @@ macro(find_component _component _pkgconfig _library _header)
      # in the FIND_PATH() and FIND_LIBRARY() calls
      find_package(PkgConfig)
      if (PKG_CONFIG_FOUND)
-       pkg_check_modules(PC_${_component} ${_pkgconfig})
+       pkg_check_modules(${_component} ${_pkgconfig})
      endif ()
   endif (NOT WIN32)
 
@@ -88,10 +87,12 @@ macro(find_component _component _pkgconfig _library _header)
   set_component_found(${_component})
 
   mark_as_advanced(
+    ${_component}_LIBRARY_DIRS
     ${_component}_INCLUDE_DIRS
     ${_component}_LIBRARIES
     ${_component}_DEFINITIONS
-    ${_component}_VERSION)
+    ${_component}_VERSION
+  )
 
 endmacro()
 
@@ -115,6 +116,7 @@ if (NOT FFMPEG_LIBRARIES)
       # message(STATUS "Required component ${_component} present.")
       set(FFMPEG_LIBRARIES   ${FFMPEG_LIBRARIES}   ${${_component}_LIBRARIES})
       set(FFMPEG_DEFINITIONS ${FFMPEG_DEFINITIONS} ${${_component}_DEFINITIONS})
+      list(APPEND FFMPEG_LIBRARY_DIRS ${${_component}_LIBRARY_DIRS})
       list(APPEND FFMPEG_INCLUDE_DIRS ${${_component}_INCLUDE_DIRS})
     else ()
       # message(STATUS "Required component ${_component} missing.")
@@ -126,14 +128,23 @@ if (NOT FFMPEG_LIBRARIES)
     list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
   endif ()
 
+  # Build the lib path with duplicates removed.
+  if (FFMPEG_LIBRARY_DIRS)
+    list(REMOVE_DUPLICATES FFMPEG_LIBRARY_DIRS)
+  endif ()
+
   # cache the vars.
   set(FFMPEG_INCLUDE_DIRS ${FFMPEG_INCLUDE_DIRS} CACHE STRING "The FFmpeg include directories." FORCE)
+  set(FFMPEG_LIBRARY_DIRS ${FFMPEG_LIBRARY_DIRS} CACHE STRING "The FFmpeg lib directories." FORCE)
   set(FFMPEG_LIBRARIES    ${FFMPEG_LIBRARIES}    CACHE STRING "The FFmpeg libraries." FORCE)
   set(FFMPEG_DEFINITIONS  ${FFMPEG_DEFINITIONS}  CACHE STRING "The FFmpeg cflags." FORCE)
 
-  mark_as_advanced(FFMPEG_INCLUDE_DIRS
-                   FFMPEG_LIBRARIES
-                   FFMPEG_DEFINITIONS)
+  mark_as_advanced(
+    FFMPEG_INCLUDE_DIRS
+    FFMPEG_LIBRARY_DIRS
+    FFMPEG_LIBRARIES
+    FFMPEG_DEFINITIONS
+  )
 
 endif ()
 
