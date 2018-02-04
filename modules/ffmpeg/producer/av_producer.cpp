@@ -77,16 +77,14 @@ struct Decoder
     mutable std::mutex              decoder_mutex_;
     std::shared_ptr<AVCodecContext> decoder_;
 
-    mutable std::mutex      mutex_;
-    std::condition_variable cond_;
-
     int64_t next_pts_ = 0;
 
+    mutable std::mutex                    mutex_;
+    std::condition_variable               cond_;
     int                                   input_capacity_ = 256;
     std::queue<std::shared_ptr<AVPacket>> input_;
-
-    int                                  output_capacity_ = 2;
-    std::queue<std::shared_ptr<AVFrame>> output_;
+    int                                   output_capacity_ = 2;
+    std::queue<std::shared_ptr<AVFrame>>  output_;
 
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
@@ -252,16 +250,12 @@ struct Input
     mutable std::mutex               format_mutex_;
     std::shared_ptr<AVFormatContext> format_;
 
-    std::vector<AVStream*> decoders_;
-
-    mutable std::mutex      mutex_;
-    std::condition_variable cond_;
-
+    mutable std::mutex                    mutex_;
+    std::condition_variable               cond_;
     int                                   output_capacity_ = 64;
     std::queue<std::shared_ptr<AVPacket>> output_;
-
-    bool paused_ = false;
-    bool eof_    = false;
+    bool                                  paused_ = false;
+    bool                                  eof_    = false;
 
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
@@ -289,10 +283,6 @@ struct Input
 
         FF(avformat_find_stream_info(format_.get(), nullptr));
 
-        for (unsigned n = 0; n < format_->nb_streams; ++n) {
-            decoders_.push_back(format_->streams[n]);
-        }
-
         thread_ = std::thread([=] {
             try {
                 set_thread_name(L"[ffmpeg::av_producer::Input]");
@@ -300,8 +290,9 @@ struct Input
                 while (!abort_request_) {
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock,
-                                   [&] { return (!paused_ && output_.size() < output_capacity_) || abort_request_; });
+                        cond_.wait(lock, [&] {
+                            return (!paused_ && output_.size() < output_capacity_) || abort_request_;
+                        });
                     }
 
                     if (abort_request_) {
@@ -347,10 +338,10 @@ struct Input
         thread_.join();
     }
 
-    bool paused() const
+    static int interrupt_cb(void* ctx)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return paused_;
+        auto input = reinterpret_cast<Input*>(ctx);
+        return input->abort_request_ ? 1 : 0;
     }
 
     void operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
@@ -365,17 +356,17 @@ struct Input
         cond_.notify_all();
     }
 
-    static int interrupt_cb(void* ctx)
-    {
-        auto input = reinterpret_cast<Input*>(ctx);
-        return input->abort_request_ ? 1 : 0;
-    }
-
     AVFormatContext* operator->() { return format_.get(); }
 
     AVFormatContext* const operator->() const { return format_.get(); }
 
     int64_t start_time() const { return format_->start_time != AV_NOPTS_VALUE ? format_->start_time : 0; }
+
+    bool paused() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return paused_;
+    }
 
     bool eof() const
     {
@@ -433,7 +424,7 @@ struct Filter
 
     Filter(std::string                    filter_spec,
            const Input&                   input,
-           const std::map<int, std::unique_ptr<Decoder>>&         streams,
+           std::map<int, Decoder>&        streams,
            int64_t                        start_time,
            AVMediaType                    media_type,
            const core::video_format_desc& format_desc)
@@ -496,13 +487,6 @@ struct Filter
             }
         }
 
-        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
-                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
-
-        if (!graph) {
-            FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
-        }
-
         if (audio_input_count == 1) {
             int count = 0;
             for (unsigned n = 0; n < input->nb_streams; ++n) {
@@ -525,6 +509,13 @@ struct Filter
             }
         }
 
+        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
+            [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
+
+        if (!graph) {
+            FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
+        }
+
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
 
         // inputs
@@ -542,8 +533,8 @@ struct Filter
                 // TODO share stream decoders between graphs
                 while (true) {
                     if (index == input->nb_streams) {
-                        graph = nullptr;
-                        return;
+                        CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                            << msg_info_t((boost::format("could not find input for: %s") % cur->name).str()));
                     }
                     if (input->streams[index]->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
@@ -552,7 +543,12 @@ struct Filter
                     index++;
                 }
 
-                auto& st = *streams.find(index)->second;
+                auto it = streams.find(index);
+                if (it == streams.end()) {
+                    it = streams.emplace(index, input->streams[index]).first;
+                }
+
+                auto& st = it->second;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
@@ -616,8 +612,6 @@ struct Filter
                 AV_PIX_FMT_YUVA444P,
                 AV_PIX_FMT_YUVA422P,
                 AV_PIX_FMT_YUVA420P,
-                // NOTE CasparCG does not properly handle interlaced vertical chrome subsampling.
-                // However, that is not a problem since we never send out interlaced frames.
                 AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
@@ -677,10 +671,10 @@ struct AVProducer::Impl
 
     std::vector<int> audio_cadence_;
 
-    Input                 input_;
-    std::map<int, std::unique_ptr<Decoder>> decoders_;
-    Filter                video_filter_;
-    Filter                audio_filter_;
+    Input                  input_;
+    std::map<int, Decoder> decoders_;
+    Filter                 video_filter_;
+    Filter                 audio_filter_;
 
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
@@ -734,10 +728,6 @@ struct AVProducer::Impl
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_text(u16(print()));
-
-        for (unsigned n = 0; n < input_->nb_streams; ++n) {
-            decoders_[n] = std::make_unique<Decoder>(input_->streams[n]);
-        }
 
         if (start_ != AV_NOPTS_VALUE) {
             seek(start_);
@@ -884,11 +874,11 @@ struct AVProducer::Impl
             if (!packet) {
                 for (auto& p : decoders_) {
                     // NOTE: Should never fail.
-                    p.second->try_push(nullptr);
+                    p.second.try_push(nullptr);
                 }
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = decoders_.find(packet->stream_index);
-                if (it != decoders_.end() && !it->second->try_push(packet)) {
+                if (it != decoders_.end() && !it->second.try_push(packet)) {
                     return false;
                 }
             }
@@ -922,7 +912,7 @@ struct AVProducer::Impl
                 continue;
             }
 
-            (*it->second)([&](std::shared_ptr<AVFrame>& frame) {
+            it->second([&](std::shared_ptr<AVFrame>& frame) {
                 if (nb_requests == 0) {
                     return false;
                 }
@@ -995,7 +985,7 @@ struct AVProducer::Impl
         // Flush unused inputs.
         for (auto& p : decoders_) {
             if (sources_.find(p.first) == sources_.end()) {
-                p.second->flush();
+                p.second.flush();
             }
         }
     }
@@ -1079,7 +1069,7 @@ struct AVProducer::Impl
             input_.resume();
 
             for (auto& p : decoders_) {
-                p.second->flush();
+                p.second.flush();
             }
 
             reset_filters(time);
