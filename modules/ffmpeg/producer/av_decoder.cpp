@@ -43,6 +43,7 @@ Decoder::Decoder(AVStream* stream)
     FF(avcodec_parameters_to_context(ctx_.get(), stream->codecpar));
 
     FF(av_opt_set_int(ctx_.get(), "refcounted_frames", 1, 0));
+    FF(av_opt_set_int(ctx_.get(), "threads", 4, 0));
 
     ctx_->pkt_timebase = stream->time_base;
 
