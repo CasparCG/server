@@ -69,7 +69,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
-                    
+
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
@@ -82,7 +82,6 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     output_.push(std::move(packet));
                     graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
                 }
-
                 cond_.notify_all();
             }
         } catch (...) {
@@ -119,12 +118,14 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
 AVFormatContext* Input::operator->() { return ic_.get(); }
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
-boost::optional<int64_t> Input::start_time() const { 
-    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>(); 
+boost::optional<int64_t> Input::start_time() const
+{
+    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>();
 }
 
-boost::optional<int64_t> Input::duration() const { 
-    return ic_->duration != AV_NOPTS_VALUE ? ic_->duration : boost::optional<int64_t>(); 
+boost::optional<int64_t> Input::duration() const
+{
+    return ic_->duration != AV_NOPTS_VALUE ? ic_->duration : boost::optional<int64_t>();
 }
 
 bool Input::paused() const { return paused_; }
@@ -134,6 +135,7 @@ void Input::paused(bool value)
     paused_ = value;
     cond_.notify_all();
 }
+
 bool Input::eof() const { return eof_; }
 
 void Input::seek(int64_t ts, bool flush)
@@ -144,6 +146,7 @@ void Input::seek(int64_t ts, bool flush)
 
     {
         std::lock_guard<std::mutex> output_lock(mutex_);
+
         while (flush && !output_.empty()) {
             output_.pop();
         }
