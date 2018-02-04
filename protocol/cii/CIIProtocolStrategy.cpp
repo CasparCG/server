@@ -115,7 +115,8 @@ I\25\4\1\\										enablar framebuffer (ignore this)
 
 M\C/SVTNEWS\\									pekar ut vilken grafisk profil som skall anv�ndas
 
-W\4009\4067\Jonas Bj�rkman\\					Skriver "Jonas Bj�rkman" till f�rsta textf�ltet i template 4067 och sparar den f�rdiga skylten som 4009
+W\4009\4067\Jonas Bj�rkman\\					Skriver "Jonas Bj�rkman" till f�rsta textf�ltet i template 4067 och sparar den f�rdiga
+skylten som 4009
 
 T\7\4009.VII\A\\								l�gger ut skylt 4009
 
@@ -130,9 +131,9 @@ V\0\1\D\C\10\0\0\0\\							g�r n�gon inst�llning som har med f�reg�end
 /**********************
 New Commands to support the Netupe automation system
 V\5\13\1\1\Template\0\TabField1\TabField2...\\		Build. Ettan f�re Template indikerar vilket lager den nya templaten skall laddas in i. OBS. Skall inte
-visas efter det h�r steget Y\<27>\\											Stop. H�r kommer ett lagerID ocks� att skickas med (<27> = ESC) Y\<254>\\
-Clear Canvas. H�r kommer ett lagerID ocks� att skickas med, utan det skall allt t�mmas
-Y\<213><243>\\										Play. H�r kommer ett lagerID ocks� att skickas med
+visas efter det h�r steget Y\<27>\\											Stop. H�r kommer ett lagerID ocks�
+att skickas med (<27> = ESC) Y\<254>\\ Clear Canvas. H�r kommer ett lagerID ocks� att skickas med, utan det skall allt t�mmas Y\<213><243>\\
+Play. H�r kommer ett lagerID ocks� att skickas med
 
 **********************/
 CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)

@@ -421,7 +421,6 @@ class IDeckLinkConfiguration_v7_6 : public IUnknown
 
 extern "C"
 {
-
     IDeckLinkIterator*                   CreateDeckLinkIteratorInstance_v7_6(void);
     IDeckLinkGLScreenPreviewHelper_v7_6* CreateOpenGLScreenPreviewHelper_v7_6(void);
     IDeckLinkVideoConversion_v7_6*       CreateVideoConversionInstance_v7_6(void);
