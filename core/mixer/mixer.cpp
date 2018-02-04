@@ -64,7 +64,9 @@ struct mixer::impl : boost::noncopyable
 
   public:
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
-        : channel_index_(channel_index), graph_(std::move(graph)), image_mixer_(std::move(image_mixer))
+        : channel_index_(channel_index)
+        , graph_(std::move(graph))
+        , image_mixer_(std::move(image_mixer))
     {
         graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         current_mix_time_ = 0;

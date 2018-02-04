@@ -19,7 +19,10 @@ struct port::impl
     int                               channel_index_;
 
   public:
-    impl(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer) : index_(index), consumer_(std::move(consumer)), channel_index_(channel_index)
+    impl(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
+        : index_(index)
+        , consumer_(std::move(consumer))
+        , channel_index_(channel_index)
     {
         consumer_->monitor_output().attach_parent(monitor_subject_);
     }
@@ -42,8 +45,14 @@ struct port::impl
     spl::shared_ptr<const frame_consumer> consumer() const { return consumer_; }
 };
 
-port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer) : impl_(new impl(index, channel_index, std::move(consumer))) {}
-port::port(port&& other) : impl_(std::move(other.impl_)) {}
+port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
+    : impl_(new impl(index, channel_index, std::move(consumer)))
+{
+}
+port::port(port&& other)
+    : impl_(std::move(other.impl_))
+{
+}
 port::~port() {}
 port& port::operator=(port&& other)
 {

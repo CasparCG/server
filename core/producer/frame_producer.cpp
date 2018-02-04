@@ -44,7 +44,10 @@ struct frame_producer_registry::impl
     std::vector<producer_factory_t> producer_factories;
 };
 
-frame_producer_registry::frame_producer_registry() : impl_(new impl()) {}
+frame_producer_registry::frame_producer_registry()
+    : impl_(new impl())
+{
+}
 
 void frame_producer_registry::register_producer_factory(std::wstring name, const producer_factory_t& factory) { impl_->producer_factories.push_back(factory); }
 
@@ -53,7 +56,11 @@ frame_producer_dependencies::frame_producer_dependencies(const spl::shared_ptr<c
                                                          const video_format_desc&                             format_desc,
                                                          const spl::shared_ptr<const frame_producer_registry> producer_registry,
                                                          const spl::shared_ptr<const cg_producer_registry>    cg_registry)
-    : frame_factory(frame_factory), channels(channels), format_desc(format_desc), producer_registry(producer_registry), cg_registry(cg_registry)
+    : frame_factory(frame_factory)
+    , channels(channels)
+    , format_desc(format_desc)
+    , producer_registry(producer_registry)
+    , cg_registry(cg_registry)
 {
 }
 
@@ -64,7 +71,8 @@ struct frame_producer_base::impl
     frame_producer_base&  self_;
     draw_frame            last_frame_;
 
-    impl(frame_producer_base& self) : self_(self)
+    impl(frame_producer_base& self)
+        : self_(self)
     {
         frame_number_ = 0;
         paused_       = false;
@@ -90,7 +98,10 @@ struct frame_producer_base::impl
     draw_frame last_frame() { return draw_frame::still(last_frame_); }
 };
 
-frame_producer_base::frame_producer_base() : impl_(new impl(*this)) {}
+frame_producer_base::frame_producer_base()
+    : impl_(new impl(*this))
+{
+}
 
 draw_frame frame_producer_base::receive() { return impl_->receive(); }
 
@@ -164,7 +175,11 @@ class destroy_producer_proxy : public frame_producer
     std::shared_ptr<frame_producer> producer_;
 
   public:
-    destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer) : producer_(std::move(producer)) { destroy_producers_in_separate_thread() = true; }
+    destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer)
+        : producer_(std::move(producer))
+    {
+        destroy_producers_in_separate_thread() = true;
+    }
 
     virtual ~destroy_producer_proxy()
     {

@@ -49,7 +49,9 @@ class transition_producer : public frame_producer_base
 
   public:
     explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info)
-        : mode_(mode), info_(info), dest_producer_(dest)
+        : mode_(mode)
+        , info_(info)
+        , dest_producer_(dest)
     {
         dest->monitor_output().attach_parent(monitor_subject_);
 

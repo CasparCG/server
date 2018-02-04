@@ -17,66 +17,60 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
+
 #ifndef _TIMER_HELPER_H__
 #define _TIMER_HELPER_H__
 
 #include "FlashAxContainer.h"
 
-namespace caspar {
-namespace flash {
+namespace caspar { namespace flash {
 
-	class TimerHelper
-	{
-		TimerHelper(const TimerHelper&);
-		const TimerHelper& operator=(const TimerHelper&);
+class TimerHelper
+{
+    TimerHelper(const TimerHelper&);
+    const TimerHelper& operator=(const TimerHelper&);
 
-	public:
-		TimerHelper()
-		{}
-		TimerHelper(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
-			: ID(id)
-			, firstTime(first)
-			, interval(interv)
-			, currentTime(first)
-			, pTimerSink(pTS)
-		{
-		}
+  public:
+    TimerHelper() {}
+    TimerHelper(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
+        : ID(id)
+        , firstTime(first)
+        , interval(interv)
+        , currentTime(first)
+        , pTimerSink(pTS)
+    {
+    }
 
-		~TimerHelper()
-		{
-		}
-		void Setup(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
-		{
-			ID = id;
-			firstTime = first;
-			interval = interv;
-			currentTime = first;
-			pTimerSink = pTS;
-		}
+    ~TimerHelper() {}
+    void Setup(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
+    {
+        ID          = id;
+        firstTime   = first;
+        interval    = interv;
+        currentTime = first;
+        pTimerSink  = pTS;
+    }
 
-		DWORD Invoke()
-		{
-			if(pTimerSink != 0)
-			{
-				VARIANT value;
-				value.vt = VT_UI4;
-				value.ulVal = currentTime;
+    DWORD Invoke()
+    {
+        if (pTimerSink != 0) {
+            VARIANT value;
+            value.vt    = VT_UI4;
+            value.ulVal = currentTime;
 
-				pTimerSink->OnTimer(value);
-				currentTime += interval;
-			}
-			return currentTime;
-		}
+            pTimerSink->OnTimer(value);
+            currentTime += interval;
+        }
+        return currentTime;
+    }
 
-		DWORD ID;
-		DWORD firstTime;
-		DWORD interval;
-		DWORD currentTime;
-		ATL::CComPtr<ITimerSink> pTimerSink;
-	};
+    DWORD                    ID;
+    DWORD                    firstTime;
+    DWORD                    interval;
+    DWORD                    currentTime;
+    ATL::CComPtr<ITimerSink> pTimerSink;
+};
 
-}	//namespace flash
-}	//namespace caspar
+}} // namespace caspar::flash
 
-#endif	//_TIMER_HELPER_H__
+#endif //_TIMER_HELPER_H__

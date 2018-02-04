@@ -25,7 +25,10 @@
 namespace caspar { namespace core {
 
 frame_geometry::coord::coord(double vertex_x, double vertex_y, double texture_x, double texture_y)
-    : vertex_x(vertex_x), vertex_y(vertex_y), texture_x(texture_x), texture_y(texture_y)
+    : vertex_x(vertex_x)
+    , vertex_y(vertex_y)
+    , texture_x(texture_x)
+    , texture_y(texture_y)
 {
 }
 
@@ -37,7 +40,8 @@ bool frame_geometry::coord::operator==(const frame_geometry::coord& other) const
 
 struct frame_geometry::impl
 {
-    impl(frame_geometry::geometry_type type, std::vector<coord> data) : type_(type)
+    impl(frame_geometry::geometry_type type, std::vector<coord> data)
+        : type_(type)
     {
         if (type == geometry_type::quad && data.size() != 4)
             CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be 4"));
@@ -54,7 +58,10 @@ struct frame_geometry::impl
     std::vector<coord>            data_;
 };
 
-frame_geometry::frame_geometry(geometry_type type, std::vector<coord> data) : impl_(new impl(type, std::move(data))) {}
+frame_geometry::frame_geometry(geometry_type type, std::vector<coord> data)
+    : impl_(new impl(type, std::move(data)))
+{
+}
 
 frame_geometry::geometry_type             frame_geometry::type() const { return impl_->type_; }
 const std::vector<frame_geometry::coord>& frame_geometry::data() const { return impl_->data_; }

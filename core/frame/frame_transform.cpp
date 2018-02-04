@@ -250,7 +250,10 @@ bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs) { return !(lhs == rhs); }
 
 tweened_transform::tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
-    : source_(source), dest_(dest), duration_(duration), tweener_(tween)
+    : source_(source)
+    , dest_(dest)
+    , duration_(duration)
+    , tweener_(tween)
 {
 }
 

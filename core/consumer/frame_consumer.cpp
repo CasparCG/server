@@ -47,7 +47,10 @@ struct frame_consumer_registry::impl
     std::map<std::wstring, preconfigured_consumer_factory_t> preconfigured_consumer_factories;
 };
 
-frame_consumer_registry::frame_consumer_registry() : impl_(new impl()) {}
+frame_consumer_registry::frame_consumer_registry()
+    : impl_(new impl())
+{
+}
 
 void frame_consumer_registry::register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory)
 {
@@ -73,7 +76,11 @@ class destroy_consumer_proxy : public frame_consumer
     std::shared_ptr<frame_consumer> consumer_;
 
   public:
-    destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) : consumer_(std::move(consumer)) { destroy_consumers_in_separate_thread() = true; }
+    destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
+        : consumer_(std::move(consumer))
+    {
+        destroy_consumers_in_separate_thread() = true;
+    }
 
     ~destroy_consumer_proxy()
     {
@@ -122,7 +129,10 @@ class print_consumer_proxy : public frame_consumer
     std::shared_ptr<frame_consumer> consumer_;
 
   public:
-    print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) : consumer_(std::move(consumer)) {}
+    print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
+        : consumer_(std::move(consumer))
+    {
+    }
 
     ~print_consumer_proxy()
     {
@@ -154,7 +164,10 @@ class recover_consumer_proxy : public frame_consumer
     video_format_desc               format_desc_;
 
   public:
-    recover_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) : consumer_(std::move(consumer)) {}
+    recover_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
+        : consumer_(std::move(consumer))
+    {
+    }
 
     std::future<bool> send(const_frame frame) override
     {
@@ -198,7 +211,10 @@ class cadence_guard : public frame_consumer
     boost::circular_buffer<std::size_t> sync_buffer_;
 
   public:
-    cadence_guard(const spl::shared_ptr<frame_consumer>& consumer) : consumer_(consumer) {}
+    cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
+        : consumer_(consumer)
+    {
+    }
 
     void initialize(const video_format_desc& format_desc, int channel_index) override
     {

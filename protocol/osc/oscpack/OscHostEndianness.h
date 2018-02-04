@@ -30,7 +30,7 @@
 #ifndef OSC_HOSTENDIANNESS_H
 #define OSC_HOSTENDIANNESS_H
 
-#define OSC_HOST_LITTLE_ENDIAN 1 
+#define OSC_HOST_LITTLE_ENDIAN 1
 
 /*
     Make sure either OSC_HOST_LITTLE_ENDIAN or OSC_HOST_BIG_ENDIAN is defined
@@ -46,7 +46,7 @@
 
 #elif defined(__WIN32__) || defined(WIN32) || defined(WINCE)
 
- assume that __WIN32__ is only defined on little endian systems
+assume that __WIN32__ is only defined on little endian systems
 
 #define OSC_HOST_LITTLE_ENDIAN 1
 #undef OSC_HOST_BIG_ENDIAN

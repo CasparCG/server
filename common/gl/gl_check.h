@@ -28,14 +28,30 @@
 
 namespace caspar { namespace gl {
 
-struct ogl_exception							: virtual caspar_exception{};
-struct ogl_invalid_enum							: virtual ogl_exception{};
-struct ogl_invalid_value						: virtual ogl_exception{};
-struct ogl_invalid_operation					: virtual ogl_exception{};
-struct ogl_stack_overflow						: virtual ogl_exception{};
-struct ogl_stack_underflow						: virtual ogl_exception{};
-struct ogl_out_of_memory						: virtual ogl_exception{};
-struct ogl_invalid_framebuffer_operation_ext	: virtual ogl_exception{};
+struct ogl_exception : virtual caspar_exception
+{
+};
+struct ogl_invalid_enum : virtual ogl_exception
+{
+};
+struct ogl_invalid_value : virtual ogl_exception
+{
+};
+struct ogl_invalid_operation : virtual ogl_exception
+{
+};
+struct ogl_stack_overflow : virtual ogl_exception
+{
+};
+struct ogl_stack_underflow : virtual ogl_exception
+{
+};
+struct ogl_out_of_memory : virtual ogl_exception
+{
+};
+struct ogl_invalid_framebuffer_operation_ext : virtual ogl_exception
+{
+};
 
 void SMFL_GLCheckError(const std::string& expr, const char* func, const char* file, unsigned int line);
 
@@ -43,31 +59,30 @@ void SMFL_GLCheckError(const std::string& expr, const char* func, const char* fi
 
 #define CASPAR_GL_EXPR_STR(expr) #expr
 
-#define GL(expr) \
-	if(false){}else \
-	{ \
-		(expr);  \
-		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FUNCTION__, __FILE__, __LINE__);\
-	}
+#define GL(expr)                                                                                                                                               \
+    if (false) {                                                                                                                                               \
+    } else {                                                                                                                                                   \
+        (expr);                                                                                                                                                \
+        caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FUNCTION__, __FILE__, __LINE__);                                                             \
+    }
 
 // TODO: decltype version does not play well with gcc
-#define GL2(expr) \
-	[&]()\
-	{\
-		auto ret = (expr);\
-		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FUNCTION__, __FILE__, __LINE__);\
-		return ret;\
-	}()
+#define GL2(expr)                                                                                                                                              \
+    [&]() {                                                                                                                                                    \
+        auto ret = (expr);                                                                                                                                     \
+        caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FUNCTION__, __FILE__, __LINE__);                                                             \
+        return ret;                                                                                                                                            \
+    }()
 /*#define GL2(expr) \
-	[&]() -> decltype(expr) \
-	{ \
-		auto ret = (expr); \
-		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__); \
-		return ret; \
-	}()*/
+    [&]() -> decltype(expr) \
+    { \
+        auto ret = (expr); \
+        caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__); \
+        return ret; \
+    }()*/
 //#define GL2(expr) [&]() -> decltype(expr) { auto ret = (expr); caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__); return ret; }()
 //#else
 //#define GL(expr) expr
 //#endif
 
-}}
+}} // namespace caspar::gl

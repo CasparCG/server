@@ -79,13 +79,15 @@ class color_producer : public frame_producer_base
 
   public:
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, uint32_t value)
-        : color_str_(L""), frame_(create_color_frame(this, frame_factory, value))
+        : color_str_(L"")
+        , frame_(create_color_frame(this, frame_factory, value))
     {
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& colors)
-        : color_str_(boost::join(colors, L", ")), frame_(create_color_frame(this, frame_factory, colors))
+        : color_str_(boost::join(colors, L", "))
+        , frame_(create_color_frame(this, frame_factory, colors))
     {
         CASPAR_LOG(info) << print() << L" Initialized";
     }

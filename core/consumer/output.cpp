@@ -62,7 +62,9 @@ struct output::impl
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
-        : graph_(std::move(graph)), channel_index_(channel_index), format_desc_(format_desc)
+        : graph_(std::move(graph))
+        , channel_index_(channel_index)
+        , format_desc_(format_desc)
     {
         graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
     }
