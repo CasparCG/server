@@ -51,19 +51,21 @@ class frame_consumer
 
     virtual monitor::subject& monitor_output() = 0;
 
-    virtual std::wstring          print() const = 0;
-    virtual std::wstring          name() const  = 0;
-    virtual bool                  has_synchronization_clock() const { return true; }
-    virtual int                   buffer_depth() const = 0; // -1 to not participate in frame presentation synchronization
-    virtual int                   index() const        = 0;
+    virtual std::wstring print() const = 0;
+    virtual std::wstring name() const  = 0;
+    virtual bool         has_synchronization_clock() const { return true; }
+    virtual int          buffer_depth() const = 0; // -1 to not participate in frame presentation synchronization
+    virtual int          index() const        = 0;
     virtual const frame_consumer* unwrapped() const { return this; }
 };
 
-typedef std::function<
-    spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&, interaction_sink* sink, std::vector<spl::shared_ptr<video_channel>> channels)>
+typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
+                                                      interaction_sink*                           sink,
+                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
     consumer_factory_t;
-typedef std::function<
-    spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree& element, interaction_sink* sink, std::vector<spl::shared_ptr<video_channel>> channels)>
+typedef std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
+                                                      interaction_sink*                           sink,
+                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
     preconfigured_consumer_factory_t;
 
 class frame_consumer_registry : boost::noncopyable
@@ -71,9 +73,11 @@ class frame_consumer_registry : boost::noncopyable
   public:
     frame_consumer_registry();
     void register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory);
-    void register_preconfigured_consumer_factory(const std::wstring& element_name, const preconfigured_consumer_factory_t& factory);
-    spl::shared_ptr<frame_consumer>
-                                    create_consumer(const std::vector<std::wstring>& params, interaction_sink* sink, std::vector<spl::shared_ptr<video_channel>> channels) const;
+    void register_preconfigured_consumer_factory(const std::wstring&                     element_name,
+                                                 const preconfigured_consumer_factory_t& factory);
+    spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&            params,
+                                                    interaction_sink*                           sink,
+                                                    std::vector<spl::shared_ptr<video_channel>> channels) const;
     spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                         element_name,
                                                     const boost::property_tree::wptree&         element,
                                                     interaction_sink*                           sink,

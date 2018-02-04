@@ -111,29 +111,34 @@ int CIIProtocolStrategy::TokenizeMessage(const std::wstring& message, std::vecto
 // Examples (<X> = ASCIICHAR X)
 
 I\25\3\VII\\									s�tter outputtype till 'vii'
-I\25\4\1\\										enablar framebuffer (ignore this)
+I\25\4\1\\										enablar framebuffer (ignore
+this)
 
-M\C/SVTNEWS\\									pekar ut vilken grafisk profil som skall anv�ndas
+M\C/SVTNEWS\\									pekar ut vilken grafisk profil som
+skall anv�ndas
 
-W\4009\4067\Jonas Bj�rkman\\					Skriver "Jonas Bj�rkman" till f�rsta textf�ltet i template 4067 och sparar den f�rdiga
-skylten som 4009
+W\4009\4067\Jonas Bj�rkman\\					Skriver "Jonas Bj�rkman" till f�rsta textf�ltet i
+template 4067 och sparar den f�rdiga skylten som 4009
 
 T\7\4009.VII\A\\								l�gger ut skylt 4009
 
-Y\<205><247><202><196><192><192><200><248>\\	l�gger ut skylten 4008 (<205><247><202><196><192><192><200><248> = "=g:4008h" om man drar bort 144 fr�n varje
-asciiv�rde)
+Y\<205><247><202><196><192><192><200><248>\\	l�gger ut skylten 4008 (<205><247><202><196><192><192><200><248> =
+"=g:4008h" om man drar bort 144 fr�n varje asciiv�rde)
 
 V\5\3\1\1\namn.tga\1\\							l�gger ut bilden namn.tga
-V\0\1\D\C\10\0\0\0\\							g�r n�gon inst�llning som har med f�reg�ende kommando att g�ra.
+V\0\1\D\C\10\0\0\0\\							g�r n�gon inst�llning som har med f�reg�ende
+kommando att g�ra.
 
 *************/
 
 /**********************
 New Commands to support the Netupe automation system
-V\5\13\1\1\Template\0\TabField1\TabField2...\\		Build. Ettan f�re Template indikerar vilket lager den nya templaten skall laddas in i. OBS. Skall inte
-visas efter det h�r steget Y\<27>\\											Stop. H�r kommer ett lagerID ocks�
-att skickas med (<27> = ESC) Y\<254>\\ Clear Canvas. H�r kommer ett lagerID ocks� att skickas med, utan det skall allt t�mmas Y\<213><243>\\
-Play. H�r kommer ett lagerID ocks� att skickas med
+V\5\13\1\1\Template\0\TabField1\TabField2...\\		Build. Ettan f�re Template indikerar vilket lager den nya
+templaten skall laddas in i. OBS. Skall inte
+visas efter det h�r steget Y\<27>\\
+Stop. H�r kommer ett lagerID ocks�
+att skickas med (<27> = ESC) Y\<254>\\ Clear Canvas. H�r kommer ett lagerID ocks� att skickas med, utan det skall allt
+t�mmas Y\<213><243>\\ Play. H�r kommer ett lagerID ocks� att skickas med
 
 **********************/
 CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
@@ -154,7 +159,9 @@ CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
     }
 }
 
-void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData)
+void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName,
+                                            const std::wstring& titleName,
+                                            const std::wstring& xmlData)
 {
     std::wstring fullTemplateFilename = templateName;
 
@@ -164,10 +171,11 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = 1;
     core::diagnostics::call_context::for_thread().layer         = 0;
-    auto producer                                               = cg_registry_->create_producer(get_dependencies(), fullTemplateFilename);
+    auto producer = cg_registry_->create_producer(get_dependencies(), fullTemplateFilename);
 
     if (producer == core::frame_producer::empty()) {
-        CASPAR_LOG(error) << "Failed to save instance of " << templateName << L" as " << titleName << L", template " << fullTemplateFilename << L"not found";
+        CASPAR_LOG(error) << "Failed to save instance of " << templateName << L" as " << titleName << L", template "
+                          << fullTemplateFilename << L"not found";
         return;
     }
 
@@ -230,7 +238,8 @@ spl::shared_ptr<core::frame_producer> CIIProtocolStrategy::GetPreparedTemplate(c
     return result;
 }
 
-void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring& titleName, const spl::shared_ptr<core::frame_producer>& pFP)
+void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring&                          titleName,
+                                              const spl::shared_ptr<core::frame_producer>& pFP)
 {
     CASPAR_LOG(info) << L"Saved title with name " << titleName;
 

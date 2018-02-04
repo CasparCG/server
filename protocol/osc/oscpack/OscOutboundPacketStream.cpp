@@ -203,7 +203,8 @@ void OutboundPacketStream::CheckForAvailableBundleSpace()
 void OutboundPacketStream::CheckForAvailableMessageSpace(const char* addressPattern)
 {
     // plus 4 for at least four bytes of type tag
-    unsigned long required = Size() + ((ElementSizeSlotRequired()) ? 4 : 0) + RoundUp4(static_cast<unsigned long>(strlen(addressPattern)) + 1) + 4;
+    unsigned long required = Size() + ((ElementSizeSlotRequired()) ? 4 : 0) +
+                             RoundUp4(static_cast<unsigned long>(strlen(addressPattern)) + 1) + 4;
 
     if (required > Capacity())
         throw OutOfBufferMemoryException(required);
@@ -212,8 +213,8 @@ void OutboundPacketStream::CheckForAvailableMessageSpace(const char* addressPatt
 void OutboundPacketStream::CheckForAvailableArgumentSpace(long argumentLength)
 {
     // plus three for extra type tag, comma and null terminator
-    unsigned long required =
-        static_cast<unsigned long>(argumentCurrent_ - data_) + argumentLength + RoundUp4(static_cast<unsigned long>(end_ - typeTagsCurrent_) + 3);
+    unsigned long required = static_cast<unsigned long>(argumentCurrent_ - data_) + argumentLength +
+                             RoundUp4(static_cast<unsigned long>(end_ - typeTagsCurrent_) + 3);
 
     if (required > Capacity())
         throw OutOfBufferMemoryException(required);

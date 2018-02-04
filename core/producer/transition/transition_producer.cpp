@@ -48,7 +48,9 @@ class transition_producer : public frame_producer_base
     bool paused_ = false;
 
   public:
-    explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info)
+    explicit transition_producer(const field_mode&                      mode,
+                                 const spl::shared_ptr<frame_producer>& dest,
+                                 const transition_info&                 info)
         : mode_(mode)
         , info_(info)
         , dest_producer_(dest)
@@ -129,11 +131,17 @@ class transition_producer : public frame_producer_base
 
     uint32_t frame_number() const override { return dest_producer_->frame_number(); }
 
-    std::wstring print() const override { return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]"; }
+    std::wstring print() const override
+    {
+        return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
+    }
 
     std::wstring name() const override { return L"transition"; }
 
-    std::future<std::wstring> call(const std::vector<std::wstring>& params) override { return dest_producer_->call(params); }
+    std::future<std::wstring> call(const std::vector<std::wstring>& params) override
+    {
+        return dest_producer_->call(params);
+    }
 
     // transition_producer
 
@@ -186,8 +194,10 @@ class transition_producer : public frame_producer_base
             d_frame2.transform().image_transform.clip_scale[0] = delta2;
         }
 
-        const auto s_frame = s_frame1.transform() == s_frame2.transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
-        const auto d_frame = d_frame1.transform() == d_frame2.transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
+        const auto s_frame =
+            s_frame1.transform() == s_frame2.transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
+        const auto d_frame =
+            d_frame1.transform() == d_frame2.transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
 
         return draw_frame::over(s_frame, d_frame);
     }
@@ -199,8 +209,9 @@ class transition_producer : public frame_producer_base
     bool collides(double x, double y) const override { return dest_producer_->collides(x, y); }
 };
 
-spl::shared_ptr<frame_producer>
-create_transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& destination, const transition_info& info)
+spl::shared_ptr<frame_producer> create_transition_producer(const field_mode&                      mode,
+                                                           const spl::shared_ptr<frame_producer>& destination,
+                                                           const transition_info&                 info)
 {
     return spl::make_shared<transition_producer>(mode, destination, info);
 }

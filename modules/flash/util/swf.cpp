@@ -39,8 +39,10 @@ std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong bu
 
     std::vector<char> out_data(buf_size, 0);
 
-    auto ret =
-        uncompress(reinterpret_cast<Bytef*>(out_data.data()), &buf_size, reinterpret_cast<const Bytef*>(in_data.data()), static_cast<uLong>(in_data.size()));
+    auto ret = uncompress(reinterpret_cast<Bytef*>(out_data.data()),
+                          &buf_size,
+                          reinterpret_cast<const Bytef*>(in_data.data()),
+                          static_cast<uLong>(in_data.size()));
 
     if (ret == Z_BUF_ERROR)
         return decompress_one_file(in_data, buf_size * 2);
@@ -109,12 +111,15 @@ swf_t::header_t::header_t(const std::wstring& filename)
     _byteswap_ulong(this->file_length);
 
     std::vector<char> file_data;
-    std::copy((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
+    std::copy(
+        (std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
 
     std::array<char, 32> uncompressed_data;
     uLongf               file_size = 32;
-    auto                 ret       = uncompress(
-        reinterpret_cast<Bytef*>(uncompressed_data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
+    auto                 ret       = uncompress(reinterpret_cast<Bytef*>(uncompressed_data.data()),
+                          &file_size,
+                          reinterpret_cast<const Bytef*>(file_data.data()),
+                          static_cast<uLong>(file_data.size()));
 
     if (ret == Z_DATA_ERROR)
         CASPAR_THROW_EXCEPTION(io_error());
@@ -131,7 +136,7 @@ swf_t::header_t::header_t(const std::wstring& filename)
     unsigned int  bi_offset = (size % 8) ? (8 - (size % 8)) : 0; // offset of bit numbers depending on specified size
     unsigned int  by_offset = (size + bi_offset) / 8;            // offest of bytes
     unsigned int  ioffset;                                       // floating byte offset during iteration
-    unsigned long ibuf = (unsigned long)(nbits % 8);             // actual result - starts with last 3 bits of first byte
+    unsigned long ibuf = (unsigned long)(nbits % 8); // actual result - starts with last 3 bits of first byte
 
     for (auto i = 0; i < 4; ++i) {
         ioffset = by_offset * i;
@@ -167,11 +172,14 @@ swf_t::swf_t(const std::wstring& filename)
     this->data.resize(this->header.file_length - 8);
 
     std::vector<char> file_data;
-    std::copy((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
+    std::copy(
+        (std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
 
     uLongf file_size = this->header.file_length;
-    auto   ret       = uncompress(
-        reinterpret_cast<Bytef*>(this->data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
+    auto   ret       = uncompress(reinterpret_cast<Bytef*>(this->data.data()),
+                          &file_size,
+                          reinterpret_cast<const Bytef*>(file_data.data()),
+                          static_cast<uLong>(file_data.size()));
 
     if (ret != Z_OK)
         CASPAR_THROW_EXCEPTION(io_error());

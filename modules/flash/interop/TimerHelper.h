@@ -51,7 +51,8 @@ class TimerHelper
         pTimerSink  = pTS;
     }
 
-    DWORD Invoke()
+    DWORD
+    Invoke()
     {
         if (pTimerSink != 0) {
             VARIANT value;

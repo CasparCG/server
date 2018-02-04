@@ -10,9 +10,10 @@ struct lock_container::impl
     std::wstring lifecycle_key_;
 
   private:
-    std::set<std::weak_ptr<client_connection<wchar_t>>, std::owner_less<std::weak_ptr<client_connection<wchar_t>>>> locks_;
-    std::wstring                                                                                                    lock_phrase_;
-    mutable tbb::spin_rw_mutex                                                                                      mutex_;
+    std::set<std::weak_ptr<client_connection<wchar_t>>, std::owner_less<std::weak_ptr<client_connection<wchar_t>>>>
+                               locks_;
+    std::wstring               lock_phrase_;
+    mutable tbb::spin_rw_mutex mutex_;
 
   public:
     impl(const std::wstring& lifecycle_key)
@@ -39,7 +40,8 @@ struct lock_container::impl
                     locks_.insert(weak_ptr);
                 }
 
-                lock.release(); // risk of reentrancy-deadlock if we don't release prior to trying to attach lifecycle-bound object to connection
+                lock.release(); // risk of reentrancy-deadlock if we don't release prior to trying to attach
+                                // lifecycle-bound object to connection
 
                 CASPAR_LOG(info) << lifecycle_key_ << " acquired";
 
@@ -54,7 +56,8 @@ struct lock_container::impl
         return false;
     }
 
-    void clear_locks() // TODO: add a function-object parameter to be called for each clients that has it's lock released
+    void
+    clear_locks() // TODO: add a function-object parameter to be called for each clients that has it's lock released
     {
         std::vector<std::weak_ptr<client_connection<wchar_t>>> clients;
 
@@ -71,7 +74,8 @@ struct lock_container::impl
         for (auto& conn : clients) {
             auto ptr = conn.lock();
             if (ptr) {
-                ptr->remove_lifecycle_bound_object(lifecycle_key_); // this calls do_relase_lock, which takes a write-lock
+                ptr->remove_lifecycle_bound_object(
+                    lifecycle_key_); // this calls do_relase_lock, which takes a write-lock
                 // TODO: invoke callback
             }
         }
@@ -105,7 +109,10 @@ lock_container::lock_container(const std::wstring& lifecycle_key)
 lock_container::~lock_container() {}
 
 bool lock_container::check_access(client_connection<wchar_t>::ptr conn) { return impl_->check_access(conn); }
-bool lock_container::try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn) { return impl_->try_lock(lock_phrase, conn); }
+bool lock_container::try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn)
+{
+    return impl_->try_lock(lock_phrase, conn);
+}
 void lock_container::release_lock(client_connection<wchar_t>::ptr conn) { impl_->release_lock(conn); }
 void lock_container::clear_locks() { return impl_->clear_locks(); }
 }} // namespace caspar::IO

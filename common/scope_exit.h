@@ -72,6 +72,7 @@ scope_exit<typename std::decay<T>::type> operator+(scope_exit_helper, T&& exitSc
 
 #define _CASPAR_EXIT_SCOPE_LINENAME_CAT(name, line) name##line
 #define _CASPAR_EXIT_SCOPE_LINENAME(name, line) _CASPAR_EXIT_SCOPE_LINENAME_CAT(name, line)
-#define CASPAR_SCOPE_EXIT auto _CASPAR_EXIT_SCOPE_LINENAME(EXIT, __LINE__) = ::caspar::detail::scope_exit_helper() + [&]() mutable
+#define CASPAR_SCOPE_EXIT                                                                                              \
+    auto _CASPAR_EXIT_SCOPE_LINENAME(EXIT, __LINE__) = ::caspar::detail::scope_exit_helper() + [&]() mutable
 
 } // namespace caspar

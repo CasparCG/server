@@ -120,9 +120,15 @@ class image_view
 
     int height() const { return height_; }
 
-    image_sub_view<PackedPixel> subview(int x, int y, int width, int height) { return image_sub_view<PackedPixel>(*this, x, y, width, height); }
+    image_sub_view<PackedPixel> subview(int x, int y, int width, int height)
+    {
+        return image_sub_view<PackedPixel>(*this, x, y, width, height);
+    }
 
-    const image_sub_view<PackedPixel> subview(int x, int y, int width, int height) const { return image_sub_view<PackedPixel>(*this, x, y, width, height); }
+    const image_sub_view<PackedPixel> subview(int x, int y, int width, int height) const
+    {
+        return image_sub_view<PackedPixel>(*this, x, y, width, height);
+    }
 
   private:
     PackedPixel* begin_;
@@ -165,7 +171,10 @@ template <class PackedPixel>
 struct image_stride_iterator : public boost::filter_iterator<is_within_view<PackedPixel>, PackedPixel*>
 {
     image_stride_iterator(PackedPixel* begin, PackedPixel* end, int width, int stride)
-        : boost::filter_iterator<is_within_view<PackedPixel>, PackedPixel*>::filter_iterator(is_within_view<PackedPixel>(begin, width, stride), begin, end)
+        : boost::filter_iterator<is_within_view<PackedPixel>, PackedPixel*>::filter_iterator(
+              is_within_view<PackedPixel>(begin, width, stride),
+              begin,
+              end)
     {
     }
 };
@@ -184,8 +193,8 @@ class image_sub_view
     int                     relative_to_root_y_;
     int                     width_;
     int                     height_;
-    PackedPixel*            raw_begin_ = root_view_.relative(root_view_.begin(), relative_to_root_x_, relative_to_root_y_);
-    PackedPixel*            raw_end_   = root_view_.relative(raw_begin_, width_ - 1, height_ - 1) + 1;
+    PackedPixel* raw_begin_ = root_view_.relative(root_view_.begin(), relative_to_root_x_, relative_to_root_y_);
+    PackedPixel* raw_end_   = root_view_.relative(raw_begin_, width_ - 1, height_ - 1) + 1;
 
   public:
     typedef PackedPixel pixel_type;
@@ -199,16 +208,25 @@ class image_sub_view
     {
     }
 
-    image_stride_iterator<PackedPixel> begin() { return image_stride_iterator<PackedPixel>(raw_begin_, raw_end_, width_, root_view_.width()); }
+    image_stride_iterator<PackedPixel> begin()
+    {
+        return image_stride_iterator<PackedPixel>(raw_begin_, raw_end_, width_, root_view_.width());
+    }
 
     image_stride_iterator<const PackedPixel> begin() const
     {
         return image_stride_iterator<const PackedPixel>(raw_begin_, raw_end_, width_, root_view_.width());
     }
 
-    image_stride_iterator<PackedPixel> end() { return image_stride_iterator<PackedPixel>(raw_end_, raw_end_, width_, root_view_.width()); }
+    image_stride_iterator<PackedPixel> end()
+    {
+        return image_stride_iterator<PackedPixel>(raw_end_, raw_end_, width_, root_view_.width());
+    }
 
-    image_stride_iterator<const PackedPixel> end() const { return image_stride_iterator<const PackedPixel>(raw_end_, raw_end_, width_, root_view_.width()); }
+    image_stride_iterator<const PackedPixel> end() const
+    {
+        return image_stride_iterator<const PackedPixel>(raw_end_, raw_end_, width_, root_view_.width());
+    }
 
     template <class PackedPixelIter>
     PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y)

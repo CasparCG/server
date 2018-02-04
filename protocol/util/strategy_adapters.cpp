@@ -86,10 +86,15 @@ class from_unicode_client_connection : public client_connection<wchar_t>
     {
         client_->add_lifecycle_bound_object(key, lifecycle_bound);
     }
-    std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override { return client_->remove_lifecycle_bound_object(key); }
+    std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override
+    {
+        return client_->remove_lifecycle_bound_object(key);
+    }
 };
 
-to_unicode_adapter_factory::to_unicode_adapter_factory(const std::string& codepage, const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory)
+to_unicode_adapter_factory::to_unicode_adapter_factory(
+    const std::string&                             codepage,
+    const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory)
     : codepage_(codepage)
     , unicode_strategy_factory_(unicode_strategy_factory)
 {
@@ -108,7 +113,8 @@ class legacy_strategy_adapter : public protocol_strategy<wchar_t>
     ClientInfoPtr       client_info_;
 
   public:
-    legacy_strategy_adapter(const ProtocolStrategyPtr& strategy, const client_connection<wchar_t>::ptr& client_connection)
+    legacy_strategy_adapter(const ProtocolStrategyPtr&             strategy,
+                            const client_connection<wchar_t>::ptr& client_connection)
         : strategy_(strategy)
         , client_info_(client_connection)
     {
@@ -123,15 +129,19 @@ legacy_strategy_adapter_factory::legacy_strategy_adapter_factory(const ProtocolS
 {
 }
 
-protocol_strategy<wchar_t>::ptr legacy_strategy_adapter_factory::create(const client_connection<wchar_t>::ptr& client_connection)
+protocol_strategy<wchar_t>::ptr
+legacy_strategy_adapter_factory::create(const client_connection<wchar_t>::ptr& client_connection)
 {
     return spl::make_shared<legacy_strategy_adapter>(strategy_, client_connection);
 }
 
-protocol_strategy_factory<char>::ptr wrap_legacy_protocol(const std::string& delimiter, const ProtocolStrategyPtr& strategy)
+protocol_strategy_factory<char>::ptr wrap_legacy_protocol(const std::string&         delimiter,
+                                                          const ProtocolStrategyPtr& strategy)
 {
     return spl::make_shared<delimiter_based_chunking_strategy_factory<char>>(
-        delimiter, spl::make_shared<to_unicode_adapter_factory>(strategy->GetCodepage(), spl::make_shared<legacy_strategy_adapter_factory>(strategy)));
+        delimiter,
+        spl::make_shared<to_unicode_adapter_factory>(strategy->GetCodepage(),
+                                                     spl::make_shared<legacy_strategy_adapter_factory>(strategy)));
 }
 
 }} // namespace caspar::IO

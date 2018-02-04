@@ -51,7 +51,8 @@ static const double SECONDS_BETWEEN_FULL_STATE = 0.4;
 
 class subject_graph : public caspar::diagnostics::spi::graph_sink
 {
-    spl::shared_ptr<monitor::subject>    subject_ = spl::make_shared<monitor::subject>("/" + boost::lexical_cast<std::string>(create_id()));
+    spl::shared_ptr<monitor::subject> subject_ =
+        spl::make_shared<monitor::subject>("/" + boost::lexical_cast<std::string>(create_id()));
     call_context                         context_ = call_context::for_thread();
     std::mutex                           mutex_;
     std::wstring                         text_;

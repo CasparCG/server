@@ -45,7 +45,10 @@ namespace caspar { namespace flash {
 std::wstring version();
 std::wstring cg_version();
 
-std::wstring get_absolute(const std::wstring& base_folder, const std::wstring& filename) { return (boost::filesystem::path(base_folder) / filename).wstring(); }
+std::wstring get_absolute(const std::wstring& base_folder, const std::wstring& filename)
+{
+    return (boost::filesystem::path(base_folder) / filename).wstring();
+}
 
 class flash_cg_proxy
     : public core::cg_proxy
@@ -55,7 +58,8 @@ class flash_cg_proxy
     std::wstring                          base_folder_;
 
   public:
-    explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer, std::wstring base_folder = env::template_folder())
+    explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer,
+                            std::wstring                                 base_folder = env::template_folder())
         : flash_producer_(producer)
         , base_folder_(base_folder)
     {
@@ -63,7 +67,11 @@ class flash_cg_proxy
 
     // cg_proxy
 
-    void add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& label, const std::wstring& data) override
+    void add(int                 layer,
+             const std::wstring& template_name,
+             bool                play_on_load,
+             const std::wstring& label,
+             const std::wstring& data) override
     {
         auto filename = template_name;
 
@@ -74,7 +82,8 @@ class flash_cg_proxy
         filename = find_template(filename);
 
         auto str = (boost::wformat(L"<invoke name=\"Add\" "
-                                   L"returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></"
+                                   L"returntype=\"xml\"><arguments><number>%1%</number><string>%2%</"
+                                   L"string>%3%<string>%4%</string><string><![CDATA[%5%]]></"
                                    L"string></arguments></invoke>") %
                     layer % filename % (play_on_load ? L"<true/>" : L"<false/>") % label % data)
                        .str();
@@ -122,8 +131,9 @@ class flash_cg_proxy
     {
         verify_flash_player();
 
-        auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property "
-                                   L"id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") %
+        auto str = (boost::wformat(
+                        L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property "
+                        L"id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") %
                     layer)
                        .str();
         CASPAR_LOG(debug) << flash_producer_->print() << " Invoking stop-command: " << str;
@@ -151,7 +161,8 @@ class flash_cg_proxy
         verify_flash_player();
 
         auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property "
-                                   L"id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") %
+                                   L"id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></"
+                                   L"arguments></invoke>") %
                     layer % data)
                        .str();
         CASPAR_LOG(debug) << flash_producer_->print() << " Invoking update-command: " << str;
@@ -164,8 +175,9 @@ class flash_cg_proxy
     {
         verify_flash_player();
 
-        auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property "
-                                   L"id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") %
+        auto str = (boost::wformat(
+                        L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property "
+                        L"id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") %
                     layer % label)
                        .str();
         CASPAR_LOG(debug) << flash_producer_->print() << " Invoking invoke-command: " << str;
@@ -176,7 +188,8 @@ class flash_cg_proxy
     }
 };
 
-spl::shared_ptr<core::frame_producer> create_ct_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_ct_producer(const core::frame_producer_dependencies& dependencies,
+                                                         const std::vector<std::wstring>&         params)
 {
     if (params.empty() || !boost::filesystem::exists(get_absolute(env::media_folder(), params.at(0)) + L".ct"))
         return core::frame_producer::empty();
@@ -191,10 +204,12 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(const core::frame_produ
 void copy_template_hosts()
 {
     try {
-        for (auto it = boost::filesystem::directory_iterator(env::initial_folder()); it != boost::filesystem::directory_iterator(); ++it) {
+        for (auto it = boost::filesystem::directory_iterator(env::initial_folder());
+             it != boost::filesystem::directory_iterator();
+             ++it) {
             if (it->path().wstring().find(L".fth") != std::wstring::npos) {
                 auto from_path = *it;
-                auto to_path   = boost::filesystem::path(env::template_folder() + L"/" + it->path().filename().wstring());
+                auto to_path = boost::filesystem::path(env::template_folder() + L"/" + it->path().filename().wstring());
 
                 if (boost::filesystem::exists(to_path))
                     boost::filesystem::remove(to_path);
@@ -218,8 +233,12 @@ void init(core::module_dependencies dependencies)
         L"flash",
         {L".ft", L".ct"},
         [](const std::wstring& filename) { return read_template_meta_info(filename); },
-        [](const spl::shared_ptr<core::frame_producer>& producer) { return spl::make_shared<flash_cg_proxy>(producer); },
-        [](const core::frame_producer_dependencies& dependencies, const std::wstring&) { return flash::create_producer(dependencies, {}); },
+        [](const spl::shared_ptr<core::frame_producer>& producer) {
+            return spl::make_shared<flash_cg_proxy>(producer);
+        },
+        [](const core::frame_producer_dependencies& dependencies, const std::wstring&) {
+            return flash::create_producer(dependencies, {});
+        },
         true);
 }
 
@@ -232,7 +251,8 @@ std::wstring version()
     HKEY hkey;
 
     DWORD dwType, dwSize;
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Macromedia\\FlashPlayerActiveX"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Macromedia\\FlashPlayerActiveX"), 0, KEY_QUERY_VALUE, &hkey) ==
+        ERROR_SUCCESS) {
         wchar_t ver_str[1024];
 
         dwType = REG_SZ;

@@ -75,7 +75,9 @@ class bitmap
         info.bmiHeader.biSize        = sizeof(BITMAPINFO);
         info.bmiHeader.biWidth       = static_cast<LONG>(width);
 
-        bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
+        bmp_.reset(CreateDIBSection(
+                       static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0),
+                   DeleteObject);
         SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());
 
         if (!bmp_data_)
@@ -105,7 +107,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 {
     try {
         std::vector<template_host> template_hosts;
-        auto                       template_hosts_element = env::properties().get_child_optional(L"configuration.template-hosts");
+        auto template_hosts_element = env::properties().get_child_optional(L"configuration.template-hosts");
 
         if (template_hosts_element) {
             for (auto& xml_mapping : *template_hosts_element) {
@@ -121,9 +123,11 @@ template_host get_template_host(const core::video_format_desc& desc)
             }
         }
 
-        auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host) { return template_host.video_mode == desc.name; });
+        auto template_host_it = boost::find_if(
+            template_hosts, [&](template_host template_host) { return template_host.video_mode == desc.name; });
         if (template_host_it == template_hosts.end())
-            template_host_it = boost::find_if(template_hosts, [&](template_host template_host) { return template_host.video_mode == L""; });
+            template_host_it = boost::find_if(
+                template_hosts, [&](template_host template_host) { return template_host.video_mode == L""; });
 
         if (template_host_it != template_hosts.end())
             return *template_host_it;
@@ -133,7 +137,9 @@ template_host get_template_host(const core::video_format_desc& desc)
     template_host template_host;
     template_host.filename = L"cg.fth";
 
-    for (auto it = boost::filesystem::directory_iterator(env::template_folder()); it != boost::filesystem::directory_iterator(); ++it) {
+    for (auto it = boost::filesystem::directory_iterator(env::template_folder());
+         it != boost::filesystem::directory_iterator();
+         ++it) {
         if (boost::iequals(it->path().extension().wstring(), L"." + desc.name)) {
             template_host.filename = it->path().filename().wstring();
             break;
@@ -161,7 +167,8 @@ class flash_renderer
         com_init()
         {
             if (FAILED(result_))
-                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to initialize com-context for flash-player"));
+                CASPAR_THROW_EXCEPTION(caspar_exception()
+                                       << msg_info("Failed to initialize com-context for flash-player"));
         }
 
         ~com_init()
@@ -257,8 +264,9 @@ class flash_renderer
         CASPAR_LOG(debug) << print() << " Call: " << param;
 
         if (!ax_->FlashCall(param, result))
-            CASPAR_LOG(warning) << print() << L" Flash call failed:" << param; // CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call
-                                                                               // failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
+            CASPAR_LOG(warning) << print() << L" Flash call failed:"
+                                << param; // CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call
+                                          // failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 
         if (boost::starts_with(result, L"<exception>"))
             CASPAR_LOG(warning) << print() << L" Flash call failed:" << result;
@@ -299,7 +307,11 @@ class flash_renderer
         }
 
         MSG msg;
-        while (PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
+        while (PeekMessage(&msg,
+                           NULL,
+                           NULL,
+                           NULL,
+                           PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
         {
             if (msg.message == WM_TIMER && msg.wParam == 3 && msg.lParam == 0) // We tick this inside FlashAxContainer
                 continue;
@@ -319,8 +331,8 @@ class flash_renderer
 
     std::wstring print()
     {
-        return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring() + L"|" + boost::lexical_cast<std::wstring>(width_) + L"x" +
-               boost::lexical_cast<std::wstring>(height_) + L"]";
+        return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring() + L"|" +
+               boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_) + L"]";
     }
 };
 
@@ -332,7 +344,8 @@ struct flash_producer : public core::frame_producer_base
     const core::video_format_desc              format_desc_;
     const int                                  width_;
     const int                                  height_;
-    const int                                  buffer_size_ = env::properties().get(L"configuration.flash.buffer-depth", format_desc_.fps > 30.0 ? 4 : 2);
+    const int                                  buffer_size_ =
+        env::properties().get(L"configuration.flash.buffer-depth", format_desc_.fps > 30.0 ? 4 : 2);
 
     std::atomic<int> fps_;
 
@@ -401,8 +414,10 @@ struct flash_producer : public core::frame_producer_base
 
         fill_buffer();
 
-        monitor_subject_ << core::monitor::message("/host/path") % filename_ << core::monitor::message("/host/width") % width_
-                         << core::monitor::message("/host/height") % height_ << core::monitor::message("/host/fps") % fps_
+        monitor_subject_ << core::monitor::message("/host/path") % filename_
+                         << core::monitor::message("/host/width") % width_
+                         << core::monitor::message("/host/height") % height_
+                         << core::monitor::message("/host/fps") % fps_
                          << core::monitor::message("/buffer") % output_buffer_.size() % buffer_size_;
 
         return frame;
@@ -420,7 +435,8 @@ struct flash_producer : public core::frame_producer_base
                 bool initialize_renderer = !renderer_;
 
                 if (initialize_renderer) {
-                    renderer_.reset(new flash_renderer(monitor_subject_, graph_, frame_factory_, filename_, width_, height_));
+                    renderer_.reset(
+                        new flash_renderer(monitor_subject_, graph_, frame_factory_, filename_, width_, height_));
 
                     has_renderer_ = true;
                 }
@@ -444,7 +460,8 @@ struct flash_producer : public core::frame_producer_base
 
     std::wstring print() const override
     {
-        return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";
+        return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" +
+               boost::lexical_cast<std::wstring>(fps_) + L"]";
     }
 
     std::wstring name() const override { return L"flash"; }
@@ -540,8 +557,9 @@ struct flash_producer : public core::frame_producer_base
         double sync;
 
         if (allow_faster_rendering) {
-            double ratio = std::min(1.0, static_cast<double>(output_buffer_.size()) / static_cast<double>(std::max(1, buffer_size_ - 1)));
-            sync         = 2 * ratio - ratio * ratio;
+            double ratio = std::min(
+                1.0, static_cast<double>(output_buffer_.size()) / static_cast<double>(std::max(1, buffer_size_ - 1)));
+            sync = 2 * ratio - ratio * ratio;
         } else {
             sync = 1.0;
         }
@@ -550,7 +568,8 @@ struct flash_producer : public core::frame_producer_base
     }
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     auto template_host = get_template_host(dependencies.format_desc);
 
@@ -559,11 +578,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));
 
-    return create_destroy_proxy(
-        spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, template_host.width, template_host.height));
+    return create_destroy_proxy(spl::make_shared<flash_producer>(
+        dependencies.frame_factory, dependencies.format_desc, filename, template_host.width, template_host.height));
 }
 
-spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies,
+                                                          const std::vector<std::wstring>&         params)
 {
     auto filename = env::media_folder() + L"\\" + params.at(0) + L".swf";
 
@@ -572,7 +592,8 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
     swf_t::header_t header(filename);
 
-    auto producer = spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, header.frame_width, header.frame_height);
+    auto producer = spl::make_shared<flash_producer>(
+        dependencies.frame_factory, dependencies.format_desc, filename, header.frame_width, header.frame_height);
 
     producer->call({L"start_rendering"}).get();
 

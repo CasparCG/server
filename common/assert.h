@@ -32,21 +32,22 @@
 
 #define CASPAR_VERIFY_EXPR_STR(str) #str
 
-#define CASPAR_VERIFY(expr)                                                                                                                                    \
-    do {                                                                                                                                                       \
-        if (!(expr)) {                                                                                                                                         \
-            CASPAR_LOG(warning) << "Assertion Failed: " << CASPAR_VERIFY_EXPR_STR(expr) << " "                                                                 \
-                                << "file:" << __FILE__ << " "                                                                                                  \
-                                << "line:" << __LINE__ << " ";                                                                                                 \
-            _CASPAR_DBG_BREAK;                                                                                                                                 \
-        }                                                                                                                                                      \
+#define CASPAR_VERIFY(expr)                                                                                            \
+    do {                                                                                                               \
+        if (!(expr)) {                                                                                                 \
+            CASPAR_LOG(warning) << "Assertion Failed: " << CASPAR_VERIFY_EXPR_STR(expr) << " "                         \
+                                << "file:" << __FILE__ << " "                                                          \
+                                << "line:" << __LINE__ << " ";                                                         \
+            _CASPAR_DBG_BREAK;                                                                                         \
+        }                                                                                                              \
     } while (0);
 
-#define CASPAR_ENSURE(expr)                                                                                                                                    \
-    do {                                                                                                                                                       \
-        if (!(expr)) {                                                                                                                                         \
-            CASPAR_THROW_EXCEPTION(programming_error() << msg_info(std::string("Assertion Failed: ") + CASPAR_VERIFY_EXPR_STR(expr)));                         \
-        }                                                                                                                                                      \
+#define CASPAR_ENSURE(expr)                                                                                            \
+    do {                                                                                                               \
+        if (!(expr)) {                                                                                                 \
+            CASPAR_THROW_EXCEPTION(programming_error()                                                                 \
+                                   << msg_info(std::string("Assertion Failed: ") + CASPAR_VERIFY_EXPR_STR(expr)));     \
+        }                                                                                                              \
     } while (0);
 
 #ifdef _DEBUG

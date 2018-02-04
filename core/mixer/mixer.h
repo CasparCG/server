@@ -44,7 +44,9 @@ class mixer final
     mixer& operator=(const mixer&);
 
   public:
-    explicit mixer(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
+    explicit mixer(int                                         channel_index,
+                   spl::shared_ptr<caspar::diagnostics::graph> graph,
+                   spl::shared_ptr<image_mixer>                image_mixer);
 
     const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc);
 

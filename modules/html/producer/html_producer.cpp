@@ -97,7 +97,9 @@ class html_client
     executor executor_;
 
   public:
-    html_client(spl::shared_ptr<core::frame_factory> frame_factory, const core::video_format_desc& format_desc, const std::wstring& url)
+    html_client(spl::shared_ptr<core::frame_factory> frame_factory,
+                const core::video_format_desc&       format_desc,
+                const std::wstring&                  url)
         : url_(url)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(format_desc)
@@ -150,7 +152,8 @@ class html_client
                        CefBrowserSettings&     settings,
                        bool*                   no_javascript_access) override
     {
-        // This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon closing
+        // This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon
+        // closing
         return true;
     }
 
@@ -187,9 +190,15 @@ class html_client
         return true;
     }
 
-    void OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height)
+    void OnPaint(CefRefPtr<CefBrowser> browser,
+                 PaintElementType      type,
+                 const RectList&       dirtyRects,
+                 const void*           buffer,
+                 int                   width,
+                 int                   height)
     {
-        graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * format_desc_.field_count * 0.5);
+        graph_->set_value("browser-tick-time",
+                          paint_timer_.elapsed() * format_desc_.fps * format_desc_.field_count * 0.5);
         paint_timer_.restart();
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
@@ -251,7 +260,9 @@ class html_client
         execute_queued_javascript();
     }
 
-    bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) override
+    bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefProcessId                 source_process,
+                                  CefRefPtr<CefProcessMessage> message) override
     {
         auto name = message->GetName().ToString();
 
@@ -264,7 +275,8 @@ class html_client
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
             auto msg      = args->GetString(1).ToWString();
 
-            BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = severity)) << print() << L" [renderer_process] " << msg;
+            BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = severity))
+                << print() << L" [renderer_process] " << msg;
         }
 
         return false;
@@ -362,7 +374,8 @@ class html_client
     {
         html::begin_invoke([=] {
             if (browser_ != nullptr)
-                browser_->GetMainFrame()->ExecuteJavaScript(u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
+                browser_->GetMainFrame()->ExecuteJavaScript(
+                    u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
         });
     }
 
@@ -388,7 +401,9 @@ class html_producer : public core::frame_producer_base
     CefRefPtr<html_client> client_;
 
   public:
-    html_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& url)
+    html_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
+                  const core::video_format_desc&              format_desc,
+                  const std::wstring&                         url)
         : format_desc_(format_desc)
         , url_(url)
     {
@@ -446,7 +461,8 @@ class html_producer : public core::frame_producer_base
             CefMouseEvent e;
             e.x = x;
             e.y = y;
-            client_->get_browser_host()->SendMouseClickEvent(e, static_cast<CefBrowserHost::MouseButtonType>(button->button), !button->pressed, 1);
+            client_->get_browser_host()->SendMouseClickEvent(
+                e, static_cast<CefBrowserHost::MouseButtonType>(button->button), !button->pressed, 1);
         } else if (core::is<core::mouse_wheel_event>(event)) {
             auto wheel = core::as<core::mouse_wheel_event>(event);
             int  x     = static_cast<int>(wheel->x * w);
@@ -495,21 +511,25 @@ class html_producer : public core::frame_producer_base
     core::monitor::subject& monitor_output() { return monitor_subject_; }
 };
 
-spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,
+                                                         const std::vector<std::wstring>&         params)
 {
     const auto filename       = env::template_folder() + params.at(0) + L".html";
     const auto found_filename = find_case_insensitive(filename);
-    const auto http_prefix    = boost::algorithm::istarts_with(params.at(0), L"http:") || boost::algorithm::istarts_with(params.at(0), L"https:");
+    const auto http_prefix    = boost::algorithm::istarts_with(params.at(0), L"http:") ||
+                             boost::algorithm::istarts_with(params.at(0), L"https:");
 
     if (!found_filename && !http_prefix)
         return core::frame_producer::empty();
 
     const auto url = found_filename ? L"file://" + *found_filename : params.at(0);
 
-    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+    return core::create_destroy_proxy(
+        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
 }
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     const auto filename       = env::template_folder() + params.at(0) + L".html";
     const auto found_filename = find_case_insensitive(filename);
@@ -520,10 +540,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     const auto url = found_filename ? L"file://" + *found_filename : params.at(1);
 
-    if (!html_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA")))
+    if (!html_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") ||
+                         boost::algorithm::ends_with(url, "_ALPHA")))
         return core::frame_producer::empty();
 
-    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+    return core::create_destroy_proxy(
+        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
 }
 
 }} // namespace caspar::html

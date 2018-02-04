@@ -68,9 +68,10 @@ void append_timestamp(Stream& stream, boost::posix_time::ptime timestamp)
 
     std::wstringstream buffer;
 
-    buffer << std::setfill(L'0') << L"[" << std::setw(4) << date.year() << L"-" << std::setw(2) << date.month().as_number() << "-" << std::setw(2)
-           << date.day().as_number() << L" " << std::setw(2) << time.hours() << L":" << std::setw(2) << time.minutes() << L":" << std::setw(2) << time.seconds()
-           << L"." << std::setw(3) << milliseconds << L"] ";
+    buffer << std::setfill(L'0') << L"[" << std::setw(4) << date.year() << L"-" << std::setw(2)
+           << date.month().as_number() << "-" << std::setw(2) << date.day().as_number() << L" " << std::setw(2)
+           << time.hours() << L":" << std::setw(2) << time.minutes() << L":" << std::setw(2) << time.seconds() << L"."
+           << std::setw(3) << milliseconds << L"] ";
 
     stream << buffer.str();
 }
@@ -89,7 +90,8 @@ class column_writer
         int          length    = static_cast<int>(to_string.size());
         int          read_width;
 
-        while ((read_width = column_width_) < length && column_width_.compare_and_swap(length, read_width) != read_width)
+        while ((read_width = column_width_) < length &&
+               column_width_.compare_and_swap(length, read_width) != read_width)
             ;
         read_width = column_width_;
 
@@ -110,7 +112,8 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
     std::wstringstream pre_message_stream;
     append_timestamp(pre_message_stream, boost::log::extract<boost::posix_time::ptime>("TimestampMillis", rec).get());
     thread_id_column.write(pre_message_stream, boost::log::extract<std::int64_t>("NativeThreadId", rec));
-    severity_column.write(pre_message_stream, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
+    severity_column.write(pre_message_stream,
+                          boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
 
     auto pre_message = pre_message_stream.str();
 
@@ -121,7 +124,8 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
     if (print_all_characters) {
         strm << boost::replace_all_copy(rec[expr::message].get<std::wstring>(), "\n", line_break_replacement);
     } else {
-        strm << boost::replace_all_copy(replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?'), L"\n", line_break_replacement);
+        strm << boost::replace_all_copy(
+            replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?'), L"\n", line_break_replacement);
     }
 }
 
@@ -130,9 +134,11 @@ namespace internal {
 void init()
 {
     boost::log::add_common_attributes();
-    boost::log::core::get()->add_global_attribute("NativeThreadId", boost::log::attributes::make_function(&std::this_thread::get_id));
-    boost::log::core::get()->add_global_attribute("TimestampMillis",
-                                                  boost::log::attributes::make_function([] { return boost::posix_time::microsec_clock::local_time(); }));
+    boost::log::core::get()->add_global_attribute("NativeThreadId",
+                                                  boost::log::attributes::make_function(&std::this_thread::get_id));
+    boost::log::core::get()->add_global_attribute("TimestampMillis", boost::log::attributes::make_function([] {
+                                                      return boost::posix_time::microsec_clock::local_time();
+                                                  }));
     typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
 
     auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
@@ -144,7 +150,8 @@ void init()
     stream_sink->set_filter(category != log_category::calltrace);
 
     // bool print_all_characters = false;
-    // stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
+    // stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1,
+    // _2));
 
     boost::log::core::get()->add_sink(stream_sink);
 }
@@ -169,15 +176,16 @@ void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
         if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path()))
             CASPAR_THROW_EXCEPTION(directory_not_found());
 
-        auto file_sink =
-            boost::make_shared<file_sink_type>(boost::log::keywords::file_name           = (file + L"_%Y-%m-%d.log"),
-                                               boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-                                               boost::log::keywords::auto_flush          = true,
-                                               boost::log::keywords::open_mode           = std::ios::app);
+        auto file_sink = boost::make_shared<file_sink_type>(
+            boost::log::keywords::file_name           = (file + L"_%Y-%m-%d.log"),
+            boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
+            boost::log::keywords::auto_flush          = true,
+            boost::log::keywords::open_mode           = std::ios::app);
 
         // bool print_all_characters = true;
 
-        // file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+        // file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1,
+        // _2));
         file_sink->set_filter(filter);
         boost::log::core::get()->add_sink(file_sink);
     } catch (...) {
@@ -202,7 +210,9 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
             try {
                 formatted_line_sink_(formatted_message);
             } catch (...) {
-                std::cerr << "[sink_backend] Error while consuming formatted message: " << formatted_message << std::endl << std::endl;
+                std::cerr << "[sink_backend] Error while consuming formatted message: " << formatted_message
+                          << std::endl
+                          << std::endl;
             }
         }
     };
@@ -249,7 +259,8 @@ void set_log_filter()
     auto disabled_categories = get_disabled_categories();
 
     boost::log::core::get()->set_filter([=](const boost::log::attribute_value_set& attributes) {
-        return severity_filter(attributes) && static_cast<int>(disabled_categories & attributes["Channel"].extract<log_category>().get()) == 0;
+        return severity_filter(attributes) &&
+               static_cast<int>(disabled_categories & attributes["Channel"].extract<log_category>().get()) == 0;
     });
 }
 

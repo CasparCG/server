@@ -65,7 +65,8 @@ typedef void*         LPVOID;
 #define SEVERITY_SUCCESS 0
 #define SEVERITY_ERROR 1
 
-#define MAKE_HRESULT(sev, fac, code) ((HRESULT)(((unsigned long)(sev) << 31) | ((unsigned long)(fac) << 16) | ((unsigned long)(code))))
+#define MAKE_HRESULT(sev, fac, code)                                                                                   \
+    ((HRESULT)(((unsigned long)(sev) << 31) | ((unsigned long)(fac) << 16) | ((unsigned long)(code))))
 
 #define S_OK ((HRESULT)0x00000000L)
 #define S_FALSE ((HRESULT)0x00000001L)
@@ -82,7 +83,7 @@ typedef void*         LPVOID;
 
 #define STDMETHODCALLTYPE
 
-#define IID_IUnknown                                                                                                                                           \
+#define IID_IUnknown                                                                                                   \
     (REFIID) { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 }
 #define IUnknownUUID IID_IUnknown
 

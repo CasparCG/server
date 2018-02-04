@@ -68,7 +68,10 @@ struct param_visitor : public boost::static_visitor<void>
     void operator()(const double value) { o << static_cast<float>(value); }
     void operator()(const std::string& value) { o << value.c_str(); }
     void operator()(const std::wstring& value) { o << u8(value).c_str(); }
-    void operator()(const std::vector<int8_t>& value) { o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size())); }
+    void operator()(const std::vector<int8_t>& value)
+    {
+        o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size()));
+    }
 };
 
 void write_osc_event(byte_vector& destination, const core::monitor::message& message, int retry_allocation_attempt = 0)
@@ -77,7 +80,8 @@ void write_osc_event(byte_vector& destination, const core::monitor::message& mes
 
     destination.resize(max_size);
 
-    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()), static_cast<unsigned long>(destination.size()));
+    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()),
+                                  static_cast<unsigned long>(destination.size()));
 
     try {
         o << ::osc::BeginMessage(message.path().c_str());
@@ -104,7 +108,8 @@ byte_vector write_osc_bundle_start()
     byte_vector destination;
     destination.resize(16);
 
-    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()), static_cast<unsigned long>(destination.size()));
+    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()),
+                                  static_cast<unsigned long>(destination.size()));
     o << ::osc::BeginBundle();
 
     destination.resize(o.Size());
@@ -301,7 +306,10 @@ client& client::operator=(client&& other)
 
 client::~client() {}
 
-std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint) { return impl_->get_subscription_token(endpoint); }
+std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
+{
+    return impl_->get_subscription_token(endpoint);
+}
 
 spl::shared_ptr<core::monitor::sink> client::sink() { return impl_; }
 

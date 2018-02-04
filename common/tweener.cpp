@@ -30,19 +30,23 @@
 // Copyright � 2001 Robert Penner
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
 //
-//    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-//    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//    * Neither the name of the author nor the names of contributors may be used to endorse or promote products derived from this software without specific
-//    prior written permission.
+//    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+//    disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+//    following disclaimer in the documentation and/or other materials provided with the distribution.
+//    * Neither the name of the author nor the names of contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tweener.h"
 
 #include "except.h"
@@ -66,9 +70,15 @@ static const double H_PI = std::atan(1.0) * 2.0;
 
 double ease_none(double t, double b, double c, double d, const std::vector<double>& params) { return c * t / d + b; }
 
-double ease_in_quad(double t, double b, double c, double d, const std::vector<double>& params) { return c * (t /= d) * t + b; }
+double ease_in_quad(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * (t /= d) * t + b;
+}
 
-double ease_out_quad(double t, double b, double c, double d, const std::vector<double>& params) { return -c * (t /= d) * (t - 2) + b; }
+double ease_out_quad(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return -c * (t /= d) * (t - 2) + b;
+}
 
 double ease_in_out_quad(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -86,9 +96,15 @@ double ease_out_in_quad(double t, double b, double c, double d, const std::vecto
     return ease_in_quad((t * 2) - d, b + c / 2, c / 2, d, params);
 }
 
-double ease_in_cubic(double t, double b, double c, double d, const std::vector<double>& params) { return c * (t /= d) * t * t + b; }
+double ease_in_cubic(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * (t /= d) * t * t + b;
+}
 
-double ease_out_cubic(double t, double b, double c, double d, const std::vector<double>& params) { return c * ((t = t / d - 1) * t * t + 1) + b; }
+double ease_out_cubic(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * ((t = t / d - 1) * t * t + 1) + b;
+}
 
 double ease_in_out_cubic(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -105,9 +121,15 @@ double ease_out_in_cubic(double t, double b, double c, double d, const std::vect
     return ease_in_cubic((t * 2) - d, b + c / 2, c / 2, d, params);
 }
 
-double ease_in_quart(double t, double b, double c, double d, const std::vector<double>& params) { return c * (t /= d) * t * t * t + b; }
+double ease_in_quart(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * (t /= d) * t * t * t + b;
+}
 
-double ease_out_quart(double t, double b, double c, double d, const std::vector<double>& params) { return -c * ((t = t / d - 1) * t * t * t - 1) + b; }
+double ease_out_quart(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return -c * ((t = t / d - 1) * t * t * t - 1) + b;
+}
 
 double ease_in_out_quart(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -125,9 +147,15 @@ double ease_out_in_quart(double t, double b, double c, double d, const std::vect
     return ease_in_quart((t * 2) - d, b + c / 2, c / 2, d, params);
 }
 
-double ease_in_quint(double t, double b, double c, double d, const std::vector<double>& params) { return c * (t /= d) * t * t * t * t + b; }
+double ease_in_quint(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * (t /= d) * t * t * t * t + b;
+}
 
-double ease_out_quint(double t, double b, double c, double d, const std::vector<double>& params) { return c * ((t = t / d - 1) * t * t * t * t + 1) + b; }
+double ease_out_quint(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
+}
 
 double ease_in_out_quint(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -145,11 +173,20 @@ double ease_out_in_quint(double t, double b, double c, double d, const std::vect
     return ease_in_quint((t * 2) - d, b + c / 2, c / 2, d, params);
 }
 
-double ease_in_sine(double t, double b, double c, double d, const std::vector<double>& params) { return -c * std::cos(t / d * (PI / 2)) + c + b; }
+double ease_in_sine(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return -c * std::cos(t / d * (PI / 2)) + c + b;
+}
 
-double ease_out_sine(double t, double b, double c, double d, const std::vector<double>& params) { return c * std::sin(t / d * (PI / 2)) + b; }
+double ease_out_sine(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * std::sin(t / d * (PI / 2)) + b;
+}
 
-double ease_in_out_sine(double t, double b, double c, double d, const std::vector<double>& params) { return -c / 2 * (std::cos(PI * t / d) - 1) + b; }
+double ease_in_out_sine(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return -c / 2 * (std::cos(PI * t / d) - 1) + b;
+}
 
 double ease_out_in_sine(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -189,9 +226,15 @@ double ease_out_in_expo(double t, double b, double c, double d, const std::vecto
     return ease_in_expo((t * 2) - d, b + c / 2, c / 2, d, params);
 }
 
-double ease_in_circ(double t, double b, double c, double d, const std::vector<double>& params) { return -c * (std::sqrt(1 - (t /= d) * t) - 1) + b; }
+double ease_in_circ(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return -c * (std::sqrt(1 - (t /= d) * t) - 1) + b;
+}
 
-double ease_out_circ(double t, double b, double c, double d, const std::vector<double>& params) { return c * std::sqrt(1 - (t = t / d - 1) * t) + b; }
+double ease_out_circ(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c * std::sqrt(1 - (t = t / d - 1) * t) + b;
+}
 
 double ease_in_out_circ(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -323,7 +366,10 @@ double ease_out_bounce(double t, double b, double c, double d, const std::vector
         return c * (7.5625 * (t -= (2.625 / 2.75)) * t + .984375) + b;
 }
 
-double ease_in_bounce(double t, double b, double c, double d, const std::vector<double>& params) { return c - ease_out_bounce(d - t, 0, c, d, params) + b; }
+double ease_in_bounce(double t, double b, double c, double d, const std::vector<double>& params)
+{
+    return c - ease_out_bounce(d - t, 0, c, d, params) + b;
+}
 
 double ease_in_out_bounce(double t, double b, double c, double d, const std::vector<double>& params)
 {
@@ -400,8 +446,9 @@ tweener_t get_tweener(std::wstring name)
 
     std::vector<double> params;
 
-    static const boost::wregex expr(LR"((?<NAME>\w*)(:(?<V0>\d+\.?\d?))?(:(?<V1>\d+\.?\d?))?)"); // boost::regex has no repeated captures?
-    boost::wsmatch             what;
+    static const boost::wregex expr(
+        LR"((?<NAME>\w*)(:(?<V0>\d+\.?\d?))?(:(?<V1>\d+\.?\d?))?)"); // boost::regex has no repeated captures?
+    boost::wsmatch what;
     if (boost::regex_match(name, what, expr)) {
         name = what["NAME"].str();
         if (what["V0"].matched)

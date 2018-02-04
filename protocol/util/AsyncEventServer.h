@@ -31,12 +31,15 @@
 
 namespace caspar { namespace IO {
 
-typedef std::function<std::pair<std::wstring, std::shared_ptr<void>>(const std::string& ipv4_address)> lifecycle_factory_t;
+typedef std::function<std::pair<std::wstring, std::shared_ptr<void>>(const std::string& ipv4_address)>
+    lifecycle_factory_t;
 
 class AsyncEventServer : boost::noncopyable
 {
   public:
-    explicit AsyncEventServer(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port);
+    explicit AsyncEventServer(std::shared_ptr<boost::asio::io_service>    service,
+                              const protocol_strategy_factory<char>::ptr& protocol,
+                              unsigned short                              port);
     ~AsyncEventServer();
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& lifecycle_factory);

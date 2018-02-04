@@ -46,11 +46,16 @@ template <typename T>
 inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
     std::locale loc;
-    std::replace_if(str.begin(), str.end(), [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n') || c > static_cast<T>(127); }, with);
+    std::replace_if(
+        str.begin(),
+        str.end(),
+        [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n') || c > static_cast<T>(127); },
+        with);
 }
 
 template <typename T>
-inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
+inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str,
+                                                      T                                                            with)
 {
     replace_nonprintable(str, with);
     return str;
@@ -68,35 +73,41 @@ enum class log_category
 ENUM_ENABLE_BITWISE(log_category)
 BOOST_LOG_ATTRIBUTE_KEYWORD(category, "Channel", ::caspar::log::log_category)
 
-typedef boost::log::sources::wseverity_channel_logger_mt<boost::log::trivial::severity_level, log_category> caspar_logger;
+typedef boost::log::sources::wseverity_channel_logger_mt<boost::log::trivial::severity_level, log_category>
+    caspar_logger;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 {
     internal::init();
-    return caspar_logger(boost::log::keywords::severity = boost::log::trivial::trace, boost::log::keywords::channel = log_category::normal);
+    return caspar_logger(boost::log::keywords::severity = boost::log::trivial::trace,
+                         boost::log::keywords::channel  = log_category::normal);
 }
 
-#define CASPAR_LOG(lvl) BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::normal, ::boost::log::trivial::lvl)
-#define CASPAR_LOG_CALL(lvl) BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::calltrace, ::boost::log::trivial::lvl)
-#define CASPAR_LOG_COMMUNICATION(lvl)                                                                                                                          \
-    BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::communication, ::boost::log::trivial::lvl)
+#define CASPAR_LOG(lvl)                                                                                                \
+    BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::normal, ::boost::log::trivial::lvl)
+#define CASPAR_LOG_CALL(lvl)                                                                                           \
+    BOOST_LOG_CHANNEL_SEV(                                                                                             \
+        ::caspar::log::logger::get(), ::caspar::log::log_category::calltrace, ::boost::log::trivial::lvl)
+#define CASPAR_LOG_COMMUNICATION(lvl)                                                                                  \
+    BOOST_LOG_CHANNEL_SEV(                                                                                             \
+        ::caspar::log::logger::get(), ::caspar::log::log_category::communication, ::boost::log::trivial::lvl)
 
-#define CASPAR_LOG_CALL_STACK()                                                                                                                                \
-    try {                                                                                                                                                      \
-        CASPAR_LOG(info) << L"callstack:\n"; /* << boost::stacktrace::stacktrace();*/                                                                          \
-    } catch (...) {                                                                                                                                            \
+#define CASPAR_LOG_CALL_STACK()                                                                                        \
+    try {                                                                                                              \
+        CASPAR_LOG(info) << L"callstack:\n"; /* << boost::stacktrace::stacktrace();*/                                  \
+    } catch (...) {                                                                                                    \
     }
 
-#define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                                                         \
-    try {                                                                                                                                                      \
-        CASPAR_LOG(error) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());                                                 \
-    } catch (...) {                                                                                                                                            \
+#define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                 \
+    try {                                                                                                              \
+        CASPAR_LOG(error) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());         \
+    } catch (...) {                                                                                                    \
     }
 
-#define CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(lvl)                                                                                                             \
-    try {                                                                                                                                                      \
-        CASPAR_LOG(lvl) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());                                                   \
-    } catch (...) {                                                                                                                                            \
+#define CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(lvl)                                                                     \
+    try {                                                                                                              \
+        CASPAR_LOG(lvl) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());           \
+    } catch (...) {                                                                                                    \
     }
 
 void set_log_level(const std::wstring& lvl);

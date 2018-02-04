@@ -56,7 +56,9 @@ struct image_producer : public core::frame_producer_base
     const uint32_t                             length_;
     core::draw_frame                           frame_;
 
-    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, uint32_t length)
+    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
+                   const std::wstring&                         description,
+                   uint32_t                                    length)
         : description_(description)
         , frame_factory_(frame_factory)
         , length_(length)
@@ -66,7 +68,10 @@ struct image_producer : public core::frame_producer_base
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length)
+    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
+                   const void*                                 png_data,
+                   size_t                                      size,
+                   uint32_t                                    length)
         : description_(L"png from memory")
         , frame_factory_(frame_factory)
         , length_(length)
@@ -81,7 +86,8 @@ struct image_producer : public core::frame_producer_base
         FreeImage_FlipVertical(bitmap.get());
         core::pixel_format_desc desc;
         desc.format = core::pixel_format::bgra;
-        desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+        desc.planes.push_back(
+            core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
         auto frame = frame_factory_->create_frame(this, desc);
 
         std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
@@ -119,7 +125,8 @@ class ieq
     bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     auto length = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 
@@ -142,8 +149,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     //		auto extension = it->path().extension().wstring();
 
-    //		if (std::find_if(supported_extensions().begin(), supported_extensions().end(), ieq(extension)) == supported_extensions().end())
-    //			continue;
+    //		if (std::find_if(supported_extensions().begin(), supported_extensions().end(), ieq(extension)) ==
+    // supported_extensions().end()) 			continue;
 
     //		files.insert(it->path().wstring());
     //	}
@@ -186,7 +193,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     // XXX
     // std::wstring filename = env::media_folder() + params.at(0);
 
-    // auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
+    // auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex)
+    // -> bool
     //{
     //	auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
@@ -196,7 +204,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     // if(ext == supported_extensions().end())
     //	return core::frame_producer::empty();
 
-    // return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), length);
+    // return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename +
+    // *ext), length);
 }
 
 }} // namespace caspar::image

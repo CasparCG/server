@@ -80,7 +80,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
                                         format_desc.time_scale,
                                         format_desc.duration,
                                         format_desc.field_mode == core::field_mode::progressive,
-                                        static_cast<float>(format_desc.square_width) / static_cast<float>(format_desc.square_height),
+                                        static_cast<float>(format_desc.square_width) /
+                                            static_cast<float>(format_desc.square_height),
                                         true,
                                         format_desc.audio_channels,
                                         format_desc.audio_sample_rate),
@@ -100,7 +101,9 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
         {
             auto audio_buffer = core::audio_32_to_16(frame.audio_data());
-            airsend::add_audio(air_send_.get(), audio_buffer.data(), static_cast<int>(audio_buffer.size()) / format_desc_.audio_channels);
+            airsend::add_audio(air_send_.get(),
+                               audio_buffer.data(),
+                               static_cast<int>(audio_buffer.size()) / format_desc_.audio_channels);
         }
 
         {
@@ -115,7 +118,10 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
     core::monitor::subject& monitor_output() override { return monitor_subject_; }
 
-    std::wstring print() const override { return connected_ ? L"newtek-ivga[connected]" : L"newtek-ivga[not connected]"; }
+    std::wstring print() const override
+    {
+        return connected_ ? L"newtek-ivga[connected]" : L"newtek-ivga[not connected]";
+    }
 
     std::wstring name() const override { return L"newtek-ivga"; }
 
@@ -126,8 +132,9 @@ struct newtek_ivga_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 };
 
-spl::shared_ptr<core::frame_consumer>
-create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params,
+                                                           core::interaction_sink*,
+                                                           std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
         return core::frame_consumer::empty();
@@ -135,9 +142,10 @@ create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_
     return spl::make_shared<newtek_ivga_consumer>();
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree,
-                                                                         core::interaction_sink*,
-                                                                         std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer>
+create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree,
+                                   core::interaction_sink*,
+                                   std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<newtek_ivga_consumer>();
 }

@@ -96,12 +96,18 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     void send_osc()
     {
-        monitor_subject_ << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) % (producer_.duration() / format_desc_.fps)
-                         << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) % static_cast<int32_t>(producer_.duration())
-                         << core::monitor::message("/file/fps") % format_desc_.fps << core::monitor::message("/loop") % producer_.loop();
+        monitor_subject_ << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
+                                (producer_.duration() / format_desc_.fps)
+                         << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
+                                static_cast<int32_t>(producer_.duration())
+                         << core::monitor::message("/file/fps") % format_desc_.fps
+                         << core::monitor::message("/loop") % producer_.loop();
     }
 
-    uint32_t nb_frames() const override { return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(producer_.time()); }
+    uint32_t nb_frames() const override
+    {
+        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(producer_.time());
+    }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
@@ -180,10 +186,35 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 bool is_valid_file(const std::wstring& filename)
 {
-    static const auto invalid_exts = {
-        L".png", L".tga", L".bmp", L".jpg", L".jpeg", L".gif", L".tiff", L".tif", L".jp2", L".jpx", L".j2k", L".j2c", L".swf", L".ct"};
-    static const auto valid_exts = {
-        L".m2t", L".mov", L".mp4", L".dv", L".flv", L".mpg", L".dnxhd", L".h264", L".prores", L".mkv", L".mxf", L".ts", L".mp3", L".wav", L".wma"};
+    static const auto invalid_exts = {L".png",
+                                      L".tga",
+                                      L".bmp",
+                                      L".jpg",
+                                      L".jpeg",
+                                      L".gif",
+                                      L".tiff",
+                                      L".tif",
+                                      L".jp2",
+                                      L".jpx",
+                                      L".j2k",
+                                      L".j2c",
+                                      L".swf",
+                                      L".ct"};
+    static const auto valid_exts   = {L".m2t",
+                                    L".mov",
+                                    L".mp4",
+                                    L".dv",
+                                    L".flv",
+                                    L".mpg",
+                                    L".dnxhd",
+                                    L".h264",
+                                    L".prores",
+                                    L".mkv",
+                                    L".mxf",
+                                    L".ts",
+                                    L".mp3",
+                                    L".wav",
+                                    L".wma"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 
@@ -205,7 +236,9 @@ bool is_valid_file(const std::wstring& filename)
     std::ifstream file(u8filename);
 
     std::vector<unsigned char> buf;
-    for (auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 1024; ++file_it)
+    for (auto file_it = std::istreambuf_iterator<char>(file);
+         file_it != std::istreambuf_iterator<char>() && buf.size() < 1024;
+         ++file_it)
         buf.push_back(*file_it);
 
     if (buf.empty())
@@ -228,13 +261,15 @@ std::wstring probe_stem(const std::wstring& stem)
     auto dir = boost::filesystem::path(*parent);
 
     for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
-        if (boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
+        if (boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) &&
+            is_valid_file(it->path().wstring()))
             return it->path().wstring();
     }
     return L"";
 }
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     auto file_or_url = params.at(0);
 
@@ -281,8 +316,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto vfilter = get_param(L"VF", params, filter_str);
     auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
 
-    auto producer =
-        spl::make_shared<ffmpeg_producer>(dependencies.frame_factory, dependencies.format_desc, file_or_url, vfilter, afilter, start, duration, loop);
+    auto producer = spl::make_shared<ffmpeg_producer>(
+        dependencies.frame_factory, dependencies.format_desc, file_or_url, vfilter, afilter, start, duration, loop);
 
     return core::create_destroy_proxy(std::move(producer));
 }

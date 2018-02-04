@@ -89,9 +89,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
             }
 
             if (!GLEW_VERSION_4_5) {
-                CASPAR_THROW_EXCEPTION(
-                    not_supported() << msg_info(
-                        "Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 4.0 or higher."));
+                CASPAR_THROW_EXCEPTION(not_supported()
+                                       << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                                                   "since it does not support OpenGL 4.0 or higher."));
             }
 
             glCreateFramebuffers(1, &fbo_);
@@ -185,7 +185,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         auto ptr = tex.get();
-        return std::shared_ptr<texture>(ptr, [tex = std::move(tex), pool, self = shared_from_this()](texture*) mutable { pool->push(tex); });
+        return std::shared_ptr<texture>(
+            ptr, [tex = std::move(tex), pool, self = shared_from_this()](texture*) mutable { pool->push(tex); });
     }
 
     std::shared_ptr<buffer> create_buffer(int size, bool write)
@@ -202,7 +203,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         auto ptr = buf.get();
-        return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), self = shared_from_this()](buffer*) mutable { self->sync_queue_.emplace(std::move(buf)); });
+        return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), self = shared_from_this()](buffer*) mutable {
+            self->sync_queue_.emplace(std::move(buf));
+        });
     }
 
     array<uint8_t> create_array(int size)
@@ -212,7 +215,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         return array<uint8_t>(ptr, buf->size(), buf);
     }
 
-    std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+    std::future<std::shared_ptr<texture>>
+    copy_async(const array<const uint8_t>& source, int width, int height, int stride)
     {
         return dispatch_async([=] {
             std::shared_ptr<buffer> buf;
@@ -276,13 +280,20 @@ device::device()
 {
 }
 device::~device() {}
-std::shared_ptr<texture>              device::create_texture(int width, int height, int stride) { return impl_->create_texture(width, height, stride, true); }
-array<uint8_t>                        device::create_array(int size) { return impl_->create_array(size); }
-std::future<std::shared_ptr<texture>> device::copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+std::shared_ptr<texture> device::create_texture(int width, int height, int stride)
+{
+    return impl_->create_texture(width, height, stride, true);
+}
+array<uint8_t> device::create_array(int size) { return impl_->create_array(size); }
+std::future<std::shared_ptr<texture>>
+device::copy_async(const array<const uint8_t>& source, int width, int height, int stride)
 {
     return impl_->copy_async(source, width, height, stride);
 }
-std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source) { return impl_->copy_async(source); }
-void                              device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
-std::wstring                      device::version() const { return impl_->version(); }
+std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source)
+{
+    return impl_->copy_async(source);
+}
+void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
+std::wstring device::version() const { return impl_->version(); }
 }}} // namespace caspar::accelerator::ogl

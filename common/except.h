@@ -137,8 +137,9 @@ struct not_supported : virtual user_error
 {
 };
 
-#define CASPAR_THROW_EXCEPTION(x)                                                                                                                              \
-    ::boost::throw_exception(::boost::enable_error_info(x) << ::boost::throw_function(BOOST_THROW_EXCEPTION_CURRENT_FUNCTION) << ::boost::throw_file(__FILE__) \
-                                                           << ::boost::throw_line((int)__LINE__))
+#define CASPAR_THROW_EXCEPTION(x)                                                                                      \
+    ::boost::throw_exception(::boost::enable_error_info(x)                                                             \
+                             << ::boost::throw_function(BOOST_THROW_EXCEPTION_CURRENT_FUNCTION)                        \
+                             << ::boost::throw_file(__FILE__) << ::boost::throw_line((int)__LINE__))
 
 } // namespace caspar

@@ -27,7 +27,8 @@ namespace caspar { namespace protocol { namespace log {
 
 struct tcp_logger_protocol_strategy_factory : public IO::protocol_strategy_factory<char>
 {
-    spl::shared_ptr<IO::protocol_strategy<char>> create(const spl::shared_ptr<IO::client_connection<char>>& client_connection) override;
+    spl::shared_ptr<IO::protocol_strategy<char>>
+    create(const spl::shared_ptr<IO::client_connection<char>>& client_connection) override;
 };
 
 }}} // namespace caspar::protocol::log

@@ -30,6 +30,7 @@
 
 namespace caspar { namespace ffmpeg {
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params);
 
 }} // namespace caspar::ffmpeg

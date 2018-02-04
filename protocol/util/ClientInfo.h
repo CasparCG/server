@@ -34,11 +34,17 @@ typedef spl::shared_ptr<client_connection<wchar_t>> ClientInfoPtr;
 
 struct ConsoleClientInfo : public client_connection<wchar_t>
 {
-    void         send(std::wstring&& data, bool skip_log) override { std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?')) << std::flush; }
+    void send(std::wstring&& data, bool skip_log) override
+    {
+        std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?')) << std::flush;
+    }
     void         disconnect() override {}
     std::wstring address() const override { return L"Console"; }
-    void         add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override {}
-    std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override { return std::shared_ptr<void>(); }
+    void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override {}
+    std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override
+    {
+        return std::shared_ptr<void>();
+    }
 };
 
 }} // namespace caspar::IO

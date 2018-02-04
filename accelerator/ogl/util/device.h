@@ -41,8 +41,9 @@ class device final : public std::enable_shared_from_this<device>
     std::shared_ptr<class texture> create_texture(int width, int height, int stride);
     array<uint8_t>                 create_array(int size);
 
-    std::future<std::shared_ptr<class texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride);
-    std::future<array<const uint8_t>>           copy_async(const std::shared_ptr<class texture>& source);
+    std::future<std::shared_ptr<class texture>>
+                                      copy_async(const array<const uint8_t>& source, int width, int height, int stride);
+    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
 
     template <typename Func>
     auto dispatch_async(Func&& func)

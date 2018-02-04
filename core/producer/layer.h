@@ -49,7 +49,9 @@ class layer final : public interaction_sink
 
     void swap(layer& other);
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
+    void load(spl::shared_ptr<frame_producer> producer,
+              bool                            preview,
+              const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
     void play();
     void pause();
     void resume();

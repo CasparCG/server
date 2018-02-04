@@ -159,8 +159,9 @@ struct output::impl
 
             auto minmax = minmax_buffer_depth();
 
-            frames_.set_capacity(std::max(2, minmax.second - minmax.first) +
-                                 1); // std::max(2, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
+            frames_.set_capacity(
+                std::max(2, minmax.second - minmax.first) +
+                1); // std::max(2, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
             frames_.push_back(input_frame);
 
             if (!frames_.full())
@@ -238,11 +239,14 @@ output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_des
     : impl_(new impl(std::move(graph), format_desc, channel_index))
 {
 }
-void                                               output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
-void                                               output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
-void                                               output::remove(int index) { impl_->remove(index); }
-void                                               output::remove(const spl::shared_ptr<frame_consumer>& consumer) { impl_->remove(consumer); }
+void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
+void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
+void output::remove(int index) { impl_->remove(index); }
+void output::remove(const spl::shared_ptr<frame_consumer>& consumer) { impl_->remove(consumer); }
 std::vector<spl::shared_ptr<const frame_consumer>> output::get_consumers() const { return impl_->get_consumers(); }
-std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc) { return (*impl_)(std::move(frame), format_desc); }
-monitor::subject&         output::monitor_output() { return *impl_->monitor_subject_; }
+std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc)
+{
+    return (*impl_)(std::move(frame), format_desc);
+}
+monitor::subject& output::monitor_output() { return *impl_->monitor_subject_; }
 }} // namespace caspar::core

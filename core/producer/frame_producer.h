@@ -105,15 +105,19 @@ struct frame_producer_dependencies
                                 const spl::shared_ptr<const cg_producer_registry>    cg_registry);
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
+                                                            const std::vector<std::wstring>&)>
+    producer_factory_t;
 
 class frame_producer_registry : boost::noncopyable
 {
   public:
     frame_producer_registry();
-    void                                  register_producer_factory(std::wstring name, const producer_factory_t& factoryr); // Not thread-safe.
-    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params) const;
-    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params) const;
+    void register_producer_factory(std::wstring name, const producer_factory_t& factoryr); // Not thread-safe.
+    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&,
+                                                          const std::vector<std::wstring>& params) const;
+    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&,
+                                                          const std::wstring& params) const;
 
   private:
     struct impl;

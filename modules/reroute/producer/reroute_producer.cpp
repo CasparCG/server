@@ -35,11 +35,13 @@
 
 namespace caspar { namespace reroute {
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params)
 {
     static const std::wstring PREFIX = L"route://";
 
-    if (params.empty() || !boost::starts_with(params.at(0), PREFIX) || boost::ends_with(params.at(0), L"_A") || boost::ends_with(params.at(0), L"_ALPHA")) {
+    if (params.empty() || !boost::starts_with(params.at(0), PREFIX) || boost::ends_with(params.at(0), L"_A") ||
+        boost::ends_with(params.at(0), L"_ALPHA")) {
         return core::frame_producer::empty();
     }
 
@@ -54,10 +56,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     else
         channel_id = boost::lexical_cast<int>(channel_layer_spec);
 
-    auto found_channel = boost::find_if(dependencies.channels, [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel_id; });
+    auto found_channel = boost::find_if(
+        dependencies.channels, [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel_id; });
 
     if (found_channel == dependencies.channels.end())
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel_id)));
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel_id)));
 
     auto params2 = params;
     params2.erase(params2.begin());

@@ -86,7 +86,10 @@ struct audio_mixer::impl : boost::noncopyable
         transform_stack_.push(core::audio_transform());
     }
 
-    void push(const frame_transform& transform) { transform_stack_.push(transform_stack_.top() * transform.audio_transform); }
+    void push(const frame_transform& transform)
+    {
+        transform_stack_.push(transform_stack_.top() * transform.audio_transform);
+    }
 
     void visit(const const_frame& frame)
     {
@@ -148,17 +151,20 @@ struct audio_mixer::impl : boost::noncopyable
             const double prev_volume = prev_transform.volume * previous_master_volume_;
             const double next_volume = next_transform.volume * master_volume_;
 
-            // TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to frame audio samples.
-            auto alpha = (next_volume - prev_volume) / static_cast<double>(item.audio_data.size() / format_desc_.audio_channels);
+            // TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to
+            // frame audio samples.
+            auto alpha =
+                (next_volume - prev_volume) / static_cast<double>(item.audio_data.size() / format_desc_.audio_channels);
 
             for (size_t n = 0; n < item.audio_data.size(); ++n) {
                 auto sample_multiplier = (prev_volume + (n / format_desc_.audio_channels) * alpha);
                 next_audio.push_back(item.audio_data.data()[n] * sample_multiplier);
             }
 
-            next_audio_streams[tag].prev_transform = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-            next_audio_streams[tag].audio_data     = std::move(next_audio);
-            next_audio_streams[tag].is_still       = item.transform.is_still;
+            next_audio_streams[tag].prev_transform =
+                std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
+            next_audio_streams[tag].audio_data = std::move(next_audio);
+            next_audio_streams[tag].is_still   = item.transform.is_still;
         }
 
         previous_master_volume_ = master_volume_;
@@ -174,13 +180,17 @@ struct audio_mixer::impl : boost::noncopyable
             if (stream.audio_data.size() < result_ps.size()) {
                 auto samples = (result_ps.size() - stream.audio_data.size()) / format_desc_.audio_channels;
                 CASPAR_LOG(trace) << L"[audio_mixer] Appended " << samples << L" zero samples";
-                CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples " << stream.audio_data.size() / format_desc_.audio_channels;
-                CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples " << result_ps.size() / format_desc_.audio_channels;
+                CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples "
+                                  << stream.audio_data.size() / format_desc_.audio_channels;
+                CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples "
+                                  << result_ps.size() / format_desc_.audio_channels;
                 stream.audio_data.resize(result_ps.size(), 0.0);
             }
 
-            auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
-            stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
+            auto out =
+                boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
+            stream.audio_data.erase(std::begin(stream.audio_data),
+                                    std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
         }
 
         boost::range::rotate(audio_cadence_, std::begin(audio_cadence_) + 1);
@@ -227,7 +237,8 @@ struct audio_mixer::impl : boost::noncopyable
             monitor_subject_ << monitor::message("/" + chan_str + "/dBFS") % dBFS;
         }
 
-        graph_->set_value("volume", static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
+        graph_->set_value("volume",
+                          static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
 
         return array<int32_t>(std::move(result));
     }

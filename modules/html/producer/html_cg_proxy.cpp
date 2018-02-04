@@ -43,7 +43,11 @@ html_cg_proxy::html_cg_proxy(spl::shared_ptr<core::frame_producer> producer)
 
 html_cg_proxy::~html_cg_proxy() {}
 
-void html_cg_proxy::add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& start_from_label, const std::wstring& data)
+void html_cg_proxy::add(int                 layer,
+                        const std::wstring& template_name,
+                        bool                play_on_load,
+                        const std::wstring& start_from_label,
+                        const std::wstring& data)
 {
     update(layer, data);
 
@@ -61,9 +65,10 @@ void html_cg_proxy::next(int layer) { impl_->producer->call({L"next()"}); }
 
 void html_cg_proxy::update(int layer, const std::wstring& data)
 {
-    impl_->producer->call(
-        {(boost::wformat(L"update(\"%1%\")") % boost::algorithm::replace_all_copy(boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
-             .str()});
+    impl_->producer->call({(boost::wformat(L"update(\"%1%\")") %
+                            boost::algorithm::replace_all_copy(
+                                boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
+                               .str()});
 }
 
 std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)

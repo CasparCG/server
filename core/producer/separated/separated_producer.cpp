@@ -88,7 +88,10 @@ class separated_producer : public frame_producer_base
 
     uint32_t nb_frames() const override { return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames()); }
 
-    std::wstring print() const override { return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]"; }
+    std::wstring print() const override
+    {
+        return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
+    }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
@@ -101,7 +104,8 @@ class separated_producer : public frame_producer_base
     monitor::subject& monitor_output() { return *monitor_subject_; }
 };
 
-spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
+spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill,
+                                                          const spl::shared_ptr<frame_producer>& key)
 {
     return spl::make_shared<separated_producer>(fill, key);
 }
