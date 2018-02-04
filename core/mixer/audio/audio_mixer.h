@@ -41,26 +41,16 @@ class audio_mixer final : public frame_visitor
     audio_mixer& operator=(const audio_mixer&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph);
-
-    // Methods
 
     array<int32_t>    operator()(const struct video_format_desc& format_desc);
     void              set_master_volume(float volume);
     float             get_master_volume();
     monitor::subject& monitor_output();
 
-    // frame_visitor
-
     virtual void push(const struct frame_transform& transform);
     virtual void visit(const class const_frame& frame);
     virtual void pop();
-
-    // Properties
 
   private:
     struct impl;

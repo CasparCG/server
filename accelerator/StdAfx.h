@@ -1,8 +1,5 @@
 #pragma once
 
-// TODO Move into cmake config
-#define _WIN32_WINNT 0x601
-
 #include <GL/glew.h>
 #include <SFML/Window/Context.hpp>
 #include <algorithm>

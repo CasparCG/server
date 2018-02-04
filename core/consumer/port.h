@@ -14,23 +14,15 @@ class port
     port& operator=(const port&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     port(int index, int channel_index, spl::shared_ptr<class frame_consumer> consumer);
     port(port&& other);
     ~port();
-
-    // Member Functions
 
     port& operator=(port&& other);
 
     std::future<bool> send(class const_frame frame);
 
     monitor::subject& monitor_output();
-
-    // Properties
 
     void                                  change_channel_format(const struct video_format_desc& format_desc);
     std::wstring                          print() const;

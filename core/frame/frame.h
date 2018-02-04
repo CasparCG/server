@@ -13,24 +13,16 @@ class mutable_frame final
     friend class const_frame;
 
   public:
-    // Static Members
-
-    // Constructors
-
     explicit mutable_frame(const void* tag, std::vector<array<std::uint8_t>> image_data, array<std::int32_t> audio_data, const struct pixel_format_desc& desc);
     mutable_frame(const mutable_frame&) = delete;
     mutable_frame(mutable_frame&& other);
 
     ~mutable_frame();
 
-    // Methods
-
     mutable_frame& operator=(const mutable_frame&) = delete;
     mutable_frame& operator                        =(mutable_frame&& other);
 
     void swap(mutable_frame& other);
-
-    // Properties
 
     const struct pixel_format_desc& pixel_format_desc() const;
 
@@ -57,10 +49,6 @@ class mutable_frame final
 class const_frame final
 {
   public:
-    // Static Members
-
-    // Constructors
-
     explicit const_frame(const void* tag = nullptr);
     explicit const_frame(const void*                        tag,
                          std::vector<array<std::uint8_t>>&& image_data,
@@ -76,11 +64,7 @@ class const_frame final
 
     ~const_frame();
 
-    // Methods
-
     const_frame& operator=(const_frame other);
-
-    // Properties
 
     const struct pixel_format_desc& pixel_format_desc() const;
 

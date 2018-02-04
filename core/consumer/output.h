@@ -39,13 +39,7 @@ class output final
     output& operator=(const output&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     explicit output(spl::shared_ptr<caspar::diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
-
-    // Methods
 
     // Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
     std::future<void> operator()(const_frame frame, const video_format_desc& format_desc);
@@ -56,8 +50,6 @@ class output final
     void remove(int index);
 
     monitor::subject& monitor_output();
-
-    // Properties
 
     std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
 

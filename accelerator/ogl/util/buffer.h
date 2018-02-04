@@ -28,24 +28,16 @@ namespace caspar { namespace accelerator { namespace ogl {
 class buffer final
 {
   public:
-    // Static Members
-
-    // Constructors
-
     buffer(int size, bool write);
     buffer(const buffer&) = delete;
     buffer(buffer&& other);
     ~buffer();
-
-    // Methods
 
     buffer& operator=(const buffer&) = delete;
     buffer& operator                 =(buffer&& other);
 
     void bind();
     void unbind();
-
-    // Properties
 
     int   id() const;
     void* data();

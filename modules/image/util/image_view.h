@@ -106,15 +106,9 @@ class image_view
     template <class PackedPixelIter>
     inline const PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y) const
     {
-        // auto x_distance
         auto               pixel_distance = delta_x + width_ * delta_y;
         const PackedPixel* to_address     = &(*to);
         auto               result         = to_address + pixel_distance;
-
-        /*if (delta_x != 0)
-        {
-            auto actual_delta_y = result % width_
-        }*/
 
         if (result < begin_ || result >= end_)
             return nullptr;

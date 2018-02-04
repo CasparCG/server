@@ -35,32 +35,21 @@
 
 namespace caspar { namespace core {
 
-// Interface
 class frame_consumer
 {
     frame_consumer(const frame_consumer&);
     frame_consumer& operator=(const frame_consumer&);
 
   public:
-    // Static Members
-
     static const spl::shared_ptr<frame_consumer>& empty();
-
-    // Constructors
 
     frame_consumer() {}
     virtual ~frame_consumer() {}
 
-    // Methods
-
     virtual std::future<bool> send(const_frame frame)                                             = 0;
     virtual void              initialize(const video_format_desc& format_desc, int channel_index) = 0;
 
-    // monitor::observable
-
     virtual monitor::subject& monitor_output() = 0;
-
-    // Properties
 
     virtual std::wstring          print() const = 0;
     virtual std::wstring          name() const  = 0;

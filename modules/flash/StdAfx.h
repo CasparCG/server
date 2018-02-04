@@ -53,7 +53,6 @@
 
 #include "../common/memory.h"
 #include "../common/utf.h"
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
 
 #include "../common/except.h"
 #include "../common/log.h"

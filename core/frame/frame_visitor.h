@@ -26,23 +26,15 @@ namespace caspar { namespace core {
 class frame_visitor
 {
   public:
-    // Static Members
-
-    // Constructors
-
     frame_visitor()                     = default;
     frame_visitor(const frame_visitor&) = delete;
     virtual ~frame_visitor()            = default;
-
-    // Methods
 
     frame_visitor& operator=(const frame_visitor&) = delete;
 
     virtual void push(const struct frame_transform& transform) = 0;
     virtual void visit(const class const_frame& frame)         = 0;
     virtual void pop()                                         = 0;
-
-    // Properties
 };
 
 }} // namespace caspar::core
