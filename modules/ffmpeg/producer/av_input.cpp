@@ -67,8 +67,9 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 // TODO (perf) Non blocking av_read_frame when possible.
                 auto ret = av_read_frame(ic_.get(), packet.get());
 
-                std::lock_guard<std::mutex> lock(mutex_);
                 {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
@@ -116,10 +117,15 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
 }
 
 AVFormatContext* Input::operator->() { return ic_.get(); }
-
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
-boost::optional<int64_t> Input::start_time() const { return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>(); }
+boost::optional<int64_t> Input::start_time() const { 
+    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>(); 
+}
+
+boost::optional<int64_t> Input::duration() const { 
+    return ic_->duration != AV_NOPTS_VALUE ? ic_->duration : boost::optional<int64_t>(); 
+}
 
 bool Input::paused() const { return paused_; }
 
