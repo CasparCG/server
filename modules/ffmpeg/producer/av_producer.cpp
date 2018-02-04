@@ -1,5 +1,11 @@
 #include "av_producer.h"
 
+#include "av_input.h"
+#include "av_decoder.h"
+
+#include "../util/av_assert.h"
+#include "../util/av_util.h"
+
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -32,14 +38,12 @@ extern "C"
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/timecode.h>
+#include <libavutil/avutil.h>
+#include <libavutil/error.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-#include "../util/av_assert.h"
-#include "../util/av_util.h"
 
 #include <algorithm>
 #include <atomic>
@@ -71,334 +75,6 @@ struct Frame
 // TODO (feat) filter preset
 // TODO (feat) forward options
 
-struct Input
-{
-    std::shared_ptr<diagnostics::graph> graph_;
-
-    mutable std::mutex               format_mutex_;
-    std::shared_ptr<AVFormatContext> format_;
-
-    mutable std::mutex                    mutex_;
-    std::condition_variable               cond_;
-    int                                   output_capacity_ = 64;
-    std::queue<std::shared_ptr<AVPacket>> output_;
-
-    std::atomic<bool>                     paused_ = false;
-    std::atomic<bool>                     eof_    = false;
-
-    std::atomic<bool> abort_request_ = false;
-    std::thread       thread_;
-
-    Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
-        : graph_(graph)
-    {
-        graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
-        graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
-
-        AVDictionary* options = nullptr;
-        CASPAR_SCOPE_EXIT { av_dict_free(&options); };
-
-        // TODO (fix) check if filename is http
-        FF(av_dict_set(&options, "reconnect", "1", 0)); // HTTP reconnect
-        // TODO (fix) timeout?
-        FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
-
-        AVFormatContext* ic = nullptr;
-        FF(avformat_open_input(&ic, filename.c_str(), nullptr, &options));
-        format_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
-
-        format_->interrupt_callback.callback = Input::interrupt_cb;
-        format_->interrupt_callback.opaque   = this;
-
-        FF(avformat_find_stream_info(format_.get(), nullptr));
-
-        thread_ = std::thread([=] {
-            try {
-                set_thread_name(L"[ffmpeg::av_producer::Input]");
-
-                while (true) {
-                    {
-                        std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] {
-                            return ((!eof_ && !paused_) && output_.size() < output_capacity_) || abort_request_;
-                        });
-
-                        if (abort_request_) {
-                            break;
-                        }
-                    }
-
-                    std::lock_guard<std::mutex> format_lock(format_mutex_);
-
-                    auto packet = alloc_packet();
-
-                    // TODO (perf) Non blocking av_read_frame when possible.
-                    auto ret = av_read_frame(format_.get(), packet.get());
-
-                    if (ret == AVERROR_EXIT) {
-                        break;
-                    } else if (ret == AVERROR_EOF) {
-                        eof_ = true;
-                        packet = nullptr;
-                    } else {
-                        FF_RET(ret, "av_read_frame");
-                    }
-
-                    {
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        output_.push(std::move(packet));
-                        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
-                    }
-                    cond_.notify_all();
-                }
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-            }
-        });
-    }
-
-    ~Input()
-    {
-        abort_request_ = true;
-        cond_.notify_all();
-        thread_.join();
-    }
-
-    static int interrupt_cb(void* ctx)
-    {
-        auto input = reinterpret_cast<Input*>(ctx);
-        return input->abort_request_ ? 1 : 0;
-    }
-
-    void operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            while (!output_.empty() && fn(output_.front())) {
-                output_.pop();
-                graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
-            }
-        }
-        cond_.notify_all();
-    }
-
-    AVFormatContext* operator->() { return format_.get(); }
-
-    AVFormatContext* const operator->() const { return format_.get(); }
-
-    int64_t start_time() const { return format_->start_time != AV_NOPTS_VALUE ? format_->start_time : 0; }
-
-    bool paused() const
-    {
-        return paused_;
-    }
-
-    bool eof() const
-    {
-        return eof_;
-    }
-
-    void pause()
-    {
-        paused_ = true;
-        cond_.notify_all();
-    }
-
-    void resume()
-    {
-        paused_ = false;
-        cond_.notify_all();
-    }
-
-    void seek(int64_t ts, bool flush = true)
-    {
-        std::lock_guard<std::mutex> lock(format_mutex_);
-
-        FF(avformat_seek_file(format_.get(), -1, INT64_MIN, ts, ts, 0));
-
-        {
-            std::lock_guard<std::mutex> output_lock(mutex_);
-            while (flush && !output_.empty()) {
-                output_.pop();
-            }
-            // TODO (fix) Don't send if already eof.
-            output_.push(nullptr);
-        }
-        eof_ = false;
-
-        cond_.notify_all();
-
-        graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
-    }
-};
-
-struct Decoder
-{
-    mutable std::mutex              decoder_mutex_;
-    std::shared_ptr<AVCodecContext> decoder_;
-
-    int64_t next_pts_ = AV_NOPTS_VALUE;
-
-    mutable std::mutex                    mutex_;
-    std::condition_variable               cond_;
-    int                                   input_capacity_ = 256;
-    std::queue<std::shared_ptr<AVPacket>> input_;
-    int                                   output_capacity_ = 2;
-    std::queue<std::shared_ptr<AVFrame>>  output_;
-
-    std::atomic<bool> abort_request_ = false;
-    std::thread       thread_;
-
-    Decoder(AVStream* stream)
-        : next_pts_(stream->start_time)
-    {
-        const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
-        if (!codec) {
-            FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
-        }
-
-        decoder_ = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
-            [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
-        if (!decoder_) {
-            FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
-        }
-
-        FF(avcodec_parameters_to_context(decoder_.get(), stream->codecpar));
-
-        FF(av_opt_set_int(decoder_.get(), "refcounted_frames", 1, 0));
-
-        decoder_->pkt_timebase = stream->time_base;
-
-        if (decoder_->codec_type == AVMEDIA_TYPE_VIDEO) {
-            decoder_->framerate = av_guess_frame_rate(nullptr, stream, nullptr);
-            decoder_->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
-        } else if (decoder_->codec_type == AVMEDIA_TYPE_AUDIO) {
-            if (!decoder_->channel_layout && decoder_->channels) {
-                decoder_->channel_layout = av_get_default_channel_layout(decoder_->channels);
-            }
-            if (!decoder_->channels && decoder_->channel_layout) {
-                decoder_->channels = av_get_channel_layout_nb_channels(decoder_->channel_layout);
-            }
-        }
-
-        FF(avcodec_open2(decoder_.get(), codec, nullptr));
-
-        thread_ = std::thread([=]
-        {
-            try {
-                set_thread_name(L"[ffmpeg::av_producer::Stream]");
-
-                while (true) {
-                    std::shared_ptr<AVPacket> packet;
-                    {
-                        std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] {
-                            return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
-                        });
-
-                        if (abort_request_) {
-                            break;
-                        }
-
-                        packet = std::move(input_.front());
-                        input_.pop();
-                    }
-
-                    std::lock_guard<std::mutex> decoder_lock(decoder_mutex_);
-
-                    FF(avcodec_send_packet(decoder_.get(), packet.get()));
-
-                    while (true) {
-                        auto frame = alloc_frame();
-                        auto ret = avcodec_receive_frame(decoder_.get(), frame.get());
-
-                        if (ret == AVERROR(EAGAIN)) {
-                            break;
-                        } else if (ret == AVERROR_EOF) {
-                            avcodec_flush_buffers(decoder_.get());
-                            frame->pts = next_pts_;
-                        } else {
-                            FF_RET(ret, "avcodec_receive_frame");
-
-                            // TODO (fix) is this always best?
-                            frame->pts = frame->best_effort_timestamp;
-                            // TODO (fix) is this always best?
-                            next_pts_ = frame->pts + frame->pkt_duration;
-                        }
-
-                        if (frame->pts != AV_NOPTS_VALUE)
-                        {
-                            std::lock_guard<std::mutex> lock(mutex_);
-                            output_.push(std::move(frame));
-                        }
-                        cond_.notify_all();
-                    }
-                }
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-            }
-        });
-    }
-
-    ~Decoder()
-    {
-        abort_request_ = true;
-        cond_.notify_all();
-        thread_.join();
-    }
-
-    AVCodecContext* operator->() { return decoder_.get(); }
-
-    const AVCodecContext* operator->() const { return decoder_.get(); }
-
-    bool try_push(std::shared_ptr<AVPacket> packet)
-    {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (input_.size() > input_capacity_ && packet) {
-                return false;
-            }
-            if (!packet) {
-                // TODO (fix) remove pending null range
-            }
-            input_.push(std::move(packet));
-        }
-        cond_.notify_all();
-
-        return true;
-    }
-
-    void operator()(std::function<bool(std::shared_ptr<AVFrame>&)> fn)
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            while (!output_.empty() && fn(output_.front())) {
-                output_.pop();
-            }
-        }
-        cond_.notify_all();
-    }
-
-    void flush()
-    {
-        std::lock_guard<std::mutex> decoder_lock(decoder_mutex_);
-
-        avcodec_flush_buffers(decoder_.get());
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            while (!output_.empty()) {
-                output_.pop();
-            }
-            while (!input_.empty()) {
-                input_.pop();
-            }
-            next_pts_ = AV_NOPTS_VALUE;
-        }
-        cond_.notify_all();
-    }
-};
-
 struct Filter
 {
     std::shared_ptr<AVFilterGraph>  graph;
@@ -407,7 +83,7 @@ struct Filter
     std::shared_ptr<AVFrame>        frame;
     bool                            eof = false;
 
-    Filter() {}
+    Filter() = default;
 
     Filter(std::string                    filter_spec,
            const Input&                   input,
