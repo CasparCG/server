@@ -42,9 +42,3 @@ endif()
 casparcg_add_include_statement("modules/oal/oal.h")
 casparcg_add_init_statement("oal::init" "oal")
 casparcg_add_module_project("oal")
-
-if(MSVC)
-	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
-else()
-
-endif()
