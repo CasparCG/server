@@ -364,7 +364,7 @@ struct AVProducer::Impl
     bool                    buffer_eof_      = true;
     bool                    buffer_flush_    = true;
 
-    std::atomic<bool> abort_request_ = false;
+    std::atomic<bool> abort_request_{ false };
     std::thread       thread_;
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
@@ -421,8 +421,8 @@ struct AVProducer::Impl
 
                     if (loop_ && input_.eof()) {
                         auto time = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        input_.seek(time + input_.start_time(), false);
-                        input_.resume();
+                        input_.seek(time + input_.start_time().value_or(0), false);
+                        input_.paused(false);
 
                         // TODO (fix) Interlaced looping.
                         continue;
@@ -444,7 +444,7 @@ struct AVProducer::Impl
                     // End of file. Reset filters.
                     if (!video_filter_.frame && !audio_filter_.frame) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset_filters(start + input_.start_time());
+                        reset_filters(start + input_.start_time().value_or(0));
                         {
                             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                             buffer_eof_ = true;
@@ -487,15 +487,15 @@ struct AVProducer::Impl
                     // TODO (perf) Seek input as soon as possible.
                     if (loop_ && duration_ != AV_NOPTS_VALUE && frame.pts >= duration_) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset_filters(start + input_.start_time());
+                        reset_filters(start + input_.start_time().value_or(0));
                         input_.seek(start, true);
-                        input_.resume();
+                        input_.paused(false);
                         continue;
                     }
 
                     // TODO (fix) Don't lose frame if duration_ is increased.
                     if (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_) {
-                        input_.pause();
+                        input_.paused(true);
                         continue;
                     }
 
@@ -726,11 +726,11 @@ struct AVProducer::Impl
             }
             buffer_cond_.notify_all();
 
-            time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time();
+            time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time().value_or(0);
 
             // TODO (fix) Dont seek if time is close future.
             input_.seek(time);
-            input_.resume();
+            input_.paused(false);
 
             for (auto& p : decoders_) {
                 p.second.flush();
@@ -786,7 +786,7 @@ struct AVProducer::Impl
 
             // TODO (fix) Flush.
 
-            input_.resume();
+            input_.paused(false);
         }
         cond_.notify_all();
     }
@@ -796,8 +796,8 @@ struct AVProducer::Impl
         auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
         auto duration = duration_;
 
-        if (duration == AV_NOPTS_VALUE && input_->duration != AV_NOPTS_VALUE) {
-            duration = input_->duration - start;
+        if (duration == AV_NOPTS_VALUE && input_.duration()) {
+            duration = *input_.duration() - start;
         }
 
         if (duration == AV_NOPTS_VALUE || duration < 0) {
