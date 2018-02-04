@@ -1,7 +1,7 @@
 #include "av_producer.h"
 
-#include "av_input.h"
 #include "av_decoder.h"
+#include "av_input.h"
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
@@ -14,9 +14,9 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
+#include <common/os/thread.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
-#include <common/os/thread.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
@@ -35,11 +35,11 @@ extern "C"
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/error.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/avutil.h>
-#include <libavutil/error.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -173,7 +173,7 @@ struct Filter
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
-            [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
+                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
 
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
@@ -196,7 +196,9 @@ struct Filter
                 // TODO share stream decoders between graphs
                 while (true) {
                     if (index == input->nb_streams) {
-                        CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                        CASPAR_THROW_EXCEPTION(
+                            ffmpeg_error_t()
+                            << boost::errinfo_errno(EINVAL)
                             << msg_info_t((boost::format("could not find input for: %s") % cur->name).str()));
                     }
                     if (input->streams[index]->codecpar->codec_type == type &&
@@ -261,21 +263,20 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            const AVPixelFormat pix_fmts[] = {
-                AV_PIX_FMT_RGB24,
-                AV_PIX_FMT_BGR24,
-                AV_PIX_FMT_BGRA,
-                AV_PIX_FMT_ARGB,
-                AV_PIX_FMT_RGBA,
-                AV_PIX_FMT_ABGR,
-                AV_PIX_FMT_YUV444P,
-                AV_PIX_FMT_YUV422P,
-                AV_PIX_FMT_YUV420P,
-                AV_PIX_FMT_YUV410P,
-                AV_PIX_FMT_YUVA444P,
-                AV_PIX_FMT_YUVA422P,
-                AV_PIX_FMT_YUVA420P,
-                AV_PIX_FMT_NONE};
+            const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGB24,
+                                              AV_PIX_FMT_BGR24,
+                                              AV_PIX_FMT_BGRA,
+                                              AV_PIX_FMT_ARGB,
+                                              AV_PIX_FMT_RGBA,
+                                              AV_PIX_FMT_ABGR,
+                                              AV_PIX_FMT_YUV444P,
+                                              AV_PIX_FMT_YUV422P,
+                                              AV_PIX_FMT_YUV420P,
+                                              AV_PIX_FMT_YUV410P,
+                                              AV_PIX_FMT_YUVA444P,
+                                              AV_PIX_FMT_YUVA422P,
+                                              AV_PIX_FMT_YUVA420P,
+                                              AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)

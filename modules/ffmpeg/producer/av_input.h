@@ -2,25 +2,24 @@
 
 #include <common/diagnostics/graph.h>
 
-#include <string>
-#include <memory>
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
-#include <queue>
+#include <memory>
 #include <mutex>
-#include <condition_variable>
-#include <atomic>
+#include <queue>
+#include <string>
 #include <thread>
 
 struct AVPacket;
 struct AVFormatContext;
 
-namespace caspar {
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 class Input
 {
-public:
+  public:
     Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph);
     ~Input();
 
@@ -43,7 +42,8 @@ public:
     void resume();
 
     void seek(int64_t ts, bool flush = true);
-private:
+
+  private:
     std::shared_ptr<diagnostics::graph> graph_;
 
     mutable std::mutex               ic_mutex_;
@@ -54,11 +54,11 @@ private:
     int                                   output_capacity_ = 64;
     std::queue<std::shared_ptr<AVPacket>> output_;
 
-    std::atomic<bool>                     paused_ = false;
-    std::atomic<bool>                     eof_ = false;
+    std::atomic<bool> paused_ = false;
+    std::atomic<bool> eof_    = false;
 
     std::atomic<bool> abort_request_ = false;
     std::thread       thread_;
 };
 
-} }
+}} // namespace caspar::ffmpeg
