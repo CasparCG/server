@@ -42,7 +42,7 @@ class executor final
     typedef tbb::concurrent_bounded_queue<task_t> queue_t;
 
     std::wstring      name_;
-    std::atomic<bool> is_running_ { true };
+    std::atomic<bool> is_running_{true};
     queue_t           queue_;
     std::thread       thread_;
 
