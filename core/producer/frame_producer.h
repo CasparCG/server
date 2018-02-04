@@ -126,7 +126,6 @@ struct frame_producer_dependencies
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&, const std::vector<std::wstring>&)> producer_factory_t;
-typedef std::function<draw_frame (const frame_producer_dependencies&, const std::wstring&)> thumbnail_producer_t;
 
 class frame_producer_registry : boost::noncopyable
 {
