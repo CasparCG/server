@@ -72,8 +72,6 @@ class delimiter_based_chunking_strategy : public protocol_strategy<CharT>
     {
         input_ += data;
 
-        // boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_)) was painfully slow in debug-build
-
         auto delim_pos = input_.find(delimiter_);
         while (delim_pos != std::string::npos) {
             strategy_->parse(input_.substr(0, delim_pos));

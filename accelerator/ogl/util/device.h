@@ -31,16 +31,10 @@ namespace caspar { namespace accelerator { namespace ogl {
 class device final : public std::enable_shared_from_this<device>
 {
   public:
-    // Static Members
-
-    // Constructors
-
     device();
     ~device();
 
     device(const device&) = delete;
-
-    // Methods
 
     device& operator=(const device&) = delete;
 
@@ -67,8 +61,6 @@ class device final : public std::enable_shared_from_this<device>
     {
         return dispatch_async(std::forward<Func>(func)).get();
     }
-
-    // Properties
 
     std::wstring version() const;
 

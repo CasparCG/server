@@ -57,18 +57,10 @@ class image_kernel final
     image_kernel& operator=(const image_kernel&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     image_kernel(const spl::shared_ptr<class device>& ogl);
     ~image_kernel();
 
-    // Methods
-
     void draw(const draw_params& params);
-
-    // Properties
 
   private:
     struct impl;

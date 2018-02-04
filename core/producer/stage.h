@@ -41,24 +41,16 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 
-// typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
-
 class stage final : public interaction_sink
 {
     stage(const stage&);
     stage& operator=(const stage&);
 
   public:
-    // Static Members
-
     typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
     typedef std::tuple<int, transform_func_t, unsigned int, tweener>      transform_tuple_t;
 
-    // Constructors
-
     explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
-
-    // Methods
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc);
 
@@ -87,15 +79,7 @@ class stage final : public interaction_sink
 
     monitor::subject& monitor_output();
 
-    // frame_observable
-    // void subscribe(const frame_observable::observer_ptr& o) override;
-    // void unsubscribe(const frame_observable::observer_ptr& o) override;
-
-    // interaction_sink
-
     void on_interaction(const interaction_event::ptr& event) override;
-
-    // Properties
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index);
     std::future<std::shared_ptr<frame_producer>> background(int index);

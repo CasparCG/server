@@ -28,15 +28,11 @@ namespace caspar { namespace core {
 class draw_frame final
 {
   public:
-    // Static Members
-
     static draw_frame interlace(draw_frame frame1, draw_frame frame2, enum class field_mode mode);
     static draw_frame over(draw_frame frame1, draw_frame frame2);
     static draw_frame mask(draw_frame fill, draw_frame key);
     static draw_frame still(draw_frame frame);
     static draw_frame push(draw_frame frame);
-
-    // Constructors
 
     draw_frame();
     draw_frame(const draw_frame& other);
@@ -47,8 +43,6 @@ class draw_frame final
 
     ~draw_frame();
 
-    // Methods
-
     draw_frame& operator=(draw_frame other);
 
     void swap(draw_frame& other);
@@ -57,8 +51,6 @@ class draw_frame final
 
     bool operator==(const draw_frame& other) const;
     bool operator!=(const draw_frame& other) const;
-
-    // Properties
 
     const struct frame_transform& transform() const;
     struct frame_transform&       transform();

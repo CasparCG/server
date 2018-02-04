@@ -30,7 +30,6 @@
 
 namespace caspar { namespace core {
 
-// Interface
 class image_mixer
     : public frame_visitor
     , public frame_factory
@@ -39,14 +38,8 @@ class image_mixer
     image_mixer& operator=(const image_mixer&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     image_mixer() {}
     virtual ~image_mixer() {}
-
-    // Methods
 
     virtual void push(const struct frame_transform& frame) = 0;
     virtual void visit(const class const_frame& frame)     = 0;
@@ -55,8 +48,6 @@ class image_mixer
     virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
     virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
-
-    // Properties
 };
 
 }} // namespace caspar::core

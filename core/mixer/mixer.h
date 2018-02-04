@@ -44,13 +44,7 @@ class mixer final
     mixer& operator=(const mixer&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     explicit mixer(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
-
-    // Methods
 
     const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc);
 
@@ -58,8 +52,6 @@ class mixer final
     float get_master_volume();
 
     mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
-
-    // Properties
 
     monitor::subject& monitor_output();
 

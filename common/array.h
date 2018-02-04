@@ -16,12 +16,8 @@ class array final
     friend class array;
 
   public:
-    // Static Members
-
     typedef T*       iterator;
     typedef const T* const_iterator;
-
-    // Constructors
 
     array() = default;
 
@@ -57,8 +53,6 @@ class array final
     {
     }
 
-    // Methods
-
     array& operator=(const array<T>&) = delete;
 
     array& operator=(array&& other)
@@ -69,8 +63,6 @@ class array final
 
         return *this;
     }
-
-    // Properties
 
     T*          begin() const { return ptr_; }
     T*          data() const { return ptr_; }
@@ -95,12 +87,9 @@ template <typename T>
 class array<const T> final
 {
   public:
-    // Static Members
-
     typedef const T* iterator;
     typedef const T* const_iterator;
 
-    // Constructors
     array() = default;
 
     array(std::vector<T> storage)
@@ -126,13 +115,6 @@ class array<const T> final
     {
     }
 
-    explicit array(const T* ptr, std::size_t size)
-        : ptr_(ptr)
-        , size_(size)
-        , storage_(new boost::any)
-    {
-    }
-
     array(const array& other)
         : ptr_(other.ptr_)
         , size_(other.size_)
@@ -147,8 +129,6 @@ class array<const T> final
     {
     }
 
-    // Methods
-
     array& operator=(array other)
     {
         other.swap(*this);
@@ -161,8 +141,6 @@ class array<const T> final
         std::swap(size_, other.size_);
         std::swap(storage_, other.storage_);
     }
-
-    // Properties
 
     const T*    begin() const { return ptr_; }
     const T*    data() const { return ptr_; }

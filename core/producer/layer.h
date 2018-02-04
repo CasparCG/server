@@ -42,14 +42,8 @@ class layer final : public interaction_sink
     layer& operator=(const layer&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     explicit layer(int index = -1);
     layer(layer&& other);
-
-    // Methods
 
     layer& operator=(layer&& other);
 
@@ -71,8 +65,6 @@ class layer final : public interaction_sink
 
     void on_interaction(const interaction_event::ptr& event) override;
     bool collides(double x, double y) const override;
-
-    // Properties
 
     spl::shared_ptr<frame_producer> foreground() const;
     spl::shared_ptr<frame_producer> background() const;

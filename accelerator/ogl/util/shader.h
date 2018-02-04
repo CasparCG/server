@@ -33,14 +33,8 @@ class shader final
     shader& operator=(const shader&);
 
   public:
-    // Static Members
-
-    // Constructors
-
     shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
     ~shader();
-
-    // Methods
 
     void set(const std::string& name, bool value);
     void set(const std::string& name, int value);
@@ -55,8 +49,6 @@ class shader final
     }
 
     void use() const;
-
-    // Properties
 
     int id() const;
 

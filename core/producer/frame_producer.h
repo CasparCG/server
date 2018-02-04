@@ -38,36 +38,24 @@
 
 namespace caspar { namespace core {
 
-// Interface
 class frame_producer : public interaction_sink
 {
     frame_producer(const frame_producer&);
     frame_producer& operator=(const frame_producer&);
 
   public:
-    // Static Members
-
     static const spl::shared_ptr<frame_producer>& empty();
-
-    // Constructors
 
     frame_producer() {}
     virtual ~frame_producer() {}
 
-    // Methods
-
     virtual draw_frame                receive()                                     = 0;
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) = 0;
 
-    // monitor::observable
-
     virtual monitor::subject& monitor_output() = 0;
 
-    // interaction_sink
     virtual void on_interaction(const interaction_event::ptr& event) override {}
     virtual bool collides(double x, double y) const override { return false; }
-
-    // Properties
 
     virtual void         paused(bool value)   = 0;
     virtual std::wstring print() const        = 0;
@@ -84,13 +72,7 @@ class frame_producer_base : public frame_producer
     frame_producer_base();
     virtual ~frame_producer_base() {}
 
-    // Methods
-
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) override;
-
-    // monitor::observable
-
-    // Properties
 
     void               paused(bool value) override;
     uint32_t           nb_frames() const override;
