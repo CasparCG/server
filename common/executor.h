@@ -42,7 +42,7 @@ class executor final
     typedef tbb::concurrent_bounded_queue<task_t> queue_t;
 
     std::wstring      name_;
-    std::atomic<bool> is_running_ = true;
+    std::atomic<bool> is_running_ { true };
     queue_t           queue_;
     std::thread       thread_;
 
@@ -66,7 +66,13 @@ class executor final
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
         }
 
-        return internal_begin_invoke(std::forward<Func>(func));
+        typedef decltype(func()) result_type;
+
+        auto task = std::make_shared<std::packaged_task<result_type()>>(std::forward<Func>(func));
+
+        queue_.push([=]() mutable { (*task)(); });
+
+        return task->get_future();
     }
 
     template <typename Func>
@@ -77,6 +83,16 @@ class executor final
         }
 
         return begin_invoke(std::forward<Func>(func)).get();
+    }
+
+    template <typename Func>
+    typename std::enable_if<std::is_same<void, decltype(std::declval<Func>())>::value, void>::type invoke(Func&& func)
+    {
+        if (is_current()) { // Avoids potential deadlock.
+            return func();
+        }
+
+        begin_invoke(std::forward<Func>(func)).wait();
     }
 
     void yield() {}
@@ -110,18 +126,6 @@ class executor final
     const std::wstring& name() const { return name_; }
 
   private:
-    template <typename Func>
-    auto internal_begin_invoke(Func&& func)
-    {
-        typedef decltype(func()) result_type;
-
-        auto task = std::make_shared<std::packaged_task<result_type()>>(std::forward<Func>(func));
-
-        queue_.push([=]() mutable { (*task)(); });
-
-        return task->get_future();
-    }
-
     void run()
     {
         set_thread_name(name_);

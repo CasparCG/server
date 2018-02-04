@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "stdafx.h"
-
 #include "included_modules.h"
 #include "server.h"
 
