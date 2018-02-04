@@ -158,6 +158,7 @@ void Decoder::flush()
     std::lock_guard<std::mutex> decoder_lock(ctx_mutex_);
 
     avcodec_flush_buffers(ctx_.get());
+    next_pts_ = AV_NOPTS_VALUE;
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -167,7 +168,6 @@ void Decoder::flush()
         while (!input_.empty()) {
             input_.pop();
         }
-        next_pts_ = AV_NOPTS_VALUE;
     }
     cond_.notify_all();
 }
