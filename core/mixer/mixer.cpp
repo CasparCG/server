@@ -67,7 +67,6 @@ struct mixer::impl : boost::noncopyable
         , graph_(std::move(graph))
         , image_mixer_(std::move(image_mixer))
     {
-        graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         audio_mixer_.monitor_output().attach_parent(monitor_subject_);
     }
 
@@ -84,12 +83,10 @@ struct mixer::impl : boost::noncopyable
 
         buffer_.push(std::async(std::launch::deferred, [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable
         {
-            caspar::timer frame_timer;
             auto desc = pixel_format_desc(pixel_format::bgra);
             desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
             std::vector<array<const uint8_t>> image_data;
             image_data.emplace_back(std::move(image.get()));
-            graph->set_value("mix-time", frame_timer.elapsed() * format_desc.fps * 0.5);
             return const_frame(tag, std::move(image_data), std::move(audio), desc);
         }));
 
