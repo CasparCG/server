@@ -15,7 +15,6 @@ const config = nconf
       template: '../template',
       media: '../media',
       font: '../font',
-      thumbnail: '../font',
       ffmpeg: process.platform === 'win32'
         ? path.join(process.cwd(), './bin/win32/ffmpeg.exe')
         : 'ffmpeg',
