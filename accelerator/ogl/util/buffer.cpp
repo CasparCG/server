@@ -40,7 +40,7 @@ struct buffer::impl : boost::noncopyable
         : size_(size)
         , write_(write)
         , target_(!write ? GL_PIXEL_PACK_BUFFER : GL_PIXEL_UNPACK_BUFFER)
-        , flags_(GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_READ_BIT | (write ? GL_MAP_WRITE_BIT : 0))
+        , flags_(GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | (write ? GL_MAP_WRITE_BIT : GL_MAP_READ_BIT))
     {
         GL(glCreateBuffers(1, &id_));
         GL(glNamedBufferStorage(id_, size_, nullptr, flags_));
