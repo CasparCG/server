@@ -9,8 +9,11 @@ const recursiveReadDir = require('recursive-readdir')
 const { Observable } = require('@reactivex/rxjs')
 const base64 = require('base64-stream')
 const config = require('./config')
+const chokidar = require('chokidar')
+const mkdirp = require('mkdirp-promise')
 
 const statAsync = util.promisify(fs.stat)
+const renameAsync = util.promisify(fs.rename)
 const recursiveReadDirAsync = util.promisify(recursiveReadDir)
 
 const logger = pino({
@@ -24,6 +27,25 @@ const app = express()
 
 app.use(pinoHttp({ logger }))
 
+if (config.thumbnails) {
+  const watcher = chokidar
+    .watch(config.paths.media, config.thumbnails.chokidar)
+    .on('error', err => logger.error({ err }))
+
+  Observable.merge(
+    Observable.fromEvent(watcher, 'add'),
+    Observable.fromEvent(watcher, 'change')
+  )
+  .concatMap(async filePath => {
+    try {
+      await generateThumbnail(filePath)
+    } catch (err) {
+      // TODO
+    }
+  })
+  .subscribe()
+}
+
 async function generateThumbnail (filePath) {
   const stat = await statAsync(filePath)
   if (stat.isDirectory()) {
@@ -31,20 +53,26 @@ async function generateThumbnail (filePath) {
   }
 
   const mediaPath = config.paths.media
-  const thumbPath = `${path.join(config.paths.thumbnail, path.relative(mediaPath, filePath)).replace(/\.[^/.]+$/, '')}.png`
+  const thumbPath = `${path.join(config.paths.thumbnail, 'tmp', path.relative(mediaPath, filePath)).replace(/\.[^/.]+$/, '')}.png`
+  const thumbPath2 = `${path.join(config.paths.thumbnail, path.relative(mediaPath, filePath)).replace(/\.[^/.]+$/, '')}.png`
 
   const args = [
     config.paths.ffmpeg,
     '-hide_banner',
     '-i', `"${filePath}"`,
     '-frames:v 1',
-    '-vf thumbnail,scale=128:-1',
+    `-vf thumbnail,scale=${config.thumbnails.width}:${config.thumbnails.height}`,
+    '-threads 1',
     thumbPath,
     '-y'
   ]
-  return new Promise((resolve, reject) => {
+
+  await mkdirp(path.dirname(thumbPath))
+  await mkdirp(path.dirname(thumbPath2))
+  await new Promise((resolve, reject) => {
     cp.exec(args.join(' '), (err, stdout, stderr) => err ? reject(err) : resolve())
   })
+  await renameAsync(thumbPath, thumbPath2)
 }
 
 async function mediaInfo (fileDir, filePath) {
@@ -177,13 +205,13 @@ app.get('/thumbnail/generate', async (req, res, next) => {
     const filePaths = await recursiveReadDirAsync(config.paths.media)
     await Observable
       .from(filePaths)
-      .mergeMap(async filePath => {
+      .concatMap(async filePath => {
         try {
           await generateThumbnail(filePath)
         } catch (err) {
           // TODO
         }
-      }, null, 8)
+      })
       .toPromise()
     res.send('202 THUMBNAIL GENERATE_ALL OK\r\n')
   } catch (err) {
