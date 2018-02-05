@@ -25,8 +25,10 @@ const config = nconf
     },
     thumbnails: {
       width: 256,
-      height: -1
-      // Note: See https://www.npmjs.com/package/chokidar#api.
+      height: -1,
+      chokidar: {
+        // Note: See https://www.npmjs.com/package/chokidar#api.
+      }
     },
     isProduction: process.env.NODE_ENV === 'production',
     logger: {
