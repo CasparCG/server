@@ -23,6 +23,11 @@ const config = nconf
         ? path.join(process.cwd(), './bin/win32/ffprobe.exe')
         : 'ffprobe'
     },
+    thumbnails: {
+      width: 256,
+      height: -1
+      // Note: See https://www.npmjs.com/package/chokidar#api.
+    },
     isProduction: process.env.NODE_ENV === 'production',
     logger: {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'trace',
@@ -37,18 +42,14 @@ const config = nconf
 
 if (config.caspar && config.caspar.config) {
   const parser = new xml2js.Parser()
-  fs.readFile(config.caspar.config, (err, data) => {
+  const data = fs.readFileSync(config.caspar.config)
+  parser.parseString(data, (err, result) => {
     if (err) {
       throw err
     }
-    parser.parseString(data, (err, result) => {
-      if (err) {
-        throw err
-      }
-      for (const path in result.configuration.paths[0]) {
-        config.paths[path.split('-')[0]] = result.configuration.paths[0][path][0]
-      }
-    })
+    for (const path in result.configuration.paths[0]) {
+      config.paths[path.split('-')[0]] = result.configuration.paths[0][path][0]
+    }
   })
 }
 
