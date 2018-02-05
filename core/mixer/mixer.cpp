@@ -106,7 +106,7 @@ struct mixer::impl : boost::noncopyable
 
     float get_master_volume()
     {
-        return audio_mixer_.get_master_volume();;
+        return audio_mixer_.get_master_volume();
     }
 };
 
