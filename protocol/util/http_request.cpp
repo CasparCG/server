@@ -54,12 +54,12 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
     if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
         // TODO
-        throw std::exception("Invalid Response");
+        throw std::runtime_error("Invalid Response");
     }
 
     if (res.status_code < 200 || res.status_code >= 300) {
         // TODO
-        throw std::exception("Invalid Response");
+        throw std::runtime_error("Invalid Response");
     }
 
     // Read the response headers, which are terminated by a blank line.
