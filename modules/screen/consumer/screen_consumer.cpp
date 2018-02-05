@@ -337,7 +337,7 @@ struct screen_consumer : boost::noncopyable
                         GL(glBindTexture(GL_TEXTURE_2D, 0));
                     }
 
-                    glFlush();
+                    GL(glFlush());
 
                     // Upload
                     {
