@@ -15,7 +15,7 @@ const readFileAsync = util.promisify(fs.readFile)
 
 module.exports = function ({ config, db, logger }) {
   const watcher = chokidar
-    .watch(config.paths.media, {
+    .watch(config.scanner.paths, {
       alwaysStat: true,
       awaitWriteFinish: {
         stabilityThreshold: 2000,
