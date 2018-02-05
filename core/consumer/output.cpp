@@ -66,7 +66,6 @@ struct output::impl
         , channel_index_(channel_index)
         , format_desc_(format_desc)
     {
-        graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
     }
 
     void add(int index, spl::shared_ptr<frame_consumer> consumer)
@@ -210,13 +209,9 @@ struct output::impl
                 }
             }
 
-            if (!has_synchronization_clock())
+            if (!has_synchronization_clock()) {
                 sync_timer_.tick(1.0 / format_desc_.fps);
-
-            auto consume_time = frame_timer->elapsed();
-            graph_->set_value("consume-time", consume_time * format_desc.fps * 0.5);
-            *monitor_subject_ << monitor::message("/consume_time") % consume_time
-                              << monitor::message("/profiler/time") % consume_time % (1.0 / format_desc.fps);
+            }
         });
     }
 

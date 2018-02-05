@@ -65,12 +65,12 @@ struct video_channel::impl final
     }(index_);
 
     caspar::core::output         output_;
-    std::future<void>            output_ready_for_frame_ = make_ready_future();
     spl::shared_ptr<image_mixer> image_mixer_;
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
-    executor executor_{L"video_channel " + boost::lexical_cast<std::wstring>(index_)};
+    std::atomic<bool>            abort_request_{ false };
+    std::thread                  thread_;
 
   public:
     impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)
@@ -82,7 +82,10 @@ struct video_channel::impl final
         , mixer_(index, graph_, image_mixer_)
         , stage_(index, graph_)
     {
+        graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
+        graph_->set_color("mix-time", caspar::diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
+        graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
         caspar::diagnostics::register_graph(graph_);
 
@@ -90,12 +93,45 @@ struct video_channel::impl final
         mixer_.monitor_output().attach_parent(monitor_subject_);
         stage_.monitor_output().attach_parent(monitor_subject_);
 
-        executor_.begin_invoke([=] { tick(); });
-
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
+
+        thread_ = std::thread([=]
+        {
+            while (!abort_request_) {
+                try {
+                    caspar::timer tick_timer;
+
+                    auto format_desc = video_format_desc();
+
+                    // Produce
+                    caspar::timer produce_timer;
+                    auto stage_frames = stage_(format_desc);
+                    graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
+
+                    // Mix
+                    caspar::timer mix_timer;
+                    auto mixed_frame = mixer_(std::move(stage_frames), format_desc);
+                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+
+                    // Consume
+                    caspar::timer consume_timer;
+                    output_(std::move(mixed_frame), format_desc).wait();
+                    graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
+
+                    graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+            }
+        });
     }
 
-    ~impl() { CASPAR_LOG(info) << print() << " Uninitializing."; }
+    ~impl()
+    {
+        CASPAR_LOG(info) << print() << " Uninitializing.";
+        abort_request_ = true;
+        thread_.join();
+    }
 
     core::video_format_desc video_format_desc() const
     {
@@ -108,40 +144,6 @@ struct video_channel::impl final
         std::lock_guard<std::mutex> lock(format_desc_mutex_);
         format_desc_ = format_desc;
         stage_.clear();
-    }
-
-    void tick()
-    {
-        try {
-            auto format_desc = video_format_desc();
-
-            caspar::timer frame_timer;
-
-            // Produce
-
-            auto stage_frames = stage_(format_desc);
-
-            // Mix
-
-            auto mixed_frame = mixer_(std::move(stage_frames), format_desc);
-
-            // Consume
-
-            output_ready_for_frame_ = output_(std::move(mixed_frame), format_desc);
-            output_ready_for_frame_.get();
-
-            auto frame_time = frame_timer.elapsed() * format_desc.fps * 0.5;
-            graph_->set_value("tick-time", frame_time);
-
-            *monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() %
-                                     (1.0 / video_format_desc().fps)
-                              << monitor::message("/format") % format_desc.name;
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-        }
-
-        if (executor_.is_running())
-            executor_.begin_invoke([=] { tick(); });
     }
 
     std::wstring print() const

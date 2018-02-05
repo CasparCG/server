@@ -68,13 +68,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         , graph_(std::move(graph))
         , aggregator_([=](double x, double y) { return collission_detect(x, y); })
     {
-        graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
     }
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
     {
-        caspar::timer frame_timer;
-
         auto frames = executor_.invoke([=]() -> std::map<int, draw_frame> {
 
             std::map<int, draw_frame> frames;
@@ -93,8 +90,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 aggregator_.translate_and_send();
 
-                tbb::parallel_for_each(
-                    indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
+                tbb::parallel_for_each(indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -102,9 +98,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             return frames;
         });
-
-        graph_->set_value("produce-time", frame_timer.elapsed() * format_desc.fps * 0.5);
-        *monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0 / format_desc.fps);
 
         return frames;
     }
