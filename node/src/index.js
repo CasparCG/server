@@ -53,9 +53,15 @@ async function generateThumbnail (filePath) {
     return
   }
 
-  const mediaPath = config.paths.media
-  const thumbPath = `${path.join(config.paths.thumbnail, 'tmp', path.relative(mediaPath, filePath)).replace(/\.[^/.]+$/, '')}.png`
-  const thumbPath2 = `${path.join(config.paths.thumbnail, path.relative(mediaPath, filePath)).replace(/\.[^/.]+$/, '')}.png`
+  const fileDir = config.paths.media
+  const tmpPath = `${path
+    .join(config.paths.thumbnail, 'tmp', path.relative(fileDir, filePath))
+    .replace(/\.[^/.]+$/, '')
+  }.png`
+  const dstPath = `${path
+    .join(config.paths.thumbnail, path.relative(fileDir, filePath))
+    .replace(/\.[^/.]+$/, '')
+  }.png`
 
   const args = [
     config.paths.ffmpeg,
@@ -64,16 +70,16 @@ async function generateThumbnail (filePath) {
     '-frames:v 1',
     `-vf thumbnail,scale=${config.thumbnails.width}:${config.thumbnails.height}`,
     '-threads 1',
-    thumbPath,
+    tmpPath,
     '-y'
   ]
 
-  await mkdirp(path.dirname(thumbPath))
-  await mkdirp(path.dirname(thumbPath2))
+  await mkdirp(path.dirname(tmpPath))
   await new Promise((resolve, reject) => {
     cp.exec(args.join(' '), (err, stdout, stderr) => err ? reject(err) : resolve())
   })
-  await renameAsync(thumbPath, thumbPath2)
+  await mkdirp(path.dirname(dstPath))
+  await renameAsync(tmpPath, dstPath)
 }
 
 async function mediaInfo (fileDir, filePath) {
@@ -103,7 +109,7 @@ async function mediaInfo (fileDir, filePath) {
       const duration = json.streams[0].duration_ts
 
       let type = 'AUDIO'
-      if (json.format.duration < 1.0 / 25.0) {
+      if (duration <= 1) {
         type = 'STILL'
       } else if (json.streams[0].pix_fmt) {
         type = 'MOVIE'
@@ -127,8 +133,9 @@ async function mediaInfo (fileDir, filePath) {
 }
 
 async function findFile (fileDir, fileId) {
-  let filePath
-  fileId = fileId.replace(/\\+/g, '/')
+  fileId = fileId
+    .replace(/\\+/g, '/')
+    .toUpperCase()
   for (let filePath2 of await recursiveReadDirAsync(fileDir)) {
     const fileId2 = path
       .relative(fileDir, filePath2)
@@ -136,14 +143,10 @@ async function findFile (fileDir, fileId) {
       .replace(/\\+/g, '/')
       .toUpperCase()
     if (fileId2 === fileId) {
-      filePath = filePath2
-      break
+      return filePath2
     }
   }
-  if (!filePath) {
-    throw new Error(`File not found`)
-  }
-  return filePath
+  throw new Error(`File not found`)
 }
 
 app.get('/cls', async (req, res, next) => {
@@ -173,7 +176,10 @@ app.get('/tls', async (req, res, next) => {
     let str = '200 TLS OK\r\n'
     for (const filePath of await recursiveReadDirAsync(config.paths.template)) {
       if (filePath.endsWith('.ft')) {
-        str += `${path.relative(config.paths.template, filePath).replace(/\.[^/.]+$/, '')}\r\n`
+        str += `${path
+          .relative(config.paths.template, filePath)
+          .replace(/\.[^/.]+$/, '')
+        }\r\n`
       }
     }
     str += '\r\n'
