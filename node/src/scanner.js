@@ -21,7 +21,7 @@ module.exports = function ({ config, db, logger }) {
         stabilityThreshold: 2000,
         pollInterval: 100
       },
-      ...config.thumbnails.chokidar
+      ...config.scanner
     })
     .on('error', err => logger.error({ err }))
 

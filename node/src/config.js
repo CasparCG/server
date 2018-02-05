@@ -22,12 +22,12 @@ const config = nconf
         ? path.join(process.cwd(), './bin/win32/ffprobe.exe')
         : 'ffprobe'
     },
+    scanner: {
+      // Note: See https://www.npmjs.com/package/chokidar#api.
+    },
     thumbnails: {
       width: 256,
-      height: -1,
-      chokidar: {
-        // Note: See https://www.npmjs.com/package/chokidar#api.
-      }
+      height: -1
     },
     isProduction: process.env.NODE_ENV === 'production',
     logger: {
