@@ -23,11 +23,11 @@
 
 #include "../../prec_timer.h"
 
-#include <boost/chrono/system_clocks.hpp>
+#include <chrono>
 
 #include "windows.h"
 
-using namespace boost::chrono;
+using namespace std::chrono;
 
 namespace caspar {
 
