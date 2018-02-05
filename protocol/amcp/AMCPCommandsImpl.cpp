@@ -29,6 +29,7 @@
 
 #include "AMCPCommandQueue.h"
 #include "amcp_command_repository.h"
+#include "../util/http_request.h"
 
 #include <common/env.h>
 
@@ -1250,99 +1251,52 @@ std::wstring channel_grid_command(command_context& ctx)
 
 std::wstring thumbnail_list_command(command_context& ctx)
 {
-    std::wstring sub_directory;
-
-    if (!ctx.parameters.empty())
-        sub_directory = ctx.parameters.at(0);
-
-    std::wstringstream replyString;
-    replyString << L"200 THUMBNAIL LIST OK\r\n";
-
-    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::thumbnail_folder(), sub_directory)),
-         end;
-         itr != end;
-         ++itr) {
-        if (boost::filesystem::is_regular_file(itr->path())) {
-            if (!boost::iequals(itr->path().extension().wstring(), L".png"))
-                continue;
-
-            auto relativePath = get_relative_without_extension(itr->path(), env::thumbnail_folder());
-            auto str          = relativePath.generic_wstring();
-
-            if (str[0] == '\\' || str[0] == '/')
-                str = std::wstring(str.begin() + 1, str.end());
-
-            auto mtime          = boost::filesystem::last_write_time(itr->path());
-            auto mtime_readable = boost::posix_time::to_iso_wstring(boost::posix_time::from_time_t(mtime));
-            auto file_size      = boost::filesystem::file_size(itr->path());
-
-            replyString << L"\"" << str << L"\" " << mtime_readable << L" " << file_size << L"\r\n";
-        }
-    }
-
-    replyString << L"\r\n";
-
-    return boost::to_upper_copy(replyString.str());
+    auto res = http::request("127.0.0.1", "8000", "/thumbnail");
+    return u16(res.body);
 }
+
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-    std::wstring filename = env::thumbnail_folder();
-    filename.append(ctx.parameters.at(0));
-    filename.append(L".png");
-
-    std::wstring file_contents;
-
-    auto found_file = find_case_insensitive(filename);
-
-    if (found_file)
-        file_contents = read_file_base64(boost::filesystem::path(*found_file));
-
-    if (file_contents.empty())
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(filename + L" not found"));
-
-    std::wstringstream reply;
-
-    reply << L"201 THUMBNAIL RETRIEVE OK\r\n";
-    reply << file_contents;
-    reply << L"\r\n";
-    return reply.str();
+    auto res = http::request("127.0.0.1", "8000", "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
+    return u16(res.body);
 }
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+    auto res = http::request("127.0.0.1", "8000", "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
+    return u16(res.body);
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+    auto res = http::request("127.0.0.1", "8000", "/thumbnail/generate");
+    return u16(res.body);
 }
 
 // Query Commands
 
 std::wstring cinf_command(command_context& ctx)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cinf turned off"));
+    auto res = http::request("127.0.0.1", "8000", "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))));
+    return u16(res.body);
 }
 
 std::wstring cls_command(command_context& ctx)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cls turned off"));
+    auto res = http::request("127.0.0.1", "8000", "/cls");
+    return u16(res.body);
 }
 
 std::wstring fls_command(command_context& ctx)
 {
-    std::wstringstream replyString;
-    replyString << L"200 FLS OK\r\n";
-
-    replyString << L"\r\n";
-
-    return replyString.str();
+    auto res = http::request("127.0.0.1", "8000", "/fls");
+    return u16(res.body);
 }
 
 std::wstring tls_command(command_context& ctx)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"tls turned off"));
+    auto res = http::request("127.0.0.1", "8000", "/tls");
+    return u16(res.body);
 }
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }

@@ -26,6 +26,7 @@ set(SOURCES
 		util/AsyncEventServer.cpp
 		util/lock_container.cpp
 		util/strategy_adapters.cpp
+		util/http_request.cpp
 
 		StdAfx.cpp
 )
@@ -64,6 +65,7 @@ set(HEADERS
 		util/ProtocolStrategy.h
 		util/protocol_strategy.h
 		util/strategy_adapters.h
+		util/http_request.h
 
 		StdAfx.h
 )
