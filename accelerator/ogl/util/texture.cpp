@@ -29,7 +29,8 @@
 namespace caspar { namespace accelerator { namespace ogl {
 
 static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
-static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
+static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8 };
+static GLenum TYPE[]            = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV };
 
 struct texture::impl : boost::noncopyable
 {
@@ -37,12 +38,14 @@ struct texture::impl : boost::noncopyable
     GLsizei width_  = 0;
     GLsizei height_ = 0;
     GLsizei stride_ = 0;
+    GLsizei size_   = 0;
 
   public:
     impl(int width, int height, int stride)
         : width_(width)
         , height_(height)
         , stride_(stride)
+        , size_(width * height * stride)
     {
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
         GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -66,20 +69,20 @@ struct texture::impl : boost::noncopyable
 
     void attach() { GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0)); }
 
-    void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, nullptr)); }
+    void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[stride_], nullptr)); }
 
     void copy_from(buffer& src)
     {
         src.bind();
         // TODO (fix) This fails on weird dimensions.
-        GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, nullptr));
+        GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], nullptr));
         src.unbind();
     }
 
     void copy_to(buffer& dst)
     {
         dst.bind();
-        GL(glGetTextureImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, width_ * height_ * stride_, nullptr));
+        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[stride_], size_, nullptr));
         dst.unbind();
     }
 };
