@@ -11,6 +11,7 @@ const base64 = require('base64-stream')
 const config = require('./config')
 const chokidar = require('chokidar')
 const mkdirp = require('mkdirp-promise')
+const moment = require('moment')
 
 const statAsync = util.promisify(fs.stat)
 const renameAsync = util.promisify(fs.rename)
@@ -112,10 +113,14 @@ async function mediaInfo (fileDir, filePath) {
     })
   })
   return [
-    `"${path.relative(fileDir, filePath).replace(/\.[^/.]+$/, '')}"`,
+    `"${path
+        .relative(fileDir, filePath)
+        .replace(/\.[^/.]+$/, '')
+        .toUpperCase()
+    }"`,
     type,
     stat.size,
-    stat.mtime.getTime(),
+    moment().format('YYYYMMDDHHmmss'),
     duration,
     timeBase
   ].join(' ')
@@ -123,8 +128,13 @@ async function mediaInfo (fileDir, filePath) {
 
 async function findFile (fileDir, fileId) {
   let filePath
+  fileId = fileId.replace(/\\+/g, '/')
   for (let filePath2 of await recursiveReadDirAsync(fileDir)) {
-    const fileId2 = path.relative(fileDir, filePath2).replace(/\.[^/.]+$/, '').toUpperCase()
+    const fileId2 = path
+      .relative(fileDir, filePath2)
+      .replace(/\.[^/.]+$/, '')
+      .replace(/\\+/g, '/')
+      .toUpperCase()
     if (fileId2 === fileId) {
       filePath = filePath2
       break
@@ -177,7 +187,11 @@ app.get('/fls', async (req, res, next) => {
   try {
     let str = '200 FLS OK\r\n'
     for (const filePath of await recursiveReadDirAsync(config.paths.fonts)) {
-      str += `${path.relative(config.paths.fonts, filePath).replace(/\.[^/.]+$/, '')}\r\n`
+      str += `${path
+        .relative(config.paths.fonts, filePath)
+        .replace(/\.[^/.]+$/, '')
+        .toUpperCase()
+      }\r\n`
     }
     str += '\r\n'
     res.send(str)
@@ -230,10 +244,39 @@ app.get('/thumbnail/generate/:id', async (req, res, next) => {
   }
 })
 
-app.get('/thumbnail', (req, res) => {
-  // TODO
-  res.statusCode = 500
-  res.end()
+app.get('/thumbnail', async (req, res, next) => {
+  try {
+    const filePaths = await recursiveReadDirAsync(config.paths.thumbnail)
+
+    let str = '200 THUMBNAIL LIST OK\r\n'
+    str += await Observable
+      .from(filePaths)
+      .mergeMap(async filePath => {
+        try {
+          const stat = await statAsync(filePath)
+          return [
+            `"${path
+              .relative(config.paths.thumbnail, filePath)
+              .replace(/\.[^/.]+$/, '')
+              .toUpperCase()
+            }"`,
+            moment().format('YYYYMMDDTHHmmss'),
+            stat.size
+          ].join(' ') + '\r\n'
+        } catch (err) {
+          console.error(err)
+          // TODO
+        }
+      }, null, 8)
+      .filter(x => x)
+      .reduce((acc, str) => acc + str, '')
+      .toPromise()
+    str += '\r\n'
+    console.log(str)
+    res.send(str)
+  } catch (err) {
+    next(err)
+  }
 })
 
 app.get('/thumbnail/:id', async (req, res, next) => {
