@@ -34,6 +34,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/distance.hpp>
 
+#include <atomic>
 #include <map>
 #include <stack>
 #include <vector>
@@ -73,7 +74,7 @@ struct audio_mixer::impl : boost::noncopyable
     std::vector<audio_item>             items_;
     std::vector<int>                    audio_cadence_;
     video_format_desc                   format_desc_;
-    float                               master_volume_          = 1.0f;
+    std::atomic<float>                  master_volume_          = 1.0f;
     float                               previous_master_volume_ = master_volume_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -101,8 +102,9 @@ struct audio_mixer::impl : boost::noncopyable
         item.transform  = transform_stack_.top();
         item.audio_data = frame.audio_data();
 
-        if (item.transform.is_still)
+        if (item.transform.is_still) {
             item.transform.volume = 0.0;
+        }
 
         items_.push_back(std::move(item));
     }
