@@ -112,7 +112,6 @@ module.exports = function ({ config, db, logger }) {
         config.paths.ffprobe,
         '-hide_banner',
         '-i', `"${doc.mediaPath}"`,
-        '-show_format',
         '-show_streams',
         '-print_format', 'json'
       ]
@@ -122,7 +121,7 @@ module.exports = function ({ config, db, logger }) {
         }
 
         const json = JSON.parse(stdout)
-        if (!json.format || !json.streams || !json.streams[0]) {
+        if (!json.streams || !json.streams[0]) {
           return reject(new Error('not media'))
         }
 
