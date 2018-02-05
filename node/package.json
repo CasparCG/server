@@ -14,6 +14,7 @@
     "chokidar": "^2.0.0",
     "express": "^4.16.2",
     "mkdirp-promise": "^5.0.1",
+    "moment": "^2.20.1",
     "nconf": "^0.10.0",
     "pino": "^4.10.4",
     "pino-http": "^3.1.0",
