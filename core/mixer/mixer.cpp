@@ -54,13 +54,12 @@ namespace caspar { namespace core {
 
 struct mixer::impl : boost::noncopyable
 {
-    int                                 channel_index_;
-    spl::shared_ptr<diagnostics::graph> graph_;
-    std::atomic<int64_t>                current_mix_time_;
-    spl::shared_ptr<monitor::subject>   monitor_subject_ = spl::make_shared<monitor::subject>("/mixer");
-    audio_mixer                         audio_mixer_{graph_};
-    spl::shared_ptr<image_mixer>        image_mixer_;
-    executor                            executor_{L"mixer " + boost::lexical_cast<std::wstring>(channel_index_)};
+    int                                  channel_index_;
+    spl::shared_ptr<diagnostics::graph>  graph_;
+    spl::shared_ptr<monitor::subject>    monitor_subject_ = spl::make_shared<monitor::subject>("/mixer");
+    audio_mixer                          audio_mixer_{graph_};
+    spl::shared_ptr<image_mixer>         image_mixer_;
+    std::queue<std::future<const_frame>> buffer_;
 
   public:
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
@@ -69,51 +68,48 @@ struct mixer::impl : boost::noncopyable
         , image_mixer_(std::move(image_mixer))
     {
         graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
-        current_mix_time_ = 0;
         audio_mixer_.monitor_output().attach_parent(monitor_subject_);
     }
 
     const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
     {
-        caspar::timer frame_timer;
+        for (auto& frame : frames) {
+            frame.second.accept(audio_mixer_);
+            frame.second.transform().image_transform.layer_depth = 1;
+            frame.second.accept(*image_mixer_);
+        }
 
-        auto frame = executor_.invoke([=]() mutable -> const_frame {
-            try {
-                for (auto& frame : frames) {
-                    frame.second.accept(audio_mixer_);
-                    frame.second.transform().image_transform.layer_depth = 1;
-                    frame.second.accept(*image_mixer_);
-                }
+        auto image = (*image_mixer_)(format_desc);
+        auto audio = audio_mixer_(format_desc);
 
-                auto image = (*image_mixer_)(format_desc);
-                auto audio = audio_mixer_(format_desc);
+        buffer_.push(std::async(std::launch::deferred, [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable
+        {
+            caspar::timer frame_timer;
+            auto desc = pixel_format_desc(pixel_format::bgra);
+            desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+            std::vector<array<const uint8_t>> image_data;
+            image_data.emplace_back(std::move(image.get()));
+            graph->set_value("mix-time", frame_timer.elapsed() * format_desc.fps * 0.5);
+            return const_frame(tag, std::move(image_data), std::move(audio), desc);
+        }));
 
-                auto desc = pixel_format_desc(pixel_format::bgra);
-                desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-                std::vector<array<const uint8_t>> image_data;
-                image_data.emplace_back(std::move(image.get()));
-                return const_frame(this, std::move(image_data), std::move(audio), desc);
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-                return const_frame{};
-            }
-        });
+        if (buffer_.size() < 3) {
+            return const_frame{};
+        }
 
-        auto mix_time = frame_timer.elapsed();
-        graph_->set_value("mix-time", mix_time * format_desc.fps * 0.5);
-        current_mix_time_ = static_cast<int64_t>(mix_time * 1000.0);
-
+        auto frame = std::move(buffer_.front().get());
+        buffer_.pop();
         return frame;
     }
 
     void set_master_volume(float volume)
     {
-        executor_.begin_invoke([=] { audio_mixer_.set_master_volume(volume); });
+        audio_mixer_.set_master_volume(volume);
     }
 
     float get_master_volume()
     {
-        return executor_.invoke([=] { return audio_mixer_.get_master_volume(); });
+        return audio_mixer_.get_master_volume();;
     }
 };
 
