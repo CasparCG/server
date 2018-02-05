@@ -23,6 +23,7 @@ const config = nconf
         : 'ffprobe'
     },
     scanner: {
+      paths: null
       // Note: See https://www.npmjs.com/package/chokidar#api.
     },
     thumbnails: {
@@ -52,6 +53,10 @@ if (config.caspar && config.caspar.config) {
       config.paths[path.split('-')[0]] = result.configuration.paths[0][path][0]
     }
   })
+}
+
+if (!config.scanner.path) {
+  config.scanner.paths = config.paths.media
 }
 
 module.exports = config
