@@ -126,7 +126,7 @@ async function mediaInfo (fileDir, filePath) {
     }"`,
     type,
     stat.size,
-    moment().format('YYYYMMDDHHmmss'),
+    moment(stat.mtime).format('YYYYMMDDHHmmss'),
     duration,
     timeBase
   ].join(' ')
@@ -266,7 +266,7 @@ app.get('/thumbnail', async (req, res, next) => {
               .replace(/\.[^/.]+$/, '')
               .toUpperCase()
             }"`,
-            moment().format('YYYYMMDDTHHmmss'),
+            moment(stat.mtime).format('YYYYMMDDTHHmmss'),
             stat.size
           ].join(' ') + '\r\n'
         } catch (err) {
