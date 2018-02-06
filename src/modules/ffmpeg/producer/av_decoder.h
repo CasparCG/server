@@ -37,7 +37,7 @@ class Decoder
 
     mutable std::mutex                    mutex_;
     std::condition_variable               cond_;
-    int                                   input_capacity_ = 256;
+    int                                   input_capacity_ = 128;
     std::queue<std::shared_ptr<AVPacket>> input_;
     int                                   output_capacity_ = 2;
     std::queue<std::shared_ptr<AVFrame>>  output_;

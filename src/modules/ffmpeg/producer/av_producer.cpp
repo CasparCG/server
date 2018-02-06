@@ -351,6 +351,7 @@ struct AVProducer::Impl
     std::condition_variable cond_;
 
     int64_t          frame_time_ = 0;
+    bool             frame_flush_ = true;
     core::draw_frame frame_;
 
     caspar::timer tick_timer_;
@@ -360,7 +361,6 @@ struct AVProducer::Impl
     std::deque<Frame>       buffer_;
     int                     buffer_capacity_ = 2;
     bool                    buffer_eof_      = true;
-    bool                    buffer_flush_    = true;
 
     std::atomic<bool> abort_request_{ false };
     std::thread       thread_;
@@ -388,7 +388,6 @@ struct AVProducer::Impl
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
-        graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_text(u16(print()));
 
         if (start_ != AV_NOPTS_VALUE) {
@@ -518,149 +517,16 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-    std::string print() const
-    {
-        std::ostringstream str;
-        str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|"
-            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
-            << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
-        return str.str();
-    }
-
-    bool schedule_inputs()
-    {
-        auto result = false;
-
-        input_([&](std::shared_ptr<AVPacket>& packet) {
-            if (!packet) {
-                for (auto& p : decoders_) {
-                    // NOTE: Should never fail.
-                    p.second.try_push(nullptr);
-                }
-            } else if (sources_.find(packet->stream_index) != sources_.end()) {
-                auto it = decoders_.find(packet->stream_index);
-                if (it != decoders_.end() && !it->second.try_push(packet)) {
-                    return false;
-                }
-            }
-
-            result = true;
-
-            return true;
-        });
-
-        return result;
-    }
-
-    bool schedule_filters()
-    {
-        auto result = schedule_inputs();
-        // TODO (perf) avoid copy?
-        auto sources = sources_;
-
-        for (auto& p : sources) {
-            auto it = decoders_.find(p.first);
-            if (it == decoders_.end()) {
-                continue;
-            }
-
-            int nb_requests = 0;
-            for (auto source : p.second) {
-                nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
-            }
-
-            if (nb_requests == 0) {
-                continue;
-            }
-
-            it->second([&](std::shared_ptr<AVFrame>& frame) {
-                if (nb_requests == 0) {
-                    return false;
-                }
-
-                for (auto& source : p.second) {
-                    if (frame && !frame->data[0]) {
-                        FF(av_buffersrc_close(source, frame->pts, 0));
-                    } else {
-                        // TODO (fix) Guard against overflow?
-                        FF(av_buffersrc_write_frame(source, frame.get()));
-                    }
-                    result = true;
-                }
-
-                // End Of File
-                if (frame && !frame->data[0]) {
-                    sources_.erase(p.first);
-                }
-
-                nb_requests -= 1;
-
-                return true;
-            });
-        }
-
-        return result || schedule_inputs();
-    }
-
-    bool filter_frame(Filter& filter, int nb_samples = -1)
-    {
-        if (!filter.sink || filter.sources.empty() || filter.eof) {
-            filter.frame = nullptr;
-            return true;
-        }
-
-        while (true) {
-            auto frame = alloc_frame();
-            auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                       : av_buffersink_get_frame(filter.sink, frame.get());
-
-            if (ret == AVERROR(EAGAIN)) {
-                if (!schedule_filters()) {
-                    return false;
-                }
-            } else if (ret == AVERROR_EOF) {
-                filter.eof   = true;
-                filter.frame = nullptr;
-                return true;
-            } else {
-                FF_RET(ret, "av_buffersink_get_frame");
-                filter.frame = frame;
-                return true;
-            }
-        }
-    }
-
-    void reset_filters(int64_t ts)
-    {
-        video_filter_ = Filter(vfilter_, input_, decoders_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, decoders_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
-
-        sources_.clear();
-        for (auto& p : video_filter_.sources) {
-            sources_[p.first].push_back(p.second);
-        }
-        for (auto& p : audio_filter_.sources) {
-            sources_[p.first].push_back(p.second);
-        }
-
-        // Flush unused inputs.
-        for (auto& p : decoders_) {
-            if (sources_.find(p.first) == sources_.end()) {
-                p.second.flush();
-            }
-        }
-    }
-
   public:
     core::draw_frame prev_frame()
     {
         {
             std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
-            if (!buffer_.empty() && (buffer_flush_ || !frame_)) {
-                frame_        = core::draw_frame::still(buffer_[0].frame);
-                frame_time_   = buffer_[0].pts + buffer_[0].duration;
-                buffer_flush_ = false;
+            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+                frame_       = core::draw_frame::still(buffer_[0].frame);
+                frame_time_  = buffer_[0].pts + buffer_[0].duration;
+                frame_flush_ = false;
             }
         }
 
@@ -695,13 +561,9 @@ struct AVProducer::Impl
                 result = frame_;
             }
 
-            buffer_flush_ = false;
+            frame_flush_ = false;
         }
         buffer_cond_.notify_all();
-
-        auto tick_time = tick_timer_.elapsed() * format_desc_.fps * 0.5;
-        graph_->set_value("tick-time", tick_time);
-        tick_timer_.restart();
 
         graph_->set_text(u16(print()));
 
@@ -719,7 +581,7 @@ struct AVProducer::Impl
                 std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                 buffer_.clear();
                 buffer_eof_   = false;
-                buffer_flush_ = true;
+                frame_flush_ = true;
             }
             buffer_cond_.notify_all();
 
@@ -802,6 +664,143 @@ struct AVProducer::Impl
         }
 
         return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
+    }
+
+ private:
+
+    std::string print() const
+    {
+        std::ostringstream str;
+        str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|"
+            << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
+            << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den }) << "]";
+        return str.str();
+    }
+
+    bool schedule_inputs()
+    {
+        auto result = false;
+
+        input_([&](std::shared_ptr<AVPacket>& packet)
+        {
+            if (!packet) {
+                for (auto& p : decoders_) {
+                    // NOTE: Should never fail.
+                    p.second.try_push(nullptr);
+                }
+            } else if (sources_.find(packet->stream_index) != sources_.end()) {
+                auto it = decoders_.find(packet->stream_index);
+                if (it != decoders_.end() && !it->second.try_push(packet)) {
+                    return false;
+                }
+            }
+
+            result = true;
+
+            return true;
+        });
+
+        return result;
+    }
+
+    bool schedule_filters()
+    {
+        auto result = schedule_inputs();
+        // TODO (perf) avoid copy?
+        auto sources = sources_;
+
+        for (auto& p : sources) {
+            auto it = decoders_.find(p.first);
+            if (it == decoders_.end()) {
+                continue;
+            }
+
+            int nb_requests = 0;
+            for (auto source : p.second) {
+                nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
+            }
+
+            if (nb_requests == 0) {
+                continue;
+            }
+
+            it->second([&](std::shared_ptr<AVFrame>& frame)
+            {
+                if (nb_requests == 0) {
+                    return false;
+                }
+
+                for (auto& source : p.second) {
+                    if (frame && !frame->data[0]) {
+                        FF(av_buffersrc_close(source, frame->pts, 0));
+                    } else {
+                        // TODO (fix) Guard against overflow?
+                        FF(av_buffersrc_write_frame(source, frame.get()));
+                    }
+                    result = true;
+                }
+
+                // End Of File
+                if (frame && !frame->data[0]) {
+                    sources_.erase(p.first);
+                }
+
+                nb_requests -= 1;
+
+                return true;
+            });
+        }
+
+        return result || schedule_inputs();
+    }
+
+    bool filter_frame(Filter& filter, int nb_samples = -1)
+    {
+        if (!filter.sink || filter.sources.empty() || filter.eof) {
+            filter.frame = nullptr;
+            return true;
+        }
+
+        while (true) {
+            auto frame = alloc_frame();
+            auto ret = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+                : av_buffersink_get_frame(filter.sink, frame.get());
+
+            if (ret == AVERROR(EAGAIN)) {
+                if (!schedule_filters()) {
+                    return false;
+                }
+            } else if (ret == AVERROR_EOF) {
+                filter.eof = true;
+                filter.frame = nullptr;
+                return true;
+            } else {
+                FF_RET(ret, "av_buffersink_get_frame");
+                filter.frame = frame;
+                return true;
+            }
+        }
+    }
+
+    void reset_filters(int64_t ts)
+    {
+        video_filter_ = Filter(vfilter_, input_, decoders_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_ = Filter(afilter_, input_, decoders_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
+
+        sources_.clear();
+        for (auto& p : video_filter_.sources) {
+            sources_[p.first].push_back(p.second);
+        }
+        for (auto& p : audio_filter_.sources) {
+            sources_[p.first].push_back(p.second);
+        }
+
+        // Flush unused inputs.
+        for (auto& p : decoders_) {
+            if (sources_.find(p.first) == sources_.end()) {
+                p.second.flush();
+            }
+        }
     }
 };
 
