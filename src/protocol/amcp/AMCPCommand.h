@@ -42,6 +42,8 @@ struct command_context
     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     std::function<void(bool)>                            shutdown_server_now;
     std::vector<std::wstring>                            parameters;
+    std::string proxy_host;
+    std::string proxy_port;
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
@@ -53,7 +55,9 @@ struct command_context
                     spl::shared_ptr<core::cg_producer_registry>          cg_registry,
                     spl::shared_ptr<const core::frame_producer_registry> producer_registry,
                     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
-                    std::function<void(bool)>                            shutdown_server_now)
+                    std::function<void(bool)>                            shutdown_server_now,
+                    std::string                                          proxy_host,
+                    std::string                                          proxy_port)
         : client(std::move(client))
         , channel(channel)
         , channel_index(channel_index)
@@ -63,6 +67,8 @@ struct command_context
         , producer_registry(std::move(producer_registry))
         , consumer_registry(std::move(consumer_registry))
         , shutdown_server_now(shutdown_server_now)
+        , proxy_host(std::move(proxy_host))
+        , proxy_port(std::move(proxy_port))
     {
     }
 };
