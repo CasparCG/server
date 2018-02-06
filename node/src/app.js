@@ -18,7 +18,7 @@ module.exports = function ({ db, config, logger }) {
       let str = '200 CLS OK\r\n'
       str += rows
         .map(row => row.doc.cinf || '')
-        .reduce((acc, { cinf }) => acc + cinf, '')
+        .reduce((acc, cinf) => acc + cinf, '')
       str += '\r\n'
       res.send(str)
     } catch (err) {
@@ -57,7 +57,6 @@ module.exports = function ({ db, config, logger }) {
       let str = '200 CINF OK\r\n'
       const { cinf } = await db.get(req.params.id.toUpperCase())
       str += cinf
-      str += '\r\n\r\n'
       res.send(str)
     } catch (err) {
       next(err)
@@ -87,7 +86,7 @@ module.exports = function ({ db, config, logger }) {
       let str = '200 THUMBNAIL LIST OK\r\n'
       str += rows
         .map(row => row.doc.tinf || '')
-        .reduce((acc, str) => acc + str, '')
+        .reduce((acc, tinf) => acc + tinf, '')
       str += '\r\n'
       res.send(str)
     } catch (err) {
@@ -97,8 +96,10 @@ module.exports = function ({ db, config, logger }) {
 
   app.get('/thumbnail/:id', async (req, res, next) => {
     try {
+      const { _attachments } = await db.get(req.params.id.toUpperCase(), { attachments: true })
+
       let str = '201 THUMBNAIL RETRIEVE OK\r\n'
-      str += await db.getAttachment(req.params.id.toUpperCase(), 'thumb.png')
+      str += _attachments['thumb.png'].data
       str += '\r\n'
       res.send(str)
     } catch (err) {
