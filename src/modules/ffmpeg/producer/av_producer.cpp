@@ -532,10 +532,9 @@ struct AVProducer::Impl
             } else {
                 result = frame_;
             }
+            frame_flush_ = false;
         }
         buffer_cond_.notify_all();
-
-        frame_flush_ = false;
 
         graph_->set_text(u16(print()));
 
