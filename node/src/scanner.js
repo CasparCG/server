@@ -8,31 +8,32 @@ const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const { getId } = require('./util')
+const Base64 = require('js-base64').Base64
 
 const statAsync = util.promisify(fs.stat)
 const unlinkAsync = util.promisify(fs.unlink)
 const readFileAsync = util.promisify(fs.readFile)
 
 module.exports = function ({ config, db, logger }) {
-  const watcher = chokidar
-    .watch(config.scanner.paths, {
-      alwaysStat: true,
-      awaitWriteFinish: {
-        stabilityThreshold: 2000,
-        pollInterval: 100
-      },
-      ...config.scanner
-    })
-    .on('error', err => logger.error({ err }))
-
   Observable
-    .merge(
-      Observable.fromEvent(watcher, 'add'),
-      Observable.fromEvent(watcher, 'change'),
-      Observable.fromEvent(watcher, 'unlink')
-    )
+    .create(o => {
+      const watcher = chokidar
+        .watch(config.scanner.paths, {
+          alwaysStat: true,
+          awaitWriteFinish: {
+            stabilityThreshold: 2000,
+            pollInterval: 100
+          },
+          ...config.scanner
+        })
+        .on('error', err => logger.error({ err }))
+        .on('add', (path, stat) => o.next([ path, stat ]))
+        .on('change', (path, stat) => o.next([ path, stat ]))
+        .on('unlink', (path, stat) => o.next([ path ]))
+      return () => watcher.cancel()
+    })
     .concatMap(async ([ mediaPath, mediaStat ]) => {
-      const mediaId = getId(mediaPath)
+      const mediaId = getId(config.paths.media, mediaPath)
       try {
         await scanFile(mediaPath, mediaId, mediaStat)
       } catch (err) {
@@ -46,34 +47,50 @@ module.exports = function ({ config, db, logger }) {
     .subscribe()
 
   async function scanFile (mediaPath, mediaId, mediaStat) {
-    const doc = await db
-      .get(mediaId)
-      .catch(() => ({
-        _id: mediaId,
-        mediaPath: mediaPath
-      }))
-
-    if (doc.mediaSize !== mediaStat.size || doc.mediaTime !== mediaStat.mtime.getTime()) {
+    if (!mediaId || mediaStat.isDirectory()) {
       return
     }
 
+    const doc = await db
+      .get(mediaId)
+      .catch(() => ({ _id: mediaId }))
+
+    const mediaLogger = logger.child({
+      id: mediaId,
+      path: mediaPath,
+      size: mediaStat.size,
+      mtime: mediaStat.mtime.toISOString()
+    })
+
+    if (doc.mediaPath && doc.mediaPath !== mediaPath) {
+      mediaLogger.info('Skipped')
+      return
+    }
+
+    if (doc.mediaSize === mediaStat.size && doc.mediaTime === mediaStat.mtime.getTime()) {
+      return
+    }
+
+    doc.mediaPath = mediaPath
     doc.mediaSize = mediaStat.size
     doc.mediaTime = mediaStat.mtime.getTime()
 
     await Promise.all([
       generateInfo(doc).catch(err => {
-        logger.error({ err })
+        mediaLogger.error({ err })
       }),
       generateThumb(doc).catch(err => {
-        logger.error({ err })
+        mediaLogger.error({ err })
       })
     ])
 
     await db.put(doc)
+
+    mediaLogger.info('Scanned')
   }
 
   async function generateThumb (doc) {
-    const tmpPath = path.join(os.tmpdir(), Math.random().toString(16))
+    const tmpPath = path.join(os.tmpdir(), Math.random().toString(16)) + '.png'
 
     const args = [
       // TODO (perf) Low priority process?
@@ -82,7 +99,6 @@ module.exports = function ({ config, db, logger }) {
       '-i', `"${doc.mediaPath}"`,
       '-frames:v 1',
       `-vf thumbnail,scale=${config.thumbnails.width}:${config.thumbnails.height}`,
-      '-f png',
       '-threads 1',
       tmpPath
     ]
@@ -101,7 +117,12 @@ module.exports = function ({ config, db, logger }) {
       doc.thumbSize
     ].join(' ') + '\r\n'
 
-    await db.putAttachment(doc._id, 'thumb.png', await readFileAsync(tmpPath), 'image/png')
+    doc._attachments = {
+      'thumb.png': {
+        content_type: 'image/jpg',
+        data: Base64.encode(await readFileAsync(tmpPath))
+      }
+    }
     await unlinkAsync(tmpPath)
   }
 
@@ -141,7 +162,7 @@ module.exports = function ({ config, db, logger }) {
           doc.mediaSize,
           duration,
           timeBase
-        ].join(' '))
+        ].join(' ') + '\r\n')
       })
     })
   }
