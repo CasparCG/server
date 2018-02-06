@@ -69,8 +69,10 @@ Decoder::Decoder(AVStream* stream)
                 std::shared_ptr<AVPacket> packet;
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(
-                        lock, [&] { return (!input_.empty() && output_.size() < output_capacity_) || abort_request_; });
+
+                    cond_.wait(lock, [&] {
+                        return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
+                    });
 
                     if (abort_request_) {
                         break;

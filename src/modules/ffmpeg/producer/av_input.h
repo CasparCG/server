@@ -50,7 +50,7 @@ class Input
 
     mutable std::mutex                    mutex_;
     std::condition_variable               cond_;
-    int                                   output_capacity_ = 64;
+    std::size_t                           output_capacity_ = 64;
     std::queue<std::shared_ptr<AVPacket>> output_;
 
     std::atomic<bool> paused_{ false };
