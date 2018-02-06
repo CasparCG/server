@@ -19,7 +19,7 @@ set(HEADERS
 	producer/av_input.h
 	util/av_util.h
 	producer/ffmpeg_producer.h
-	consumer/ffmpeg_consumer.cpp
+	consumer/ffmpeg_consumer.h
 
 	ffmpeg.h
 	StdAfx.h
