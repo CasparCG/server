@@ -66,14 +66,17 @@ const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 
 struct Frame
 {
-    core::draw_frame frame;
-    int64_t          pts      = AV_NOPTS_VALUE;
-    int64_t          duration = 0;
+    core::draw_frame         frame;
+    std::shared_ptr<AVFrame> video;
+    std::shared_ptr<AVFrame> audio;
+    int64_t                  pts      = AV_NOPTS_VALUE;
+    int64_t                  duration = 0;
 };
 
 // TODO (fix) ts discontinuities
 // TODO (feat) filter preset
 // TODO (feat) forward options
+// TODO (fix) Interlaced looping.
 
 struct Filter
 {
@@ -360,7 +363,6 @@ struct AVProducer::Impl
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
     int                     buffer_capacity_ = 2;
-    bool                    buffer_eof_      = true;
 
     std::atomic<bool> abort_request_{ false };
     std::thread       thread_;
@@ -400,6 +402,8 @@ struct AVProducer::Impl
             try {
                 set_thread_name(L"[ffmpeg::av_producer]");
 
+                Frame frame;
+
                 while (!abort_request_) {
                     // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801,
                     // 800)
@@ -416,15 +420,6 @@ struct AVProducer::Impl
                         break;
                     }
 
-                    if (loop_ && input_.eof()) {
-                        auto time = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        input_.seek(time + input_.start_time().value_or(0), false);
-                        input_.paused(false);
-
-                        // TODO (fix) Interlaced looping.
-                        continue;
-                    }
-
                     if (!video_filter_.frame && !filter_frame(video_filter_)) {
                         // TODO (perf) Avoid polling.
                         cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
@@ -438,69 +433,46 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    // End of file. Reset filters.
-                    if (!video_filter_.frame && !audio_filter_.frame) {
-                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset_filters(start + input_.start_time().value_or(0));
-                        {
-                            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                            buffer_eof_ = true;
+                    // End of file.
+                    if ((!video_filter_.frame && !audio_filter_.frame) ||
+                        (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_)) {
+                        if (loop_) {
+                            // TODO (perf) Seek as soon as possible in order to keep buffering.
+                            auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
+                            reset_filters(start + input_.start_time().value_or(0));
+                            input_.seek(start, true);
+                            input_.paused(false);
+                        } else {
+                            input_.paused(true);
+                            // TODO (perf) Avoid polling.
+                            std::this_thread::sleep_for(10ms);
                         }
-                        // TODO (fix) Set duration_?
                         continue;
                     }
-
-                    // Drop extra audio.
-                    if (video_filter_.sink && !video_filter_.frame) {
-                        audio_filter_.frame = nullptr;
-                        video_filter_.frame = nullptr;
-                        continue;
-                    }
-
-                    auto video = std::move(video_filter_.frame);
-                    auto audio = std::move(audio_filter_.frame);
-
-                    Frame frame;
 
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
-                    // TODO (fix) check video->pts vs audio->pts
-                    // TODO (fix) ensure pts != AV_NOPTS_VALUE
-
-                    if (video) {
-                        auto tb = av_buffersink_get_time_base(video_filter_.sink);
-                        auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
-                        frame.pts = av_rescale_q(video->pts, tb, TIME_BASE_Q) - start_time;
+                    if (video_filter_.frame) {
+                        frame.video = std::move(video_filter_.frame);
+                        const auto tb = av_buffersink_get_time_base(video_filter_.sink);
+                        const auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
+                        frame.pts = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
                         frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
-                    } else if (audio) {
-                        auto tb = av_buffersink_get_time_base(audio_filter_.sink);
-                        auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
-                        frame.pts = av_rescale_q(audio->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
-                    // TODO (perf) Seek input as soon as possible.
-                    if (loop_ && duration_ != AV_NOPTS_VALUE && frame.pts >= duration_) {
-                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        reset_filters(start + input_.start_time().value_or(0));
-                        input_.seek(start, true);
-                        input_.paused(false);
-                        continue;
+                    if (audio_filter_.frame) {
+                        frame.audio = std::move(audio_filter_.frame);
+                        const auto tb = av_buffersink_get_time_base(audio_filter_.sink);
+                        const auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
+                        frame.pts = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
+                        frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
                     }
 
-                    // TODO (fix) Don't lose frame if duration_ is increased.
-                    if (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_) {
-                        input_.paused(true);
-                        continue;
-                    }
-
-                    frame.frame = core::draw_frame(make_frame(this, *frame_factory_, video, audio));
+                    frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
 
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-
-                        buffer_.push_back(std::move(frame));
-                        buffer_eof_ = false;
+                        buffer_.push_back(frame);
                     }
                 }
             } catch (...) {
@@ -541,7 +513,7 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
 
-            if (!buffer_eof_ && buffer_.size() < format_desc_.field_count) {
+            if (!input_.paused() && buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame{};
             }
@@ -560,10 +532,10 @@ struct AVProducer::Impl
             } else {
                 result = frame_;
             }
-
-            frame_flush_ = false;
         }
         buffer_cond_.notify_all();
+
+        frame_flush_ = false;
 
         graph_->set_text(u16(print()));
 
@@ -580,10 +552,10 @@ struct AVProducer::Impl
             {
                 std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                 buffer_.clear();
-                buffer_eof_   = false;
-                frame_flush_ = true;
             }
             buffer_cond_.notify_all();
+
+            frame_flush_ = true;
 
             time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time().value_or(0);
 
@@ -720,10 +692,6 @@ struct AVProducer::Impl
                 nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
-            if (nb_requests == 0) {
-                continue;
-            }
-
             it->second([&](std::shared_ptr<AVFrame>& frame)
             {
                 if (nb_requests == 0) {
@@ -782,10 +750,10 @@ struct AVProducer::Impl
         }
     }
 
-    void reset_filters(int64_t ts)
+    void reset_filters(int64_t start_time)
     {
-        video_filter_ = Filter(vfilter_, input_, decoders_, ts, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, decoders_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
+        video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
