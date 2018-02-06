@@ -69,7 +69,7 @@ sf::Font& get_default_font()
 {
     static sf::Font DEFAULT_FONT = []() {
         sf::Font font;
-        if (!font.loadFromFile("LiberationSans-Regular.ttf"))
+        if (!font.loadFromFile("LiberationMono-Regular.ttf"))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("LiberationSans-Regular.ttf not found"));
         return font;
     }();
