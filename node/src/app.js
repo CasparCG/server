@@ -65,6 +65,7 @@ module.exports = function ({ db, config, logger }) {
 
   app.get('/thumbnail/generate', async (req, res, next) => {
     try {
+      // TODO Force generate?
       res.send('202 THUMBNAIL GENERATE_ALL OK\r\n')
     } catch (err) {
       next(err)
@@ -73,6 +74,7 @@ module.exports = function ({ db, config, logger }) {
 
   app.get('/thumbnail/generate/:id', async (req, res, next) => {
     try {
+      // TODO Wait for scanner?
       res.send('202 THUMBNAIL GENERATE OK\r\n')
     } catch (err) {
       next(err)
