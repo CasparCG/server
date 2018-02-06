@@ -16,7 +16,6 @@
 #include <common/except.h>
 #include <common/os/thread.h>
 #include <common/scope_exit.h>
-#include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
@@ -356,8 +355,6 @@ struct AVProducer::Impl
     int64_t          frame_time_ = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
-
-    caspar::timer tick_timer_;
 
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
