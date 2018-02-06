@@ -12,11 +12,13 @@
     "@reactivex/rxjs": "^5.5.6",
     "chokidar": "^2.0.0",
     "express": "^4.16.2",
+    "js-base64": "^2.4.3",
     "mkdirp-promise": "^5.0.1",
     "moment": "^2.20.1",
     "nconf": "^0.10.0",
     "pino": "^4.10.4",
     "pino-http": "^3.1.0",
+    "pouchdb-node": "^6.4.3",
     "recursive-readdir": "^2.2.1",
     "xml2js": "^0.4.19"
   },
