@@ -34,7 +34,6 @@ const std::wstring& media_folder();
 const std::wstring& log_folder();
 const std::wstring& template_folder();
 const std::wstring& data_folder();
-const std::wstring& thumbnail_folder();
 const std::wstring& font_folder();
 const std::wstring& version();
 
