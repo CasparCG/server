@@ -232,6 +232,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto tex = create_texture(width, height, stride, false);
             tex->copy_from(*buf);
+            // TODO (perf) save tex on source
             return tex;
         });
     }
