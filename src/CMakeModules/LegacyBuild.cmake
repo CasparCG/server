@@ -146,6 +146,7 @@ casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
 
 # LIBERATION_FONTS
 set(LIBERATION_FONTS_BIN_PATH "${PACKAGES_FOLDER}/liberation-fonts")
+casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
 # CEF
 set(CEF_INCLUDE_PATH "${PACKAGES_FOLDER}/cef/win32/include")
