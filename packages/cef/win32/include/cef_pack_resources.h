@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2018 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -351,8 +351,9 @@
 #define IDR_CEF_VERSION_HTML 31502
 #define IDR_CEF_EXTENSION_API_FEATURES 31503
 #define IDR_CEF_BROWSER_MANIFEST_OVERLAY 31504
-#define IDR_CEF_RENDERER_MANIFEST_OVERLAY 31505
-#define IDR_CEF_UTILITY_MANIFEST_OVERLAY 31506
+#define IDR_CEF_PACKAGED_SERVICES_MANIFEST_OVERLAY 31505
+#define IDR_CEF_RENDERER_MANIFEST_OVERLAY 31506
+#define IDR_CEF_UTILITY_MANIFEST_OVERLAY 31507
 
 // ---------------------------------------------------------------------------
 // From common_resources.h:

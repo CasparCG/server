@@ -1,25 +1,30 @@
-Chromium Embedded Framework (CEF) Minimal Binary Distribution for Windows
+Chromium Embedded Framework (CEF) Standard Binary Distribution for Windows
 -------------------------------------------------------------------------------
 
-Date:             December 19, 2017
+Date:             January 24, 2018
 
-CEF Version:      3.3239.1705.gf6d6dfc
+CEF Version:      3.3239.1723.g071d1c1
 CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @f6d6dfc8591fe6d014c3b97fa8eef695cebfa40e
+                  @071d1c16536ff012efd8f287823930c4b32e4f17
 
-Chromium Version: 63.0.3239.109
+Chromium Version: 63.0.3239.132
 Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @ddeaa76b268f37915af8a880d4572bea94df3317
+                  @76cbfebbcc5236da3346c8389b94b648d36f8be6
 
-This distribution contains the minimial components necessary to build and
-distribute an application using CEF on the Windows platform. Please see
-the LICENSING section of this document for licensing terms and conditions.
+This distribution contains all components necessary to build and distribute an
+application using CEF on the Windows platform. Please see the LICENSING
+section of this document for licensing terms and conditions.
 
 
 CONTENTS
 --------
 
 cmake       Contains CMake configuration files shared by all targets.
+
+Debug       Contains libcef.dll, libcef.lib and other components required to
+            build and run the debug version of CEF-based applications. By
+            default these files should be placed in the same directory as the
+            executable and will be copied there as part of the build process.
 
 include     Contains all required CEF header files.
 
@@ -29,10 +34,28 @@ libcef_dll  Contains the source code for the libcef_dll_wrapper static library
 Release     Contains libcef.dll, libcef.lib and other components required to
             build and run the release version of CEF-based applications. By
             default these files should be placed in the same directory as the
-            executable.
+            executable and will be copied there as part of the build process.
 
 Resources   Contains resources required by libcef.dll. By default these files
-            should be placed in the same directory as libcef.dll.
+            should be placed in the same directory as libcef.dll and will be
+            copied there as part of the build process.
+
+tests/      Directory of tests that demonstrate CEF usage.
+
+  cefclient Contains the cefclient sample application configured to build
+            using the files in this distribution. This application demonstrates
+            a wide range of CEF functionalities.
+
+  cefsimple Contains the cefsimple sample application configured to build
+            using the files in this distribution. This application demonstrates
+            the minimal functionality required to create a browser window.
+
+  ceftests  Contains unit tests that exercise the CEF APIs.
+
+  gtest     Contains the Google C++ Testing Framework used by the ceftests
+            target.
+
+  shared    Contains source code shared by the cefclient and ceftests targets.
 
 
 USAGE

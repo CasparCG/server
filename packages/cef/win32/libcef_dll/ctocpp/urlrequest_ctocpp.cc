@@ -1,4 +1,4 @@
-// Copyright (c) 2017 The Chromium Embedded Framework Authors. All rights
+// Copyright (c) 2018 The Chromium Embedded Framework Authors. All rights
 // reserved. Use of this source code is governed by a BSD-style license that
 // can be found in the LICENSE file.
 //
@@ -9,7 +9,7 @@
 // implementations. See the translator.README.txt file in the tools directory
 // for more information.
 //
-// $hash=45ae3379337399f920ccc9e443e4bd3b0fad0fdc$
+// $hash=f4e93b00934fd541c9ab0b0a43da21ece8ccddaf$
 //
 
 #include "libcef_dll/ctocpp/urlrequest_ctocpp.h"
@@ -116,6 +116,20 @@ CefRefPtr<CefResponse> CefURLRequestCToCpp::GetResponse() {
 
   // Return type: refptr_same
   return CefResponseCToCpp::Wrap(_retval);
+}
+
+bool CefURLRequestCToCpp::ResponseWasCached() {
+  cef_urlrequest_t* _struct = GetStruct();
+  if (CEF_MEMBER_MISSING(_struct, response_was_cached))
+    return false;
+
+  // AUTO-GENERATED CONTENT - DELETE THIS COMMENT BEFORE MODIFYING
+
+  // Execute
+  int _retval = _struct->response_was_cached(_struct);
+
+  // Return type: bool
+  return _retval ? true : false;
 }
 
 void CefURLRequestCToCpp::Cancel() {
