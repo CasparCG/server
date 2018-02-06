@@ -150,8 +150,8 @@ set(LIBERATION_FONTS_BIN_PATH "${PACKAGES_FOLDER}/liberation-fonts")
 # CEF
 set(CEF_INCLUDE_PATH "${PACKAGES_FOLDER}/cef/win32/include")
 set(CEF_PATH "${PACKAGES_FOLDER}/cef/win32")
-set(CEF_BIN_PATH "${PACKAGES_FOLDER}/cef/win32/Release")
-set(CEF_RESOURCE_PATH "${PACKAGES_FOLDER}/cef/win32/Resources")
+set(CEF_BIN_PATH "${PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
+set(CEF_RESOURCE_PATH "${PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
 link_directories("${CEF_BIN_PATH}")
 
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
