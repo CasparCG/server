@@ -101,9 +101,6 @@ namespace caspar { namespace protocol { namespace amcp {
 
 using namespace core;
 
-const auto proxy_host = u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1"));
-const auto proxy_port = u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000"));
-
 std::wstring read_file_base64(const boost::filesystem::path& file)
 {
     using namespace boost::archive::iterators;
@@ -1266,13 +1263,13 @@ std::wstring thumbnail_retrieve_command(command_context& ctx)
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
     return u16(res.body);
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/thumbnail/generate");
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate");
     return u16(res.body);
 }
 
@@ -1280,25 +1277,25 @@ std::wstring thumbnail_generateall_command(command_context& ctx)
 
 std::wstring cinf_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))));
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))));
     return u16(res.body);
 }
 
 std::wstring cls_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/cls");
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/cls");
     return u16(res.body);
 }
 
 std::wstring fls_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/fls");
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/fls");
     return u16(res.body);
 }
 
 std::wstring tls_command(command_context& ctx)
 {
-    auto res = http::request(proxy_host, proxy_port, "/tls");
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/tls");
     return u16(res.body);
 }
 

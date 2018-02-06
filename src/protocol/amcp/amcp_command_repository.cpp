@@ -23,7 +23,10 @@
 
 #include "amcp_command_repository.h"
 
+#include <common/env.h>
+
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <map>
 
@@ -67,6 +70,8 @@ struct amcp_command_repository::impl
     spl::shared_ptr<const core::frame_producer_registry> producer_registry;
     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     std::function<void(bool)>                            shutdown_server_now;
+    std::string proxy_host = u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1"));
+    std::string proxy_port = u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000"));
 
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands;
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands;
@@ -114,7 +119,9 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
                         self.cg_registry,
                         self.producer_registry,
                         self.consumer_registry,
-                        self.shutdown_server_now);
+                        self.shutdown_server_now,
+                        self.proxy_host,
+                        self.proxy_port);
 
     auto command = find_command(self.commands, s, ctx, tokens);
 
@@ -144,7 +151,9 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(const std:
                         self.cg_registry,
                         self.producer_registry,
                         self.consumer_registry,
-                        self.shutdown_server_now);
+                        self.shutdown_server_now,
+                        self.proxy_host,
+                        self.proxy_port);
 
     auto command = find_command(self.channel_commands, s, ctx, tokens);
 
