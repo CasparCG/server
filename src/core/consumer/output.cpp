@@ -151,7 +151,7 @@ struct output::impl
         change_channel_format(format_desc);
 
         auto pending_send_results = executor_.invoke([=]() -> std::shared_ptr<std::map<int, std::future<bool>>> {
-            if (input_frame.size() != format_desc_.size) {
+            if (input_frame && input_frame.size() != format_desc_.size) {
                 CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
                 return nullptr;
             }
