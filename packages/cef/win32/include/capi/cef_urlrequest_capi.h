@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2018 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -33,7 +33,7 @@
 // by hand. See the translator.README.txt file in the tools directory for
 // more information.
 //
-// $hash=d0ac53d1df275f9ea9cf19a6a07f8dce88f2b151$
+// $hash=f877ff032d10d23cb5f71e01a8770347c1e66335$
 //
 
 #ifndef CEF_INCLUDE_CAPI_CEF_URLREQUEST_CAPI_H_
@@ -98,6 +98,12 @@ typedef struct _cef_urlrequest_t {
   ///
   struct _cef_response_t*(CEF_CALLBACK* get_response)(
       struct _cef_urlrequest_t* self);
+
+  ///
+  // Returns true (1) if the response body was served from the cache. This
+  // includes responses for which revalidation was required.
+  ///
+  int(CEF_CALLBACK* response_was_cached)(struct _cef_urlrequest_t* self);
 
   ///
   // Cancel the request.
