@@ -23,7 +23,7 @@ Development using Visual Studio
 
 2. Install CMake (http://www.cmake.org/download/).
 
-3. cmake -G "Visual Studio 14 2015" -A x64 
+3. cmake -G "Visual Studio 14 2015" -A x64 ./src
 
 4. Open "CasparCG Server.sln"
 
