@@ -37,6 +37,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
+#include <cstdint>
+
 #pragma warning(push, 1)
 
 extern "C"
@@ -96,12 +98,13 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     void send_osc()
     {
-        monitor_subject_ << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
-                                (producer_.duration() / format_desc_.fps)
-                         << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
-                                static_cast<int32_t>(producer_.duration())
-                         << core::monitor::message("/file/fps") % format_desc_.fps
-                         << core::monitor::message("/loop") % producer_.loop();
+        monitor_subject_
+            << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
+                (producer_.duration() / format_desc_.fps)
+            << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
+                static_cast<int32_t>(producer_.duration())
+            << core::monitor::message("/file/fps") % format_desc_.fps
+            << core::monitor::message("/loop") % producer_.loop();
     }
 
     uint32_t nb_frames() const override
@@ -127,13 +130,13 @@ struct ffmpeg_producer : public core::frame_producer_base
             result = boost::lexical_cast<std::wstring>(producer_.loop());
         } else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start")) {
             if (!value.empty()) {
-                producer_.start(boost::lexical_cast<std::int64_t>(value));
+                producer_.start(boost::lexical_cast<int64_t>(value));
             }
 
             result = boost::lexical_cast<std::wstring>(producer_.start());
         } else if (boost::iequals(cmd, L"out")) {
             if (!value.empty()) {
-                producer_.duration(boost::lexical_cast<std::int64_t>(value) - producer_.start());
+                producer_.duration(boost::lexical_cast<int64_t>(value) - producer_.start());
             }
 
             result = boost::lexical_cast<std::wstring>(producer_.start() + producer_.duration());
@@ -154,11 +157,11 @@ struct ffmpeg_producer : public core::frame_producer_base
             } else if (boost::iequals(value, L"end")) {
                 seek = producer_.duration();
             } else {
-                seek = boost::lexical_cast<std::int64_t>(value);
+                seek = boost::lexical_cast<int64_t>(value);
             }
 
             if (params.size() > 2) {
-                seek += boost::lexical_cast<std::int64_t>(params.at(2));
+                seek += boost::lexical_cast<int64_t>(params.at(2));
             }
 
             producer_.seek(seek);
