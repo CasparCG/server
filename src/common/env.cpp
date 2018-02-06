@@ -45,7 +45,6 @@ std::wstring                 log;
 std::wstring                 ftemplate;
 std::wstring                 data;
 std::wstring                 font;
-std::wstring                 thumbnail;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -123,7 +122,6 @@ void configure(const std::wstring& filename)
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
         data      = clean_path(paths.get(L"data-path", initial + L"/data/"));
         font      = clean_path(paths.get(L"font-path", initial + L"/font/"));
-        thumbnail = clean_path(paths.get(L"thumbnail-path", paths.get(L"thumbnails-path", initial + L"/thumbnail/")));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;
@@ -134,12 +132,10 @@ void configure(const std::wstring& filename)
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
     data      = ensure_trailing_slash(resolve_or_create(data));
     font      = ensure_trailing_slash(resolve_or_create(font));
-    thumbnail = ensure_trailing_slash(resolve_or_create(thumbnail));
 
     ensure_writable(log);
     ensure_writable(ftemplate);
     ensure_writable(data);
-    ensure_writable(thumbnail);
 }
 
 const std::wstring& initial_folder()
@@ -176,12 +172,6 @@ const std::wstring& font_folder()
 {
     check_is_configured();
     return font;
-}
-
-const std::wstring& thumbnail_folder()
-{
-    check_is_configured();
-    return thumbnail;
 }
 
 #define QUOTE(str) #str
