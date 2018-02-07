@@ -133,15 +133,14 @@ class decklink_frame : public IDeckLinkVideoFrame
     core::const_frame             frame_;
     const core::video_format_desc format_desc_;
 
-    const bool key_only_;
-    void*      data_;
+    const bool key_only_ = false;
+    void*      data_     = nullptr;
 
   public:
     decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
         : frame_(frame)
         , format_desc_(format_desc)
         , key_only_(key_only)
-        , data_(scalable_aligned_malloc(format_desc_.size, 64))
     {
         ref_count_ = 0;
     }
@@ -177,8 +176,15 @@ class decklink_frame : public IDeckLinkVideoFrame
     {
         try {
             if (static_cast<int>(frame_.image_data(0).size()) != format_desc_.size) {
+                if (!data_) {
+                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
+                }
                 std::memset(data_, 0, format_desc_.size);
+                *buffer = data_;
             } else if (key_only_) {
+                if (!data_) {
+                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
+                }
                 aligned_memshfl(data_,
                                 frame_.image_data(0).begin(),
                                 format_desc_.size,
@@ -186,10 +192,10 @@ class decklink_frame : public IDeckLinkVideoFrame
                                 0x0B0B0B0B,
                                 0x07070707,
                                 0x03030303);
+                *buffer = data_;
             } else {
-                std::memcpy(data_, frame_.image_data(0).begin(), format_desc_.size);
+                *buffer = const_cast<uint8_t*>(frame_.image_data(0).begin());
             }
-            *buffer = data_;
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             return E_FAIL;
