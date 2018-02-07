@@ -22,8 +22,16 @@ IF (GIT_FOUND)
 ENDIF ()
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
-FIND_PACKAGE (Boost COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+SET (BOOST_ROOT "/opt/boost")
+SET (Boost_USE_DEBUG_LIBS ON)
+SET (Boost_USE_RELEASE_LIBS OFF)
+SET (Boost_USE_STATIC_LIBS ON)
+FIND_PACKAGE (Boost 1.66.0 EXACT COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+
+SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/opt/ffmpeg/lib/pkgconfig")
 FIND_PACKAGE (FFmpeg REQUIRED)
+LINK_DIRECTORIES( ${FFMPEG_LIBRARY_DIRS} )
+
 FIND_PACKAGE (OpenGL REQUIRED)
 FIND_PACKAGE (JPEG REQUIRED)
 FIND_PACKAGE (FreeImage REQUIRED)
@@ -35,15 +43,8 @@ FIND_PACKAGE (OpenAL REQUIRED)
 FIND_PACKAGE (GLFW REQUIRED)
 FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
 
-LINK_DIRECTORIES( ${FFMPEG_LIBRARY_DIRS} )
-
 # TO CLEANUP!!
-
-if (MSVC)
-	set(PLATFORM_FOLDER_NAME	"win32")
-else()
-	set(PLATFORM_FOLDER_NAME	"linux")
-endif ()
+SET (PLATFORM_FOLDER_NAME "linux")
 
 set(BOOST_INCLUDE_PATH			"${Boost_INCLUDE_DIRS}")
 set(TBB_INCLUDE_PATH			"${TBB_INCLUDE_DIRS}")
@@ -88,9 +89,6 @@ else()
 	add_definitions( -D__NO_INLINE__ ) # Needed for precompiled headers to work
 	add_definitions( -DBOOST_NO_SWPRINTF ) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 	add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=1 )
-	add_definitions( -DBOOST_ALL_NO_LIB )
-	add_definitions( -DBOOST_ALL_DYN_LINK )
-	add_definitions( -DBOOST_LOG_DYN_LINK )
 endif ()
 
 if (POLICY CMP0045)
