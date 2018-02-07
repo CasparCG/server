@@ -215,7 +215,7 @@ struct screen_consumer : boost::noncopyable
         }
 
         if (!GLEW_VERSION_4_5) {
-            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
         }
 
         for (int n = 0; n < 3; ++n) {
