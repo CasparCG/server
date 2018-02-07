@@ -29,6 +29,8 @@
 #include <core/interaction/interaction_sink.h>
 #include <core/video_format.h>
 
+#include <boost/noncopyable.hpp>
+
 #include <cstdint>
 #include <functional>
 #include <future>

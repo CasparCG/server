@@ -14,8 +14,6 @@ set(SOURCES
 		clk/clk_commands.cpp
 		clk/clk_command_processor.cpp
 
-		log/tcp_logger_protocol_strategy.cpp
-
 		osc/oscpack/OscOutboundPacketStream.cpp
 		osc/oscpack/OscPrintReceivedElements.cpp
 		osc/oscpack/OscReceivedElements.cpp
@@ -45,8 +43,6 @@ set(HEADERS
 		clk/CLKProtocolStrategy.h
 		clk/clk_commands.h
 		clk/clk_command_processor.h
-
-		log/tcp_logger_protocol_strategy.h
 
 		osc/oscpack/MessageMappingOscPacketListener.h
 		osc/oscpack/OscException.h

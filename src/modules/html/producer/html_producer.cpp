@@ -275,7 +275,7 @@ class html_client
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
             auto msg      = args->GetString(1).ToWString();
 
-            BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = severity))
+            BOOST_LOG_SEV(log::logger::get(), severity)
                 << print() << L" [renderer_process] " << msg;
         }
 

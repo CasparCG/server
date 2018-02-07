@@ -417,13 +417,6 @@ std::wstring log_level_command(command_context& ctx)
     return L"202 LOG OK\r\n";
 }
 
-std::wstring log_category_command(command_context& ctx)
-{
-    log::set_log_category(ctx.parameters.at(0), ctx.parameters.at(1) == L"1");
-
-    return L"202 LOG OK\r\n";
-}
-
 std::wstring set_command(command_context& ctx)
 {
     std::wstring name  = boost::to_upper_copy(ctx.parameters[0]);
@@ -1391,7 +1384,6 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
     repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 1);
-    repo.register_command(L"Basic Commands", L"LOG CATEGORY", log_category_command, 2);
     repo.register_channel_command(L"Basic Commands", L"SET", set_command, 2);
     repo.register_command(L"Basic Commands", L"LOCK", lock_command, 2);
 

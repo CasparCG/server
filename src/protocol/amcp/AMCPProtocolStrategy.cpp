@@ -118,8 +118,7 @@ struct AMCPProtocolStrategy::impl
             return;
         }
 
-        CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message
-                                       << L"\\r\\n";
+        CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
 
         command_interpreter_result result;
         if (interpret_command_string(tokens, result, client)) {

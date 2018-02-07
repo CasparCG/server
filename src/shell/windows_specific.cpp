@@ -49,7 +49,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
                           << L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
                           << L"Continuing execution. \n#######################";
 
-        CASPAR_LOG_CALL_STACK();
+        CASPAR_LOG_CURRENT_CALL_STACK();
     } catch (...) {
     }
 

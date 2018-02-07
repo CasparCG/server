@@ -280,12 +280,12 @@ class cef_task : public CefTask
 
     void Execute() override
     {
-        CASPAR_LOG_CALL(trace) << "[cef_task] executing task";
+        CASPAR_LOG(trace) << "[cef_task] executing task";
 
         try {
             function_();
             promise_.set_value();
-            CASPAR_LOG_CALL(trace) << "[cef_task] task succeeded";
+            CASPAR_LOG(trace) << "[cef_task] task succeeded";
         } catch (...) {
             promise_.set_exception(std::current_exception());
             CASPAR_LOG(warning) << "[cef_task] task failed";
