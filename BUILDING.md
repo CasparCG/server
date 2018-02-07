@@ -21,9 +21,9 @@ Development using Visual Studio
 
 3. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server`
 
-4. `cmake -G "Visual Studio 15 2017" -A x64 ./server/src`
+4. `cmake -G "Visual Studio 15 2017" -A x64 ./src`
 
-5. Open `./server/src/CasparCG Server.sln`
+5. Open `./src/CasparCG Server.sln`
 
 6. Build Solution
 
