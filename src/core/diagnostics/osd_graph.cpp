@@ -200,7 +200,7 @@ class context : public drawable
             calculate_view_ = false;
         }
 
-        CASPAR_LOG_CALL(trace) << "osd_graph::tick()";
+        CASPAR_LOG(trace) << "osd_graph::tick()";
         window_->draw(*this);
 
         static const auto THRESHOLD          = 1;

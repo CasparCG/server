@@ -27,6 +27,7 @@
 #include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/noncopyable.hpp>
 
 #include <functional>
 #include <future>

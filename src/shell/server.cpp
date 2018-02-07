@@ -50,7 +50,6 @@
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/clk/CLKProtocolStrategy.h>
-#include <protocol/log/tcp_logger_protocol_strategy.h>
 #include <protocol/osc/client.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
@@ -195,8 +194,6 @@ struct server::impl : boost::noncopyable
                 try {
                     if (name != L"<xmlcomment>")
                         channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage(), channels_));
-                } catch (user_error&) {
-                    CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -283,8 +280,6 @@ struct server::impl : boost::noncopyable
         else if (boost::iequals(name, L"CLOCK"))
             return spl::make_shared<to_unicode_adapter_factory>(
                 "ISO-8859-1", spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
-        else if (boost::iequals(name, L"LOG"))
-            return spl::make_shared<protocol::log::tcp_logger_protocol_strategy_factory>();
 
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
     }
