@@ -597,8 +597,7 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(mutex_);
             start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-
-            // TODO (fix) Flush.
+            frame_flush_ = true;
         }
         cond_.notify_all();
     }
@@ -614,10 +613,8 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(mutex_);
             duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-
-            // TODO (fix) Flush.
-
             input_.paused(false);
+            frame_flush_ = true;
         }
         cond_.notify_all();
     }
