@@ -67,6 +67,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     GLuint fbo_;
 
+    std::wstring version_;
+
     io_context                          service_;
     decltype(make_work_guard(service_)) work_;
     std::thread                         thread_;
@@ -87,6 +89,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 << msg_info("Your graphics card does not meet the minimum hardware requirements "
                     "since it does not support OpenGL 4.0 or higher."));
         }
+
+        version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
+                   u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
@@ -156,15 +161,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version()
     {
-        try {
-            return dispatch_sync([] {
-                return u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
-                       u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
-            });
-        } catch (...) {
-            return L"Not found";
-            ;
-        }
+        return version_;
     }
 
     std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
