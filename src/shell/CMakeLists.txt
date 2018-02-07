@@ -39,6 +39,15 @@ include_directories(${TBB_INCLUDE_PATH})
 
 source_group(sources ./*)
 
+target_link_libraries(casparcg
+		accelerator
+		common
+		core
+		protocol
+
+		"${CASPARCG_MODULE_PROJECTS}"
+)
+
 if (MSVC)
 	target_link_libraries(casparcg
 		#jpeg.lib
@@ -71,6 +80,7 @@ else ()
 		${Boost_LIBRARIES}
 		${TBB_LIBRARIES}
 		${TBB_MALLOC_LIBRARIES}
+		${TBB_MALLOC_PROXY_LIBRARIES}
 		${SFML_LIBRARIES}
 		${GLEW_LIBRARIES}
 		${OPENGL_gl_LIBRARY}
@@ -78,62 +88,14 @@ else ()
 		${JPEG_LIBRARIES}
 		${SNDFILE_LIBRARIES}
 		${FREETYPE_LIBRARIES}
+		${FFMPEG_LIBRARIES}
 		dl
 		icui18n
 		icuuc
 		z
 		pthread
-
-		-Wl,--start-group
-		avformat.so
-		avcodec.so
-		avutil.so
-		avfilter.so
-		avdevice.so
-		swscale.so
-		swresample.so
-		postproc.so
-
-		ass
-		bluray
-		crypto
-		expat
-		fontconfig
-		fribidi
-		gmp
-		gnutls
-		gsm
-		hogweed
-		modplug
-		mp3lame
-		nettle
-		ogg
-		opencore-amrnb
-		opencore-amrwb
-		opus
-		rtmp
-		ssl
-		tasn1
-		theoradec
-		theoraenc
-		vorbis
-		vorbisenc
-		vpx
-		x264
-		xvidcore
-		z
-		-Wl,--end-group
 	)
 endif ()
-
-target_link_libraries(casparcg
-		accelerator
-		common
-		core
-		protocol
-
-		"${CASPARCG_MODULE_PROJECTS}"
-)
 
 add_custom_target(casparcg_copy_dependencies ALL)
 
