@@ -12,9 +12,11 @@ See [README](README?raw=true) and [CHANGELOG](CHANGELOG?raw=true) for more infor
 Development
 -----------
 
-You can find the latest unstable CasparCG Server development builds on [http://builds.casparcg.com/CasparCG Server/2.1.0/](http://builds.casparcg.com/CasparCG%20Server/2.1.0/).
+```bash
+git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server
+```
 
-See [BUILDING](BUILDING?raw=true) for instructions on how to build the CasparCG Server from source manually.
+See [BUILDING](BUILDING.md) for instructions on how to build the CasparCG Server from source manually.
 
 **Join our development IRC channel on the Freenode network.**
 
@@ -24,7 +26,7 @@ License
 -------
 
 CasparCG Server is distributed under the GNU General Public License GPLv3 or
-higher, see [LICENSE](LICENSE?raw=true) for details.
+higher, see [LICENSE](LICENSE.md) for details.
 
 More information is available at http://casparcg.com/
 
@@ -51,44 +53,14 @@ COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX
 SYSTEM REQUIREMENTS FOR WINDOWS
 -------------------------------
 
-- Windows 7 (64-bit)
-  CasparCG Server has also been used successfully on Windows 8 (64-bit).
-  NOT SUPPORTED: 32-bit Windows versions and Windows 2003 Server.
-
-- Microsoft Visual C++ 2015 Redistributable Package must be installed.
-  See link in the 'INSTALLATION ON WINDOWS' section below.
-
-
 SYSTEM REQUIREMENTS FOR LINUX
 -----------------------------
-
-- Ubuntu Desktop 14.04.3 LTS 64-bit.
-  Other distributions might be ABI compatible and supported but not tested.
-
-- An Nvidia graphics card.
-  Other manufacturers might also work but are untested.
-
 
 INSTALLATION ON WINDOWS
 -----------------------
 
-1. Check that your system meets the requirements above.
-
-2. Unzip and place the "CasparCG Server" folder anywhere you like.
-
-3. Install "Microsoft Visual C++ Redistributable for Visual Studio 2015" from
-   https://www.microsoft.com/en-us/download/details.aspx?id=48145
-
-
 INSTALLATION ON LINUX
 ---------------------
-
-1. Check that your system meets the requirements above.
-
-2. Unpack and place the "CasparCG Server" folder anywhere you like.
-
-3. If using an Nvidia graphics card enable the use of "NVIDIA binary driver"
-   under "Software & Updates -- Additional Drivers".
    
 RESOLVING COMMON ISSUES ON LINUX
 --------------------------------
