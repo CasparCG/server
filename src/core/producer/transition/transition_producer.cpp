@@ -65,7 +65,7 @@ class transition_producer : public frame_producer_base
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { source_producer_ = producer; }
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return current_frame_ >= info_.duration
+        return source_producer_ == core::frame_producer::empty()
             ? dest_producer_
             : core::frame_producer::empty();
     }
