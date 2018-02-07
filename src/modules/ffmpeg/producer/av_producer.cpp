@@ -428,9 +428,10 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    // End of file.
-                    if ((!video_filter_.frame && !audio_filter_.frame) ||
-                        (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_)) {
+                    const auto eof = (!video_filter_.frame && !audio_filter_.frame) ||
+                                     (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
+
+                    if (eof) {
                         if (loop_) {
                             seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
                         } else {
@@ -443,6 +444,7 @@ struct AVProducer::Impl
 
                     if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
                         seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
+                        continue;
                     }
 
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
