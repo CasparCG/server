@@ -70,9 +70,9 @@ struct Frame
     int64_t                  duration = 0;
 };
 
-// TODO (fix) ts discontinuities
-// TODO (feat) filter preset
-// TODO (feat) forward options
+// TODO (fix) Handle ts discontinuities.
+// TODO (feat) Filter presets.
+// TODO (feat) Forward options.
 // TODO (fix) Interlaced looping.
 
 struct Filter
