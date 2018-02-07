@@ -33,11 +33,8 @@ Linux
 Building inside Docker
 ----------------------
 
-1. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server`
-2. build-scripts/ubuntu-17.10/build-docker-image
-3. build-scripts/ubuntu-17.10/launch-interactive
-4. cmake /source
-5. make -j8 (or however many cores you want to use)
-6. /source/build-scripts/ubuntu-17.10/package
+1. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server` casparcg-server-2.2.0
+2. `cd casparcg-server-2.2.0`
+3. `tools/linux/build-in-docker`
 
-If all goes to plan, a package has been created in /build/products which should be accessible outside of the Docker container
+If all goes to plan, a docker image has been created containing CasparCG Server which can be run inside of a container.
