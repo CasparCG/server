@@ -19,11 +19,13 @@ Development using Visual Studio
 
 2. Install CMake (http://www.cmake.org/download/).
 
-3. cmake -G "Visual Studio 14 2015" -A x64 ./src
+3. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server`
 
-4. Open "CasparCG Server.sln"
+4. `cmake -G "Visual Studio 14 2015" -A x64 ./src`
 
-5. Build Solution
+5. Open "CasparCG Server.sln" under "./src"
+
+6. Build Solution
 
 Linux
 =====
@@ -31,7 +33,7 @@ Linux
 Building inside Docker
 ----------------------
 
-1. Checkout project
+1. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server`
 2. build-scripts/ubuntu-17.10/build-docker-image
 3. build-scripts/ubuntu-17.10/launch-interactive
 4. cmake /source
