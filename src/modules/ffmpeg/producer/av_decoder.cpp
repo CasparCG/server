@@ -101,32 +101,31 @@ Decoder::Decoder(AVStream* stream)
                             input_.pop();
                         }
                     }
-                }
-
-                while (true) {
-                    auto frame = alloc_frame();
-                    auto ret   = avcodec_receive_frame(ctx_.get(), frame.get());
-
-                    if (ret == AVERROR(EAGAIN)) {
-                        break;
-                    } else if (ret == AVERROR_EOF) {
-                        avcodec_flush_buffers(ctx_.get());
-                        frame->pts = next_pts_;
-                    } else {
-                        FF_RET(ret, "avcodec_receive_frame");
-
-                        // TODO (fix) is this always best?
-                        frame->pts = frame->best_effort_timestamp;
-                        // TODO (fix) is this always best?
-                        next_pts_ = frame->pts + frame->pkt_duration;
-                    }
-
-                    {
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        output_.push(std::move(frame));
-                    }
                     cond_.notify_all();
                 }
+
+                auto frame = alloc_frame();
+                auto ret   = avcodec_receive_frame(ctx_.get(), frame.get());
+
+                if (ret == AVERROR(EAGAIN)) {
+                    continue;
+                } else if (ret == AVERROR_EOF) {
+                    avcodec_flush_buffers(ctx_.get());
+                    frame->pts = next_pts_;
+                } else {
+                    FF_RET(ret, "avcodec_receive_frame");
+
+                    // TODO (fix) is this always best?
+                    frame->pts = frame->best_effort_timestamp;
+                    // TODO (fix) is this always best?
+                    next_pts_ = frame->pts + frame->pkt_duration;
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    output_.push(std::move(frame));
+                }
+                cond_.notify_all();
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
