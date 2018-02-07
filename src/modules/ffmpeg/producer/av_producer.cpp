@@ -428,18 +428,20 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    const auto eof = (!video_filter_.frame && !audio_filter_.frame) ||
-                                     (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
+                    {
+                        const auto eof = (!video_filter_.frame && !audio_filter_.frame) ||
+                                         (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
 
-                    if (eof) {
-                        if (loop_) {
-                            seek_internal(start_);
-                        } else {
-                            input_.paused(true);
-                            // TODO (perf) Avoid polling.
-                            std::this_thread::sleep_for(10ms);
+                        if (eof) {
+                            if (loop_) {
+                                seek_internal(start_);
+                            } else {
+                                input_.paused(true);
+                                // TODO (perf) Avoid polling.
+                                std::this_thread::sleep_for(10ms);
+                            }
+                            continue;
                         }
-                        continue;
                     }
 
                     if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
