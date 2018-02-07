@@ -26,3 +26,4 @@ FROM casparcg/base:1.0.0
 FROM ubuntu:artful
 	COPY --from=build-casparcg /staging /opt/casparcg
 	WORKDIR /opt/casparcg
+
