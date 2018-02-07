@@ -146,7 +146,7 @@ link_directories("${PACKAGES_FOLDER}/openal/lib/win32")
 casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
 
 # LIBERATION_FONTS
-set(LIBERATION_FONTS_BIN_PATH "${PACKAGES_FOLDER}/liberation-fonts")
+set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
 # CEF
