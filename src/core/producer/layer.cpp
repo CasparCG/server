@@ -122,7 +122,7 @@ struct layer::impl
             auto frame = foreground_->receive();
 
             *monitor_subject_
-                << monitor::message("/profiler/time") % produce_timer.elapste() % (1.0 / format_desc.fps)
+                << monitor::message("/profiler/time") % produce_timer.elapsed() % (1.0 / format_desc.fps)
                 << monitor::message("/paused") % is_paused_;
 
             if (!frame) {

@@ -67,7 +67,7 @@ class transition_producer : public frame_producer_base
     {
         return current_frame_ >= info_.duration
             ? dest_producer_
-            : core::frame_producer::empty()
+            : core::frame_producer::empty();
     }
 
     draw_frame receive_impl() override

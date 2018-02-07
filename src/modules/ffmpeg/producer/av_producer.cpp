@@ -21,8 +21,6 @@
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
 
-#include <tbb/concurrent_queue.h>
-
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -46,16 +44,16 @@ extern "C"
 
 #include <algorithm>
 #include <atomic>
-#include <cinttypes>
 #include <condition_variable>
 #include <deque>
 #include <exception>
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <set>
+#include <iomanip>
 #include <string>
 #include <thread>
+#include <sstream>
 
 namespace caspar { namespace ffmpeg {
 
