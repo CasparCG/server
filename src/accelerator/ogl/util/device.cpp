@@ -80,23 +80,30 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
-        dispatch_sync([=] {
-            device_.reset(new sf::Context());
-            device_->setActive(true);
+        try {
+            dispatch_sync([=]
+            {
+                device_.reset(new sf::Context());
+                device_->setActive(true);
 
-            if (glewInit() != GLEW_OK) {
-                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-            }
+                if (glewInit() != GLEW_OK) {
+                    CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+                }
 
-            if (!GLEW_VERSION_4_5) {
-                CASPAR_THROW_EXCEPTION(not_supported()
-                                       << msg_info("Your graphics card does not meet the minimum hardware requirements "
-                                                   "since it does not support OpenGL 4.0 or higher."));
-            }
+                if (!GLEW_VERSION_4_5) {
+                    CASPAR_THROW_EXCEPTION(not_supported()
+                        << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                            "since it does not support OpenGL 4.0 or higher."));
+                }
 
-            glCreateFramebuffers(1, &fbo_);
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-        });
+                glCreateFramebuffers(1, &fbo_);
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+            });
+        } catch (...) {
+            work_.reset();
+            thread_.join();
+            throw;
+        }
 
         CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
     }
