@@ -38,17 +38,7 @@ in the forum at http://casparcg.com/forum/
 COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX
 ------------------------------------------------
 
-- Intel processor capable of using SSSE3 instructions.
-  Please refer to
-  http://en.wikipedia.org/wiki/SSSE3 for a complete list.
-  While AMD processors might work, CasparCG Server has only been tested on Intel
-  processors.
-
-- A graphics card (GPU) capable of OpenGL 3.0 is required.
-  We strongly recommend that you use a separate graphics card, and avoid
-  using the built-in GPU that exists in many CPUs. Your playback performance
-  might suffer if using a built-in GPU.
-
+- A graphics card (GPU) capable of OpenGL 4.5 is required.
 
 SYSTEM REQUIREMENTS FOR WINDOWS
 -------------------------------
