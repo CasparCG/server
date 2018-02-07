@@ -55,7 +55,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     typedef tbb::concurrent_bounded_queue<std::shared_ptr<texture>> texture_queue_t;
     typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>  buffer_queue_t;
 
-    std::unique_ptr<sf::Context> device_;
+    sf::Context device_;
 
     std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>  host_pools_;
@@ -73,37 +73,32 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     impl()
         : work_(make_work_guard(service_))
-        , thread_([&] {
-            set_thread_name(L"OpenGL Device");
-            service_.run();
-        })
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
-        try {
-            dispatch_sync([=]
-            {
-                device_.reset(new sf::Context());
-                device_->setActive(true);
+        device_.setActive(true);
 
-                if (glewInit() != GLEW_OK) {
-                    CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-                }
-
-                if (!GLEW_VERSION_4_5) {
-                    CASPAR_THROW_EXCEPTION(not_supported()
-                        << msg_info("Your graphics card does not meet the minimum hardware requirements "
-                            "since it does not support OpenGL 4.0 or higher."));
-                }
-
-                glCreateFramebuffers(1, &fbo_);
-                glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-            });
-        } catch (...) {
-            work_.reset();
-            thread_.join();
-            throw;
+        if (glewInit() != GLEW_OK) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
+
+        if (!GLEW_VERSION_4_5) {
+            CASPAR_THROW_EXCEPTION(not_supported()
+                << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                    "since it does not support OpenGL 4.0 or higher."));
+        }
+
+        GL(glCreateFramebuffers(1, &fbo_));
+        GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+
+        device_.setActive(false);
+
+        thread_ = std::thread([&]
+        {
+            device_.setActive(true);
+            set_thread_name(L"OpenGL Device");
+            service_.run();
+        });
 
         CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
     }
@@ -120,12 +115,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
             sync_queue_.clear();
 
             if (sync_fence_) {
-                glDeleteSync(sync_fence_);
+                GL(glDeleteSync(sync_fence_));
             }
 
-            glDeleteFramebuffers(1, &fbo_);
-
-            device_.reset();
+            GL(glDeleteFramebuffers(1, &fbo_));
         });
         work_.reset();
         thread_.join();
