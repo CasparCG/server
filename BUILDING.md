@@ -38,3 +38,16 @@ Building inside Docker
 3. `tools/linux/build-in-docker`
 
 If all goes to plan, a docker image has been created containing CasparCG Server which can be run inside of a container.
+
+Development
+-----------
+
+Prerequisites
+
+Build boost and ffmpeg as per the docker images inside of `tools/linux` they should be saved in `/opt/boost` and `/opt/ffmeg`
+1. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server` casparcg-server-2.2.0
+2. `mkdir casparcg-server-2.2.0-build && cd casparcg-server-2.2.0-build`
+3. `cmake ../casparcg-server-2.2.0`
+4. `make -j8`
+
+If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
