@@ -21,7 +21,7 @@ FROM casparcg/base:1.0.0
 		cp shell/casparcg /staging/bin/casparcg && \
 		cp /source/shell/casparcg.config /staging/casparcg.config && \
 		cp /source/shell/run.sh /staging/run.sh && \
-		cp /source/shell/LiberationMono-Regular.ttf /staging/LiberationMono-Regular.ttf
+		cp /source/shell/liberation-fonts/LiberationMono-Regular.ttf /staging/LiberationMono-Regular.ttf
 
 FROM ubuntu:artful
 	COPY --from=build-casparcg /staging /opt/casparcg
