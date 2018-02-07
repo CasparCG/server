@@ -7,3 +7,5 @@
 .vscode
 .vs
 CMakeFiles
+src/version.h
+src/shell/included_modules.h
