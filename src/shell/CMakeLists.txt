@@ -39,6 +39,15 @@ include_directories(${TBB_INCLUDE_PATH})
 
 source_group(sources ./*)
 
+target_link_libraries(casparcg
+		accelerator
+		common
+		core
+		protocol
+
+		"${CASPARCG_MODULE_PROJECTS}"
+)
+
 if (MSVC)
 	target_link_libraries(casparcg
 		#jpeg.lib
@@ -71,6 +80,7 @@ else ()
 		${Boost_LIBRARIES}
 		${TBB_LIBRARIES}
 		${TBB_MALLOC_LIBRARIES}
+		${TBB_MALLOC_PROXY_LIBRARIES}
 		${SFML_LIBRARIES}
 		${GLEW_LIBRARIES}
 		${OPENGL_gl_LIBRARY}
@@ -78,62 +88,14 @@ else ()
 		${JPEG_LIBRARIES}
 		${SNDFILE_LIBRARIES}
 		${FREETYPE_LIBRARIES}
+		${FFMPEG_LIBRARIES}
 		dl
 		icui18n
 		icuuc
 		z
 		pthread
-
-		-Wl,--start-group
-		avformat.so
-		avcodec.so
-		avutil.so
-		avfilter.so
-		avdevice.so
-		swscale.so
-		swresample.so
-		postproc.so
-
-		ass
-		bluray
-		crypto
-		expat
-		fontconfig
-		fribidi
-		gmp
-		gnutls
-		gsm
-		hogweed
-		modplug
-		mp3lame
-		nettle
-		ogg
-		opencore-amrnb
-		opencore-amrwb
-		opus
-		rtmp
-		ssl
-		tasn1
-		theoradec
-		theoraenc
-		vorbis
-		vorbisenc
-		vpx
-		x264
-		xvidcore
-		z
-		-Wl,--end-group
 	)
 endif ()
-
-target_link_libraries(casparcg
-		accelerator
-		common
-		core
-		protocol
-
-		"${CASPARCG_MODULE_PROJECTS}"
-)
 
 add_custom_target(casparcg_copy_dependencies ALL)
 
@@ -150,3 +112,8 @@ foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES})
 		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\")
 	endif()
 endforeach(FILE_TO_COPY)
+
+ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)
+ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/casparcg.config ${CMAKE_BINARY_DIR}/staging/casparcg.config)
+ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/liberation-fonts/LiberationMono-Regular.ttf ${CMAKE_BINARY_DIR}/staging/LiberationMono-Regular.ttf)
+ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/run.sh ${CMAKE_BINARY_DIR}/staging/run.sh)
