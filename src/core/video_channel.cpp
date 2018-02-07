@@ -69,8 +69,8 @@ struct video_channel::impl final
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
-    std::atomic<bool>            abort_request_{ false };
-    std::thread                  thread_;
+    std::atomic<bool> abort_request_{false};
+    std::thread       thread_;
 
   public:
     impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)
@@ -95,8 +95,7 @@ struct video_channel::impl final
 
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
-        thread_ = std::thread([=]
-        {
+        thread_ = std::thread([=] {
             while (!abort_request_) {
                 try {
                     caspar::timer tick_timer;
@@ -105,12 +104,12 @@ struct video_channel::impl final
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto stage_frames = stage_(format_desc);
+                    auto          stage_frames = stage_(format_desc);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Mix
                     caspar::timer mix_timer;
-                    auto mixed_frame = mixer_(std::move(stage_frames), format_desc);
+                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Consume
@@ -173,7 +172,7 @@ void                           core::video_channel::video_format_desc(const core
 {
     impl_->video_format_desc(format_desc);
 }
-int                   video_channel::index() const { return impl_->index(); }
-monitor::subject&     video_channel::monitor_output() { return *impl_->monitor_subject_; }
+int               video_channel::index() const { return impl_->index(); }
+monitor::subject& video_channel::monitor_output() { return *impl_->monitor_subject_; }
 
 }} // namespace caspar::core

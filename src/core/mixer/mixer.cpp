@@ -81,14 +81,15 @@ struct mixer::impl : boost::noncopyable
         auto image = (*image_mixer_)(format_desc);
         auto audio = audio_mixer_(format_desc);
 
-        buffer_.push(std::async(std::launch::deferred, [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable
-        {
-            auto desc = pixel_format_desc(pixel_format::bgra);
-            desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-            std::vector<array<const uint8_t>> image_data;
-            image_data.emplace_back(std::move(image.get()));
-            return const_frame(tag, std::move(image_data), std::move(audio), desc);
-        }));
+        buffer_.push(std::async(
+            std::launch::deferred,
+            [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable {
+                auto desc = pixel_format_desc(pixel_format::bgra);
+                desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+                std::vector<array<const uint8_t>> image_data;
+                image_data.emplace_back(std::move(image.get()));
+                return const_frame(tag, std::move(image_data), std::move(audio), desc);
+            }));
 
         if (buffer_.size() < 3) {
             return const_frame{};
@@ -99,15 +100,9 @@ struct mixer::impl : boost::noncopyable
         return frame;
     }
 
-    void set_master_volume(float volume)
-    {
-        audio_mixer_.set_master_volume(volume);
-    }
+    void set_master_volume(float volume) { audio_mixer_.set_master_volume(volume); }
 
-    float get_master_volume()
-    {
-        return audio_mixer_.get_master_volume();
-    }
+    float get_master_volume() { return audio_mixer_.get_master_volume(); }
 };
 
 mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)

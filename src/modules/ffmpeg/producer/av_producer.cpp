@@ -47,13 +47,13 @@ extern "C"
 #include <condition_variable>
 #include <deque>
 #include <exception>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <iomanip>
+#include <sstream>
 #include <string>
 #include <thread>
-#include <sstream>
 
 namespace caspar { namespace ffmpeg {
 
@@ -350,7 +350,7 @@ struct AVProducer::Impl
     mutable std::mutex      mutex_;
     std::condition_variable cond_;
 
-    int64_t          frame_time_ = 0;
+    int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
@@ -359,7 +359,7 @@ struct AVProducer::Impl
     std::deque<Frame>       buffer_;
     int                     buffer_capacity_ = 2;
 
-    std::atomic<bool> abort_request_{ false };
+    std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
@@ -452,19 +452,19 @@ struct AVProducer::Impl
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
                     if (video_filter_.frame) {
-                        frame.video = std::move(video_filter_.frame);
-                        const auto tb = av_buffersink_get_time_base(video_filter_.sink);
-                        const auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
-                        frame.pts = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
+                        frame.video    = std::move(video_filter_.frame);
+                        const auto tb  = av_buffersink_get_time_base(video_filter_.sink);
+                        const auto fr  = av_buffersink_get_frame_rate(video_filter_.sink);
+                        frame.pts      = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
                         frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
                     }
 
                     if (audio_filter_.frame) {
-                        frame.audio = std::move(audio_filter_.frame);
-                        const auto tb = av_buffersink_get_time_base(audio_filter_.sink);
-                        const auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
-                        frame.pts = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
+                        frame.audio    = std::move(audio_filter_.frame);
+                        const auto tb  = av_buffersink_get_time_base(audio_filter_.sink);
+                        const auto sr  = av_buffersink_get_sample_rate(audio_filter_.sink);
+                        frame.pts      = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
+                        frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
                     frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
@@ -627,14 +627,13 @@ struct AVProducer::Impl
         return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
     }
 
- private:
-
+  private:
     std::string print() const
     {
         std::ostringstream str;
         str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|"
-            << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
-            << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den }) << "]";
+            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
+            << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
         return str.str();
     }
 
@@ -659,8 +658,7 @@ struct AVProducer::Impl
     {
         auto result = false;
 
-        input_([&](std::shared_ptr<AVPacket>& packet)
-        {
+        input_([&](std::shared_ptr<AVPacket>& packet) {
             if (!packet) {
                 for (auto& p : decoders_) {
                     // NOTE: Should never fail.
@@ -698,8 +696,7 @@ struct AVProducer::Impl
                 nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
-            it->second([&](std::shared_ptr<AVFrame>& frame)
-            {
+            it->second([&](std::shared_ptr<AVFrame>& frame) {
                 if (nb_requests == 0) {
                     return false;
                 }
@@ -737,15 +734,15 @@ struct AVProducer::Impl
 
         while (true) {
             auto frame = alloc_frame();
-            auto ret = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                : av_buffersink_get_frame(filter.sink, frame.get());
+            auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+                                       : av_buffersink_get_frame(filter.sink, frame.get());
 
             if (ret == AVERROR(EAGAIN)) {
                 if (!schedule_filters()) {
                     return false;
                 }
             } else if (ret == AVERROR_EOF) {
-                filter.eof = true;
+                filter.eof   = true;
                 filter.frame = nullptr;
                 return true;
             } else {

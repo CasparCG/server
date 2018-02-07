@@ -1,10 +1,9 @@
 #pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
-namespace caspar {
-namespace http {
+namespace caspar { namespace http {
 
 struct HTTPResponse
 {
@@ -18,5 +17,4 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
 std::string url_encode(const std::string& str);
 
-}
-}
+}} // namespace caspar::http

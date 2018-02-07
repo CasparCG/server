@@ -42,7 +42,7 @@ class Decoder
     std::size_t                           output_capacity_ = 1;
     std::queue<std::shared_ptr<AVFrame>>  output_;
 
-    std::atomic<bool> abort_request_{ false };
+    std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 };
 

@@ -49,8 +49,8 @@
 #include <string>
 #include <vector>
 
-#include <boost/filesystem.hpp>
 #include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
 
 #include <common/memory.h>

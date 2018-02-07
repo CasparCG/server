@@ -42,8 +42,8 @@ struct command_context
     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     std::function<void(bool)>                            shutdown_server_now;
     std::vector<std::wstring>                            parameters;
-    std::string proxy_host;
-    std::string proxy_port;
+    std::string                                          proxy_host;
+    std::string                                          proxy_port;
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 

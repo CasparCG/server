@@ -59,17 +59,14 @@ class frame_producer : public interaction_sink
     virtual void on_interaction(const interaction_event::ptr& event) override {}
     virtual bool collides(double x, double y) const override { return false; }
 
-    virtual void         paused(bool value)   = 0;
-    virtual std::wstring print() const        = 0;
-    virtual std::wstring name() const         = 0;
-    virtual uint32_t     nb_frames() const    = 0;
-    virtual uint32_t     frame_number() const = 0;
-    virtual draw_frame   last_frame()         = 0;
-    virtual void         leading_producer(const spl::shared_ptr<frame_producer>&) {}
-    virtual spl::shared_ptr<frame_producer> following_producer() const
-    {
-        return core::frame_producer::empty();
-    }
+    virtual void                            paused(bool value)   = 0;
+    virtual std::wstring                    print() const        = 0;
+    virtual std::wstring                    name() const         = 0;
+    virtual uint32_t                        nb_frames() const    = 0;
+    virtual uint32_t                        frame_number() const = 0;
+    virtual draw_frame                      last_frame()         = 0;
+    virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
+    virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
 };
 
 class frame_producer_base : public frame_producer
