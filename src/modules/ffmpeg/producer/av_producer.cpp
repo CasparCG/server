@@ -588,7 +588,12 @@ struct AVProducer::Impl
         cond_.notify_all();
     }
 
-    bool loop() const { return loop_; }
+    bool loop() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return loop_;
+    }
 
     void start(int64_t start)
     {
@@ -604,6 +609,8 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> start() const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
     }
 
@@ -621,6 +628,8 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> duration() const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
         auto duration = duration_;
 
