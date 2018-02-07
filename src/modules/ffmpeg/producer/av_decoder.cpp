@@ -66,25 +66,42 @@ Decoder::Decoder(AVStream* stream)
             set_thread_name(L"[ffmpeg::av_producer::Stream]");
 
             while (true) {
-                std::shared_ptr<AVPacket> packet;
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
 
                     cond_.wait(lock, [&] {
                         return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
                     });
+                }
 
-                    if (abort_request_) {
-                        break;
-                    }
-
-                    packet = std::move(input_.front());
-                    input_.pop();
+                if (abort_request_) {
+                    break;
                 }
 
                 std::lock_guard<std::mutex> decoder_lock(ctx_mutex_);
 
-                FF(avcodec_send_packet(ctx_.get(), packet.get()));
+                {
+                    std::shared_ptr<AVPacket> packet;
+
+                    while (!input_.empty()) {
+                        {
+                            std::unique_lock<std::mutex> lock(mutex_);
+                            packet = input_.front();
+                        }
+
+                        auto ret = avcodec_send_packet(ctx_.get(), packet.get());
+                        if (ret == AVERROR(EAGAIN)) {
+                            break;
+                        } else {
+                            FF_RET(ret, "avcodec_send_packet");
+                        }
+
+                        {
+                            std::unique_lock<std::mutex> lock(mutex_);
+                            input_.pop();
+                        }
+                    }
+                }
 
                 while (true) {
                     auto frame = alloc_frame();
