@@ -16,4 +16,42 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libsfml-dev \
 	libxrandr-dev \
 	libfdk-aac-dev \
-	libjpeg-dev libsndfile1-dev libudev-dev libglu1-mesa-dev libharfbuzz0b libpangoft2-1.0-0 libcairo2 libv4l-0 libraw1394-11 libavc1394-0 libiec61883-0 libxtst6 libnss3 libnspr4 libgconf-2-4 libasound2 libfreeimage-dev libglew-dev libtbb-dev libopenal-dev libglfw3-dev libsfml-dev libopus-dev libgsm1-dev libmodplug-dev libvpx-dev libass-dev libbluray-dev libfribidi-dev libgmp-dev libgnutls28-dev libmp3lame-dev libopencore-amrnb-dev libopencore-amrwb-dev librtmp-dev libtheora-dev libx264-dev libxvidcore-dev libx265-dev
+	libjpeg-dev \
+	libsndfile1-dev \
+	libudev-dev \
+	libglu1-mesa-dev \
+	libharfbuzz0b \
+	libpangoft2-1.0-0 \
+	libcairo2 \
+	libv4l-0 \
+	libraw1394-11 \
+	libavc1394-0 \
+	libiec61883-0 \
+	libxtst6 \
+	libnss3 \
+	libnspr4 \
+	libgconf-2-4 \
+	libasound2 \
+	libfreeimage-dev \
+	libglew-dev \
+	libtbb-dev \
+	libopenal-dev \
+	libglfw3-dev \
+	libsfml-dev \
+	libopus-dev \
+	libgsm1-dev \
+	libmodplug-dev \
+	libvpx-dev \
+	libass-dev \
+	libbluray-dev \
+	libfribidi-dev \
+	libgmp-dev \
+	libgnutls28-dev \
+	libmp3lame-dev \
+	libopencore-amrnb-dev \
+	libopencore-amrwb-dev \
+	librtmp-dev \
+	libtheora-dev \
+	libx264-dev \
+	libxvidcore-dev \
+	libx265-dev
