@@ -445,6 +445,12 @@ struct AVProducer::Impl
                         continue;
                     }
 
+                    if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
+                        reset_filters(start_ + input_.start_time().value_or(0));
+                        input_.seek(start_, true);
+                        input_.paused(false);
+                    }
+
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
                     if (video_filter_.frame) {
