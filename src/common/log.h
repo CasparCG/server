@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <boost/exception/diagnostic_information.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/severity_logger.hpp>
