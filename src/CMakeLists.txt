@@ -11,9 +11,9 @@ SET (CONFIG_VERSION_TAG "Beta 1")
 LIST (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 if (MSVC)
-	INCLUDE (LegacyBuild)
+	INCLUDE (Bootstrap_Windows)
 else ()
-	INCLUDE (Bootstrap)
+	INCLUDE (Bootstrap_Linux)
 
 	# Output build settings
 	IF (SUPPORTED_PLATFORM)
