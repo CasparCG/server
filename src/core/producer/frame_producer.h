@@ -63,7 +63,11 @@ class frame_producer : public interaction_sink
     virtual uint32_t     nb_frames() const    = 0;
     virtual uint32_t     frame_number() const = 0;
     virtual draw_frame   last_frame()         = 0;
-    virtual void         leading_producer(const spl::shared_ptr<frame_producer>&) {}
+    virtual void         leading_producer(const spl::shared_ptr<frame_producer>&) {}    
+    virtual spl::shared_ptr<frame_producer> following_producer() const 
+    {
+        return core::frame_producer::empty()
+    }
 };
 
 class frame_producer_base : public frame_producer

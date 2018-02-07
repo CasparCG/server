@@ -113,13 +113,17 @@ struct layer::impl
     draw_frame receive(const video_format_desc& format_desc)
     {
         try {
-            *monitor_subject_ << monitor::message("/paused") % is_paused_;
-
             caspar::timer produce_timer;
-            auto          frame        = foreground_->receive();
-            auto          produce_time = produce_timer.elapsed();
 
-            *monitor_subject_ << monitor::message("/profiler/time") % produce_time % (1.0 / format_desc.fps);
+            if (foreground_->following_producer() != core::frame_producer::empty()) {
+                foreground_ = foreground_->following_producer();
+            }
+
+            auto frame = foreground_->receive();
+
+            *monitor_subject_
+                << monitor::message("/profiler/time") % produce_timer.elapste() % (1.0 / format_desc.fps)
+                << monitor::message("/paused") % is_paused_;
 
             if (!frame) {
                 return foreground_->last_frame();
