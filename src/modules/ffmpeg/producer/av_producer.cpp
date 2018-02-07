@@ -432,11 +432,7 @@ struct AVProducer::Impl
                     if ((!video_filter_.frame && !audio_filter_.frame) ||
                         (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_)) {
                         if (loop_) {
-                            // TODO (perf) Seek as soon as possible in order to keep buffering.
-                            auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                            reset_filters(start + input_.start_time().value_or(0));
-                            input_.seek(start, true);
-                            input_.paused(false);
+                            seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
                         } else {
                             input_.paused(true);
                             // TODO (perf) Avoid polling.
@@ -446,9 +442,7 @@ struct AVProducer::Impl
                     }
 
                     if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
-                        reset_filters(start_ + input_.start_time().value_or(0));
-                        input_.seek(start_, true);
-                        input_.paused(false);
+                        seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
                     }
 
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
@@ -554,20 +548,7 @@ struct AVProducer::Impl
                 buffer_.clear();
             }
             buffer_cond_.notify_all();
-
-            frame_flush_ = true;
-
-            time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time().value_or(0);
-
-            // TODO (fix) Dont seek if time is close future.
-            input_.seek(time);
-            input_.paused(false);
-
-            for (auto& p : decoders_) {
-                p.second.flush();
-            }
-
-            reset_filters(time);
+            seek_internal(av_rescale_q(time, format_tb_, TIME_BASE_Q));
         }
 
         cond_.notify_all();
@@ -602,7 +583,6 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(mutex_);
             start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-            frame_flush_ = true;
         }
         cond_.notify_all();
     }
@@ -621,7 +601,6 @@ struct AVProducer::Impl
             std::lock_guard<std::mutex> lock(mutex_);
             duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
             input_.paused(false);
-            frame_flush_ = true;
         }
         cond_.notify_all();
     }
@@ -653,6 +632,20 @@ struct AVProducer::Impl
             << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
             << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den }) << "]";
         return str.str();
+    }
+
+    void seek_internal(int64_t time)
+    {
+        // TODO (fix) Dont seek if time is close future.
+        input_.seek(time + input_.start_time().value_or(0));
+        input_.paused(false);
+        frame_flush_ = true;
+
+        for (auto& p : decoders_) {
+            p.second.flush();
+        }
+
+        reset_filters(time);
     }
 
     bool schedule_inputs()
