@@ -81,9 +81,8 @@ Decoder::Decoder(AVStream* stream)
                 std::lock_guard<std::mutex> decoder_lock(ctx_mutex_);
 
                 {
-                    std::shared_ptr<AVPacket> packet;
-
                     while (!input_.empty()) {
+                        std::shared_ptr<AVPacket> packet;
                         {
                             std::unique_lock<std::mutex> lock(mutex_);
                             packet = input_.front();
@@ -94,9 +93,6 @@ Decoder::Decoder(AVStream* stream)
                             break;
                         } else {
                             FF_RET(ret, "avcodec_send_packet");
-                        }
-
-                        {
                             std::unique_lock<std::mutex> lock(mutex_);
                             input_.pop();
                         }
