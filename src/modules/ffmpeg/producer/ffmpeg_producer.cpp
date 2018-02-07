@@ -98,13 +98,12 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     void send_osc()
     {
-        monitor_subject_
-            << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
-                (producer_.duration() / format_desc_.fps)
-            << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
-                static_cast<int32_t>(producer_.duration())
-            << core::monitor::message("/file/fps") % format_desc_.fps
-            << core::monitor::message("/loop") % producer_.loop();
+        monitor_subject_ << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
+                                (producer_.duration() / format_desc_.fps)
+                         << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
+                                static_cast<int32_t>(producer_.duration())
+                         << core::monitor::message("/file/fps") % format_desc_.fps
+                         << core::monitor::message("/loop") % producer_.loop();
     }
 
     uint32_t nb_frames() const override

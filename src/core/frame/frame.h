@@ -2,9 +2,9 @@
 
 #include <common/array.h>
 
-#include <memory>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace caspar { namespace core {

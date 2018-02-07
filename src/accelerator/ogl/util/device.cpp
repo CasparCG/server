@@ -86,8 +86,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         if (!GLEW_VERSION_4_5) {
             CASPAR_THROW_EXCEPTION(not_supported()
-                << msg_info("Your graphics card does not meet the minimum hardware requirements "
-                    "since it does not support OpenGL 4.0 or higher."));
+                                   << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                                               "since it does not support OpenGL 4.0 or higher."));
         }
 
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
@@ -98,8 +98,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         device_.setActive(false);
 
-        thread_ = std::thread([&]
-        {
+        thread_ = std::thread([&] {
             device_.setActive(true);
             set_thread_name(L"OpenGL Device");
             service_.run();
@@ -159,10 +158,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         return dispatch_async(std::forward<Func>(func)).get();
     }
 
-    std::wstring version()
-    {
-        return version_;
-    }
+    std::wstring version() { return version_; }
 
     std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
     {

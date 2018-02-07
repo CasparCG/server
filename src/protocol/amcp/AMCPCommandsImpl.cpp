@@ -27,9 +27,9 @@
 
 #include "AMCPCommandsImpl.h"
 
+#include "../util/http_request.h"
 #include "AMCPCommandQueue.h"
 #include "amcp_command_repository.h"
-#include "../util/http_request.h"
 
 #include <common/env.h>
 
@@ -1256,7 +1256,8 @@ std::wstring thumbnail_retrieve_command(command_context& ctx)
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
+    auto res = http::request(
+        ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
     return u16(res.body);
 }
 

@@ -10,7 +10,7 @@ namespace caspar {
 template <typename F>
 auto flatten(F&& f)
 {
-    return std::async(std::launch::deferred, [f = std::forward<F>(f)] () mutable { return f.get().get(); });
+    return std::async(std::launch::deferred, [f = std::forward<F>(f)]() mutable { return f.get().get(); });
 }
 
 template <typename F>

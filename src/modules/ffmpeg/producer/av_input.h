@@ -53,10 +53,10 @@ class Input
     std::size_t                           output_capacity_ = 64;
     std::queue<std::shared_ptr<AVPacket>> output_;
 
-    std::atomic<bool> paused_{ false };
-    std::atomic<bool> eof_{ false };
+    std::atomic<bool> paused_{false};
+    std::atomic<bool> eof_{false};
 
-    std::atomic<bool> abort_request_{ false };
+    std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 };
 

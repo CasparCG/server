@@ -120,8 +120,8 @@ void configure(const std::wstring& filename)
         log        = clean_path(paths.get(L"log-path", initial + L"/log/"));
         ftemplate =
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
-        data      = clean_path(paths.get(L"data-path", initial + L"/data/"));
-        font      = clean_path(paths.get(L"font-path", initial + L"/font/"));
+        data = clean_path(paths.get(L"data-path", initial + L"/data/"));
+        font = clean_path(paths.get(L"font-path", initial + L"/font/"));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;

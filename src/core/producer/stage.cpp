@@ -90,7 +90,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 aggregator_.translate_and_send();
 
-                tbb::parallel_for_each(indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
+                tbb::parallel_for_each(
+                    indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();

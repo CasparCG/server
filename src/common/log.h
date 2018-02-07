@@ -21,31 +21,29 @@
 
 #pragma once
 
-#include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <string>
 
 namespace caspar { namespace log {
 
-template<typename T>
+template <typename T>
 inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
     std::locale loc;
-    std::replace_if(str.begin(), str.end(), [&](T c)->bool
-    {
-        return
-            (!std::isprint(c, loc)
-                && c != '\r'
-                && c != '\n')
-            || c > static_cast<T>(127);
-    }, with);
+    std::replace_if(
+        str.begin(),
+        str.end(),
+        [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n') || c > static_cast<T>(127); },
+        with);
 }
 
-template<typename T>
-inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
+template <typename T>
+inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str,
+                                                      T                                                            with)
 {
     replace_nonprintable(str, with);
     return str;
@@ -60,10 +58,11 @@ void add_file_sink(const std::wstring& file);
 void add_cout_sink();
 void set_log_level(const std::wstring& lvl);
 
-#define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-    CASPAR_LOG(error) << boost::current_exception_diagnostic_information(); \
-	}\
-	catch(...){}
+#define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                 \
+    try {                                                                                                              \
+        CASPAR_LOG(error) << boost::current_exception_diagnostic_information();                                        \
+    } catch (...) {                                                                                                    \
+    }
 
 #define CASPAR_LOG_CURRENT_CALL_STACK() // TODO (fix)
 

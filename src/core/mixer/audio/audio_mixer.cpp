@@ -74,7 +74,7 @@ struct audio_mixer::impl : boost::noncopyable
     std::vector<audio_item>             items_;
     std::vector<int>                    audio_cadence_;
     video_format_desc                   format_desc_;
-    std::atomic<float>                  master_volume_{ 1.0f };
+    std::atomic<float>                  master_volume_{1.0f};
     float                               previous_master_volume_ = master_volume_;
     spl::shared_ptr<diagnostics::graph> graph_;
 

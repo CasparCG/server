@@ -69,9 +69,8 @@ Decoder::Decoder(AVStream* stream)
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
 
-                    cond_.wait(lock, [&] {
-                        return (!input_.empty() && output_.size() < output_capacity_) || abort_request_;
-                    });
+                    cond_.wait(
+                        lock, [&] { return (!input_.empty() && output_.size() < output_capacity_) || abort_request_; });
                 }
 
                 if (abort_request_) {
@@ -103,7 +102,7 @@ Decoder::Decoder(AVStream* stream)
                 // TODO (perf) Don't receive all frames only the amount needed for output_capacity_.
                 while (true) {
                     auto frame = alloc_frame();
-                    auto ret = avcodec_receive_frame(ctx_.get(), frame.get());
+                    auto ret   = avcodec_receive_frame(ctx_.get(), frame.get());
 
                     if (ret == AVERROR(EAGAIN)) {
                         break;
