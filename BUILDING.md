@@ -1,4 +1,3 @@
-============================
 Building the CasparCG Server
 ============================
 
@@ -12,9 +11,6 @@ loading CMakeLists.txt files directly.
 
 Windows
 =======
-
-This section is based on a Windows 7 Professional installation. Other versions
-of Windows might also work.
 
 Development using Visual Studio
 -------------------------------
