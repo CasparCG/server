@@ -14,10 +14,9 @@ FROM casparcg/base:1.0.0
 	RUN make -j8
 
 	# Find a better way to copy deps
-	COPY build-scripts/linux/files/copy_deps.sh /build/copy_deps.sh
 
 	RUN mkdir -p /staging/lib && mkdir -p /staging/bin && \
-		./copy_deps.sh shell/casparcg /staging/lib && \
+		/source/shell/copy_deps.sh shell/casparcg /staging/lib && \
 		cp shell/casparcg /staging/bin/casparcg && \
 		cp /source/shell/casparcg.config /staging/casparcg.config && \
 		cp /source/shell/run.sh /staging/run.sh && \
