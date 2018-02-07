@@ -1301,6 +1301,18 @@ std::wstring tls_command(command_context& ctx)
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
 
+std::wstring info_command(command_context& ctx)
+{
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"200 INFO OK\r\n";
+    for (size_t n = 0; n < ctx.channels.size(); ++n) {
+        replyString << n + 1 << L" " << ctx.channels.at(n).channel->video_format_desc().name << L" PLAYING\r\n";
+    }
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
 std::wstring diag_command(command_context& ctx)
 {
     core::diagnostics::osd::show_graphs(true);
@@ -1432,6 +1444,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"BYE", bye_command, 0);
     repo.register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
+    repo.register_command(L"Query Commands", L"INFO", info_command, 0);
 }
 
 }}} // namespace caspar::protocol::amcp
