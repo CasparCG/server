@@ -1,3 +1,6 @@
-.*
-/packages
-/products
+src/packages
+build-scripts
+resources
+.git
+.vscode
+CMakeFiles
