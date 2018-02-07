@@ -433,7 +433,7 @@ struct AVProducer::Impl
 
                     if (eof) {
                         if (loop_) {
-                            seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
+                            seek_internal(start_);
                         } else {
                             input_.paused(true);
                             // TODO (perf) Avoid polling.
@@ -443,7 +443,7 @@ struct AVProducer::Impl
                     }
 
                     if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
-                        seek_internal(start_ != AV_NOPTS_VALUE ? start_ : 0);
+                        seek_internal(start_);
                         continue;
                     }
 
@@ -638,8 +638,11 @@ struct AVProducer::Impl
 
     void seek_internal(int64_t time)
     {
+        time = time != AV_NOPTS_VALUE ? time : 0;
+        time = time + input_.start_time().value_or(0);
+
         // TODO (fix) Dont seek if time is close future.
-        input_.seek(time + input_.start_time().value_or(0));
+        input_.seek(time);
         input_.paused(false);
         frame_flush_ = true;
 
