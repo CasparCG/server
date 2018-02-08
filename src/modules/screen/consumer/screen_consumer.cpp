@@ -306,10 +306,14 @@ struct screen_consumer : boost::noncopyable
 
     void tick()
     {
-        poll();
-
         core::const_frame in_frame;
-        frame_buffer_.pop(in_frame);
+
+        while (!frame_buffer_.try_pop(in_frame)) {
+            // TODO (fix)
+            if (!poll()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+        }
 
         if (!in_frame) {
             return;
@@ -349,6 +353,7 @@ struct screen_consumer : boost::noncopyable
                     frame.fence = 0;
                 }
                 if (!poll()) {
+                    // TODO (fix)
                     std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 }
             }
