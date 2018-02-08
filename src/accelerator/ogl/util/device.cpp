@@ -105,6 +105,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             device_.setActive(true);
             set_thread_name(L"OpenGL Device");
             service_.run();
+            device_.setActive(false);
         });
     }
 
