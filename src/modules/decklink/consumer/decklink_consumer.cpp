@@ -145,7 +145,12 @@ class decklink_frame : public IDeckLinkVideoFrame
         ref_count_ = 0;
     }
 
-    ~decklink_frame() { scalable_aligned_free(data_); }
+    ~decklink_frame()
+    {
+        if (data_) {
+            scalable_aligned_free(data_);
+        }
+    }
 
     // IUnknown
 
