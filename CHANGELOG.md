@@ -5,7 +5,8 @@ General
 -------
 
  * C++14
- * Major refactoring, cleanup and optimization.
+ * Major refactoring, cleanup, optimization 
+   and stability improvements.
  * Removed unmaintained documentation API.
  * Removed unmaintained program options API.
  * Removed unused frame age API.
