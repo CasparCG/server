@@ -44,6 +44,8 @@ extern "C"
 #pragma warning(pop)
 #endif
 
+#include <tbb/parallel_invoke.h>
+
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -425,14 +427,16 @@ struct AVProducer::Impl
                         break;
                     }
 
-                    if (!video_filter_.frame && !filter_frame(video_filter_)) {
-                        // TODO (perf) Avoid polling.
-                        cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
-                        continue;
-                    }
+                    schedule_inputs();
+                    schedule_filters();
 
-                    if (!audio_filter_.frame &&
-                        !filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count)) {
+                    tbb::parallel_invoke([=] {
+                        filter_frame(video_filter_);
+                    }, [&]{
+                        filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count);
+                    });
+
+                    if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         // TODO (perf) Avoid polling.
                         cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
                         continue;
@@ -447,9 +451,7 @@ struct AVProducer::Impl
                                 seek_internal(start_);
                             } else {
                                 // TODO (perf) Avoid polling.
-                                lock.unlock();
-                                std::this_thread::sleep_for(10ms);
-                                lock.lock();
+                                cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
                             }
                             continue;
                         }
@@ -499,7 +501,109 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-  public:
+    void schedule_inputs()
+    {
+        input_([&](std::shared_ptr<AVPacket>& packet)
+        {
+            if (!packet) {
+                for (auto& p : decoders_) {
+                    // NOTE: Should never fail.
+                    p.second.try_push(nullptr);
+                }
+            } else if (sources_.find(packet->stream_index) != sources_.end()) {
+                auto it = decoders_.find(packet->stream_index);
+                if (it != decoders_.end() && !it->second.try_push(packet)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
+    void schedule_filters()
+    {
+        std::vector<int> eof;
+
+        for (auto& p : sources_) {
+            auto it = decoders_.find(p.first);
+            if (it == decoders_.end()) {
+                continue;
+            }
+
+            int nb_requests = 0;
+            for (auto source : p.second) {
+                nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
+            }
+
+            if (nb_requests == 0) {
+                continue;
+            }
+
+            it->second([&](std::shared_ptr<AVFrame>& frame)
+            {
+                if (nb_requests == 0) {
+                    return false;
+                }
+
+                for (auto& source : p.second) {
+                    if (frame && !frame->data[0]) {
+                        FF(av_buffersrc_close(source, frame->pts, 0));
+                    } else {
+                        // TODO (fix) Guard against overflow?
+                        FF(av_buffersrc_write_frame(source, frame.get()));
+                    }
+                }
+
+                // End Of File
+                if (frame && !frame->data[0]) {
+                    eof.push_back(p.first);
+                }
+
+                nb_requests -= 1;
+
+                return true;
+            });
+        }
+
+        for (auto index : eof) {
+            sources_.erase(index);
+        }
+    }
+
+    void filter_frame(Filter& filter, int nb_samples = -1)
+    {
+        if (filter.frame || filter.eof) {
+            return;
+        }
+
+        if (!filter.sink || filter.sources.empty()) {
+            filter.eof = true;
+            filter.frame = nullptr;
+            return;
+        }
+
+        auto frame = alloc_frame();
+
+        while (true) {
+            auto ret = nb_samples >= 0
+                ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+                : av_buffersink_get_frame(filter.sink, frame.get());
+
+            if (ret == AVERROR(EAGAIN)) {
+                return;
+            } else if (ret == AVERROR_EOF) {
+                filter.eof = true;
+                filter.frame = nullptr;
+                return;
+            } else {
+                FF_RET(ret, "av_buffersink_get_frame");
+                filter.frame = frame;
+                return;
+            }
+        }
+    }
+
     core::draw_frame prev_frame()
     {
         caspar::timer frame_timer;
@@ -510,12 +614,14 @@ struct AVProducer::Impl
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
-        std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+        {
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-        if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-            frame_       = core::draw_frame::still(buffer_[0].frame);
-            frame_time_  = buffer_[0].pts + buffer_[0].duration;
-            frame_flush_ = false;
+            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+                frame_ = core::draw_frame::still(buffer_[0].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                frame_flush_ = false;
+            }
         }
 
         return frame_;
@@ -533,7 +639,7 @@ struct AVProducer::Impl
 
         core::draw_frame result;
         {
-            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
 
             if (buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
@@ -554,6 +660,7 @@ struct AVProducer::Impl
             } else {
                 result = frame_;
             }
+
             frame_flush_ = false;
         }
         buffer_cond_.notify_all();
@@ -669,105 +776,6 @@ struct AVProducer::Impl
         }
 
         reset_filters(time);
-    }
-
-    bool schedule_inputs()
-    {
-        auto result = false;
-
-        input_([&](std::shared_ptr<AVPacket>& packet) {
-            if (!packet) {
-                for (auto& p : decoders_) {
-                    // NOTE: Should never fail.
-                    p.second.try_push(nullptr);
-                }
-            } else if (sources_.find(packet->stream_index) != sources_.end()) {
-                auto it = decoders_.find(packet->stream_index);
-                if (it != decoders_.end() && !it->second.try_push(packet)) {
-                    return false;
-                }
-            }
-
-            result = true;
-
-            return true;
-        });
-
-        return result;
-    }
-
-    bool schedule_filters()
-    {
-        auto result = schedule_inputs();
-        // TODO (perf) avoid copy?
-        auto sources = sources_;
-
-        for (auto& p : sources) {
-            auto it = decoders_.find(p.first);
-            if (it == decoders_.end()) {
-                continue;
-            }
-
-            int nb_requests = 0;
-            for (auto source : p.second) {
-                nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
-            }
-
-            it->second([&](std::shared_ptr<AVFrame>& frame) {
-                if (nb_requests == 0) {
-                    return false;
-                }
-
-                for (auto& source : p.second) {
-                    if (frame && !frame->data[0]) {
-                        FF(av_buffersrc_close(source, frame->pts, 0));
-                    } else {
-                        // TODO (fix) Guard against overflow?
-                        FF(av_buffersrc_write_frame(source, frame.get()));
-                    }
-                    result = true;
-                }
-
-                // End Of File
-                if (frame && !frame->data[0]) {
-                    sources_.erase(p.first);
-                }
-
-                nb_requests -= 1;
-
-                return true;
-            });
-        }
-
-        return result || schedule_inputs();
-    }
-
-    bool filter_frame(Filter& filter, int nb_samples = -1)
-    {
-        if (!filter.sink || filter.sources.empty() || filter.eof) {
-            filter.frame = nullptr;
-            return true;
-        }
-
-        while (true) {
-            auto frame = alloc_frame();
-            auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                       : av_buffersink_get_frame(filter.sink, frame.get());
-
-            if (ret == AVERROR(EAGAIN)) {
-                if (!schedule_filters()) {
-                    return false;
-                }
-            } else if (ret == AVERROR_EOF) {
-                filter.eof   = true;
-                filter.frame = nullptr;
-                return true;
-            } else {
-                FF_RET(ret, "av_buffersink_get_frame");
-                filter.frame = frame;
-                return true;
-            }
-        }
     }
 
     void reset_filters(int64_t start_time)
