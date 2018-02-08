@@ -1,5 +1,107 @@
 C H A N G E S
 
+CasparCG 2.2.0 Alpha 1
+==========================================
+
+General
+-------
+
+  o C++14
+  o Major refactoring, cleanup and optimization.
+  o Removed unmaintained documentation API.
+  o Removed unmaintained program options API.
+  o Removed unused frame age API.
+  o Removed misc unused and/or unmaintained APIs.
+  o Removed TCP logger.
+  o Fixed memory leak in transition producer.
+  o Removed PSD Producer (moved to 2.3.0).
+  o Removed Text Producer (moved to 2.3.0).
+  o Removed SyncTo consumer.
+  o Removed channel layout in favor of 8 channel passthrough
+    and FFMPEG audio filters.
+  o Major stability and performance improvements of GPU code.
+  o GPU code now requires OpenGL 4.5.
+  o Repo cleanup (>2GB => <100MB when cloning).
+  o Misc cleanup and fixes.
+
+Build
+-----
+  o Linux build re done with Docker.
+  o Windows build re done with Nuget.
+
+HTML
+----
+  o Updated to Chromium 63 (Julusian).
+  o Allow running templates from arbitrary urls (Julusian).
+
+DECKLINK
+--------
+  o Fixed broken Linux.
+  o Misc cleanup and fixes.
+
+MIXER
+-----
+  o Performance improvements.
+  o Removed straight output (moved to 2.3.0).
+  o Proper OpenGL pipelining.
+  o Blend modes are always enabled.
+  o Misc cleanup and fixes.
+  o Optimized CPU mixer (sesse).
+
+IMAGE
+-----
+  o Correctly apply alpha to base64 encoded pngs from AMCP (Julusian).
+  o Unmultiply frame before writing to png (Julusian).
+
+FFMPEG
+------
+  o Rewritten from scratch for better accuracy, stability and 
+    performance.
+  o Update freezed frame during seeking.
+  o FFMPEG 3.4.1.
+  o Reduce blocking during initialization.
+  o Fixed timestamp handling.
+  o Fixed V/A sync.
+  o Fixed interlacing.
+  o Fixed framerate handling.
+  o Fixed looping.
+  o Fixed seeking.
+  o Fixed duration.
+  o Audio resampling to match timestamps.
+  o Fixed invalid interlaced YUV (411, 420) handling.
+  o Added YUV(A)444.
+  o Added IO timeout.
+  o Added HTTP reconnect.
+  o FFMPEG video filter support.
+  o FFMPEG audio filter support.
+  o CALL SEEK return actually seeked value.
+  o All AMCP options are based on channel format.
+  o Misc improvements, cleanup and fixes.
+
+Bluefish
+--------
+  o Bluefish Consumer removed (moved to 2.3.0).
+
+OAL
+------------
+  o Added audio sample compensation to avoid audio distortions
+    during time drift.
+  o Misc cleanup and fixes.
+
+Screen
+---------------
+  o Properly OpenGL pipelining.
+  o Misc cleanup and fixes.
+
+AMCP
+----
+  o Added PING command (Julusian).
+  o Removed INFO commands in favor of OSC.
+  o Moved CLS, CINF, TLS, FLS, TLS, THUMBNAIL implementations into
+    a separate NodeJS service which is proxied through
+    an HTTP API.
+  o Misc cleanup and fixes.
+
 CasparCG 2.1.0 Next (w.r.t 2.1.0 Beta 2)
 ==========================================
 
@@ -8,8 +110,6 @@ General
 
   o Removed asmlib dependency in favor of using standard library std::memcpy and
     std::memset, because of better performance.
-
-
 
 CasparCG 2.1.0 Beta 2 (w.r.t 2.1.0 Beta 1)
 ==========================================
