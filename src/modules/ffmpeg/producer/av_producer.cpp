@@ -409,13 +409,11 @@ struct AVProducer::Impl
             try {
                 set_thread_name(L"[ffmpeg::av_producer]");
 
+                boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+
                 Frame frame;
 
                 while (!abort_request_) {
-                    // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801,
-                    // 800)
-                    boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
                         buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
@@ -486,6 +484,8 @@ struct AVProducer::Impl
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                         buffer_.push_back(frame);
                     }
+
+                    boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
                 }
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
