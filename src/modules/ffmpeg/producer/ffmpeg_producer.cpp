@@ -98,7 +98,9 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     void send_osc()
     {
-        state_["file/time"]  = { producer_.time(), format_desc_.fps, producer_.duration() / format_desc_.fps };
+        state_["file/fps"]   = format_desc_.fps;
+        state_["file/path"]  = u8(filename_);
+        state_["file/time"]  = { producer_.time(), producer_.duration() / format_desc_.fps };
         state_["file/frame"] = { static_cast<int32_t>(producer_.time()), static_cast<int32_t>(producer_.duration()) };
         state_["loop"]       = producer_.loop();
     }
