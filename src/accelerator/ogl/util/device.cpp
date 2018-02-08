@@ -99,7 +99,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
-
         device_.setActive(false);
 
         thread_ = std::thread([&] {
@@ -111,23 +110,24 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     ~impl()
     {
-        boost::asio::dispatch(service_, [=] {
-            for (auto& pool : host_pools_)
-                pool.clear();
-
-            for (auto& pool : device_pools_)
-                pool.clear();
-
-            sync_queue_.clear();
-
-            if (sync_fence_) {
-                GL(glDeleteSync(sync_fence_));
-            }
-
-            GL(glDeleteFramebuffers(1, &fbo_));
-        });
         work_.reset();
         thread_.join();
+
+        device_.setActive(true);
+
+        for (auto& pool : host_pools_)
+            pool.clear();
+
+        for (auto& pool : device_pools_)
+            pool.clear();
+
+        sync_queue_.clear();
+
+        if (sync_fence_) {
+            GL(glDeleteSync(sync_fence_));
+        }
+
+        GL(glDeleteFramebuffers(1, &fbo_));
     }
 
     template <typename Func>
