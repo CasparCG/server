@@ -38,6 +38,8 @@ class AVProducer
     AVProducer& duration(int64_t duration);
     int64_t     duration() const;
 
+    const core::monitor::state& state() const;
+
   private:
     struct Impl;
     std::shared_ptr<Impl> impl_;

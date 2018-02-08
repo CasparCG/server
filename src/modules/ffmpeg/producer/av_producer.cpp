@@ -18,6 +18,7 @@
 #include <common/os/thread.h>
 #include <common/scope_exit.h>
 
+#include <core/monitor/monitor.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
@@ -325,6 +326,7 @@ struct Filter
 
 struct AVProducer::Impl
 {
+    core::monitor::state                state_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
     const std::shared_ptr<core::frame_factory> frame_factory_;
@@ -384,6 +386,12 @@ struct AVProducer::Impl
         , audio_cadence_(format_desc_.audio_cadence)
         , buffer_capacity_(boost::rational_cast<int>(format_desc_.framerate))
     {
+        state_["file/path"] = u8(filename_);
+        state_["file/fps"] = format_desc_.fps;
+        state_["file/time"] = { time(), this->duration().value_or(0) / format_desc_.fps };
+        state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0)) };
+        state_["loop"] = loop_;
+
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
@@ -498,6 +506,8 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT{
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
+            state_["file/time"] = { time(), duration().value_or(0) / format_desc_.fps };
+            state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
         std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
@@ -517,6 +527,8 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT{
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
+            state_["file/time"] = { time(), duration().value_or(0) / format_desc_.fps };
+            state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
         core::draw_frame result;
@@ -561,6 +573,7 @@ struct AVProducer::Impl
                 buffer_.clear();
             }
             buffer_cond_.notify_all();
+
             seek_internal(av_rescale_q(time, format_tb_, TIME_BASE_Q));
         }
 
@@ -575,7 +588,11 @@ struct AVProducer::Impl
 
     void loop(bool loop)
     {
-        loop_ = loop;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            loop_ = loop;
+            state_["loop"] = loop;
+        }
         cond_.notify_all();
     }
 
@@ -587,7 +604,11 @@ struct AVProducer::Impl
     void start(int64_t start)
     {
         // TODO (fix) Validate input.
-        start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
+        }
         cond_.notify_all();
     }
 
@@ -599,8 +620,11 @@ struct AVProducer::Impl
     void duration(int64_t duration)
     {
         // TODO (fix) Validate input.
-        duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-        input_.paused(false);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
+            input_.paused(false);
+        }
         cond_.notify_all();
     }
 
@@ -709,7 +733,7 @@ struct AVProducer::Impl
                     sources_.erase(p.first);
                 }
 
-                nb_requests = 0;
+                nb_requests -= 1;
 
                 return true;
             });
@@ -822,5 +846,7 @@ AVProducer& AVProducer::duration(int64_t duration)
 }
 
 int64_t AVProducer::duration() const { return impl_->duration().value_or(std::numeric_limits<int64_t>::max()); }
+
+const core::monitor::state& AVProducer::state() const { return impl_->state_; }
 
 }} // namespace caspar::ffmpeg

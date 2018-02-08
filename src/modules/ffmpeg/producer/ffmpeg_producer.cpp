@@ -56,8 +56,6 @@ using namespace std::chrono_literals;
 
 struct ffmpeg_producer : public core::frame_producer_base
 {
-    core::monitor::state state_;
-
     const std::wstring                   filename_;
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
@@ -78,34 +76,18 @@ struct ffmpeg_producer : public core::frame_producer_base
         , frame_factory_(frame_factory)
         , producer_(frame_factory_, format_desc_, u8(filename), u8(vfilter), u8(afilter), start, duration, loop)
     {
-        state_["file/path"] = u8(filename_);
-        state_["file/fps"]  = format_desc_.fps;
-        state_["loop"] = producer_.loop();
     }
 
     // frame_producer
 
     core::draw_frame last_frame() override
     {
-        CASPAR_SCOPE_EXIT {
-            update_state();
-        };
         return producer_.prev_frame();
     }
 
     core::draw_frame receive_impl() override
     {
-        CASPAR_SCOPE_EXIT {
-            update_state();
-        };
         return producer_.next_frame();
-    }
-
-    void update_state()
-    {
-        state_["file/time"]  = { producer_.time(), producer_.duration() / format_desc_.fps };
-        state_["file/frame"] = { static_cast<int32_t>(producer_.time()), static_cast<int32_t>(producer_.duration()) };
-        state_["loop"]       = producer_.loop();
     }
 
     uint32_t nb_frames() const override
@@ -185,7 +167,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"ffmpeg"; }
 
-    const core::monitor::state& state() const override { return state_; }
+    const core::monitor::state& state() const override { return producer_.state(); }
 };
 
 bool is_valid_file(const std::wstring& filename)
