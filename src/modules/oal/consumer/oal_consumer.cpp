@@ -114,7 +114,7 @@ void init_device()
 
 struct oal_consumer : public core::frame_consumer
 {
-    core::monitor::subject monitor_subject_;
+    core::monitor::state state_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
@@ -320,7 +320,7 @@ struct oal_consumer : public core::frame_consumer
 
     int index() const override { return 500; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,

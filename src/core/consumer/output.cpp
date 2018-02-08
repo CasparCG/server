@@ -51,8 +51,8 @@ namespace caspar { namespace core {
 
 struct output::impl
 {
+    monitor::state                      state_;
     spl::shared_ptr<diagnostics::graph> graph_;
-    spl::shared_ptr<monitor::subject>   monitor_subject_ = spl::make_shared<monitor::subject>("/output");
     const int                           channel_index_;
     video_format_desc                   format_desc_;
     std::map<int, port>                 ports_;
@@ -76,7 +76,6 @@ struct output::impl
 
         executor_.begin_invoke([this, index, consumer] {
             port p(index, channel_index_, std::move(consumer));
-            p.monitor_output().attach_parent(monitor_subject_);
             ports_.insert(std::make_pair(index, std::move(p)));
         });
     }
@@ -168,6 +167,8 @@ struct output::impl
 
             spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
 
+            state_.clear();
+
             // Start invocations
             for (auto it = ports_.begin(); it != ports_.end();) {
                 auto& port  = it->second;
@@ -176,6 +177,7 @@ struct output::impl
 
                 try {
                     send_results->insert(std::make_pair(it->first, port.send(frame)));
+                    state_.append("port/" + boost::lexical_cast<std::string>(it->first), port.state());
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
@@ -243,5 +245,5 @@ std::future<void> output::operator()(const_frame frame, const video_format_desc&
 {
     return (*impl_)(std::move(frame), format_desc);
 }
-monitor::subject& output::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state& output::state() const { return impl_->state_; }
 }} // namespace caspar::core

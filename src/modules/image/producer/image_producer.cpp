@@ -50,7 +50,7 @@ namespace caspar { namespace image {
 
 struct image_producer : public core::frame_producer_base
 {
-    core::monitor::subject                     monitor_subject_;
+    core::monitor::state                       state_;
     const std::wstring                         description_;
     const spl::shared_ptr<core::frame_factory> frame_factory_;
     const uint32_t                             length_;
@@ -98,7 +98,7 @@ struct image_producer : public core::frame_producer_base
 
     core::draw_frame receive_impl() override
     {
-        monitor_subject_ << core::monitor::message("/file/path") % description_;
+        state_["file/path"] = description_;
 
         return frame_;
     }
@@ -109,7 +109,7 @@ struct image_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"image"; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() const { return state_; }
 };
 
 class ieq

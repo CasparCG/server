@@ -14,6 +14,7 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
+#include <common/timer.h>
 #include <common/os/thread.h>
 #include <common/scope_exit.h>
 
@@ -385,6 +386,7 @@ struct AVProducer::Impl
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
+        graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
 
         if (start_ != AV_NOPTS_VALUE) {
@@ -491,6 +493,7 @@ struct AVProducer::Impl
   public:
     core::draw_frame prev_frame()
     {
+        caspar::timer frame_timer;
         {
             std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
@@ -501,6 +504,7 @@ struct AVProducer::Impl
             }
         }
 
+        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
         graph_->set_text(u16(print()));
 
         return frame_;
@@ -508,6 +512,8 @@ struct AVProducer::Impl
 
     core::draw_frame next_frame()
     {
+        caspar::timer frame_timer;
+
         core::draw_frame result;
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
@@ -535,6 +541,7 @@ struct AVProducer::Impl
         }
         buffer_cond_.notify_all();
 
+        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
         graph_->set_text(u16(print()));
 
         return result;

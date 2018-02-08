@@ -54,9 +54,9 @@ namespace caspar { namespace core {
 
 struct mixer::impl : boost::noncopyable
 {
+    monitor::state                       state_;
     int                                  channel_index_;
     spl::shared_ptr<diagnostics::graph>  graph_;
-    spl::shared_ptr<monitor::subject>    monitor_subject_ = spl::make_shared<monitor::subject>("/mixer");
     audio_mixer                          audio_mixer_{graph_};
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
@@ -67,7 +67,6 @@ struct mixer::impl : boost::noncopyable
         , graph_(std::move(graph))
         , image_mixer_(std::move(image_mixer))
     {
-        audio_mixer_.monitor_output().attach_parent(monitor_subject_);
     }
 
     const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
@@ -80,6 +79,8 @@ struct mixer::impl : boost::noncopyable
 
         auto image = (*image_mixer_)(format_desc);
         auto audio = audio_mixer_(format_desc);
+
+        state_.append("audio", audio_mixer_.state());
 
         buffer_.push(std::async(
             std::launch::deferred,
@@ -119,5 +120,5 @@ mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc
 {
     return impl_->image_mixer_->create_frame(tag, desc);
 }
-monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state& mixer::state() const { return impl_->state_; }
 }} // namespace caspar::core

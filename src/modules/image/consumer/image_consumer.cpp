@@ -49,8 +49,8 @@ namespace caspar { namespace image {
 
 struct image_consumer : public core::frame_consumer
 {
-    core::monitor::subject monitor_subject_;
-    std::wstring           filename_;
+    core::monitor::state state_;
+    std::wstring         filename_;
 
   public:
     // frame_consumer
@@ -109,7 +109,7 @@ struct image_consumer : public core::frame_consumer
 
     int index() const override { return 100; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,

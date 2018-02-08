@@ -78,7 +78,7 @@ class stage final : public interaction_sink
     void add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer);
     void remove_layer_consumer(void* token, int layer);
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     void on_interaction(const interaction_event::ptr& event) override;
 

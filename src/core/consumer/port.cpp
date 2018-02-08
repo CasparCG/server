@@ -13,9 +13,8 @@ namespace caspar { namespace core {
 
 struct port::impl
 {
-    int                               index_;
-    spl::shared_ptr<monitor::subject> monitor_subject_ =
-        spl::make_shared<monitor::subject>("/port/" + boost::lexical_cast<std::string>(index_));
+    monitor::state                  state_;
+    int                             index_;
     spl::shared_ptr<frame_consumer> consumer_;
     int                             channel_index_;
 
@@ -25,7 +24,6 @@ struct port::impl
         , consumer_(std::move(consumer))
         , channel_index_(channel_index)
     {
-        consumer_->monitor_output().attach_parent(monitor_subject_);
     }
 
     void change_channel_format(const core::video_format_desc& format_desc)
@@ -35,8 +33,12 @@ struct port::impl
 
     std::future<bool> send(const_frame frame)
     {
-        *monitor_subject_ << monitor::message("/type") % consumer_->name();
-        return consumer_->send(std::move(frame));
+        auto future = consumer_->send(std::move(frame));
+
+        state_["type"] = consumer_->name();
+        state_.append(consumer_->state());
+
+        return future;
     }
     std::wstring print() const { return consumer_->print(); }
 
@@ -64,7 +66,7 @@ port& port::operator=(port&& other)
     return *this;
 }
 std::future<bool> port::send(const_frame frame) { return impl_->send(std::move(frame)); }
-monitor::subject& port::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state& port::state() const { return impl_->state_; }
 void              port::change_channel_format(const core::video_format_desc& format_desc)
 {
     impl_->change_channel_format(format_desc);

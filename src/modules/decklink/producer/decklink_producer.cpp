@@ -82,7 +82,7 @@ class decklink_producer
     , public IDeckLinkInputCallback
 {
     const int                           device_index_;
-    core::monitor::subject              monitor_subject_;
+    core::monitor::state                state_;
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
@@ -190,19 +190,19 @@ class decklink_producer
             if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
                 return S_OK;
 
-            monitor_subject_ << core::monitor::message("/file/name") % model_name_
-                             << core::monitor::message("/file/path") % device_index_
-                             << core::monitor::message("/file/video/width") % video->GetWidth()
-                             << core::monitor::message("/file/video/height") % video->GetHeight()
-                             << core::monitor::message("/file/video/field") %
-                                    u8(format_desc_.field_mode != core::field_mode::progressive
-                                           ? "progressive"
-                                           : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"))
-                             << core::monitor::message("/file/audio/sample-rate") % 48000
-                             << core::monitor::message("/file/audio/channels") % 2
-                             << core::monitor::message("/file/audio/format") %
-                                    u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
-                             << core::monitor::message("/file/fps") % format_desc_.fps;
+            state_["file/name"] = model_name_;
+            state_["file/path"] = device_index_;
+            state_["file/video/width"] = video->GetWidth();
+            state_["file/video/height"] = video->GetHeight();
+            state_["file/video/field"] =
+                u8(format_desc_.field_mode != core::field_mode::progressive
+                    ? "progressive"
+                    : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"));
+            state_["file/audio/sample-rate"] = 48000;
+            state_["file/audio/channels"] = 2;
+            state_["file/audio/format"] =
+                u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
+            state_["file/fps"] = format_desc_.fps;
 
             // Audio
 
@@ -295,11 +295,11 @@ class decklink_producer
             }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-            monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer.elapsed() % format_desc_.fps;
+            state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
 
             graph_->set_value("output-buffer",
                               static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
-            monitor_subject_ << core::monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
+            state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
         } catch (...) {
             exception_ = std::current_exception();
             return E_FAIL;
@@ -333,7 +333,7 @@ class decklink_producer
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() { return state_; }
 };
 
 class decklink_producer_proxy : public core::frame_producer_base
@@ -367,7 +367,7 @@ class decklink_producer_proxy : public core::frame_producer_base
         });
     }
 
-    core::monitor::subject& monitor_output() { return producer_->monitor_output(); }
+    const core::monitor::state& state() const { return producer_->state(); }
 
     // frame_producer
 

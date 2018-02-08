@@ -74,31 +74,23 @@ struct param_visitor : public boost::static_visitor<void>
     }
 };
 
-void write_osc_event(byte_vector& destination, const core::monitor::message& message, int retry_allocation_attempt = 0)
+void write_osc_event(byte_vector& destination, const std::string& msg_path, const std::vector<core::monitor::data_t>& msg_data)
 {
-    static std::size_t max_size = 128;
+    static std::size_t max_size = 256;
 
     destination.resize(max_size);
 
     ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()),
                                   static_cast<unsigned long>(destination.size()));
 
-    try {
-        o << ::osc::BeginMessage(message.path().c_str());
+    o << ::osc::BeginMessage(msg_path.c_str());
 
-        param_visitor<decltype(o)> param_visitor(o);
-        for (const auto& data : message.data())
-            boost::apply_visitor(param_visitor, data);
-
-        o << ::osc::EndMessage;
-    } catch (const ::osc::OutOfBufferMemoryException& e) {
-        if (retry_allocation_attempt > message.data().size())
-            throw;
-
-        max_size = e.required;
-        CASPAR_LOG(trace) << L"[osc] Too small buffer for osc message. Increasing to " << max_size;
-        return write_osc_event(destination, message, retry_allocation_attempt + 1);
+    param_visitor<decltype(o)> param_visitor(o);
+    for (const auto& data : msg_data) {
+        boost::apply_visitor(param_visitor, data);
     }
+
+    o << ::osc::EndMessage;
 
     destination.resize(o.Size());
 }
@@ -130,9 +122,7 @@ void write_osc_bundle_element_start(byte_vector& destination, const byte_vector&
 #endif
 }
 
-struct client::impl
-    : public spl::enable_shared_from_this<client::impl>
-    , core::monitor::sink
+struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
     std::shared_ptr<boost::asio::io_context> service_;
     udp::socket                              socket_;
@@ -189,20 +179,24 @@ struct client::impl
         });
     }
 
-  private:
-    void propagate(const core::monitor::message& msg)
+    void send(const core::monitor::state& state)
     {
-        std::lock_guard<std::mutex> lock(updates_mutex_);
+        {
+            std::lock_guard<std::mutex> lock(updates_mutex_);
 
-        try {
-            write_osc_event(updates_[msg.path()], msg);
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-            updates_.erase(msg.path());
+            for (auto& p : state.get()) {
+                try {
+                    write_osc_event(updates_[p.first], p.first, p.second);
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                    updates_.erase(p.first);
+                }
+            }
         }
-
         updates_cond_.notify_one();
     }
+
+  private:
 
     template <typename T>
     void do_send(const T& buffers, const std::vector<udp::endpoint>& destinations)
@@ -311,6 +305,9 @@ std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp:
     return impl_->get_subscription_token(endpoint);
 }
 
-spl::shared_ptr<core::monitor::sink> client::sink() { return impl_; }
+void client::send(const core::monitor::state& state)
+{
+    impl_->send(state);
+}
 
 }}} // namespace caspar::protocol::osc

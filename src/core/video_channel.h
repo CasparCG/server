@@ -38,10 +38,10 @@ class video_channel final
     video_channel& operator=(const video_channel&);
 
   public:
-    explicit video_channel(int index, const video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer);
+    explicit video_channel(int index, const video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer, std::function<void(const monitor::state&)> on_tick);
     ~video_channel();
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     const core::stage&  stage() const;
     core::stage&        stage();

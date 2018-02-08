@@ -178,7 +178,7 @@ class flash_renderer
         }
     } com_init_;
 
-    core::monitor::subject& monitor_subject_;
+    core::monitor::state& state_;
 
     const std::wstring filename_;
     const int          width_;
@@ -195,13 +195,13 @@ class flash_renderer
     spl::shared_ptr<diagnostics::graph> graph_;
 
   public:
-    flash_renderer(core::monitor::subject&                     monitor_subject,
+    flash_renderer(core::monitor::state&                       state,
                    const spl::shared_ptr<diagnostics::graph>&  graph,
                    const std::shared_ptr<core::frame_factory>& frame_factory,
                    const std::wstring&                         filename,
                    int                                         width,
                    int                                         height)
-        : monitor_subject_(monitor_subject)
+        : state_(state)
         , graph_(graph)
         , filename_(filename)
         , width_(width)
@@ -321,7 +321,7 @@ class flash_renderer
         }
 
         graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed() / frame_time) * 0.5f);
-        monitor_subject_ << core::monitor::message("/renderer/profiler/time") % frame_timer.elapsed() % frame_time;
+        state_["renderer/profiler/time"] = { frame_timer.elapsed(), frame_time };
         return head_;
     }
 
@@ -338,7 +338,7 @@ class flash_renderer
 
 struct flash_producer : public core::frame_producer_base
 {
-    core::monitor::subject                     monitor_subject_;
+    core::monitor::state                       state_;
     const std::wstring                         filename_;
     const spl::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_desc              format_desc_;
@@ -414,11 +414,11 @@ struct flash_producer : public core::frame_producer_base
 
         fill_buffer();
 
-        monitor_subject_ << core::monitor::message("/host/path") % filename_
-                         << core::monitor::message("/host/width") % width_
-                         << core::monitor::message("/host/height") % height_
-                         << core::monitor::message("/host/fps") % fps_
-                         << core::monitor::message("/buffer") % output_buffer_.size() % buffer_size_;
+        state_["host/path"] = filename_;
+        state_["host/width"] = width_;
+        state_["host/height"] = height_;
+        state_["host/fps"] = fps_;
+        state_["buffer"] = output_buffer_.size() % buffer_size_;
 
         return frame;
     }
@@ -436,7 +436,7 @@ struct flash_producer : public core::frame_producer_base
 
                 if (initialize_renderer) {
                     renderer_.reset(
-                        new flash_renderer(monitor_subject_, graph_, frame_factory_, filename_, width_, height_));
+                        new flash_renderer(state_, graph_, frame_factory_, filename_, width_, height_));
 
                     has_renderer_ = true;
                 }
@@ -466,7 +466,7 @@ struct flash_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"flash"; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() { return state_; }
 
     // flash_producer
 

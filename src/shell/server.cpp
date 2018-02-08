@@ -31,9 +31,7 @@
 
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
-#include <core/diagnostics/graph_to_log_sink.h>
 #include <core/diagnostics/osd_graph.h>
-#include <core/diagnostics/subject_diagnostics.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/mixer/mixer.h>
 #include <core/producer/cg_proxy.h>
@@ -101,8 +99,6 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 struct server::impl : boost::noncopyable
 {
     std::shared_ptr<boost::asio::io_service>           io_service_ = create_running_io_service();
-    spl::shared_ptr<monitor::subject>                  monitor_subject_;
-    spl::shared_ptr<monitor::subject>                  diag_subject_ = core::diagnostics::get_or_create_subject();
     accelerator::accelerator                           accelerator_;
     std::shared_ptr<amcp::amcp_command_repository>     amcp_command_repo_;
     std::vector<spl::shared_ptr<IO::AsyncEventServer>> async_servers_;
@@ -121,9 +117,7 @@ struct server::impl : boost::noncopyable
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
         , shutdown_server_now_(shutdown_server_now)
     {
-        core::diagnostics::register_graph_to_log_sink();
         caspar::core::diagnostics::osd::register_sink();
-        diag_subject_->attach_parent(monitor_subject_);
 
         module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_);
 
@@ -178,9 +172,13 @@ struct server::impl : boost::noncopyable
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto channel_id = static_cast<int>(channels_.size() + 1);
-            auto channel    = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id));
+            auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id), [=](const monitor::state& channel_state)
+            {
+                monitor::state state;
+                state.append("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
+                osc_client_->send(state);
+            });
 
-            channel->monitor_output().attach_parent(monitor_subject_);
             channels_.push_back(channel);
         }
 
@@ -199,22 +197,12 @@ struct server::impl : boost::noncopyable
                 }
             }
         }
-
-        // Dummy diagnostics channel
-        if (env::properties().get(L"configuration.channel-grid", false)) {
-            auto channel_id = static_cast<int>(channels_.size() + 1);
-            channels_.push_back(spl::make_shared<video_channel>(
-                channel_id, core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer(channel_id)));
-            channels_.back()->monitor_output().attach_parent(monitor_subject_);
-        }
     }
 
     void setup_osc(const boost::property_tree::wptree& pt)
     {
         using boost::property_tree::wptree;
         using namespace boost::asio::ip;
-
-        monitor_subject_->attach_parent(osc_client_->sink());
 
         auto default_port                 = pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
         auto disable_send_to_amcp_clients = pt.get(L"configuration.osc.disable-send-to-amcp-clients", false);
@@ -291,6 +279,5 @@ server::server(std::function<void(bool)> shutdown_server_now)
 }
 void                                                     server::start() { impl_->start(); }
 spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
-core::monitor::subject&                                  server::monitor_output() { return *impl_->monitor_subject_; }
 
 } // namespace caspar

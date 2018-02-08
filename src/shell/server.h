@@ -37,8 +37,6 @@ class server final : public boost::noncopyable
     void                                                     start();
     spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 
-    core::monitor::subject& monitor_output();
-
   private:
     struct impl;
     std::shared_ptr<impl> impl_;

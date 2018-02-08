@@ -46,7 +46,7 @@ class audio_mixer final : public frame_visitor
     array<int32_t>    operator()(const struct video_format_desc& format_desc);
     void              set_master_volume(float volume);
     float             get_master_volume();
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     virtual void push(const struct frame_transform& transform);
     virtual void visit(const class const_frame& frame);

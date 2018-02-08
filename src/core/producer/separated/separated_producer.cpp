@@ -23,6 +23,8 @@
 
 #include "separated_producer.h"
 
+#include <common/scope_exit.h>
+
 #include <core/frame/draw_frame.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
@@ -35,8 +37,7 @@ namespace caspar { namespace core {
 
 class separated_producer : public frame_producer_base
 {
-    spl::shared_ptr<monitor::subject> monitor_subject_;
-    spl::shared_ptr<monitor::subject> key_monitor_subject_ = spl::make_shared<monitor::subject>("/keyer");
+    monitor::state                  state_;
 
     spl::shared_ptr<frame_producer> fill_producer_;
     spl::shared_ptr<frame_producer> key_producer_;
@@ -48,11 +49,6 @@ class separated_producer : public frame_producer_base
         : fill_producer_(fill)
         , key_producer_(key)
     {
-        key_monitor_subject_->attach_parent(monitor_subject_);
-
-        key_producer_->monitor_output().attach_parent(key_monitor_subject_);
-        fill_producer_->monitor_output().attach_parent(monitor_subject_);
-
         CASPAR_LOG(debug) << print() << L" Initialized";
     }
 
@@ -60,6 +56,13 @@ class separated_producer : public frame_producer_base
 
     draw_frame receive_impl() override
     {
+        CASPAR_SCOPE_EXIT
+        {
+            state_.clear();
+            state_.append(fill_producer_->state());
+            state_.append("keyer", key_producer_->state());
+        };
+
         tbb::parallel_invoke(
             [&] {
                 if (!fill_) {
@@ -101,7 +104,7 @@ class separated_producer : public frame_producer_base
 
     std::wstring name() const override { return L"separated"; }
 
-    monitor::subject& monitor_output() { return *monitor_subject_; }
+    const monitor::state& state() const { return state_; }
 };
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill,

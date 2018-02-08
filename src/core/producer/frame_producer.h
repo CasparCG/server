@@ -45,7 +45,7 @@ class frame_producer : public interaction_sink
     frame_producer(const frame_producer&);
     frame_producer& operator=(const frame_producer&);
 
-  public:
+public:
     static const spl::shared_ptr<frame_producer>& empty();
 
     frame_producer() {}
@@ -54,11 +54,14 @@ class frame_producer : public interaction_sink
     virtual draw_frame                receive()                                     = 0;
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) = 0;
 
-    virtual monitor::subject& monitor_output() = 0;
-
     virtual void on_interaction(const interaction_event::ptr& event) override {}
     virtual bool collides(double x, double y) const override { return false; }
 
+    virtual const monitor::state&         state() const
+    {
+        static const monitor::state empty;
+        return empty;
+    }
     virtual void                            paused(bool value)   = 0;
     virtual std::wstring                    print() const        = 0;
     virtual std::wstring                    name() const         = 0;

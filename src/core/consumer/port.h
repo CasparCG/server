@@ -22,7 +22,7 @@ class port
 
     std::future<bool> send(class const_frame frame);
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     void                                  change_channel_format(const struct video_format_desc& format_desc);
     std::wstring                          print() const;
