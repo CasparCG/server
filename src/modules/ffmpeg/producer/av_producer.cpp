@@ -431,16 +431,17 @@ struct AVProducer::Impl
                     }
 
                     {
-                        const auto eof = (!video_filter_.frame && !audio_filter_.frame) ||
+                        const auto eof = (video_filter_.eof && audio_filter_.eof) ||
                                          (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
 
                         if (eof) {
                             if (loop_) {
                                 seek_internal(start_);
                             } else {
-                                input_.paused(true);
                                 // TODO (perf) Avoid polling.
+                                lock.unlock();
                                 std::this_thread::sleep_for(10ms);
+                                lock.lock();
                             }
                             continue;
                         }
@@ -494,18 +495,18 @@ struct AVProducer::Impl
     core::draw_frame prev_frame()
     {
         caspar::timer frame_timer;
-        {
-            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+        CASPAR_SCOPE_EXIT{
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_text(u16(print()));
+        };
 
-            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                frame_       = core::draw_frame::still(buffer_[0].frame);
-                frame_time_  = buffer_[0].pts + buffer_[0].duration;
-                frame_flush_ = false;
-            }
+        std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+
+        if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+            frame_       = core::draw_frame::still(buffer_[0].frame);
+            frame_time_  = buffer_[0].pts + buffer_[0].duration;
+            frame_flush_ = false;
         }
-
-        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-        graph_->set_text(u16(print()));
 
         return frame_;
     }
@@ -513,12 +514,16 @@ struct AVProducer::Impl
     core::draw_frame next_frame()
     {
         caspar::timer frame_timer;
+        CASPAR_SCOPE_EXIT{
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_text(u16(print()));
+        };
 
         core::draw_frame result;
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
 
-            if (!input_.paused() && buffer_.size() < format_desc_.field_count) {
+            if (buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame{};
             }
@@ -540,9 +545,6 @@ struct AVProducer::Impl
             frame_flush_ = false;
         }
         buffer_cond_.notify_all();
-
-        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-        graph_->set_text(u16(print()));
 
         return result;
     }
