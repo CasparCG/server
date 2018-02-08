@@ -151,11 +151,7 @@ void Input::seek(int64_t ts, bool flush)
             output_.pop();
         }
 
-        if (eof_) {
-            eof_ = false;
-        } else {
-            output_.push(nullptr);
-        }
+        eof_ = false;
     }
     cond_.notify_all();
 
