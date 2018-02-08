@@ -202,7 +202,7 @@ struct screen_consumer : boost::noncopyable
                 //    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
                 //}
 
-                for (int n = 0; n < 3; ++n) {
+                for (int n = 0; n < 2; ++n) {
                     screen::frame frame;
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
                     GL(glCreateBuffers(1, &frame.pbo));
@@ -320,32 +320,9 @@ struct screen_consumer : boost::noncopyable
             return;
         }
 
-        // Display
-        {
-            auto& frame = frames_[2];
-
-            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
-            GL(glClear(GL_COLOR_BUFFER_BIT));
-
-            glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex2f(-width_, -height_);
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex2f(width_, -height_);
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex2f(width_, height_);
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex2f(-width_, height_);
-            glEnd();
-
-            GL(glBindTexture(GL_TEXTURE_2D, 0));
-        }
-
-        GL(glFlush());
-
         // Upload
         {
-            auto& frame = frames_[0];
+            auto& frame = frames_.front();
 
             while (frame.fence) {
                 auto wait = glClientWaitSync(frame.fence, 0, 0);
@@ -386,6 +363,27 @@ struct screen_consumer : boost::noncopyable
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
             frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        }
+
+        // Display
+        {
+            auto& frame = frames_.back();
+
+            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+            GL(glClear(GL_COLOR_BUFFER_BIT));
+
+            glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex2f(-width_, -height_);
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex2f(width_, -height_);
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex2f(width_, height_);
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex2f(-width_, height_);
+            glEnd();
+
+            GL(glBindTexture(GL_TEXTURE_2D, 0));
         }
 
         window_.display();
