@@ -373,6 +373,7 @@ struct screen_consumer : boost::noncopyable
             GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
             GL(glClear(GL_COLOR_BUFFER_BIT));
 
+            // TODO (perf)
             glBegin(GL_QUADS);
             glTexCoord2f(0.0f, 1.0f);
             glVertex2f(-width_, -height_);
