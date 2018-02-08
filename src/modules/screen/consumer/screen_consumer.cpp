@@ -93,6 +93,7 @@ struct frame
     GLuint pbo = 0;
     GLuint tex = 0;
     char*  ptr = nullptr;
+    GLsync fence = 0;
 };
 
 struct screen_consumer : boost::noncopyable
@@ -103,17 +104,16 @@ struct screen_consumer : boost::noncopyable
 
     std::vector<frame> frames_;
 
-    float width_;
-    float height_;
-    int   screen_x_;
-    int   screen_y_;
     int   screen_width_  = format_desc_.width;
     int   screen_height_ = format_desc_.height;
     int   square_width_  = format_desc_.square_width;
     int   square_height_ = format_desc_.square_height;
+    int   screen_x_ = 0;
+    int   screen_y_ = 0;
+    float width_ = screen_width_;
+    float height_ = screen_height_;
 
     sf::Window        window_;
-    std::atomic<bool> polling_event_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
@@ -124,8 +124,8 @@ struct screen_consumer : boost::noncopyable
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     core::interaction_sink*                          sink_;
 
+    std::atomic<bool> is_running_{ true };
     std::thread       thread_;
-    std::atomic<bool> is_running_;
 
   public:
     screen_consumer(const configuration&           config,
@@ -181,16 +181,71 @@ struct screen_consumer : boost::noncopyable
         if (config_.screen_index > 1) {
             CASPAR_LOG(warning) << print() << L" Screen-index is not supported on linux";
         }
-
-        screen_x_      = 0;
-        screen_y_      = 0;
-        screen_width_  = square_width_;
-        screen_height_ = square_height_;
 #endif
 
-        polling_event_ = false;
-        is_running_    = true;
-        thread_        = std::thread([this] { run(); });
+        thread_ = std::thread([this] {
+            try {
+                auto window_style = config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+                window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
+                window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+                window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+                window_.setMouseCursorVisible(config_.interactive);
+                window_.setActive(true);
+
+                if (glewInit() != GLEW_OK) {
+                    CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+                }
+
+                // TODO (fix) This reports falsy false.
+                //if (!GLEW_VERSION_4_5) {
+                //    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
+                //}
+
+                for (int n = 0; n < 3; ++n) {
+                    screen::frame frame;
+                    auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+                    GL(glCreateBuffers(1, &frame.pbo));
+                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
+                    frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
+
+                    GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
+                    GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
+                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+
+                    frames_.push_back(frame);
+                }
+
+                GL(glEnable(GL_TEXTURE_2D));
+                GL(glDisable(GL_DEPTH_TEST));
+                GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+                GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+                GL(glLoadIdentity());
+
+                calculate_aspect();
+
+                window_.setVerticalSyncEnabled(config_.vsync);
+
+                if (config_.vsync) {
+                    CASPAR_LOG(info) << print() << " Enabled vsync.";
+                }
+
+                while (is_running_) {
+                    tick();
+                }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                is_running_ = false;
+            }
+            for (auto frame : frames_) {
+                GL(glUnmapNamedBuffer(frame.pbo));
+                glDeleteBuffers(1, &frame.pbo);
+                glDeleteTextures(1, &frame.tex);
+            }
+        });
     }
 
     ~screen_consumer()
@@ -200,200 +255,132 @@ struct screen_consumer : boost::noncopyable
         thread_.join();
     }
 
-    void init()
+    void tick()
     {
-        auto window_style =
-            config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
-        window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
-        window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-        window_.setSize(sf::Vector2u(screen_width_, screen_height_));
-        window_.setMouseCursorVisible(config_.interactive);
-        window_.setActive();
-
-        if (glewInit() != GLEW_OK) {
-            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-        }
-
-        // TODO (fix) This reports falsy false.
-        //if (!GLEW_VERSION_4_5) {
-        //    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
-        //}
-
-        for (int n = 0; n < 3; ++n) {
-            screen::frame frame;
-            auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-            GL(glCreateBuffers(1, &frame.pbo));
-            GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
-            frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
-
-            GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-            GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
-            GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
-            GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
-            GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
-
-            frames_.push_back(frame);
-        }
-
-        GL(glEnable(GL_TEXTURE_2D));
-        GL(glDisable(GL_DEPTH_TEST));
-        GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-        GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-        GL(glLoadIdentity());
-
-        calculate_aspect();
-
-        window_.setVerticalSyncEnabled(config_.vsync);
-
-        if (config_.vsync) {
-            CASPAR_LOG(info) << print() << " Enabled vsync.";
-        }
-    }
-
-    void uninit()
-    {
-        for (auto frame : frames_) {
-            GL(glUnmapNamedBuffer(frame.pbo));
-            glDeleteBuffers(1, &frame.pbo);
-            glDeleteTextures(1, &frame.tex);
-        }
-    }
-
-    void run()
-    {
-        try {
-            init();
-
-            while (is_running_) {
-                try {
-                    auto poll_event = [this](sf::Event& e) {
-                        polling_event_ = true;
-                        CASPAR_SCOPE_EXIT { polling_event_ = false; };
-                        return window_.pollEvent(e);
-                    };
-
-                    sf::Event e;
-                    while (poll_event(e)) {
-                        if (e.type == sf::Event::Resized) {
-                            calculate_aspect();
-                        } else if (e.type == sf::Event::Closed) {
-                            is_running_ = false;
-                        } else if (config_.interactive && sink_) {
-                            switch (e.type) {
-                                case sf::Event::MouseMoved: {
-                                    auto& mouse_move = e.mouseMove;
-                                    sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                                        1,
-                                        static_cast<double>(mouse_move.x) / screen_width_,
-                                        static_cast<double>(mouse_move.y) / screen_height_));
-                                    break;
-                                }
-                                case sf::Event::MouseButtonPressed:
-                                case sf::Event::MouseButtonReleased: {
-                                    auto& mouse_button = e.mouseButton;
-                                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
-                                        1,
-                                        static_cast<double>(mouse_button.x) / screen_width_,
-                                        static_cast<double>(mouse_button.y) / screen_height_,
-                                        static_cast<int>(mouse_button.button),
-                                        e.type == sf::Event::MouseButtonPressed));
-                                    break;
-                                }
-                                case sf::Event::MouseWheelMoved: {
-                                    auto& wheel_moved = e.mouseWheel;
-                                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
-                                        1,
-                                        static_cast<double>(wheel_moved.x) / screen_width_,
-                                        static_cast<double>(wheel_moved.y) / screen_height_,
-                                        wheel_moved.delta));
-                                    break;
-                                }
-                            }
-                        }
+        sf::Event e;
+        while (window_.pollEvent(e)) {
+            if (e.type == sf::Event::Resized) {
+                calculate_aspect();
+            } else if (e.type == sf::Event::Closed) {
+                is_running_ = false;
+            } else if (config_.interactive && sink_) {
+                switch (e.type) {
+                    case sf::Event::MouseMoved: {
+                        auto& mouse_move = e.mouseMove;
+                        sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
+                            1,
+                            static_cast<double>(mouse_move.x) / screen_width_,
+                            static_cast<double>(mouse_move.y) / screen_height_));
+                        break;
                     }
-
-                    core::const_frame in_frame;
-                    frame_buffer_.pop(in_frame);
-
-                    // Display
-                    {
-                        auto& frame = frames_[2];
-
-                        GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
-                        GL(glClear(GL_COLOR_BUFFER_BIT));
-
-                        glBegin(GL_QUADS);
-                        glTexCoord2f(0.0f, 1.0f);
-                        glVertex2f(-width_, -height_);
-                        glTexCoord2f(1.0f, 1.0f);
-                        glVertex2f(width_, -height_);
-                        glTexCoord2f(1.0f, 0.0f);
-                        glVertex2f(width_, height_);
-                        glTexCoord2f(0.0f, 0.0f);
-                        glVertex2f(-width_, height_);
-                        glEnd();
-
-                        GL(glBindTexture(GL_TEXTURE_2D, 0));
+                    case sf::Event::MouseButtonPressed:
+                    case sf::Event::MouseButtonReleased: {
+                        auto& mouse_button = e.mouseButton;
+                        sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
+                            1,
+                            static_cast<double>(mouse_button.x) / screen_width_,
+                            static_cast<double>(mouse_button.y) / screen_height_,
+                            static_cast<int>(mouse_button.button),
+                            e.type == sf::Event::MouseButtonPressed));
+                        break;
                     }
-
-                    GL(glFlush());
-
-                    // Upload
-                    {
-                        auto& frame = frames_[0];
-
-                        // TODO (fix) Wait for sync before re-using pbo?
-
-                        if (config_.key_only) {
-                            for (int n = 0; n < format_desc_.height; ++n) {
-                                aligned_memshfl(frame.ptr + n * format_desc_.width * 4,
-                                                in_frame.image_data(0).begin() + n * format_desc_.width * 4,
-                                                format_desc_.width * 4,
-                                                0x0F0F0F0F,
-                                                0x0B0B0B0B,
-                                                0x07070707,
-                                                0x03030303);
-                            }
-                        } else {
-                            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
-                        }
-
-                        GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-                        GL(glTextureSubImage2D(frame.tex,
-                                               0,
-                                               0,
-                                               0,
-                                               format_desc_.width,
-                                               format_desc_.height,
-                                               GL_BGRA,
-                                               GL_UNSIGNED_BYTE,
-                                               nullptr));
-                        GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
+                    case sf::Event::MouseWheelMoved: {
+                        auto& wheel_moved = e.mouseWheel;
+                        sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+                            1,
+                            static_cast<double>(wheel_moved.x) / screen_width_,
+                            static_cast<double>(wheel_moved.y) / screen_height_,
+                            wheel_moved.delta));
+                        break;
                     }
+                }
+            }
+        }
 
-                    window_.display();
+        core::const_frame in_frame;
+        frame_buffer_.pop(in_frame);
 
-                    std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
+        if (!in_frame) {
+            return;
+        }
 
-                    graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
-                    tick_timer_.restart();
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
-                    is_running_ = false;
+        // Display
+        {
+            auto& frame = frames_[2];
+
+            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+            GL(glClear(GL_COLOR_BUFFER_BIT));
+
+            glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex2f(-width_, -height_);
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex2f(width_, -height_);
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex2f(width_, height_);
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex2f(-width_, height_);
+            glEnd();
+
+            GL(glBindTexture(GL_TEXTURE_2D, 0));
+        }
+
+        GL(glFlush());
+
+        // Upload
+        {
+            auto& frame = frames_[0];
+
+            glFlush();
+
+            while (frame.fence) {
+                auto wait = glClientWaitSync(frame.fence, 0, 1000000);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    glDeleteSync(frame.fence);
+                    frame.fence = 0;
                 }
             }
 
-            uninit();
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
+            if (config_.key_only) {
+                for (int n = 0; n < format_desc_.height; ++n) {
+                    aligned_memshfl(frame.ptr + n * format_desc_.width * 4,
+                                    in_frame.image_data(0).begin() + n * format_desc_.width * 4,
+                                    format_desc_.width * 4,
+                                    0x0F0F0F0F,
+                                    0x0B0B0B0B,
+                                    0x07070707,
+                                    0x03030303);
+                }
+            } else {
+                std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
+            }
+
+            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
+            GL(glTextureSubImage2D(frame.tex,
+                                    0,
+                                    0,
+                                    0,
+                                    format_desc_.width,
+                                    format_desc_.height,
+                                    GL_BGRA,
+                                    GL_UNSIGNED_BYTE,
+                                    nullptr));
+            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
+
+            frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         }
+
+        window_.display();
+
+        std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
+
+        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+        tick_timer_.restart();
     }
 
     std::future<bool> send(core::const_frame frame)
     {
-        if (!frame_buffer_.try_push(frame) && !polling_event_) {
+        if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
         return make_ready_future(is_running_.load());
