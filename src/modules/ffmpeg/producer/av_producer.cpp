@@ -440,6 +440,7 @@ struct AVProducer::Impl
                         continue;
                     }
 
+                    // TODO (perf) seek as soon as input is past duration or eof.
                     {
                         const auto eof = (video_filter_.eof && audio_filter_.eof) ||
                                          (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
