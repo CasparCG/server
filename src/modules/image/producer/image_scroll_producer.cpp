@@ -36,6 +36,7 @@
 #include <core/monitor/monitor.h>
 
 #include <common/array.h>
+#include <common/scope_exit.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
@@ -376,6 +377,13 @@ struct image_scroll_producer : public core::frame_producer_base
 
     core::draw_frame receive_impl() override
     {
+        CASPAR_SCOPE_EXIT
+        {
+            state_["file/path"] = filename_;
+            state_["delta"] = delta_;
+            state_["speed"] = speed_.fetch();
+        };
+
         core::draw_frame result;
 
         if (format_desc_.field_mode == core::field_mode::progressive || progressive_) {
@@ -392,10 +400,6 @@ struct image_scroll_producer : public core::frame_producer_base
 
             result = core::draw_frame::interlace(field1, field2, format_desc_.field_mode);
         }
-
-        state_["file/path"] = filename_;
-            state_["delta"] = delta_;
-        state_["speed"] = speed_.fetch();
 
         return result;
     }

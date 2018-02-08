@@ -31,6 +31,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
+#include <common/scope_exit.h>
 
 #include <core/diagnostics/call_context.h>
 #include <core/frame/draw_frame.h>
@@ -178,18 +179,9 @@ class decklink_producer
         if (!video)
             return S_OK;
 
-        try {
-            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
-            tick_timer_.restart();
+        caspar::timer frame_timer;
 
-            caspar::timer frame_timer;
-
-            // Video
-
-            void* video_bytes = nullptr;
-            if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
-                return S_OK;
-
+        CASPAR_SCOPE_EXIT {
             state_["file/name"] = model_name_;
             state_["file/path"] = device_index_;
             state_["file/video/width"] = video->GetWidth();
@@ -200,9 +192,26 @@ class decklink_producer
                     : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"));
             state_["file/audio/sample-rate"] = 48000;
             state_["file/audio/channels"] = 2;
-            state_["file/audio/format"] =
-                u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
+            state_["file/audio/format"] = u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
             state_["file/fps"] = format_desc_.fps;
+            state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
+            state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
+
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_value("output-buffer",
+                static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
+        };
+
+        try {
+            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            tick_timer_.restart();
+
+
+            // Video
+
+            void* video_bytes = nullptr;
+            if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
+                return S_OK;
 
             // Audio
 
@@ -293,13 +302,6 @@ class decklink_producer
 
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
-
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-            state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
-
-            graph_->set_value("output-buffer",
-                              static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
-            state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
         } catch (...) {
             exception_ = std::current_exception();
             return E_FAIL;
