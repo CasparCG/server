@@ -214,7 +214,7 @@ struct screen_consumer : boost::noncopyable
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
-                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, nullptr));
+                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
 
                     frames_.push_back(frame);
                 }
@@ -255,47 +255,58 @@ struct screen_consumer : boost::noncopyable
         thread_.join();
     }
 
-    void tick()
+    bool poll()
     {
+        int count = 0;
         sf::Event e;
         while (window_.pollEvent(e)) {
+            count++;
             if (e.type == sf::Event::Resized) {
                 calculate_aspect();
             } else if (e.type == sf::Event::Closed) {
                 is_running_ = false;
             } else if (config_.interactive && sink_) {
                 switch (e.type) {
-                    case sf::Event::MouseMoved: {
-                        auto& mouse_move = e.mouseMove;
-                        sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                            1,
-                            static_cast<double>(mouse_move.x) / screen_width_,
-                            static_cast<double>(mouse_move.y) / screen_height_));
-                        break;
-                    }
-                    case sf::Event::MouseButtonPressed:
-                    case sf::Event::MouseButtonReleased: {
-                        auto& mouse_button = e.mouseButton;
-                        sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
-                            1,
-                            static_cast<double>(mouse_button.x) / screen_width_,
-                            static_cast<double>(mouse_button.y) / screen_height_,
-                            static_cast<int>(mouse_button.button),
-                            e.type == sf::Event::MouseButtonPressed));
-                        break;
-                    }
-                    case sf::Event::MouseWheelMoved: {
-                        auto& wheel_moved = e.mouseWheel;
-                        sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
-                            1,
-                            static_cast<double>(wheel_moved.x) / screen_width_,
-                            static_cast<double>(wheel_moved.y) / screen_height_,
-                            wheel_moved.delta));
-                        break;
-                    }
+                case sf::Event::MouseMoved:
+                {
+                    auto& mouse_move = e.mouseMove;
+                    sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
+                        1,
+                        static_cast<double>(mouse_move.x) / screen_width_,
+                        static_cast<double>(mouse_move.y) / screen_height_));
+                    break;
+                }
+                case sf::Event::MouseButtonPressed:
+                case sf::Event::MouseButtonReleased:
+                {
+                    auto& mouse_button = e.mouseButton;
+                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
+                        1,
+                        static_cast<double>(mouse_button.x) / screen_width_,
+                        static_cast<double>(mouse_button.y) / screen_height_,
+                        static_cast<int>(mouse_button.button),
+                        e.type == sf::Event::MouseButtonPressed));
+                    break;
+                }
+                case sf::Event::MouseWheelMoved:
+                {
+                    auto& wheel_moved = e.mouseWheel;
+                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+                        1,
+                        static_cast<double>(wheel_moved.x) / screen_width_,
+                        static_cast<double>(wheel_moved.y) / screen_height_,
+                        wheel_moved.delta));
+                    break;
+                }
                 }
             }
         }
+        return count > 0;
+    }
+
+    void tick()
+    {
+        poll();
 
         core::const_frame in_frame;
         frame_buffer_.pop(in_frame);
@@ -331,13 +342,14 @@ struct screen_consumer : boost::noncopyable
         {
             auto& frame = frames_[0];
 
-            glFlush();
-
             while (frame.fence) {
-                auto wait = glClientWaitSync(frame.fence, 0, 1000000);
+                auto wait = glClientWaitSync(frame.fence, 0, 0);
                 if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
                     glDeleteSync(frame.fence);
                     frame.fence = 0;
+                }
+                if (!poll()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 }
             }
 
@@ -363,7 +375,7 @@ struct screen_consumer : boost::noncopyable
                                     format_desc_.width,
                                     format_desc_.height,
                                     GL_BGRA,
-                                    GL_UNSIGNED_INT_8_8_8_8_REV,
+                                    GL_UNSIGNED_BYTE,
                                     nullptr));
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
