@@ -246,6 +246,7 @@ struct screen_consumer : boost::noncopyable
                 glDeleteBuffers(1, &frame.pbo);
                 glDeleteTextures(1, &frame.tex);
             }
+            window_.close();
         });
     }
 
