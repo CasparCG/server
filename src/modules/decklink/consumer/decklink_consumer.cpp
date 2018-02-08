@@ -194,7 +194,14 @@ class decklink_frame : public IDeckLinkVideoFrame
                                 0x03030303);
                 *buffer = data_;
             } else {
+#ifdef _MSC_VER
                 *buffer = const_cast<uint8_t*>(frame_.image_data(0).begin());
+#else
+                if (!data_) {
+                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
+                }
+                std::memcpy(data_, frame_.image_data(0).begin(), format_desc_.size);
+#endif
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
