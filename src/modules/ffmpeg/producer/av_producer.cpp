@@ -575,53 +575,37 @@ struct AVProducer::Impl
 
     void loop(bool loop)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            loop_ = loop;
-        }
+        loop_ = loop;
         cond_.notify_all();
     }
 
     bool loop() const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-
         return loop_;
     }
 
     void start(int64_t start)
     {
         // TODO (fix) Validate input.
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-        }
+        start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
         cond_.notify_all();
     }
 
     boost::optional<int64_t> start() const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-
         return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
     }
 
     void duration(int64_t duration)
     {
         // TODO (fix) Validate input.
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-            input_.paused(false);
-        }
+        duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
+        input_.paused(false);
         cond_.notify_all();
     }
 
     boost::optional<int64_t> duration() const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-
         auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
         auto duration = duration_;
 
@@ -725,7 +709,7 @@ struct AVProducer::Impl
                     sources_.erase(p.first);
                 }
 
-                nb_requests -= 1;
+                nb_requests = 0;
 
                 return true;
             });
