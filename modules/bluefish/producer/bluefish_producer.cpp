@@ -310,7 +310,7 @@ public:
 			<< core::monitor::message("/file/video/height") % out_format_desc_.height
 			<< core::monitor::message("/file/video/field") % u8(!video_frame->interlaced_frame ? "progressive" : (video_frame->top_field_first ? "upper" : "lower"))
 			<< core::monitor::message("/file/audio/sample-rate") % 48000
-			<< core::monitor::message("/file/audio/channels") % 2
+			<< core::monitor::message("/file/audio/channels") % channel_layout_.num_channels
 			<< core::monitor::message("/file/audio/format") % u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
 			<< core::monitor::message("/file/fps") % in_format_desc_.fps;
 		
@@ -443,9 +443,9 @@ public:
         if (noAudioChannelToExtract == 2)
             decode_struct->audio_ch_required_mask = MONO_CHANNEL_1 | MONO_CHANNEL_2;
         else if (noAudioChannelToExtract == 8)
-            decode_struct->audio_ch_required_mask = MONO_CHANNEL_1 | MONO_CHANNEL_2;
+            decode_struct->audio_ch_required_mask = MONO_CHANNEL_1 | MONO_CHANNEL_2 | MONO_CHANNEL_3 | MONO_CHANNEL_4 | MONO_CHANNEL_5 | MONO_CHANNEL_6 | MONO_CHANNEL_7 | MONO_CHANNEL_8;
         else if (noAudioChannelToExtract == 16)
-            decode_struct->audio_ch_required_mask = MONO_CHANNEL_1 | MONO_CHANNEL_2;
+            decode_struct->audio_ch_required_mask = MONO_CHANNEL_1 | MONO_CHANNEL_2 | MONO_CHANNEL_3 | MONO_CHANNEL_4 | MONO_CHANNEL_5 | MONO_CHANNEL_6 | MONO_CHANNEL_7 | MONO_CHANNEL_8 | MONO_CHANNEL_11 | MONO_CHANNEL_12 | MONO_CHANNEL_13 | MONO_CHANNEL_14 | MONO_CHANNEL_15 | MONO_CHANNEL_16 | MONO_CHANNEL_17 | MONO_CHANNEL_18;
 
         blue_->decode_hanc_frame(card_type, src_hanc_buffer, decode_struct);
 
@@ -593,7 +593,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		in_format_desc = dependencies.format_desc;
 
 	auto channel_layout_spec	= get_param(L"CHANNEL_LAYOUT", params);
-	auto channel_layout			= *core::audio_channel_layout_repository::get_default()->get_layout(L"stereo");
+	auto channel_layout			= *core::audio_channel_layout_repository::get_default()->get_layout(L"8ch");
 
 	if (!channel_layout_spec.empty())
 	{
