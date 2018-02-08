@@ -214,7 +214,7 @@ struct screen_consumer : boost::noncopyable
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
-                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, nullptr));
 
                     frames_.push_back(frame);
                 }
@@ -363,7 +363,7 @@ struct screen_consumer : boost::noncopyable
                                     format_desc_.width,
                                     format_desc_.height,
                                     GL_BGRA,
-                                    GL_UNSIGNED_BYTE,
+                                    GL_UNSIGNED_INT_8_8_8_8_REV,
                                     nullptr));
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
