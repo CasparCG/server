@@ -171,12 +171,16 @@ struct server::impl : boost::noncopyable
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
+            auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id = static_cast<int>(channels_.size() + 1);
-            auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id), [=](const monitor::state& channel_state)
+            auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id), [channel_id, weak_client](const monitor::state& channel_state)
             {
                 monitor::state state;
                 state.append("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
-                osc_client_->send(state);
+                auto client = weak_client.lock();
+                if (client) {
+                    client->send(state);
+                }
             });
 
             channels_.push_back(channel);

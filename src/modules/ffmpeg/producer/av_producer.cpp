@@ -419,13 +419,13 @@ struct AVProducer::Impl
                         buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
                     }
 
-                    std::unique_lock<std::mutex> lock(mutex_);
-
                     if (abort_request_) {
                         break;
                     }
 
-                    schedule_inputs();
+                    std::unique_lock<std::mutex> lock(mutex_);
+
+                    schedule_decoders();
                     schedule_filters();
 
                     tbb::parallel_invoke([=] {
@@ -502,7 +502,7 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-    void schedule_inputs()
+    void schedule_decoders()
     {
         input_([&](std::shared_ptr<AVPacket>& packet)
         {
