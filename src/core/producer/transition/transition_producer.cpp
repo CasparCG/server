@@ -28,6 +28,8 @@
 #include "../../monitor/monitor.h"
 #include "../frame_producer.h"
 
+#include <common/scope_exit.h>
+
 #include <tbb/parallel_invoke.h>
 
 #include <future>
@@ -36,7 +38,7 @@ namespace caspar { namespace core {
 
 class transition_producer : public frame_producer_base
 {
-    spl::shared_ptr<monitor::subject> monitor_subject_;
+    monitor::state                    state_;
     const field_mode                  mode_;
     int                               current_frame_ = 0;
 
@@ -55,8 +57,6 @@ class transition_producer : public frame_producer_base
         , info_(info)
         , dest_producer_(dest)
     {
-        dest->monitor_output().attach_parent(monitor_subject_);
-
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
@@ -70,6 +70,30 @@ class transition_producer : public frame_producer_base
 
     draw_frame receive_impl() override
     {
+        CASPAR_SCOPE_EXIT
+        {
+            state_.clear();
+            state_.append(dest_producer_->state());
+
+            state_["transition/frame"] = { current_frame_, info_.duration };
+            state_["transition/type"] = [&]() -> std::string
+            {
+                switch (info_.type) {
+                case transition_type::mix:
+                    return "mix";
+                case transition_type::wipe:
+                    return "wipe";
+                case transition_type::slide:
+                    return "slide";
+                case transition_type::push:
+                    return "push";
+                case transition_type::cut:
+                    return "cut";
+                default:
+                    return "n/a";
+                }
+            }();
+        };
         if (source_producer_ == core::frame_producer::empty()) {
             return dest_producer_->receive();
         }
@@ -101,24 +125,6 @@ class transition_producer : public frame_producer_base
         }
 
         current_frame_ += 1;
-
-        *monitor_subject_ << monitor::message("/transition/frame") % current_frame_ % info_.duration
-                          << monitor::message("/transition/type") % [&]() -> std::string {
-            switch (info_.type) {
-                case transition_type::mix:
-                    return "mix";
-                case transition_type::wipe:
-                    return "wipe";
-                case transition_type::slide:
-                    return "slide";
-                case transition_type::push:
-                    return "push";
-                case transition_type::cut:
-                    return "cut";
-                default:
-                    return "n/a";
-            }
-        }();
 
         return compose(dest, source);
     }
@@ -206,7 +212,7 @@ class transition_producer : public frame_producer_base
         return draw_frame::over(s_frame, d_frame);
     }
 
-    monitor::subject& monitor_output() { return *monitor_subject_; }
+    const monitor::state& state() { return state_; }
 
     void on_interaction(const interaction_event::ptr& event) override { dest_producer_->on_interaction(event); }
 

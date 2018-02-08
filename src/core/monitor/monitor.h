@@ -20,15 +20,13 @@
  */
 #pragma once
 
-#include <common/assert.h>
-#include <common/memory.h>
-
-#include <boost/chrono/duration.hpp>
 #include <boost/variant.hpp>
 
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
+#include <mutex>
 
 namespace caspar { namespace core { namespace monitor {
 
@@ -36,78 +34,74 @@ typedef boost::
     variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring, std::vector<std::int8_t>>
         data_t;
 
-class message
+class state_proxy
 {
-  public:
-    message(std::string path, std::vector<data_t> data = std::vector<data_t>())
-        : path_(std::move(path))
-        , data_ptr_(std::make_shared<std::vector<data_t>>(std::move(data)))
+    std::string key_;
+    std::map<std::string, std::vector<data_t>>& data_;
+public:
+    state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data)
+        : key_(key)
+        , data_(data)
     {
-        CASPAR_ASSERT(path.empty() || path[0] == '/');
     }
 
-    message(std::string path, spl::shared_ptr<std::vector<data_t>> data_ptr)
-        : path_(std::move(path))
-        , data_ptr_(std::move(data_ptr))
+    state_proxy& operator=(data_t data)
     {
-        CASPAR_ASSERT(path.empty() || path[0] == '/');
-    }
-
-    const std::string& path() const { return path_; }
-
-    const std::vector<data_t>& data() const { return *data_ptr_; }
-
-    message propagate(const std::string& path) const { return message(path + path_, data_ptr_); }
-
-    template <typename T>
-    message& operator%(T&& data)
-    {
-        data_ptr_->push_back(std::forward<T>(data));
+        data_[key_] = { std::move(data) };
         return *this;
     }
 
-  private:
-    std::string                          path_;
-    spl::shared_ptr<std::vector<data_t>> data_ptr_;
-};
-
-struct sink
-{
-    virtual ~sink() {}
-
-    virtual void propagate(const message& msg) = 0;
-};
-
-class subject : public sink
-{
-  private:
-    std::weak_ptr<sink> parent_;
-    const std::string   path_;
-
-  public:
-    subject(std::string path = "")
-        : path_(std::move(path))
+    state_proxy& operator=(std::initializer_list<data_t> data)
     {
-        CASPAR_ASSERT(path.empty() || path[0] == '/');
-    }
-
-    void attach_parent(spl::shared_ptr<sink> parent) { parent_ = std::move(parent); }
-
-    void detach_parent() { parent_.reset(); }
-
-    subject& operator<<(const message& msg)
-    {
-        propagate(msg);
-
+        data_[key_] = std::move(data);
         return *this;
     }
+};
 
-    virtual void propagate(const message& msg) override
+// TODO (perf) Optimize
+class state
+{
+    typedef std::map<std::string, std::vector<data_t>> data_map_t;
+
+    mutable std::mutex mutex_;
+    data_map_t         data_;
+public:
+    state_proxy operator[](const std::string& key)
     {
-        auto parent = parent_.lock();
+        return state_proxy(key, data_);
+    }
 
-        if (parent)
-            parent->propagate(msg.propagate(path_));
+    void clear()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        data_.clear();
+    }
+
+    void append(const std::string& name, const state& other)
+    {
+        std::lock_guard<std::mutex> lock1(mutex_);
+        std::lock_guard<std::mutex> lock2(other.mutex_);
+
+        auto name2 = name.empty() ? name : name + "/";
+        for (auto& p : other.data_) {
+            data_[name2 + p.first] = p.second;
+        }
+    }
+
+    void append(const state& other)
+    {
+        std::lock_guard<std::mutex> lock1(mutex_);
+        std::lock_guard<std::mutex> lock2(other.mutex_);
+
+        for (auto& p : other.data_) {
+            data_[p.first] = p.second;
+        }
+    }
+
+    auto get() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return data_;
     }
 };
 

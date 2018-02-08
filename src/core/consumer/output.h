@@ -51,7 +51,7 @@ class output final
     void remove(const spl::shared_ptr<frame_consumer>& consumer);
     void remove(int index);
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
 

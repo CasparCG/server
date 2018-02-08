@@ -38,7 +38,8 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {
-    spl::shared_ptr<monitor::subject> monitor_subject_;
+    monitor::state state_;
+
     spl::shared_ptr<frame_producer>   foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer>   background_ = frame_producer::empty();
     ;
@@ -47,16 +48,13 @@ struct layer::impl
     int64_t                  current_frame_age_ = 0;
 
   public:
-    impl(int index)
-        : monitor_subject_(spl::make_shared<monitor::subject>("/layer/" + boost::lexical_cast<std::string>(index)))
+    impl()
     {
     }
 
     void set_foreground(spl::shared_ptr<frame_producer> producer)
     {
-        foreground_->monitor_output().detach_parent();
         foreground_ = std::move(producer);
-        foreground_->monitor_output().attach_parent(monitor_subject_);
     }
 
     void pause()
@@ -113,16 +111,15 @@ struct layer::impl
     draw_frame receive(const video_format_desc& format_desc)
     {
         try {
-            caspar::timer produce_timer;
-
             if (foreground_->following_producer() != core::frame_producer::empty()) {
                 foreground_ = foreground_->following_producer();
             }
 
             auto frame = foreground_->receive();
 
-            *monitor_subject_ << monitor::message("/profiler/time") % produce_timer.elapsed() % (1.0 / format_desc.fps)
-                              << monitor::message("/paused") % is_paused_;
+            state_.clear();
+            state_["paused"] = is_paused_;
+            state_.append(foreground_->state());
 
             if (!frame) {
                 return foreground_->last_frame();
@@ -150,8 +147,8 @@ struct layer::impl
     bool collides(double x, double y) const { return foreground_->collides(x, y); }
 };
 
-layer::layer(int index)
-    : impl_(new impl(index))
+layer::layer()
+    : impl_(new impl())
 {
 }
 layer::layer(layer&& other)
@@ -177,7 +174,7 @@ void       layer::stop() { impl_->stop(); }
 draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-monitor::subject&               layer::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state&               layer::state() const { return impl_->state_; }
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }} // namespace caspar::core

@@ -56,7 +56,7 @@ class client
 
     client& operator=(client&&);
 
-    spl::shared_ptr<core::monitor::sink> sink();
+    void send(const core::monitor::state& state);
 
   private:
     struct impl;

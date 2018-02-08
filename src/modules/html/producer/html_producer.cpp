@@ -394,7 +394,7 @@ class html_client
 class html_producer : public core::frame_producer_base
 {
     core::video_format_desc format_desc_;
-    core::monitor::subject  monitor_subject_;
+    core::monitor::state    state_;
     const std::wstring      url_;
 
     CefRefPtr<html_client> client_;
@@ -507,7 +507,7 @@ class html_producer : public core::frame_producer_base
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() const { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,

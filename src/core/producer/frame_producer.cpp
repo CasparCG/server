@@ -132,11 +132,6 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
         void              paused(bool value) override {}
         uint32_t          nb_frames() const override { return 0; }
         std::wstring      print() const override { return L"empty"; }
-        monitor::subject& monitor_output() override
-        {
-            static monitor::subject monitor_subject("");
-            return monitor_subject;
-        }
         std::wstring              name() const override { return L"empty"; }
         uint32_t                  frame_number() const override { return 0; }
         std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -235,7 +230,7 @@ class destroy_producer_proxy : public frame_producer
     }
     uint32_t          nb_frames() const override { return producer_->nb_frames(); }
     draw_frame        last_frame() { return producer_->last_frame(); }
-    monitor::subject& monitor_output() override { return producer_->monitor_output(); }
+    const monitor::state& state() const { return producer_->state(); }
     bool              collides(double x, double y) const override { return producer_->collides(x, y); }
     void on_interaction(const interaction_event::ptr& event) override { return producer_->on_interaction(event); }
 };

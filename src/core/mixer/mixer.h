@@ -55,7 +55,7 @@ class mixer final
 
     mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
   private:
     struct impl;

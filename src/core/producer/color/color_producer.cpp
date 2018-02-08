@@ -32,6 +32,7 @@
 
 #include <common/array.h>
 #include <common/except.h>
+#include <common/scope_exit.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -75,7 +76,7 @@ draw_frame create_color_frame(void*                                 tag,
 
 class color_producer : public frame_producer_base
 {
-    monitor::subject monitor_subject_;
+    monitor::state state_;
 
     const std::wstring color_str_;
     draw_frame         frame_;
@@ -99,7 +100,10 @@ class color_producer : public frame_producer_base
 
     draw_frame receive_impl() override
     {
-        monitor_subject_ << monitor::message("color") % color_str_;
+        CASPAR_SCOPE_EXIT
+        {
+            state_["color"] = color_str_;
+        };
 
         return frame_;
     }
@@ -108,7 +112,7 @@ class color_producer : public frame_producer_base
 
     std::wstring name() const override { return L"color"; }
 
-    monitor::subject& monitor_output() override { return monitor_subject_; }
+    const monitor::state& state() const override { return state_; }
 };
 
 std::wstring get_hex_color(const std::wstring& str)

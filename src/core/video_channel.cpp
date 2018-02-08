@@ -51,7 +51,7 @@ namespace caspar { namespace core {
 
 struct video_channel::impl final
 {
-    spl::shared_ptr<monitor::subject> monitor_subject_;
+    monitor::state state_;
 
     const int index_;
 
@@ -69,18 +69,20 @@ struct video_channel::impl final
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
+    std::function<void(const monitor::state&)>        tick_;
+
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
   public:
-    impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)
-        : monitor_subject_(spl::make_shared<monitor::subject>("/channel/" + boost::lexical_cast<std::string>(index)))
-        , index_(index)
+    impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer, std::function<void(const monitor::state&)> tick)
+        : index_(index)
         , format_desc_(format_desc)
         , output_(graph_, format_desc, index)
         , image_mixer_(std::move(image_mixer))
         , mixer_(index, graph_, image_mixer_)
         , stage_(index, graph_)
+        , tick_(tick)
     {
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -88,10 +90,6 @@ struct video_channel::impl final
         graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
         caspar::diagnostics::register_graph(graph_);
-
-        output_.monitor_output().attach_parent(monitor_subject_);
-        mixer_.monitor_output().attach_parent(monitor_subject_);
-        stage_.monitor_output().attach_parent(monitor_subject_);
 
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
@@ -102,22 +100,32 @@ struct video_channel::impl final
 
                     auto format_desc = video_format_desc();
 
+                    state_.clear();
+
                     // Produce
                     caspar::timer produce_timer;
                     auto          stage_frames = stage_(format_desc);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
+
+                    state_.append("stage", stage_.state());
 
                     // Mix
                     caspar::timer mix_timer;
                     auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
+                    state_.append("mixer", mixer_.state());
+
                     // Consume
                     caspar::timer consume_timer;
                     output_(std::move(mixed_frame), format_desc).wait();
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
+                    state_.append("output", output_.state());
+
                     graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
+
+                    tick_(state_);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -155,8 +163,9 @@ struct video_channel::impl final
 
 video_channel::video_channel(int                            index,
                              const core::video_format_desc& format_desc,
-                             std::unique_ptr<image_mixer>   image_mixer)
-    : impl_(new impl(index, format_desc, std::move(image_mixer)))
+                             std::unique_ptr<image_mixer>   image_mixer,
+                             std::function<void(const monitor::state&)> tick)
+    : impl_(new impl(index, format_desc, std::move(image_mixer), tick))
 {
 }
 video_channel::~video_channel() {}
@@ -173,6 +182,6 @@ void                           core::video_channel::video_format_desc(const core
     impl_->video_format_desc(format_desc);
 }
 int               video_channel::index() const { return impl_->index(); }
-monitor::subject& video_channel::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state& video_channel::state() const { return impl_->state_; }
 
 }} // namespace caspar::core

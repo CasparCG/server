@@ -56,13 +56,13 @@ using namespace std::chrono_literals;
 
 struct ffmpeg_producer : public core::frame_producer_base
 {
+    core::monitor::state state_;
+
     const std::wstring                   filename_;
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
 
     AVProducer producer_;
-
-    core::monitor::subject monitor_subject_;
 
   public:
     explicit ffmpeg_producer(spl::shared_ptr<core::frame_factory> frame_factory,
@@ -98,12 +98,9 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     void send_osc()
     {
-        monitor_subject_ << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) %
-                                (producer_.duration() / format_desc_.fps)
-                         << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) %
-                                static_cast<int32_t>(producer_.duration())
-                         << core::monitor::message("/file/fps") % format_desc_.fps
-                         << core::monitor::message("/loop") % producer_.loop();
+        state_["file/time"]  = { producer_.time(), format_desc_.fps, producer_.duration() / format_desc_.fps };
+        state_["file/frame"] = { static_cast<int32_t>(producer_.time()), static_cast<int32_t>(producer_.duration()) };
+        state_["loop"]       = producer_.loop();
     }
 
     uint32_t nb_frames() const override
@@ -183,7 +180,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"ffmpeg"; }
 
-    core::monitor::subject& monitor_output() override { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 };
 
 bool is_valid_file(const std::wstring& filename)

@@ -467,7 +467,7 @@ struct screen_consumer : boost::noncopyable
 
 struct screen_consumer_proxy : public core::frame_consumer
 {
-    core::monitor::subject           monitor_subject_;
+    core::monitor::state             state_;
     const configuration              config_;
     std::unique_ptr<screen_consumer> consumer_;
     core::interaction_sink*          sink_;
@@ -499,7 +499,7 @@ struct screen_consumer_proxy : public core::frame_consumer
 
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() const { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

@@ -67,7 +67,7 @@ namespace caspar { namespace reroute {
 
 class channel_consumer : public core::frame_consumer
 {
-    core::monitor::subject                          monitor_subject_;
+    core::monitor::state                            state_;
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
     core::video_format_desc                         format_desc_;
     int                                             channel_index_;
@@ -121,7 +121,7 @@ class channel_consumer : public core::frame_consumer
 
     int index() const override { return 78500 + consumer_index_; }
 
-    core::monitor::subject& monitor_output() override { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 
     // channel_consumer
 
@@ -152,7 +152,7 @@ core::video_format_desc get_progressive_format(core::video_format_desc format_de
 class channel_producer : public core::frame_producer_base
 {
     spl::shared_ptr<core::video_channel> channel_;
-    core::monitor::subject               monitor_subject_;
+    core::monitor::state                 state_;
 
     const spl::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_desc              format_desc_;
@@ -188,7 +188,7 @@ class channel_producer : public core::frame_producer_base
 
     std::wstring print() const override { return L"channel-producer[]"; }
 
-    core::monitor::subject& monitor_output() override { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 
     boost::rational<int> current_framerate() const { return format_desc_.framerate; }
 };

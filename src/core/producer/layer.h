@@ -42,7 +42,7 @@ class layer final : public interaction_sink
     layer& operator=(const layer&);
 
   public:
-    explicit layer(int index = -1);
+    explicit layer();
     layer(layer&& other);
 
     layer& operator=(layer&& other);
@@ -61,7 +61,7 @@ class layer final : public interaction_sink
 
     // monitor::observable
 
-    monitor::subject& monitor_output();
+    const monitor::state& state() const;
 
     // interaction_sink
 

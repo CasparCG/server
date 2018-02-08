@@ -68,7 +68,7 @@ struct audio_stream
 
 struct audio_mixer::impl : boost::noncopyable
 {
-    monitor::subject                    monitor_subject_{"/audio"};
+    monitor::state                      state_;
     std::stack<core::audio_transform>   transform_stack_;
     std::map<const void*, audio_stream> audio_streams_;
     std::vector<audio_item>             items_;
@@ -217,7 +217,9 @@ struct audio_mixer::impl : boost::noncopyable
             graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clipping");
 
         const int num_channels = format_desc_.audio_channels;
-        monitor_subject_ << monitor::message("/nb_channels") % num_channels;
+
+        state_.clear();
+        state_["nb_channels"] = num_channels;
 
         auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
 
@@ -235,8 +237,8 @@ struct audio_mixer::impl : boost::noncopyable
 
             auto chan_str = boost::lexical_cast<std::string>(i + 1);
 
-            monitor_subject_ << monitor::message("/" + chan_str + "/pFS") % pFS;
-            monitor_subject_ << monitor::message("/" + chan_str + "/dBFS") % dBFS;
+            state_[chan_str + "/pFS"] = pFS;
+            state_[chan_str + "/dBFS"] = dBFS;
         }
 
         graph_->set_value("volume",
@@ -258,6 +260,6 @@ void           audio_mixer::pop() { impl_->pop(); }
 void           audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float          audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
 array<int32_t> audio_mixer::operator()(const video_format_desc& format_desc) { return impl_->mix(format_desc); }
-monitor::subject&           audio_mixer::monitor_output() { return impl_->monitor_subject_; }
+const monitor::state& audio_mixer::state() const { return impl_->state_; }
 
 }} // namespace caspar::core

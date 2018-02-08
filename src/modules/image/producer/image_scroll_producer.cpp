@@ -99,7 +99,7 @@ class speed_tweener
 
 struct image_scroll_producer : public core::frame_producer_base
 {
-    core::monitor::subject monitor_subject_;
+    core::monitor::state          state_;
 
     const std::wstring            filename_;
     std::vector<core::draw_frame> frames_;
@@ -393,9 +393,9 @@ struct image_scroll_producer : public core::frame_producer_base
             result = core::draw_frame::interlace(field1, field2, format_desc_.field_mode);
         }
 
-        monitor_subject_ << core::monitor::message("/file/path") % filename_
-                         << core::monitor::message("/delta") % delta_
-                         << core::monitor::message("/speed") % speed_.fetch();
+        state_["file/path"] = filename_;
+            state_["delta"] = delta_;
+        state_["speed"] = speed_.fetch();
 
         return result;
     }
@@ -415,7 +415,7 @@ struct image_scroll_producer : public core::frame_producer_base
         }
     }
 
-    core::monitor::subject& monitor_output() { return monitor_subject_; }
+    const core::monitor::state& state() { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies,

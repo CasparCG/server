@@ -47,7 +47,7 @@ namespace caspar { namespace newtek {
 struct newtek_ivga_consumer : public core::frame_consumer
 {
     core::video_format_desc             format_desc_;
-    core::monitor::subject              monitor_subject_;
+    core::monitor::state                state_;
     std::shared_ptr<void>               air_send_;
     std::atomic<bool>                   connected_ = false;
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -116,7 +116,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
         return make_ready_future(true);
     }
 
-    core::monitor::subject& monitor_output() override { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 
     std::wstring print() const override
     {

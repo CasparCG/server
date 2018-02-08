@@ -117,7 +117,7 @@ std::vector<core::draw_frame> extract_actual_frames(core::draw_frame original, c
 
 class layer_producer : public core::frame_producer_base
 {
-    core::monitor::subject monitor_subject_;
+    core::monitor::state state_;
 
     const int                             layer_;
     const spl::shared_ptr<layer_consumer> consumer_;
@@ -191,7 +191,7 @@ class layer_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"layer-producer"; }
 
-    core::monitor::subject& monitor_output() override { return monitor_subject_; }
+    const core::monitor::state& state() const override { return state_; }
 
     boost::rational<int> current_framerate() const
     {

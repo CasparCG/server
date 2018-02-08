@@ -54,7 +54,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 {
     int                                 channel_index_;
     spl::shared_ptr<diagnostics::graph> graph_;
-    spl::shared_ptr<monitor::subject>   monitor_subject_ = spl::make_shared<monitor::subject>("/stage");
+    monitor::state                      state_;
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
     interaction_aggregator              aggregator_;
@@ -77,21 +77,22 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
-                std::vector<int> indices;
-
-                for (auto& layer : layers_) {
-                    // Prevent race conditions in parallel for each later
-                    frames[layer.first];
-                    tweens_[layer.first];
-                    layer_consumers_[layer.first];
-
-                    indices.push_back(layer.first);
-                }
-
                 aggregator_.translate_and_send();
 
-                tbb::parallel_for_each(
-                    indices.begin(), indices.end(), [&](int index) { draw(index, format_desc, frames); });
+                state_.clear();
+
+                for (auto& p : layers_) {
+                    auto& layer = p.second;
+                    auto& tween = tweens_[p.first];
+                    //auto& consumers = layer_consumers_[p.first];
+
+                    auto frame = layer.receive(format_desc);
+                    frame.transform() *= tween.fetch_and_tick(1);
+
+                    state_.append("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+
+                    frames[p.first] = std::move(frame);
+                }
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -103,41 +104,11 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return frames;
     }
 
-    void draw(int index, const video_format_desc& format_desc, std::map<int, draw_frame>& frames)
-    {
-        auto& layer     = layers_[index];
-        auto& tween     = tweens_[index];
-        auto& consumers = layer_consumers_[index];
-
-        auto frame = layer.receive(format_desc);
-
-        if (!consumers.empty()) {
-            auto consumer_it = consumers | boost::adaptors::map_values;
-            tbb::parallel_for_each(consumer_it.begin(),
-                                   consumer_it.end(),
-                                   [&](decltype(*consumer_it.begin()) layer_consumer) { layer_consumer->send(frame); });
-        }
-
-        auto frame1 = frame;
-
-        frame1.transform() *= tween.fetch_and_tick(1);
-
-        if (format_desc.field_mode != core::field_mode::progressive) {
-            auto frame2 = frame;
-            frame2.transform() *= tween.fetch_and_tick(1);
-            frame2.transform().audio_transform.volume = 0.0;
-            frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
-        }
-
-        frames[index] = frame1;
-    }
-
     layer& get_layer(int index)
     {
         auto it = layers_.find(index);
         if (it == std::end(layers_)) {
-            it = layers_.insert(std::make_pair(index, layer(index))).first;
-            it->second.monitor_output().attach_parent(monitor_subject_);
+            it = layers_.emplace(index, layer()).first;
         }
         return it->second;
     }
@@ -233,19 +204,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             auto layers       = layers_ | boost::adaptors::map_values;
             auto other_layers = other_impl->layers_ | boost::adaptors::map_values;
 
-            for (auto& layer : layers)
-                layer.monitor_output().detach_parent();
-
-            for (auto& layer : other_layers)
-                layer.monitor_output().detach_parent();
-
             std::swap(layers_, other_impl->layers_);
-
-            for (auto& layer : layers)
-                layer.monitor_output().attach_parent(monitor_subject_);
-
-            for (auto& layer : other_layers)
-                layer.monitor_output().attach_parent(monitor_subject_);
 
             if (swap_transforms)
                 std::swap(tweens_, other_impl->tweens_);
@@ -275,13 +234,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 auto& my_layer    = get_layer(index);
                 auto& other_layer = other_impl->get_layer(other_index);
 
-                my_layer.monitor_output().detach_parent();
-                other_layer.monitor_output().detach_parent();
-
                 std::swap(my_layer, other_layer);
-
-                my_layer.monitor_output().attach_parent(monitor_subject_);
-                other_layer.monitor_output().attach_parent(other_impl->monitor_subject_);
 
                 if (swap_transforms) {
                     auto& my_tween    = tweens_[index];
@@ -403,6 +356,6 @@ void stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
-monitor::subject&                stage::monitor_output() { return *impl_->monitor_subject_; }
+const monitor::state&                stage::state() const { return impl_->state_; }
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }} // namespace caspar::core
