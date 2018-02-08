@@ -90,11 +90,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
                                                "since it does not support OpenGL 4.5 or higher."));
         }
 
+        CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
+
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
                    u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+
 
         device_.setActive(false);
 
@@ -103,8 +106,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
             set_thread_name(L"OpenGL Device");
             service_.run();
         });
-
-        CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
     }
 
     ~impl()
