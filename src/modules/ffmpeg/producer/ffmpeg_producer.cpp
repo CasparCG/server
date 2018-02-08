@@ -78,28 +78,31 @@ struct ffmpeg_producer : public core::frame_producer_base
         , frame_factory_(frame_factory)
         , producer_(frame_factory_, format_desc_, u8(filename), u8(vfilter), u8(afilter), start, duration, loop)
     {
+        state_["file/path"] = u8(filename_);
+        state_["file/fps"]  = format_desc_.fps;
+        state_["loop"] = producer_.loop();
     }
 
     // frame_producer
 
     core::draw_frame last_frame() override
     {
-        auto frame = producer_.prev_frame();
-        send_osc();
-        return frame;
+        CASPAR_SCOPE_EXIT {
+            update_state();
+        };
+        return producer_.prev_frame();
     }
 
     core::draw_frame receive_impl() override
     {
-        auto frame = producer_.next_frame();
-        send_osc();
-        return frame;
+        CASPAR_SCOPE_EXIT {
+            update_state();
+        };
+        return producer_.next_frame();
     }
 
-    void send_osc()
+    void update_state()
     {
-        state_["file/fps"]   = format_desc_.fps;
-        state_["file/path"]  = u8(filename_);
         state_["file/time"]  = { producer_.time(), producer_.duration() / format_desc_.fps };
         state_["file/frame"] = { static_cast<int32_t>(producer_.time()), static_cast<int32_t>(producer_.duration()) };
         state_["loop"]       = producer_.loop();
