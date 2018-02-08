@@ -151,11 +151,13 @@ set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
 # CEF
-set(CEF_INCLUDE_PATH "${PACKAGES_FOLDER}/cef/win32/include")
-set(CEF_PATH "${PACKAGES_FOLDER}/cef/win32")
+set(CEF_INCLUDE_PATH "${PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF")
 set(CEF_BIN_PATH "${PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
 set(CEF_RESOURCE_PATH "${PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
-link_directories("${PACKAGES_FOLDER}/cef/win32/lib")
+link_directories("${PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/debug")
+link_directories("${PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/release")
+link_directories("${PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/debug/VS2015")
+link_directories("${PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/release/VS2015")
 
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef.pak")
