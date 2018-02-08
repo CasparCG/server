@@ -49,6 +49,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <vector>
+#include <thread>
 
 #if defined(_MSC_VER)
 #include <windows.h>
