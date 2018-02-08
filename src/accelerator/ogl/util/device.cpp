@@ -257,6 +257,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 }
             }
 
+            glDeleteSync(fence);
+
             {
                 std::shared_ptr<buffer> buf2;
                 while (sync_queue_.try_pop(buf2) && buf2) {
