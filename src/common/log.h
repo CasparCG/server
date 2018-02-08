@@ -21,11 +21,16 @@
 
 #pragma once
 
+#include "utf.h"
+
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/trivial.hpp>
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <boost/stacktrace.hpp>
 
 #include <string>
 
@@ -50,6 +55,8 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
     return str;
 }
 
+std::string current_exception_diagnostic_information();
+
 typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, caspar_logger)
@@ -59,9 +66,18 @@ void add_file_sink(const std::wstring& file);
 void add_cout_sink();
 void set_log_level(const std::wstring& lvl);
 
+inline std::wstring get_stack_trace()
+{
+    auto bt = boost::stacktrace::stacktrace();
+    if (bt) {
+        return caspar::u16(boost::stacktrace::detail::to_string(&bt.as_vector()[0], bt.size()));
+    }
+    return L"";
+}
+
 #define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                 \
     try {                                                                                                              \
-        CASPAR_LOG(error) << boost::current_exception_diagnostic_information();                                        \
+        CASPAR_LOG(error) << caspar::u16(::caspar::log::current_exception_diagnostic_information()) << L"\n" << caspar::log::get_stack_trace(); \
     } catch (...) {                                                                                                    \
     }
 

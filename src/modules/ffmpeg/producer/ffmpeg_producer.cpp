@@ -172,7 +172,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 bool is_valid_file(const std::wstring& filename)
 {
-    static const auto invalid_exts = {L".png",
+    static const auto invalid_exts = { L".png",
                                       L".tga",
                                       L".bmp",
                                       L".jpg",
@@ -185,8 +185,8 @@ bool is_valid_file(const std::wstring& filename)
                                       L".j2k",
                                       L".j2c",
                                       L".swf",
-                                      L".ct"};
-    static const auto valid_exts   = {L".m2t",
+                                      L".ct" };
+    static const auto valid_exts = { L".m2t",
                                     L".mov",
                                     L".mp4",
                                     L".dv",
@@ -200,35 +200,40 @@ bool is_valid_file(const std::wstring& filename)
                                     L".ts",
                                     L".mp3",
                                     L".wav",
-                                    L".wma"};
+                                    L".wma" };
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 
-    if (std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
+    if (std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end()) {
         return true;
+    }
 
-    if (std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
+    if (std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end()) {
         return false;
+    }
 
     auto u8filename = u8(filename);
 
     int         score = 0;
-    AVProbeData pb    = {};
-    pb.filename       = u8filename.c_str();
+    AVProbeData pb = {};
+    pb.filename = u8filename.c_str();
 
-    if (av_probe_input_format2(&pb, false, &score) != nullptr)
+    if (av_probe_input_format2(&pb, false, &score) != nullptr) {
         return true;
+    }
 
     std::ifstream file(u8filename);
 
     std::vector<unsigned char> buf;
     for (auto file_it = std::istreambuf_iterator<char>(file);
-         file_it != std::istreambuf_iterator<char>() && buf.size() < 1024;
-         ++file_it)
+        file_it != std::istreambuf_iterator<char>() && buf.size() < 1024;
+        ++file_it) {
         buf.push_back(*file_it);
+    }
 
-    if (buf.empty())
+    if (buf.empty()) {
         return false;
+    }
 
     pb.buf      = buf.data();
     pb.buf_size = static_cast<int>(buf.size());

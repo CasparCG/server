@@ -45,6 +45,7 @@ set(HEADERS
 		enum_class.h
 		env.h
 		executor.h
+		except.h
 		filesystem.h
 		forward.h
 		future.h
