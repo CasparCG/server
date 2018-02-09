@@ -397,6 +397,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     core::monitor::state    state_;
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
+    bool                    realtime_ = false;
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -407,7 +408,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::thread                                      frame_thread_;
 
   public:
-    ffmpeg_consumer(std::string path, std::string args)
+    ffmpeg_consumer(std::string path, std::string args, bool realtime)
         : path_(std::move(path))
         , args_(std::move(args))
         , channel_index_([&] {
@@ -415,8 +416,9 @@ struct ffmpeg_consumer : public core::frame_consumer
             result.process_bytes(path.data(), path.length());
             return result.checksum();
         }())
+        , realtime_(realtime)
     {
-        frame_buffer_.set_capacity(128);
+        frame_buffer_.set_capacity(realtime_ ? 1 : 128);
 
         diagnostics::register_graph(graph_);
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -588,8 +590,6 @@ struct ffmpeg_consumer : public core::frame_consumer
     {
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-        } else {
-            frame_buffer_.push(std::move(frame));
         }
 
         return make_ready_future(true);
@@ -620,7 +620,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));
     }
-    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, L" "));
+    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, L" "), boost::iequals(params.at(0), L"STREAM"));
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -629,6 +629,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
-                                             u8(ptree.get<std::wstring>(L"args", L"")));
+                                             u8(ptree.get<std::wstring>(L"args", L"")),
+                                             ptree.get(L"realtime", false));
 }
 }} // namespace caspar::ffmpeg
