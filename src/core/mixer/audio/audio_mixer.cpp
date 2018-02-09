@@ -219,7 +219,7 @@ struct audio_mixer::impl : boost::noncopyable
         const int num_channels = format_desc_.audio_channels;
 
         state_.clear();
-        state_["nb_channels"] = num_channels;
+        state_["nb_channels"] = static_cast<int32_t>(num_channels);
 
         auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
 

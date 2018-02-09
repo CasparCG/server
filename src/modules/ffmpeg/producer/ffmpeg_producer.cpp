@@ -65,6 +65,7 @@ struct ffmpeg_producer : public core::frame_producer_base
   public:
     explicit ffmpeg_producer(spl::shared_ptr<core::frame_factory> frame_factory,
                              core::video_format_desc              format_desc,
+                             std::wstring                         path,
                              std::wstring                         filename,
                              std::wstring                         vfilter,
                              std::wstring                         afilter,
@@ -74,7 +75,7 @@ struct ffmpeg_producer : public core::frame_producer_base
         : format_desc_(format_desc)
         , filename_(filename)
         , frame_factory_(frame_factory)
-        , producer_(frame_factory_, format_desc_, u8(filename), u8(vfilter), u8(afilter), start, duration, loop)
+        , producer_(frame_factory_, format_desc_, u8(path), u8(filename), u8(vfilter), u8(afilter), start, duration, loop)
     {
     }
 
@@ -262,10 +263,13 @@ std::wstring probe_stem(const std::wstring& stem)
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
+    // TODO (fix) Normalize paths.
     auto file_or_url = params.at(0);
+    auto path = file_or_url;
 
     if (!boost::contains(file_or_url, L"://")) {
         file_or_url = probe_stem(env::media_folder() + L"/" + file_or_url);
+        path += boost::filesystem::path(file_or_url).extension().wstring();
     }
 
     if (file_or_url.empty()) {
@@ -309,7 +313,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
     auto producer = spl::make_shared<ffmpeg_producer>(
-        dependencies.frame_factory, dependencies.format_desc, file_or_url, vfilter, afilter, start, duration, loop);
+        dependencies.frame_factory, dependencies.format_desc, file_or_url, path, vfilter, afilter, start, duration, loop);
 
     return core::create_destroy_proxy(std::move(producer));
 }

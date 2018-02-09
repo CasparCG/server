@@ -334,6 +334,7 @@ struct AVProducer::Impl
     const std::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_desc              format_desc_;
     const AVRational                           format_tb_;
+    const std::string                          path_;
     const std::string                          filename_;
 
     std::vector<int> audio_cadence_;
@@ -369,6 +370,7 @@ struct AVProducer::Impl
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
          core::video_format_desc              format_desc,
+         std::string                          path,
          std::string                          filename,
          std::string                          vfilter,
          std::string                          afilter,
@@ -378,8 +380,9 @@ struct AVProducer::Impl
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale})
+        , path_(path)
         , filename_(filename)
-        , input_(filename, graph_)
+        , input_(path, graph_)
         , start_(start.value_or(AV_NOPTS_VALUE))
         , duration_(duration.value_or(AV_NOPTS_VALUE))
         , loop_(loop)
@@ -389,6 +392,7 @@ struct AVProducer::Impl
         , buffer_capacity_(boost::rational_cast<int>(format_desc_.framerate))
     {
         state_["file/path"] = u8(filename_);
+        state_["file/fullpath"] = u8(path_);
         state_["file/fps"] = format_desc_.fps;
         state_["file/time"] = { time(), this->duration().value_or(0) / format_desc_.fps };
         state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0)) };
@@ -611,7 +615,7 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT{
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
-            state_["file/time"] = { time(), duration().value_or(0) / format_desc_.fps };
+            state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
@@ -634,7 +638,7 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT{
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
-            state_["file/time"] = { time(), duration().value_or(0) / format_desc_.fps };
+            state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
@@ -803,6 +807,7 @@ struct AVProducer::Impl
 
 AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        core::video_format_desc              format_desc,
+                       std::string                          path,
                        std::string                          filename,
                        boost::optional<std::string>         vfilter,
                        boost::optional<std::string>         afilter,
@@ -811,6 +816,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        boost::optional<bool>                loop)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
+                     std::move(path),
                      std::move(filename),
                      std::move(vfilter.get_value_or("")),
                      std::move(afilter.get_value_or("")),
