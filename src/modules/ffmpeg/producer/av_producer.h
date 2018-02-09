@@ -17,7 +17,7 @@ class AVProducer
     AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                core::video_format_desc              format_desc,
                std::string                          path,
-               std::string                          filename,
+               std::string                          name,
                boost::optional<std::string>         vfilter,
                boost::optional<std::string>         afilter,
                boost::optional<int64_t>             start,
