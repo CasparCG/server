@@ -21,6 +21,11 @@
 
 #include "image_producer.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <FreeImage.h>
+
 #include "../util/image_loader.h"
 
 #include <core/video_format.h>
@@ -179,33 +184,29 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     //	return core::create_const_producer(std::move(frames), width, height);
     //}
     // else
-    if (boost::iequals(params.at(0), L"[PNG_BASE64]")) {
-        if (params.size() < 2)
-            return core::frame_producer::empty();
+    //if (boost::iequals(params.at(0), L"[PNG_BASE64]")) {
+    //    if (params.size() < 2)
+    //        return core::frame_producer::empty();
 
-        auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
+    //    auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
 
-        return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size(), length);
+    //    return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size(), length);
+    //}
+
+    std::wstring filename = env::media_folder() + params.at(0);
+
+    auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
+    {
+    	auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
+
+    	return static_cast<bool>(file);
+    });
+
+    if (ext == supported_extensions().end()) {
+        return core::frame_producer::empty();
     }
 
-    return core::frame_producer::empty();
-
-    // XXX
-    // std::wstring filename = env::media_folder() + params.at(0);
-
-    // auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex)
-    // -> bool
-    //{
-    //	auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
-
-    //	return static_cast<bool>(file);
-    //});
-
-    // if(ext == supported_extensions().end())
-    //	return core::frame_producer::empty();
-
-    // return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename +
-    // *ext), length);
+    return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), length);
 }
 
 }} // namespace caspar::image
