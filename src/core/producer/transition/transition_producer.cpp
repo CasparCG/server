@@ -38,9 +38,9 @@ namespace caspar { namespace core {
 
 class transition_producer : public frame_producer_base
 {
-    monitor::state                    state_;
-    const field_mode                  mode_;
-    int                               current_frame_ = 0;
+    monitor::state   state_;
+    const field_mode mode_;
+    int              current_frame_ = 0;
 
     const transition_info info_;
 
@@ -75,22 +75,21 @@ class transition_producer : public frame_producer_base
             state_.clear();
             state_.append(dest_producer_->state());
 
-            state_["transition/frame"] = { current_frame_, info_.duration };
-            state_["transition/type"] = [&]() -> std::string
-            {
+            state_["transition/frame"] = {current_frame_, info_.duration};
+            state_["transition/type"]  = [&]() -> std::string {
                 switch (info_.type) {
-                case transition_type::mix:
-                    return "mix";
-                case transition_type::wipe:
-                    return "wipe";
-                case transition_type::slide:
-                    return "slide";
-                case transition_type::push:
-                    return "push";
-                case transition_type::cut:
-                    return "cut";
-                default:
-                    return "n/a";
+                    case transition_type::mix:
+                        return "mix";
+                    case transition_type::wipe:
+                        return "wipe";
+                    case transition_type::slide:
+                        return "slide";
+                    case transition_type::push:
+                        return "push";
+                    case transition_type::cut:
+                        return "cut";
+                    default:
+                        return "n/a";
                 }
             }();
         };

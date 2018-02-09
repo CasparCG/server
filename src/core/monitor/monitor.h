@@ -23,10 +23,10 @@
 #include <boost/variant.hpp>
 
 #include <cstdint>
-#include <string>
-#include <vector>
 #include <map>
 #include <mutex>
+#include <string>
+#include <vector>
 
 namespace caspar { namespace core { namespace monitor {
 
@@ -36,9 +36,10 @@ typedef boost::
 
 class state_proxy
 {
-    std::string key_;
+    std::string                                 key_;
     std::map<std::string, std::vector<data_t>>& data_;
-public:
+
+  public:
     state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data)
         : key_(key)
         , data_(data)
@@ -47,7 +48,7 @@ public:
 
     state_proxy& operator=(data_t data)
     {
-        data_[key_] = { std::move(data) };
+        data_[key_] = {std::move(data)};
         return *this;
     }
 
@@ -65,11 +66,9 @@ class state
 
     mutable std::mutex mutex_;
     data_map_t         data_;
-public:
-    state_proxy operator[](const std::string& key)
-    {
-        return state_proxy(key, data_);
-    }
+
+  public:
+    state_proxy operator[](const std::string& key) { return state_proxy(key, data_); }
 
     void clear()
     {

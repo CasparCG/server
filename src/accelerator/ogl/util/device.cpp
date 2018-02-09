@@ -85,7 +85,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         // TODO (fix) This reports falsy false.
-        //if (!GLEW_VERSION_4_5) {
+        // if (!GLEW_VERSION_4_5) {
         //    CASPAR_THROW_EXCEPTION(not_supported()
         //                           << msg_info("Your graphics card does not meet the minimum hardware requirements "
         //                                       "since it does not support OpenGL 4.5 or higher."));

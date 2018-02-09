@@ -23,8 +23,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <windows.h>
 #include <FreeImage.h>
+#include <windows.h>
 
 #include <common/array.h>
 #include <common/env.h>

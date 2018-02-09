@@ -37,7 +37,7 @@ namespace caspar { namespace core {
 
 class separated_producer : public frame_producer_base
 {
-    monitor::state                  state_;
+    monitor::state state_;
 
     spl::shared_ptr<frame_producer> fill_producer_;
     spl::shared_ptr<frame_producer> key_producer_;

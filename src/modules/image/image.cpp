@@ -22,8 +22,8 @@
 #include "image.h"
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <FreeImage.h>
+#include <windows.h>
 
 #include "consumer/image_consumer.h"
 #include "producer/image_producer.h"

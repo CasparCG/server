@@ -48,8 +48,8 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <vector>
 #include <thread>
+#include <vector>
 
 #if defined(_MSC_VER)
 #include <windows.h>
@@ -91,9 +91,9 @@ struct configuration
 
 struct frame
 {
-    GLuint pbo = 0;
-    GLuint tex = 0;
-    char*  ptr = nullptr;
+    GLuint pbo   = 0;
+    GLuint tex   = 0;
+    char*  ptr   = nullptr;
     GLsync fence = 0;
 };
 
@@ -109,12 +109,12 @@ struct screen_consumer : boost::noncopyable
     int   screen_height_ = format_desc_.height;
     int   square_width_  = format_desc_.square_width;
     int   square_height_ = format_desc_.square_height;
-    int   screen_x_ = 0;
-    int   screen_y_ = 0;
-    float width_ = screen_width_;
-    float height_ = screen_height_;
+    int   screen_x_      = 0;
+    int   screen_y_      = 0;
+    float width_         = screen_width_;
+    float height_        = screen_height_;
 
-    sf::Window        window_;
+    sf::Window window_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
@@ -125,7 +125,7 @@ struct screen_consumer : boost::noncopyable
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     core::interaction_sink*                          sink_;
 
-    std::atomic<bool> is_running_{ true };
+    std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
   public:
@@ -186,7 +186,9 @@ struct screen_consumer : boost::noncopyable
 
         thread_ = std::thread([this] {
             try {
-                auto window_style = config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+                auto window_style = config_.borderless ? sf::Style::None
+                                                       : (config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                           : sf::Style::Fullscreen);
                 window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -198,7 +200,7 @@ struct screen_consumer : boost::noncopyable
                 }
 
                 // TODO (fix) This reports falsy false.
-                //if (!GLEW_VERSION_4_5) {
+                // if (!GLEW_VERSION_4_5) {
                 //    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
                 //}
 
@@ -207,7 +209,8 @@ struct screen_consumer : boost::noncopyable
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
                     GL(glCreateBuffers(1, &frame.pbo));
                     GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
-                    frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
+                    frame.ptr =
+                        reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -259,7 +262,7 @@ struct screen_consumer : boost::noncopyable
 
     bool poll()
     {
-        int count = 0;
+        int       count = 0;
         sf::Event e;
         while (window_.pollEvent(e)) {
             count++;
@@ -269,37 +272,34 @@ struct screen_consumer : boost::noncopyable
                 is_running_ = false;
             } else if (config_.interactive && sink_) {
                 switch (e.type) {
-                case sf::Event::MouseMoved:
-                {
-                    auto& mouse_move = e.mouseMove;
-                    sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                        1,
-                        static_cast<double>(mouse_move.x) / screen_width_,
-                        static_cast<double>(mouse_move.y) / screen_height_));
-                    break;
-                }
-                case sf::Event::MouseButtonPressed:
-                case sf::Event::MouseButtonReleased:
-                {
-                    auto& mouse_button = e.mouseButton;
-                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
-                        1,
-                        static_cast<double>(mouse_button.x) / screen_width_,
-                        static_cast<double>(mouse_button.y) / screen_height_,
-                        static_cast<int>(mouse_button.button),
-                        e.type == sf::Event::MouseButtonPressed));
-                    break;
-                }
-                case sf::Event::MouseWheelMoved:
-                {
-                    auto& wheel_moved = e.mouseWheel;
-                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
-                        1,
-                        static_cast<double>(wheel_moved.x) / screen_width_,
-                        static_cast<double>(wheel_moved.y) / screen_height_,
-                        wheel_moved.delta));
-                    break;
-                }
+                    case sf::Event::MouseMoved: {
+                        auto& mouse_move = e.mouseMove;
+                        sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
+                            1,
+                            static_cast<double>(mouse_move.x) / screen_width_,
+                            static_cast<double>(mouse_move.y) / screen_height_));
+                        break;
+                    }
+                    case sf::Event::MouseButtonPressed:
+                    case sf::Event::MouseButtonReleased: {
+                        auto& mouse_button = e.mouseButton;
+                        sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
+                            1,
+                            static_cast<double>(mouse_button.x) / screen_width_,
+                            static_cast<double>(mouse_button.y) / screen_height_,
+                            static_cast<int>(mouse_button.button),
+                            e.type == sf::Event::MouseButtonPressed));
+                        break;
+                    }
+                    case sf::Event::MouseWheelMoved: {
+                        auto& wheel_moved = e.mouseWheel;
+                        sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+                            1,
+                            static_cast<double>(wheel_moved.x) / screen_width_,
+                            static_cast<double>(wheel_moved.y) / screen_height_,
+                            wheel_moved.delta));
+                        break;
+                    }
                 }
             }
         }
@@ -352,15 +352,8 @@ struct screen_consumer : boost::noncopyable
             }
 
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(frame.tex,
-                                    0,
-                                    0,
-                                    0,
-                                    format_desc_.width,
-                                    format_desc_.height,
-                                    GL_BGRA,
-                                    GL_UNSIGNED_BYTE,
-                                    nullptr));
+            GL(glTextureSubImage2D(
+                frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
             frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);

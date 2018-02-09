@@ -84,7 +84,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     auto& layer = p.second;
                     auto& tween = tweens_[p.first];
-                    //auto& consumers = layer_consumers_[p.first];
+                    // auto& consumers = layer_consumers_[p.first];
 
                     auto frame = layer.receive(format_desc);
                     frame.transform() *= tween.fetch_and_tick(1);
@@ -356,6 +356,6 @@ void stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
-const monitor::state&                stage::state() const { return impl_->state_; }
+const monitor::state&            stage::state() const { return impl_->state_; }
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }} // namespace caspar::core

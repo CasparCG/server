@@ -65,9 +65,9 @@ port& port::operator=(port&& other)
     impl_ = std::move(other.impl_);
     return *this;
 }
-std::future<bool> port::send(const_frame frame) { return impl_->send(std::move(frame)); }
+std::future<bool>     port::send(const_frame frame) { return impl_->send(std::move(frame)); }
 const monitor::state& port::state() const { return impl_->state_; }
-void              port::change_channel_format(const core::video_format_desc& format_desc)
+void                  port::change_channel_format(const core::video_format_desc& format_desc)
 {
     impl_->change_channel_format(format_desc);
 }

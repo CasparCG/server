@@ -24,8 +24,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <windows.h>
 #include <FreeImage.h>
+#include <windows.h>
 
 #include "../util/image_algorithms.h"
 #include "../util/image_loader.h"
@@ -41,13 +41,13 @@
 #include <core/monitor/monitor.h>
 
 #include <common/array.h>
-#include <common/scope_exit.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/param.h>
+#include <common/scope_exit.h>
 #include <common/tweener.h>
 
 #include <boost/date_time.hpp>
@@ -105,7 +105,7 @@ class speed_tweener
 
 struct image_scroll_producer : public core::frame_producer_base
 {
-    core::monitor::state          state_;
+    core::monitor::state state_;
 
     const std::wstring            filename_;
     std::vector<core::draw_frame> frames_;
@@ -385,8 +385,8 @@ struct image_scroll_producer : public core::frame_producer_base
         CASPAR_SCOPE_EXIT
         {
             state_["file/path"] = filename_;
-            state_["delta"] = delta_;
-            state_["speed"] = speed_.fetch();
+            state_["delta"]     = delta_;
+            state_["speed"]     = speed_.fetch();
         };
 
         core::draw_frame result;
