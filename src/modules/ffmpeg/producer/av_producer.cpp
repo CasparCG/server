@@ -363,7 +363,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    int                     buffer_capacity_ = 2;
+    int                     buffer_capacity_ = 3;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -646,7 +646,7 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-            if (buffer_.size() < format_desc_.field_count) {
+            if (buffer_.size() < format_desc_.field_count && (!frame_flush_ || buffer_.size() == buffer_capacity_)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame{};
             }
