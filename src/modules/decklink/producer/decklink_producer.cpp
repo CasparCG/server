@@ -253,12 +253,12 @@ class decklink_producer
                 src->top_field_first  = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
                 src->key_frame        = 1;
 
-                core::pixel_format_desc desc;
-                auto                    frame = frame_factory_->create_frame(this, desc);
+                core::pixel_format_desc desc = core::pixel_format::ycbcr;
                 desc.planes.push_back(core::pixel_format_desc::plane(src->width, src->height, 1));
                 desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
                 desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
 
+                auto frame   = frame_factory_->create_frame(this, desc);
                 auto dst     = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
                 dst->data[0] = reinterpret_cast<uint8_t*>(frame.image_data(0).data());
                 dst->data[1] = reinterpret_cast<uint8_t*>(frame.image_data(1).data());
