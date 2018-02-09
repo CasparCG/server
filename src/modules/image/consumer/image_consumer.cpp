@@ -21,6 +21,11 @@
 
 #include "image_consumer.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <FreeImage.h>
+
 #include <common/array.h>
 #include <common/env.h>
 #include <common/except.h>
@@ -36,8 +41,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <tbb/concurrent_queue.h>
-
-#include <FreeImage.h>
 
 #include <algorithm>
 #include <vector>

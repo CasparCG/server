@@ -22,6 +22,11 @@
 
 #include "image_scroll_producer.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <FreeImage.h>
+
 #include "../util/image_algorithms.h"
 #include "../util/image_loader.h"
 #include "../util/image_view.h"

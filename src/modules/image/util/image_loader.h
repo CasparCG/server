@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include <FreeImage.h>
-
 #include <memory>
 #include <set>
 #include <string>
+
+struct FIBITMAP;
 
 namespace caspar { namespace image {
 

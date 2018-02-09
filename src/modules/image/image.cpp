@@ -21,6 +21,10 @@
 
 #include "image.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <FreeImage.h>
+
 #include "consumer/image_consumer.h"
 #include "producer/image_producer.h"
 #include "producer/image_scroll_producer.h"
@@ -34,8 +38,6 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/property_tree/ptree.hpp>
-
-#include <FreeImage.h>
 
 namespace caspar { namespace image {
 

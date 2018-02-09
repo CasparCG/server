@@ -21,6 +21,11 @@
 
 #include "image_loader.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <FreeImage.h>
+
 #include <common/except.h>
 #include <common/utf.h>
 
