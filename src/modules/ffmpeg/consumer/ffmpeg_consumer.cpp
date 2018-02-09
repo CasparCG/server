@@ -80,6 +80,34 @@ namespace caspar { namespace ffmpeg {
 // TODO run video filter, video encoder, audio filter, audio encoder in separate threads.
 // TODO realtime with smaller buffer?
 
+AVDictionary* to_dict(std::map<std::string, std::string>&& map)
+{
+    AVDictionary* dict = nullptr;
+    for (auto& p : map) {
+        if (!p.second.empty()) {
+            av_dict_set(&dict, p.first.c_str(), p.second.c_str(), 0);
+        }
+    }
+    return dict;
+}
+
+std::map<std::string, std::string> to_map(AVDictionary** dict)
+{
+    std::map<std::string, std::string> map;
+    AVDictionaryEntry* t = nullptr;
+    while (*dict) {
+        t = av_dict_get(*dict, "", t, AV_DICT_IGNORE_SUFFIX);
+        if (!t) {
+            break;
+        }
+        if (t->value) {
+            map[t->key] = t->value;
+        }
+    }
+    av_dict_free(dict);
+    return map;
+}
+
 struct Stream
 {
     std::shared_ptr<AVFilterGraph> graph  = nullptr;
@@ -91,55 +119,44 @@ struct Stream
 
     int64_t pts = 0;
 
-    Stream(AVFormatContext*               oc,
-           std::string                    suffix,
-           AVCodecID                      codec_id,
-           const core::video_format_desc& format_desc,
-           AVDictionary**                 options)
+    Stream(AVFormatContext*                    oc,
+           std::string                         suffix,
+           AVCodecID                           codec_id,
+           const core::video_format_desc&      format_desc,
+           std::map<std::string, std::string>& options)
     {
-        AVDictionary* stream_options = nullptr;
-        CASPAR_SCOPE_EXIT
-        {
-            AVDictionaryEntry* t = nullptr;
-            while (stream_options) {
-                t = av_dict_get(stream_options, "", t, AV_DICT_IGNORE_SUFFIX);
-                if (!t) {
-                    break;
-                }
-                FF(av_dict_set(options, (t->key + suffix).c_str(), t->value, 0));
-            }
-        };
+        std::map<std::string, std::string> stream_options;
 
         {
-            AVDictionaryEntry* t = nullptr;
-            while (*options) {
-                t = av_dict_get(*options, "", t, AV_DICT_IGNORE_SUFFIX);
-                if (!t) {
-                    break;
+            for (auto& p : options) {
+                if (boost::algorithm::ends_with(p.first, suffix)) {
+                    const auto key = p.first.substr(0, p.first.size() - suffix.size());
+                    stream_options[key] = std::move(p.second);
                 }
-                auto key = std::string(t->key);
-                if (boost::algorithm::ends_with(key, suffix)) {
-                    FF(av_dict_set(&stream_options, key.substr(0, key.size() - suffix.size()).c_str(), t->value, 0));
-                    FF(av_dict_set(options, t->key, nullptr, 0));
-                }
+            }
+
+            for (auto& p : stream_options) {
+                options.erase(options.find(p.first + suffix));
             }
         }
 
         std::string filter_spec = "";
         {
-            const auto filter_opt = av_dict_get(stream_options, "filter", nullptr, 0);
-            if (filter_opt) {
-                filter_spec = filter_opt->value;
-                FF(av_dict_set(&stream_options, "filter", nullptr, 0));
+            const auto it = stream_options.find("filter");
+            if (it != stream_options.end()) {
+                filter_spec = it->second;
+                stream_options.erase(it);
             }
         }
 
+        std::move(stream_options["filter"]);
+
         auto codec = avcodec_find_encoder(codec_id);
         {
-            const auto codec_opt = av_dict_get(stream_options, "codec", nullptr, 0);
-            if (codec_opt) {
-                codec = avcodec_find_encoder_by_name(codec_opt->value);
-                FF(av_dict_set(&stream_options, "codec", nullptr, 0));
+            const auto it = stream_options.find("codec");
+            if (it != stream_options.end()) {
+                codec = avcodec_find_encoder_by_name(it->second.c_str());
+                stream_options.erase(it);
             }
         }
 
@@ -304,15 +321,26 @@ struct Stream
             // TODO
         }
 
-        FF(avcodec_open2(enc.get(), codec, &stream_options));
+        auto dict = to_dict(std::move(stream_options));
+        CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+        FF(avcodec_open2(enc.get(), codec, &dict));
+        for (auto& p : to_map(&dict)) {
+            options[p.first] = suffix + p.second;
+        }
+
         FF(avcodec_parameters_from_context(st->codecpar, enc.get()));
+
+        if (codec->type == AVMEDIA_TYPE_AUDIO &&
+            !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
+            av_buffersink_set_frame_size(sink, enc->frame_size);
+        }
 
         if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
             enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
     }
 
-    void send(boost::optional<core::const_frame>             in_frame,
+    void send(core::const_frame                              in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
@@ -322,11 +350,11 @@ struct Stream
 
         if (in_frame) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame      = make_av_video_frame(*in_frame, format_desc);
+                frame      = make_av_video_frame(in_frame, format_desc);
                 frame->pts = pts;
                 pts += 1;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
-                frame      = make_av_audio_frame(*in_frame, format_desc);
+                frame      = make_av_audio_frame(in_frame, format_desc);
                 frame->pts = pts;
                 pts += frame->nb_samples;
             } else {
@@ -375,8 +403,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::string path_;
     std::string args_;
 
-    tbb::concurrent_bounded_queue<boost::optional<core::const_frame>> frame_buffer_;
-    std::thread                                                       frame_thread_;
+    tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
+    std::thread                                      frame_thread_;
 
   public:
     ffmpeg_consumer(std::string path, std::string args)
@@ -398,7 +426,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.try_push(boost::none);
+            frame_buffer_.try_push(core::const_frame{});
             frame_thread_.join();
         }
     }
@@ -417,16 +445,13 @@ struct ffmpeg_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         frame_thread_ = std::thread([=] {
-            AVDictionary* options = nullptr;
+            std::map<std::string, std::string> options;
             {
                 static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
                 for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
                      it != boost::sregex_iterator();
                      ++it) {
-                    FF(av_dict_set(&options,
-                                   (*it)["NAME"].str().c_str(),
-                                   (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "",
-                                   0));
+                    options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
                 }
             }
 
@@ -450,39 +475,49 @@ struct ffmpeg_consumer : public core::frame_consumer
                 AVFormatContext* oc = nullptr;
 
                 {
-                    const auto format_opt = av_dict_get(options, "format", nullptr, 0);
+                    std::string format;
+                    {
+                        const auto format_it = options.find("format");
+                        if (format_it != options.end()) {
+                            format = std::move(format_it->second);
+                            options.erase(format_it);
+                        }
+                    }
+
                     FF(avformat_alloc_output_context2(
-                        &oc, nullptr, format_opt ? format_opt->value : nullptr, path_.c_str()));
-                    FF(av_dict_set(&options, "format", nullptr, 0));
+                        &oc, nullptr, !format.empty() ? format.c_str() : nullptr, path_.c_str()));
                 }
 
                 CASPAR_SCOPE_EXIT { avformat_free_context(oc); };
 
                 boost::optional<Stream> video_stream;
                 if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
-                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, &options);
+                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
                 }
 
                 boost::optional<Stream> audio_stream;
                 if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
-                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, &options);
+                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, options);
                 }
 
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
                     // TODO (fix) interrupt_cb
-                    FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &options));
+                    auto dict = to_dict(std::move(options));
+                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &dict));
+                    options = to_map(&dict);
                 }
 
-                FF(avformat_write_header(oc, &options))
+                {
+                    auto dict = to_dict(std::move(options));
+                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    FF(avformat_write_header(oc, &dict));
+                    options = to_map(&dict);
+                }
 
                 {
-                    AVDictionaryEntry* t = nullptr;
-                    while (options) {
-                        t = av_dict_get(options, "", t, AV_DICT_IGNORE_SUFFIX);
-                        if (!t) {
-                            break;
-                        }
-                        CASPAR_LOG(warning) << print() << " Unused option " << t->key << "=" << t->value;
+                    for (auto& p : options) {
+                        CASPAR_LOG(warning) << print() << " Unused option " << p.first << "=" << p.second;
                     }
                 }
 
@@ -523,7 +558,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
                 while (true) {
-                    boost::optional<core::const_frame> frame;
+                    core::const_frame frame;
                     frame_buffer_.pop(frame);
 
                     caspar::timer frame_timer;
@@ -551,7 +586,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     std::future<bool> send(core::const_frame frame) override
     {
-        if (!frame_buffer_.try_push(std::move(frame))) {
+        if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         } else {
             frame_buffer_.push(std::move(frame));
@@ -560,7 +595,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         return make_ready_future(true);
     }
 
-    std::wstring print() const override { return L"ffmpeg"; }
+    std::wstring print() const override { return L"ffmpeg[" + u16(path_) + L"]"; }
 
     std::wstring name() const override { return L"ffmpeg"; }
 
