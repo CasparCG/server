@@ -128,15 +128,14 @@ struct Stream
         std::map<std::string, std::string> stream_options;
 
         {
-            for (auto& p : options) {
+            auto tmp = std::move(options);
+            for (auto& p : tmp) {
                 if (boost::algorithm::ends_with(p.first, suffix)) {
                     const auto key = p.first.substr(0, p.first.size() - suffix.size());
-                    stream_options[key] = std::move(p.second);
+                    stream_options.emplace(key, std::move(p.second));
+                } else {
+                    options.insert(std::move(p));
                 }
-            }
-
-            for (auto& p : stream_options) {
-                options.erase(options.find(p.first + suffix));
             }
         }
 
@@ -144,7 +143,7 @@ struct Stream
         {
             const auto it = stream_options.find("filter");
             if (it != stream_options.end()) {
-                filter_spec = it->second;
+                filter_spec = std::move(it->second);
                 stream_options.erase(it);
             }
         }
