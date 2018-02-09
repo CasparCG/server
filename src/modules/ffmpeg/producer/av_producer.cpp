@@ -666,13 +666,8 @@ struct AVProducer::Impl
                 return false;
             }
 
-            ret = avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get());
-            if (ret == AVERROR(EAGAIN)) {
-                return false;
-            } else {
-                FF_RET(ret, "avcodec_send_packet");
-                decoder.input.pop();
-            }
+            FF(avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get()));
+            decoder.input.pop();
         } else if (ret == AVERROR_EOF) {
             avcodec_flush_buffers(decoder.ctx.get());
             frame->pts    = decoder.next_pts;

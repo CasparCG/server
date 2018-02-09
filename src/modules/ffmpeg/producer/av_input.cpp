@@ -109,8 +109,8 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
         std::unique_lock<std::mutex> lock(mutex_);
         while (!output_.empty() && fn(output_.front())) {
             output_.pop();
-            graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
         }
+        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
     }
     cond_.notify_all();
 }
@@ -150,9 +150,8 @@ void Input::seek(int64_t ts, bool flush)
         while (flush && !output_.empty()) {
             output_.pop();
         }
-
-        eof_ = false;
     }
+    eof_ = false;
     cond_.notify_all();
 
     graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
