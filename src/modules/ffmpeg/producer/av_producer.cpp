@@ -1,6 +1,5 @@
 #include "av_producer.h"
 
-#include "av_decoder.h"
 #include "av_input.h"
 
 #include "../util/av_assert.h"
@@ -45,6 +44,7 @@ extern "C"
 #endif
 
 #include <tbb/parallel_invoke.h>
+#include <tbb/parallel_for_each.h>
 
 #include <algorithm>
 #include <atomic>
@@ -78,6 +78,53 @@ struct Frame
 // TODO (feat) Filter presets.
 // TODO (feat) Forward options.
 // TODO (fix) Interlaced looping.
+
+struct Decoder
+{
+    std::shared_ptr<AVCodecContext>       ctx;
+    int64_t                               next_pts = AV_NOPTS_VALUE;
+    std::queue<std::shared_ptr<AVPacket>> input;
+    std::shared_ptr<AVFrame>              frame;
+    bool                                  eof = false;
+
+    Decoder() = default;
+
+    Decoder(AVStream* stream)
+    {
+        const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
+        if (!codec) {
+            FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
+        }
+
+        ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+            [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+
+        if (!ctx) {
+            FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
+        }
+
+        FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
+
+        FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
+        FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
+
+        ctx->pkt_timebase = stream->time_base;
+
+        if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+            ctx->framerate = av_guess_frame_rate(nullptr, stream, nullptr);
+            ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
+        } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+            if (!ctx->channel_layout && ctx->channels) {
+                ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
+            }
+            if (!ctx->channels && ctx->channel_layout) {
+                ctx->channels = av_get_channel_layout_nb_channels(ctx->channel_layout);
+            }
+        }
+
+        FF(avcodec_open2(ctx.get(), codec, nullptr));
+    }
+};
 
 struct Filter
 {
@@ -215,7 +262,7 @@ struct Filter
                     it = streams.emplace(index, input->streams[index]).first;
                 }
 
-                auto& st = it->second;
+                auto st = it->second.ctx;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
@@ -363,7 +410,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    int                     buffer_capacity_ = 3;
+    int                     buffer_capacity_ = 8;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -429,18 +476,30 @@ struct AVProducer::Impl
 
                     std::unique_lock<std::mutex> lock(mutex_);
 
-                    schedule_decoders();
-                    schedule_filters();
+                    std::atomic<int> progress{ 0 };
 
-                    tbb::parallel_invoke([=] {
-                        filter_frame(video_filter_);
-                    }, [&]{
-                        filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count);
-                    });
+                    progress.fetch_or(schedule_decoders());
+                    progress.fetch_or(schedule_filters());
+
+                    tbb::parallel_invoke(
+                        [&] {
+                            tbb::parallel_for_each(decoders_.begin(), decoders_.end(), [&](auto& p) {
+                                progress.fetch_or(decode_frame(p.second));
+                            });
+                        },
+                        [&]{
+                            progress.fetch_or(filter_frame(video_filter_));
+                        },
+                        [&]{
+                            progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count));
+                        }
+                    );
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         // TODO (perf) Avoid polling.
-                        cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
+                        if (!progress) {
+                            cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                        }
                         continue;
                     }
 
@@ -454,7 +513,7 @@ struct AVProducer::Impl
                                 seek_internal(start_);
                             } else {
                                 // TODO (perf) Avoid polling.
-                                cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
+                                cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
                             }
                             continue;
                         }
@@ -506,28 +565,45 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-    void schedule_decoders()
+    bool schedule_decoders()
     {
+        auto result = false;
         input_([&](std::shared_ptr<AVPacket>& packet)
         {
+            auto min = std::numeric_limits<std::size_t>::max();
+            for (auto& p : decoders_) {
+                min = std::min(min, p.second.input.size());
+            }
+
             if (!packet) {
                 for (auto& p : decoders_) {
-                    // NOTE: Should never fail.
-                    p.second.try_push(nullptr);
+                    p.second.input.push(nullptr);
                 }
+                result = true;
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = decoders_.find(packet->stream_index);
-                if (it != decoders_.end() && !it->second.try_push(packet)) {
+                if (it == decoders_.end()) {
+                    return true;
+                }
+
+                if (min > 0 || it->second.input.size() >= 512) {
                     return false;
                 }
+
+                result = true;
+
+                it->second.input.push(std::move(packet));
             }
 
             return true;
         });
+        return result;
     }
 
-    void schedule_filters()
+    bool schedule_filters()
     {
+        auto result = false;
+
         std::vector<int> eof;
 
         for (auto& p : sources_) {
@@ -545,67 +621,106 @@ struct AVProducer::Impl
                 continue;
             }
 
-            it->second([&](std::shared_ptr<AVFrame>& frame)
-            {
-                if (nb_requests == 0) {
-                    return false;
-                }
+            if (!it->second.frame) {
+                continue;
+            }
 
-                for (auto& source : p.second) {
-                    if (frame && !frame->data[0]) {
-                        FF(av_buffersrc_close(source, frame->pts, 0));
-                    } else {
-                        // TODO (fix) Guard against overflow?
-                        FF(av_buffersrc_write_frame(source, frame.get()));
-                    }
-                }
+            auto frame = std::move(it->second.frame);
 
-                // End Of File
+            for (auto& source : p.second) {
                 if (frame && !frame->data[0]) {
-                    eof.push_back(p.first);
+                    FF(av_buffersrc_close(source, frame->pts, 0));
+                } else {
+                    // TODO (fix) Guard against overflow?
+                    FF(av_buffersrc_write_frame(source, frame.get()));
                 }
+                result = true;
+            }
 
-                nb_requests -= 1;
-
-                return true;
-            });
+            // End Of File
+            if (!frame->data[0]) {
+                eof.push_back(p.first);
+            }
         }
 
         for (auto index : eof) {
             sources_.erase(index);
         }
+
+        return result;
     }
 
-    void filter_frame(Filter& filter, int nb_samples = -1)
+    bool decode_frame(Decoder& decoder)
+    {
+        int ret;
+
+        if (decoder.frame || decoder.eof) {
+            return false;
+        }
+
+        auto frame = alloc_frame();
+        ret = avcodec_receive_frame(decoder.ctx.get(), frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            if (decoder.input.empty()) {
+                return false;
+            }
+
+            auto packet = decoder.input.front();
+
+            ret = avcodec_send_packet(decoder.ctx.get(), packet.get());
+            if (ret == AVERROR(EAGAIN)) {
+                return false;
+            } else {
+                FF_RET(ret, "avcodec_send_packet");
+                decoder.input.pop();
+            }
+        } else if (ret == AVERROR_EOF) {
+            avcodec_flush_buffers(decoder.ctx.get());
+            frame->pts = decoder.next_pts;
+            decoder.eof = true;
+            decoder.frame = std::move(frame);
+        } else {
+            FF_RET(ret, "avcodec_receive_frame");
+
+            // TODO (fix) is this always best?
+            frame->pts = frame->best_effort_timestamp;
+            // TODO (fix) is this always best?
+            decoder.next_pts = frame->pts + frame->pkt_duration;
+            decoder.frame = std::move(frame);
+        }
+
+
+        return true;
+    }
+
+    bool filter_frame(Filter& filter, int nb_samples = -1)
     {
         if (filter.frame || filter.eof) {
-            return;
+            return false;
         }
 
         if (!filter.sink || filter.sources.empty()) {
             filter.eof = true;
             filter.frame = nullptr;
-            return;
+            return false;
         }
 
         auto frame = alloc_frame();
+        auto ret = nb_samples >= 0
+            ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+            : av_buffersink_get_frame(filter.sink, frame.get());
 
-        while (true) {
-            auto ret = nb_samples >= 0
-                ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                : av_buffersink_get_frame(filter.sink, frame.get());
-
-            if (ret == AVERROR(EAGAIN)) {
-                return;
-            } else if (ret == AVERROR_EOF) {
-                filter.eof = true;
-                filter.frame = nullptr;
-                return;
-            } else {
-                FF_RET(ret, "av_buffersink_get_frame");
-                filter.frame = frame;
-                return;
-            }
+        if (ret == AVERROR(EAGAIN)) {
+            return false;
+        } else if (ret == AVERROR_EOF) {
+            filter.eof = true;
+            filter.frame = nullptr;
+            return true;
+        } else {
+            FF_RET(ret, "av_buffersink_get_frame");
+            filter.frame = frame;
+            return true;
         }
     }
 
@@ -777,10 +892,19 @@ struct AVProducer::Impl
         frame_flush_ = true;
 
         for (auto& p : decoders_) {
-            p.second.flush();
+            reset_decoder(p.second);
         }
 
         reset_filters(time);
+    }
+
+    void reset_decoder(Decoder& decoder)
+    {
+        avcodec_flush_buffers(decoder.ctx.get());
+        decoder.next_pts = AV_NOPTS_VALUE;
+        decoder.frame = nullptr;
+        decoder.eof = false;
+        decoder.input = decltype(decoder.input){};
     }
 
     void reset_filters(int64_t start_time)
@@ -799,7 +923,7 @@ struct AVProducer::Impl
         // Flush unused inputs.
         for (auto& p : decoders_) {
             if (sources_.find(p.first) == sources_.end()) {
-                p.second.flush();
+                reset_decoder(p.second);
             }
         }
     }
