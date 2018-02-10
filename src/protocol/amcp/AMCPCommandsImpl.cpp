@@ -1244,13 +1244,13 @@ std::wstring channel_grid_command(command_context& ctx)
 
 std::wstring thumbnail_list_command(command_context& ctx)
 {
-    auto res = http::request("127.0.0.1", "8000", "/thumbnail");
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail");
     return u16(res.body);
 }
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-    auto res = http::request("127.0.0.1", "8000", "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
     return u16(res.body);
 }
 
