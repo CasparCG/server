@@ -167,30 +167,31 @@ struct output::impl
 
             spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
 
-            state_.clear();
+            state_.set([&](auto& state) {
+                // Start invocations
+                for (auto it = ports_.begin(); it != ports_.end();) {
+                    auto& port  = it->second;
+                    auto  depth = port.buffer_depth();
+                    auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
-            // Start invocations
-            for (auto it = ports_.begin(); it != ports_.end();) {
-                auto& port  = it->second;
-                auto  depth = port.buffer_depth();
-                auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
-
-                try {
-                    send_results->insert(std::make_pair(it->first, port.send(frame)));
-                    state_.append("port/" + boost::lexical_cast<std::string>(it->first), port.state());
-                    ++it;
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
                     try {
                         send_results->insert(std::make_pair(it->first, port.send(frame)));
+                        monitor::assign(state, "port/" + boost::lexical_cast<std::string>(it->first), port.state());
                         ++it;
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
-                        CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
-                        it = ports_.erase(it);
+                        try {
+                            send_results->insert(std::make_pair(it->first, port.send(frame)));
+                            ++it;
+                        } catch (...) {
+                            CASPAR_LOG_CURRENT_EXCEPTION();
+                            CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
+                            it = ports_.erase(it);
+                        }
                     }
                 }
-            }
+
+            });
 
             return send_results;
         });

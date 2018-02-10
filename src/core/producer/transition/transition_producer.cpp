@@ -72,26 +72,27 @@ class transition_producer : public frame_producer_base
     {
         CASPAR_SCOPE_EXIT
         {
-            state_.clear();
-            state_.append(dest_producer_->state());
+            state_.set([&](auto& state) {
+                monitor::assign(state, dest_producer_->state());
+                state["transition/frame"] = {current_frame_, info_.duration};
+                state["transition/type"]  = [&]() -> std::string {
+                    switch (info_.type) {
+                        case transition_type::mix:
+                            return "mix";
+                        case transition_type::wipe:
+                            return "wipe";
+                        case transition_type::slide:
+                            return "slide";
+                        case transition_type::push:
+                            return "push";
+                        case transition_type::cut:
+                            return "cut";
+                        default:
+                            return "n/a";
+                    }
+                }();
 
-            state_["transition/frame"] = {current_frame_, info_.duration};
-            state_["transition/type"]  = [&]() -> std::string {
-                switch (info_.type) {
-                    case transition_type::mix:
-                        return "mix";
-                    case transition_type::wipe:
-                        return "wipe";
-                    case transition_type::slide:
-                        return "slide";
-                    case transition_type::push:
-                        return "push";
-                    case transition_type::cut:
-                        return "cut";
-                    default:
-                        return "n/a";
-                }
-            }();
+            });
         };
         if (source_producer_ == core::frame_producer::empty()) {
             return dest_producer_->receive();

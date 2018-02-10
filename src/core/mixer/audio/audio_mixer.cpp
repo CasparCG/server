@@ -218,28 +218,29 @@ struct audio_mixer::impl : boost::noncopyable
 
         const int num_channels = format_desc_.audio_channels;
 
-        state_.clear();
-        state_["nb_channels"] = static_cast<int32_t>(num_channels);
+        state_.set([&](auto& state) {
+            state["nb_channels"] = static_cast<int32_t>(num_channels);
 
-        auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
+            auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
 
-        for (size_t n = 0; n < result.size(); n += num_channels)
-            for (int ch = 0; ch < num_channels; ++ch)
-                max[ch] = std::max(max[ch], std::abs(result[n + ch]));
+            for (size_t n = 0; n < result.size(); n += num_channels)
+                for (int ch = 0; ch < num_channels; ++ch)
+                    max[ch] = std::max(max[ch], std::abs(result[n + ch]));
 
-        // Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
-        // Otherwise it would be -infinity
-        static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());
+            // Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
+            // Otherwise it would be -infinity
+            static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());
 
-        for (int i = 0; i < num_channels; ++i) {
-            const auto pFS  = max[i] / static_cast<float>(std::numeric_limits<int32_t>::max());
-            const auto dBFS = 20.0f * std::log10(std::max(MIN_PFS, pFS));
+            for (int i = 0; i < num_channels; ++i) {
+                const auto pFS  = max[i] / static_cast<float>(std::numeric_limits<int32_t>::max());
+                const auto dBFS = 20.0f * std::log10(std::max(MIN_PFS, pFS));
 
-            auto chan_str = boost::lexical_cast<std::string>(i + 1);
+                auto chan_str = boost::lexical_cast<std::string>(i + 1);
 
-            state_[chan_str + "/pFS"]  = pFS;
-            state_[chan_str + "/dBFS"] = dBFS;
-        }
+                state[chan_str + "/pFS"]  = pFS;
+                state[chan_str + "/dBFS"] = dBFS;
+            }
+        });
 
         graph_->set_value("volume",
                           static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());

@@ -35,8 +35,10 @@ struct port::impl
     {
         auto future = consumer_->send(std::move(frame));
 
-        state_["type"] = consumer_->name();
-        state_.append(consumer_->state());
+        state_.set([&](auto& state) {
+            state["type"] = consumer_->name();
+            monitor::assign(state, consumer_->state());
+        });
 
         return future;
     }

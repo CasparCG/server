@@ -79,20 +79,20 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             try {
                 aggregator_.translate_and_send();
 
-                state_.clear();
+                state_.set([&](auto& state) {
+                    for (auto& p : layers_) {
+                        auto& layer = p.second;
+                        auto& tween = tweens_[p.first];
+                        // auto& consumers = layer_consumers_[p.first];
 
-                for (auto& p : layers_) {
-                    auto& layer = p.second;
-                    auto& tween = tweens_[p.first];
-                    // auto& consumers = layer_consumers_[p.first];
+                        auto frame = layer.receive(format_desc);
+                        frame.transform() *= tween.fetch_and_tick(1);
 
-                    auto frame = layer.receive(format_desc);
-                    frame.transform() *= tween.fetch_and_tick(1);
+                        monitor::assign(state, "layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
 
-                    state_.append("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
-
-                    frames[p.first] = std::move(frame);
-                }
+                        frames[p.first] = std::move(frame);
+                    }
+                });
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
