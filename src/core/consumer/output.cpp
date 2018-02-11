@@ -73,7 +73,7 @@ struct output::impl
 
         consumer->initialize(format_desc_, channel_index_);
 
-        executor_.begin_invoke([this, index, consumer] {
+        executor_.begin_invoke([=] {
             ports_.emplace(index, std::move(consumer));
         });
     }
@@ -94,25 +94,22 @@ struct output::impl
 
     void change_channel_format(const core::video_format_desc& format_desc)
     {
-        executor_.invoke([&] {
-            if (format_desc_ == format_desc) {
-                return;
-            }
+        if (format_desc_ == format_desc) {
+            return;
+        }
 
-            auto it = ports_.begin();
-            while (it != ports_.end()) {
-                try {
-                    it->second->initialize(format_desc, it->first);
-                    ++it;
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
-                    it = ports_.erase(it);
-                }
+        for (auto it = ports_.begin(); it != ports_.end();) {
+            try {
+                it->second->initialize(format_desc, it->first);
+                ++it;
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                it = ports_.erase(it);
             }
+        }
 
-            format_desc_ = format_desc;
-            frames_.clear();
-        });
+        format_desc_ = format_desc;
+        frames_.clear();
     }
 
     std::pair<int, int> minmax_buffer_depth() const
@@ -144,16 +141,14 @@ struct output::impl
 
     std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc)
     {
-        spl::shared_ptr<caspar::timer> frame_timer;
-
-        change_channel_format(format_desc);
-
-        auto pending_send_results = executor_.invoke([=]() -> std::shared_ptr<std::map<int, std::future<bool>>> {
+        return executor_.begin_invoke([=]{
             if (input_frame && input_frame.size() != format_desc_.size) {
                 CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
-                return nullptr;
+                return;
             }
-
+            
+            change_channel_format(format_desc);
+            
             // TODO (fix) This needs review.
             {
                 auto minmax = minmax_buffer_depth();
@@ -162,18 +157,18 @@ struct output::impl
                 frames_.push_back(input_frame);
 
                 if (!frames_.full()) {
-                    return nullptr;
+                    return;
                 }
             }
 
-            spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
+            std::map<int, std::future<bool>> results;
 
             for (auto it = ports_.begin(); it != ports_.end();) {
                 auto depth = it.second->buffer_depth();
                 auto frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
                 try {
-                    send_results->emplace(it->first, it.second->send(frame));
+                    results.emplace(it->first, it.second->send(frame));
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
@@ -189,23 +184,16 @@ struct output::impl
                 }
             });
 
-            return send_results;
-        });
-
-        if (!pending_send_results) {
-            return make_ready_future();
-        }
-
-        return executor_.begin_invoke([=]() {
-            // Retrieve results
-            for (auto it = pending_send_results->begin(); it != pending_send_results->end(); ++it) {
+            for (auto it = results.begin(); it != results.end();) {
                 try {
                     if (!it->second.get()) {
-                        ports_.erase(it->first);
+                        it = ports_.erase(it->first);
+                    } else {
+                        ++it;
                     }
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
-                    ports_.erase(it->first);
+                    it = ports_.erase(it->first);
                 }
             }
 
