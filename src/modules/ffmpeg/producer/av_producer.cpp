@@ -384,7 +384,7 @@ struct AVProducer::Impl
     const std::string                          path_;
     const std::string                          name_;
 
-    std::vector<int> audio_cadence_;
+    std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
 
     Input                  input_;
     std::map<int, Decoder> decoders_;
@@ -410,7 +410,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    int                     buffer_capacity_ = 2;
+    int                     buffer_capacity_ = format_desc_.field_count + 1;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -435,8 +435,6 @@ struct AVProducer::Impl
         , loop_(loop)
         , vfilter_(vfilter)
         , afilter_(afilter)
-        , audio_cadence_(format_desc_.audio_cadence)
-        , buffer_capacity_(boost::rational_cast<int>(format_desc_.framerate))
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -449,12 +447,14 @@ struct AVProducer::Impl
             reset(0);
         }
 
-        state_["file/name"]  = u8(name_);
-        state_["file/path"]  = u8(path_);
-        state_["file/fps"]   = format_desc_.fps;
-        state_["file/time"]  = {time(), this->duration().value_or(0) / format_desc_.fps};
-        state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0))};
-        state_["loop"]       = loop_;
+        state_.set([&](auto& state) {
+            state["file/name"]  = u8(name_);
+            state["file/path"]  = u8(path_);
+            state["file/fps"]   = format_desc_.fps;
+            state["file/time"]  = {time(), this->duration().value_or(0) / format_desc_.fps};
+            state["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0))};
+            state["loop"]       = loop_;
+        });
 
         thread_ = std::thread([=] {
             try {
@@ -721,8 +721,10 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"]  = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-            state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            state_.update([&](auto& state) {
+                state["file/time"]  = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+                state["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            });
         };
 
         {
@@ -743,8 +745,10 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"]  = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-            state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            state_.update([&](auto& state) {
+                state["file/time"]  = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+                state["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            });
         };
 
         core::draw_frame result;
@@ -807,7 +811,9 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(mutex_);
             loop_          = loop;
-            state_["loop"] = loop;
+            state_.update([&](auto& state) {
+                state["loop"] = loop;
+            })
         }
         cond_.notify_all();
     }
