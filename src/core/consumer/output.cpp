@@ -106,7 +106,7 @@ struct output::impl
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
-                    ports_.erase(it++);
+                    it = ports_.erase(it);
                 }
             }
 
@@ -173,18 +173,11 @@ struct output::impl
                 auto frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
                 try {
-                    send_results->insert(std::make_pair(it->first, it.second->send(frame)));
+                    send_results->emplace(it->first, it.second->send(frame));
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
-                    try {
-                        send_results->insert(std::make_pair(it->first, it.second->send(frame)));
-                        ++it;
-                    } catch (...) {
-                        CASPAR_LOG_CURRENT_EXCEPTION();
-                        CASPAR_LOG(error) << "Failed to recover consumer: " << it.second->print() << L". Removing it.";
-                        it = ports_.erase(it);
-                    }
+                    it = ports_.erase(it);
                 }
             }
             
