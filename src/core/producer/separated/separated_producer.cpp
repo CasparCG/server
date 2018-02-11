@@ -66,19 +66,10 @@ class separated_producer : public frame_producer_base
                 }
             });
 
-        if (!fill_ || !key_) {
-            return core::draw_frame{};
-        }
-
-        auto frame = draw_frame::mask(fill_, key_);
-
-        fill_ = draw_frame{};
-        key_  = draw_frame{};
-
-        return frame;
+        return !fill_ || !key_
+            ? core::draw_frame{}
+            : draw_frame::mask(std::move(fill_), std::move(key_));
     }
-
-    draw_frame last_frame() { return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame()); }
 
     uint32_t nb_frames() const override { return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames()); }
 
