@@ -28,7 +28,6 @@
 #include "output.h"
 
 #include "frame_consumer.h"
-#include "port.h"
 
 #include "../frame/frame.h"
 #include "../video_format.h"
@@ -51,14 +50,14 @@ namespace caspar { namespace core {
 
 struct output::impl
 {
-    monitor::state                      state_;
-    spl::shared_ptr<diagnostics::graph> graph_;
-    const int                           channel_index_;
-    video_format_desc                   format_desc_;
-    std::map<int, port>                 ports_;
-    prec_timer                          sync_timer_;
-    boost::circular_buffer<const_frame> frames_;
-    executor                            executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
+    monitor::state                                  state_;
+    spl::shared_ptr<diagnostics::graph>             graph_;
+    const int                                       channel_index_;
+    video_format_desc                               format_desc_;
+    std::map<int, std::shared_ptr<frame_consumer>>  ports_;
+    prec_timer                                      sync_timer_;
+    boost::circular_buffer<const_frame>             frames_;
+    executor                                        executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -75,8 +74,7 @@ struct output::impl
         consumer->initialize(format_desc_, channel_index_);
 
         executor_.begin_invoke([this, index, consumer] {
-            port p(index, channel_index_, std::move(consumer));
-            ports_.insert(std::make_pair(index, std::move(p)));
+            ports_.emplace(index, std::move(consumer));
         });
     }
 
@@ -97,13 +95,14 @@ struct output::impl
     void change_channel_format(const core::video_format_desc& format_desc)
     {
         executor_.invoke([&] {
-            if (format_desc_ == format_desc)
+            if (format_desc_ == format_desc) {
                 return;
+            }
 
             auto it = ports_.begin();
             while (it != ports_.end()) {
                 try {
-                    it->second.change_channel_format(format_desc);
+                    it->second->initialize(format_desc, it->first);
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
@@ -124,7 +123,7 @@ struct output::impl
 
         std::pair<int, int> minmax = std::make_pair(INT_MAX, 0);
         for (auto& port : ports_) {
-            if (port.second.buffer_depth() < 0) {
+            if (port.second->buffer_depth() < 0) {
                 continue;
             }
             minmax.first  = std::min<int>(minmax.first, port.second.buffer_depth());
@@ -138,7 +137,7 @@ struct output::impl
     {
         bool result = false;
         for (auto& port : ports_) {
-            result |= port.second.has_synchronization_clock();
+            result |= port.second->has_synchronization_clock();
         }
         return result;
     }
@@ -167,37 +166,38 @@ struct output::impl
 
             spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
 
-            state_.set([&](auto& state) {
-                // Start invocations
-                for (auto it = ports_.begin(); it != ports_.end();) {
-                    auto& port  = it->second;
-                    auto  depth = port.buffer_depth();
-                    auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
+            for (auto it = ports_.begin(); it != ports_.end();) {
+                auto depth = it.second->buffer_depth();
+                auto frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
+                try {
+                    send_results->insert(std::make_pair(it->first, it.second->send(frame)));
+                    ++it;
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
                     try {
-                        send_results->insert(std::make_pair(it->first, port.send(frame)));
-                        monitor::assign(state, "port/" + boost::lexical_cast<std::string>(it->first), port.state());
+                        send_results->insert(std::make_pair(it->first, it.second->send(frame)));
                         ++it;
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
-                        try {
-                            send_results->insert(std::make_pair(it->first, port.send(frame)));
-                            ++it;
-                        } catch (...) {
-                            CASPAR_LOG_CURRENT_EXCEPTION();
-                            CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
-                            it = ports_.erase(it);
-                        }
+                        CASPAR_LOG(error) << "Failed to recover consumer: " << it.second->print() << L". Removing it.";
+                        it = ports_.erase(it);
                     }
                 }
-
+            }
+            
+            state_.update([&](auto& state) {
+                for (auto it = ports_.begin(); it != ports_.end();) {
+                    monitor::assign(state, "port/" + boost::lexical_cast<std::string>(it->first), it.second->state());
+                }
             });
 
             return send_results;
         });
 
-        if (!pending_send_results)
+        if (!pending_send_results) {
             return make_ready_future();
+        }
 
         return executor_.begin_invoke([=]() {
             // Retrieve results
