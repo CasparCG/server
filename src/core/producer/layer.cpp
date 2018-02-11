@@ -112,7 +112,9 @@ struct layer::impl
 
             auto frame = foreground_->receive();
 
-            state_.set([&](auto& state) {
+            state_.update([&](auto& state) {
+                // TODO (refactor)
+                state.clear();
                 state["paused"] = is_paused_;
                 monitor::asign(state, foreground_->state());
             });

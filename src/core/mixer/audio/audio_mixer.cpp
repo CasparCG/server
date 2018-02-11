@@ -218,15 +218,16 @@ struct audio_mixer::impl : boost::noncopyable
 
         const int num_channels = format_desc_.audio_channels;
 
-        state_.set([&](auto& state) {
+        state_.update([&](auto& state) {
             state["nb_channels"] = static_cast<int32_t>(num_channels);
 
             auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
 
-            for (size_t n = 0; n < result.size(); n += num_channels)
-                for (int ch = 0; ch < num_channels; ++ch)
+            for (size_t n = 0; n < result.size(); n += num_channels) {
+                for (int ch = 0; ch < num_channels; ++ch) {
                     max[ch] = std::max(max[ch], std::abs(result[n + ch]));
-
+                }
+            }
             // Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
             // Otherwise it would be -infinity
             static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());

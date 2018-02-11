@@ -187,6 +187,8 @@ struct output::impl
             }
             
             state_.update([&](auto& state) {
+                // TODO (refactor)
+                state.clear();
                 for (auto it = ports_.begin(); it != ports_.end();) {
                     monitor::assign(state, "port/" + boost::lexical_cast<std::string>(it->first), it.second->state());
                 }

@@ -103,30 +103,31 @@ struct video_channel::impl final
 
                     auto format_desc = video_format_desc();
 
-                    state_.clear();
+                    state_.update([&](auto& state) {
+                        state.clear();
+                        // Produce
+                        caspar::timer produce_timer;
+                        auto          stage_frames = stage_(format_desc);
+                        graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
-                    // Produce
-                    caspar::timer produce_timer;
-                    auto          stage_frames = stage_(format_desc);
-                    graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
+                        monitor::assign(state, "stage", stage_.state());
 
-                    state_.append("stage", stage_.state());
+                        // Mix
+                        caspar::timer mix_timer;
+                        auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
+                        graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
-                    // Mix
-                    caspar::timer mix_timer;
-                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
-                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+                        monitor::assign(state, "mixer", mixer_.state());
 
-                    state_.append("mixer", mixer_.state());
+                        // Consume
+                        caspar::timer consume_timer;
+                        output_(std::move(mixed_frame), format_desc).wait();
+                        graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
-                    // Consume
-                    caspar::timer consume_timer;
-                    output_(std::move(mixed_frame), format_desc).wait();
-                    graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
+                        monitor::assign(state, "output", output_.state());
 
-                    state_.append("output", output_.state());
-
-                    graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
+                        graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
+                    });
 
                     tick_(state_);
                 } catch (...) {

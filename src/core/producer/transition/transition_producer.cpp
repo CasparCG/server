@@ -72,7 +72,8 @@ class transition_producer : public frame_producer_base
     {
         CASPAR_SCOPE_EXIT
         {
-            state_.set([&](auto& state) {
+            state_.update([&](auto& state) {
+                state.clear();
                 monitor::assign(state, dest_producer_->state());
                 state["transition/frame"] = {current_frame_, info_.duration};
                 state["transition/type"]  = [&]() -> std::string {

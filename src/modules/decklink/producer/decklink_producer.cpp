@@ -182,21 +182,6 @@ class decklink_producer
         caspar::timer frame_timer;
 
         CASPAR_SCOPE_EXIT {
-            state_["file/name"] = model_name_;
-            state_["file/path"] = device_index_;
-            state_["file/video/width"] = video->GetWidth();
-            state_["file/video/height"] = video->GetHeight();
-            state_["file/video/field"] =
-                u8(format_desc_.field_mode != core::field_mode::progressive
-                    ? "progressive"
-                    : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"));
-            state_["file/audio/sample-rate"] = 48000;
-            state_["file/audio/channels"] = 2;
-            state_["file/audio/format"] = u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
-            state_["file/fps"] = format_desc_.fps;
-            state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
-            state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
-
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_value("output-buffer",
                 static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));

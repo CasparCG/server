@@ -447,7 +447,7 @@ struct AVProducer::Impl
             reset(0);
         }
 
-        state_.set([&](auto& state) {
+        state_.update([&](auto& state) {
             state["file/name"]  = u8(name_);
             state["file/path"]  = u8(path_);
             state["file/fps"]   = format_desc_.fps;

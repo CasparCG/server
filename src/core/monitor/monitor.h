@@ -50,14 +50,6 @@ class state
         func(data_);
     }
 
-    template <typename F>
-    void set(const F& func)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_.clear();
-        func(data_);
-    }
-
     auto get() const
     {
         std::lock_guard<std::mutex> lock(mutex_);

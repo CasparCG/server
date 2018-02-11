@@ -79,18 +79,23 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             try {
                 aggregator_.translate_and_send();
 
-                state_.set([&](auto& state) {
+                for (auto& p : layers_) {
+                    auto& tween = tweens_[p.first];
+
+                    auto frame = p.second.receive(format_desc);
+                    frame.transform() *= tween.fetch_and_tick(1);
+
+                    // XXX interlaced tween?
+                    // XXX parallel_for?
+
+                    frames[p.first] = std::move(frame);
+                }
+                
+                state_.update([&](auto& state) {
+                    // TODO (refactor)
+                    state.clear();
                     for (auto& p : layers_) {
-                        auto& layer = p.second;
-                        auto& tween = tweens_[p.first];
-                        // auto& consumers = layer_consumers_[p.first];
-
-                        auto frame = layer.receive(format_desc);
-                        frame.transform() *= tween.fetch_and_tick(1);
-
                         monitor::assign(state, "layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
-
-                        frames[p.first] = std::move(frame);
                     }
                 });
             } catch (...) {

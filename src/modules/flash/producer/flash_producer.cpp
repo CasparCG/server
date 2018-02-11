@@ -321,7 +321,6 @@ class flash_renderer
         }
 
         graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed() / frame_time) * 0.5f);
-        state_["renderer/profiler/time"] = {frame_timer.elapsed(), frame_time};
         return head_;
     }
 
@@ -413,12 +412,6 @@ struct flash_producer : public core::frame_producer_base
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
         fill_buffer();
-
-        state_["host/path"]   = filename_;
-        state_["host/width"]  = width_;
-        state_["host/height"] = height_;
-        state_["host/fps"]    = fps_;
-        state_["buffer"]      = output_buffer_.size() % buffer_size_;
 
         return frame;
     }
