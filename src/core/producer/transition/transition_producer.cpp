@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "../../StdAfx.h"
-
 #include "transition_producer.h"
 
 #include "../../frame/draw_frame.h"
@@ -47,8 +44,6 @@ class transition_producer : public frame_producer_base
     spl::shared_ptr<frame_producer> dest_producer_;
     spl::shared_ptr<frame_producer> source_producer_ = frame_producer::empty();
 
-    bool paused_ = false;
-
   public:
     explicit transition_producer(const field_mode&                      mode,
                                  const spl::shared_ptr<frame_producer>& dest,
@@ -57,12 +52,10 @@ class transition_producer : public frame_producer_base
         , info_(info)
         , dest_producer_(dest)
     {
-        CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    // frame_producer
-
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { source_producer_ = producer; }
+
     spl::shared_ptr<frame_producer> following_producer() const override
     {
         return source_producer_ == core::frame_producer::empty() ? dest_producer_ : core::frame_producer::empty();
@@ -94,6 +87,7 @@ class transition_producer : public frame_producer_base
                 }();
             });
         };
+
         if (source_producer_ == core::frame_producer::empty()) {
             return dest_producer_->receive();
         }
@@ -127,14 +121,6 @@ class transition_producer : public frame_producer_base
         current_frame_ += 1;
 
         return compose(dest, source);
-    }
-
-    draw_frame last_frame() override
-    {
-        if (current_frame_ >= info_.duration)
-            return dest_producer_->last_frame();
-
-        return frame_producer_base::last_frame();
     }
 
     uint32_t nb_frames() const override { return dest_producer_->nb_frames(); }
