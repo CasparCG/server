@@ -154,13 +154,16 @@ struct output::impl
                 return nullptr;
             }
 
-            auto minmax = minmax_buffer_depth();
+            // TODO (fix) This needs review.
+            {
+                auto minmax = minmax_buffer_depth();
 
-            frames_.set_capacity(minmax.second - minmax.first);
-            frames_.push_back(input_frame);
+                frames_.set_capacity(minmax.second - minmax.first);
+                frames_.push_back(input_frame);
 
-            if (!frames_.full()) {
-                return nullptr;
+                if (!frames_.full()) {
+                    return nullptr;
+                }
             }
 
             spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
