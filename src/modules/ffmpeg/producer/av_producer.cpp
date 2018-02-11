@@ -523,10 +523,11 @@ struct AVProducer::Impl
                         }
                     }
 
-                    if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
-                        seek_internal(start_);
-                        continue;
-                    }
+                    // TODO (fix)
+                    // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
+                    //     seek_internal(start_);
+                    //     continue;
+                    // }
 
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
