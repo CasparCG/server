@@ -33,9 +33,8 @@ namespace caspar { namespace core { namespace monitor {
 
 typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string> data_t;
 
-typedef boost::small_vector<data_t, 4> data_vector_t;
+typedef boost::small_vector<data_t, 2> data_vector_t;
 
-// TODO (perf) Optimize
 class state
 {
     typedef boost::flat_map<std::string, data_vector_t> data_map_t;
@@ -80,8 +79,12 @@ void assign(state& dst, const state& src)
 {
     auto data = src.get();
     dst.update([&](auto& state) {
-        for (auto& p : data) {
-            data_.insert(std::move(p));
+        if (state.empty()) {
+            state = std::move(data);
+        } else {
+            data_.insert(boost::container::ordered_unique_range_t{}, 
+                         std::make_move_iterator(state.begin()), 
+                         std::make_move_iterator(state.end()));
         }
     });
 }
