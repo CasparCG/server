@@ -72,27 +72,35 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
     {
-        auto frames = executor_.invoke([=]() -> std::map<int, draw_frame> {
-
+        return executor_.invoke([=]() -> std::map<int, draw_frame> {
             std::map<int, draw_frame> frames;
 
             try {
                 aggregator_.translate_and_send();
 
-                state_.clear();
-
                 for (auto& p : layers_) {
-                    auto& layer = p.second;
                     auto& tween = tweens_[p.first];
-                    //auto& consumers = layer_consumers_[p.first];
 
-                    auto frame = layer.receive(format_desc);
+                    auto frame = p.second.receive(format_desc);
                     frame.transform() *= tween.fetch_and_tick(1);
 
-                    state_.append("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    if (format_desc.field_mode != core::field_mode::progressive) {
+                        auto frame2 = frame;
+                        frame2.transform() *= tween.fetch_and_tick(1);
+                        frame2.transform().audio_transform.volume = 0.0;
+                        frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
+                    }
 
                     frames[p.first] = std::move(frame);
                 }
+                
+                state_.update([&](auto& state) {
+                    // TODO (refactor)
+                    state.clear();
+                    for (auto& p : layers_) {
+                        monitor::assign(state, "layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    }
+                });
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -100,8 +108,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             return frames;
         });
-
-        return frames;
     }
 
     layer& get_layer(int index)
@@ -356,6 +362,6 @@ void stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
-const monitor::state&                stage::state() const { return impl_->state_; }
+const monitor::state&            stage::state() const { return impl_->state_; }
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }} // namespace caspar::core

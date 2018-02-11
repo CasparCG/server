@@ -25,8 +25,8 @@
 #include "../monitor/monitor.h"
 
 #include <common/forward.h>
-#include <common/memory.h>
 
+#include <memory>
 #include <future>
 
 FORWARD2(caspar, diagnostics, class graph);
@@ -43,7 +43,6 @@ class output final
                     const video_format_desc&                    format_desc,
                     int                                         channel_index);
 
-    // Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
     std::future<void> operator()(const_frame frame, const video_format_desc& format_desc);
 
     void add(const spl::shared_ptr<frame_consumer>& consumer);
@@ -53,11 +52,9 @@ class output final
 
     const monitor::state& state() const;
 
-    std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
-
   private:
     struct impl;
-    spl::shared_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 };
 
 }} // namespace caspar::core

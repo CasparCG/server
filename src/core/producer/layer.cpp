@@ -40,22 +40,17 @@ struct layer::impl
 {
     monitor::state state_;
 
-    spl::shared_ptr<frame_producer>   foreground_ = frame_producer::empty();
-    spl::shared_ptr<frame_producer>   background_ = frame_producer::empty();
+    spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
+    spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
     ;
     boost::optional<int32_t> auto_play_delta_;
     bool                     is_paused_         = false;
     int64_t                  current_frame_age_ = 0;
 
   public:
-    impl()
-    {
-    }
+    impl() {}
 
-    void set_foreground(spl::shared_ptr<frame_producer> producer)
-    {
-        foreground_ = std::move(producer);
-    }
+    void set_foreground(spl::shared_ptr<frame_producer> producer) { foreground_ = std::move(producer); }
 
     void pause()
     {
@@ -117,9 +112,12 @@ struct layer::impl
 
             auto frame = foreground_->receive();
 
-            state_.clear();
-            state_["paused"] = is_paused_;
-            state_.append(foreground_->state());
+            state_.update([&](auto& state) {
+                // TODO (refactor)
+                state.clear();
+                state["paused"] = is_paused_;
+                monitor::asign(state, foreground_->state());
+            });
 
             if (!frame) {
                 return foreground_->last_frame();
@@ -174,7 +172,7 @@ void       layer::stop() { impl_->stop(); }
 draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-const monitor::state&               layer::state() const { return impl_->state_; }
+const monitor::state&           layer::state() const { return impl_->state_; }
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }} // namespace caspar::core

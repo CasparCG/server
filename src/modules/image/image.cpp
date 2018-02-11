@@ -22,12 +22,11 @@
 #include "image.h"
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <FreeImage.h>
+#include <windows.h>
 
 #include "consumer/image_consumer.h"
 #include "producer/image_producer.h"
-#include "producer/image_scroll_producer.h"
 #include "util/image_loader.h"
 
 #include <core/consumer/frame_consumer.h>
@@ -46,7 +45,6 @@ std::wstring version() { return u16(FreeImage_GetVersion()); }
 void init(core::module_dependencies dependencies)
 {
     FreeImage_Initialise();
-    dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer);
     dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer);
     dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer);
 }

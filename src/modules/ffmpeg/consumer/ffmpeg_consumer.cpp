@@ -94,7 +94,7 @@ AVDictionary* to_dict(std::map<std::string, std::string>&& map)
 std::map<std::string, std::string> to_map(AVDictionary** dict)
 {
     std::map<std::string, std::string> map;
-    AVDictionaryEntry* t = nullptr;
+    AVDictionaryEntry*                 t = nullptr;
     while (*dict) {
         t = av_dict_get(*dict, "", t, AV_DICT_IGNORE_SUFFIX);
         if (!t) {
@@ -321,7 +321,7 @@ struct Stream
         }
 
         auto dict = to_dict(std::move(stream_options));
-        CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+        CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
         for (auto& p : to_map(&dict)) {
             options[p.first] = suffix + p.second;
@@ -329,8 +329,7 @@ struct Stream
 
         FF(avcodec_parameters_from_context(st->codecpar, enc.get()));
 
-        if (codec->type == AVMEDIA_TYPE_AUDIO &&
-            !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
+        if (codec->type == AVMEDIA_TYPE_AUDIO && !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
             av_buffersink_set_frame_size(sink, enc->frame_size);
         }
 
@@ -504,14 +503,14 @@ struct ffmpeg_consumer : public core::frame_consumer
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
                     // TODO (fix) interrupt_cb
                     auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
                     FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &dict));
                     options = to_map(&dict);
                 }
 
                 {
                     auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
                     FF(avformat_write_header(oc, &dict));
                     options = to_map(&dict);
                 }

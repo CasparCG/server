@@ -46,12 +46,6 @@ struct draw_frame::impl
     {
     }
 
-    impl(const impl& other)
-        : frame_(other.frame_)
-        , transform_(other.transform_)
-    {
-    }
-
     void accept(frame_visitor& visitor) const
     {
         struct accept_visitor : public boost::static_visitor<void>
@@ -87,12 +81,16 @@ draw_frame::draw_frame()
 {
 }
 draw_frame::draw_frame(const draw_frame& other)
-    : impl_(new impl(*other.impl_))
+    : impl_(new impl())
 {
+    std::swap(impl_->frame_, other.impl_->frame_);
+    std::swap(impl_->transform_, other.timpl_->ransform_);
 }
-draw_frame::draw_frame(draw_frame&& other)
-    : impl_(std::move(other.impl_))
+
+draw_frame::draw_frame(draw_frame&& other)    
+    : impl_(new impl())
 {
+    impl_.swap(other.impl_);
 }
 draw_frame::draw_frame(const_frame&& frame)
     : impl_(new impl(std::move(frame)))
@@ -103,13 +101,13 @@ draw_frame::draw_frame(mutable_frame&& frame)
 {
 }
 draw_frame::draw_frame(std::vector<draw_frame> frames)
-    : impl_(new impl(frames))
+    : impl_(new impl(std::move(frames)))
 {
 }
 draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
-    other.swap(*this);
+    impl_.swap(other.impl_);
     return *this;
 }
 void                   draw_frame::swap(draw_frame& other) { impl_.swap(other.impl_); }

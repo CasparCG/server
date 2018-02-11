@@ -45,7 +45,7 @@ class frame_producer : public interaction_sink
     frame_producer(const frame_producer&);
     frame_producer& operator=(const frame_producer&);
 
-public:
+  public:
     static const spl::shared_ptr<frame_producer>& empty();
 
     frame_producer() {}
@@ -57,7 +57,7 @@ public:
     virtual void on_interaction(const interaction_event::ptr& event) override {}
     virtual bool collides(double x, double y) const override { return false; }
 
-    virtual const monitor::state&         state() const
+    virtual const monitor::state& state() const
     {
         static const monitor::state empty;
         return empty;

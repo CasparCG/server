@@ -21,81 +21,33 @@
 #pragma once
 
 #include <boost/variant.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/small_vector.hpp>
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <map>
-#include <mutex>
 
 namespace caspar { namespace core { namespace monitor {
 
-typedef boost::
-    variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring, std::vector<std::int8_t>>
-        data_t;
+typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string> data_t;
 
-class state_proxy
-{
-    std::string key_;
-    std::map<std::string, std::vector<data_t>>& data_;
-public:
-    state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data)
-        : key_(key)
-        , data_(data)
-    {
-    }
+typedef boost::small_vector<data_t, 2> data_vector_t;
 
-    state_proxy& operator=(data_t data)
-    {
-        data_[key_] = { std::move(data) };
-        return *this;
-    }
-
-    state_proxy& operator=(std::initializer_list<data_t> data)
-    {
-        data_[key_] = std::move(data);
-        return *this;
-    }
-};
-
-// TODO (perf) Optimize
 class state
 {
-    typedef std::map<std::string, std::vector<data_t>> data_map_t;
+    typedef boost::flat_map<std::string, data_vector_t> data_map_t;
 
     mutable std::mutex mutex_;
     data_map_t         data_;
-public:
-    state_proxy operator[](const std::string& key)
-    {
-        return state_proxy(key, data_);
-    }
 
-    void clear()
+  public:
+    template <typename F>
+    void update(const F& func)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        data_.clear();
-    }
-
-    void append(const std::string& name, const state& other)
-    {
-        std::lock_guard<std::mutex> lock1(mutex_);
-        std::lock_guard<std::mutex> lock2(other.mutex_);
-
-        auto name2 = name.empty() ? name : name + "/";
-        for (auto& p : other.data_) {
-            data_[name2 + p.first] = p.second;
-        }
-    }
-
-    void append(const state& other)
-    {
-        std::lock_guard<std::mutex> lock1(mutex_);
-        std::lock_guard<std::mutex> lock2(other.mutex_);
-
-        for (auto& p : other.data_) {
-            data_[p.first] = p.second;
-        }
+        func(data_);
     }
 
     auto get() const
@@ -104,5 +56,29 @@ public:
         return data_;
     }
 };
+
+void assign(state& dst, const std::string& name, const state& src)
+{
+    auto data = src.get();
+    dst.update([&](auto& state) {
+        for (auto& p : data) {
+            state[name + "/" + p.first] = std::move(p.second);
+        }
+    });
+}
+
+void assign(state& dst, const state& src)
+{
+    auto data = src.get();
+    dst.update([&](auto& state) {
+        if (state.empty()) {
+            state = std::move(data);
+        } else {
+            data_.insert(boost::container::ordered_unique_range_t{}, 
+                         std::make_move_iterator(state.begin()), 
+                         std::make_move_iterator(state.end()));
+        }
+    });
+}
 
 }}} // namespace caspar::core::monitor

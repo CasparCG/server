@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "../../StdAfx.h"
-
 #include "transition_producer.h"
 
 #include "../../frame/draw_frame.h"
@@ -38,16 +35,14 @@ namespace caspar { namespace core {
 
 class transition_producer : public frame_producer_base
 {
-    monitor::state                    state_;
-    const field_mode                  mode_;
-    int                               current_frame_ = 0;
+    monitor::state   state_;
+    const field_mode mode_;
+    int              current_frame_ = 0;
 
     const transition_info info_;
 
     spl::shared_ptr<frame_producer> dest_producer_;
     spl::shared_ptr<frame_producer> source_producer_ = frame_producer::empty();
-
-    bool paused_ = false;
 
   public:
     explicit transition_producer(const field_mode&                      mode,
@@ -57,12 +52,10 @@ class transition_producer : public frame_producer_base
         , info_(info)
         , dest_producer_(dest)
     {
-        CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    // frame_producer
-
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { source_producer_ = producer; }
+
     spl::shared_ptr<frame_producer> following_producer() const override
     {
         return source_producer_ == core::frame_producer::empty() ? dest_producer_ : core::frame_producer::empty();
@@ -72,28 +65,29 @@ class transition_producer : public frame_producer_base
     {
         CASPAR_SCOPE_EXIT
         {
-            state_.clear();
-            state_.append(dest_producer_->state());
-
-            state_["transition/frame"] = { current_frame_, info_.duration };
-            state_["transition/type"] = [&]() -> std::string
-            {
-                switch (info_.type) {
-                case transition_type::mix:
-                    return "mix";
-                case transition_type::wipe:
-                    return "wipe";
-                case transition_type::slide:
-                    return "slide";
-                case transition_type::push:
-                    return "push";
-                case transition_type::cut:
-                    return "cut";
-                default:
-                    return "n/a";
-                }
-            }();
+            state_.update([&](auto& state) {
+                state.clear();
+                monitor::assign(state, dest_producer_->state());
+                state["transition/frame"] = {current_frame_, info_.duration};
+                state["transition/type"]  = [&]() -> std::string {
+                    switch (info_.type) {
+                        case transition_type::mix:
+                            return "mix";
+                        case transition_type::wipe:
+                            return "wipe";
+                        case transition_type::slide:
+                            return "slide";
+                        case transition_type::push:
+                            return "push";
+                        case transition_type::cut:
+                            return "cut";
+                        default:
+                            return "n/a";
+                    }
+                }();
+            });
         };
+
         if (source_producer_ == core::frame_producer::empty()) {
             return dest_producer_->receive();
         }
@@ -129,14 +123,6 @@ class transition_producer : public frame_producer_base
         return compose(dest, source);
     }
 
-    draw_frame last_frame() override
-    {
-        if (current_frame_ >= info_.duration)
-            return dest_producer_->last_frame();
-
-        return frame_producer_base::last_frame();
-    }
-
     uint32_t nb_frames() const override { return dest_producer_->nb_frames(); }
 
     uint32_t frame_number() const override { return dest_producer_->frame_number(); }
@@ -157,8 +143,9 @@ class transition_producer : public frame_producer_base
 
     draw_frame compose(draw_frame dest_frame, draw_frame src_frame) const
     {
-        if (info_.type == transition_type::cut)
+        if (info_.type == transition_type::cut) {
             return src_frame;
+        }
 
         const double delta1 = info_.tweener(current_frame_ * 2 - 1, 0.0, 1.0, static_cast<double>(info_.duration * 2));
         const double delta2 = info_.tweener(current_frame_ * 2, 0.0, 1.0, static_cast<double>(info_.duration * 2));
@@ -189,8 +176,7 @@ class transition_producer : public frame_producer_base
             s_frame1.transform().image_transform.is_mix  = true;
             s_frame2.transform().image_transform.opacity = 1.0 - delta2;
             s_frame2.transform().image_transform.is_mix  = true;
-        }
-        if (info_.type == transition_type::slide) {
+        } else if (info_.type == transition_type::slide) {
             d_frame1.transform().image_transform.fill_translation[0] = (-1.0 + delta1) * dir;
             d_frame2.transform().image_transform.fill_translation[0] = (-1.0 + delta2) * dir;
         } else if (info_.type == transition_type::push) {
@@ -204,10 +190,12 @@ class transition_producer : public frame_producer_base
             d_frame2.transform().image_transform.clip_scale[0] = delta2;
         }
 
-        const auto s_frame =
-            s_frame1.transform() == s_frame2.transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
-        const auto d_frame =
-            d_frame1.transform() == d_frame2.transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
+        const auto s_frame = s_frame1.transform() == s_frame2.transform() 
+            ? s_frame2 
+            : draw_frame::interlace(s_frame1, s_frame2, mode_);
+        const auto d_frame = d_frame1.transform() == d_frame2.transform() 
+            ? d_frame2 
+            : draw_frame::interlace(d_frame1, d_frame2, mode_);
 
         return draw_frame::over(s_frame, d_frame);
     }
