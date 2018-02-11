@@ -755,24 +755,25 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-            if (buffer_.size() < format_desc_.field_count && (!frame_flush_ || buffer_.size() == buffer_capacity_)) {
+            // TODO (fix) Won't play last field.
+            
+            if (buffer_.size() < format_desc_.field_count) {
+                // TODO (fix) Don't spam when not a problem.
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame{};
             }
 
-            if (format_desc_.field_count == 2 && buffer_.size() >= 2) {
+            if (format_desc_.field_count == 2) {
                 result      = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
                 frame_      = core::draw_frame::still(buffer_[1].frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
                 buffer_.pop_front();
                 buffer_.pop_front();
-            } else if (buffer_.size() >= 1) {
+            } else {
                 result      = buffer_[0].frame;
                 frame_      = core::draw_frame::still(buffer_[0].frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration;
                 buffer_.pop_front();
-            } else {
-                result = frame_;
             }
 
             frame_flush_ = false;
