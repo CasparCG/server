@@ -92,7 +92,6 @@ class transition_producer : public frame_producer_base
                             return "n/a";
                     }
                 }();
-
             });
         };
         if (source_producer_ == core::frame_producer::empty()) {
@@ -158,8 +157,9 @@ class transition_producer : public frame_producer_base
 
     draw_frame compose(draw_frame dest_frame, draw_frame src_frame) const
     {
-        if (info_.type == transition_type::cut)
+        if (info_.type == transition_type::cut) {
             return src_frame;
+        }
 
         const double delta1 = info_.tweener(current_frame_ * 2 - 1, 0.0, 1.0, static_cast<double>(info_.duration * 2));
         const double delta2 = info_.tweener(current_frame_ * 2, 0.0, 1.0, static_cast<double>(info_.duration * 2));
@@ -190,8 +190,7 @@ class transition_producer : public frame_producer_base
             s_frame1.transform().image_transform.is_mix  = true;
             s_frame2.transform().image_transform.opacity = 1.0 - delta2;
             s_frame2.transform().image_transform.is_mix  = true;
-        }
-        if (info_.type == transition_type::slide) {
+        } else if (info_.type == transition_type::slide) {
             d_frame1.transform().image_transform.fill_translation[0] = (-1.0 + delta1) * dir;
             d_frame2.transform().image_transform.fill_translation[0] = (-1.0 + delta2) * dir;
         } else if (info_.type == transition_type::push) {
@@ -205,10 +204,12 @@ class transition_producer : public frame_producer_base
             d_frame2.transform().image_transform.clip_scale[0] = delta2;
         }
 
-        const auto s_frame =
-            s_frame1.transform() == s_frame2.transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
-        const auto d_frame =
-            d_frame1.transform() == d_frame2.transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
+        const auto s_frame = s_frame1.transform() == s_frame2.transform() 
+            ? s_frame2 
+            : draw_frame::interlace(s_frame1, s_frame2, mode_);
+        const auto d_frame = d_frame1.transform() == d_frame2.transform() 
+            ? d_frame2 
+            : draw_frame::interlace(d_frame1, d_frame2, mode_);
 
         return draw_frame::over(s_frame, d_frame);
     }
