@@ -47,8 +47,9 @@ create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factor
     desc.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(values.size()), 1, 4));
     auto frame = frame_factory->create_frame(tag, desc);
 
-    for (int i = 0; i < values.size(); ++i)
+    for (int i = 0; i < values.size(); ++i) {
         *reinterpret_cast<uint32_t*>(frame.image_data(0).begin() + (i * 4)) = values.at(i);
+    }
 
     return core::draw_frame(std::move(frame));
 }
@@ -67,8 +68,9 @@ draw_frame create_color_frame(void*                                 tag,
     std::vector<uint32_t> values(strs.size());
 
     for (int i = 0; i < values.size(); ++i) {
-        if (!try_get_color(strs.at(i), values.at(i)))
+        if (!try_get_color(strs.at(i), values.at(i))) {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid color: " + strs.at(i)));
+        }
     }
 
     return create_color_frame(tag, frame_factory, values);
@@ -77,33 +79,25 @@ draw_frame create_color_frame(void*                                 tag,
 class color_producer : public frame_producer_base
 {
     monitor::state state_;
-
-    const std::wstring color_str_;
-    draw_frame         frame_;
+    draw_frame     frame_;
 
   public:
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, uint32_t value)
-        : color_str_(L"")
-        , frame_(create_color_frame(this, frame_factory, value))
+        : frame_(create_color_frame(this, frame_factory, value))
     {
-        CASPAR_LOG(info) << print() << L" Initialized";
     }
 
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& colors)
-        : color_str_(boost::join(colors, L", "))
-        , frame_(create_color_frame(this, frame_factory, colors))
+        : frame_(create_color_frame(this, frame_factory, colors))
     {
-        CASPAR_LOG(info) << print() << L" Initialized";
     }
-
-    // frame_producer
 
     draw_frame receive_impl() override
     {
         return frame_;
     }
 
-    std::wstring print() const override { return L"color[" + color_str_ + L"]"; }
+    std::wstring print() const override { return L"color"; }
 
     std::wstring name() const override { return L"color"; }
 
@@ -112,43 +106,35 @@ class color_producer : public frame_producer_base
 
 std::wstring get_hex_color(const std::wstring& str)
 {
-    if (str.at(0) == '#')
+    if (str.at(0) == '#') {
         return str.length() == 7 ? L"#FF" + str.substr(1) : str;
+    }
 
-    std::wstring col_str = boost::to_upper_copy(str);
+    auto col_str = boost::to_upper_copy(str);
 
-    if (col_str == L"EMPTY")
+    if (col_str == L"EMPTY") {
         return L"#00000000";
-
-    if (col_str == L"BLACK")
+    } else if (col_str == L"BLACK") {
         return L"#FF000000";
-
-    if (col_str == L"WHITE")
+    } else if (col_str == L"WHITE") {
         return L"#FFFFFFFF";
-
-    if (col_str == L"RED")
+    } else if (col_str == L"RED") {
         return L"#FFFF0000";
-
-    if (col_str == L"GREEN")
+    } else if (col_str == L"GREEN") {
         return L"#FF00FF00";
-
-    if (col_str == L"BLUE")
+    } else if (col_str == L"BLUE") {
         return L"#FF0000FF";
-
-    if (col_str == L"ORANGE")
+    } else if (col_str == L"ORANGE") {
         return L"#FFFFA500";
-
-    if (col_str == L"YELLOW")
+    } else if (col_str == L"YELLOW") {
         return L"#FFFFFF00";
-
-    if (col_str == L"BROWN")
+    } else if (col_str == L"BROWN") {
         return L"#FFA52A2A";
-
-    if (col_str == L"GRAY")
+    } else  if (col_str == L"GRAY") {
         return L"#FF808080";
-
-    if (col_str == L"TEAL")
+    } else if (col_str == L"TEAL") {
         return L"#FF008080";
+    }
 
     return str;
 }
@@ -156,15 +142,18 @@ std::wstring get_hex_color(const std::wstring& str)
 bool try_get_color(const std::wstring& str, uint32_t& value)
 {
     auto color_str = get_hex_color(str);
-    if (color_str.length() != 9 || color_str[0] != '#')
+    if (color_str.length() != 9 || color_str[0] != '#') {
         return false;
+    }
 
     std::wstringstream ss(color_str.substr(1));
-    if (!(ss >> std::hex >> value) || !ss.eof())
+    if (!(ss >> std::hex >> value) || !ss.eof()) {
         return false;
+    }
 
     return true;
 }
+
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
                                                       uint32_t                              value)
 {
@@ -174,18 +163,21 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
                                                       const std::vector<std::wstring>&      params)
 {
-    if (params.size() < 0)
+    if (params.size() < 0) {
         return core::frame_producer::empty();
+    }
 
     uint32_t value = 0;
-    if (!try_get_color(params.at(0), value))
+    if (!try_get_color(params.at(0), value)) {
         return core::frame_producer::empty();
+    }
 
     std::vector<std::wstring> colors;
 
     for (auto& param : params) {
-        if (try_get_color(param, value))
+        if (try_get_color(param, value)) {
             colors.push_back(param);
+        }
     }
 
     return spl::make_shared<color_producer>(frame_factory, colors);
