@@ -13,8 +13,8 @@ General
  * Removed misc unused and/or unmaintained APIs.
  * Removed TCP logger.
  * Fixed memory leak in transition producer.
- * Removed PSD Producer (moved to 2.3.0).
- * Removed Text Producer (moved to 2.3.0).
+ * Removed PSD Producer (moved to 3.0.0).
+ * Removed Text Producer (moved to 3.0.0).
  * Removed SyncTo consumer.
  * Removed channel layout in favor of 8 channel passthrough
     and FFMPEG audio filters.
@@ -41,7 +41,7 @@ DECKLINK
 MIXER
 -----
  * Performance improvements.
- * Removed straight output (moved to 2.3.0).
+ * Removed straight output (moved to 3.0.0).
  * Proper OpenGL pipelining.
  * Blend modes are always enabled.
  * Misc cleanup and fixes.
@@ -51,6 +51,7 @@ IMAGE
 -----
  * Correctly apply alpha to base64 encoded pngs from AMCP (Julusian).
  * Unmultiply frame before writing to png (Julusian).
+ * Removed scroll producer (moved to 3.0.0)
 
 FFMPEG
 ------
@@ -79,7 +80,7 @@ FFMPEG
 
 Bluefish
 --------
- * Bluefish Consumer removed (moved to 2.3.0).
+ * Bluefish Consumer removed (moved to 3.0.0).
 
 OAL
 ------------
