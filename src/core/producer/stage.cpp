@@ -72,8 +72,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
     {
-        auto frames = executor_.invoke([=]() -> std::map<int, draw_frame> {
-
+        return executor_.invoke([=]() -> std::map<int, draw_frame> {
             std::map<int, draw_frame> frames;
 
             try {
@@ -85,8 +84,12 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto frame = p.second.receive(format_desc);
                     frame.transform() *= tween.fetch_and_tick(1);
 
-                    // XXX interlaced tween?
-                    // XXX parallel_for?
+                    if (format_desc.field_mode != core::field_mode::progressive) {
+                        auto frame2 = frame;
+                        frame2.transform() *= tween.fetch_and_tick(1);
+                        frame2.transform().audio_transform.volume = 0.0;
+                        frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
+                    }
 
                     frames[p.first] = std::move(frame);
                 }
@@ -105,8 +108,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             return frames;
         });
-
-        return frames;
     }
 
     layer& get_layer(int index)
