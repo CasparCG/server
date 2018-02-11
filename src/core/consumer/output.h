@@ -53,8 +53,6 @@ class output final
 
     const monitor::state& state() const;
 
-    std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
-
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;

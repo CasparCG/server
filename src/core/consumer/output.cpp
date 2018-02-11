@@ -216,18 +216,6 @@ struct output::impl
     }
 
     std::wstring print() const { return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]"; }
-
-    std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()
-    {
-        return executor_.invoke([=] {
-            std::vector<spl::shared_ptr<const frame_consumer>> consumers;
-
-            for (auto& port : ports_)
-                consumers.push_back(port.second.consumer());
-
-            return consumers;
-        });
-    }
 };
 
 output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -238,7 +226,6 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { i
 void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
 void output::remove(int index) { impl_->remove(index); }
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer) { impl_->remove(consumer); }
-std::vector<spl::shared_ptr<const frame_consumer>> output::get_consumers() const { return impl_->get_consumers(); }
 std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc)
 {
     return (*impl_)(std::move(frame), format_desc);
