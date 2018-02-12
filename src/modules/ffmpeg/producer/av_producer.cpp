@@ -451,7 +451,7 @@ struct AVProducer::Impl
         if (start_ != AV_NOPTS_VALUE) {
             seek(start_);
         } else {
-            reset_filters(0);
+            reset(0);
         }
 
         thread_ = std::thread([=] {
@@ -891,7 +891,7 @@ struct AVProducer::Impl
             reset_decoder(p.second);
         }
 
-        reset_filters(time);
+        reset(time);
     }
 
     void reset_decoder(Decoder& decoder)
@@ -903,7 +903,7 @@ struct AVProducer::Impl
         decoder.input = decltype(decoder.input){};
     }
 
-    void reset_filters(int64_t start_time)
+    void reset(int64_t start_time)
     {
         video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
         audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
