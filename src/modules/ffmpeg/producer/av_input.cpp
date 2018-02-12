@@ -150,9 +150,8 @@ void Input::seek(int64_t ts, bool flush)
         while (flush && !output_.empty()) {
             output_.pop();
         }
-
-        eof_ = false;
     }
+    eof_ = false;
     cond_.notify_all();
 
     graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
