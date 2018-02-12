@@ -410,7 +410,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    int                     buffer_capacity_ = format_desc_.field_count * 2;
+    int                     buffer_capacity_ = format_desc_.fps;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
