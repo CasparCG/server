@@ -83,8 +83,8 @@ draw_frame::draw_frame()
 draw_frame::draw_frame(const draw_frame& other)
     : impl_(new impl())
 {
-    std::swap(impl_->frame_, other.impl_->frame_);
-    std::swap(impl_->transform_, other.impl_->transform_);
+    impl_->frame_ = other.impl_->frame_;
+    impl_->transform_ = other.impl_->transform_;
 }
 
 draw_frame::draw_frame(draw_frame&& other)
