@@ -47,11 +47,6 @@ set(HEADERS
 		frame/geometry.h
 		frame/pixel_format.h
 
-		interaction/interaction_aggregator.h
-		interaction/interaction_event.h
-		interaction/interaction_sink.h
-		interaction/util.h
-
 		mixer/audio/audio_mixer.h
 
 		mixer/image/blend_modes.h
@@ -94,7 +89,6 @@ source_group(sources\\producer producer/*)
 source_group(sources\\monitor monitor/*)
 source_group(sources\\producer\\framerate producer/framerate/*)
 source_group(sources\\frame frame/*)
-source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
 source_group(sources\\mixer\\audio mixer/audio/*)
 source_group(sources\\mixer\\image mixer/image/*)

@@ -24,7 +24,6 @@
 #include "frame_producer.h"
 
 #include "../fwd.h"
-#include "../interaction/interaction_sink.h"
 #include "../monitor/monitor.h"
 
 #include <common/forward.h>
@@ -36,7 +35,7 @@
 
 namespace caspar { namespace core {
 
-class layer final : public interaction_sink
+class layer final
 {
     layer(const layer&);
     layer& operator=(const layer&);
@@ -59,14 +58,7 @@ class layer final : public interaction_sink
 
     draw_frame receive(const video_format_desc& format_desc);
 
-    // monitor::observable
-
     const monitor::state& state() const;
-
-    // interaction_sink
-
-    void on_interaction(const interaction_event::ptr& event) override;
-    bool collides(double x, double y) const override;
 
     spl::shared_ptr<frame_producer> foreground() const;
     spl::shared_ptr<frame_producer> background() const;

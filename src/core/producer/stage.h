@@ -22,7 +22,6 @@
 #pragma once
 
 #include "../fwd.h"
-#include "../interaction/interaction_sink.h"
 #include "../monitor/monitor.h"
 
 #include <common/forward.h>
@@ -41,7 +40,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 
-class stage final : public interaction_sink
+class stage final
 {
     stage(const stage&);
     stage& operator=(const stage&);
@@ -79,8 +78,6 @@ class stage final : public interaction_sink
     void remove_layer_consumer(void* token, int layer);
 
     const monitor::state& state() const;
-
-    void on_interaction(const interaction_event::ptr& event) override;
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index);
     std::future<std::shared_ptr<frame_producer>> background(int index);

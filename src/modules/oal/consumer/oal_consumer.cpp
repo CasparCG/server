@@ -324,7 +324,6 @@ struct oal_consumer : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,
-                                                      core::interaction_sink*,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
@@ -335,7 +334,6 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
-                              core::interaction_sink*,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<oal_consumer>();

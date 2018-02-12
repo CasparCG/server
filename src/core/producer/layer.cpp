@@ -141,10 +141,6 @@ struct layer::impl
             return draw_frame{};
         }
     }
-
-    void on_interaction(const interaction_event::ptr& event) { foreground_->on_interaction(event); }
-
-    bool collides(double x, double y) const { return foreground_->collides(x, y); }
 };
 
 layer::layer()
@@ -175,6 +171,4 @@ draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 const monitor::state&               layer::state() const { return impl_->state_; }
-void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
-bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }} // namespace caspar::core

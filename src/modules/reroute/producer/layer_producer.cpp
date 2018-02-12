@@ -27,6 +27,7 @@
 #include <core/consumer/write_frame_consumer.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_visitor.h>
 #include <core/producer/frame_producer.h>

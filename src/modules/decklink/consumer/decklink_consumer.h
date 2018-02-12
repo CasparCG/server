@@ -33,11 +33,9 @@
 namespace caspar { namespace decklink {
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,
-                                                      core::interaction_sink*,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels);
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
-                              core::interaction_sink*,
                               std::vector<spl::shared_ptr<core::video_channel>> channels);
 
 }} // namespace caspar::decklink
