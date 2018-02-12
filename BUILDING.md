@@ -25,7 +25,7 @@ Development using Visual Studio
 
 5. `cmake -G "Visual Studio 15 2017" -A x64 .`
 
-6. Open `.CasparCG Server.sln`
+6. Open `CasparCG Server.sln`
 
 Linux
 =====
