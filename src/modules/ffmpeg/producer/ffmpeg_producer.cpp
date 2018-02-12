@@ -263,12 +263,11 @@ std::wstring probe_stem(const std::wstring& stem)
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
-    // TODO (fix) Normalize paths.
     auto name = params.at(0);
     auto path = name;
 
     if (!boost::contains(path, L"://")) {
-        path = probe_stem(env::media_folder() + L"/" + path);
+        path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
         name += boost::filesystem::path(path).extension().wstring();
     }
 
