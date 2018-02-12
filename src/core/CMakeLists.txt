@@ -4,7 +4,6 @@ project (core)
 set(SOURCES
 		consumer/frame_consumer.cpp
 		consumer/output.cpp
-		consumer/port.cpp
 
 		diagnostics/call_context.cpp
 		diagnostics/osd_graph.cpp
@@ -35,7 +34,6 @@ set(SOURCES
 set(HEADERS
 		consumer/frame_consumer.h
 		consumer/output.h
-		consumer/port.h
 		consumer/write_frame_consumer.h
 
 		diagnostics/call_context.h
