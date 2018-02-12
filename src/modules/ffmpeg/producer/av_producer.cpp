@@ -384,7 +384,7 @@ struct AVProducer::Impl
     const std::string                          path_;
     const std::string                          filename_;
 
-    std::vector<int> audio_cadence_;
+    std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
 
     Input                  input_;
     std::map<int, Decoder> decoders_;
@@ -410,7 +410,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    int                     buffer_capacity_ = 8;
+    int                     buffer_capacity_ = format_desc_.field_count * 2;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -435,8 +435,6 @@ struct AVProducer::Impl
         , loop_(loop)
         , vfilter_(vfilter)
         , afilter_(afilter)
-        , audio_cadence_(format_desc_.audio_cadence)
-        , buffer_capacity_(boost::rational_cast<int>(format_desc_.framerate))
     {
         state_["file/path"] = u8(filename_);
         state_["file/fullpath"] = u8(path_);
