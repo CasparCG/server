@@ -472,6 +472,11 @@ struct AVProducer::Impl
                         break;
                     }
 
+                    caspar::timer frame_timer;
+                    CASPAR_SCOPE_EXIT{
+                        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+                    };
+
                     std::unique_lock<std::mutex> lock(mutex_);
 
                     std::atomic<int> progress{ 0 };
@@ -717,9 +722,7 @@ struct AVProducer::Impl
 
     core::draw_frame prev_frame()
     {
-        caspar::timer frame_timer;
         CASPAR_SCOPE_EXIT{
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
             state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
@@ -740,9 +743,7 @@ struct AVProducer::Impl
 
     core::draw_frame next_frame()
     {
-        caspar::timer frame_timer;
         CASPAR_SCOPE_EXIT{
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_text(u16(print()));
             state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
