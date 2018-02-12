@@ -72,26 +72,32 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
     {
-        auto frames = executor_.invoke([=]() -> std::map<int, draw_frame> {
-
+        return executor_.invoke([=]() -> std::map<int, draw_frame> {
             std::map<int, draw_frame> frames;
 
             try {
                 aggregator_.translate_and_send();
 
-                state_.clear();
-
                 for (auto& p : layers_) {
                     auto& layer = p.second;
                     auto& tween = tweens_[p.first];
-                    //auto& consumers = layer_consumers_[p.first];
 
-                    auto frame = layer.receive(format_desc);
-                    frame.transform() *= tween.fetch_and_tick(1);
+                    auto frame1 = layer.receive(format_desc);
+                    frame1.transform() *= tween.fetch_and_tick(1);
 
+                    if (format_desc.field_mode != core::field_mode::progressive) {
+                        auto frame2 = frame1;
+                        frame2.transform() *= tween.fetch_and_tick(1);
+                        frame2.transform().audio_transform.volume = 0.0;
+                        frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
+                    }
+
+                    frames[p.first] = std::move(frame1);
+                }
+
+                state_.clear();
+                for (auto& p : layers_) {
                     state_.append("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
-
-                    frames[p.first] = std::move(frame);
                 }
             } catch (...) {
                 layers_.clear();
@@ -100,8 +106,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             return frames;
         });
-
-        return frames;
     }
 
     layer& get_layer(int index)
