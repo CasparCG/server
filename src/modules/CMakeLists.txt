@@ -6,11 +6,7 @@ add_subdirectory(ffmpeg)
 add_subdirectory(oal)
 add_subdirectory(decklink)
 add_subdirectory(screen)
-
-# Temporary disable of html producer for linux
-if (MSVC)
-	add_subdirectory(html)
-endif()
+add_subdirectory(html)
 
 if (MSVC)
 	add_subdirectory(flash)

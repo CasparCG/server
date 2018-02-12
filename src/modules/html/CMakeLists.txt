@@ -42,9 +42,6 @@ else()
 
 		${CEF_BIN_PATH}/libcef.so
 		libcef_dll_wrapper
-
-		${CEF_BIN_PATH}/libudev.so.0
-		${CEF_BIN_PATH}/libcap.so.2
 	)
 endif()
 
