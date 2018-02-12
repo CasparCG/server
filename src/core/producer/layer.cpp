@@ -153,7 +153,7 @@ layer::layer(layer&& other)
 }
 layer& layer::operator=(layer&& other)
 {
-    other.swap(*this);
+    impl_ = std::move(other.impl_);
     return *this;
 }
 void layer::swap(layer& other) { impl_.swap(other.impl_); }

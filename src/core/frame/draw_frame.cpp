@@ -88,9 +88,8 @@ draw_frame::draw_frame(const draw_frame& other)
 }
 
 draw_frame::draw_frame(draw_frame&& other)
-    : impl_(new impl())
+    : impl_(std::move(other.impl_))
 {
-    impl_.swap(other.impl_);
 }
 draw_frame::draw_frame(const_frame&& frame)
     : impl_(new impl(std::move(frame)))
@@ -107,14 +106,14 @@ draw_frame::draw_frame(std::vector<draw_frame> frames)
 draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
-    impl_.swap(other.impl_);
+    impl_ = std::move(other.impl_);
     return *this;
 }
 void                   draw_frame::swap(draw_frame& other) { impl_.swap(other.impl_); }
 const frame_transform& draw_frame::transform() const { return impl_->transform_; }
 frame_transform&       draw_frame::transform() { return impl_->transform_; }
 void                   draw_frame::accept(frame_visitor& visitor) const { impl_->accept(visitor); }
-bool draw_frame::operator==(const draw_frame& other) const { return *impl_ == *other.impl_; }
+bool draw_frame::operator==(const draw_frame& other) const { return impl_ && *impl_ == *other.impl_; }
 bool draw_frame::operator!=(const draw_frame& other) const { return !(*this == other); }
 
 draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, field_mode mode)
@@ -178,6 +177,6 @@ draw_frame draw_frame::still(draw_frame frame)
     return frame;
 }
 
-draw_frame::operator bool() const { return impl_->frame_.which() != 0; }
+draw_frame::operator bool() const { return impl_ && impl_->frame_.which() != 0; }
 
 }} // namespace caspar::core
