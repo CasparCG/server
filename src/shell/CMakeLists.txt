@@ -5,7 +5,7 @@ join_list("${CASPARCG_MODULE_INCLUDE_STATEMENTS}" "\n" CASPARCG_MODULE_INCLUDE_S
 join_list("${CASPARCG_MODULE_INIT_STATEMENTS}" "\n" CASPARCG_MODULE_INIT_STATEMENTS)
 join_list("${CASPARCG_MODULE_UNINIT_STATEMENTS}" "\n" CASPARCG_MODULE_UNINIT_STATEMENTS)
 join_list("${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}" "\n" CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS)
-configure_file("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${PROJECT_SOURCE_DIR}/included_modules.h")
+CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${CMAKE_BINARY_DIR}/generated/included_modules.h")
 
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
@@ -21,12 +21,10 @@ endif ()
 
 set(SOURCES
 		casparcg.config
-		included_modules.tmpl
 		main.cpp
 		server.cpp
 )
 set(HEADERS
-		included_modules.h
 		platform_specific.h
 		server.h
 )

@@ -20,7 +20,7 @@
  */
 #include "env.h"
 
-#include "../version.h"
+#include "version.h"
 
 #include "except.h"
 #include "log.h"
