@@ -576,6 +576,10 @@ struct AVProducer::Impl
                 min = std::min(min, p.second.input.size());
             }
 
+            if (min > 0) {
+                return false;
+            }
+
             if (!packet) {
                 for (auto& p : decoders_) {
                     p.second.input.push(nullptr);
@@ -587,7 +591,7 @@ struct AVProducer::Impl
                     return true;
                 }
 
-                if (min > 0 || it->second.input.size() >= 512) {
+                if (it->second.input.size() >= 512) {
                     return false;
                 }
 
