@@ -381,8 +381,8 @@ struct AVProducer::Impl
     const std::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_desc              format_desc_;
     const AVRational                           format_tb_;
+    const std::string                          name_;
     const std::string                          path_;
-    const std::string                          filename_;
 
     std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
 
@@ -417,8 +417,8 @@ struct AVProducer::Impl
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
          core::video_format_desc              format_desc,
+         std::string                          name,
          std::string                          path,
-         std::string                          filename,
          std::string                          vfilter,
          std::string                          afilter,
          boost::optional<int64_t>             start,
@@ -428,7 +428,7 @@ struct AVProducer::Impl
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale})
         , path_(path)
-        , filename_(filename)
+        , name_(name)
         , input_(path, graph_)
         , start_(start.value_or(AV_NOPTS_VALUE))
         , duration_(duration.value_or(AV_NOPTS_VALUE))
@@ -436,8 +436,8 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
-        state_["file/path"] = u8(filename_);
-        state_["file/fullpath"] = u8(path_);
+        state_["file/name"] = u8(name_);
+        state_["file/fpath"] = u8(path_);
         state_["file/fps"] = format_desc_.fps;
         state_["file/time"] = { time(), this->duration().value_or(0) / format_desc_.fps };
         state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0)) };
@@ -867,7 +867,7 @@ struct AVProducer::Impl
     std::string print() const
     {
         std::ostringstream str;
-        str << std::fixed << std::setprecision(4) << "ffmpeg[" << filename_ << "|"
+        str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
             << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
             << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
         return str.str();
@@ -923,8 +923,8 @@ struct AVProducer::Impl
 
 AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        core::video_format_desc              format_desc,
+                       std::string                          name,
                        std::string                          path,
-                       std::string                          filename,
                        boost::optional<std::string>         vfilter,
                        boost::optional<std::string>         afilter,
                        boost::optional<int64_t>             start,
@@ -932,8 +932,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        boost::optional<bool>                loop)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
+                     std::move(name),
                      std::move(path),
-                     std::move(filename),
                      std::move(vfilter.get_value_or("")),
                      std::move(afilter.get_value_or("")),
                      std::move(start),

@@ -264,15 +264,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                       const std::vector<std::wstring>&         params)
 {
     // TODO (fix) Normalize paths.
-    auto file_or_url = params.at(0);
-    auto path = file_or_url;
+    auto name = params.at(0);
+    auto path = name;
 
-    if (!boost::contains(file_or_url, L"://")) {
-        file_or_url = probe_stem(env::media_folder() + L"/" + file_or_url);
-        path += boost::filesystem::path(file_or_url).extension().wstring();
+    if (!boost::contains(path, L"://")) {
+        path = probe_stem(env::media_folder() + L"/" + path);
+        name += boost::filesystem::path(path).extension().wstring();
     }
 
-    if (file_or_url.empty()) {
+    if (path.empty()) {
         return core::frame_producer::empty();
     }
 
@@ -313,7 +313,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
     auto producer = spl::make_shared<ffmpeg_producer>(
-        dependencies.frame_factory, dependencies.format_desc, file_or_url, path, vfilter, afilter, start, duration, loop);
+        dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop);
 
     return core::create_destroy_proxy(std::move(producer));
 }
