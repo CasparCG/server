@@ -93,7 +93,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     uint32_t nb_frames() const override
     {
-        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(producer_.time());
+        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(producer_.time() * format_desc_.fps);
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
