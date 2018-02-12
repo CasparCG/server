@@ -496,8 +496,8 @@ struct AVProducer::Impl
                     );
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
-                        // TODO (perf) Avoid polling.
                         if (!progress) {
+                            // TODO (perf) Avoid polling.
                             cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
                         }
                         continue;
@@ -608,20 +608,16 @@ struct AVProducer::Impl
 
         for (auto& p : sources_) {
             auto it = decoders_.find(p.first);
-            if (it == decoders_.end()) {
+            if (it == decoders_.end() || !it->second.frame) {
                 continue;
             }
 
-            int nb_requests = 0;
+            auto nb_requests = 0U;
             for (auto source : p.second) {
-                nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
+                nb_requests = std::max(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
             if (nb_requests == 0) {
-                continue;
-            }
-
-            if (!it->second.frame) {
                 continue;
             }
 
@@ -652,14 +648,12 @@ struct AVProducer::Impl
 
     bool decode_frame(Decoder& decoder)
     {
-        int ret;
-
         if (decoder.frame || decoder.eof) {
             return false;
         }
 
         auto frame = alloc_frame();
-        ret = avcodec_receive_frame(decoder.ctx.get(), frame.get());
+        auto ret = avcodec_receive_frame(decoder.ctx.get(), frame.get());
 
         if (ret == AVERROR(EAGAIN)) {
             if (decoder.input.empty()) {
@@ -679,6 +673,7 @@ struct AVProducer::Impl
             avcodec_flush_buffers(decoder.ctx.get());
             frame->pts = decoder.next_pts;
             decoder.eof = true;
+            decoder.next_pts = AV_NOPTS_VALUE;
             decoder.frame = std::move(frame);
         } else {
             FF_RET(ret, "avcodec_receive_frame");
@@ -703,7 +698,7 @@ struct AVProducer::Impl
         if (!filter.sink || filter.sources.empty()) {
             filter.eof = true;
             filter.frame = nullptr;
-            return false;
+            return true;
         }
 
         auto frame = alloc_frame();
