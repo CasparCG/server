@@ -39,13 +39,22 @@ Building inside Docker
 
 If all goes to plan, a docker image has been created containing CasparCG Server.
 
+Extracting CasparCG Server from Docker
+--------------------------------------
+
+1. `tools/linux/extract-from-docker`
+
+You will then find a folder called `casparcg_server` which should contain everything you need to run CasparCG Server.
+
 Development
 -----------
 
-1. Build boost and ffmpeg as per the docker images inside of `tools/linux` they should be saved in `/opt/boost` and `/opt/ffmeg`
-2. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server` casparcg-server-2.2.0
-3. `mkdir casparcg-server-2.2.0-build && cd casparcg-server-2.2.0-build`
-4. `cmake ../casparcg-server-2.2.0`
-5. `make -j8`
+1. Install dependencies `apt-get install .... (coming soon)`
+2. Build boost and ffmpeg as per the docker images inside of `tools/linux` they should be saved in `/opt/boost` and `/opt/ffmpeg`
+3. Download CEF from the link near the top of `tools/linux/Dockerfile`, and extract to `/opt/cef`
+4. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server` casparcg-server-2.2.0
+5. `mkdir casparcg-server-2.2.0-build && cd casparcg-server-2.2.0-build`
+6. `cmake ../casparcg-server-2.2.0`
+7. `make -j8`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.

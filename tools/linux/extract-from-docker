@@ -1,0 +1,4 @@
+#! /bin/bash
+tempContainer=$(docker create casparcg/server)
+docker cp $tempContainer:/opt/casparcg ./casparcg_server
+docker rm -v $tempContainer

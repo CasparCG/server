@@ -54,4 +54,5 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libtheora-dev \
 	libx264-dev \
 	libxvidcore-dev \
-	libx265-dev
+	libx265-dev \
+	libxss1
