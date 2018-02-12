@@ -54,10 +54,6 @@ class const_frame final
 {
   public:
     explicit const_frame(const void* tag = nullptr);
-    explicit const_frame(const void*                        tag,
-                         std::vector<array<std::uint8_t>>&& image_data,
-                         array<const std::int32_t>          audio_data,
-                         const struct pixel_format_desc&    desc);
     explicit const_frame(const void*                            tag,
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
