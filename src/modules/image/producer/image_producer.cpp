@@ -23,7 +23,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+#if defined(_MSC_VER)
 #include <windows.h>
+#endif
 #include <FreeImage.h>
 
 #include "../util/image_loader.h"
