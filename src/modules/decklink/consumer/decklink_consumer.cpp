@@ -180,7 +180,7 @@ class decklink_frame : public IDeckLinkVideoFrame
     virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
     {
         try {
-            if (static_cast<int>(frame_.image_data(0).size()) != format_desc_.size) {
+            if (!frame_ || static_cast<int>(frame_.image_data(0).size()) != format_desc_.size) {
                 if (!data_) {
                     data_ = scalable_aligned_malloc(format_desc_.size, 64);
                 }
@@ -206,6 +206,7 @@ class decklink_frame : public IDeckLinkVideoFrame
                     data_ = scalable_aligned_malloc(format_desc_.size, 64);
                 }
                 std::memcpy(data_, frame_.image_data(0).begin(), format_desc_.size);
+                *buffer = data_;
 #endif
             }
         } catch (...) {
