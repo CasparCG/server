@@ -26,7 +26,6 @@
 
 #include <common/memory.h>
 
-#include <core/interaction/interaction_sink.h>
 #include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
@@ -40,7 +39,7 @@
 
 namespace caspar { namespace core {
 
-class frame_producer : public interaction_sink
+class frame_producer
 {
     frame_producer(const frame_producer&);
     frame_producer& operator=(const frame_producer&);
@@ -53,9 +52,6 @@ public:
 
     virtual draw_frame                receive()                                     = 0;
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) = 0;
-
-    virtual void on_interaction(const interaction_event::ptr& event) override {}
-    virtual bool collides(double x, double y) const override { return false; }
 
     virtual const monitor::state&         state() const
     {

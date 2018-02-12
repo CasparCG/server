@@ -198,10 +198,6 @@ class transition_producer : public frame_producer_base
     }
 
     const monitor::state& state() { return state_; }
-
-    void on_interaction(const interaction_event::ptr& event) override { dest_producer_->on_interaction(event); }
-
-    bool collides(double x, double y) const override { return dest_producer_->collides(x, y); }
 };
 
 spl::shared_ptr<frame_producer> create_transition_producer(const field_mode&                      mode,

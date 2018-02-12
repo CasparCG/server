@@ -28,7 +28,6 @@
 #include "../consumer/write_frame_consumer.h"
 #include "../frame/draw_frame.h"
 #include "../frame/frame_factory.h"
-#include "../interaction/interaction_aggregator.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
@@ -57,7 +56,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     monitor::state                      state_;
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
-    interaction_aggregator              aggregator_;
     // map of layer -> map of tokens (src ref) -> layer_consumer
     std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>> layer_consumers_;
     executor executor_{L"stage " + boost::lexical_cast<std::wstring>(channel_index_)};
@@ -66,7 +64,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
         : channel_index_(channel_index)
         , graph_(std::move(graph))
-        , aggregator_([=](double x, double y) { return collission_detect(x, y); })
     {
     }
 
@@ -76,8 +73,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
-                aggregator_.translate_and_send();
-
                 for (auto& p : layers_) {
                     auto& layer = p.second;
                     auto& tween = tweens_[p.first];
@@ -283,26 +278,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
     }
-
-    void on_interaction(const interaction_event::ptr& event)
-    {
-        executor_.begin_invoke([=] { aggregator_.offer(event); });
-    }
-
-    boost::optional<interaction_target> collission_detect(double x, double y)
-    {
-        for (auto& layer : layers_ | boost::adaptors::reversed) {
-            auto transform  = tweens_[layer.first].fetch();
-            auto translated = translate(x, y, transform);
-
-            if (translated.first >= 0.0 && translated.first <= 1.0 && translated.second >= 0.0 &&
-                translated.second <= 1.0 && layer.second.collides(translated.first, translated.second)) {
-                return std::make_pair(transform, static_cast<interaction_sink*>(&layer.second));
-            }
-        }
-
-        return boost::optional<interaction_target>();
-    }
 };
 
 stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
@@ -361,5 +336,4 @@ std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { retu
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
 const monitor::state&                stage::state() const { return impl_->state_; }
-void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }} // namespace caspar::core

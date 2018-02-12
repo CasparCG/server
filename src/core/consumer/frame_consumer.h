@@ -65,11 +65,9 @@ class frame_consumer
 };
 
 typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
-                                                      interaction_sink*                           sink,
                                                       std::vector<spl::shared_ptr<video_channel>> channels)>
     consumer_factory_t;
 typedef std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
-                                                      interaction_sink*                           sink,
                                                       std::vector<spl::shared_ptr<video_channel>> channels)>
     preconfigured_consumer_factory_t;
 
@@ -81,11 +79,9 @@ class frame_consumer_registry : boost::noncopyable
     void register_preconfigured_consumer_factory(const std::wstring&                     element_name,
                                                  const preconfigured_consumer_factory_t& factory);
     spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&            params,
-                                                    interaction_sink*                           sink,
                                                     std::vector<spl::shared_ptr<video_channel>> channels) const;
     spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                         element_name,
                                                     const boost::property_tree::wptree&         element,
-                                                    interaction_sink*                           sink,
                                                     std::vector<spl::shared_ptr<video_channel>> channels) const;
 
   private:

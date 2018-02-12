@@ -195,7 +195,7 @@ struct server::impl : boost::noncopyable
 
                 try {
                     if (name != L"<xmlcomment>")
-                        channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage(), channels_));
+                        channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, channels_));
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }

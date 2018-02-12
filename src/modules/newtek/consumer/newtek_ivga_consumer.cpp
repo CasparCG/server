@@ -133,7 +133,6 @@ struct newtek_ivga_consumer : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params,
-                                                           core::interaction_sink*,
                                                            std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
@@ -144,7 +143,6 @@ spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree,
-                                   core::interaction_sink*,
                                    std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<newtek_ivga_consumer>();

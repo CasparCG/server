@@ -39,7 +39,6 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
-#include <core/interaction/interaction_sink.h>
 #include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
@@ -123,7 +122,6 @@ struct screen_consumer : boost::noncopyable
     caspar::prec_timer wait_timer_;
 
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
-    core::interaction_sink*                          sink_;
 
     std::atomic<bool> is_running_{ true };
     std::thread       thread_;
@@ -131,12 +129,10 @@ struct screen_consumer : boost::noncopyable
   public:
     screen_consumer(const configuration&           config,
                     const core::video_format_desc& format_desc,
-                    int                            channel_index,
-                    core::interaction_sink*        sink)
+                    int                            channel_index)
         : config_(config)
         , format_desc_(format_desc)
         , channel_index_(channel_index)
-        , sink_(sink)
     {
         if (format_desc_.format == core::video_format::ntsc &&
             config_.aspect == configuration::aspect_ratio::aspect_4_3) {
@@ -267,40 +263,6 @@ struct screen_consumer : boost::noncopyable
                 calculate_aspect();
             } else if (e.type == sf::Event::Closed) {
                 is_running_ = false;
-            } else if (config_.interactive && sink_) {
-                switch (e.type) {
-                case sf::Event::MouseMoved:
-                {
-                    auto& mouse_move = e.mouseMove;
-                    sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
-                        1,
-                        static_cast<double>(mouse_move.x) / screen_width_,
-                        static_cast<double>(mouse_move.y) / screen_height_));
-                    break;
-                }
-                case sf::Event::MouseButtonPressed:
-                case sf::Event::MouseButtonReleased:
-                {
-                    auto& mouse_button = e.mouseButton;
-                    sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
-                        1,
-                        static_cast<double>(mouse_button.x) / screen_width_,
-                        static_cast<double>(mouse_button.y) / screen_height_,
-                        static_cast<int>(mouse_button.button),
-                        e.type == sf::Event::MouseButtonPressed));
-                    break;
-                }
-                case sf::Event::MouseWheelMoved:
-                {
-                    auto& wheel_moved = e.mouseWheel;
-                    sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
-                        1,
-                        static_cast<double>(wheel_moved.x) / screen_width_,
-                        static_cast<double>(wheel_moved.y) / screen_height_,
-                        wheel_moved.delta));
-                    break;
-                }
-                }
             }
         }
         return count > 0;
@@ -470,12 +432,10 @@ struct screen_consumer_proxy : public core::frame_consumer
     core::monitor::state             state_;
     const configuration              config_;
     std::unique_ptr<screen_consumer> consumer_;
-    core::interaction_sink*          sink_;
 
   public:
-    screen_consumer_proxy(const configuration& config, core::interaction_sink* sink)
+    screen_consumer_proxy(const configuration& config)
         : config_(config)
-        , sink_(sink)
     {
     }
 
@@ -484,7 +444,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
         consumer_.reset();
-        consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));
+        consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
     }
 
     std::future<bool> send(core::const_frame frame) override { return consumer_->send(frame); }
@@ -503,7 +463,6 @@ struct screen_consumer_proxy : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      core::interaction_sink*                           sink,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN")) {
@@ -526,12 +485,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
-    return spl::make_shared<screen_consumer_proxy>(config, sink);
+    return spl::make_shared<screen_consumer_proxy>(config);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              core::interaction_sink*                           sink,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;
@@ -558,7 +516,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.aspect = configuration::aspect_ratio::aspect_4_3;
     }
 
-    return spl::make_shared<screen_consumer_proxy>(config, sink);
+    return spl::make_shared<screen_consumer_proxy>(config);
 }
 
 }} // namespace caspar::screen
