@@ -38,21 +38,25 @@ class state_proxy
 {
     std::string key_;
     std::map<std::string, std::vector<data_t>>& data_;
+    std::mutex& mutex_;
 public:
-    state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data)
+    state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data, std::mutex& mutex)
         : key_(key)
         , data_(data)
+        , mutex_(mutex)
     {
     }
 
     state_proxy& operator=(data_t data)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = { std::move(data) };
         return *this;
     }
 
     state_proxy& operator=(std::initializer_list<data_t> data)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = std::move(data);
         return *this;
     }
@@ -68,7 +72,7 @@ class state
 public:
     state_proxy operator[](const std::string& key)
     {
-        return state_proxy(key, data_);
+        return state_proxy(key, data_, mutex_);
     }
 
     void clear()
