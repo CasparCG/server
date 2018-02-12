@@ -158,13 +158,6 @@ const_frame::const_frame(const void*                            tag,
     : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
 }
-const_frame::const_frame(const void*                        tag,
-                         std::vector<array<std::uint8_t>>&& image_data,
-                         array<const std::int32_t>          audio_data,
-                         const core::pixel_format_desc&     desc)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
-{
-}
 const_frame::const_frame(const_frame&& other)
     : impl_(std::move(other.impl_))
 {
