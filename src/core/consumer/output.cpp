@@ -171,7 +171,7 @@ struct output::impl
                 state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
             }
 
-            if (!std::any_of(consumers_.begin(), consumers_.begin(), [](auto& p) {
+            if (!std::any_of(consumers_.begin(), consumers_.end(), [](auto& p) {
                 return p.second->has_synchronization_clock();
             })) {
                 sync_timer_.tick(1.0 / format_desc_.fps);
