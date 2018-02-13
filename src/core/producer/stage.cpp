@@ -92,7 +92,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 state_.clear();
                 for (auto& p : layers_) {
-                    state_.append("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    state_.insert_or_assign("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
                 }
             } catch (...) {
                 layers_.clear();
