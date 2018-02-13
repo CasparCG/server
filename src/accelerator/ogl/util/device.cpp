@@ -243,7 +243,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-            glFlush();
+            GL(glFlush());
 
             deadline_timer timer(service_);
             for (auto n = 0; true; ++n) {
