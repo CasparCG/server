@@ -63,7 +63,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
     typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>> sync_queue_t;
 
     sync_queue_t sync_queue_;
-    GLsync       sync_fence_ = 0;
 
     GLuint fbo_;
 
@@ -123,10 +122,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
             pool.clear();
 
         sync_queue_.clear();
-
-        if (sync_fence_) {
-            GL(glDeleteSync(sync_fence_));
-        }
 
         GL(glDeleteFramebuffers(1, &fbo_));
     }
