@@ -192,10 +192,9 @@ struct screen_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
                 }
 
-                // TODO (fix) This reports falsy false.
-                //if (!GLEW_VERSION_4_5) {
-                //    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
-                //}
+                if (!GLEW_VERSION_4_5) {
+                    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
+                }
 
                 for (int n = 0; n < 2; ++n) {
                     screen::frame frame;

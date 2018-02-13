@@ -83,12 +83,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
 
-        // TODO (fix) This reports falsy false.
-        //if (!GLEW_VERSION_4_5) {
-        //    CASPAR_THROW_EXCEPTION(not_supported()
-        //                           << msg_info("Your graphics card does not meet the minimum hardware requirements "
-        //                                       "since it does not support OpenGL 4.5 or higher."));
-        //}
+        if (!GLEW_VERSION_4_5) {
+            CASPAR_THROW_EXCEPTION(not_supported()
+                                   << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                                               "since it does not support OpenGL 4.5 or higher."));
+        }
 
         CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
 

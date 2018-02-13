@@ -278,23 +278,10 @@ struct image_kernel::impl
             params.blend_mode = core::blend_mode::normal;
         }
 
-        if (!glTextureBarrier) {
-            GL(glEnable(GL_BLEND));
-
-            switch (params.keyer) {
-                case keyer::additive:
-                    GL(glBlendFunc(GL_ONE, GL_ONE));
-                    break;
-                case keyer::linear:
-                    GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
-                    break;
-            }
-        } else {
-            params.background->bind(static_cast<int>(texture_id::background));
-            shader_->set("background", texture_id::background);
-            shader_->set("blend_mode", params.blend_mode);
-            shader_->set("keyer", params.keyer);
-        }
+        params.background->bind(static_cast<int>(texture_id::background));
+        shader_->set("background", texture_id::background);
+        shader_->set("blend_mode", params.blend_mode);
+        shader_->set("keyer", params.keyer);
 
         // Setup image-adjustements
 
@@ -418,9 +405,7 @@ struct image_kernel::impl
                 glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
 
                 glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
-                if (glTextureBarrier) {
-                    glTextureBarrier();
-                }
+                glTextureBarrier();
 
                 glDisableClientState(GL_TEXTURE_COORD_ARRAY);
                 glDisableClientState(GL_VERTEX_ARRAY);
