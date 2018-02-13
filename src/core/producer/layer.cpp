@@ -126,8 +126,9 @@ struct layer::impl
             }
 
             if (auto_play_delta_) {
-                auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() -
-                                   static_cast<int64_t>(*auto_play_delta_);
+                auto time = static_cast<std::int64_t>(foreground_->frame_number());
+                auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
                     return receive(format_desc);
