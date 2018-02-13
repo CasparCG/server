@@ -94,10 +94,10 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
         thread_ = std::thread([=] {
+            caspar::timer tick_timer;
+
             while (!abort_request_) {
                 try {
-                    caspar::timer tick_timer;
-
                     auto format_desc = video_format_desc();
 
                     state_.clear();
@@ -124,6 +124,7 @@ struct video_channel::impl final
                     state_.insert_or_assign("output", output_.state());
 
                     graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
+                    tick_timer.restart();
 
                     tick_(state_);
                 } catch (...) {
