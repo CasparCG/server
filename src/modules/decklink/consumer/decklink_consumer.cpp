@@ -450,10 +450,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 }
             }
 
-            if (abort_request_) {
-                return E_FAIL;
-            }
-
             std::shared_ptr<void>     image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
             std::vector<std::int32_t> audio_data;
 
@@ -467,6 +463,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 }
             }
             buffer_cond_.notify_all();
+
+            if (abort_request_) {
+                return E_FAIL;
+            }
 
             if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
                 if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
