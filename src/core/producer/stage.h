@@ -74,9 +74,6 @@ class stage final
     std::future<void>            swap_layer(int index, int other_index, bool swap_transforms);
     std::future<void>            swap_layer(int index, int other_index, stage& other, bool swap_transforms);
 
-    void add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer);
-    void remove_layer_consumer(void* token, int layer);
-
     const monitor::state& state() const;
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index);

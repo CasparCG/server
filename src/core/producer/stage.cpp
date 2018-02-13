@@ -25,7 +25,6 @@
 
 #include "layer.h"
 
-#include "../consumer/write_frame_consumer.h"
 #include "../frame/draw_frame.h"
 #include "../frame/frame_factory.h"
 
@@ -39,8 +38,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
-
-#include <tbb/parallel_for_each.h>
 
 #include <functional>
 #include <future>
@@ -56,8 +53,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     monitor::state                      state_;
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
-    // map of layer -> map of tokens (src ref) -> layer_consumer
-    std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>> layer_consumers_;
+
     executor executor_{L"stage " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
@@ -246,22 +242,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         }
     }
 
-    void add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer)
-    {
-        executor_.begin_invoke([=] { layer_consumers_[layer].insert(std::make_pair(token, layer_consumer)); });
-    }
-
-    void remove_layer_consumer(void* token, int layer)
-    {
-        executor_.begin_invoke([=] {
-            auto& layer_map = layer_consumers_[layer];
-            layer_map.erase(token);
-            if (layer_map.empty()) {
-                layer_consumers_.erase(layer);
-            }
-        });
-    }
-
     std::future<std::shared_ptr<frame_producer>> foreground(int index)
     {
         return executor_.begin_invoke(
@@ -327,11 +307,6 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 {
     return impl_->swap_layer(index, other_index, other, swap_transforms);
 }
-void stage::add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer)
-{
-    impl_->add_layer_consumer(token, layer, layer_consumer);
-}
-void stage::remove_layer_consumer(void* token, int layer) { impl_->remove_layer_consumer(token, layer); }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
