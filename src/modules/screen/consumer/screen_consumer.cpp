@@ -80,7 +80,6 @@ struct configuration
     int             screen_index     = 0;
     screen::stretch stretch          = screen::stretch::fill;
     bool            windowed         = true;
-    bool            auto_deinterlace = true;
     bool            key_only         = false;
     aspect_ratio    aspect           = aspect_ratio::aspect_invalid;
     bool            vsync            = false;
@@ -478,7 +477,6 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     config.windowed         = !contains_param(L"FULLSCREEN", params);
     config.key_only         = contains_param(L"KEY_ONLY", params);
     config.interactive      = !contains_param(L"NON_INTERACTIVE", params);
-    config.auto_deinterlace = !contains_param(L"NO_AUTO_DEINTERLACE", params);
     config.borderless       = contains_param(L"BORDERLESS", params);
 
     if (contains_param(L"NAME", params)) {
@@ -497,7 +495,6 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.screen_index     = ptree.get(L"device", config.screen_index + 1) - 1;
     config.windowed         = ptree.get(L"windowed", config.windowed);
     config.key_only         = ptree.get(L"key-only", config.key_only);
-    config.auto_deinterlace = ptree.get(L"auto-deinterlace", config.auto_deinterlace);
     config.vsync            = ptree.get(L"vsync", config.vsync);
     config.interactive      = ptree.get(L"interactive", config.interactive);
     config.borderless       = ptree.get(L"borderless", config.borderless);
