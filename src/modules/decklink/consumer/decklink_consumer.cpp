@@ -34,7 +34,6 @@
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/array.h>
-#include <common/prec_timer.h>
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -574,11 +573,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             buffer_.push(std::move(frame));
         }
         buffer_cond_.notify_all();
-
-        if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
-            caspar::prec_timer timer;
-            timer.tick(1 / format_desc_.fps);
-        }
 
         return !abort_request_;
     }
