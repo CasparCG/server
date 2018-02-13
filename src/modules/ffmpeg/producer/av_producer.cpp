@@ -436,7 +436,7 @@ struct AVProducer::Impl
         , afilter_(afilter)
     {
         state_["file/name"] = u8(name_);
-        state_["file/fpath"] = u8(path_);
+        state_["file/path"] = u8(path_);
         state_["file/fps"] = format_desc_.fps;
         state_["file/time"] = { time(), this->duration().value_or(0) / format_desc_.fps };
         state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0)) };
