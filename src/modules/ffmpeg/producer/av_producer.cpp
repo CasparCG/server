@@ -244,7 +244,6 @@ struct Filter
                 unsigned index = 0;
 
                 // TODO find stream based on link name
-                // TODO share stream decoders between graphs
                 while (true) {
                     if (index == input->nb_streams) {
                         graph = nullptr;
