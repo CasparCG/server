@@ -105,6 +105,9 @@ class decklink_producer
 
     std::exception_ptr exception_;
 
+    com_ptr<IDeckLinkDisplayMode> mode_        = get_display_mode(input_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
+    int                           field_count_ = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
+
   public:
     decklink_producer(const core::video_format_desc&              format_desc,
                       int                                         device_index,
@@ -114,7 +117,7 @@ class decklink_producer
         , format_desc_(format_desc)
         , frame_factory_(frame_factory)
     {
-        frame_buffer_.set_capacity(4);
+        frame_buffer_.set_capacity(field_count_ + 1);
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -124,32 +127,27 @@ class decklink_producer
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        auto display_mode = get_display_mode(input_, format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
-
-        // NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
-        if (FAILED(input_->EnableVideoInput(display_mode->GetDisplayMode(), bmdFormat8BitYUV, 0)))
+        if (FAILED(input_->EnableVideoInput(mode_->GetDisplayMode(), bmdFormat8BitYUV, 0))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable video input.")
-                                                      << boost::errinfo_api_function("EnableVideoInput"));
+                                   << boost::errinfo_api_function("EnableVideoInput"));
+        }
 
         if (FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz,
                                             bmdAudioSampleType32bitInteger,
-                                            static_cast<int>(format_desc_.audio_channels))))
+                                            static_cast<int>(format_desc_.audio_channels)))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable audio input.")
-                                                      << boost::errinfo_api_function("EnableAudioInput"));
+                                   << boost::errinfo_api_function("EnableAudioInput"));
+        }
 
-        if (FAILED(input_->SetCallback(this)) != S_OK)
+        if (FAILED(input_->SetCallback(this)) != S_OK) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input callback.")
-                                                      << boost::errinfo_api_function("SetCallback"));
+                                   << boost::errinfo_api_function("SetCallback"));
+        }
 
-        if (FAILED(input_->StartStreams()))
+        if (FAILED(input_->StartStreams())) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start input stream.")
-                                                      << boost::errinfo_api_function("StartStreams"));
-
-        // Wait for first frame until returning or give up after 2 seconds.
-        caspar::timer timeout_timer;
-
-        while (frame_buffer_.size() < 1 && timeout_timer.elapsed() < 2.0)
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                                   << boost::errinfo_api_function("StartStreams"));
+        }
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
@@ -176,8 +174,9 @@ class decklink_producer
     virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*  video,
                                                              IDeckLinkAudioInputPacket* audio)
     {
-        if (!video)
+        if (!video) {
             return S_OK;
+        }
 
         caspar::timer frame_timer;
 
@@ -202,12 +201,12 @@ class decklink_producer
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
 
-
             // Video
 
             void* video_bytes = nullptr;
-            if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
+            if (FAILED(video->GetBytes(&video_bytes)) || !video_bytes) {
                 return S_OK;
+            }
 
             // Audio
 
@@ -245,9 +244,8 @@ class decklink_producer
                 src->format           = AV_PIX_FMT_UYVY422;
                 src->width            = video->GetWidth();
                 src->height           = video->GetHeight();
-                // XXX
-                //src->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
-                //src->top_field_first  = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+                src->interlaced_frame = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame;
+                src->top_field_first  = mode_->GetFieldDominance() == BMDFieldDominance::bmdUpperFieldFirst ? 1 : 0;
                 src->key_frame        = 1;
 
                 core::pixel_format_desc desc = core::pixel_format::ycbcr;
@@ -289,19 +287,17 @@ class decklink_producer
                 return core::draw_frame(std::move(frame));
             }();
 
-            // XXX
-            // TODO: deinterlace
-            //for (auto n = 0; n < format_desc_.field_count; ++n) {
-            //    if (!frame_buffer_.try_push(frame)) {
-            //        auto dummy = core::draw_frame{};
-            //        frame_buffer_.try_pop(dummy);
+            // TODO (fix) deinterlace
+            for (auto n = 0; n < field_count_; ++n) {
+                if (!frame_buffer_.try_push(frame)) {
+                    auto dummy = core::draw_frame{};
+                    frame_buffer_.try_pop(dummy);
 
-            //        frame_buffer_.try_push(frame);
+                    frame_buffer_.try_push(frame);
 
-            //        graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            //    }
-            //}
-
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                }
+            }
         } catch (...) {
             exception_ = std::current_exception();
             return E_FAIL;
@@ -317,10 +313,11 @@ class decklink_producer
 
         core::draw_frame frame = last_frame_;
 
-        if (!frame_buffer_.try_pop(frame))
+        if (!frame_buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
-        else
+        } else {
             last_frame_ = frame;
+        }
 
         graph_->set_value("output-buffer",
                           static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));

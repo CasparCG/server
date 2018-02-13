@@ -89,7 +89,7 @@ const void*                mutable_frame::stream_tag() const { return impl_->tag
 const frame_geometry&      mutable_frame::geometry() const { return impl_->geometry_; }
 frame_geometry&            mutable_frame::geometry() { return impl_->geometry_; }
 
-struct const_frame::impl : boost::noncopyable
+struct const_frame::impl
 {
     const void*                                  tag_ = nullptr;
     const std::vector<array<const std::uint8_t>> image_data_;
@@ -173,7 +173,7 @@ const_frame::const_frame(const const_frame& other)
 const_frame::~const_frame() {}
 const_frame& const_frame::operator=(const_frame other)
 {
-    impl_ = std::move(other.impl_);
+    impl_ = other.impl_;
     return *this;
 }
 bool const_frame::operator==(const const_frame& other) const { return impl_ == other.impl_; }
@@ -188,5 +188,5 @@ std::size_t                      const_frame::height() const { return impl_->hei
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const void*                      const_frame::stream_tag() const { return impl_->tag_; }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
-const_frame::                    operator bool() const { return impl_ && impl_->tag_ != nullptr; }
+const_frame::                    operator bool() const { return impl_ && impl_->tag_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
 }} // namespace caspar::core

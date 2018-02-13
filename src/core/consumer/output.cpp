@@ -157,7 +157,9 @@ struct output::impl
 
             for (auto& p : futures) {
                 try {
-                    p.second.wait();
+                    if (!p.second.get()) {
+                        consumers_.erase(p.first);
+                    }
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                     consumers_.erase(p.first);
