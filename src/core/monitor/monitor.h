@@ -88,7 +88,7 @@ public:
         return data_;
     }
 
-    void append(const std::string& name, const state& other)
+    void insert_or_assign(const std::string& name, const state& other)
     {
         auto data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
@@ -97,14 +97,16 @@ public:
         }
     }
 
-    void append(const state& other)
+    void insert_or_assign(const state& other)
     {
         auto data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         if (data_.empty()) {
             data_ = std::move(data);
         } else {
-            data_.insert(std::make_move_iterator(data_.begin()), std::make_move_iterator(data_.end()));
+            for (auto& p : data) {
+                data_[p.first] = std::move(p.second);
+            }
         }
     }
 };

@@ -119,7 +119,7 @@ struct layer::impl
 
             state_.clear();
             state_["paused"] = is_paused_;
-            state_.append(foreground_->state());
+            state_.insert_or_assign(foreground_->state());
 
             if (!frame) {
                 return foreground_->last_frame();

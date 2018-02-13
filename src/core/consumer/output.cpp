@@ -166,7 +166,7 @@ struct output::impl
 
             state_.clear();
             for (auto& p : consumers_) {
-                state_.append("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
+                state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
             }
 
             if (!std::any_of(consumers_.begin(), consumers_.begin(), [](auto& p) {

@@ -59,8 +59,8 @@ class separated_producer : public frame_producer_base
         CASPAR_SCOPE_EXIT
         {
             state_.clear();
-            state_.append(fill_producer_->state());
-            state_.append("keyer", key_producer_->state());
+            state_.insert_or_assign(fill_producer_->state());
+            state_.insert_or_assign("keyer", key_producer_->state());
         };
 
         tbb::parallel_invoke(

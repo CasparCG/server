@@ -176,7 +176,7 @@ struct server::impl : boost::noncopyable
             auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id), [channel_id, weak_client](const monitor::state& channel_state)
             {
                 monitor::state state;
-                state.append("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
+                state.insert_or_assign("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
                 auto client = weak_client.lock();
                 if (client) {
                     client->send(state);
