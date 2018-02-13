@@ -324,9 +324,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         for (int n = 0; n < buffer_size_; ++n) {
-            auto nb_samples = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels * field_count_;
+            auto nb_samples = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * field_count_;
             if (config.embedded_audio) {
-                schedule_next_audio(std::vector<int32_t>(nb_samples));
+                schedule_next_audio(std::vector<int32_t>(nb_samples * format_desc_.audio_channels), nb_samples);
             }
 
             std::shared_ptr<void> image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
@@ -334,9 +334,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         if (config.embedded_audio) {
-            auto nb_samples = format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * format_desc_.audio_channels * field_count_;
+            auto nb_samples = format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * field_count_;
             // Preroll one extra frame worth of audio
-            schedule_next_audio(std::vector<int32_t>(nb_samples, 0));
+            schedule_next_audio(std::vector<int32_t>(nb_samples * format_desc_.audio_channels, 0), nb_samples);
             output_->EndAudioPreroll();
         }
 
@@ -487,10 +487,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
             }
 
-            schedule_next_video(image_data, static_cast<int>(audio_data.size()) / format_desc_.audio_channels);
+            const auto nb_samples = static_cast<int>(audio_data.size()) / format_desc_.audio_channels;
+
+            schedule_next_video(image_data, nb_samples);
 
             if (config_.embedded_audio) {
-                schedule_next_audio(audio_data);
+                schedule_next_audio(audio_data, nb_samples);
             }
         } catch (...) {
             std::lock_guard<std::mutex> lock(exception_mutex_);
@@ -502,21 +504,19 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     }
 
     template <typename T>
-    void schedule_next_audio(const T& audio_data)
+    void schedule_next_audio(const T& audio_data, int nb_samples)
     {
-        auto sample_frame_count = static_cast<int>(audio_data.size() / format_desc_.audio_channels);
-
         audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
         if (FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(),
-            sample_frame_count,
-            audio_scheduled_,
-            format_desc_.audio_sample_rate,
-            nullptr))) {
+                                                 nb_samples,
+                                                 audio_scheduled_,
+                                                 format_desc_.audio_sample_rate,
+                                                 nullptr))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
         }
 
-        audio_scheduled_ += sample_frame_count;
+        audio_scheduled_ += nb_samples;
     }
 
     void schedule_next_video(std::shared_ptr<void> fill, int nb_samples)
