@@ -79,7 +79,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
                                         format_desc.height,
                                         format_desc.time_scale,
                                         format_desc.duration,
-                                        format_desc.field_mode == core::field_mode::progressive,
+                                        false,
                                         static_cast<float>(format_desc.square_width) /
                                             static_cast<float>(format_desc.square_height),
                                         true,

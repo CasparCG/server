@@ -151,7 +151,7 @@ struct Filter
             filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
-                            (format_desc.framerate.numerator() * format_desc.field_count) %
+                            format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
@@ -493,7 +493,7 @@ struct AVProducer::Impl
                             progress.fetch_or(filter_frame(video_filter_));
                         },
                         [&]{
-                            progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count));
+                            progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0]));
                         }
                     );
 
@@ -753,24 +753,15 @@ struct AVProducer::Impl
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-            // TODO (fix) Won't play last field.
-            if (buffer_.size() < format_desc_.field_count) {
+            if (buffer_.empty()) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame{};
             }
 
-            if (format_desc_.field_count == 2) {
-                result      = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
-                frame_      = core::draw_frame::still(buffer_[1].frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
-                buffer_.pop_front();
-                buffer_.pop_front();
-            } else {
-                result      = buffer_[0].frame;
-                frame_      = core::draw_frame::still(buffer_[0].frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration;
-                buffer_.pop_front();
-            }
+            result = buffer_[0].frame;
+            frame_ = core::draw_frame::still(buffer_[0].frame);
+            frame_time_ = buffer_[0].pts + buffer_[0].duration;
+            buffer_.pop_front();
 
             frame_flush_ = false;
         }

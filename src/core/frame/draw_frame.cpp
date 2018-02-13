@@ -116,29 +116,6 @@ void                   draw_frame::accept(frame_visitor& visitor) const { impl_-
 bool draw_frame::operator==(const draw_frame& other) const { return impl_ && *impl_ == *other.impl_; }
 bool draw_frame::operator!=(const draw_frame& other) const { return !(*this == other); }
 
-draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, field_mode mode)
-{
-    if (!frame1 && !frame2) {
-        return draw_frame{};
-    }
-
-    if (frame1 == frame2 || mode == field_mode::progressive)
-        return frame2;
-
-    if (mode == field_mode::upper) {
-        frame1.transform().image_transform.field_mode = field_mode::upper;
-        frame2.transform().image_transform.field_mode = field_mode::lower;
-    } else {
-        frame1.transform().image_transform.field_mode = field_mode::lower;
-        frame2.transform().image_transform.field_mode = field_mode::upper;
-    }
-
-    std::vector<draw_frame> frames;
-    frames.push_back(std::move(frame1));
-    frames.push_back(std::move(frame2));
-    return draw_frame(std::move(frames));
-}
-
 draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 {
     if (!frame1 && !frame2) {

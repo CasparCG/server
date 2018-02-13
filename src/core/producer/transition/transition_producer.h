@@ -56,8 +56,7 @@ struct transition_info
     caspar::tweener      tweener{L"linear"};
 };
 
-spl::shared_ptr<frame_producer> create_transition_producer(const field_mode&                      mode,
-                                                           const spl::shared_ptr<frame_producer>& destination,
+spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
                                                            const transition_info&                 info);
 
 }} // namespace caspar::core

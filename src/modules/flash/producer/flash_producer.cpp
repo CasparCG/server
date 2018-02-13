@@ -512,14 +512,7 @@ struct flash_producer : public core::frame_producer_base
             frame_buffer_.push(core::draw_frame{});
 
         if (frame_buffer_.empty()) {
-            if (abs(renderer_->fps() / 2.0 - format_desc_.fps) < 2.0) // flash == 2 * format -> interlace
-            {
-                auto frame1 = render_frame(allow_faster_rendering);
-                if (frame1) {
-                    auto frame2 = render_frame(allow_faster_rendering);
-                    frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode));
-                }
-            } else if (abs(renderer_->fps() - format_desc_.fps / 2.0) < 2.0) // format == 2 * flash -> duplicate
+            if (abs(renderer_->fps() - format_desc_.fps / 2.0) < 2.0) // format == 2 * flash -> duplicate
             {
                 auto frame = render_frame(allow_faster_rendering);
                 if (frame) {

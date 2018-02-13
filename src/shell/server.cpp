@@ -179,7 +179,7 @@ struct server::impl : boost::noncopyable
                 state.insert_or_assign("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
                 auto client = weak_client.lock();
                 if (client) {
-                    client->send(state);
+                    client->send(std::move(state));
                 }
             });
 

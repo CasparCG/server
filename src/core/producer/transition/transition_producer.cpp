@@ -39,7 +39,6 @@ namespace caspar { namespace core {
 class transition_producer : public frame_producer_base
 {
     monitor::state                    state_;
-    const field_mode                  mode_;
     int                               current_frame_ = 0;
 
     const transition_info info_;
@@ -50,11 +49,9 @@ class transition_producer : public frame_producer_base
     bool paused_ = false;
 
   public:
-    transition_producer(const field_mode&                      mode,
-                        const spl::shared_ptr<frame_producer>& dest,
+    transition_producer(const spl::shared_ptr<frame_producer>& dest,
                         const transition_info&                 info)
-        : mode_(mode)
-        , info_(info)
+        : info_(info)
         , dest_producer_(dest)
     {
     }
@@ -141,70 +138,43 @@ class transition_producer : public frame_producer_base
         return dest_producer_->call(params);
     }
 
-    draw_frame compose(draw_frame dest_frame, draw_frame src_frame) const
+    draw_frame compose(draw_frame dst_frame, draw_frame src_frame) const
     {
         if (info_.type == transition_type::cut) {
             return src_frame;
         }
 
-        const double delta1 = info_.tweener(current_frame_ * 2 - 1, 0.0, 1.0, static_cast<double>(info_.duration * 2));
-        const double delta2 = info_.tweener(current_frame_ * 2, 0.0, 1.0, static_cast<double>(info_.duration * 2));
+        const double delta = info_.tweener(current_frame_ , 0.0, 1.0, static_cast<double>(info_.duration));
 
         const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
 
-        // For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
-        src_frame.transform().audio_transform.volume = 1.0 - delta2;
-        auto s_frame1                                = src_frame;
-        auto s_frame2                                = src_frame;
-
-        dest_frame.transform().audio_transform.volume = delta2;
-        auto d_frame1                                 = dest_frame;
-        auto d_frame2                                 = dest_frame;
-
-        // Don't submit double amount of audio samples for interlaced modes.
-        d_frame1.transform().audio_transform.volume = 0.0;
-        s_frame1.transform().audio_transform.volume = 0.0;
+        src_frame.transform().audio_transform.volume = 1.0 - delta;
+        dst_frame.transform().audio_transform.volume = delta;
 
         if (info_.type == transition_type::mix) {
-            d_frame1.transform().image_transform.opacity = delta1;
-            d_frame1.transform().image_transform.is_mix  = true;
-            d_frame2.transform().image_transform.opacity = delta2;
-            d_frame2.transform().image_transform.is_mix  = true;
-
-            s_frame1.transform().image_transform.opacity = 1.0 - delta1;
-            s_frame1.transform().image_transform.is_mix  = true;
-            s_frame2.transform().image_transform.opacity = 1.0 - delta2;
-            s_frame2.transform().image_transform.is_mix  = true;
+            dst_frame.transform().image_transform.opacity = delta;
+            dst_frame.transform().image_transform.is_mix  = true;
+            src_frame.transform().image_transform.opacity = 1.0 - delta;
+            src_frame.transform().image_transform.is_mix  = true;
         } else if (info_.type == transition_type::slide) {
-            d_frame1.transform().image_transform.fill_translation[0] = (-1.0 + delta1) * dir;
-            d_frame2.transform().image_transform.fill_translation[0] = (-1.0 + delta2) * dir;
+            dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
         } else if (info_.type == transition_type::push) {
-            d_frame1.transform().image_transform.fill_translation[0] = (-1.0 + delta1) * dir;
-            d_frame2.transform().image_transform.fill_translation[0] = (-1.0 + delta2) * dir;
-
-            s_frame1.transform().image_transform.fill_translation[0] = (0.0 + delta1) * dir;
-            s_frame2.transform().image_transform.fill_translation[0] = (0.0 + delta2) * dir;
+            dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
+            src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * dir;
         } else if (info_.type == transition_type::wipe) {
-            d_frame1.transform().image_transform.clip_scale[0] = delta1;
-            d_frame2.transform().image_transform.clip_scale[0] = delta2;
+            dst_frame.transform().image_transform.clip_scale[0] = delta;
         }
 
-        const auto s_frame =
-            s_frame1.transform() == s_frame2.transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
-        const auto d_frame =
-            d_frame1.transform() == d_frame2.transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
-
-        return draw_frame::over(s_frame, d_frame);
+        return draw_frame::over(src_frame, dst_frame);
     }
 
     const monitor::state& state() { return state_; }
 };
 
-spl::shared_ptr<frame_producer> create_transition_producer(const field_mode&                      mode,
-                                                           const spl::shared_ptr<frame_producer>& destination,
+spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
                                                            const transition_info&                 info)
 {
-    return spl::make_shared<transition_producer>(mode, destination, info);
+    return spl::make_shared<transition_producer>(destination, info);
 }
 
 }} // namespace caspar::core
