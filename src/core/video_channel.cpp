@@ -85,7 +85,6 @@ struct video_channel::impl final
         , tick_(tick)
     {
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
-        graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("mix-time", caspar::diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
@@ -94,8 +93,6 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
         thread_ = std::thread([=] {
-            caspar::timer tick_timer;
-
             while (!abort_request_) {
                 try {
                     auto format_desc = video_format_desc();
@@ -122,9 +119,6 @@ struct video_channel::impl final
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
                     state_.insert_or_assign("output", output_.state());
-
-                    graph_->set_value("tick-time", tick_timer.elapsed() * format_desc.fps * 0.5);
-                    tick_timer.restart();
 
                     tick_(state_);
                 } catch (...) {
