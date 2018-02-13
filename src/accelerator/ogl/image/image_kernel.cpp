@@ -278,7 +278,7 @@ struct image_kernel::impl
             params.blend_mode = core::blend_mode::normal;
         }
 
-        if (params.blend_mode == core::blend_mode::normal) {
+        if (!glTextureBarrier) {
             GL(glEnable(GL_BLEND));
 
             switch (params.keyer) {
@@ -393,8 +393,6 @@ struct image_kernel::impl
             }
         }
 
-        params.background->attach();
-
         // Draw
         switch (params.geometry.type()) {
             case core::frame_geometry::geometry_type::quad:
@@ -419,13 +417,9 @@ struct image_kernel::impl
                 glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
                 glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
 
-                if (params.blend_mode == core::blend_mode::normal) {
-                    glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
-                } else {
-                    for (auto i = 0; i < coords.size(); i += 4) {
-                        glTextureBarrier();
-                        glDrawArrays(GL_QUADS, i, 4);
-                    }
+                glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
+                if (glTextureBarrier) {
+                    glTextureBarrier();
                 }
 
                 glDisableClientState(GL_TEXTURE_COORD_ARRAY);
