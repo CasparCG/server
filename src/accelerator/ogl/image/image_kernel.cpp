@@ -386,8 +386,10 @@ struct image_kernel::impl
                 glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
                 glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
 
-                glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
-                glTextureBarrier();
+                for (int i = 0; i < coords.size(); i += 4) {
+                    glDrawArrays(GL_QUADS, i, 4);
+                    glTextureBarrier();
+                }
 
                 glDisableClientState(GL_TEXTURE_COORD_ARRAY);
                 glDisableClientState(GL_VERTEX_ARRAY);
