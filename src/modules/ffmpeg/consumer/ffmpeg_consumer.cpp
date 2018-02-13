@@ -493,6 +493,9 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 boost::optional<Stream> video_stream;
                 if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
+                    if (options.find("preset:v") == options.end()) {
+                        options["preset:v"] = "veryfast";
+                    }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
                 }
 
