@@ -58,9 +58,6 @@ enum class video_format
     x1556p2398,
     x1556p2400,
     x1556p2500,
-    dci1080p2398,
-    dci1080p2400,
-    dci1080p2500,
     x2160p2398,
     x2160p2400,
     x2160p2500,
@@ -69,21 +66,9 @@ enum class video_format
     x2160p5000,
     x2160p5994,
     x2160p6000,
-    dci2160p2398,
-    dci2160p2400,
-    dci2160p2500,
     invalid,
     count
 };
-
-enum class field_mode
-{
-    empty       = 0,
-    lower       = 1,
-    upper       = 2,
-    progressive = 3 // NOTE: progressive == lower | upper;
-};
-ENUM_ENABLE_BITWISE(field_mode);
 
 struct video_format_desc final
 {
@@ -93,12 +78,10 @@ struct video_format_desc final
     int                  height;
     int                  square_width;
     int                  square_height;
-    core::field_mode     field_mode; // progressive, interlaced upper field first, interlaced lower field first
     double               fps;        // actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
     boost::rational<int> framerate;
     int                  time_scale;
     int                  duration;
-    int                  field_count;
     std::size_t          size; // frame size in bytes
     std::wstring         name; // name of output format
 
@@ -111,7 +94,6 @@ struct video_format_desc final
                       int                     height,
                       int                     square_width,
                       int                     square_height,
-                      core::field_mode        field_mode,
                       int                     time_scale,
                       int                     duration,
                       const std::wstring&     name,

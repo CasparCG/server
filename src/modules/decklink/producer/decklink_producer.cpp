@@ -127,7 +127,7 @@ class decklink_producer
         auto display_mode = get_display_mode(input_, format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 
         // NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
-        if (FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0)))
+        if (FAILED(input_->EnableVideoInput(display_mode->GetDisplayMode(), bmdFormat8BitYUV, 0)))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable video input.")
                                                       << boost::errinfo_api_function("EnableVideoInput"));
 
@@ -186,10 +186,6 @@ class decklink_producer
             state_["file/path"] = device_index_;
             state_["file/video/width"] = video->GetWidth();
             state_["file/video/height"] = video->GetHeight();
-            state_["file/video/field"] =
-                u8(format_desc_.field_mode != core::field_mode::progressive
-                    ? "progressive"
-                    : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"));
             state_["file/audio/sample-rate"] = 48000;
             state_["file/audio/channels"] = 2;
             state_["file/audio/format"] = u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
@@ -249,8 +245,9 @@ class decklink_producer
                 src->format           = AV_PIX_FMT_UYVY422;
                 src->width            = video->GetWidth();
                 src->height           = video->GetHeight();
-                src->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
-                src->top_field_first  = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+                // XXX
+                //src->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
+                //src->top_field_first  = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
                 src->key_frame        = 1;
 
                 core::pixel_format_desc desc = core::pixel_format::ycbcr;
@@ -269,8 +266,6 @@ class decklink_producer
                 dst->format           = AV_PIX_FMT_YUV422P;
                 dst->width            = format_desc_.width;
                 dst->height           = format_desc_.height;
-                dst->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
-                dst->top_field_first  = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
                 dst->key_frame        = 1;
 
                 auto sws = sws_getCachedContext(sws_.get(),
@@ -294,14 +289,19 @@ class decklink_producer
                 return core::draw_frame(std::move(frame));
             }();
 
-            if (!frame_buffer_.try_push(frame)) {
-                auto dummy = core::draw_frame{};
-                frame_buffer_.try_pop(dummy);
+            // XXX
+            // TODO: deinterlace
+            //for (auto n = 0; n < format_desc_.field_count; ++n) {
+            //    if (!frame_buffer_.try_push(frame)) {
+            //        auto dummy = core::draw_frame{};
+            //        frame_buffer_.try_pop(dummy);
 
-                frame_buffer_.try_push(frame);
+            //        frame_buffer_.try_push(frame);
 
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            }
+            //        graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+            //    }
+            //}
+
         } catch (...) {
             exception_ = std::current_exception();
             return E_FAIL;

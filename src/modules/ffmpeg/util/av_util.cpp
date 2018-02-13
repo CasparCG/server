@@ -170,8 +170,6 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     av_frame->sample_aspect_ratio = {sar.numerator(), sar.denominator()};
     av_frame->width               = format_desc.width;
     av_frame->height              = format_desc.height;
-    av_frame->interlaced_frame    = format_desc.field_mode != core::field_mode::progressive ? 1 : 0;
-    av_frame->top_field_first     = format_desc.field_mode == core::field_mode::upper ? 1 : 0;
 
     switch (format) {
         case core::pixel_format::rgb:

@@ -34,6 +34,7 @@
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/array.h>
+#include <common/prec_timer.h>
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -325,6 +326,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::atomic<int64_t>                scheduled_frames_completed_;
     std::unique_ptr<key_video_context>  key_context_;
 
+    com_ptr<IDeckLinkDisplayMode>       mode_;
+
     executor executor_;
 
   public:
@@ -357,7 +360,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
+        mode_ = get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
+        enable_video(mode_->GetDisplayMode());
 
         if (config.embedded_audio) {
             enable_audio();
@@ -370,10 +374,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             output_->BeginAudioPreroll();
         }
 
+        auto field_count = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
+
         for (int n = 0; n < buffer_size_; ++n) {
             if (config.embedded_audio) {
                 schedule_next_audio(std::vector<int32_t>(
-                    format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels,
+                    format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels * field_count,
                     0));
             }
 
@@ -384,7 +390,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             // Preroll one extra frame worth of audio
             schedule_next_audio(
                 std::vector<int32_t>(format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] *
-                                         format_desc_.audio_channels,
+                                         format_desc_.audio_channels * field_count,
                                      0));
             output_->EndAudioPreroll();
         }
@@ -504,8 +510,43 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 }
             }
 
-            if (!frame_buffer_.try_pop(frame_)) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
+                core::const_frame frame1;
+                core::const_frame frame2;
+
+                if (!frame_buffer_.try_pop(frame1)) {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                }
+
+                caspar::prec_timer timer;
+                timer.tick(format_desc_.fps / 2);
+
+                if (!frame_buffer_.try_pop(frame2)) {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                }
+
+                std::array<core::const_frame, 2> vec;
+                vec[0] = frame1;
+                vec[1] = frame2;
+
+                if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
+                    std::swap(vec[0], vec[1]);
+                }
+
+                array<std::uint8_t> image(format_desc_.size);
+                for (auto y = 0; y < format_desc_.height; ++y) {
+                    std::memcpy(image.data() + y * format_desc_.width, vec[y % 2].image_data(0).data() + y * format_desc_.width, format_desc_.width);
+                }
+
+                array<std::int32_t> audio(frame1.audio_data().size() * 4 + frame2.audio_data().size() * 4);
+                std::memcpy(audio.data(),                                  frame1.audio_data().data(), frame1.audio_data().size() * 4);
+                std::memcpy(audio.data() + frame1.audio_data().size() * 4, frame2.audio_data().data(), frame2.audio_data().size() * 4);
+
+                frame_ = core::const_frame(this, { std::move(image) }, std::move(audio), frame1.pixel_format_desc());
+            } else {
+                if (!frame_buffer_.try_pop(frame_)) {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                }
             }
 
             if (config_.embedded_audio) {

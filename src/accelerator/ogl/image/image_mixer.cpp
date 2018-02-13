@@ -91,11 +91,7 @@ class image_renderer
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 
-            if (format_desc.field_mode != core::field_mode::progressive) {
-                draw(target_texture, layers, format_desc, core::field_mode::upper);
-                draw(target_texture, std::move(layers), format_desc, core::field_mode::lower);
-            } else
-                draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
+            draw(target_texture, std::move(layers), format_desc);
 
             return ogl_->copy_async(target_texture);
         }));
@@ -104,31 +100,21 @@ class image_renderer
   private:
     void draw(std::shared_ptr<texture>&      target_texture,
               std::vector<layer>             layers,
-              const core::video_format_desc& format_desc,
-              core::field_mode               field_mode)
+              const core::video_format_desc& format_desc)
     {
         std::shared_ptr<texture> layer_key_texture;
 
         for (auto& layer : layers) {
-            draw(target_texture, layer.sublayers, format_desc, field_mode);
-            draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
+            draw(target_texture, layer.sublayers, format_desc);
+            draw(target_texture, std::move(layer), layer_key_texture, format_desc);
         }
     }
 
     void draw(std::shared_ptr<texture>&      target_texture,
               layer                          layer,
               std::shared_ptr<texture>&      layer_key_texture,
-              const core::video_format_desc& format_desc,
-              core::field_mode               field_mode)
+              const core::video_format_desc& format_desc)
     {
-        // Mask out fields
-        for (auto& item : layer.items)
-            item.transform.field_mode &= field_mode;
-
-        // Remove empty items.
-        boost::range::remove_erase_if(
-            layer.items, [&](const item& item) { return item.transform.field_mode == core::field_mode::empty; });
-
         if (layer.items.empty())
             return;
 
@@ -277,9 +263,6 @@ struct image_mixer::impl : public core::frame_factory
             return;
 
         if (frame.pixel_format_desc().planes.empty())
-            return;
-
-        if (transform_stack_.back().field_mode == core::field_mode::empty)
             return;
 
         item item;

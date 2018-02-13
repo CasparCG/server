@@ -323,17 +323,6 @@ struct image_kernel::impl
             shader_->set("csb", false);
         }
 
-        // Setup interlacing
-
-        if (params.transform.field_mode != core::field_mode::progressive) {
-            GL(glEnable(GL_POLYGON_STIPPLE));
-
-            if (params.transform.field_mode == core::field_mode::upper)
-                glPolygonStipple(upper_pattern);
-            else if (params.transform.field_mode == core::field_mode::lower)
-                glPolygonStipple(lower_pattern);
-        }
-
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));
@@ -449,7 +438,6 @@ struct image_kernel::impl
 
         // Cleanup
         GL(glDisable(GL_SCISSOR_TEST));
-        GL(glDisable(GL_POLYGON_STIPPLE));
         GL(glDisable(GL_BLEND));
     }
 };

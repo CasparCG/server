@@ -75,17 +75,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto& tween = tweens_[p.first];
 
                     auto frame = layer.receive(format_desc);
-                    auto frame1 = frame;
-                    frame1.transform() *= tween.fetch_and_tick(1);
-
-                    if (format_desc.field_mode != core::field_mode::progressive) {
-                        auto frame2 = frame;
-                        frame2.transform() *= tween.fetch_and_tick(1);
-                        frame2.transform().audio_transform.volume = 0.0;
-                        frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
-                    }
-
-                    frames[p.first] = std::move(frame1);
+                    frame.transform() *= tween.fetch_and_tick(1);
+                    frames[p.first] = std::move(frame);
                 }
 
                 state_.clear();

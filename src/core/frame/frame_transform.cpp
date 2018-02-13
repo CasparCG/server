@@ -96,7 +96,6 @@ image_transform& image_transform::operator*=(const image_transform& other)
     chroma.spill_suppress = std::max(other.chroma.spill_suppress, chroma.spill_suppress);
     chroma.spill_suppress_saturation =
         std::min(other.chroma.spill_suppress_saturation, chroma.spill_suppress_saturation);
-    field_mode = field_mode & other.field_mode;
     is_key |= other.is_key;
     is_mix |= other.is_mix;
     blend_mode = std::max(blend_mode, other.blend_mode);
@@ -185,7 +184,6 @@ image_transform image_transform::tween(double                 time,
         do_tween(time, source.chroma.spill_suppress_saturation, dest.chroma.spill_suppress_saturation, duration, tween);
     result.chroma.enable    = dest.chroma.enable;
     result.chroma.show_mask = dest.chroma.show_mask;
-    result.field_mode       = source.field_mode & dest.field_mode;
     result.is_key           = source.is_key | dest.is_key;
     result.is_mix           = source.is_mix | dest.is_mix;
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
@@ -218,7 +216,7 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
            boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
            boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
            boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
-           lhs.field_mode == rhs.field_mode && lhs.is_key == rhs.is_key && lhs.is_mix == rhs.is_mix &&
+           lhs.is_key == rhs.is_key && lhs.is_mix == rhs.is_mix &&
            lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
            lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
            eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&

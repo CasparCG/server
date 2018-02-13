@@ -94,7 +94,6 @@ struct image_transform final
     core::levels          levels;
     core::chroma          chroma;
 
-    core::field_mode field_mode  = field_mode::progressive;
     bool             is_key      = false;
     bool             is_mix      = false;
     core::blend_mode blend_mode  = blend_mode::normal;

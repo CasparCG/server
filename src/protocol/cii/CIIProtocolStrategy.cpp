@@ -209,7 +209,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
     core::diagnostics::call_context::for_thread().layer         = 0;
 
     auto pFP         = get_producer_registry()->create_producer(get_dependencies(), filename);
-    auto pTransition = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transition);
+    auto pTransition = create_transition_producer(pFP, transition);
 
     try {
         pChannel_->stage().load(0, pTransition);

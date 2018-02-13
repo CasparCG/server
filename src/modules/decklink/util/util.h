@@ -86,12 +86,6 @@ static BMDDisplayMode get_decklink_video_format(core::video_format fmt)
             return bmdMode2k24;
         case core::video_format::x1556p2500:
             return bmdMode2k25;
-        case core::video_format::dci1080p2398:
-            return bmdMode2kDCI2398;
-        case core::video_format::dci1080p2400:
-            return bmdMode2kDCI24;
-        case core::video_format::dci1080p2500:
-            return bmdMode2kDCI25;
         case core::video_format::x2160p2398:
             return bmdMode4K2160p2398;
         case core::video_format::x2160p2400:
@@ -108,12 +102,6 @@ static BMDDisplayMode get_decklink_video_format(core::video_format fmt)
             return bmdMode4K2160p5994;
         case core::video_format::x2160p6000:
             return bmdMode4K2160p60;
-        case core::video_format::dci2160p2398:
-            return bmdMode4kDCI2398;
-        case core::video_format::dci2160p2400:
-            return bmdMode4kDCI24;
-        case core::video_format::dci2160p2500:
-            return bmdMode4kDCI25;
         default:
             return (BMDDisplayMode)ULONG_MAX;
     }
@@ -160,12 +148,6 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
             return core::video_format::x1556p2400;
         case bmdMode2k25:
             return core::video_format::x1556p2500;
-        case bmdMode2kDCI2398:
-            return core::video_format::dci1080p2398;
-        case bmdMode2kDCI24:
-            return core::video_format::dci1080p2400;
-        case bmdMode2kDCI25:
-            return core::video_format::dci1080p2500;
         case bmdMode4K2160p2398:
             return core::video_format::x2160p2398;
         case bmdMode4K2160p24:
@@ -182,12 +164,6 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
             return core::video_format::x2160p5994;
         case bmdMode4K2160p60:
             return core::video_format::x2160p6000;
-        case bmdMode4kDCI2398:
-            return core::video_format::dci2160p2398;
-        case bmdMode4kDCI24:
-            return core::video_format::dci2160p2400;
-        case bmdMode4kDCI25:
-            return core::video_format::dci2160p2500;
         default:
             return core::video_format::invalid;
     }
@@ -201,7 +177,7 @@ static std::wstring get_mode_name(const com_ptr<IDeckLinkDisplayMode>& mode)
 }
 
 template <typename T, typename F>
-BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag)
+com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag)
 {
     IDeckLinkDisplayMode*         m = nullptr;
     IDeckLinkDisplayModeIterator* iter;
@@ -229,11 +205,11 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
     else if (displayModeSupport == bmdDisplayModeSupportedWithConversion)
         CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
 
-    return mode->GetDisplayMode();
+    return mode;
 }
 
 template <typename T, typename F>
-static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
+static com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
 {
     return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }

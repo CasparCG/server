@@ -37,7 +37,6 @@
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/os/filesystem.h>
-#include <common/prec_timer.h>
 #include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -88,7 +87,6 @@ class html_client
     mutable std::mutex                   frames_mutex_;
 
     core::draw_frame   last_frame_;
-    core::draw_frame   last_progressive_frame_;
     mutable std::mutex last_frame_mutex_;
 
     CefRefPtr<CefBrowser> browser_;
@@ -196,8 +194,7 @@ class html_client
                  int                   width,
                  int                   height)
     {
-        graph_->set_value("browser-tick-time",
-                          paint_timer_.elapsed() * format_desc_.fps * format_desc_.field_count * 0.5);
+        graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
         paint_timer_.restart();
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
@@ -215,10 +212,7 @@ class html_client
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             frames_.push(core::draw_frame(std::move(frame)));
-
-            size_t max_in_queue = format_desc_.field_count + 1;
-
-            while (frames_.size() > max_in_queue) {
+            while (frames_.size() > 2) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -285,7 +279,7 @@ class html_client
         if (browser_)
             browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
 
-        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * format_desc_.field_count * 0.5);
+        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
     }
 
@@ -318,52 +312,16 @@ class html_client
     {
         invoke_requested_animation_frames();
 
-        prec_timer timer;
-        timer.tick(0.0);
-
         auto num_frames = [&] {
             std::lock_guard<std::mutex> lock(frames_mutex_);
             return frames_.size();
         }();
 
-        if (num_frames >= format_desc_.field_count) {
-            if (format_desc_.field_mode != core::field_mode::progressive) {
-                auto frame1 = pop();
-
-                // TODO yield
-                timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
-                invoke_requested_animation_frames();
-
-                auto frame2 = pop();
-
-                std::lock_guard<std::mutex> lock(last_frame_mutex_);
-                last_progressive_frame_ = frame2;
-                last_frame_             = core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode);
-            } else {
-                auto                        frame = pop();
-                std::lock_guard<std::mutex> lock(last_frame_mutex_);
-                last_frame_ = frame;
-            }
-        } else if (num_frames == 1) // Interlaced but only one frame
-        {                           // available. Probably the last frame
-                                    // of some animation sequence.
-            auto frame = pop();
-
-            {
-                std::lock_guard<std::mutex> lock(last_frame_mutex_);
-                last_progressive_frame_ = frame;
-                last_frame_             = frame;
-            }
-
-            timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
-            invoke_requested_animation_frames();
-            graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+        if (num_frames >= 1) {
+            auto                        frame = pop();
+            std::lock_guard<std::mutex> lock(last_frame_mutex_);
+            last_frame_ = frame;
         } else {
-            if (format_desc_.field_mode != core::field_mode::progressive) {
-                std::lock_guard<std::mutex> lock(last_frame_mutex_);
-                last_frame_ = last_progressive_frame_;
-            }
-
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
         }
     }
@@ -419,9 +377,6 @@ class html_producer : public core::frame_producer_base
             browser_settings.web_security = cef_state_t::STATE_DISABLED;
             browser_settings.webgl        = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
             double fps                    = format_desc.fps;
-            if (format_desc.field_mode != core::field_mode::progressive) {
-                fps *= 2.0;
-            }
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
         });

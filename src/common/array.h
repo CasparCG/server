@@ -33,7 +33,7 @@ class array final
     {
         auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
         ptr_         = reinterpret_cast<T*>(storage.get());
-        storage_     = std::move(storage);
+        storage_     = std::make_unique<boost::any>(std::move(storage));
     }
 
     template <typename S>
