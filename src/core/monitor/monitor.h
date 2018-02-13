@@ -24,8 +24,6 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
-#include <map>
 #include <mutex>
 
 #include <boost/container/flat_map.hpp>
@@ -84,31 +82,30 @@ public:
         data_.clear();
     }
 
+    auto get() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return data_;
+    }
+
     void append(const std::string& name, const state& other)
     {
-        std::lock_guard<std::mutex> lock1(mutex_);
-        std::lock_guard<std::mutex> lock2(other.mutex_);
-
-        auto name2 = name.empty() ? name : name + "/";
-        for (auto& p : other.data_) {
-            data_[name2 + p.first] = p.second;
+        auto data = other.get();
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& p : data) {
+            data_[name + "/" + p.first] = std::move(p.second);
         }
     }
 
     void append(const state& other)
     {
-        std::lock_guard<std::mutex> lock1(mutex_);
-        std::lock_guard<std::mutex> lock2(other.mutex_);
-
-        for (auto& p : other.data_) {
-            data_[p.first] = p.second;
-        }
-    }
-
-    auto get() const
-    {
+        auto data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
-        return data_;
+        if (data_.empty()) {
+            data_ = std::move(data);
+        } else {
+            data_.insert(std::make_move_iterator(data_.begin()), std::make_move_iterator(data_.end()));
+        }
     }
 };
 
