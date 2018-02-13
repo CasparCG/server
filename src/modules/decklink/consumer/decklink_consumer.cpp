@@ -454,18 +454,17 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::vector<std::int32_t> audio_data;
 
             std::vector<core::const_frame> frames;
-            {
-                std::unique_lock<std::mutex> lock(buffer_mutex_);
-                buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
-                for (auto n = 0; n < field_count_; ++n) {
+            for (auto n = 0; n < field_count_; ++n) {
+                {
+                    std::unique_lock<std::mutex> lock(buffer_mutex_);
+                    buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
+                    if (abort_request_) {
+                        return E_FAIL;
+                    }
                     frames.push_back(std::move(buffer_.front()));
                     buffer_.pop();
                 }
-            }
-            buffer_cond_.notify_all();
-
-            if (abort_request_) {
-                return E_FAIL;
+                buffer_cond_.notify_all();
             }
 
             if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
@@ -508,6 +507,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     {
         audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
+        // TODO (refactor) does ScheduleAudioSamples copy data?
         if (FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(),
                                                  nb_samples,
                                                  audio_scheduled_,
@@ -569,7 +569,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
-            buffer_cond_.wait(lock, [&] { return buffer_.size() < field_count_ || abort_request_; });
+            buffer_cond_.wait(lock, [&] { return buffer_.empty() || abort_request_; });
             buffer_.push(std::move(frame));
         }
         buffer_cond_.notify_all();

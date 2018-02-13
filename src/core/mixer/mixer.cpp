@@ -92,7 +92,7 @@ struct mixer::impl : boost::noncopyable
                 return const_frame(tag, std::move(image_data), std::move(audio), desc);
             }));
 
-        if (buffer_.size() < 3) {
+        if (buffer_.size() < 2) {
             return const_frame{};
         }
 
