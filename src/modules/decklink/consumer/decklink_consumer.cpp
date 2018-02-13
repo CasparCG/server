@@ -497,7 +497,6 @@ struct decklink_consumer
 
             if (!frame_buffer_.try_pop(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                frame_buffer_.pop(frame);
             }
 
             if (!is_running_)
