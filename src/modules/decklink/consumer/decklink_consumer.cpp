@@ -132,27 +132,17 @@ void set_keyer(const com_iface_ptr<IDeckLinkAttributes>& attributes,
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-    std::atomic<int>              ref_count_;
-    core::const_frame             frame_;
-    const core::video_format_desc format_desc_;
-
-    const bool key_only_ = false;
-    void*      data_     = nullptr;
+    core::video_format_desc format_desc_;
+    std::shared_ptr<void> data_;
+    std::atomic<int> ref_count_{ 0 };
+    int nb_samples_;
 
   public:
-    decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
-        : frame_(frame)
+    decklink_frame(std::shared_ptr<void> data, const core::video_format_desc& format_desc, int nb_samples)
+        : data_(data)
         , format_desc_(format_desc)
-        , key_only_(key_only)
+        , nb_samples_(nb_samples)
     {
-        ref_count_ = 0;
-    }
-
-    ~decklink_frame()
-    {
-        if (data_) {
-            scalable_aligned_free(data_);
-        }
     }
 
     // IUnknown
@@ -182,41 +172,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
     {
-        try {
-            if (!frame_ || static_cast<int>(frame_.image_data(0).size()) != format_desc_.size) {
-                if (!data_) {
-                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
-                }
-                std::memset(data_, 0, format_desc_.size);
-                *buffer = data_;
-            } else if (key_only_) {
-                if (!data_) {
-                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
-                }
-                aligned_memshfl(data_,
-                                frame_.image_data(0).begin(),
-                                format_desc_.size,
-                                0x0F0F0F0F,
-                                0x0B0B0B0B,
-                                0x07070707,
-                                0x03030303);
-                *buffer = data_;
-            } else {
-#ifdef _MSC_VER
-                *buffer = const_cast<uint8_t*>(frame_.image_data(0).begin());
-#else
-                if (!data_) {
-                    data_ = scalable_aligned_malloc(format_desc_.size, 64);
-                }
-                std::memcpy(data_, frame_.image_data(0).begin(), format_desc_.size);
-                *buffer = data_;
-#endif
-            }
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-            return E_FAIL;
-        }
-
+        *buffer = data_.get();
         return S_OK;
     }
 
@@ -226,9 +182,10 @@ class decklink_frame : public IDeckLinkVideoFrame
     }
     virtual HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) { return S_FALSE; }
 
-    // decklink_frame
-
-    const array<const std::int32_t>& audio_data() { return frame_.audio_data(); }
+    int nb_samples() const
+    {
+        return nb_samples_;
+    }
 };
 
 struct key_video_context : public IDeckLinkVideoOutputCallback
@@ -368,12 +325,13 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         for (int n = 0; n < buffer_size_; ++n) {
+            auto nb_samples = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels * field_count_;
             if (config.embedded_audio) {
-                auto nb_samples = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * format_desc_.audio_channels * field_count_;
                 schedule_next_audio(std::vector<int32_t>(nb_samples));
             }
 
-            schedule_next_video(core::const_frame{});
+            std::shared_ptr<void> image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
+            schedule_next_video(image_data, nb_samples);
         }
 
         if (config.embedded_audio) {
@@ -454,7 +412,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                                                               BMDOutputFrameCompletionResult result)
     {
         try {
-            auto tick_time = tick_timer_.elapsed() * format_desc_.fps * 0.5;
+            auto tick_time = tick_timer_.elapsed() * format_desc_.fps / field_count_ * 0.5;
             graph_->set_value("tick-time", tick_time);
             tick_timer_.restart();
 
@@ -473,7 +431,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             if (result == bmdOutputFrameDisplayedLate) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
                 video_scheduled_ += format_desc_.duration * field_count_;
-                audio_scheduled_ += dframe->audio_data().size() / format_desc_.audio_channels;
+                audio_scheduled_ += dframe->nb_samples();
             } else if (result == bmdOutputFrameDropped) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             } else if (result == bmdOutputFrameFlushed) {
@@ -497,56 +455,44 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 return E_FAIL;
             }
 
-            auto frame = [&]
+            std::shared_ptr<void>     image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
+            std::vector<std::int32_t> audio_data;
+
+            std::vector<core::const_frame> frames;
             {
-                if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
-                    std::array<core::const_frame, 2> frames;
-
-                    {
-                        std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return buffer_.size() >= 2 || abort_request_; });
-                        frames[0] = std::move(buffer_.front());
-                        buffer_.pop();
-                        frames[1] = std::move(buffer_.front());
-                        buffer_.pop();
-                    }
-                    buffer_cond_.notify_all();
-
-                    return frames[0];
-
-                    if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
-                        std::swap(frames[0], frames[1]);
-                    }
-
-                    std::vector<std::uint8_t> image(format_desc_.size);
-                    for (auto y = 0; y < format_desc_.height; ++y) {
-                        std::memcpy(image.data() + y * format_desc_.width * 4, frames[y % 2].image_data(0).data() + y * format_desc_.width * 4, format_desc_.width * 4);
-                    }
-
-                    std::vector<std::int32_t> audio(frames[0].audio_data().size() + frames[1].audio_data().size());
-                    audio.insert(audio.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
-                    audio.insert(audio.end(), frames[1].audio_data().begin(), frames[1].audio_data().end());
-
-                    return core::const_frame(this, { std::move(image) }, std::move(audio), frames[0].pixel_format_desc());
-                } else {
-                    core::const_frame frame;
-                    {
-                        std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
-                        frame = std::move(buffer_.front());
-                        buffer_.pop();
-                    }
-                    buffer_cond_.notify_all();
-
-                    return frame;
+                std::unique_lock<std::mutex> lock(buffer_mutex_);
+                buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
+                for (auto n = 0; n < field_count_; ++n) {
+                    frames.push_back(std::move(buffer_.front()));
+                    buffer_.pop();
                 }
-            }();
+            }
+            buffer_cond_.notify_all();
 
-            if (config_.embedded_audio) {
-                schedule_next_audio(frame.audio_data());
+            if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
+                if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
+                    std::swap(frames[0], frames[1]);
+                }
+
+                for (auto y = 0; y < format_desc_.height; ++y) {
+                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4, frames[y % 2].image_data(0).data() + y * format_desc_.width * 4, format_desc_.width * 4);
+                }
+
+                audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
+                audio_data.insert(audio_data.end(), frames[1].audio_data().begin(), frames[1].audio_data().end());
+            } else {
+                for (auto y = 0; y < format_desc_.height; ++y) {
+                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4, frames[0].image_data(0).data() + y * format_desc_.width * 4, format_desc_.width * 4);
+                }
+
+                audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
             }
 
-            schedule_next_video(frame);
+            schedule_next_video(image_data, static_cast<int>(audio_data.size()) / format_desc_.audio_channels);
+
+            if (config_.embedded_audio) {
+                schedule_next_audio(audio_data);
+            }
         } catch (...) {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             exception_ = std::current_exception();
@@ -574,17 +520,34 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += sample_frame_count;
     }
 
-    void schedule_next_video(core::const_frame frame)
+    void schedule_next_video(std::shared_ptr<void> fill, int nb_samples)
     {
+        std::shared_ptr<void> key;
+
+        if (key_context_ || config_.key_only) {
+            key = std::shared_ptr<void>(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
+
+            aligned_memshfl(key.get(),
+                            fill.get(),
+                            format_desc_.size,
+                            0x0F0F0F0F,
+                            0x0B0B0B0B,
+                            0x07070707,
+                            0x03030303);
+
+            if (config_.key_only) {
+                fill = key;
+            }
+        }
+
         if (key_context_) {
-            auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true));
+            auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(key, format_desc_, nb_samples));
             if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration * field_count_, format_desc_.time_scale))) {
                 CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
             }
         }
 
-        auto fill_frame =
-            wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
+        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(fill, format_desc_, nb_samples));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame), video_scheduled_, format_desc_.duration * field_count_, format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule fill video.";
         }
@@ -601,7 +564,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
         }
 
-        if (frame) {
+        if (!frame) {
+            return !abort_request_;
+        }
+
+        {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return buffer_.size() < field_count_ || abort_request_; });
             buffer_.push(std::move(frame));
@@ -609,8 +576,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         buffer_cond_.notify_all();
 
         if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
-            //caspar::prec_timer timer;
-            //timer.tick(format_desc_.fps / 2);
+            caspar::prec_timer timer;
+            timer.tick(1 / format_desc_.fps);
         }
 
         return !abort_request_;
@@ -654,8 +621,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
             com_uninitialize();
         });
     }
-
-    // frame_consumer
 
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
