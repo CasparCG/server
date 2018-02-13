@@ -34,20 +34,12 @@
 #include <core/monitor/monitor.h>
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 
-#include <atomic>
-#include <functional>
-#include <mutex>
-#include <thread>
-#include <unordered_map>
 #include <vector>
 
 using namespace boost::asio::ip;
 
 namespace caspar { namespace protocol { namespace osc {
-
-typedef std::vector<char> byte_vector;
 
 template <typename T>
 struct param_visitor : public boost::static_visitor<void>
@@ -68,60 +60,7 @@ struct param_visitor : public boost::static_visitor<void>
     void operator()(const double value) { o << static_cast<float>(value); }
     void operator()(const std::string& value) { o << value.c_str(); }
     void operator()(const std::wstring& value) { o << u8(value).c_str(); }
-    void operator()(const std::vector<int8_t>& value)
-    {
-        o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size()));
-    }
 };
-
-template<typename D, typename T>
-void write_osc_event(D& destination, const std::string& msg_path, const T& msg_data)
-{
-    static std::size_t max_size = 256;
-
-    destination.resize(max_size);
-
-    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()),
-                                  static_cast<unsigned long>(destination.size()));
-
-    o << ::osc::BeginMessage(msg_path.c_str());
-
-    param_visitor<decltype(o)> param_visitor(o);
-    for (const auto& data : msg_data) {
-        boost::apply_visitor(param_visitor, data);
-    }
-
-    o << ::osc::EndMessage;
-
-    destination.resize(o.Size());
-}
-
-byte_vector write_osc_bundle_start()
-{
-    byte_vector destination;
-    destination.resize(16);
-
-    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()),
-                                  static_cast<unsigned long>(destination.size()));
-    o << ::osc::BeginBundle();
-
-    destination.resize(o.Size());
-
-    return destination;
-}
-
-void write_osc_bundle_element_start(byte_vector& destination, const byte_vector& message)
-{
-    destination.resize(4);
-
-    int32_t* bundle_element_size = reinterpret_cast<int32_t*>(destination.data());
-
-#ifdef OSC_HOST_LITTLE_ENDIAN
-    *bundle_element_size = swap_byte_order(static_cast<int32_t>(message.size()));
-#else
-    *bundle_element_size = static_cast<int32_t>(bundle.size());
-#endif
-}
 
 struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
@@ -129,30 +68,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     udp::socket                              socket_;
     std::mutex                               endpoints_mutex_;
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
-
-    std::unordered_map<std::string, byte_vector> updates_;
-    std::mutex                                   updates_mutex_;
-    std::condition_variable                      updates_cond_;
-
-    std::atomic<bool> is_running_;
-
-    std::thread thread_;
+    std::vector<char>                        buffer_;
 
   public:
     impl(std::shared_ptr<boost::asio::io_service> service)
         : service_(std::move(service))
         , socket_(*service_, udp::v4())
-        , thread_(boost::bind(&impl::run, this))
+        , buffer_(1000000)
     {
-    }
-
-    ~impl()
-    {
-        is_running_ = false;
-
-        updates_cond_.notify_one();
-
-        thread_.join();
     }
 
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
@@ -182,103 +105,34 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
     void send(const core::monitor::state& state)
     {
-        {
-            std::lock_guard<std::mutex> lock(updates_mutex_);
+        ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()), static_cast<unsigned long>(buffer_.size()));
 
-            for (auto& p : state.get()) {
-                try {
-                    write_osc_event(updates_[p.first], p.first, p.second);
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
-                    updates_.erase(p.first);
-                }
+        o << ::osc::BeginBundle();
+
+        for (auto& p : state.get()) {
+            o << ::osc::BeginMessage(p.first.c_str());
+
+            param_visitor<decltype(o)> param_visitor(o);
+            for (const auto& data : p.second) {
+                boost::apply_visitor(param_visitor, data);
             }
+
+            o << ::osc::EndMessage;
         }
-        updates_cond_.notify_one();
-    }
 
-  private:
+        o << ::osc::EndBundle;
 
-    template <typename T>
-    void do_send(const T& buffers, const std::vector<udp::endpoint>& destinations)
-    {
+        std::vector<udp::endpoint> endpoints;
+        {
+            std::lock_guard<std::mutex> lock(endpoints_mutex_);
+
+            for (const auto& endpoint : reference_counts_by_endpoint_)
+                endpoints.push_back(endpoint.first);
+        }
+
         boost::system::error_code ec;
-
-        for (const auto& endpoint : destinations)
-            socket_.send_to(buffers, endpoint, 0, ec);
-    }
-
-    void run()
-    {
-        // http://stackoverflow.com/questions/14993000/the-most-reliable-and-efficient-udp-packet-size
-        const int SAFE_DATAGRAM_SIZE = 508;
-
-        try {
-            is_running_ = true;
-
-            std::unordered_map<std::string, byte_vector> updates;
-            std::vector<udp::endpoint>                   destinations;
-            const byte_vector                            bundle_header = write_osc_bundle_start();
-            std::vector<byte_vector>                     element_headers;
-
-            while (is_running_) {
-                updates.clear();
-                destinations.clear();
-
-                {
-                    std::unique_lock<std::mutex> cond_lock(updates_mutex_);
-
-                    if (!is_running_)
-                        return;
-
-                    if (updates_.empty())
-                        updates_cond_.wait(cond_lock);
-
-                    std::swap(updates, updates_);
-                }
-
-                {
-                    std::lock_guard<std::mutex> lock(endpoints_mutex_);
-
-                    for (const auto& endpoint : reference_counts_by_endpoint_)
-                        destinations.push_back(endpoint.first);
-                }
-
-                if (destinations.empty())
-                    continue;
-
-                std::vector<boost::asio::const_buffers_1> buffers;
-                element_headers.resize(std::max(element_headers.size(), updates.size()));
-
-                int  i             = 0;
-                auto datagram_size = bundle_header.size();
-                buffers.push_back(boost::asio::buffer(bundle_header));
-
-                for (const auto& slot : updates) {
-                    write_osc_bundle_element_start(element_headers[i], slot.second);
-                    const auto& headers = element_headers;
-
-                    auto size_of_element = headers[i].size() + slot.second.size();
-
-                    if (datagram_size + size_of_element >= SAFE_DATAGRAM_SIZE) {
-                        do_send(buffers, destinations);
-                        buffers.clear();
-                        buffers.push_back(boost::asio::buffer(bundle_header));
-                        datagram_size = bundle_header.size();
-                    }
-
-                    buffers.push_back(boost::asio::buffer(headers[i]));
-                    buffers.push_back(boost::asio::buffer(slot.second));
-
-                    datagram_size += size_of_element;
-                    ++i;
-                }
-
-                if (!buffers.empty())
-                    do_send(buffers, destinations);
-            }
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
+        for (const auto& endpoint : endpoints) {
+            socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
         }
     }
 };
