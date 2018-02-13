@@ -28,19 +28,24 @@
 #include <map>
 #include <mutex>
 
+#include <boost/container/flat_map.hpp>
+#include <boost/container/small_vector.hpp>
+
 namespace caspar { namespace core { namespace monitor {
 
 typedef boost::
-    variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring, std::vector<std::int8_t>>
+    variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring>
         data_t;
+
+typedef boost::container::flat_map<std::string, boost::container::small_vector<data_t, 2>> data_map_t;
 
 class state_proxy
 {
     std::string key_;
-    std::map<std::string, std::vector<data_t>>& data_;
+    data_map_t& data_;
     std::mutex& mutex_;
 public:
-    state_proxy(const std::string& key, std::map<std::string, std::vector<data_t>>& data, std::mutex& mutex)
+    state_proxy(const std::string& key, data_map_t& data, std::mutex& mutex)
         : key_(key)
         , data_(data)
         , mutex_(mutex)
@@ -65,8 +70,6 @@ public:
 // TODO (perf) Optimize
 class state
 {
-    typedef std::map<std::string, std::vector<data_t>> data_map_t;
-
     mutable std::mutex mutex_;
     data_map_t         data_;
 public:
