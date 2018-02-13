@@ -74,7 +74,8 @@ struct param_visitor : public boost::static_visitor<void>
     }
 };
 
-void write_osc_event(byte_vector& destination, const std::string& msg_path, const std::vector<core::monitor::data_t>& msg_data)
+template<typename D, typename T>
+void write_osc_event(D& destination, const std::string& msg_path, const T& msg_data)
 {
     static std::size_t max_size = 256;
 
