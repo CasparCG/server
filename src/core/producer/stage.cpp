@@ -69,6 +69,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
+                // TODO (perf) parallel_for
                 for (auto& p : layers_) {
                     auto& layer = p.second;
                     auto& tween = tweens_[p.first];
