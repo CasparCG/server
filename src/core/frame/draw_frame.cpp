@@ -28,21 +28,18 @@
 
 namespace caspar { namespace core {
 
+typedef boost::variant<boost::blank, const_frame, std::vector<draw_frame>> frame_t;
+
 struct draw_frame::impl
 {
-    boost::variant<boost::blank, const_frame, std::vector<draw_frame>> frame_;
-    frame_transform                                                    transform_;
+    frame_t         frame_;
+    frame_transform transform_;
 
   public:
     impl() {}
 
-    impl(const_frame frame)
+    impl(frame_t frame)
         : frame_(std::move(frame))
-    {
-    }
-
-    impl(std::vector<draw_frame> frames)
-        : frame_(std::move(frames))
     {
     }
 
@@ -146,6 +143,22 @@ draw_frame draw_frame::push(draw_frame frame)
     std::vector<draw_frame> frames;
     frames.push_back(std::move(frame));
     return draw_frame(std::move(frames));
+}
+
+draw_frame draw_frame::push(draw_frame frame, const frame_transform& transform)
+{
+    std::vector<draw_frame> frames;
+    frames.push_back(std::move(frame));
+    auto result = draw_frame(std::move(frames));
+    result.transform() = std::move(transform);
+    return result;
+}
+
+draw_frame draw_frame::pop(draw_frame frame)
+{
+    draw_frame result;
+    result.impl_->frame_ = frame.impl_->frame_;
+    return result;
 }
 
 draw_frame draw_frame::still(draw_frame frame)
