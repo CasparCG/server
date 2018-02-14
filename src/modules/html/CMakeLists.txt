@@ -32,8 +32,10 @@ if(MSVC)
 		common
 		core
 
-		libcef
-		libcef_dll_wrapper
+		optimized release/libcef
+		optimized release/VS2015/libcef_dll_wrapper
+		debug debug/libcef
+		debug debug/VS2015/libcef_dll_wrapper
 	)
 else()
 	target_link_libraries(html

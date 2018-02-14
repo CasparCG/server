@@ -157,10 +157,7 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 set(CEF_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF")
 set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
 set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
-link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/debug")
-link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/release")
-link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/debug/VS2015")
-link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64/release/VS2015")
+link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64")
 
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef.pak")
