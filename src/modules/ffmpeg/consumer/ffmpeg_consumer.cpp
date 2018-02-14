@@ -542,6 +542,12 @@ struct ffmpeg_consumer : public core::frame_consumer
                 packet_buffer.set_capacity(128);
                 auto packet_thread = std::thread([&] {
                     try {
+                        CASPAR_SCOPE_EXIT{
+                            if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                                FF(avio_closep(&oc->pb));
+                            }
+                        };
+
                         std::shared_ptr<AVPacket> pkt;
                         while (true) {
                             packet_buffer.pop(pkt);
@@ -552,10 +558,6 @@ struct ffmpeg_consumer : public core::frame_consumer
                         }
 
                         FF(av_write_trailer(oc));
-
-                        if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                            FF(avio_closep(&oc->pb));
-                        }
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                         // TODO
