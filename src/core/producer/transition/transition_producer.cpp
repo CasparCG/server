@@ -41,6 +41,9 @@ class transition_producer : public frame_producer_base
     monitor::state                    state_;
     int                               current_frame_ = 0;
 
+    core::draw_frame dst_;
+    core::draw_frame src_;
+
     const transition_info info_;
 
     spl::shared_ptr<frame_producer> dest_producer_;
@@ -62,7 +65,7 @@ class transition_producer : public frame_producer_base
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return current_frame_ >= info_.duration ? dest_producer_ : core::frame_producer::empty();
+        return dst_ && current_frame_ >= info_.duration ? dest_producer_ : core::frame_producer::empty();
     }
 
     draw_frame receive_impl() override
@@ -92,34 +95,31 @@ class transition_producer : public frame_producer_base
             }();
         };
 
-        auto dest   = draw_frame{};
-        auto source = draw_frame{};
-
         tbb::parallel_invoke(
             [&] {
-                dest = dest_producer_->receive();
-                if (!dest) {
-                    dest = dest_producer_->last_frame();
+                dst_ = dest_producer_->receive();
+                if (!dst_) {
+                    dst_ = dest_producer_->last_frame();
                 }
             },
             [&] {
-                source = source_producer_->receive();
-                if (!source) {
-                    source = source_producer_->last_frame();
+                src_ = source_producer_->receive();
+                if (!src_) {
+                    src_ = source_producer_->last_frame();
                 }
             });
 
-        if (!dest) {
-            return source;
+        if (!dst_) {
+            return src_;
         }
 
         if (current_frame_ >= info_.duration) {
-            return dest;
+            return dst_;
         }
 
         current_frame_ += 1;
 
-        return compose(std::move(dest), std::move(source));
+        return compose(dst_, src_);
     }
 
     uint32_t nb_frames() const override { return dest_producer_->nb_frames(); }
