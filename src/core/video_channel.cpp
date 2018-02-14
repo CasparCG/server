@@ -27,6 +27,7 @@
 
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
+#include "frame/frame_transform.h"
 #include "frame/frame.h"
 #include "frame/frame_factory.h"
 #include "mixer/mixer.h"
@@ -109,13 +110,16 @@ struct video_channel::impl final
 
                     state_.insert_or_assign("stage", stage_.state());
 
+                    std::vector<core::draw_frame> frames;
                     {
                         std::lock_guard<std::mutex> lock(routes_mutex_);
 
-                        std::vector<core::draw_frame> frames;
-
                         for (auto& p : stage_frames) {
-                            frames.push_back(p.second);
+                            {
+                                core::draw_frame frame = p.second.first;
+                                frame.transform() *= p.second.second;
+                                frames.push_back(frame);
+                            }
 
                             auto it = routes_.find(p.first);
                             if (it == routes_.end()) {
@@ -125,7 +129,7 @@ struct video_channel::impl final
                             if (!route) {
                                 continue;
                             }
-                            route->signal(p.second);
+                            route->signal(p.second.first);
                         }
 
                         auto it = routes_.find(-1);
@@ -138,11 +142,20 @@ struct video_channel::impl final
                     }
 
                     // Mix
-                    caspar::timer mix_timer;
-                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
-                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+                    auto mixed_frame = [&]{
+                        std::map<int, draw_frame> mix_frames;
+                        for (auto n = 0UL; n < frames.size(); ++n) {
+                            mix_frames[n] = frames[n];
+                        }
 
-                    state_.insert_or_assign("mixer", mixer_.state());
+                        caspar::timer mix_timer;
+                        auto          mixed_frame = mixer_(std::move(mix_frames), format_desc);
+                        graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+
+                        state_.insert_or_assign("mixer", mixer_.state());
+
+                        return mixed_frame;
+                    }();
 
                     // Consume
                     caspar::timer consume_timer;
