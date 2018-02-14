@@ -37,11 +37,11 @@ class route_producer : public frame_producer_base
 {
     monitor::state state_;
 
-    std::shared_ptr<route> route_;
-    boost::signals2::connection connection_;
-
     core::draw_frame frame_;
     std::mutex       frame_mutex_;
+
+    std::shared_ptr<route> route_;
+    boost::signals2::scoped_connection connection_;
 
   public:
     route_producer(std::shared_ptr<route> route)
@@ -73,7 +73,7 @@ class route_producer : public frame_producer_base
 spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_producer_dependencies& dependencies,
                                                             const std::vector<std::wstring>&         params)
 {
-    static boost::wregex expr(L"route://(?<CHANNEL>\\d+)(-(?<LAYER>\\d+))?");
+    static boost::wregex expr(L"route://(?<CHANNEL>\\d+)(-(?<LAYER>\\d+))?", boost::regex::icase);
     boost::wsmatch what;
 
     if (params.empty() || !boost::regex_match(params.at(0), what, expr)) {

@@ -254,8 +254,16 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
         producer = create_color_producer(dependencies.frame_factory, params);
     }
 
+    if (producer != frame_producer::empty()) {
+        return producer;
+    }
+
     if (producer == frame_producer::empty()) {
         producer = create_route_producer(dependencies, params);
+    }
+
+    if (producer != frame_producer::empty()) {
+        return producer;
     }
 
     std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool {
