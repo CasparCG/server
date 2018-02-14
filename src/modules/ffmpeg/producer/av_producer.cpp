@@ -75,9 +75,7 @@ struct Frame
 };
 
 // TODO (fix) Handle ts discontinuities.
-// TODO (feat) Filter presets.
 // TODO (feat) Forward options.
-// TODO (fix) Interlaced looping.
 
 struct Decoder
 {
