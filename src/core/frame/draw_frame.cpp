@@ -91,7 +91,7 @@ draw_frame::draw_frame(draw_frame&& other)
     : impl_(std::move(other.impl_))
 {
 }
-draw_frame::draw_frame(const_frame&& frame)
+draw_frame::draw_frame(const_frame frame)
     : impl_(new impl(std::move(frame)))
 {
 }
