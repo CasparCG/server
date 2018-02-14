@@ -81,6 +81,7 @@ struct configuration
     screen::stretch stretch          = screen::stretch::fill;
     bool            windowed         = true;
     bool            key_only         = false;
+    bool            sbs_key          = false;
     aspect_ratio    aspect           = aspect_ratio::aspect_invalid;
     bool            vsync            = false;
     bool            interactive      = true;
@@ -182,9 +183,12 @@ struct screen_consumer : boost::noncopyable
         thread_ = std::thread([this] {
             try {
                 auto window_style = config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
-                window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
+                sf::VideoMode mode = sf::VideoMode::getDesktopMode();
+                sf::VideoMode sbsmode = mode;
+                sbsmode.width = sbsmode.width * 2;
+                window_.create(!config_.sbs_key ? mode : sbsmode, u8(print()), window_style);
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-                window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+                window_.setSize(sf::Vector2u(!config_.sbs_key ? screen_width_ : screen_width_ * 2, screen_height_));
                 window_.setMouseCursorVisible(config_.interactive);
                 window_.setActive(true);
 
@@ -200,15 +204,15 @@ struct screen_consumer : boost::noncopyable
                     screen::frame frame;
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
                     GL(glCreateBuffers(1, &frame.pbo));
-                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
-                    frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
+                    GL(glNamedBufferStorage(frame.pbo, !config_.sbs_key ? format_desc_.size : format_desc_.size * 2, nullptr, flags));
+                    frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, !config_.sbs_key ? format_desc_.size : format_desc_.size * 2, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
-                    GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
+                    GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, !config_.sbs_key ? format_desc_.width : format_desc_.width * 2, format_desc_.height));
                     GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
 
                     frames_.push_back(frame);
@@ -217,7 +221,7 @@ struct screen_consumer : boost::noncopyable
                 GL(glEnable(GL_TEXTURE_2D));
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-                GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+                GL(glViewport(0, 0, !config_.sbs_key ? format_desc_.width : format_desc_.width * 2, format_desc_.height));
                 GL(glLoadIdentity());
 
                 calculate_aspect();
@@ -307,7 +311,22 @@ struct screen_consumer : boost::noncopyable
                                     0x07070707,
                                     0x03030303);
                 }
-            } else {
+            }
+            else if (config_.sbs_key) {
+                for (int n = 0; n < format_desc_.height; ++n) {
+                    std::memcpy(frame.ptr + ( n * 2 ) * format_desc_.width * 4, 
+                        in_frame.image_data(0).begin() + n * format_desc_.width * 4, 
+                        format_desc_.width * 4);
+                    aligned_memshfl(frame.ptr + (n * 2 + 1) * format_desc_.width * 4,
+                        in_frame.image_data(0).begin() + n * format_desc_.width * 4,
+                        format_desc_.width * 4,
+                        0x0F0F0F0F,
+                        0x0B0B0B0B,
+                        0x07070707,
+                        0x03030303);
+                }
+            }
+            else {
                 std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
             }
 
@@ -316,7 +335,7 @@ struct screen_consumer : boost::noncopyable
                                     0,
                                     0,
                                     0,
-                                    format_desc_.width,
+                                    !config_.sbs_key ? format_desc_.width : format_desc_.width * 2,
                                     format_desc_.height,
                                     GL_BGRA,
                                     GL_UNSIGNED_BYTE,
@@ -375,10 +394,10 @@ struct screen_consumer : boost::noncopyable
     {
         if (config_.windowed) {
             screen_height_ = window_.getSize().y;
-            screen_width_  = window_.getSize().x;
+            screen_width_  = !config_.sbs_key ? window_.getSize().x : window_.getSize().x / 2;
         }
 
-        GL(glViewport(0, 0, screen_width_, screen_height_));
+        GL(glViewport(0, 0, !config_.sbs_key ? screen_width_ : screen_width_ * 2, screen_height_));
 
         std::pair<float, float> target_ratio = none();
         if (config_.stretch == screen::stretch::fill) {
@@ -403,7 +422,7 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform()
     {
-        float aspect = static_cast<float>(square_width_) / static_cast<float>(square_height_);
+        float aspect = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_ * 2) / static_cast<float>(square_height_);
         float width  = std::min(1.0f, static_cast<float>(screen_height_) * aspect / static_cast<float>(screen_width_));
         float height = static_cast<float>(screen_width_ * width) / static_cast<float>(screen_height_ * aspect);
 
@@ -414,7 +433,7 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform_to_fill()
     {
-        float wr    = static_cast<float>(square_width_) / static_cast<float>(screen_width_);
+        float wr    = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_ * 2) / static_cast<float>(screen_width_);
         float hr    = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
         float r_inv = 1.0f / std::min(wr, hr);
 
@@ -475,6 +494,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     config.windowed         = !contains_param(L"FULLSCREEN", params);
     config.key_only         = contains_param(L"KEY_ONLY", params);
+    config.sbs_key          = contains_param(L"SBS_KEY", params);
     config.interactive      = !contains_param(L"NON_INTERACTIVE", params);
     config.borderless       = contains_param(L"BORDERLESS", params);
 
@@ -494,9 +514,12 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.screen_index     = ptree.get(L"device", config.screen_index + 1) - 1;
     config.windowed         = ptree.get(L"windowed", config.windowed);
     config.key_only         = ptree.get(L"key-only", config.key_only);
+    config.sbs_key          = ptree.get(L"sbs-key", config.sbs_key);
     config.vsync            = ptree.get(L"vsync", config.vsync);
     config.interactive      = ptree.get(L"interactive", config.interactive);
     config.borderless       = ptree.get(L"borderless", config.borderless);
+    
+    if (config.sbs_key) config.key_only = false;
 
     auto stretch_str = ptree.get(L"stretch", L"default");
     if (stretch_str == L"uniform") {
