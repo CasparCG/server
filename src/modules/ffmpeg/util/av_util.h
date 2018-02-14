@@ -24,4 +24,6 @@ core::mutable_frame     make_frame(void*                    tag,
 std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 
+int graph_execute(AVFilterContext *ctx, avfilter_action_func *func, void *arg, int *ret, int count);
+
 }} // namespace caspar::ffmpeg

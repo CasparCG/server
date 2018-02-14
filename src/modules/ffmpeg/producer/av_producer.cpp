@@ -228,6 +228,9 @@ struct Filter
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
 
+        graph->nb_threads = 16;
+        graph->execute = graph_execute;
+
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
 
         // inputs
