@@ -417,6 +417,8 @@ struct ffmpeg_consumer : public core::frame_consumer
         }())
         , realtime_(realtime)
     {
+        state_["file/path"] = u8(path_);
+
         frame_buffer_.set_capacity(realtime_ ? 1 : 128);
 
         diagnostics::register_graph(graph_);
@@ -500,6 +502,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                         options["threads:v"] = "4";
                     }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
+                    state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
                 }
 
                 boost::optional<Stream> audio_stream;
@@ -564,7 +567,10 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
+                std::int32_t frame_number = 0;
                 while (true) {
+                    state_["file/frame"] = frame_number++;
+
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
 
