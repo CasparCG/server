@@ -376,9 +376,8 @@ class decklink_producer : public IDeckLinkInputCallback
             state_["file/path"] = device_index_;
             state_["file/video/width"] = video->GetWidth();
             state_["file/video/height"] = video->GetHeight();
-            state_["file/audio/sample-rate"] = 48000;
-            state_["file/audio/channels"] = 2;
-            state_["file/audio/format"] = u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32));
+            state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
+            state_["file/audio/channels"] = format_desc_.audio_channels;
             state_["file/fps"] = format_desc_.fps;
             state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
             state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
