@@ -22,6 +22,7 @@
 
 #include <common/scope_exit.h>
 #include <common/diagnostics/graph.h>
+#include <common/param.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/monitor/monitor.h>
@@ -32,6 +33,8 @@
 #include <boost/signals2.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 
+#include <tbb/concurrent_queue.h>
+
 namespace caspar { namespace core {
 
 class route_producer : public frame_producer_base
@@ -39,25 +42,27 @@ class route_producer : public frame_producer_base
     monitor::state                      state_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
-    core::draw_frame frame_;
-    std::mutex       frame_mutex_;
+    tbb::concurrent_bounded_queue<core::draw_frame> buffer_;
 
     std::shared_ptr<route> route_;
     boost::signals2::scoped_connection connection_;
 
   public:
-    route_producer(std::shared_ptr<route> route)
+    route_producer(std::shared_ptr<route> route, int buffer)
         : route_(route)
         , connection_(route_->signal.connect([this](const core::draw_frame& frame) {
-            std::lock_guard<std::mutex> lock(frame_mutex_);
-            if (frame_) {
+            if (!buffer_.try_push(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
-            frame_ = frame;
+            graph_->set_value("output-buffer",
+                              static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
         }))
     {
+        buffer_.set_capacity(buffer > 0 ? buffer : route->format_desc.field_count);
+
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+        graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
@@ -66,11 +71,13 @@ class route_producer : public frame_producer_base
 
     draw_frame receive_impl() override
     {
-        std::lock_guard<std::mutex> lock(frame_mutex_);
-        if (!frame_) {
+        core::draw_frame frame;
+        if (!buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
         }
-        return std::move(frame_);
+        graph_->set_value("output-buffer",
+                          static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
+        return frame;
     }
 
     std::wstring print() const override
@@ -102,7 +109,9 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel)));
     }
 
-    return spl::make_shared<route_producer>((*channel_it)->route(layer));
+    auto buffer = get_param(L"BUFFER", params, 0);
+
+    return spl::make_shared<route_producer>((*channel_it)->route(layer), buffer);
 }
 
 }} // namespace caspar::core
