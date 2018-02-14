@@ -297,19 +297,16 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-
-    const auto in_tb  = AVRational{dependencies.format_desc.duration, dependencies.format_desc.time_scale};
-    const auto out_tb = AVRational{1, AV_TIME_BASE};
-
+    
     boost::optional<std::int64_t> start;
     boost::optional<std::int64_t> duration;
 
     if (in != 0) {
-        start = av_rescale_q(static_cast<int64_t>(in), in_tb, out_tb);
+        start = in;
     }
 
     if (out != std::numeric_limits<uint32_t>::max()) {
-        duration = av_rescale_q(static_cast<int64_t>(out - in), in_tb, out_tb);
+        duration = out - in;
     }
 
     // TODO (fix) use raw input?
