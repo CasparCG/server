@@ -727,7 +727,7 @@ struct AVProducer::Impl
     {
         CASPAR_SCOPE_EXIT{
             graph_->set_text(u16(print()));
-            state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+            state_["file/time"] = { time() / format_desc_.fps, input_.duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
@@ -842,18 +842,10 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> duration() const
     {
-        auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
-        auto duration = duration_;
-
-        if (duration == AV_NOPTS_VALUE && input_.duration()) {
-            duration = *input_.duration() - start;
-        }
-
-        if (duration == AV_NOPTS_VALUE || duration < 0) {
+        if (!input_.duration()) {
             return boost::none;
         }
-
-        return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
+        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
     }
 
   private:
