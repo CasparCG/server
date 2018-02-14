@@ -74,10 +74,12 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     impl(std::shared_ptr<boost::asio::io_service> service)
         : service_(std::move(service))
         , socket_(*service_, udp::v4())
+        // TODO (fix) Split into smaller packets.
         , buffer_(1000000)
     {
     }
 
+    // TODO (refactor) This is wierd...
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(endpoints_mutex_);
@@ -98,8 +100,9 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
             int reference_count_after = --self.reference_counts_by_endpoint_[endpoint];
 
-            if (reference_count_after == 0)
+            if (reference_count_after == 0) {
                 self.reference_counts_by_endpoint_.erase(endpoint);
+            }
         });
     }
 
