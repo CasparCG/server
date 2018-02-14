@@ -46,33 +46,31 @@ class transition_producer : public frame_producer_base
 
     const transition_info info_;
 
-    spl::shared_ptr<frame_producer> dest_producer_;
-    spl::shared_ptr<frame_producer> source_producer_ = frame_producer::empty();
-
-    bool paused_ = false;
+    spl::shared_ptr<frame_producer> dst_producer_ = frame_producer::empty();
+    spl::shared_ptr<frame_producer> src_producer_ = frame_producer::empty();
 
   public:
     transition_producer(const spl::shared_ptr<frame_producer>& dest,
                         const transition_info&                 info)
         : info_(info)
-        , dest_producer_(dest)
+        , dst_producer_(dest)
     {
     }
 
     // frame_producer
 
-    void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { source_producer_ = producer; }
+    void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return dst_ && current_frame_ >= info_.duration ? dest_producer_ : core::frame_producer::empty();
+        return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
 
     draw_frame receive_impl() override
     {
         CASPAR_SCOPE_EXIT
         {
-            state_ = dest_producer_->state();
+            state_ = dst_producer_->state();
             state_["transition/frame"] = { current_frame_, info_.duration };
             state_["transition/type"] = [&]() -> std::string
             {
@@ -95,15 +93,15 @@ class transition_producer : public frame_producer_base
 
         tbb::parallel_invoke(
             [&] {
-                dst_ = dest_producer_->receive();
+                dst_ = dst_producer_->receive();
                 if (!dst_) {
-                    dst_ = dest_producer_->last_frame();
+                    dst_ = dst_producer_->last_frame();
                 }
             },
             [&] {
-                src_ = source_producer_->receive();
+                src_ = src_producer_->receive();
                 if (!src_) {
-                    src_ = source_producer_->last_frame();
+                    src_ = src_producer_->last_frame();
                 }
             });
 
@@ -120,20 +118,20 @@ class transition_producer : public frame_producer_base
         return compose(dst_, src_);
     }
 
-    uint32_t nb_frames() const override { return dest_producer_->nb_frames(); }
+    uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
 
-    uint32_t frame_number() const override { return dest_producer_->frame_number(); }
+    uint32_t frame_number() const override { return dst_producer_->frame_number(); }
 
     std::wstring print() const override
     {
-        return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
+        return L"transition[" + src_producer_->print() + L"=>" + dst_producer_->print() + L"]";
     }
 
     std::wstring name() const override { return L"transition"; }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
-        return dest_producer_->call(params);
+        return dst_producer_->call(params);
     }
 
     draw_frame compose(draw_frame dst_frame, draw_frame src_frame) const
