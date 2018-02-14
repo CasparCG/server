@@ -439,7 +439,7 @@ class decklink_producer : public IDeckLinkInputCallback
                     src->data[0] = reinterpret_cast<uint8_t*>(audio_bytes);
                     src->linesize[0] = src->nb_samples * src->channels * av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
                 } else {
-                    src->nb_samples = audio_cadence_[0];
+                    src->nb_samples = audio_cadence_[0] * format_desc_.field_count;
                     av_frame_get_buffer(src.get(), 0);
                     std::memset(src->data[0], 0, src->linesize[0]);
                 }
