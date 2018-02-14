@@ -21,16 +21,33 @@
 
 #pragma once
 
+#include "fwd.h"
+#include "video_format.h"
+
+#include "monitor/monitor.h"
+
 #include <common/forward.h>
 #include <common/memory.h>
 
-#include "fwd.h"
-
-#include "monitor/monitor.h"
+#include <boost/signals2.hpp>
 
 #include <functional>
 
 namespace caspar { namespace core {
+
+struct route
+{
+    route() = default;
+    route(const route&) = delete;
+    route(route&&) = default;
+
+    route& operator=(const route&) = delete;
+    route& operator=(route&&) = default;
+
+    boost::signals2::signal<void(class draw_frame)> signal;
+    video_format_desc format_desc;
+    std::wstring name;
+};
 
 class video_channel final
 {
@@ -56,6 +73,8 @@ class video_channel final
     spl::shared_ptr<core::frame_factory> frame_factory();
 
     int index() const;
+
+    std::shared_ptr<route> route(int index = -1);
 
   private:
     struct impl;

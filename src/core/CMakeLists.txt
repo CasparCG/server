@@ -18,9 +18,9 @@ set(SOURCES
 		mixer/mixer.cpp
 
 		producer/color/color_producer.cpp
-
 		producer/separated/separated_producer.cpp
 		producer/transition/transition_producer.cpp
+		producer/route/route_producer.cpp
 
 		producer/cg_proxy.cpp
 		producer/frame_producer.cpp
@@ -56,8 +56,9 @@ set(HEADERS
 		monitor/monitor.h
 
 		producer/color/color_producer.h
-
+		producer/separated/separated_producer.h
 		producer/transition/transition_producer.h
+		producer/route/route_producer.h
 
 		producer/cg_proxy.h
 		producer/frame_producer.h

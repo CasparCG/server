@@ -36,7 +36,7 @@ class draw_frame final
     draw_frame();
     draw_frame(const draw_frame& other);
     draw_frame(draw_frame&& other);
-    draw_frame(class const_frame&& frame);
+    draw_frame(class const_frame frame);
     draw_frame(class mutable_frame&& frame);
     draw_frame(std::vector<draw_frame> frames);
 
