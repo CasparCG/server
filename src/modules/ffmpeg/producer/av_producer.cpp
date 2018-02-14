@@ -220,8 +220,8 @@ struct Filter
 					input->streams[n]->codecpar->height > best_height) {						
 						best_height = input->streams[n]->codecpar->height;
 						force_index = n;
-					}
-                    count += 1;
+				}
+                count += 1;
             }
             //if (count > 1) {
             //    filter_spec = "alphamerge," + filter_spec;
