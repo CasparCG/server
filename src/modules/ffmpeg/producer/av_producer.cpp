@@ -430,8 +430,8 @@ struct AVProducer::Impl
         , path_(path)
         , name_(name)
         , input_(path, graph_)
-        , start_(start.value_or(AV_NOPTS_VALUE))
-        , duration_(duration.value_or(AV_NOPTS_VALUE))
+        , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
+        , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
         , vfilter_(vfilter)
         , afilter_(afilter)
@@ -449,7 +449,8 @@ struct AVProducer::Impl
         graph_->set_text(u16(print()));
 
         if (start_ != AV_NOPTS_VALUE) {
-            seek(start_);
+            input_.seek(start_);
+            reset(start_);
         } else {
             reset(0);
         }
