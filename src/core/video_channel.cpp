@@ -112,7 +112,11 @@ struct video_channel::impl final
                     {
                         std::lock_guard<std::mutex> lock(routes_mutex_);
 
+                        std::vector<core::draw_frame> frames;
+
                         for (auto& p : stage_frames) {
+                            frames.push_back(p.second);
+
                             auto it = routes_.find(p.first);
                             if (it == routes_.end()) {
                                 continue;
@@ -123,28 +127,20 @@ struct video_channel::impl final
                             }
                             route->signal(p.second);
                         }
+
+                        auto it = routes_.find(-1);
+                        if (it != routes_.end()) {
+                            auto route = it->second.lock();
+                            if (route) {
+                                route->signal(core::draw_frame(std::move(frames)));
+                            }
+                        }
                     }
 
                     // Mix
                     caspar::timer mix_timer;
                     auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
-
-                    [&]{
-                        std::lock_guard<std::mutex> lock(routes_mutex_);
-
-                        auto it = routes_.find(-1);
-                        if (it == routes_.end()) {
-                            return;
-                        }
-
-                        auto route = it->second.lock();
-                        if (!route) {
-                            return;
-                        }
-
-                        route->signal(core::draw_frame(mixed_frame));
-                    }();
 
                     state_.insert_or_assign("mixer", mixer_.state());
 
