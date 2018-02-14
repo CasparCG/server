@@ -289,7 +289,6 @@ class decklink_producer : public IDeckLinkInputCallback
     spl::shared_ptr<core::frame_factory> frame_factory_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
-    core::draw_frame                                last_frame_;
 
     std::exception_ptr exception_;
 
@@ -493,15 +492,14 @@ class decklink_producer : public IDeckLinkInputCallback
 
     core::draw_frame get_frame()
     {
-        if (exception_ != nullptr)
+        if (exception_ != nullptr) {
             std::rethrow_exception(exception_);
+        }
 
-        core::draw_frame frame = last_frame_;
+        core::draw_frame frame;
 
         if (!frame_buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
-        } else {
-            last_frame_ = frame;
         }
 
         graph_->set_value("output-buffer",
