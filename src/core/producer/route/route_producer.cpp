@@ -21,6 +21,7 @@
 #include "route_producer.h"
 
 #include <common/scope_exit.h>
+#include <common/diagnostics/graph.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/monitor/monitor.h>
@@ -35,7 +36,8 @@ namespace caspar { namespace core {
 
 class route_producer : public frame_producer_base
 {
-    monitor::state state_;
+    monitor::state                      state_;
+    spl::shared_ptr<diagnostics::graph> graph_;
 
     core::draw_frame frame_;
     std::mutex       frame_mutex_;
@@ -48,15 +50,26 @@ class route_producer : public frame_producer_base
         : route_(route)
         , connection_(route_->signal.connect([this](const core::draw_frame& frame) {
             std::lock_guard<std::mutex> lock(frame_mutex_);
+            if (frame_) {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+            }
             frame_ = frame;
         }))
     {
+        graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+        graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+        graph_->set_text(print());
+        diagnostics::register_graph(graph_);
+
         CASPAR_LOG(debug) << print() << L" Initialized";
     }
 
     draw_frame receive_impl() override
     {
         std::lock_guard<std::mutex> lock(frame_mutex_);
+        if (!frame_) {
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+        }
         return std::move(frame_);
     }
 
