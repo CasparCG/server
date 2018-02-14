@@ -252,6 +252,17 @@ struct Filter
                     }
                     if (input->streams[index]->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
+						// find a better resolution if there are more streams available
+						if (type == AVMEDIA_TYPE_VIDEO && input->nb_streams - 1 > index) {
+							auto best_height = input->streams[index]->codecpar->height;
+							for (unsigned int i = index + 1; i < input->nb_streams; i++) {
+								if (input->streams[i]->codec->codec_type == type && 
+									input->streams[i]->codecpar->height > best_height) {
+									index = i;
+									best_height = input->streams[i]->codecpar->height;
+								}
+							}
+						}
                         break;
                     }
                     index++;
