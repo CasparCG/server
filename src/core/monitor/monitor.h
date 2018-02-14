@@ -71,6 +71,16 @@ class state
     mutable std::mutex mutex_;
     data_map_t         data_;
 public:
+    state() = default;
+    state(const state& other)
+        : data_(other.data_)
+    {
+    }
+    state(state&& other)
+        : data_(std::move(other.data_))
+    {
+    }
+
     state_proxy operator[](const std::string& key)
     {
         return state_proxy(key, data_, mutex_);
@@ -82,7 +92,23 @@ public:
         data_.clear();
     }
 
-    auto get() const
+    state& operator=(const state& other)
+    {
+        auto data = other.get();
+        std::lock_guard<std::mutex> lock(mutex_);
+        data_ = std::move(data);
+        return *this;
+    }
+
+    template<typename T>
+    state& operator=(T&& data)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        data_ = std::forward<T>(data);
+        return *this;
+    }
+
+    data_map_t get() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         return data_;

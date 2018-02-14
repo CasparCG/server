@@ -216,9 +216,9 @@ struct Filter
                     count += 1;
                 }
             }
-            if (count > 1) {
-                filter_spec = "alphamerge," + filter_spec;
-            }
+            //if (count > 1) {
+            //    filter_spec = "alphamerge," + filter_spec;
+            //}
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
@@ -506,8 +506,9 @@ struct AVProducer::Impl
 
                     // TODO (perf) seek as soon as input is past duration or eof.
                     {
+                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
                         const auto eof = (video_filter_.eof && audio_filter_.eof) ||
-                                         (duration_ != AV_NOPTS_VALUE && frame.pts >= duration_);
+                                         (duration_ != AV_NOPTS_VALUE && frame.pts >= start + duration_);
 
                         if (eof) {
                             if (loop_) {
