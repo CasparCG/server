@@ -216,9 +216,9 @@ struct Filter
                     count += 1;
                 }
             }
-            if (count > 1) {
-                filter_spec = "alphamerge," + filter_spec;
-            }
+            //if (count > 1) {
+            //    filter_spec = "alphamerge," + filter_spec;
+            //}
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
