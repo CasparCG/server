@@ -268,6 +268,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::mutex                    buffer_mutex_;
     std::condition_variable       buffer_cond_;
     std::queue<core::const_frame> buffer_;
+	int                           buffer_reqs_ = 0;
     const int                     buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
     long long video_scheduled_ = 0;
@@ -454,18 +455,21 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::vector<std::int32_t> audio_data;
 
             std::vector<core::const_frame> frames;
-            for (auto n = 0; n < field_count_; ++n) {
-                {
-                    std::unique_lock<std::mutex> lock(buffer_mutex_);
-                    buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
-                    if (abort_request_) {
-                        return E_FAIL;
-                    }
-                    frames.push_back(std::move(buffer_.front()));
-                    buffer_.pop();
-                }
-                buffer_cond_.notify_all();
-            }
+			{
+				std::unique_lock<std::mutex> lock(buffer_mutex_);
+				buffer_reqs_ = field_count_;
+				buffer_cond_.notify_all();
+				buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
+				if (abort_request_) {
+					return E_FAIL;
+				}
+				for (auto n = 0; n < field_count_; ++n) {
+					frames.push_back(std::move(buffer_.front()));
+					buffer_.pop();
+				}
+				buffer_reqs_ = 0;
+				buffer_cond_.notify_all();
+			}
 
             if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
                 if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
@@ -491,7 +495,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             schedule_next_video(image_data, nb_samples);
 
             if (config_.embedded_audio) {
-                schedule_next_audio(audio_data, nb_samples);
+                schedule_next_audio(std::move(audio_data), nb_samples);
             }
         } catch (...) {
             std::lock_guard<std::mutex> lock(exception_mutex_);
@@ -502,12 +506,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         return S_OK;
     }
 
-    template <typename T>
-    void schedule_next_audio(const T& audio_data, int nb_samples)
+    void schedule_next_audio(std::vector<std::int32_t> audio, int nb_samples)
     {
-        audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
-
         // TODO (refactor) does ScheduleAudioSamples copy data?
+
+        audio_container_.push_back(std::move(audio));
+
         if (FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(),
                                                  nb_samples,
                                                  audio_scheduled_,
@@ -569,7 +573,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
-            buffer_cond_.wait(lock, [&] { return buffer_.empty() || abort_request_; });
+            buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_reqs_ || abort_request_; });
             buffer_.push(std::move(frame));
         }
         buffer_cond_.notify_all();
