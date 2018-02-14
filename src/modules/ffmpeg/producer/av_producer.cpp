@@ -75,9 +75,7 @@ struct Frame
 };
 
 // TODO (fix) Handle ts discontinuities.
-// TODO (feat) Filter presets.
 // TODO (feat) Forward options.
-// TODO (fix) Interlaced looping.
 
 struct Decoder
 {
@@ -425,7 +423,7 @@ struct AVProducer::Impl
          bool                                 loop)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
-        , format_tb_({format_desc.duration, format_desc.time_scale})
+        , format_tb_({format_desc.duration * format_desc.field_count, format_desc.time_scale})
         , path_(path)
         , name_(name)
         , input_(path, graph_)
