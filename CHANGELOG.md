@@ -19,7 +19,7 @@ General
  * Removed channel layout in favor of 8 channel passthrough
     and FFMPEG audio filters.
  * Major stability and performance improvements of GPU code.
- * GPU code now requires OpenGL 4.5.
+ * Requires OpenGL 4.5.
  * Repo cleanup (>2GB => <100MB when cloning).
  * Misc cleanup and fixes.
 
@@ -37,6 +37,7 @@ DECKLINK
 --------
  * Fixed broken Linux.
  * Misc cleanup and fixes.
+ * Complex FFMPEG filters (VF, AF).
 
 MIXER
 -----
@@ -45,13 +46,21 @@ MIXER
  * Proper OpenGL pipelining.
  * Blend modes are always enabled.
  * Misc cleanup and fixes.
- * Optimized CPU mixer (sesse).
+ * Removed CPU mixer. 
+ * Mixer always runs in progressive mode. Consumers are expected to convert to interlaced if required.
 
 IMAGE
 -----
  * Correctly apply alpha to base64 encoded pngs from AMCP (Julusian).
  * Unmultiply frame before writing to png (Julusian).
  * Removed scroll producer (moved to 3.0.0)
+ 
+ ROUTE
+ -----
+ 
+ * Reimplemented, simplified.
+ * Cross channel routing will render full stage instead of simply copying channel output.
+ * Reduced overhead and latency.
 
 FFMPEG
 ------
@@ -74,6 +83,7 @@ FFMPEG
  * Added HTTP reconnect.
  * FFMPEG video filter support.
  * FFMPEG audio filter support.
+ * Complex FFMPEG filters (VF, AF).
  * CALL SEEK return actually seeked value.
  * All AMCP options are based on channel format.
  * Misc improvements, cleanup and fixes.
@@ -90,7 +100,7 @@ OAL
 
 Screen
 ---------------
- * Properly OpenGL pipelining.
+ * Proper OpenGL pipelining.
  * Misc cleanup and fixes.
 
 AMCP
