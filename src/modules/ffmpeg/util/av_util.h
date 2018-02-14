@@ -8,6 +8,8 @@
 enum AVPixelFormat;
 struct AVFrame;
 struct AVPacket;
+struct AVFilterContext;
+struct AVCodecContext;
 
 namespace caspar { namespace ffmpeg {
 
@@ -24,7 +26,7 @@ core::mutable_frame     make_frame(void*                    tag,
 std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 
-int graph_execute(struct AVFilterContext *ctx, avfilter_action_func *func, void *arg, int *ret, int count);
-int codec_execute(struct AVCodecContext *c, int(*func)(struct AVCodecContext *c2, void *arg), void *arg2, int *ret, int count, int size);
-int codec_execute2(struct AVCodecContext *c, int(*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int coun);
+int graph_execute(AVFilterContext *c, int(*func)(AVFilterContext *ctx, void *arg, int jobnr, int nb_jobs), void *arg, int *ret, int count);
+int codec_execute(AVCodecContext *c, int(*func)(AVCodecContext *c2, void *arg), void *arg2, int *ret, int count, int size);
+int codec_execute2(AVCodecContext *c, int(*func)(AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int coun);
 }} // namespace caspar::ffmpeg
