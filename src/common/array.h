@@ -59,9 +59,9 @@ class array final
 
     array& operator=(array&& other)
     {
-        std::swap(ptr_, other.ptr_);
-        std::swap(size_, other.size_);
-        std::swap(storage_, other.storage_);
+        ptr_ = std::move(other.ptr_);
+        size_ = std::move(other.size_);
+        storage_ = std::move(other.storage_);
 
         return *this;
     }
@@ -104,9 +104,11 @@ class array<const T> final
     array(std::size_t size)
         : size_(size)
     {
-        auto storage = std::vector<char>(size, 0);
-        ptr_         = reinterpret_cast<T*>(storage.data());
-        storage_     = std::move(storage);
+        if (size_ > 0) {
+            auto storage = std::vector<char>(size, 0);
+            ptr_ = reinterpret_cast<T*>(storage.data());
+            storage_ = std::move(storage);
+        }
     }
 
     template <typename S>
