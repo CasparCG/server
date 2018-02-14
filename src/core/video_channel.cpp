@@ -119,14 +119,12 @@ struct video_channel::impl final
                             frames.push_back(p.second);
 
                             auto it = routes_.find(p.first);
-                            if (it == routes_.end()) {
-                                continue;
+                            if (it != routes_.end()) {
+                                auto route = it->second.lock();
+                                if (route) {
+                                    route->signal(draw_frame::pop(p.second));
+                                }
                             }
-                            auto route = it->second.lock();
-                            if (!route) {
-                                continue;
-                            }
-                            route->signal(draw_frame::pop(p.second));
                         }
 
                         auto it = routes_.find(-1);
