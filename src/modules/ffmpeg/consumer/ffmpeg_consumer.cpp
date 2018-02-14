@@ -69,6 +69,7 @@ extern "C"
 #endif
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for.h>
 
 #include <memory>
 #include <thread>
@@ -178,6 +179,9 @@ struct Stream
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
+
+        graph->nb_threads = 16;
+        graph->execute = graph_execute;
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {

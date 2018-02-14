@@ -11,10 +11,13 @@ extern "C"
 #include <libavcodec/avcodec.h>
 #include <libavutil/frame.h>
 #include <libavutil/pixfmt.h>
+#include <libavfilter/avfilter.h>
 }
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+#include <tbb/parallel_for.h>
 
 namespace caspar { namespace ffmpeg {
 
@@ -247,6 +250,22 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     std::memcpy(av_frame->data[0], buffer.data(), buffer.size() * sizeof(buffer.data()[0]));
 
     return av_frame;
+}
+
+int graph_execute(AVFilterContext* ctx, avfilter_action_func* func, void *arg, int *ret, int count)
+{
+    if (count == 0) {
+        return 0;
+    }
+
+    tbb::parallel_for(0, count, [&](int n) {
+        int r = func(ctx, arg, n, count);
+        if (ret) {
+            ret[n] = r;
+        }
+    });
+
+    return 0;
 }
 
 }} // namespace caspar::ffmpeg
