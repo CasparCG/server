@@ -496,6 +496,9 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
+                    if (options.find("threads:v") == options.end()) {
+                        options["threads:v"] = "4";
+                    }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
                 }
 
