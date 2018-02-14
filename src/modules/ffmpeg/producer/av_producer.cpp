@@ -198,6 +198,7 @@ struct Filter
                 }
             }
         }
+		auto force_index = -1;
 
         if (audio_input_count == 1) {
             int count = 0;
@@ -211,10 +212,16 @@ struct Filter
             }
         } else if (video_input_count == 1) {
             int count = 0;
+			// find a better resolution if there are more streams available
+			auto best_height = 0;
             for (unsigned n = 0; n < input->nb_streams; ++n) {
-                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                if (input->nb_streams > 1 && 
+					input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && 
+					input->streams[n]->codecpar->height > best_height) {						
+						best_height = input->streams[n]->codecpar->height;
+						force_index = n;
+					}
                     count += 1;
-                }
             }
             //if (count > 1) {
             //    filter_spec = "alphamerge," + filter_spec;
@@ -242,29 +249,16 @@ struct Filter
                                                             << msg_info_t("only video and audio filters supported"));
                 }
 
-                unsigned index = 0;
+                unsigned index = force_index > -1 ? force_index : 0;
 
                 // TODO find stream based on link name
-                while (true) {
+                while (force_index == -1) {
                     if (index == input->nb_streams) {
                         graph = nullptr;
                         return;
                     }
                     if (input->streams[index]->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
-						// find a better resolution if there are more streams available
-						if (video_input_count == 1 && 
-							type == AVMEDIA_TYPE_VIDEO && 
-							input->nb_streams - 1 > index) {
-							auto best_height = input->streams[index]->codecpar->height;
-							for (unsigned int i = index + 1; i < input->nb_streams; i++) {
-								if (input->streams[i]->codec->codec_type == type && 
-									input->streams[i]->codecpar->height > best_height) {
-									index = i;
-									best_height = input->streams[i]->codecpar->height;
-								}
-							}
-						}
                         break;
                     }
                     index++;
