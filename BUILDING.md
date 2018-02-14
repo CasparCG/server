@@ -21,11 +21,15 @@ Development using Visual Studio
 
 3. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server casparcg-server-2.2.0`
 
-4. `cd casparcg-server-2.2.0/src`
+4. `cd casparcg-server-2.2.0`
 
-5. `cmake -G "Visual Studio 15 2017" -A x64 .`
+5. `mkdir build`
 
-6. Open `CasparCG Server.sln`
+6. `cd build`
+
+7. `cmake -G "Visual Studio 15 2017" -A x64 ../src`
+
+8. Open `CasparCG Server.sln`
 
 Linux
 =====
