@@ -6,5 +6,6 @@
 .settings
 .vscode
 .vs
+build
 CMakeFiles
 casparcg_server
