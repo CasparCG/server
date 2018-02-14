@@ -324,7 +324,7 @@ struct Stream
         CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
         for (auto& p : to_map(&dict)) {
-            options[p.first] = suffix + p.second;
+            options[p.first] = p.second + suffix;
         }
 
         FF(avcodec_parameters_from_context(st->codecpar, enc.get()));
