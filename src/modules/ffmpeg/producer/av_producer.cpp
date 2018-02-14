@@ -198,7 +198,7 @@ struct Filter
                 }
             }
         }
-		auto force_index = -1;
+        auto force_index = -1;
 
         if (audio_input_count == 1) {
             int count = 0;
@@ -212,15 +212,15 @@ struct Filter
             }
         } else if (video_input_count == 1) {
             int count = 0;
-			// find a better resolution if there are more streams available
-			auto best_height = 0;
+            // find a better resolution if there are more streams available
+            auto best_height = 0;
             for (unsigned n = 0; n < input->nb_streams; ++n) {
                 if (input->nb_streams > 1 && 
-					input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && 
-					input->streams[n]->codecpar->height > best_height) {						
-						best_height = input->streams[n]->codecpar->height;
-						force_index = n;
-				}
+                    input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && 
+                    input->streams[n]->codecpar->height > best_height) {
+                        best_height = input->streams[n]->codecpar->height;
+                        force_index = n;
+                }
                 count += 1;
             }
             //if (count > 1) {
