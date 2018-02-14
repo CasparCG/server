@@ -94,29 +94,11 @@ struct Filter
 {
     std::shared_ptr<AVFilterGraph> graph = nullptr;
     AVFilterContext*               sink = nullptr;
-    AVFilterContext*               source = nullptr;
+    AVFilterContext*               video_source = nullptr;
+    AVFilterContext*               audio_source = nullptr;
 
     Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc)
     {
-        AVFilterInOut* outputs = nullptr;
-        AVFilterInOut* inputs = nullptr;
-
-        CASPAR_SCOPE_EXIT
-        {
-            avfilter_inout_free(&inputs);
-            avfilter_inout_free(&outputs);
-        };
-
-        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
-                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
-
-        if (!graph) {
-            FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
-        }
-
-        graph->nb_threads = 16;
-        graph->execute = graph_execute;
-
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
@@ -132,17 +114,62 @@ struct Filter
             filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
         }
 
-        FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
+        AVFilterInOut* outputs = nullptr;
+        AVFilterInOut* inputs = nullptr;
 
+        CASPAR_SCOPE_EXIT
         {
-            auto cur = inputs;
+            avfilter_inout_free(&inputs);
+            avfilter_inout_free(&outputs);
+        };
 
-            if (!cur || cur->next) {
-                CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
-                                       << msg_info_t("invalid filter graph input count"));
+        int video_input_count = 0;
+        int audio_input_count = 0;
+        {
+            auto graph2 = avfilter_graph_alloc();
+            if (!graph2) {
+                FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
             }
 
-            if (type == AVMEDIA_TYPE_VIDEO) {
+            CASPAR_SCOPE_EXIT
+            {
+                avfilter_graph_free(&graph2);
+                avfilter_inout_free(&inputs);
+                avfilter_inout_free(&outputs);
+            };
+
+            FF(avfilter_graph_parse2(graph2, filter_spec.c_str(), &inputs, &outputs));
+
+            for (auto cur = inputs; cur; cur = cur->next) {
+                const auto filter_type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
+                if (filter_type == AVMEDIA_TYPE_VIDEO) {
+                    video_input_count += 1;
+                } else if (filter_type == AVMEDIA_TYPE_AUDIO) {
+                    audio_input_count += 1;
+                }
+            }
+        }
+
+        graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
+                                               [](AVFilterGraph* ptr) { avfilter_graph_free(&ptr); });
+
+        if (!graph) {
+            FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
+        }
+
+        graph->nb_threads = 16;
+        graph->execute = graph_execute;
+
+        FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
+
+        for (auto cur = inputs; cur; cur = cur->next) {
+            const auto filter_type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
+
+            if (filter_type == AVMEDIA_TYPE_VIDEO) {
+                if (video_source) {
+                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                           << msg_info_t("only single video input supported"));
+                }
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                     boost::rational<int>(format_desc.width, format_desc.height);
 
@@ -154,10 +181,14 @@ struct Filter
                 auto name = (boost::format("in_%d") % 0).str();
 
                 FF(avfilter_graph_create_filter(
-                    &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
-                FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-            }
-            else if (type == AVMEDIA_TYPE_AUDIO) {
+                    &video_source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                FF(avfilter_link(video_source, 0, cur->filter_ctx, cur->pad_idx));
+            } else if (filter_type == AVMEDIA_TYPE_AUDIO) {
+                if (audio_source) {
+                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
+                                           << msg_info_t("only single audio input supported"));
+                }
+
                 auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % 1 %
                              format_desc.audio_sample_rate % format_desc.audio_sample_rate % AV_SAMPLE_FMT_S32 %
                              av_get_default_channel_layout(format_desc.audio_channels))
@@ -165,12 +196,11 @@ struct Filter
                 auto name = (boost::format("in_%d") % 0).str();
 
                 FF(avfilter_graph_create_filter(
-                    &source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
-                FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-            }
-            else {
+                    &audio_source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                FF(avfilter_link(audio_source, 0, cur->filter_ctx, cur->pad_idx));
+            } else {
                 CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
-                                       << msg_info_t("invalid filter input media type"));
+                                       << msg_info_t("only video and audio filters supported"));
             }
         }
 
@@ -216,8 +246,7 @@ struct Filter
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-        }
-        else {
+        } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
@@ -359,7 +388,7 @@ class decklink_producer : public IDeckLinkInputCallback
             state_["profiler/time"] = { frame_timer.elapsed(), format_desc_.fps };
             state_["buffer"] = { frame_buffer_.size(), frame_buffer_.capacity() };
 
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps / format_desc_.field_count * 0.5);
             graph_->set_value("output-buffer",
                 static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
         };
@@ -390,54 +419,62 @@ class decklink_producer : public IDeckLinkInputCallback
                 src->data[0] = reinterpret_cast<uint8_t*>(video_bytes);
                 src->linesize[0] = video->GetRowBytes();
 
-                FF(av_buffersrc_write_frame(video_filter_.source, src.get()));
+                if (video_filter_.video_source) {
+                    FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
+                }
+                if (audio_filter_.video_source) {
+                    FF(av_buffersrc_write_frame(audio_filter_.video_source, src.get()));
+                }
             }
 
-            if (audio) {
-                void* audio_bytes = nullptr;
-                if (FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes) {
-                    return S_OK;
+            {
+                auto src = std::shared_ptr<AVFrame>(av_frame_alloc(), [audio](AVFrame* ptr) { av_frame_free(&ptr); });
+                src->format = AV_SAMPLE_FMT_S32;
+                src->channels = format_desc_.audio_channels;
+                src->sample_rate = format_desc_.audio_sample_rate;
+
+                if (audio) {
+                    void* audio_bytes = nullptr;
+                    if (FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes) {
+                        return S_OK;
+                    }
+
+                    audio->AddRef();
+                    src = std::shared_ptr<AVFrame>(src.get(), [src, audio](AVFrame* ptr) {
+                        audio->Release();
+                    });
+                    src->nb_samples = audio->GetSampleFrameCount();
+                    src->data[0] = reinterpret_cast<uint8_t*>(audio_bytes);
+                    src->linesize[0] = src->nb_samples * src->channels * av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
+                } else {
+                    src->nb_samples = audio_cadence_[0];
+                    av_frame_get_buffer(src.get(), 0);
                 }
 
-                audio->AddRef();
-                auto src = std::shared_ptr<AVFrame>(av_frame_alloc(), [audio](AVFrame* ptr) {
-                    av_frame_free(&ptr);
-                    audio->Release();
-                });
-
-                src->nb_samples = audio->GetSampleFrameCount();
-                src->format = AV_SAMPLE_FMT_S32;
-                src->channels = format_desc_.audio_channels;
-                src->sample_rate = format_desc_.audio_sample_rate;
-                src->data[0] = reinterpret_cast<uint8_t*>(audio_bytes);
-                src->linesize[0] = src->nb_samples * src->channels * av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
-
-                FF(av_buffersrc_write_frame(audio_filter_.source, src.get()));
-            }
-            else {
-                auto src = std::shared_ptr<AVFrame>(av_frame_alloc(), [audio](AVFrame* ptr) { av_frame_free(&ptr); });
-                src->nb_samples = audio_cadence_[0];
-                src->format = AV_SAMPLE_FMT_S32;
-                src->channels = format_desc_.audio_channels;
-                src->sample_rate = format_desc_.audio_sample_rate;
-
-                av_frame_get_buffer(src.get(), 0);
-
-                FF(av_buffersrc_write_frame(audio_filter_.source, src.get()));
+                if (video_filter_.audio_source) {
+                    FF(av_buffersrc_write_frame(video_filter_.audio_source, src.get()));
+                }
+                if (audio_filter_.audio_source) {
+                    FF(av_buffersrc_write_frame(audio_filter_.audio_source, src.get()));
+                }
             }
 
             while (true) {
+                {
+                    auto av_video = alloc_frame();
+                    auto av_audio = alloc_frame();
+
+                    if (av_buffersink_get_frame_flags(video_filter_.sink, av_video.get(), AV_BUFFERSINK_FLAG_PEEK) < 0) {
+                        return S_OK;
+                    }
+
+                    audio_filter_.sink->inputs[0]->min_samples = audio_cadence_[0];
+                    if (av_buffersink_get_frame_flags(audio_filter_.sink, av_audio.get(), AV_BUFFERSINK_FLAG_PEEK) < 0) {
+                        return S_OK;
+                    }
+                }
                 auto av_video = alloc_frame();
                 auto av_audio = alloc_frame();
-
-                if (av_buffersink_get_frame_flags(video_filter_.sink, av_video.get(), AV_BUFFERSINK_FLAG_PEEK) < 0) {
-                    return S_OK;
-                }
-
-                audio_filter_.sink->inputs[0]->min_samples = audio_cadence_[0];
-                if (av_buffersink_get_frame_flags(audio_filter_.sink, av_audio.get(), AV_BUFFERSINK_FLAG_PEEK) < 0) {
-                    return S_OK;
-                }
 
                 av_buffersink_get_frame(video_filter_.sink, av_video.get());
                 av_buffersink_get_samples(audio_filter_.sink, av_audio.get(), audio_cadence_[0]);
