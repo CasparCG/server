@@ -407,6 +407,9 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::string path_;
     std::string args_;
 
+    std::exception_ptr exception_;
+    std::mutex         exception_mutex_;
+
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     std::thread                                      frame_thread_;
 
@@ -452,33 +455,33 @@ struct ffmpeg_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         frame_thread_ = std::thread([=] {
-            std::map<std::string, std::string> options;
-            {
-                static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
-                for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
-                     it != boost::sregex_iterator();
-                     ++it) {
-                    options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
-                }
-            }
-
-            boost::filesystem::path full_path = path_;
-
-            static boost::regex prot_exp("^.+:.*");
-            if (!boost::regex_match(path_, prot_exp)) {
-                if (!full_path.is_complete()) {
-                    full_path = u8(env::media_folder()) + path_;
-                }
-
-                // TODO -y?
-                if (boost::filesystem::exists(full_path)) {
-                    boost::filesystem::remove(full_path);
-                }
-
-                boost::filesystem::create_directories(full_path.parent_path());
-            }
-
             try {
+                std::map<std::string, std::string> options;
+                {
+                    static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+                    for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
+                         it != boost::sregex_iterator();
+                         ++it) {
+                        options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
+                    }
+                }
+
+                boost::filesystem::path full_path = path_;
+
+                static boost::regex prot_exp("^.+:.*");
+                if (!boost::regex_match(path_, prot_exp)) {
+                    if (!full_path.is_complete()) {
+                        full_path = u8(env::media_folder()) + path_;
+                    }
+
+                    // TODO -y?
+                    if (boost::filesystem::exists(full_path)) {
+                        boost::filesystem::remove(full_path);
+                    }
+
+                    boost::filesystem::create_directories(full_path.parent_path());
+                }
+
                 AVFormatContext* oc = nullptr;
 
                 {
@@ -595,14 +598,21 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 packet_thread.join();
             } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-                // TODO
+                std::lock_guard<std::mutex> lock(exception_mutex_);
+                exception_ = std::current_exception();
             }
         });
     }
 
     std::future<bool> send(core::const_frame frame) override
     {
+        {
+            std::lock_guard<std::mutex> lock(exception_mutex_);
+            if (exception_ != nullptr) {
+                std::rethrow_exception(exception_);
+            }
+        }
+
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
