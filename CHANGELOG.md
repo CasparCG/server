@@ -60,6 +60,7 @@ IMAGE
  
  * Reimplemented, simplified.
  * Cross channel routing will render full stage instead of simply copying channel output.
+ * Reduced overhead and latency.
 
 FFMPEG
 ------
