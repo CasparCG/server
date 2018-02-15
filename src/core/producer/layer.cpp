@@ -127,7 +127,6 @@ struct layer::impl
                 auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
-                    return receive(format_desc, nb_samples);
                 }
             }
 
