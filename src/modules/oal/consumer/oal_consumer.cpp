@@ -177,8 +177,6 @@ struct oal_consumer : public core::frame_consumer
 
     std::future<bool> send(core::const_frame frame) override
     {
-        // Will only block if the default executor queue capacity of 512 is
-        // exhausted, which should not happen
         executor_.begin_invoke([=] {
             auto dst            = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
             dst->format         = AV_SAMPLE_FMT_S16;
