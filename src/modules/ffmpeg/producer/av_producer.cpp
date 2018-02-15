@@ -217,6 +217,15 @@ struct Filter
             std::stable_sort(av_streams.begin(), av_streams.end(), [](auto lhs, auto rhs) {
                 return lhs->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && lhs->codecpar->height > rhs->codecpar->height;
             });
+
+            std::vector<AVStream*> video_av_streams;
+            std::copy_if(av_streams.begin(), av_streams.end(), std::back_inserter(video_av_streams), [](auto s) {
+                return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+            });
+
+            if (video_av_streams.size() == 2 && video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
+                filter_spec = "alphamerge," + filter_spec;
+            }
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
