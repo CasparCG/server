@@ -32,7 +32,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/range/distance.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include <atomic>
 #include <map>
@@ -40,6 +40,8 @@
 #include <vector>
 
 namespace caspar { namespace core {
+
+using namespace boost::container;
 
 struct audio_item
 {
@@ -67,15 +69,15 @@ struct audio_stream
 
 struct audio_mixer::impl : boost::noncopyable
 {
-    monitor::state                      state_;
-    std::stack<core::audio_transform>   transform_stack_;
-    std::map<const void*, audio_stream> audio_streams_;
-    std::vector<audio_item>             items_;
-    std::vector<int>                    audio_cadence_;
-    video_format_desc                   format_desc_;
-    std::atomic<float>                  master_volume_{1.0f};
-    float                               previous_master_volume_ = master_volume_;
-    spl::shared_ptr<diagnostics::graph> graph_;
+    monitor::state                             state_;
+    std::stack<core::audio_transform>          transform_stack_;
+    flat_map<const void*, audio_stream>        audio_streams_;
+    std::vector<audio_item>                    items_;
+    std::vector<int>                           audio_cadence_;
+    video_format_desc                          format_desc_;
+    std::atomic<float>                         master_volume_{1.0f};
+    float                                      previous_master_volume_ = master_volume_;
+    spl::shared_ptr<diagnostics::graph>        graph_;
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph)
@@ -115,12 +117,14 @@ struct audio_mixer::impl : boost::noncopyable
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
             audio_cadence_ = format_desc.audio_cadence;
-            format_desc_   = format_desc;
+            format_desc_ = format_desc;
         }
 
-        std::map<const void*, audio_stream> next_audio_streams;
+        flat_map<const void*, audio_stream> next_audio_streams;
 
-        for (auto& item : items_) {
+        auto items = std::move(items_);
+
+        for (auto& item : items) {
             audio_buffer_ps next_audio;
 
             auto next_transform = item.transform;
@@ -128,17 +132,17 @@ struct audio_mixer::impl : boost::noncopyable
 
             auto tag = item.tag;
 
-            auto it    = next_audio_streams.find(tag);
+            auto it = next_audio_streams.find(tag);
             bool found = it != next_audio_streams.end();
 
             if (!found) {
-                it    = audio_streams_.find(tag);
+                it = audio_streams_.find(tag);
                 found = it != audio_streams_.end();
             }
 
             if (found) {
                 prev_transform = it->second.prev_transform;
-                next_audio     = std::move(it->second.audio_data);
+                next_audio = std::move(it->second.audio_data);
             }
 
             // Skip it if there is no existing audio stream and item has no audio-data.
@@ -159,85 +163,66 @@ struct audio_mixer::impl : boost::noncopyable
             }
 
             next_audio_streams[tag].prev_transform = std::move(next_transform);
-            next_audio_streams[tag].audio_data     = std::move(next_audio);
+            next_audio_streams[tag].audio_data = std::move(next_audio);
         }
 
         previous_master_volume_ = master_volume_;
-        items_.clear();
 
         audio_streams_ = std::move(next_audio_streams);
 
-        if (audio_streams_.empty())
-            audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0);
+        auto result = std::vector<int32_t>(audio_size(audio_cadence_.front()), 0);
 
-        audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
-        for (auto& stream : audio_streams_ | boost::adaptors::map_values) {
-            if (stream.audio_data.size() < result_ps.size()) {
-                auto samples = (result_ps.size() - stream.audio_data.size()) / format_desc_.audio_channels;
-                CASPAR_LOG(trace) << L"[audio_mixer] Appended " << samples << L" zero samples";
-                CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples "
-                                  << stream.audio_data.size() / format_desc_.audio_channels;
-                CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples "
-                                  << result_ps.size() / format_desc_.audio_channels;
-                stream.audio_data.resize(result_ps.size(), 0.0);
+        if (audio_streams_.empty()) {
+            return result;
+        }
+
+        audio_buffer_ps result_ps(result.size(), 0.0);
+        for (auto& p : audio_streams_) {
+            auto& data = p.second.audio_data;
+            auto  size = std::min(data.size(), result_ps.size());
+            for (auto n = 0; n < size; ++n) {
+                result_ps[n] += static_cast<double>(data[n]);
             }
-
-            auto out =
-                boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
-            stream.audio_data.erase(std::begin(stream.audio_data),
-                                    std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
+            data.erase(data.begin(), data.begin() + size);
         }
 
         boost::range::rotate(audio_cadence_, std::begin(audio_cadence_) + 1);
 
-        auto result = std::vector<int32_t>{};
-        result.reserve(result_ps.size());
         const int32_t min_amplitude = std::numeric_limits<int32_t>::min();
         const int32_t max_amplitude = std::numeric_limits<int32_t>::max();
-        bool          clipping      = false;
-        boost::range::transform(result_ps, std::back_inserter(result), [&](double sample) {
+        bool          clipping = false;
+        boost::range::transform(result_ps, result.begin(), [&](double sample) {
             if (sample > max_amplitude) {
                 clipping = true;
                 return max_amplitude;
             } else if (sample < min_amplitude) {
                 clipping = true;
                 return min_amplitude;
-            } else
+            } else {
                 return static_cast<int32_t>(sample);
+            }
         });
 
-        if (clipping)
+        if (clipping) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clipping");
-
-        const int num_channels = format_desc_.audio_channels;
-
-        state_.clear();
-        state_["nb_channels"] = static_cast<int32_t>(num_channels);
-
-        auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
-
-        for (size_t n = 0; n < result.size(); n += num_channels)
-            for (int ch = 0; ch < num_channels; ++ch)
-                max[ch] = std::max(max[ch], std::abs(result[n + ch]));
-
-        // Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
-        // Otherwise it would be -infinity
-        static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());
-
-        for (int i = 0; i < num_channels; ++i) {
-            const auto pFS  = max[i] / static_cast<float>(std::numeric_limits<int32_t>::max());
-            const auto dBFS = 20.0f * std::log10(std::max(MIN_PFS, pFS));
-
-            auto chan_str = boost::lexical_cast<std::string>(i + 1);
-
-            state_[chan_str + "/pFS"]  = pFS;
-            state_[chan_str + "/dBFS"] = dBFS;
         }
+
+        const int channels = format_desc_.audio_channels;
+
+        auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
+
+        for (size_t n = 0; n < result.size(); n += channels) {
+            for (int ch = 0; ch < channels; ++ch) {
+                max[ch] = std::max(max[ch], std::abs(result[n + ch]));
+            }
+        }
+
+        state_["volume"] = std::move(max);
 
         graph_->set_value("volume",
                           static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
 
-        return array<int32_t>(std::move(result));
+        return result;
     }
 
     size_t audio_size(size_t num_samples) const { return num_samples * format_desc_.audio_channels; }
