@@ -455,10 +455,7 @@ struct AVProducer::Impl
     {
         state_["file/name"]  = u8(name_);
         state_["file/path"]  = u8(path_);
-        state_["file/fps"]   = format_desc_.fps;
         state_["file/time"]  = {time(), this->duration().value_or(0) / format_desc_.fps};
-        state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(this->duration().value_or(0))};
-        state_["loop"]       = loop_;
 
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -738,8 +735,7 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"]  = {time() / format_desc_.fps, input_.duration().value_or(0) / format_desc_.fps};
-            state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            state_["file/time"] = {time() / format_desc_.fps, input_.duration().value_or(0) / format_desc_.fps};
         };
 
         {
@@ -760,8 +756,7 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"]  = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-            state_["file/frame"] = {static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0))};
+            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
         };
 
         core::draw_frame result;
@@ -814,8 +809,7 @@ struct AVProducer::Impl
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            loop_          = loop;
-            state_["loop"] = loop;
+            loop_ = loop;
         }
         cond_.notify_all();
     }
