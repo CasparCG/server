@@ -198,34 +198,25 @@ struct Filter
                 }
             }
         }
-        auto force_index = -1;
+
+        std::vector<AVStream*> av_streams;
+        for (auto n = 0U; n < input->nb_streams; ++n) {
+            av_streams.push_back(input->streams[n]);
+        }
 
         if (audio_input_count == 1) {
-            int count = 0;
-            for (unsigned n = 0; n < input->nb_streams; ++n) {
-                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-                    count += 1;
-                }
-            }
+            auto count = std::count_if(av_streams.begin(), av_streams.end(), [](auto s) {
+                return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+            });
             if (count > 1) {
                 filter_spec = (boost::format("amerge=inputs=%d,") % count).str() + filter_spec;
             }
-        } else if (video_input_count == 1) {
-            int count = 0;
-            // find a better resolution if there are more streams available
-            auto best_height = 0;
-            for (unsigned n = 0; n < input->nb_streams; ++n) {
-                if (input->nb_streams > 1 && 
-                    input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && 
-                    input->streams[n]->codecpar->height > best_height) {
-                        best_height = input->streams[n]->codecpar->height;
-                        force_index = n;
-                }
-                count += 1;
-            }
-            //if (count > 1) {
-            //    filter_spec = "alphamerge," + filter_spec;
-            //}
+        } 
+        
+        if (video_input_count == 1) {
+            std::stable_sort(av_streams.begin(), av_streams.end(), [](auto lhs, auto rhs) {
+                return lhs->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && lhs->codecpar->height > rhs->codecpar->height;
+            });
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
@@ -249,15 +240,15 @@ struct Filter
                                                             << msg_info_t("only video and audio filters supported"));
                 }
 
-                unsigned index = force_index > -1 ? force_index : 0;
+                unsigned index = 0;
 
                 // TODO find stream based on link name
-                while (force_index == -1) {
-                    if (index == input->nb_streams) {
+                while (true) {
+                    if (index == av_streams.size()) {
                         graph = nullptr;
                         return;
                     }
-                    if (input->streams[index]->codecpar->codec_type == type &&
+                    if (av_streams.at(index)->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
                         break;
                     }
