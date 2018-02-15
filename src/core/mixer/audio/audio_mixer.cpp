@@ -101,31 +101,29 @@ struct audio_mixer::impl : boost::noncopyable
             return result;
         }
 
+        auto sample_cast = [](int64_t sample) {
+            if (sample > std::numeric_limits<int32_t>::max()) {
+                return std::numeric_limits<int32_t>::max();
+            } else if (sample < std::numeric_limits<int32_t>::min()) {
+                return std::numeric_limits<int32_t>::min();
+            } else {
+                return static_cast<int32_t>(sample);
+            }
+        };
+
         for (auto& item : items) {
             auto ptr  = item.samples.data();
             auto size = std::min(item.samples.size(), result.size());
             for (auto n = 0; n < size; ++n) {
                 auto sample = static_cast<int64_t>(static_cast<double>(ptr[n]) * item.transform.volume) + result[n];
-                if (sample > std::numeric_limits<int32_t>::max()) {
-                    result[n] = std::numeric_limits<int32_t>::max();
-                } else if (sample < std::numeric_limits<int32_t>::min()) {
-                    result[n] = std::numeric_limits<int32_t>::min();
-                } else {
-                    result[n] = static_cast<int32_t>(sample);
-                }
+                result[n] = sample_cast(sample);
             }
         }
 
         auto master_volume = master_volume_.load();
-        for (auto n = 0; n < result.size(); ++n) {
+        for (auto n = 0; n < result.size() && std::abs(master_volume - 1.0) > 0.01; ++n) {
             auto sample = static_cast<int64_t>(static_cast<double>(result[n]) * master_volume);
-            if (sample > std::numeric_limits<int32_t>::max()) {
-                result[n] = std::numeric_limits<int32_t>::max();
-            } else if (sample < std::numeric_limits<int32_t>::min()) {
-                result[n] = std::numeric_limits<int32_t>::min();
-            } else {
-                result[n] = static_cast<int32_t>(sample);
-            }
+            result[n] = sample_cast(sample);
         }
  
         auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
