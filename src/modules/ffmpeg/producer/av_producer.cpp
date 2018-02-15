@@ -223,7 +223,7 @@ struct Filter
                 return s->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
             });
 
-            if (video_av_streams.size() == 2 && video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
+            if (video_av_streams.size() >= 2 && video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
                 filter_spec = "alphamerge," + filter_spec;
             }
         }
