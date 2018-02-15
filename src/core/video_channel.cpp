@@ -94,6 +94,7 @@ struct video_channel::impl final
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_color("mix-time", caspar::diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
+        graph_->set_color("osc-time", caspar::diagnostics::color(0.3f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
         caspar::diagnostics::register_graph(graph_);
 
@@ -153,7 +154,9 @@ struct video_channel::impl final
 
                     state_.insert_or_assign("output", output_.state());
 
+                    caspar::timer osc_timer;
                     tick_(state_);
+                    graph_->set_value("osc-time", osc_timer.elapsed() * format_desc.fps * 0.5);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
