@@ -200,7 +200,10 @@ struct Filter
 
         std::vector<AVStream*> av_streams;
         for (auto n = 0U; n < input->nb_streams; ++n) {
-            av_streams.push_back(input->streams[n]);
+            if (input->streams[n]->codecpar->codec_type != AVMEDIA_TYPE_VIDEO || 
+                !(input->streams[n]->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
+                av_streams.push_back(input->streams[n]);
+            }
         }
 
         if (audio_input_count == 1) {
