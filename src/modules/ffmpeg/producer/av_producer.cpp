@@ -210,6 +210,9 @@ struct Filter
             auto count = std::count_if(av_streams.begin(), av_streams.end(), [](auto s) {
                 return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
             });
+            
+            // TODO (fix) Use some form of stream meta data to do this.
+            // https://github.com/CasparCG/server/issues/833
             if (count > 1) {
                 filter_spec = (boost::format("amerge=inputs=%d,") % count).str() + filter_spec;
             }
@@ -225,6 +228,8 @@ struct Filter
                 return s->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
             });
 
+            // TODO (fix) Use some form of stream meta data to do this.
+            // https://github.com/CasparCG/server/issues/832
             if (video_av_streams.size() >= 2 &&
                 video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
                 filter_spec = "alphamerge," + filter_spec;
