@@ -77,7 +77,7 @@ class video_channel final
 
     int index() const;
 
-    std::shared_ptr<route> route(int index = -1);
+    std::shared_ptr<core::route> route(int index = -1);
 
   private:
     struct impl;
