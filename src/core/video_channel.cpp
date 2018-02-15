@@ -114,7 +114,6 @@ struct video_channel::impl final
                         nb_samples = audio_cadence_.front();
                     }
 
-
                     state_.clear();
 
                     // Produce

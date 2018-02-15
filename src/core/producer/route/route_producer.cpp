@@ -23,6 +23,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/param.h>
 #include <common/scope_exit.h>
+#include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/monitor/monitor.h>
@@ -44,6 +45,9 @@ class route_producer : public frame_producer_base
 
     tbb::concurrent_bounded_queue<core::draw_frame> buffer_;
 
+    caspar::timer produce_timer_;
+    caspar::timer consume_timer_;
+
     std::shared_ptr<route>             route_;
     boost::signals2::scoped_connection connection_;
 
@@ -54,15 +58,16 @@ class route_producer : public frame_producer_base
             if (!buffer_.try_push(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
-            graph_->set_value("output-buffer",
-                              static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
+            graph_->set_value("produce-time", produce_timer_.elapsed() * route_->format_desc.fps * 0.5);
+            produce_timer_.restart();
         }))
     {
         buffer_.set_capacity(buffer > 0 ? buffer : route->format_desc.field_count);
 
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+        graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-        graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
@@ -75,7 +80,8 @@ class route_producer : public frame_producer_base
         if (!buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
         }
-        graph_->set_value("output-buffer", static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
+        graph_->set_value("consume-time", consume_timer_.elapsed() * route_->format_desc.fps * 0.5);
+        consume_timer_.restart();
         return frame;
     }
 
