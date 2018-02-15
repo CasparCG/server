@@ -34,7 +34,6 @@
 #include <common/prec_timer.h>
 #include <common/timer.h>
 
-#include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <functional>
@@ -49,7 +48,6 @@ struct output::impl
     video_format_desc                              format_desc_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
     prec_timer                                     sync_timer_;
-    boost::circular_buffer<const_frame>            frames_;
     executor                                       executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
@@ -98,25 +96,6 @@ struct output::impl
         }
 
         format_desc_ = format_desc;
-        frames_.clear();
-    }
-
-    std::pair<int, int> minmax_buffer_depth() const
-    {
-        if (consumers_.empty()) {
-            return std::make_pair(0, 0);
-        }
-
-        auto minmax = std::make_pair(INT_MAX, 0);
-        for (auto& port : consumers_) {
-            if (port.second->buffer_depth() < 0) {
-                continue;
-            }
-            minmax.first  = std::min<int>(minmax.first, port.second->buffer_depth());
-            minmax.second = std::max<int>(minmax.second, port.second->buffer_depth());
-        }
-
-        return minmax;
     }
 
     std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc)
@@ -131,23 +110,11 @@ struct output::impl
                 change_channel_format(format_desc);
             }
 
-            auto minmax = minmax_buffer_depth();
-
-            frames_.set_capacity(minmax.second - minmax.first + 1);
-            frames_.push_back(input_frame);
-
-            if (!frames_.full()) {
-                return;
-            }
-
             std::map<int, std::future<bool>> futures;
 
             for (auto it = consumers_.begin(); it != consumers_.end();) {
-                auto depth = it->second->buffer_depth();
-                auto frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
-
                 try {
-                    futures.emplace(it->first, it->second->send(frame));
+                    futures.emplace(it->first, it->second->send(input_frame));
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();

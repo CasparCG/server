@@ -110,8 +110,6 @@ struct image_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"image"; }
 
-    int buffer_depth() const override { return -1; }
-
     int index() const override { return 100; }
 
     const core::monitor::state& state() { return state_; }

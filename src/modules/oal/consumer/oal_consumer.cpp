@@ -315,9 +315,7 @@ struct oal_consumer : public core::frame_consumer
     std::wstring name() const override { return L"system-audio"; }
 
     bool has_synchronization_clock() const override { return false; }
-
-    int buffer_depth() const override { return static_cast<int>(buffers_.size()); }
-
+    
     int index() const override { return 500; }
 
     const core::monitor::state& state() const override { return state_; }
