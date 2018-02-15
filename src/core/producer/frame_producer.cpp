@@ -28,8 +28,8 @@
 #include "../frame/frame_transform.h"
 
 #include "color/color_producer.h"
-#include "separated/separated_producer.h"
 #include "route/route_producer.h"
+#include "separated/separated_producer.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -129,10 +129,10 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
     {
       public:
         empty_frame_producer() {}
-        draw_frame        receive() override { return draw_frame{}; }
-        void              paused(bool value) override {}
-        uint32_t          nb_frames() const override { return 0; }
-        std::wstring      print() const override { return L"empty"; }
+        draw_frame                receive() override { return draw_frame{}; }
+        void                      paused(bool value) override {}
+        uint32_t                  nb_frames() const override { return 0; }
+        std::wstring              print() const override { return L"empty"; }
         std::wstring              name() const override { return L"empty"; }
         uint32_t                  frame_number() const override { return 0; }
         std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -229,8 +229,8 @@ class destroy_producer_proxy : public frame_producer
     {
         return producer_->leading_producer(producer);
     }
-    uint32_t          nb_frames() const override { return producer_->nb_frames(); }
-    draw_frame        last_frame() { return producer_->last_frame(); }
+    uint32_t              nb_frames() const override { return producer_->nb_frames(); }
+    draw_frame            last_frame() { return producer_->last_frame(); }
     const monitor::state& state() const { return producer_->state(); }
 };
 

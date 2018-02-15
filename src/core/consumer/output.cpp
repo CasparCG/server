@@ -48,7 +48,7 @@ struct output::impl
     video_format_desc                              format_desc_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
     prec_timer                                     sync_timer_;
-    executor                                       executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
+    executor executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -64,9 +64,7 @@ struct output::impl
 
         consumer->initialize(format_desc_, channel_index_);
 
-        executor_.begin_invoke([=] {
-            consumers_.emplace(index, std::move(consumer));
-        });
+        executor_.begin_invoke([=] { consumers_.emplace(index, std::move(consumer)); });
     }
 
     void add(const spl::shared_ptr<frame_consumer>& consumer) { add(consumer->index(), consumer); }
@@ -139,8 +137,8 @@ struct output::impl
             }
 
             if (!std::any_of(consumers_.begin(), consumers_.end(), [](auto& p) {
-                return p.second->has_synchronization_clock();
-            })) {
+                    return p.second->has_synchronization_clock();
+                })) {
                 sync_timer_.tick(1.0 / format_desc_.fps);
             }
         });
@@ -153,9 +151,7 @@ output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_des
     : impl_(new impl(std::move(graph), format_desc, channel_index))
 {
 }
-output::~output()
-{
-}
+output::~output() {}
 void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
 void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
 void output::remove(int index) { impl_->remove(index); }

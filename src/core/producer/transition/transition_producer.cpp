@@ -38,8 +38,8 @@ namespace caspar { namespace core {
 
 class transition_producer : public frame_producer_base
 {
-    monitor::state                    state_;
-    int                               current_frame_ = 0;
+    monitor::state state_;
+    int            current_frame_ = 0;
 
     core::draw_frame dst_;
     core::draw_frame src_;
@@ -50,8 +50,7 @@ class transition_producer : public frame_producer_base
     spl::shared_ptr<frame_producer> src_producer_ = frame_producer::empty();
 
   public:
-    transition_producer(const spl::shared_ptr<frame_producer>& dest,
-                        const transition_info&                 info)
+    transition_producer(const spl::shared_ptr<frame_producer>& dest, const transition_info& info)
         : info_(info)
         , dst_producer_(dest)
     {
@@ -70,23 +69,22 @@ class transition_producer : public frame_producer_base
     {
         CASPAR_SCOPE_EXIT
         {
-            state_ = dst_producer_->state();
-            state_["transition/frame"] = { current_frame_, info_.duration };
-            state_["transition/type"] = [&]() -> std::string
-            {
+            state_                     = dst_producer_->state();
+            state_["transition/frame"] = {current_frame_, info_.duration};
+            state_["transition/type"]  = [&]() -> std::string {
                 switch (info_.type) {
-                case transition_type::mix:
-                    return "mix";
-                case transition_type::wipe:
-                    return "wipe";
-                case transition_type::slide:
-                    return "slide";
-                case transition_type::push:
-                    return "push";
-                case transition_type::cut:
-                    return "cut";
-                default:
-                    return "n/a";
+                    case transition_type::mix:
+                        return "mix";
+                    case transition_type::wipe:
+                        return "wipe";
+                    case transition_type::slide:
+                        return "slide";
+                    case transition_type::push:
+                        return "push";
+                    case transition_type::cut:
+                        return "cut";
+                    default:
+                        return "n/a";
                 }
             }();
         };
@@ -140,7 +138,7 @@ class transition_producer : public frame_producer_base
             return src_frame;
         }
 
-        const double delta = info_.tweener(current_frame_ , 0.0, 1.0, static_cast<double>(info_.duration));
+        const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration));
 
         const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
 

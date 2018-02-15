@@ -44,7 +44,7 @@ class frame_producer
     frame_producer(const frame_producer&);
     frame_producer& operator=(const frame_producer&);
 
-public:
+  public:
     static const spl::shared_ptr<frame_producer>& empty();
 
     frame_producer() {}
@@ -53,7 +53,7 @@ public:
     virtual draw_frame                receive()                                     = 0;
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) = 0;
 
-    virtual const monitor::state&         state() const
+    virtual const monitor::state& state() const
     {
         static const monitor::state empty;
         return empty;

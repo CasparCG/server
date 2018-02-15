@@ -20,18 +20,18 @@
  */
 #include "route_producer.h"
 
-#include <common/scope_exit.h>
 #include <common/diagnostics/graph.h>
 #include <common/param.h>
+#include <common/scope_exit.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 #include <core/video_channel.h>
 
+#include <boost/range/algorithm/find_if.hpp>
 #include <boost/regex.hpp>
 #include <boost/signals2.hpp>
-#include <boost/range/algorithm/find_if.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -44,7 +44,7 @@ class route_producer : public frame_producer_base
 
     tbb::concurrent_bounded_queue<core::draw_frame> buffer_;
 
-    std::shared_ptr<route> route_;
+    std::shared_ptr<route>             route_;
     boost::signals2::scoped_connection connection_;
 
   public:
@@ -75,15 +75,11 @@ class route_producer : public frame_producer_base
         if (!buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
         }
-        graph_->set_value("output-buffer",
-                          static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
+        graph_->set_value("output-buffer", static_cast<float>(buffer_.size()) / static_cast<float>(buffer_.capacity()));
         return frame;
     }
 
-    std::wstring print() const override
-    {
-        return L"route[" + route_->name + L"]";
-    }
+    std::wstring print() const override { return L"route[" + route_->name + L"]"; }
 
     std::wstring name() const override { return L"route"; }
 
@@ -94,7 +90,7 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
                                                             const std::vector<std::wstring>&         params)
 {
     static boost::wregex expr(L"route://(?<CHANNEL>\\d+)(-(?<LAYER>\\d+))?", boost::regex::icase);
-    boost::wsmatch what;
+    boost::wsmatch       what;
 
     if (params.empty() || !boost::regex_match(params.at(0), what, expr)) {
         return core::frame_producer::empty();
@@ -103,10 +99,12 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
     auto channel = boost::lexical_cast<int>(what["CHANNEL"].str());
     auto layer   = what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : -1;
 
-    auto channel_it = boost::find_if(dependencies.channels, [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel; });
+    auto channel_it = boost::find_if(dependencies.channels,
+                                     [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel; });
 
     if (channel_it == dependencies.channels.end()) {
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel)));
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel)));
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);

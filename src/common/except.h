@@ -35,12 +35,12 @@
 
 namespace caspar {
 
-typedef boost::error_info<struct tag_arg_name_info, std::string>  arg_name_info_t;
-typedef boost::error_info<struct tag_arg_value_info, std::string> arg_value_info_t;
-typedef boost::error_info<struct tag_msg_info, std::string>       msg_info_t;
-typedef boost::error_info<struct tag_error_info, std::string>     error_info_t;
-typedef boost::error_info<struct tag_source_info, std::string>    source_info_t;
-typedef boost::error_info<struct tag_file_name_info, std::string> file_name_info_t;
+typedef boost::error_info<struct tag_arg_name_info, std::string>                     arg_name_info_t;
+typedef boost::error_info<struct tag_arg_value_info, std::string>                    arg_value_info_t;
+typedef boost::error_info<struct tag_msg_info, std::string>                          msg_info_t;
+typedef boost::error_info<struct tag_error_info, std::string>                        error_info_t;
+typedef boost::error_info<struct tag_source_info, std::string>                       source_info_t;
+typedef boost::error_info<struct tag_file_name_info, std::string>                    file_name_info_t;
 typedef boost::error_info<struct tag_stacktrace_info, boost::stacktrace::stacktrace> stacktrace_info_t;
 
 template <typename T>
@@ -74,10 +74,7 @@ inline file_name_info_t file_name_info(const T& str)
     return file_name_info_t(u8(str));
 }
 
-inline stacktrace_info_t stacktrace_info()
-{
-    return stacktrace_info_t(boost::stacktrace::stacktrace());
-}
+inline stacktrace_info_t stacktrace_info() { return stacktrace_info_t(boost::stacktrace::stacktrace()); }
 
 typedef boost::error_info<struct tag_line_info, size_t>                     line_info;
 typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nested_exception;
@@ -149,6 +146,7 @@ struct not_supported : virtual user_error
 #define CASPAR_THROW_EXCEPTION(x)                                                                                      \
     ::boost::throw_exception(::boost::enable_error_info(x)                                                             \
                              << ::boost::throw_function(BOOST_THROW_EXCEPTION_CURRENT_FUNCTION)                        \
-                             << ::boost::throw_file(__FILE__) << ::boost::throw_line((int)__LINE__) << stacktrace_info())
+                             << ::boost::throw_file(__FILE__) << ::boost::throw_line((int)__LINE__)                    \
+                             << stacktrace_info())
 
 } // namespace caspar

@@ -188,5 +188,8 @@ std::size_t                      const_frame::height() const { return impl_->hei
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const void*                      const_frame::stream_tag() const { return impl_->tag_; }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
-const_frame::                    operator bool() const { return impl_ && impl_->tag_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
+const_frame::                    operator bool() const
+{
+    return impl_ && impl_->tag_ != nullptr && impl_->desc_.format != core::pixel_format::invalid;
+}
 }} // namespace caspar::core

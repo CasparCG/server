@@ -132,9 +132,9 @@ void set_keyer(const com_iface_ptr<IDeckLinkAttributes>& attributes,
 class decklink_frame : public IDeckLinkVideoFrame
 {
     core::video_format_desc format_desc_;
-    std::shared_ptr<void> data_;
-    std::atomic<int> ref_count_{ 0 };
-    int nb_samples_;
+    std::shared_ptr<void>   data_;
+    std::atomic<int>        ref_count_{0};
+    int                     nb_samples_;
 
   public:
     decklink_frame(std::shared_ptr<void> data, const core::video_format_desc& format_desc, int nb_samples)
@@ -181,10 +181,7 @@ class decklink_frame : public IDeckLinkVideoFrame
     }
     virtual HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) { return S_FALSE; }
 
-    int nb_samples() const
-    {
-        return nb_samples_;
-    }
+    int nb_samples() const { return nb_samples_; }
 };
 
 struct key_video_context : public IDeckLinkVideoOutputCallback
@@ -268,7 +265,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::mutex                    buffer_mutex_;
     std::condition_variable       buffer_cond_;
     std::queue<core::const_frame> buffer_;
-	int                           buffer_reqs_ = 0;
+    int                           buffer_reqs_ = 0;
     const int                     buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
     long long video_scheduled_ = 0;
@@ -282,10 +279,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::atomic<int64_t>                scheduled_frames_completed_{0};
     std::unique_ptr<key_video_context>  key_context_;
 
-    com_ptr<IDeckLinkDisplayMode>       mode_        = get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
-    int                                 field_count_ = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
+    com_ptr<IDeckLinkDisplayMode> mode_ =
+        get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
+    int field_count_ = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
 
-    std::atomic<bool> abort_request_{ false };
+    std::atomic<bool> abort_request_{false};
 
   public:
     decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
@@ -335,7 +333,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         if (config.embedded_audio) {
-            auto nb_samples = format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * field_count_;
+            auto nb_samples =
+                format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * field_count_;
             // Preroll one extra frame worth of audio
             schedule_next_audio(std::vector<int32_t>(nb_samples * format_desc_.audio_channels, 0), nb_samples);
             output_->EndAudioPreroll();
@@ -361,9 +360,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     void enable_audio()
     {
         if (FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz,
-            bmdAudioSampleType32bitInteger,
-            format_desc_.audio_channels,
-            bmdAudioOutputStreamTimestamped))) {
+                                              bmdAudioSampleType32bitInteger,
+                                              format_desc_.audio_channels,
+                                              bmdAudioOutputStreamTimestamped))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable audio output."));
         }
 
@@ -378,8 +377,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         if (FAILED(output_->SetScheduledFrameCompletionCallback(this))) {
             CASPAR_THROW_EXCEPTION(caspar_exception()
-                << msg_info(print() + L" Failed to set fill playback completion callback.")
-                << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
+                                   << msg_info(print() + L" Failed to set fill playback completion callback.")
+                                   << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
         }
 
         if (key_context_) {
@@ -425,7 +424,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 graph_->set_value(
                     "key-offset",
                     static_cast<double>(scheduled_frames_completed_ - key_context_->scheduled_frames_completed_) * 0.1 +
-                    0.5);
+                        0.5);
             }
 
             if (result == bmdOutputFrameDisplayedLate) {
@@ -446,8 +445,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 if (config_.embedded_audio) {
                     output_->GetBufferedAudioSampleFrameCount(&buffered);
                     graph_->set_value("buffered-audio",
-                        static_cast<double>(buffered) /
-                        (format_desc_.audio_cadence[0] * field_count_ * config_.buffer_depth()));
+                                      static_cast<double>(buffered) /
+                                          (format_desc_.audio_cadence[0] * field_count_ * config_.buffer_depth()));
                 }
             }
 
@@ -455,21 +454,21 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::vector<std::int32_t> audio_data;
 
             std::vector<core::const_frame> frames;
-			{
-				std::unique_lock<std::mutex> lock(buffer_mutex_);
-				buffer_reqs_ = field_count_;
-				buffer_cond_.notify_all();
-				buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
-				if (abort_request_) {
-					return E_FAIL;
-				}
-				for (auto n = 0; n < field_count_; ++n) {
-					frames.push_back(std::move(buffer_.front()));
-					buffer_.pop();
-				}
-				buffer_reqs_ = 0;
-				buffer_cond_.notify_all();
-			}
+            {
+                std::unique_lock<std::mutex> lock(buffer_mutex_);
+                buffer_reqs_ = field_count_;
+                buffer_cond_.notify_all();
+                buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
+                if (abort_request_) {
+                    return E_FAIL;
+                }
+                for (auto n = 0; n < field_count_; ++n) {
+                    frames.push_back(std::move(buffer_.front()));
+                    buffer_.pop();
+                }
+                buffer_reqs_ = 0;
+                buffer_cond_.notify_all();
+            }
 
             if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
                 if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
@@ -477,14 +476,18 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 }
 
                 for (auto y = 0; y < format_desc_.height; ++y) {
-                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4, frames[y % 2].image_data(0).data() + y * format_desc_.width * 4, format_desc_.width * 4);
+                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4,
+                                frames[y % 2].image_data(0).data() + y * format_desc_.width * 4,
+                                format_desc_.width * 4);
                 }
 
                 audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
                 audio_data.insert(audio_data.end(), frames[1].audio_data().begin(), frames[1].audio_data().end());
             } else {
                 for (auto y = 0; y < format_desc_.height; ++y) {
-                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4, frames[0].image_data(0).data() + y * format_desc_.width * 4, format_desc_.width * 4);
+                    std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4,
+                                frames[0].image_data(0).data() + y * format_desc_.width * 4,
+                                format_desc_.width * 4);
                 }
 
                 audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
@@ -530,13 +533,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         if (key_context_ || config_.key_only) {
             key = std::shared_ptr<void>(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
 
-            aligned_memshfl(key.get(),
-                            fill.get(),
-                            format_desc_.size,
-                            0x0F0F0F0F,
-                            0x0B0B0B0B,
-                            0x07070707,
-                            0x03030303);
+            aligned_memshfl(key.get(), fill.get(), format_desc_.size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 
             if (config_.key_only) {
                 fill = key;
@@ -545,13 +542,19 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         if (key_context_) {
             auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(key, format_desc_, nb_samples));
-            if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration * field_count_, format_desc_.time_scale))) {
+            if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame),
+                                                                 video_scheduled_,
+                                                                 format_desc_.duration * field_count_,
+                                                                 format_desc_.time_scale))) {
                 CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
             }
         }
 
         auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(fill, format_desc_, nb_samples));
-        if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame), video_scheduled_, format_desc_.duration * field_count_, format_desc_.time_scale))) {
+        if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame),
+                                               video_scheduled_,
+                                               format_desc_.duration * field_count_,
+                                               format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule fill video.";
         }
 
@@ -585,11 +588,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     {
         if (config_.keyer == configuration::keyer_t::external_separate_device_keyer) {
             return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-                boost::lexical_cast<std::wstring>(config_.device_index) + L"&&" +
-                boost::lexical_cast<std::wstring>(config_.key_device_index()) + L"|" + format_desc_.name + L"]";
+                   boost::lexical_cast<std::wstring>(config_.device_index) + L"&&" +
+                   boost::lexical_cast<std::wstring>(config_.key_device_index()) + L"|" + format_desc_.name + L"]";
         } else {
             return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-                boost::lexical_cast<std::wstring>(config_.device_index) + L"|" + format_desc_.name + L"]";
+                   boost::lexical_cast<std::wstring>(config_.device_index) + L"|" + format_desc_.name + L"]";
         }
     }
 };
@@ -607,9 +610,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
         : config_(config)
         , executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
     {
-        executor_.begin_invoke([=] {
-            com_initialize();
-        });
+        executor_.begin_invoke([=] { com_initialize(); });
     }
 
     ~decklink_consumer_proxy()
@@ -631,10 +632,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
     std::future<bool> send(core::const_frame frame) override
     {
-        return executor_.begin_invoke([=]
-        {
-            return consumer_->send(frame);
-        });
+        return executor_.begin_invoke([=] { return consumer_->send(frame); });
     }
 
     std::wstring print() const override { return consumer_ ? consumer_->print() : L"[decklink_consumer]"; }
@@ -648,7 +646,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
     const core::monitor::state& state() { return state_; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK")) {
@@ -681,7 +679,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
+create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;

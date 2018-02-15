@@ -209,7 +209,8 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode f
 }
 
 template <typename T, typename F>
-static com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
+static com_ptr<IDeckLinkDisplayMode>
+get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
 {
     return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }

@@ -9,9 +9,9 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
+#include <libavfilter/avfilter.h>
 #include <libavutil/frame.h>
 #include <libavutil/pixfmt.h>
-#include <libavfilter/avfilter.h>
 }
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -170,69 +170,68 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                      boost::rational<int>(format_desc.width, format_desc.height);
 
-av_frame->sample_aspect_ratio = { sar.numerator(), sar.denominator() };
-av_frame->width = format_desc.width;
-av_frame->height = format_desc.height;
+    av_frame->sample_aspect_ratio = {sar.numerator(), sar.denominator()};
+    av_frame->width               = format_desc.width;
+    av_frame->height              = format_desc.height;
 
-switch (format) {
-    case core::pixel_format::rgb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
-        break;
-    case core::pixel_format::bgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
-        break;
-    case core::pixel_format::rgba:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
-        break;
-    case core::pixel_format::argb:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
-        break;
-    case core::pixel_format::bgra:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
-        break;
-    case core::pixel_format::abgr:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
-        break;
-    case core::pixel_format::gray:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
-        break;
-    case core::pixel_format::ycbcr:
-    {
-        int y_w = planes[0].width;
-        int y_h = planes[0].height;
-        int c_w = planes[1].width;
-        int c_h = planes[1].height;
+    switch (format) {
+        case core::pixel_format::rgb:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
+            break;
+        case core::pixel_format::bgr:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
+            break;
+        case core::pixel_format::rgba:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
+            break;
+        case core::pixel_format::argb:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
+            break;
+        case core::pixel_format::bgra:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
+            break;
+        case core::pixel_format::abgr:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
+            break;
+        case core::pixel_format::gray:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
+            break;
+        case core::pixel_format::ycbcr: {
+            int y_w = planes[0].width;
+            int y_h = planes[0].height;
+            int c_w = planes[1].width;
+            int c_h = planes[1].height;
 
-        if (c_h == y_h && c_w == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
-        else if (c_h == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
-        else if (c_h == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
-        else if (c_h * 2 == y_h && c_w * 2 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
-        else if (c_h * 2 == y_h && c_w * 4 == y_w)
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
+            if (c_h == y_h && c_w == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
+            else if (c_h == y_h && c_w * 2 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
+            else if (c_h == y_h && c_w * 4 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
+            else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+            else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
 
-        break;
+            break;
+        }
+        case core::pixel_format::ycbcra:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
+            break;
     }
-    case core::pixel_format::ycbcra:
-        av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
-        break;
-}
 
-FF(av_frame_get_buffer(av_frame.get(), 32));
+    FF(av_frame_get_buffer(av_frame.get(), 32));
 
-// TODO (perf) Avoid extra memcpy.
-for (int n = 0; n < planes.size(); ++n) {
-    for (int y = 0; y < av_frame->height; ++y) {
-        std::memcpy(av_frame->data[n] + y * av_frame->linesize[n],
-                    frame.image_data(n).data() + y * planes[n].linesize,
-                    planes[n].linesize);
+    // TODO (perf) Avoid extra memcpy.
+    for (int n = 0; n < planes.size(); ++n) {
+        for (int y = 0; y < av_frame->height; ++y) {
+            std::memcpy(av_frame->data[n] + y * av_frame->linesize[n],
+                        frame.image_data(n).data() + y * planes[n].linesize,
+                        planes[n].linesize);
+        }
     }
-}
 
-return av_frame;
+    return av_frame;
 }
 
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_desc)
@@ -242,18 +241,18 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     const auto& buffer = frame.audio_data();
 
     // TODO (fix) Use sample_format_desc.
-    av_frame->channels = format_desc.audio_channels;
+    av_frame->channels       = format_desc.audio_channels;
     av_frame->channel_layout = av_get_default_channel_layout(av_frame->channels);
-    av_frame->sample_rate = format_desc.audio_sample_rate;
-    av_frame->format = AV_SAMPLE_FMT_S32;
-    av_frame->nb_samples = static_cast<int>(buffer.size() / av_frame->channels);
+    av_frame->sample_rate    = format_desc.audio_sample_rate;
+    av_frame->format         = AV_SAMPLE_FMT_S32;
+    av_frame->nb_samples     = static_cast<int>(buffer.size() / av_frame->channels);
     FF(av_frame_get_buffer(av_frame.get(), 32));
     std::memcpy(av_frame->data[0], buffer.data(), buffer.size() * sizeof(buffer.data()[0]));
 
     return av_frame;
 }
 
-int graph_execute(struct AVFilterContext* ctx, avfilter_action_func* func, void *arg, int *ret, int count)
+int graph_execute(struct AVFilterContext* ctx, avfilter_action_func* func, void* arg, int* ret, int count)
 {
     if (count == 0) {
         return 0;
@@ -269,7 +268,12 @@ int graph_execute(struct AVFilterContext* ctx, avfilter_action_func* func, void 
     return 0;
 }
 
-int codec_execute(AVCodecContext *c, int(*func)(AVCodecContext *c2, void *arg), void *arg2, int *ret, int count, int size)
+int codec_execute(AVCodecContext* c,
+                  int (*func)(AVCodecContext* c2, void* arg),
+                  void* arg2,
+                  int*  ret,
+                  int   count,
+                  int   size)
 {
     tbb::parallel_for(0, count, 1, [&](int i) {
         int r = func(c, (char*)arg2 + i * size);
@@ -281,10 +285,14 @@ int codec_execute(AVCodecContext *c, int(*func)(AVCodecContext *c2, void *arg), 
     return 0;
 }
 
-int codec_execute2(AVCodecContext *c, int(*func)(AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int count)
+int codec_execute2(AVCodecContext* c,
+                   int (*func)(AVCodecContext* c2, void* arg, int jobnr, int threadnr),
+                   void* arg2,
+                   int*  ret,
+                   int   count)
 {
     std::array<std::vector<int>, 128> jobs;
-    
+
     for (int jobnr = 0; jobnr < count; ++jobnr) {
         jobs[(jobnr * c->thread_count) / count].push_back(jobnr);
     }

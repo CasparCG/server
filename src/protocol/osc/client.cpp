@@ -125,7 +125,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
             return;
         }
 
-        ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()), static_cast<unsigned long>(buffer_.size()));
+        ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()),
+                                      static_cast<unsigned long>(buffer_.size()));
 
         o << ::osc::BeginBundle();
 
@@ -172,9 +173,6 @@ std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp:
     return impl_->get_subscription_token(endpoint);
 }
 
-void client::send(const core::monitor::state& state)
-{
-    impl_->send(state);
-}
+void client::send(const core::monitor::state& state) { impl_->send(state); }
 
 }}} // namespace caspar::protocol::osc

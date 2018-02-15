@@ -80,7 +80,7 @@ draw_frame::draw_frame()
 draw_frame::draw_frame(const draw_frame& other)
     : impl_(new impl())
 {
-    impl_->frame_ = other.impl_->frame_;
+    impl_->frame_     = other.impl_->frame_;
     impl_->transform_ = other.impl_->transform_;
 }
 
@@ -149,7 +149,7 @@ draw_frame draw_frame::push(draw_frame frame, const frame_transform& transform)
 {
     std::vector<draw_frame> frames;
     frames.push_back(std::move(frame));
-    auto result = draw_frame(std::move(frames));
+    auto result        = draw_frame(std::move(frames));
     result.transform() = std::move(transform);
     return result;
 }
