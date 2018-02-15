@@ -604,7 +604,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
         CASPAR_LOG(debug) << print_() << L" [activity]     " << str;
 
         // this is how templatehost 1.7 reports that a command has been received
-        if (str.find(L"Command recieved") != std::wstring::npos)
+        if (str.find(L"Command recieved") != std::wstring::npos || str.find(L"Command received") != std::wstring::npos)
             bCallSuccessful_ = true;
 
         /*if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
