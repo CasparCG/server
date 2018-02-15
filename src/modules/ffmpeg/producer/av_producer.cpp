@@ -461,7 +461,7 @@ struct AVProducer::Impl
             input_.seek(start_);
             reset(start_);
         } else {
-            reset(0);
+            reset(input_.start_time().value_or(0));
         }
 
         thread_ = std::thread([=] {
