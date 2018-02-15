@@ -220,7 +220,7 @@ struct Filter
 
             std::vector<AVStream*> video_av_streams;
             std::copy_if(av_streams.begin(), av_streams.end(), std::back_inserter(video_av_streams), [](auto s) {
-                return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+                return s->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
             });
 
             if (video_av_streams.size() == 2 && video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
