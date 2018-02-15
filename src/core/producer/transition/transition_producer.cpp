@@ -65,7 +65,7 @@ class transition_producer : public frame_producer_base
         return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
 
-    draw_frame receive_impl() override
+    draw_frame receive_impl(int nb_samples) override
     {
         CASPAR_SCOPE_EXIT
         {
@@ -91,13 +91,13 @@ class transition_producer : public frame_producer_base
 
         tbb::parallel_invoke(
             [&] {
-                dst_ = dst_producer_->receive();
+                dst_ = dst_producer_->receive(nb_samples);
                 if (!dst_) {
                     dst_ = dst_producer_->last_frame();
                 }
             },
             [&] {
-                src_ = src_producer_->receive();
+                src_ = src_producer_->receive(nb_samples);
                 if (!src_) {
                     src_ = src_producer_->last_frame();
                 }

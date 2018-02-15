@@ -63,7 +63,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
     }
 
-    std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
+    std::map<int, draw_frame> operator()(const video_format_desc& format_desc, int nb_samples)
     {
         return executor_.invoke([=] {
             std::map<int, draw_frame> frames;
@@ -73,7 +73,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     auto& layer     = p.second;
                     auto& tween     = tweens_[p.first];
-                    frames[p.first] = draw_frame::push(layer.receive(format_desc), tween.fetch_and_tick(1));
+                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch_and_tick(1));
                 }
 
                 state_.clear();
@@ -299,6 +299,6 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc) { return (*impl_)(format_desc); }
+std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc, int nb_samples) { return (*impl_)(format_desc, nb_samples); }
 const monitor::state&            stage::state() const { return impl_->state_; }
 }} // namespace caspar::core

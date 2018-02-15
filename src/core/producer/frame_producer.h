@@ -50,7 +50,7 @@ class frame_producer
     frame_producer() {}
     virtual ~frame_producer() {}
 
-    virtual draw_frame                receive()                                     = 0;
+    virtual draw_frame                receive(int nb_samples)                       = 0;
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params) = 0;
 
     virtual const monitor::state& state() const
@@ -82,8 +82,8 @@ class frame_producer_base : public frame_producer
     virtual draw_frame last_frame() override;
 
   private:
-    virtual draw_frame receive() override;
-    virtual draw_frame receive_impl() = 0;
+    virtual draw_frame receive(int nb_samples) override;
+    virtual draw_frame receive_impl(int nb_samples) = 0;
 
     struct impl;
     friend struct impl;

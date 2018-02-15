@@ -70,6 +70,8 @@ struct video_channel::impl final
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
+    std::vector<int>             audio_cadence_ = format_desc_.audio_cadence;
+
     std::function<void(const monitor::state&)> tick_;
 
     std::map<int, std::weak_ptr<core::route>> routes_;
@@ -103,13 +105,21 @@ struct video_channel::impl final
         thread_ = std::thread([=] {
             while (!abort_request_) {
                 try {
-                    auto format_desc = video_format_desc();
+                    core::video_format_desc format_desc;
+                    int nb_samples;
+                    {
+                        std::lock_guard<std::mutex> lock(format_desc_mutex_);
+                        format_desc = format_desc_;
+                        boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+                        nb_samples = audio_cadence_.front();
+                    }
+
 
                     state_.clear();
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto          stage_frames = stage_(format_desc);
+                    auto          stage_frames = stage_(format_desc, nb_samples);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
                     state_.insert_or_assign("stage", stage_.state());
@@ -142,7 +152,7 @@ struct video_channel::impl final
 
                     // Mix
                     caspar::timer mix_timer;
-                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
+                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc, format_desc.audio_cadence[0]);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     state_.insert_or_assign("mixer", mixer_.state());
@@ -199,6 +209,7 @@ struct video_channel::impl final
     {
         std::lock_guard<std::mutex> lock(format_desc_mutex_);
         format_desc_ = format_desc;
+        audio_cadence_ = format_desc_.audio_cadence;
         stage_.clear();
     }
 

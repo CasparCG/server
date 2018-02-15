@@ -69,7 +69,7 @@ class route_producer : public frame_producer_base
         CASPAR_LOG(debug) << print() << L" Initialized";
     }
 
-    draw_frame receive_impl() override
+    draw_frame receive_impl(int nb_samples) override
     {
         core::draw_frame frame;
         if (!buffer_.try_pop(frame)) {

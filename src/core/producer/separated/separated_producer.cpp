@@ -54,7 +54,7 @@ class separated_producer : public frame_producer_base
 
     // frame_producer
 
-    draw_frame receive_impl() override
+    draw_frame receive_impl(int nb_samples) override
     {
         CASPAR_SCOPE_EXIT
         {
@@ -66,12 +66,12 @@ class separated_producer : public frame_producer_base
         tbb::parallel_invoke(
             [&] {
                 if (!fill_) {
-                    fill_ = fill_producer_->receive();
+                    fill_ = fill_producer_->receive(nb_samples);
                 }
             },
             [&] {
                 if (!key_) {
-                    key_ = key_producer_->receive();
+                    key_ = key_producer_->receive(nb_samples);
                 }
             });
 
