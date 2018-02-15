@@ -163,7 +163,7 @@ draw_frame draw_frame::pop(draw_frame frame)
 
 draw_frame draw_frame::still(draw_frame frame)
 {
-    frame.transform().audio_transform.is_still = true;
+    frame.transform().audio_transform.volume = 0.0;
     return frame;
 }
 

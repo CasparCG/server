@@ -63,7 +63,6 @@ struct audio_stream
 {
     audio_transform prev_transform;
     audio_buffer_ps audio_data;
-    bool            is_still = false;
 };
 
 struct audio_mixer::impl : boost::noncopyable
@@ -101,10 +100,6 @@ struct audio_mixer::impl : boost::noncopyable
         item.tag        = frame.stream_tag();
         item.transform  = transform_stack_.top();
         item.audio_data = frame.audio_data();
-
-        if (item.transform.is_still) {
-            item.transform.volume = 0.0;
-        }
 
         items_.push_back(std::move(item));
     }
@@ -163,10 +158,8 @@ struct audio_mixer::impl : boost::noncopyable
                 next_audio.push_back(item.audio_data.data()[n] * sample_multiplier);
             }
 
-            next_audio_streams[tag].prev_transform =
-                std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-            next_audio_streams[tag].audio_data = std::move(next_audio);
-            next_audio_streams[tag].is_still   = item.transform.is_still;
+            next_audio_streams[tag].prev_transform = std::move(next_transform);
+            next_audio_streams[tag].audio_data     = std::move(next_audio);
         }
 
         previous_master_volume_ = master_volume_;
