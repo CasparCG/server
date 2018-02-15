@@ -264,6 +264,8 @@ struct Filter
                     index++;
                 }
 
+                index = av_streams.at(index)->index;
+
                 auto it = streams.find(index);
                 if (it == streams.end()) {
                     it = streams.emplace(index, input->streams[index]).first;
