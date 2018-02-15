@@ -125,8 +125,6 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"newtek-ivga"; }
 
-    int buffer_depth() const override { return -1; }
-
     int index() const override { return 900; }
 
     bool has_synchronization_clock() const override { return false; }

@@ -452,9 +452,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     std::wstring name() const override { return L"screen"; }
 
     bool has_synchronization_clock() const override { return false; }
-
-    int buffer_depth() const override { return 1; }
-
+   
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 
     const core::monitor::state& state() const { return state_; }

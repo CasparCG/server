@@ -628,8 +628,6 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     bool has_synchronization_clock() const override { return false; }
 
-    int buffer_depth() const override { return -1; }
-
     int index() const override { return 100000 + channel_index_; }
 
     const core::monitor::state& state() const { return state_; }
