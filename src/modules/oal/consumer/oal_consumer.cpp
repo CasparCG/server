@@ -268,10 +268,11 @@ struct oal_consumer : public core::frame_consumer
                 alSourcePlay(source_);
             }
 
-            if (delta > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
+            // TODO (fix)
+            //if (swr_set_compensation(swr_.get(), delta, 2000) < 0) {
+            //    // TODO FF error
+            //    CASPAR_THROW_EXCEPTION(invalid_argument());
+            //}
 
             for (auto n = 0; n < processed; ++n) {
                 if (swr_get_delay(swr_.get(), 48000) < dst->nb_samples) {
