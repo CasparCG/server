@@ -281,7 +281,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
-    int field_count_ = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
+    int field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame ? 2 : 1;
 
     std::atomic<bool> abort_request_{false};
 
@@ -470,8 +470,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 buffer_cond_.notify_all();
             }
 
-            if (mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame) {
-                if (mode_->GetFieldDominance() != BMDFieldDominance::bmdUpperFieldFirst) {
+            if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
+                if (mode_->GetFieldDominance() != bmdUpperFieldFirst) {
                     std::swap(frames[0], frames[1]);
                 }
 

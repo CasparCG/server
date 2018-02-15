@@ -280,7 +280,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(input_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
-    int field_count_ = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame ? 2 : 1;
+    int field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame ? 2 : 1;
 
     Filter video_filter_;
     Filter audio_filter_;
@@ -384,8 +384,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 src->format = AV_PIX_FMT_UYVY422;
                 src->width  = video->GetWidth();
                 src->height = video->GetHeight();
-                src->interlaced_frame = mode_->GetFieldDominance() != BMDFieldDominance::bmdProgressiveFrame;
-                src->top_field_first  = mode_->GetFieldDominance() == BMDFieldDominance::bmdUpperFieldFirst ? 1 : 0;
+                src->interlaced_frame = mode_->GetFieldDominance() != bmdProgressiveFrame;
+                src->top_field_first  = mode_->GetFieldDominance() == bmdUpperFieldFirst ? 1 : 0;
                 src->key_frame        = 1;
 
                 void* video_bytes = nullptr;
