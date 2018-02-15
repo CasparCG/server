@@ -121,11 +121,9 @@ struct audio_mixer::impl : boost::noncopyable
         }
 
         auto master_volume = master_volume_.load();
-        if (std::abs(master_volume - 1.0) > 0.01) {
-            for (auto n = 0; n < result.size(); ++n) {
-                auto sample = static_cast<int64_t>(static_cast<double>(result[n]) * master_volume);
-                result[n] = sample_cast(sample);
-            }
+        for (auto n = 0; n < result.size(); ++n) {
+            auto sample = static_cast<int64_t>(static_cast<double>(result[n]) * master_volume);
+            result[n] = sample_cast(sample);
         }
  
         auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
