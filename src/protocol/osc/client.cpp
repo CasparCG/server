@@ -74,10 +74,12 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     impl(std::shared_ptr<boost::asio::io_service> service)
         : service_(std::move(service))
         , socket_(*service_, udp::v4())
+        // TODO (fix) Split into smaller packets.
         , buffer_(1000000)
     {
     }
 
+    // TODO (refactor) This is wierd...
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(endpoints_mutex_);
@@ -98,37 +100,47 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
             int reference_count_after = --self.reference_counts_by_endpoint_[endpoint];
 
-            if (reference_count_after == 0)
+            if (reference_count_after == 0) {
                 self.reference_counts_by_endpoint_.erase(endpoint);
+            }
         });
     }
 
     void send(const core::monitor::state& state)
     {
+        auto bundle = state.get();
+        if (bundle.empty()) {
+            return;
+        }
+
+        std::vector<udp::endpoint> endpoints;
+        {
+            std::lock_guard<std::mutex> lock(endpoints_mutex_);
+            for (auto& p : reference_counts_by_endpoint_) {
+                endpoints.push_back(p.first);
+            }
+        }
+
+        if (endpoints.empty()) {
+            return;
+        }
+
         ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()), static_cast<unsigned long>(buffer_.size()));
 
         o << ::osc::BeginBundle();
 
-        for (auto& p : state.get()) {
+        for (auto& p : bundle) {
             o << ::osc::BeginMessage(p.first.c_str());
 
             param_visitor<decltype(o)> param_visitor(o);
-            for (const auto& data : p.second) {
-                boost::apply_visitor(param_visitor, data);
+            for (const auto& element : p.second) {
+                boost::apply_visitor(param_visitor, element);
             }
 
             o << ::osc::EndMessage;
         }
 
         o << ::osc::EndBundle;
-
-        std::vector<udp::endpoint> endpoints;
-        {
-            std::lock_guard<std::mutex> lock(endpoints_mutex_);
-
-            for (const auto& endpoint : reference_counts_by_endpoint_)
-                endpoints.push_back(endpoint.first);
-        }
 
         boost::system::error_code ec;
         for (const auto& endpoint : endpoints) {

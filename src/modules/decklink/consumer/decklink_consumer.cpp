@@ -641,8 +641,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
     std::wstring name() const override { return L"decklink"; }
 
-    int buffer_depth() const override { return config_.buffer_depth() + 2; }
-
     int index() const override { return 300 + config_.device_index; }
 
     bool has_synchronization_clock() const override { return true; }

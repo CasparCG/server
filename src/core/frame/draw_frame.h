@@ -32,11 +32,13 @@ class draw_frame final
     static draw_frame mask(draw_frame fill, draw_frame key);
     static draw_frame still(draw_frame frame);
     static draw_frame push(draw_frame frame);
+    static draw_frame push(draw_frame frame, const struct frame_transform& transform);
+    static draw_frame pop(draw_frame frame);
 
     draw_frame();
     draw_frame(const draw_frame& other);
     draw_frame(draw_frame&& other);
-    draw_frame(class const_frame&& frame);
+    draw_frame(class const_frame frame);
     draw_frame(class mutable_frame&& frame);
     draw_frame(std::vector<draw_frame> frames);
 

@@ -41,8 +41,8 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4458)
-#include <cef_app.h>
-#include <cef_version.h>
+#include <include/cef_app.h>
+#include <include/cef_version.h>
 #pragma warning(pop)
 
 #pragma comment(lib, "libcef.lib")

@@ -164,8 +164,9 @@ class image_renderer
         draw_params.aspect_ratio =
             static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height);
 
-        for (auto& future_texture : item.textures)
+        for (auto& future_texture : item.textures) {
             draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
+        }
 
         if (item.transform.is_key) {
             local_key_texture = local_key_texture

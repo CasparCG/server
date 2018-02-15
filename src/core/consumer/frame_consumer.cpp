@@ -122,11 +122,8 @@ class destroy_consumer_proxy : public frame_consumer
     }
     std::wstring          print() const override { return consumer_->print(); }
     std::wstring          name() const override { return consumer_->name(); }
-    bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   buffer_depth() const override { return consumer_->buffer_depth(); }
     int                   index() const override { return consumer_->index(); }
     const monitor::state& state() const override { return consumer_->state(); }
-    const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
 class print_consumer_proxy : public frame_consumer
@@ -156,10 +153,8 @@ class print_consumer_proxy : public frame_consumer
     std::wstring          print() const override { return consumer_->print(); }
     std::wstring          name() const override { return consumer_->name(); }
     bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   buffer_depth() const override { return consumer_->buffer_depth(); }
     int                   index() const override { return consumer_->index(); }
     const monitor::state& state() const override { return consumer_->state(); }
-    const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
 class recover_consumer_proxy : public frame_consumer
@@ -201,10 +196,8 @@ class recover_consumer_proxy : public frame_consumer
     std::wstring          print() const override { return consumer_->print(); }
     std::wstring          name() const override { return consumer_->name(); }
     bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   buffer_depth() const override { return consumer_->buffer_depth(); }
     int                   index() const override { return consumer_->index(); }
     const monitor::state& state() const override { return consumer_->state(); }
-    const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
 // This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
@@ -252,10 +245,8 @@ class cadence_guard : public frame_consumer
     std::wstring          print() const override { return consumer_->print(); }
     std::wstring          name() const override { return consumer_->name(); }
     bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   buffer_depth() const override { return consumer_->buffer_depth(); }
     int                   index() const override { return consumer_->index(); }
     const monitor::state& state() const override { return consumer_->state(); }
-    const frame_consumer* unwrapped() const override { return consumer_->unwrapped(); }
 };
 
 spl::shared_ptr<core::frame_consumer>
@@ -310,7 +301,6 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
         std::wstring      print() const override { return L"empty"; }
         std::wstring      name() const override { return L"empty"; }
         bool              has_synchronization_clock() const override { return false; }
-        int               buffer_depth() const override { return 0; };
         int               index() const override { return -1; }
     };
     static spl::shared_ptr<frame_consumer> consumer = spl::make_shared<empty_frame_consumer>();

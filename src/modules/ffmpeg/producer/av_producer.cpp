@@ -199,26 +199,33 @@ struct Filter
             }
         }
 
+        std::vector<AVStream*> av_streams;
+        for (auto n = 0U; n < input->nb_streams; ++n) {
+            av_streams.push_back(input->streams[n]);
+        }
+
         if (audio_input_count == 1) {
-            int count = 0;
-            for (unsigned n = 0; n < input->nb_streams; ++n) {
-                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-                    count += 1;
-                }
-            }
+            auto count = std::count_if(av_streams.begin(), av_streams.end(), [](auto s) {
+                return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+            });
             if (count > 1) {
                 filter_spec = (boost::format("amerge=inputs=%d,") % count).str() + filter_spec;
             }
-        } else if (video_input_count == 1) {
-            int count = 0;
-            for (unsigned n = 0; n < input->nb_streams; ++n) {
-                if (input->streams[n]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    count += 1;
-                }
+        } 
+        
+        if (video_input_count == 1) {
+            std::stable_sort(av_streams.begin(), av_streams.end(), [](auto lhs, auto rhs) {
+                return lhs->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && lhs->codecpar->height > rhs->codecpar->height;
+            });
+
+            std::vector<AVStream*> video_av_streams;
+            std::copy_if(av_streams.begin(), av_streams.end(), std::back_inserter(video_av_streams), [](auto s) {
+                return s->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+            });
+
+            if (video_av_streams.size() >= 2 && video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
+                filter_spec = "alphamerge," + filter_spec;
             }
-            //if (count > 1) {
-            //    filter_spec = "alphamerge," + filter_spec;
-            //}
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
@@ -227,6 +234,9 @@ struct Filter
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
+
+        graph->nb_threads = 16;
+        graph->execute = graph_execute;
 
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
 
@@ -243,16 +253,18 @@ struct Filter
 
                 // TODO find stream based on link name
                 while (true) {
-                    if (index == input->nb_streams) {
+                    if (index == av_streams.size()) {
                         graph = nullptr;
                         return;
                     }
-                    if (input->streams[index]->codecpar->codec_type == type &&
+                    if (av_streams.at(index)->codecpar->codec_type == type &&
                         sources.find(static_cast<int>(index)) == sources.end()) {
                         break;
                     }
                     index++;
                 }
+
+                index = av_streams.at(index)->index;
 
                 auto it = streams.find(index);
                 if (it == streams.end()) {
@@ -427,8 +439,8 @@ struct AVProducer::Impl
         , path_(path)
         , name_(name)
         , input_(path, graph_)
-        , start_(start.value_or(AV_NOPTS_VALUE))
-        , duration_(duration.value_or(AV_NOPTS_VALUE))
+        , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
+        , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
         , vfilter_(vfilter)
         , afilter_(afilter)
@@ -446,7 +458,8 @@ struct AVProducer::Impl
         graph_->set_text(u16(print()));
 
         if (start_ != AV_NOPTS_VALUE) {
-            seek(start_);
+            input_.seek(start_);
+            reset(start_);
         } else {
             reset(0);
         }
@@ -723,7 +736,7 @@ struct AVProducer::Impl
     {
         CASPAR_SCOPE_EXIT{
             graph_->set_text(u16(print()));
-            state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+            state_["file/time"] = { time() / format_desc_.fps, input_.duration().value_or(0) / format_desc_.fps };
             state_["file/frame"] = { static_cast<int32_t>(time()), static_cast<int32_t>(duration().value_or(0)) };
         };
 
@@ -838,18 +851,10 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> duration() const
     {
-        auto start    = start_ != AV_NOPTS_VALUE ? start_ : 0;
-        auto duration = duration_;
-
-        if (duration == AV_NOPTS_VALUE && input_.duration()) {
-            duration = *input_.duration() - start;
-        }
-
-        if (duration == AV_NOPTS_VALUE || duration < 0) {
+        if (!input_.duration()) {
             return boost::none;
         }
-
-        return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
+        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
     }
 
   private:

@@ -27,6 +27,7 @@
 
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
+#include "frame/frame_transform.h"
 #include "frame/frame.h"
 #include "frame/frame_factory.h"
 #include "mixer/mixer.h"
@@ -69,7 +70,10 @@ struct video_channel::impl final
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
-    std::function<void(const monitor::state&)>        tick_;
+    std::function<void(const monitor::state&)> tick_;
+
+    std::map<int, std::weak_ptr<core::route>> routes_;
+    std::mutex                                routes_mutex_;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -106,6 +110,32 @@ struct video_channel::impl final
 
                     state_.insert_or_assign("stage", stage_.state());
 
+                    {
+                        std::vector<core::draw_frame> frames;
+
+                        std::lock_guard<std::mutex> lock(routes_mutex_);
+
+                        for (auto& p : stage_frames) {
+                            frames.push_back(p.second);
+
+                            auto it = routes_.find(p.first);
+                            if (it != routes_.end()) {
+                                auto route = it->second.lock();
+                                if (route) {
+                                    route->signal(draw_frame::pop(p.second));
+                                }
+                            }
+                        }
+
+                        auto it = routes_.find(-1);
+                        if (it != routes_.end()) {
+                            auto route = it->second.lock();
+                            if (route) {
+                                route->signal(core::draw_frame(std::move(frames)));
+                            }
+                        }
+                    }
+
                     // Mix
                     caspar::timer mix_timer;
                     auto          mixed_frame = mixer_(std::move(stage_frames), format_desc);
@@ -133,6 +163,24 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Uninitializing.";
         abort_request_ = true;
         thread_.join();
+    }
+
+    std::shared_ptr<core::route> route(int index = -1)
+    {
+        std::lock_guard<std::mutex> lock(routes_mutex_);
+
+        auto route = routes_[index].lock();
+        if (!route) {
+            route = std::make_shared<core::route>();
+            route->format_desc = format_desc_;
+            route->name = boost::lexical_cast<std::wstring>(index_);
+            if (index != -1) {
+                route->name += L"/" + boost::lexical_cast<std::wstring>(index);
+            }
+            routes_[index] = route;
+        }
+
+        return route;
     }
 
     core::video_format_desc video_format_desc() const
@@ -178,5 +226,7 @@ void                           core::video_channel::video_format_desc(const core
 }
 int               video_channel::index() const { return impl_->index(); }
 const monitor::state& video_channel::state() const { return impl_->state_; }
+
+std::shared_ptr<route> video_channel::route(int index) { return impl_->route(index); }
 
 }} // namespace caspar::core

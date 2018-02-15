@@ -29,6 +29,7 @@
 
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
+#include "route/route_producer.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -243,10 +244,28 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
                                                          const std::vector<producer_factory_t>& factories,
                                                          bool                                   throw_on_fail = false)
 {
-    if (params.empty())
+    if (params.empty()) {
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
+    }
 
     auto producer = frame_producer::empty();
+
+    if (producer == frame_producer::empty()) {
+        producer = create_color_producer(dependencies.frame_factory, params);
+    }
+
+    if (producer != frame_producer::empty()) {
+        return producer;
+    }
+
+    if (producer == frame_producer::empty()) {
+        producer = create_route_producer(dependencies, params);
+    }
+
+    if (producer != frame_producer::empty()) {
+        return producer;
+    }
+
     std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool {
         try {
             producer = factory(dependencies, params);
@@ -260,12 +279,6 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
         }
         return producer != frame_producer::empty();
     });
-
-    if (producer == frame_producer::empty())
-        producer = create_color_producer(dependencies.frame_factory, params);
-
-    if (producer == frame_producer::empty())
-        return producer;
 
     return producer;
 }

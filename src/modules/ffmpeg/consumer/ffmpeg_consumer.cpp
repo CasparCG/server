@@ -69,6 +69,7 @@ extern "C"
 #endif
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for.h>
 
 #include <memory>
 #include <thread>
@@ -178,6 +179,9 @@ struct Stream
         if (!graph) {
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
+
+        graph->nb_threads = 16;
+        graph->execute = graph_execute;
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -324,7 +328,7 @@ struct Stream
         CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
         for (auto& p : to_map(&dict)) {
-            options[p.first] = suffix + p.second;
+            options[p.first] = p.second + suffix;
         }
 
         FF(avcodec_parameters_from_context(st->codecpar, enc.get()));
@@ -403,6 +407,9 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::string path_;
     std::string args_;
 
+    std::exception_ptr exception_;
+    std::mutex         exception_mutex_;
+
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     std::thread                                      frame_thread_;
 
@@ -417,6 +424,8 @@ struct ffmpeg_consumer : public core::frame_consumer
         }())
         , realtime_(realtime)
     {
+        state_["file/path"] = u8(path_);
+
         frame_buffer_.set_capacity(realtime_ ? 1 : 128);
 
         diagnostics::register_graph(graph_);
@@ -446,33 +455,33 @@ struct ffmpeg_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         frame_thread_ = std::thread([=] {
-            std::map<std::string, std::string> options;
-            {
-                static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
-                for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
-                     it != boost::sregex_iterator();
-                     ++it) {
-                    options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
-                }
-            }
-
-            boost::filesystem::path full_path = path_;
-
-            static boost::regex prot_exp("^.+:.*");
-            if (!boost::regex_match(path_, prot_exp)) {
-                if (!full_path.is_complete()) {
-                    full_path = u8(env::media_folder()) + path_;
-                }
-
-                // TODO -y?
-                if (boost::filesystem::exists(full_path)) {
-                    boost::filesystem::remove(full_path);
-                }
-
-                boost::filesystem::create_directories(full_path.parent_path());
-            }
-
             try {
+                std::map<std::string, std::string> options;
+                {
+                    static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+                    for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
+                         it != boost::sregex_iterator();
+                         ++it) {
+                        options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
+                    }
+                }
+
+                boost::filesystem::path full_path = path_;
+
+                static boost::regex prot_exp("^.+:.*");
+                if (!boost::regex_match(path_, prot_exp)) {
+                    if (!full_path.is_complete()) {
+                        full_path = u8(env::media_folder()) + path_;
+                    }
+
+                    // TODO -y?
+                    if (boost::filesystem::exists(full_path)) {
+                        boost::filesystem::remove(full_path);
+                    }
+
+                    boost::filesystem::create_directories(full_path.parent_path());
+                }
+
                 AVFormatContext* oc = nullptr;
 
                 {
@@ -493,10 +502,14 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 boost::optional<Stream> video_stream;
                 if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
-                    if (options.find("preset:v") == options.end()) {
+                    if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
+                    if (options.find("threads:v") == options.end()) {
+                        options["threads:v"] = "4";
+                    }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
+                    state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
                 }
 
                 boost::optional<Stream> audio_stream;
@@ -526,9 +539,15 @@ struct ffmpeg_consumer : public core::frame_consumer
                 }
 
                 tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
-                packet_buffer.set_capacity(128);
+                packet_buffer.set_capacity(realtime_ ? 1 : 128);
                 auto packet_thread = std::thread([&] {
                     try {
+                        CASPAR_SCOPE_EXIT{
+                            if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                                FF(avio_closep(&oc->pb));
+                            }
+                        };
+
                         std::shared_ptr<AVPacket> pkt;
                         while (true) {
                             packet_buffer.pop(pkt);
@@ -539,10 +558,6 @@ struct ffmpeg_consumer : public core::frame_consumer
                         }
 
                         FF(av_write_trailer(oc));
-
-                        if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                            FF(avio_closep(&oc->pb));
-                        }
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                         // TODO
@@ -561,7 +576,10 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
+                std::int32_t frame_number = 0;
                 while (true) {
+                    state_["file/frame"] = frame_number++;
+
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
 
@@ -582,14 +600,21 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 packet_thread.join();
             } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-                // TODO
+                std::lock_guard<std::mutex> lock(exception_mutex_);
+                exception_ = std::current_exception();
             }
         });
     }
 
     std::future<bool> send(core::const_frame frame) override
     {
+        {
+            std::lock_guard<std::mutex> lock(exception_mutex_);
+            if (exception_ != nullptr) {
+                std::rethrow_exception(exception_);
+            }
+        }
+
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
@@ -602,8 +627,6 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::wstring name() const override { return L"ffmpeg"; }
 
     bool has_synchronization_clock() const override { return false; }
-
-    int buffer_depth() const override { return -1; }
 
     int index() const override { return 100000 + channel_index_; }
 

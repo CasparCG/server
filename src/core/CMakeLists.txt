@@ -18,9 +18,9 @@ set(SOURCES
 		mixer/mixer.cpp
 
 		producer/color/color_producer.cpp
-
 		producer/separated/separated_producer.cpp
 		producer/transition/transition_producer.cpp
+		producer/route/route_producer.cpp
 
 		producer/cg_proxy.cpp
 		producer/frame_producer.cpp
@@ -56,8 +56,9 @@ set(HEADERS
 		monitor/monitor.h
 
 		producer/color/color_producer.h
-
+		producer/separated/separated_producer.h
 		producer/transition/transition_producer.h
+		producer/route/route_producer.h
 
 		producer/cg_proxy.h
 		producer/frame_producer.h
@@ -73,6 +74,7 @@ set(HEADERS
 
 add_library(core ${SOURCES} ${HEADERS})
 add_precompiled_header(core StdAfx.h FORCEINCLUDE)
+configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
@@ -86,14 +88,12 @@ source_group(sources\\consumer consumer/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\producer producer/*)
 source_group(sources\\monitor monitor/*)
-source_group(sources\\producer\\framerate producer/framerate/*)
 source_group(sources\\frame frame/*)
 source_group(sources\\mixer mixer/*)
 source_group(sources\\mixer\\audio mixer/audio/*)
 source_group(sources\\mixer\\image mixer/image/*)
 source_group(sources\\producer\\color producer/color/*)
-source_group(sources\\producer\\text\\utils producer/text/utils/*)
-source_group(sources\\producer\\text producer/text/*)
+source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 

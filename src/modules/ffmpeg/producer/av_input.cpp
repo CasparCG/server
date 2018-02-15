@@ -44,6 +44,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
 
+    output_capacity_ *= ic_->nb_streams;
+
     thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");

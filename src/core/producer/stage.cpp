@@ -65,7 +65,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
     {
-        return executor_.invoke([=]() -> std::map<int, draw_frame> {
+        return executor_.invoke([=] {
             std::map<int, draw_frame> frames;
 
             try {
@@ -73,10 +73,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     auto& layer = p.second;
                     auto& tween = tweens_[p.first];
-
-                    auto frame = layer.receive(format_desc);
-                    frame.transform() *= tween.fetch_and_tick(1);
-                    frames[p.first] = std::move(frame);
+                    frames[p.first] = draw_frame::push(layer.receive(format_desc), tween.fetch_and_tick(1));
                 }
 
                 state_.clear();
