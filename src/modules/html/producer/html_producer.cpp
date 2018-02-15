@@ -392,7 +392,7 @@ class html_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"html"; }
 
-    core::draw_frame receive_impl() override
+    core::draw_frame receive_impl(int nb_samples) override
     {
         if (client_) {
             if (client_->is_removed()) {

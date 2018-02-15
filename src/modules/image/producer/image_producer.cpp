@@ -103,7 +103,7 @@ struct image_producer : public core::frame_producer_base
 
     // frame_producer
 
-    core::draw_frame receive_impl() override
+    core::draw_frame receive_impl(int nb_samples) override
     {
         state_["file/path"] = description_;
 

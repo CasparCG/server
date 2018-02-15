@@ -71,8 +71,9 @@ struct layer::impl
         auto_play_delta_ = auto_play_delta;
 
         if (preview) {
+            // TODO (fix) Move receive into receive.
             play();
-            receive(video_format::invalid);
+            receive(video_format::invalid, 0);
             foreground_->paused(true);
             is_paused_ = true;
         }
@@ -103,14 +104,14 @@ struct layer::impl
         auto_play_delta_.reset();
     }
 
-    draw_frame receive(const video_format_desc& format_desc)
+    draw_frame receive(const video_format_desc& format_desc, int nb_samples)
     {
         try {
             if (foreground_->following_producer() != core::frame_producer::empty()) {
                 foreground_ = foreground_->following_producer();
             }
 
-            auto frame = foreground_->receive();
+            auto frame = foreground_->receive(nb_samples);
 
             state_.clear();
             state_["paused"] = is_paused_;
@@ -126,7 +127,7 @@ struct layer::impl
                 auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
-                    return receive(format_desc);
+                    return receive(format_desc, nb_samples);
                 }
             }
 
@@ -163,7 +164,7 @@ void       layer::play() { impl_->play(); }
 void       layer::pause() { impl_->pause(); }
 void       layer::resume() { impl_->resume(); }
 void       layer::stop() { impl_->stop(); }
-draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
+draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples) { return impl_->receive(format_desc, nb_samples); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 const monitor::state&           layer::state() const { return impl_->state_; }

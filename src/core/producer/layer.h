@@ -56,7 +56,7 @@ class layer final
     void resume();
     void stop();
 
-    draw_frame receive(const video_format_desc& format_desc);
+    draw_frame receive(const video_format_desc& format_desc, int nb_samples);
 
     const monitor::state& state() const;
 

@@ -540,7 +540,7 @@ class decklink_producer_proxy : public core::frame_producer_base
 
     // frame_producer
 
-    core::draw_frame receive_impl() override { return producer_->get_frame(); }
+    core::draw_frame receive_impl(int nb_samples) override { return producer_->get_frame(); }
 
     uint32_t nb_frames() const override { return length_; }
 

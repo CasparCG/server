@@ -83,12 +83,12 @@ struct frame_producer_base::impl
         paused_       = false;
     }
 
-    draw_frame receive()
+    draw_frame receive(int nb_samples)
     {
         if (paused_)
             return self_.last_frame();
 
-        auto frame = self_.receive_impl();
+        auto frame = self_.receive_impl(nb_samples);
         if (!frame) {
             return self_.last_frame();
         }
@@ -108,7 +108,7 @@ frame_producer_base::frame_producer_base()
 {
 }
 
-draw_frame frame_producer_base::receive() { return impl_->receive(); }
+draw_frame frame_producer_base::receive(int nb_samples) { return impl_->receive(nb_samples); }
 
 void frame_producer_base::paused(bool value) { impl_->paused(value); }
 
@@ -129,7 +129,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
     {
       public:
         empty_frame_producer() {}
-        draw_frame                receive() override { return draw_frame{}; }
+        draw_frame                receive(int nb_samples) override { return draw_frame{}; }
         void                      paused(bool value) override {}
         uint32_t                  nb_frames() const override { return 0; }
         std::wstring              print() const override { return L"empty"; }
@@ -219,7 +219,7 @@ class destroy_producer_proxy : public frame_producer
         });
     }
 
-    draw_frame                receive() override { return producer_->receive(); }
+    draw_frame                receive(int nb_samples) override { return producer_->receive(nb_samples); }
     std::wstring              print() const override { return producer_->print(); }
     void                      paused(bool value) override { producer_->paused(value); }
     std::wstring              name() const override { return producer_->name(); }
