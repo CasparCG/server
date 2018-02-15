@@ -75,21 +75,23 @@ struct ffmpeg_producer : public core::frame_producer_base
         : format_desc_(format_desc)
         , filename_(filename)
         , frame_factory_(frame_factory)
-        , producer_(frame_factory_, format_desc_, u8(path), u8(filename), u8(vfilter), u8(afilter), start, duration, loop)
+        , producer_(frame_factory_,
+                    format_desc_,
+                    u8(path),
+                    u8(filename),
+                    u8(vfilter),
+                    u8(afilter),
+                    start,
+                    duration,
+                    loop)
     {
     }
 
     // frame_producer
 
-    core::draw_frame last_frame() override
-    {
-        return producer_.prev_frame();
-    }
+    core::draw_frame last_frame() override { return producer_.prev_frame(); }
 
-    core::draw_frame receive_impl() override
-    {
-        return producer_.next_frame();
-    }
+    core::draw_frame receive_impl() override { return producer_.next_frame(); }
 
     std::uint32_t frame_number() const override
     {
@@ -98,7 +100,8 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     std::uint32_t nb_frames() const override
     {
-        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<std::uint32_t>(producer_.duration() * format_desc_.fps);
+        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max()
+                                : static_cast<std::uint32_t>(producer_.duration() * format_desc_.fps);
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -178,7 +181,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 bool is_valid_file(const std::wstring& filename)
 {
-    static const auto invalid_exts = { L".png",
+    static const auto invalid_exts = {L".png",
                                       L".tga",
                                       L".bmp",
                                       L".jpg",
@@ -191,8 +194,8 @@ bool is_valid_file(const std::wstring& filename)
                                       L".j2k",
                                       L".j2c",
                                       L".swf",
-                                      L".ct" };
-    static const auto valid_exts = { L".m2t",
+                                      L".ct"};
+    static const auto valid_exts   = {L".m2t",
                                     L".mov",
                                     L".mp4",
                                     L".dv",
@@ -206,7 +209,7 @@ bool is_valid_file(const std::wstring& filename)
                                     L".ts",
                                     L".mp3",
                                     L".wav",
-                                    L".wma" };
+                                    L".wma"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 
@@ -221,8 +224,8 @@ bool is_valid_file(const std::wstring& filename)
     auto u8filename = u8(filename);
 
     int         score = 0;
-    AVProbeData pb = {};
-    pb.filename = u8filename.c_str();
+    AVProbeData pb    = {};
+    pb.filename       = u8filename.c_str();
 
     if (av_probe_input_format2(&pb, false, &score) != nullptr) {
         return true;
@@ -232,8 +235,8 @@ bool is_valid_file(const std::wstring& filename)
 
     std::vector<unsigned char> buf;
     for (auto file_it = std::istreambuf_iterator<char>(file);
-        file_it != std::istreambuf_iterator<char>() && buf.size() < 1024;
-        ++file_it) {
+         file_it != std::istreambuf_iterator<char>() && buf.size() < 1024;
+         ++file_it) {
         buf.push_back(*file_it);
     }
 
@@ -297,7 +300,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-    
+
     boost::optional<std::int64_t> start;
     boost::optional<std::int64_t> duration;
 

@@ -237,7 +237,7 @@ struct audio_mixer::impl : boost::noncopyable
 
             auto chan_str = boost::lexical_cast<std::string>(i + 1);
 
-            state_[chan_str + "/pFS"] = pFS;
+            state_[chan_str + "/pFS"]  = pFS;
             state_[chan_str + "/dBFS"] = dBFS;
         }
 
@@ -260,6 +260,6 @@ void           audio_mixer::pop() { impl_->pop(); }
 void           audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float          audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
 array<int32_t> audio_mixer::operator()(const video_format_desc& format_desc) { return impl_->mix(format_desc); }
-const monitor::state& audio_mixer::state() const { return impl_->state_; }
+const monitor::state&       audio_mixer::state() const { return impl_->state_; }
 
 }} // namespace caspar::core

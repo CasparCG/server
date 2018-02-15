@@ -33,8 +33,8 @@ class array final
     {
         if (size_ > 0) {
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
-            ptr_ = reinterpret_cast<T*>(storage.get());
-            storage_ = std::make_unique<boost::any>(std::move(storage));
+            ptr_         = reinterpret_cast<T*>(storage.get());
+            storage_     = std::make_unique<boost::any>(std::move(storage));
         }
     }
 
@@ -59,8 +59,8 @@ class array final
 
     array& operator=(array&& other)
     {
-        ptr_ = std::move(other.ptr_);
-        size_ = std::move(other.size_);
+        ptr_     = std::move(other.ptr_);
+        size_    = std::move(other.size_);
         storage_ = std::move(other.storage_);
 
         return *this;
@@ -106,8 +106,8 @@ class array<const T> final
     {
         if (size_ > 0) {
             auto storage = std::vector<char>(size, 0);
-            ptr_ = reinterpret_cast<T*>(storage.data());
-            storage_ = std::move(storage);
+            ptr_         = reinterpret_cast<T*>(storage.data());
+            storage_     = std::move(storage);
         }
     }
 

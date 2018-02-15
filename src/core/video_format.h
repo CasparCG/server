@@ -78,8 +78,8 @@ struct video_format_desc final
     int                  height;
     int                  square_width;
     int                  square_height;
-	int                  field_count;
-    double               fps;        // actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
+    int                  field_count;
+    double               fps; // actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
     boost::rational<int> framerate;
     int                  time_scale;
     int                  duration;
@@ -91,7 +91,7 @@ struct video_format_desc final
     std::vector<int> audio_cadence; // rotating optimal number of samples per frame
 
     video_format_desc(video_format            format,
-		              int                     field_count,
+                      int                     field_count,
                       int                     width,
                       int                     height,
                       int                     square_width,

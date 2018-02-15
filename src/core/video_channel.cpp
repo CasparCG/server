@@ -27,9 +27,9 @@
 
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
-#include "frame/frame_transform.h"
 #include "frame/frame.h"
 #include "frame/frame_factory.h"
+#include "frame/frame_transform.h"
 #include "mixer/mixer.h"
 #include "producer/stage.h"
 
@@ -79,7 +79,10 @@ struct video_channel::impl final
     std::thread       thread_;
 
   public:
-    impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer, std::function<void(const monitor::state&)> tick)
+    impl(int                                        index,
+         const core::video_format_desc&             format_desc,
+         std::unique_ptr<image_mixer>               image_mixer,
+         std::function<void(const monitor::state&)> tick)
         : index_(index)
         , format_desc_(format_desc)
         , output_(graph_, format_desc, index)
@@ -171,9 +174,9 @@ struct video_channel::impl final
 
         auto route = routes_[index].lock();
         if (!route) {
-            route = std::make_shared<core::route>();
+            route              = std::make_shared<core::route>();
             route->format_desc = format_desc_;
-            route->name = boost::lexical_cast<std::wstring>(index_);
+            route->name        = boost::lexical_cast<std::wstring>(index_);
             if (index != -1) {
                 route->name += L"/" + boost::lexical_cast<std::wstring>(index);
             }
@@ -204,9 +207,9 @@ struct video_channel::impl final
     int index() const { return index_; }
 };
 
-video_channel::video_channel(int                            index,
-                             const core::video_format_desc& format_desc,
-                             std::unique_ptr<image_mixer>   image_mixer,
+video_channel::video_channel(int                                        index,
+                             const core::video_format_desc&             format_desc,
+                             std::unique_ptr<image_mixer>               image_mixer,
                              std::function<void(const monitor::state&)> tick)
     : impl_(new impl(index, format_desc, std::move(image_mixer), tick))
 {
@@ -224,7 +227,7 @@ void                           core::video_channel::video_format_desc(const core
 {
     impl_->video_format_desc(format_desc);
 }
-int               video_channel::index() const { return impl_->index(); }
+int                   video_channel::index() const { return impl_->index(); }
 const monitor::state& video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index) { return impl_->route(index); }

@@ -379,8 +379,7 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer =
-        ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx));
+    auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx));
     ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
@@ -393,8 +392,7 @@ std::wstring remove_command(command_context& ctx)
     if (index == std::numeric_limits<int>::min()) {
         replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
 
-        index = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))
-                    ->index();
+        index = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))->index();
     }
 
     ctx.channel.channel->output().remove(index);
@@ -404,8 +402,7 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.channel->output().add(
-        ctx.consumer_registry->create_consumer({L"IMAGE"}, get_channels(ctx)));
+    ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({L"IMAGE"}, get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -1250,7 +1247,8 @@ std::wstring thumbnail_list_command(command_context& ctx)
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
+    auto res =
+        http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
     return u16(res.body);
 }
 

@@ -47,8 +47,8 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <vector>
 #include <thread>
+#include <vector>
 
 #if defined(_MSC_VER)
 #include <windows.h>
@@ -76,22 +76,22 @@ struct configuration
         aspect_invalid,
     };
 
-    std::wstring    name             = L"Screen consumer";
-    int             screen_index     = 0;
-    screen::stretch stretch          = screen::stretch::fill;
-    bool            windowed         = true;
-    bool            key_only         = false;
-    aspect_ratio    aspect           = aspect_ratio::aspect_invalid;
-    bool            vsync            = false;
-    bool            interactive      = true;
-    bool            borderless       = false;
+    std::wstring    name         = L"Screen consumer";
+    int             screen_index = 0;
+    screen::stretch stretch      = screen::stretch::fill;
+    bool            windowed     = true;
+    bool            key_only     = false;
+    aspect_ratio    aspect       = aspect_ratio::aspect_invalid;
+    bool            vsync        = false;
+    bool            interactive  = true;
+    bool            borderless   = false;
 };
 
 struct frame
 {
-    GLuint pbo = 0;
-    GLuint tex = 0;
-    char*  ptr = nullptr;
+    GLuint pbo   = 0;
+    GLuint tex   = 0;
+    char*  ptr   = nullptr;
     GLsync fence = 0;
 };
 
@@ -107,12 +107,12 @@ struct screen_consumer : boost::noncopyable
     int   screen_height_ = format_desc_.height;
     int   square_width_  = format_desc_.square_width;
     int   square_height_ = format_desc_.square_height;
-    int   screen_x_ = 0;
-    int   screen_y_ = 0;
-    float width_ = screen_width_;
-    float height_ = screen_height_;
+    int   screen_x_      = 0;
+    int   screen_y_      = 0;
+    float width_         = screen_width_;
+    float height_        = screen_height_;
 
-    sf::Window        window_;
+    sf::Window window_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
@@ -122,13 +122,11 @@ struct screen_consumer : boost::noncopyable
 
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
 
-    std::atomic<bool> is_running_{ true };
+    std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
   public:
-    screen_consumer(const configuration&           config,
-                    const core::video_format_desc& format_desc,
-                    int                            channel_index)
+    screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
         : config_(config)
         , format_desc_(format_desc)
         , channel_index_(channel_index)
@@ -181,7 +179,9 @@ struct screen_consumer : boost::noncopyable
 
         thread_ = std::thread([this] {
             try {
-                auto window_style = config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+                auto window_style = config_.borderless ? sf::Style::None
+                                                       : (config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                           : sf::Style::Fullscreen);
                 window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -201,7 +201,8 @@ struct screen_consumer : boost::noncopyable
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
                     GL(glCreateBuffers(1, &frame.pbo));
                     GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
-                    frame.ptr = reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
+                    frame.ptr =
+                        reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -253,7 +254,7 @@ struct screen_consumer : boost::noncopyable
 
     bool poll()
     {
-        int count = 0;
+        int       count = 0;
         sf::Event e;
         while (window_.pollEvent(e)) {
             count++;
@@ -312,15 +313,8 @@ struct screen_consumer : boost::noncopyable
             }
 
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(frame.tex,
-                                    0,
-                                    0,
-                                    0,
-                                    format_desc_.width,
-                                    format_desc_.height,
-                                    GL_BGRA,
-                                    GL_UNSIGNED_BYTE,
-                                    nullptr));
+            GL(glTextureSubImage2D(
+                frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
             frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -452,7 +446,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     std::wstring name() const override { return L"screen"; }
 
     bool has_synchronization_clock() const override { return false; }
-   
+
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 
     const core::monitor::state& state() const { return state_; }
@@ -471,10 +465,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.screen_index = boost::lexical_cast<int>(params.at(1));
     }
 
-    config.windowed         = !contains_param(L"FULLSCREEN", params);
-    config.key_only         = contains_param(L"KEY_ONLY", params);
-    config.interactive      = !contains_param(L"NON_INTERACTIVE", params);
-    config.borderless       = contains_param(L"BORDERLESS", params);
+    config.windowed    = !contains_param(L"FULLSCREEN", params);
+    config.key_only    = contains_param(L"KEY_ONLY", params);
+    config.interactive = !contains_param(L"NON_INTERACTIVE", params);
+    config.borderless  = contains_param(L"BORDERLESS", params);
 
     if (contains_param(L"NAME", params)) {
         config.name = get_param(L"NAME", params);
@@ -488,13 +482,13 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;
-    config.name             = ptree.get(L"name", config.name);
-    config.screen_index     = ptree.get(L"device", config.screen_index + 1) - 1;
-    config.windowed         = ptree.get(L"windowed", config.windowed);
-    config.key_only         = ptree.get(L"key-only", config.key_only);
-    config.vsync            = ptree.get(L"vsync", config.vsync);
-    config.interactive      = ptree.get(L"interactive", config.interactive);
-    config.borderless       = ptree.get(L"borderless", config.borderless);
+    config.name         = ptree.get(L"name", config.name);
+    config.screen_index = ptree.get(L"device", config.screen_index + 1) - 1;
+    config.windowed     = ptree.get(L"windowed", config.windowed);
+    config.key_only     = ptree.get(L"key-only", config.key_only);
+    config.vsync        = ptree.get(L"vsync", config.vsync);
+    config.interactive  = ptree.get(L"interactive", config.interactive);
+    config.borderless   = ptree.get(L"borderless", config.borderless);
 
     auto stretch_str = ptree.get(L"stretch", L"default");
     if (stretch_str == L"uniform") {

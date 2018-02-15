@@ -95,7 +95,7 @@ AVDictionary* to_dict(std::map<std::string, std::string>&& map)
 std::map<std::string, std::string> to_map(AVDictionary** dict)
 {
     std::map<std::string, std::string> map;
-    AVDictionaryEntry* t = nullptr;
+    AVDictionaryEntry*                 t = nullptr;
     while (*dict) {
         t = av_dict_get(*dict, "", t, AV_DICT_IGNORE_SUFFIX);
         if (!t) {
@@ -181,7 +181,7 @@ struct Stream
         }
 
         graph->nb_threads = 16;
-        graph->execute = graph_execute;
+        graph->execute    = graph_execute;
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -325,7 +325,7 @@ struct Stream
         }
 
         auto dict = to_dict(std::move(stream_options));
-        CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+        CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
         for (auto& p : to_map(&dict)) {
             options[p.first] = p.second + suffix;
@@ -333,8 +333,7 @@ struct Stream
 
         FF(avcodec_parameters_from_context(st->codecpar, enc.get()));
 
-        if (codec->type == AVMEDIA_TYPE_AUDIO &&
-            !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
+        if (codec->type == AVMEDIA_TYPE_AUDIO && !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
             av_buffersink_set_frame_size(sink, enc->frame_size);
         }
 
@@ -462,7 +461,8 @@ struct ffmpeg_consumer : public core::frame_consumer
                     for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
                          it != boost::sregex_iterator();
                          ++it) {
-                        options[(*it)["NAME"].str().c_str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
+                        options[(*it)["NAME"].str().c_str()] =
+                            (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
                     }
                 }
 
@@ -520,14 +520,14 @@ struct ffmpeg_consumer : public core::frame_consumer
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
                     // TODO (fix) interrupt_cb
                     auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
                     FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &dict));
                     options = to_map(&dict);
                 }
 
                 {
                     auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT{ av_dict_free(&dict); };
+                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
                     FF(avformat_write_header(oc, &dict));
                     options = to_map(&dict);
                 }
@@ -542,7 +542,8 @@ struct ffmpeg_consumer : public core::frame_consumer
                 packet_buffer.set_capacity(realtime_ ? 1 : 128);
                 auto packet_thread = std::thread([&] {
                     try {
-                        CASPAR_SCOPE_EXIT{
+                        CASPAR_SCOPE_EXIT
+                        {
                             if (!(oc->oformat->flags & AVFMT_NOFILE)) {
                                 FF(avio_closep(&oc->pb));
                             }
@@ -633,7 +634,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     const core::monitor::state& state() const { return state_; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
@@ -648,7 +649,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree& ptree,
+create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),

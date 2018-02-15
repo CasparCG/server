@@ -23,17 +23,15 @@
 #include <boost/variant.hpp>
 
 #include <cstdint>
-#include <string>
 #include <mutex>
+#include <string>
 
 #include <boost/container/flat_map.hpp>
 #include <boost/container/small_vector.hpp>
 
 namespace caspar { namespace core { namespace monitor {
 
-typedef boost::
-    variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring>
-        data_t;
+typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring> data_t;
 
 typedef boost::container::flat_map<std::string, boost::container::small_vector<data_t, 2>> data_map_t;
 
@@ -42,7 +40,8 @@ class state_proxy
     std::string key_;
     data_map_t& data_;
     std::mutex& mutex_;
-public:
+
+  public:
     state_proxy(const std::string& key, data_map_t& data, std::mutex& mutex)
         : key_(key)
         , data_(data)
@@ -53,7 +52,7 @@ public:
     state_proxy& operator=(data_t data)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = { std::move(data) };
+        data_[key_] = {std::move(data)};
         return *this;
     }
 
@@ -70,7 +69,8 @@ class state
 {
     mutable std::mutex mutex_;
     data_map_t         data_;
-public:
+
+  public:
     state() = default;
     state(const state& other)
         : data_(other.data_)
@@ -81,10 +81,7 @@ public:
     {
     }
 
-    state_proxy operator[](const std::string& key)
-    {
-        return state_proxy(key, data_, mutex_);
-    }
+    state_proxy operator[](const std::string& key) { return state_proxy(key, data_, mutex_); }
 
     void clear()
     {
@@ -94,13 +91,13 @@ public:
 
     state& operator=(const state& other)
     {
-        auto data = other.get();
+        auto                        data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         data_ = std::move(data);
         return *this;
     }
 
-    template<typename T>
+    template <typename T>
     state& operator=(T&& data)
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -116,7 +113,7 @@ public:
 
     void insert_or_assign(const std::string& name, const state& other)
     {
-        auto data = other.get();
+        auto                        data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto& p : data) {
             data_[name + "/" + p.first] = std::move(p.second);
@@ -125,7 +122,7 @@ public:
 
     void insert_or_assign(const state& other)
     {
-        auto data = other.get();
+        auto                        data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         if (data_.empty()) {
             data_ = std::move(data);

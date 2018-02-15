@@ -37,9 +37,7 @@ namespace caspar { namespace core {
 class output final
 {
   public:
-    explicit output(spl::shared_ptr<diagnostics::graph> graph,
-                    const video_format_desc&            format_desc,
-                    int                                 channel_index);
+    explicit output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
 
     output(const output&) = delete;
     output& operator=(const output&) = delete;

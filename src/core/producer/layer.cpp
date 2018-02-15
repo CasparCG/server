@@ -40,22 +40,17 @@ struct layer::impl
 {
     monitor::state state_;
 
-    spl::shared_ptr<frame_producer>   foreground_ = frame_producer::empty();
-    spl::shared_ptr<frame_producer>   background_ = frame_producer::empty();
+    spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
+    spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
     ;
     boost::optional<int32_t> auto_play_delta_;
     bool                     is_paused_         = false;
     int64_t                  current_frame_age_ = 0;
 
   public:
-    impl()
-    {
-    }
+    impl() {}
 
-    void set_foreground(spl::shared_ptr<frame_producer> producer)
-    {
-        foreground_ = std::move(producer);
-    }
+    void set_foreground(spl::shared_ptr<frame_producer> producer) { foreground_ = std::move(producer); }
 
     void pause()
     {
@@ -126,8 +121,8 @@ struct layer::impl
             }
 
             if (auto_play_delta_) {
-                auto time = static_cast<std::int64_t>(foreground_->frame_number());
-                auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                auto time        = static_cast<std::int64_t>(foreground_->frame_number());
+                auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
                 auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
@@ -171,5 +166,5 @@ void       layer::stop() { impl_->stop(); }
 draw_frame layer::receive(const video_format_desc& format_desc) { return impl_->receive(format_desc); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-const monitor::state&               layer::state() const { return impl_->state_; }
+const monitor::state&           layer::state() const { return impl_->state_; }
 }} // namespace caspar::core
