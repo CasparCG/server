@@ -427,6 +427,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
+    std::atomic<bool>       buffer_eof_{ false };
     int                     buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
 
     std::atomic<bool> abort_request_{false};
@@ -443,7 +444,7 @@ struct AVProducer::Impl
          bool                                 loop)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
-        , format_tb_({format_desc.duration * format_desc.field_count, format_desc.time_scale})
+        , format_tb_({format_desc.duration, format_desc.time_scale})
         , path_(path)
         , name_(name)
         , input_(path, graph_)
@@ -520,11 +521,12 @@ struct AVProducer::Impl
 
                     // TODO (perf) seek as soon as input is past duration or eof.
                     {
-                        auto       start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        const auto eof   = (video_filter_.eof && audio_filter_.eof) ||
-                                         (duration_ != AV_NOPTS_VALUE && frame.pts >= start + duration_);
+                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
 
-                        if (eof) {
+                        buffer_eof_ = (video_filter_.eof && audio_filter_.eof) ||
+                                       (duration_ != AV_NOPTS_VALUE && frame.pts >= start + duration_);
+
+                        if (buffer_eof_) {
                             if (loop_) {
                                 seek_internal(start_);
                             } else {
@@ -759,16 +761,20 @@ struct AVProducer::Impl
             state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
         };
 
-        core::draw_frame result;
+        core::draw_frame frame;
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);
 
             if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                return core::draw_frame{};
+                if (buffer_eof_) {
+                    return frame_;
+                } else {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                    return core::draw_frame{};
+                }
             }
 
-            result      = buffer_[0].frame;
+            frame       = buffer_[0].frame;
             frame_      = core::draw_frame::still(buffer_[0].frame);
             frame_time_ = buffer_[0].pts + buffer_[0].duration;
             buffer_.pop_front();
@@ -777,7 +783,7 @@ struct AVProducer::Impl
         }
         buffer_cond_.notify_all();
 
-        return result;
+        return frame;
     }
 
     void seek(int64_t time)
@@ -870,6 +876,7 @@ struct AVProducer::Impl
         input_.seek(time);
         input_.paused(false);
         frame_flush_ = true;
+        buffer_eof_ = false;
 
         for (auto& p : decoders_) {
             reset_decoder(p.second);
