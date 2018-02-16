@@ -430,6 +430,8 @@ struct AVProducer::Impl
     std::atomic<bool>       buffer_eof_{ false };
     int                     buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
 
+    tbb::task_group_context task_context_;
+
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
@@ -454,6 +456,8 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
+        task_context_.set_priority(tbb::priority_high);
+
         state_["file/name"]  = u8(name_);
         state_["file/path"]  = u8(path_);
         state_["file/time"]  = {time(), this->duration().value_or(0) / format_desc_.fps};
@@ -505,10 +509,10 @@ struct AVProducer::Impl
                         [&] {
                             tbb::parallel_for_each(decoders_.begin(), decoders_.end(), [&](auto& p) {
                                 progress.fetch_or(decode_frame(p.second));
-                            });
+                            }, task_context_);
                         },
                         [&] { progress.fetch_or(filter_frame(video_filter_)); },
-                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); });
+                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); }, task_context_);
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         if (!progress) {
@@ -567,6 +571,14 @@ struct AVProducer::Impl
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                         buffer_.push_back(frame);
+                    }
+
+                    if (buffer_.size() > buffer_capacity_ / 2) {
+                        task_context_.set_priority(tbb::priority_low);
+                    } else if (buffer_.size() > 2) {
+                        task_context_.set_priority(tbb::priority_normal);
+                    } else {
+                        task_context_.set_priority(tbb::priority_high);
                     }
 
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
