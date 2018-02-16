@@ -125,7 +125,7 @@ struct video_channel::impl final
 
                     // Mix
                     caspar::timer mix_timer;
-                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc, format_desc.audio_cadence[0]);
+                    auto          mixed_frame = mixer_(stage_frames, format_desc, format_desc.audio_cadence[0]);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     state_.insert_or_assign("mixer", mixer_.state());
