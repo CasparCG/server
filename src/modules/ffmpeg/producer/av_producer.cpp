@@ -492,6 +492,14 @@ struct AVProducer::Impl
                         break;
                     }
 
+                    if (buffer_.size() > buffer_capacity_ / 2) {
+                        task_context_.set_priority(tbb::priority_low);
+                    } else if (buffer_.size() > 2) {
+                        task_context_.set_priority(tbb::priority_normal);
+                    } else {
+                        task_context_.set_priority(tbb::priority_high);
+                    }
+
                     caspar::timer frame_timer;
                     CASPAR_SCOPE_EXIT
                     {
@@ -571,14 +579,6 @@ struct AVProducer::Impl
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                         buffer_.push_back(frame);
-                    }
-
-                    if (buffer_.size() > buffer_capacity_ / 2) {
-                        task_context_.set_priority(tbb::priority_low);
-                    } else if (buffer_.size() > 2) {
-                        task_context_.set_priority(tbb::priority_normal);
-                    } else {
-                        task_context_.set_priority(tbb::priority_high);
                     }
 
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
