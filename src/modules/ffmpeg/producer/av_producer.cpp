@@ -105,6 +105,7 @@ struct Decoder
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
         FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
+        FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
 
