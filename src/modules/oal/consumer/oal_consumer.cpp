@@ -313,7 +313,7 @@ struct oal_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"system-audio"; }
 
-    bool has_synchronization_clock() const override { return true; }
+    bool has_synchronization_clock() const override { return false; }
 
     int index() const override { return 500; }
 
