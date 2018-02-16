@@ -78,8 +78,9 @@ struct layer::impl
             is_paused_ = true;
         }
 
-        if (auto_play_delta_ && foreground_ == frame_producer::empty())
+        if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
             play();
+        }
     }
 
     void play()
@@ -111,24 +112,23 @@ struct layer::impl
                 foreground_ = foreground_->following_producer();
             }
 
-            auto frame = foreground_->receive(nb_samples);
-
-            state_.clear();
-            state_["paused"] = is_paused_;
-            state_.insert_or_assign(foreground_->state());
-
-            if (!frame) {
-                return foreground_->last_frame();
-            }
-
             if (auto_play_delta_) {
-                auto time        = static_cast<std::int64_t>(foreground_->frame_number());
-                auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
+                auto time = static_cast<std::int64_t>(foreground_->frame_number());
+                auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
                 auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
                 if (frames_left < 1) {
                     play();
                 }
             }
+
+            auto frame = foreground_->receive(nb_samples);
+            if (!frame) {
+                frame = foreground_->last_frame();
+            }
+
+            state_.clear();
+            state_["paused"] = is_paused_;
+            state_.insert_or_assign(foreground_->state());
 
             return frame;
         } catch (...) {
