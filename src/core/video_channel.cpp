@@ -123,6 +123,18 @@ struct video_channel::impl final
 
                     state_.insert_or_assign("stage", stage_.state());
 
+                    // Mix
+                    caspar::timer mix_timer;
+                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc, format_desc.audio_cadence[0]);
+                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+
+                    state_.insert_or_assign("mixer", mixer_.state());
+
+                    // Consume
+                    caspar::timer consume_timer;
+                    output_(std::move(mixed_frame), format_desc).wait();
+                    graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
+
                     {
                         std::vector<core::draw_frame> frames;
 
@@ -148,18 +160,6 @@ struct video_channel::impl final
                             }
                         }
                     }
-
-                    // Mix
-                    caspar::timer mix_timer;
-                    auto          mixed_frame = mixer_(std::move(stage_frames), format_desc, format_desc.audio_cadence[0]);
-                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
-
-                    state_.insert_or_assign("mixer", mixer_.state());
-
-                    // Consume
-                    caspar::timer consume_timer;
-                    output_(std::move(mixed_frame), format_desc).wait();
-                    graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
                     state_.insert_or_assign("output", output_.state());
 
