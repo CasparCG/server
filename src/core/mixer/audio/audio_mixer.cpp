@@ -101,29 +101,26 @@ struct audio_mixer::impl : boost::noncopyable
             return result;
         }
 
-        auto sample_cast = [](int64_t sample) {
-            if (sample > std::numeric_limits<int32_t>::max()) {
-                return std::numeric_limits<int32_t>::max();
-            } else if (sample < std::numeric_limits<int32_t>::min()) {
-                return std::numeric_limits<int32_t>::min();
-            } else {
-                return static_cast<int32_t>(sample);
-            }
-        };
+        auto mixed = std::vector<double>(nb_samples * channels, 0.0f);
 
         for (auto& item : items) {
             auto ptr  = item.samples.data();
             auto size = std::min(item.samples.size(), result.size());
             for (auto n = 0; n < size; ++n) {
-                auto sample = static_cast<int64_t>(static_cast<double>(ptr[n]) * item.transform.volume) + result[n];
-                result[n] = sample_cast(sample);
+                mixed[n] = static_cast<double>(ptr[n]) * item.transform.volume + mixed[n];
             }
         }
 
         auto master_volume = master_volume_.load();
-        for (auto n = 0; n < result.size(); ++n) {
-            auto sample = static_cast<int64_t>(static_cast<double>(result[n]) * master_volume);
-            result[n] = sample_cast(sample);
+        for (auto n = 0; n < mixed.size(); ++n) {
+            auto sample = mixed[n] * master_volume;
+            if (sample > std::numeric_limits<int32_t>::max()) {
+                result[n] = std::numeric_limits<int32_t>::max();
+            } else if (sample < std::numeric_limits<int32_t>::min()) {
+                result[n] = std::numeric_limits<int32_t>::min();
+            } else {
+                result[n] = static_cast<int32_t>(sample);
+            }
         }
  
         auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
