@@ -44,7 +44,9 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
 
-    output_capacity_ *= ic_->nb_streams;
+    for (auto n = 0U; n < ic_->nb_streams; ++n) {
+        ic_->streams[n]->discard = AVDISCARD_ALL;
+    }
 
     thread_ = std::thread([=] {
         try {
