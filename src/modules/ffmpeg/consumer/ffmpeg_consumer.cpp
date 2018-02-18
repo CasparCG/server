@@ -503,9 +503,6 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
-                    if (options.find("threads:v") == options.end()) {
-                        options["threads:v"] = "4";
-                    }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
                     state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
                 }
@@ -556,6 +553,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                             FF(av_interleaved_write_frame(oc, pkt.get()));
                         }
 
+                        // TODO (fix) This can crash if no package written?
                         FF(av_write_trailer(oc));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
