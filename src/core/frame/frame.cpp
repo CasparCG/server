@@ -85,81 +85,71 @@ array<std::uint8_t>&       mutable_frame::image_data(std::size_t index) { return
 array<std::int32_t>&       mutable_frame::audio_data() { return impl_->audio_data_; }
 std::size_t                mutable_frame::width() const { return impl_->desc_.planes.at(0).width; }
 std::size_t                mutable_frame::height() const { return impl_->desc_.planes.at(0).height; }
-const void*                mutable_frame::stream_tag() const { return impl_->tag_; }
 const frame_geometry&      mutable_frame::geometry() const { return impl_->geometry_; }
 frame_geometry&            mutable_frame::geometry() { return impl_->geometry_; }
 
 struct const_frame::impl
 {
-    const void*                                  tag_ = nullptr;
-    const std::vector<array<const std::uint8_t>> image_data_;
-    const array<const std::int32_t>              audio_data_;
-    const core::pixel_format_desc                desc_     = pixel_format::invalid;
-    const frame_geometry                         geometry_ = frame_geometry::get_default();
+    std::vector<array<const std::uint8_t>> image_data_;
+    array<const std::int32_t>              audio_data_;
+    core::pixel_format_desc                desc_     = pixel_format::invalid;
+    frame_geometry                         geometry_ = frame_geometry::get_default();
 
-    impl(const void* tag)
-        : tag_(tag)
-    {
-    }
-
-    impl(const void*                            tag,
-         std::vector<array<const std::uint8_t>> image_data,
+    impl(std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
          const core::pixel_format_desc&         desc)
-        : tag_(tag)
-        , image_data_(std::move(image_data))
+        : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
     {
+        if (desc_.planes.size() != image_data_.size()) {
+            CASPAR_THROW_EXCEPTION(invalid_argument());
+        }
     }
 
-    impl(const void*                        tag,
-         std::vector<array<std::uint8_t>>&& image_data,
+    impl(std::vector<array<std::uint8_t>>&& image_data,
          array<const std::int32_t>          audio_data,
          const core::pixel_format_desc&     desc)
-        : tag_(tag)
-        , image_data_(std::make_move_iterator(image_data.begin()), std::make_move_iterator(image_data.end()))
+        : image_data_(std::make_move_iterator(image_data.begin()), std::make_move_iterator(image_data.end()))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
     {
+        if (desc_.planes.size() != image_data_.size()) {
+            CASPAR_THROW_EXCEPTION(invalid_argument());
+        }
     }
 
     impl(mutable_frame&& other)
-        : tag_(other.impl_->tag_)
-        , image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
+        : image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
                       std::make_move_iterator(other.impl_->image_data_.end()))
         , audio_data_(std::move(other.impl_->audio_data_))
         , desc_(std::move(other.impl_->desc_))
         , geometry_(std::move(other.impl_->geometry_))
     {
+        if (desc_.planes.size() != image_data_.size()) {
+            CASPAR_THROW_EXCEPTION(invalid_argument());
+        }
     }
 
     const array<const std::uint8_t>& image_data(std::size_t index) const
     {
-        static auto empty = array<const std::uint8_t>{};
-        return tag_ ? image_data_.at(index) : empty;
+        return image_data_.at(index);
     }
 
-    std::size_t width() const { return tag_ ? desc_.planes.at(0).width : 0; }
+    std::size_t width() const { return desc_.planes.at(0).width; }
 
-    std::size_t height() const { return tag_ ? desc_.planes.at(0).height : 0; }
+    std::size_t height() const { return desc_.planes.at(0).height; }
 
-    std::size_t size() const { return tag_ ? desc_.planes.at(0).size : 0; }
+    std::size_t size() const { return desc_.planes.at(0).size; }
 };
 
-const_frame::const_frame(const void* tag)
-    : impl_(new impl(tag))
+const_frame::const_frame()
 {
 }
-const_frame::const_frame(const void*                            tag,
-                         std::vector<array<const std::uint8_t>> image_data,
+const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const core::pixel_format_desc&         desc)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
-{
-}
-const_frame::const_frame(const_frame&& other)
-    : impl_(std::move(other.impl_))
+    : impl_(new impl(std::move(image_data), std::move(audio_data), desc))
 {
 }
 const_frame::const_frame(mutable_frame&& other)
@@ -170,8 +160,10 @@ const_frame::const_frame(const const_frame& other)
     : impl_(other.impl_)
 {
 }
-const_frame::~const_frame() {}
-const_frame& const_frame::operator=(const_frame other)
+const_frame::~const_frame() 
+{
+}
+const_frame& const_frame::operator=(const const_frame& other)
 {
     impl_ = other.impl_;
     return *this;
@@ -186,10 +178,9 @@ const array<const std::int32_t>& const_frame::audio_data() const { return impl_-
 std::size_t                      const_frame::width() const { return impl_->width(); }
 std::size_t                      const_frame::height() const { return impl_->height(); }
 std::size_t                      const_frame::size() const { return impl_->size(); }
-const void*                      const_frame::stream_tag() const { return impl_->tag_; }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
 const_frame::                    operator bool() const
 {
-    return impl_ && impl_->tag_ != nullptr && impl_->desc_.format != core::pixel_format::invalid;
+    return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid;
 }
 }} // namespace caspar::core
