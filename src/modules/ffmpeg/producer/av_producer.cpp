@@ -517,6 +517,28 @@ struct AVProducer::Impl
 
                     std::unique_lock<std::mutex> lock(mutex_);
 
+                    // TODO (perf) seek as soon as input is past duration or eof.
+                    {
+                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
+                        auto duration = duration_ != AV_NOPTS_VALUE ? duration_ : input_->duration;
+                        auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
+                        auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+
+                        buffer_eof_ = (video_filter_.eof && audio_filter_.eof) || av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+
+                        if (buffer_eof_) {
+                            if (loop_) {
+                                frame = Frame{};
+                                seek_internal(start_);
+                            } else {
+                                // TODO (perf) Avoid polling.
+                                cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                            }
+                            // TODO (fix) Limit live polling due to bugs.
+                            continue;
+                        }
+                    }
+
                     std::atomic<int> progress = schedule();
 
                     tbb::parallel_invoke(
@@ -535,26 +557,6 @@ struct AVProducer::Impl
                         }
                         // TODO (fix) Limit live polling due to bugs.
                         continue;
-                    }
-
-                    // TODO (perf) seek as soon as input is past duration or eof.
-                    {
-                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-
-                        buffer_eof_ = (video_filter_.eof && audio_filter_.eof) ||
-                                       (duration_ != AV_NOPTS_VALUE && frame.pts >= start + duration_);
-
-                        if (buffer_eof_) {
-                            if (loop_) {
-                                frame = Frame{};
-                                seek_internal(start_);
-                            } else {
-                                // TODO (perf) Avoid polling.
-                                cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                            }
-                            // TODO (fix) Limit live polling due to bugs.
-                            continue;
-                        }
                     }
 
                     // TODO (fix)
