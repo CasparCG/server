@@ -149,8 +149,6 @@ struct Stream
             }
         }
 
-        std::move(stream_options["filter"]);
-
         auto codec = avcodec_find_encoder(codec_id);
         {
             const auto it = stream_options.find("codec");

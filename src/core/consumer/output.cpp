@@ -98,9 +98,13 @@ struct output::impl
 
     std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc)
     {
-        return executor_.begin_invoke([=] {
+        return executor_.begin_invoke([=, input_frame = std::move(input_frame)] {
             if (input_frame && input_frame.size() != format_desc_.size) {
                 CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
+                return;
+            }
+
+            if (!input_frame) {
                 return;
             }
 

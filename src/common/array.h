@@ -21,28 +21,30 @@ class array final
 
     array() = default;
 
-    array(std::vector<T> storage)
-        : ptr_(storage.data())
-        , size_(storage.size())
-        , storage_(std::make_unique<boost::any>(std::move(storage)))
-    {
-    }
-
     explicit array(std::size_t size)
         : size_(size)
     {
         if (size_ > 0) {
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
             ptr_         = reinterpret_cast<T*>(storage.get());
-            storage_     = std::make_unique<boost::any>(std::move(storage));
+            std::memset(ptr_, 0, size_);
+            storage_     = std::make_shared<boost::any>(std::move(storage));
         }
+    }
+
+    array(std::vector<T> other)
+    {
+        auto storage = std::make_shared<std::vector<T>>(std::move(other));
+        ptr_ = storage->data();
+        size_ = storage->size();
+        storage_ = std::make_shared<boost::any>(std::move(storage));
     }
 
     template <typename S>
     explicit array(T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
         , size_(size)
-        , storage_(std::make_unique<boost::any>(std::forward<S>(storage)))
+        , storage_(std::make_shared<boost::any>(std::forward<S>(storage)))
     {
     }
 
@@ -53,14 +55,16 @@ class array final
         , size_(other.size_)
         , storage_(std::move(other.storage_))
     {
+        other.ptr_ = nullptr;
+        other.size_ = 0;
     }
 
     array& operator=(const array<T>&) = delete;
 
     array& operator=(array&& other)
     {
-        ptr_     = std::move(other.ptr_);
-        size_    = std::move(other.size_);
+        ptr_ = std::move(other.ptr_);
+        size_ = std::move(other.size_);
         storage_ = std::move(other.storage_);
 
         return *this;
@@ -82,7 +86,7 @@ class array final
   private:
     T*                          ptr_  = nullptr;
     std::size_t                 size_ = 0;
-    std::unique_ptr<boost::any> storage_;
+    std::shared_ptr<boost::any> storage_;
 };
 
 template <typename T>
@@ -94,21 +98,23 @@ class array<const T> final
 
     array() = default;
 
-    array(std::vector<T> storage)
-        : ptr_(storage.data())
-        , size_(storage.size())
-        , storage_(std::make_unique<boost::any>(std::move(storage)))
-    {
-    }
-
     array(std::size_t size)
         : size_(size)
     {
         if (size_ > 0) {
-            auto storage = std::vector<char>(size, 0);
-            ptr_         = reinterpret_cast<T*>(storage.data());
-            storage_     = std::move(storage);
+            auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
+            ptr_         = reinterpret_cast<T*>(storage.get());
+            std::memset(ptr_, 0, size_);
+            storage_     = std::make_shared<boost::any>(storage);
         }
+    }
+
+    array(const std::vector<T>& other)
+    {
+        auto storage = std::make_shared<std::vector<T>>(std::move(other));
+        ptr_ = storage->data();
+        size_ = storage->size();
+        storage_ = std::make_shared<boost::any>(std::move(storage));
     }
 
     template <typename S>
@@ -129,23 +135,21 @@ class array<const T> final
     array(array<T>&& other)
         : ptr_(other.ptr_)
         , size_(other.size_)
-        , storage_(std::move(other.storage_))
+        , storage_(other.storage_)
     {
+        other.ptr_ = nullptr;
+        other.size_ = 0;
+        other.storage_ = nullptr;
     }
 
-    array& operator=(array other)
+    array& operator=(const array& other)
     {
-        other.swap(*this);
+        ptr_ = other.ptr_;
+        size_ = other.size_;
+        storage_ = other.storage_;
         return *this;
     }
-
-    void swap(array& other)
-    {
-        std::swap(ptr_, other.ptr_);
-        std::swap(size_, other.size_);
-        std::swap(storage_, other.storage_);
-    }
-
+ 
     const T*    begin() const { return ptr_; }
     const T*    data() const { return ptr_; }
     const T*    end() const { return ptr_ + size_; }
