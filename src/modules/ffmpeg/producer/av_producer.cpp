@@ -500,13 +500,14 @@ struct AVProducer::Impl
                         break;
                     }
 
-                    if (buffer_.size() > buffer_capacity_ / 2) {
-                        task_context_.set_priority(tbb::priority_low);
-                    } else if (buffer_.size() > 2) {
-                        task_context_.set_priority(tbb::priority_normal);
-                    } else {
-                        task_context_.set_priority(tbb::priority_high);
-                    }
+                    // TODO (fix) This gives assertion warnings.
+                    //if (buffer_.size() > buffer_capacity_ / 2) {
+                    //    task_context_.set_priority(tbb::priority_low);
+                    //} else if (buffer_.size() > 2) {
+                    //    task_context_.set_priority(tbb::priority_normal);
+                    //} else {
+                    //    task_context_.set_priority(tbb::priority_high);
+                    //}
 
                     caspar::timer frame_timer;
                     CASPAR_SCOPE_EXIT
