@@ -79,6 +79,7 @@ struct Frame
 
 struct Decoder
 {
+    AVStream*                             st;
     std::shared_ptr<AVCodecContext>       ctx;
     int64_t                               next_pts = AV_NOPTS_VALUE;
     std::queue<std::shared_ptr<AVPacket>> input;
@@ -88,6 +89,7 @@ struct Decoder
     Decoder() = default;
 
     Decoder(AVStream* stream)
+        : st(stream)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!codec) {
@@ -319,6 +321,9 @@ struct Filter
                     CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
                                                             << msg_info_t("invalid filter input media type"));
                 }
+
+                // TODO (refactor)
+                it->second.st->discard = AVDISCARD_NONE;
             }
         }
 
@@ -474,6 +479,8 @@ struct AVProducer::Impl
         } else {
             reset(input_.start_time().value_or(0));
         }
+
+        input_.paused(false);
 
         thread_ = std::thread([=] {
             try {
