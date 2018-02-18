@@ -546,6 +546,7 @@ struct AVProducer::Impl
 
                         if (buffer_eof_) {
                             if (loop_) {
+                                frame = Frame{};
                                 seek_internal(start_);
                             } else {
                                 // TODO (perf) Avoid polling.
