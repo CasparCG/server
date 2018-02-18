@@ -705,9 +705,14 @@ struct AVProducer::Impl
         } else {
             FF_RET(ret, "avcodec_receive_frame");
 
+            if (frame->width > 1024 && frame->interlaced_frame) {
+                frame->top_field_first = 1;
+            }
+
             // TODO (fix) is this always best?
             frame->pts = frame->best_effort_timestamp;
             // TODO (fix) is this always best?
+
             decoder.next_pts = frame->pts + frame->pkt_duration;
             decoder.frame    = std::move(frame);
         }
