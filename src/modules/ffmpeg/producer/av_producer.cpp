@@ -509,10 +509,7 @@ struct AVProducer::Impl
 
                     std::unique_lock<std::mutex> lock(mutex_);
 
-                    std::atomic<int> progress{0};
-
-                    progress.fetch_or(schedule_decoders());
-                    progress.fetch_or(schedule_filters());
+                    std::atomic<int> progress = schedule();
 
                     tbb::parallel_invoke(
                         [&] {
@@ -598,7 +595,7 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-    bool schedule_decoders()
+    bool schedule()
     {
         auto result = false;
         input_([&](std::shared_ptr<AVPacket>& packet) {
@@ -633,12 +630,6 @@ struct AVProducer::Impl
 
             return true;
         });
-        return result;
-    }
-
-    bool schedule_filters()
-    {
-        auto result = false;
 
         std::vector<int> eof;
 
