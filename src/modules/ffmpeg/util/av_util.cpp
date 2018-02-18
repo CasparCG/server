@@ -64,7 +64,7 @@ core::mutable_frame make_frame(void*                    tag,
         auto dst           = frame.audio_data().data();
         auto src           = reinterpret_cast<int32_t*>(audio->data[0]);
         for (auto i = 0; i < audio->nb_samples; ++i) {
-            for (auto j = 0; j < audio->channels; ++j) {
+            for (auto j = 0; j < std::min(8, audio->channels); ++j) {
                 dst[i * 8 + j] = src[i * audio->channels + j];
             }
         }
