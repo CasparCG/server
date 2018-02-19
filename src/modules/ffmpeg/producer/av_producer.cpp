@@ -473,6 +473,10 @@ struct AVProducer::Impl
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
 
+        if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+            duration_ = input_->duration;
+        }
+
         if (start_ != AV_NOPTS_VALUE) {
             input_.seek(start_);
             reset(start_);
@@ -520,8 +524,7 @@ struct AVProducer::Impl
                     // TODO (perf) seek as soon as input is past duration or eof.
                     {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        auto duration = duration_ != AV_NOPTS_VALUE ? duration_ : input_->duration;
-                        auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
+                        auto end = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
                         auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
 
                         buffer_eof_ = (video_filter_.eof && audio_filter_.eof) || av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
