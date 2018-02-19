@@ -613,18 +613,24 @@ struct AVProducer::Impl
     {
         auto result = false;
         input_([&](std::shared_ptr<AVPacket>& packet) {
-            auto min = std::numeric_limits<std::size_t>::max();
+            // TODO (refactor) std::min_element
+            std::pair<int, int> min{ -1, std::numeric_limits<int>::max() };
             for (auto& p : decoders_) {
-                min = std::min(min, p.second.input.size());
+                const auto size = static_cast<int>(p.second.input.size());
+                if (size < min.first && !p.second.eof) {
+                    min = std::pair<int, int>(p.first, size);
+                }
             }
 
-            if (min > 0) {
+            if (min.first > 0) {
                 return false;
             }
 
             if (!packet) {
                 for (auto& p : decoders_) {
-                    p.second.input.push(nullptr);
+                    if (!p.second.eof) {
+                        p.second.input.push(nullptr);
+                    }
                 }
                 result = true;
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
@@ -633,7 +639,11 @@ struct AVProducer::Impl
                     return true;
                 }
 
-                if (it->second.input.size() >= 512) {
+                if (it->second.input.size() >= 256) {
+                    if (min.first != -1) {
+                        decoders_[min.first].input.push(nullptr);
+                        return true;
+                    }
                     return false;
                 }
 
