@@ -542,7 +542,7 @@ struct AVProducer::Impl
                         }
                     }
 
-                    std::atomic<int> progress = schedule();
+                    std::atomic<int> progress{ schedule() };
 
                     tbb::parallel_invoke(
                         [&] {
