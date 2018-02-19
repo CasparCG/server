@@ -721,6 +721,7 @@ struct AVProducer::Impl
         } else {
             FF_RET(ret, "avcodec_receive_frame");
 
+            // NOTE This is a workaround for DVCPRO HD.
             if (frame->width > 1024 && frame->interlaced_frame) {
                 frame->top_field_first = 1;
             }
