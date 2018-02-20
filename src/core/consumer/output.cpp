@@ -30,11 +30,15 @@
 #include <common/except.h>
 #include <common/memory.h>
 
+#include <boost/optional.hpp>
+
 #include <chrono>
 #include <thread>
 #include <map>
 
 namespace caspar { namespace core {
+
+typedef decltype(std::chrono::high_resolution_clock::now()) time_point_t;
 
 struct output::impl
 {
@@ -45,6 +49,8 @@ struct output::impl
 
     std::mutex                                     consumers_mutex_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
+
+    boost::optional<time_point_t> time_;
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -79,6 +85,8 @@ struct output::impl
 
     void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
     {
+        auto time = std::move(time_);
+
         if (format_desc_ != format_desc) {
             std::lock_guard<std::mutex> lock(consumers_mutex_);
             for (auto it = consumers_.begin(); it != consumers_.end();) {
@@ -91,6 +99,7 @@ struct output::impl
                 }
             }
             format_desc_ = format_desc;
+            time_ = boost::none;
             return;
         }
 
@@ -142,8 +151,12 @@ struct output::impl
         });
 
         if (needs_sync) {
-            // TODO (fix) This is not accurate over time. Should use time_point.
-            std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
+            if (!time) {
+                time = std::chrono::high_resolution_clock::now();
+            } else {
+                std::this_thread::sleep_until(*time);
+            }
+            time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps));
         }
     }
 
