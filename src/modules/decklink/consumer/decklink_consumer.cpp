@@ -265,7 +265,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::mutex                    buffer_mutex_;
     std::condition_variable       buffer_cond_;
     std::queue<core::const_frame> buffer_;
-    int                           buffer_reqs_ = 0;
+    int                           buffer_capacity_ = 1;
+
     const int                     buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
     long long video_scheduled_ = 0;
@@ -453,24 +454,16 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::shared_ptr<void>     image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
             std::vector<std::int32_t> audio_data;
 
-            std::vector<core::const_frame> frames;
-            {
-                std::unique_lock<std::mutex> lock(buffer_mutex_);
-                buffer_reqs_ = field_count_;
-                buffer_cond_.notify_all();
-                buffer_cond_.wait(lock, [&] { return buffer_.size() >= field_count_ || abort_request_; });
+            std::vector<core::const_frame> frames { pop() };
+            if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
+                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
+
+                frames.push_back(pop());
+                
                 if (abort_request_) {
                     return E_FAIL;
                 }
-                for (auto n = 0; n < field_count_; ++n) {
-                    frames.push_back(std::move(buffer_.front()));
-                    buffer_.pop();
-                }
-                buffer_reqs_ = 0;
-                buffer_cond_.notify_all();
-            }
 
-            if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
                 if (mode_->GetFieldDominance() != bmdUpperFieldFirst) {
                     std::swap(frames[0], frames[1]);
                 }
@@ -484,6 +477,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                 audio_data.insert(audio_data.end(), frames[0].audio_data().begin(), frames[0].audio_data().end());
                 audio_data.insert(audio_data.end(), frames[1].audio_data().begin(), frames[1].audio_data().end());
             } else {
+                if (abort_request_) {
+                    return E_FAIL;
+                }
+
                 for (auto y = 0; y < format_desc_.height; ++y) {
                     std::memcpy(reinterpret_cast<char*>(image_data.get()) + y * format_desc_.width * 4,
                                 frames[0].image_data(0).data() + y * format_desc_.width * 4,
@@ -507,6 +504,21 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         return S_OK;
+    }
+
+    core::const_frame pop()
+    {
+        core::const_frame frame;
+        {
+            std::unique_lock<std::mutex> lock(buffer_mutex_);
+            buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
+            if (!abort_request_) {
+                frame = std::move(buffer_.front());
+                buffer_.pop();
+            }
+        }
+        buffer_cond_.notify_all();
+        return frame;
     }
 
     void schedule_next_audio(std::vector<std::int32_t> audio, int nb_samples)
@@ -576,7 +588,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
-            buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_reqs_ || abort_request_; });
+            buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             buffer_.push(std::move(frame));
         }
         buffer_cond_.notify_all();

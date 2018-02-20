@@ -29,7 +29,6 @@
 
 #include <common/env.h>
 #include <common/executor.h>
-#include <common/prec_timer.h>
 #include <common/timer.h>
 
 #include <SFML/Graphics.hpp>
@@ -96,7 +95,6 @@ class context : public drawable
     sf::View                          view_;
 
     std::list<std::weak_ptr<drawable>> drawables_;
-    int64_t                            refresh_rate_millis_ = 16;
     caspar::timer                      display_time_;
     bool                               calculate_view_  = true;
     int                                scroll_position_ = 0;
@@ -202,23 +200,14 @@ class context : public drawable
 
         CASPAR_LOG(trace) << "osd_graph::tick()";
         window_->draw(*this);
-
-        static const auto THRESHOLD          = 1;
-        int64_t           since_last_refresh = display_time_.elapsed() * 1000;
-        int64_t           until_next_refresh = refresh_rate_millis_ - since_last_refresh;
-        int64_t           sleep_for          = until_next_refresh - THRESHOLD;
-
-        if (sleep_for > 0) {
-            prec_timer timer;
-            timer.tick_millis(0);
-            timer.tick_millis(sleep_for);
-        }
-
         window_->display();
+        
         display_time_.restart();
         if (executor_.is_running()) {
             executor_.begin_invoke([this] { tick(); });
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
     void render(sf::RenderTarget& target, sf::RenderStates states)

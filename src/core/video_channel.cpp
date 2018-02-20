@@ -132,7 +132,7 @@ struct video_channel::impl final
 
                     // Consume
                     caspar::timer consume_timer;
-                    output_(std::move(mixed_frame), format_desc).wait();
+                    output_(std::move(mixed_frame), format_desc);
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
                     {
