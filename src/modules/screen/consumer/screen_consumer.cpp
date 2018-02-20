@@ -32,7 +32,6 @@
 #include <common/memory.h>
 #include <common/memshfl.h>
 #include <common/param.h>
-#include <common/prec_timer.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
 #include <common/utf.h>
@@ -117,8 +116,6 @@ struct screen_consumer : boost::noncopyable
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
     caspar::timer                       tick_timer_;
-
-    caspar::prec_timer wait_timer_;
 
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
 

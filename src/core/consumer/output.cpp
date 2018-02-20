@@ -24,19 +24,15 @@
 
 #include "../frame/frame.h"
 #include "../video_format.h"
+#include "../monitor/monitor.h"
 
-#include <common/assert.h>
 #include <common/diagnostics/graph.h>
-#include <common/env.h>
-#include <common/executor.h>
-#include <common/future.h>
-#include <common/memshfl.h>
-#include <common/prec_timer.h>
-#include <common/timer.h>
+#include <common/except.h>
+#include <common/memory.h>
 
-#include <boost/lexical_cast.hpp>
-
-#include <functional>
+#include <chrono>
+#include <thread>
+#include <map>
 
 namespace caspar { namespace core {
 
@@ -46,9 +42,9 @@ struct output::impl
     spl::shared_ptr<diagnostics::graph>            graph_;
     const int                                      channel_index_;
     video_format_desc                              format_desc_;
+
+    std::mutex                                     consumers_mutex_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
-    prec_timer                                     sync_timer_;
-    executor executor_{L"output " + boost::lexical_cast<std::wstring>(channel_index_)};
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -64,28 +60,60 @@ struct output::impl
 
         consumer->initialize(format_desc_, channel_index_);
 
-        executor_.begin_invoke([=] { consumers_.emplace(index, std::move(consumer)); });
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        consumers_.emplace(index, std::move(consumer));
     }
 
     void add(const spl::shared_ptr<frame_consumer>& consumer) { add(consumer->index(), consumer); }
 
     void remove(int index)
     {
-        executor_.begin_invoke([=] {
-            auto it = consumers_.find(index);
-            if (it != consumers_.end()) {
-                consumers_.erase(it);
-            }
-        });
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        auto it = consumers_.find(index);
+        if (it != consumers_.end()) {
+            consumers_.erase(it);
+        }
     }
 
     void remove(const spl::shared_ptr<frame_consumer>& consumer) { remove(consumer->index()); }
 
-    void change_channel_format(const core::video_format_desc& format_desc)
+    void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
     {
+        if (format_desc_ != format_desc) {
+            std::lock_guard<std::mutex> lock(consumers_mutex_);
+            for (auto it = consumers_.begin(); it != consumers_.end();) {
+                try {
+                    it->second->initialize(format_desc, it->first);
+                    ++it;
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                    it = consumers_.erase(it);
+                }
+            }
+            format_desc_ = format_desc;
+            return;
+        }
+
+        decltype(consumers_) consumers;
+        {
+            std::lock_guard<std::mutex> lock(consumers_mutex_);
+            consumers = consumers_;
+        }
+
+        if (input_frame && input_frame.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
+            return;
+        }
+
+        if (!input_frame) {
+            return;
+        }
+
+        std::map<int, std::future<bool>> futures;
+
         for (auto it = consumers_.begin(); it != consumers_.end();) {
             try {
-                it->second->initialize(format_desc, it->first);
+                futures.emplace(it->first, it->second->send(input_frame));
                 ++it;
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -93,61 +121,30 @@ struct output::impl
             }
         }
 
-        format_desc_ = format_desc;
-    }
-
-    std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc)
-    {
-        return executor_.begin_invoke([=, input_frame = std::move(input_frame)] {
-            if (input_frame && input_frame.size() != format_desc_.size) {
-                CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
-                return;
-            }
-
-            if (!input_frame) {
-                return;
-            }
-
-            if (format_desc_ != format_desc) {
-                change_channel_format(format_desc);
-            }
-
-            std::map<int, std::future<bool>> futures;
-
-            for (auto it = consumers_.begin(); it != consumers_.end();) {
-                try {
-                    futures.emplace(it->first, it->second->send(input_frame));
-                    ++it;
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
-                    it = consumers_.erase(it);
-                }
-            }
-
-            for (auto& p : futures) {
-                try {
-                    if (!p.second.get()) {
-                        consumers_.erase(p.first);
-                    }
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
+        for (auto& p : futures) {
+            try {
+                if (!p.second.get()) {
                     consumers_.erase(p.first);
                 }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                consumers_.erase(p.first);
             }
+        }
 
-            state_.clear();
-            for (auto& p : consumers_) {
-                state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
-            }
+        state_.clear();
+        for (auto& p : consumers_) {
+            state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
+        }
 
-            const auto needs_sync = std::all_of(consumers_.begin(), consumers_.end(), [](auto& p) {
-                return !p.second->has_synchronization_clock();
-            });
-
-            if (needs_sync) {
-                sync_timer_.tick(1.0 / format_desc_.fps);
-            }
+        const auto needs_sync = std::all_of(consumers_.begin(), consumers_.end(), [](auto& p) {
+            return !p.second->has_synchronization_clock();
         });
+
+        if (needs_sync) {
+            // TODO (fix) This is not accurate over time. Should use time_point.
+            std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
+        }
     }
 
     std::wstring print() const { return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]"; }
@@ -162,7 +159,7 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { i
 void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
 void output::remove(int index) { impl_->remove(index); }
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer) { impl_->remove(consumer); }
-std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc)
+void output::operator()(const_frame frame, const video_format_desc& format_desc)
 {
     return (*impl_)(std::move(frame), format_desc);
 }

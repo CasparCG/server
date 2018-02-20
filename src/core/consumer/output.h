@@ -43,7 +43,7 @@ class output final
     output& operator=(const output&) = delete;
     ~output();
 
-    std::future<void> operator()(const_frame frame, const video_format_desc& format_desc);
+    void operator()(const_frame frame, const video_format_desc& format_desc);
 
     void add(const spl::shared_ptr<frame_consumer>& consumer);
     void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
