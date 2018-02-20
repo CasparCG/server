@@ -109,12 +109,12 @@ struct output::impl
             consumers = consumers_;
         }
 
-        if (input_frame && input_frame.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
+        if (!input_frame) {
             return;
         }
 
-        if (!input_frame) {
+        if (input_frame.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
 
