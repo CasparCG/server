@@ -54,13 +54,32 @@ namespace caspar { namespace log {
 
 std::string current_exception_diagnostic_information()
 {
-    auto e = boost::current_exception_cast<const char*>();
-
-    if (e) {
-        return std::string("[char *] = ") + *e + "\n";
-    } else {
-        return boost::current_exception_diagnostic_information();
+    {
+        auto e = boost::current_exception_cast<const char*>();
+        if (e) {
+            return std::string("[char *] = ") + *e + "\n";
+        }
     }
+    {
+        auto e = boost::current_exception_cast<const wchar_t*>();
+        if (e) {
+            return std::string("[char *] = ") + u8(*e) + "\n";
+        }
+    }
+    {
+        auto e = boost::current_exception_cast<std::string>();
+        if (e) {
+            return std::string("[char *] = ") + *e + "\n";
+        }
+    }
+    {
+        auto e = boost::current_exception_cast<std::wstring>();
+        if (e) {
+            return std::string("[char *] = ") + u8(*e) + "\n";
+        }
+    }
+
+    return boost::current_exception_diagnostic_information(true);
 }
 
 template <typename Stream>
