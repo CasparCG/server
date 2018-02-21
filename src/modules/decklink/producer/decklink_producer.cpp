@@ -173,8 +173,8 @@ struct Filter
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             format_desc.width % format_desc.height % AV_PIX_FMT_UYVY422 % (format_desc.duration * format_desc.field_count) %
-                             format_desc.time_scale % sar.numerator() % sar.denominator() %
+                             format_desc.width % format_desc.height % AV_PIX_FMT_UYVY422 % 1 %
+                             AV_TIME_BASE % sar.numerator() % sar.denominator() %
                              format_desc.framerate.numerator() % (format_desc.framerate.denominator() * format_desc.field_count))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
@@ -395,16 +395,19 @@ class decklink_producer : public IDeckLinkInputCallback
 
                     src->data[0]     = reinterpret_cast<uint8_t*>(video_bytes);
                     src->linesize[0] = video->GetRowBytes();
-                } else {
-                    av_frame_get_buffer(src.get(), 0);
-                    std::memset(src->data[0], 0, src->linesize[0] * src->height);
-                }
 
-                if (video_filter_.video_source) {
-                    FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
-                }
-                if (audio_filter_.video_source) {
-                    FF(av_buffersrc_write_frame(audio_filter_.video_source, src.get()));
+                    BMDTimeValue time;
+                    BMDTimeValue duration;
+                    if (SUCCEEDED(video->GetStreamTime(&time, &duration, AV_TIME_BASE))) {
+                      src->pts = time;
+                    }
+
+                    if (video_filter_.video_source) {
+                      FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
+                    }
+                    if (audio_filter_.video_source) {
+                      FF(av_buffersrc_write_frame(audio_filter_.video_source, src.get()));
+                    }
                 }
             }
 
@@ -422,17 +425,18 @@ class decklink_producer : public IDeckLinkInputCallback
                     src->data[0]     = reinterpret_cast<uint8_t*>(audio_bytes);
                     src->linesize[0] = src->nb_samples * src->channels *
                                        av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
-                } else {
-                    src->nb_samples = audio_cadence_[0] * format_desc_.field_count;
-                    av_frame_get_buffer(src.get(), 0);
-                    std::memset(src->data[0], 0, src->linesize[0]);
-                }
 
-                if (video_filter_.audio_source) {
-                    FF(av_buffersrc_write_frame(video_filter_.audio_source, src.get()));
-                }
-                if (audio_filter_.audio_source) {
-                    FF(av_buffersrc_write_frame(audio_filter_.audio_source, src.get()));
+                    BMDTimeValue time;
+                    if (SUCCEEDED(audio->GetPacketTime(&time, format_desc_.audio_sample_rate))) {
+                      src->pts = time;
+                    }
+
+                    if (video_filter_.audio_source) {
+                      FF(av_buffersrc_write_frame(video_filter_.audio_source, src.get()));
+                    }
+                    if (audio_filter_.audio_source) {
+                      FF(av_buffersrc_write_frame(audio_filter_.audio_source, src.get()));
+                    }
                 }
             }
 
