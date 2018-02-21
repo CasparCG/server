@@ -462,8 +462,6 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
-        task_context_.set_priority(tbb::priority_high);
-
         state_["file/name"]  = u8(name_);
         state_["file/path"]  = u8(path_);
 
