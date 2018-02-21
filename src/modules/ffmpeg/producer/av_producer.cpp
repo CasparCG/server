@@ -67,7 +67,6 @@ const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 
 struct Frame
 {
-    core::draw_frame         frame;
     std::shared_ptr<AVFrame> video;
     std::shared_ptr<AVFrame> audio;
     int64_t                  pts      = AV_NOPTS_VALUE;
@@ -583,8 +582,6 @@ struct AVProducer::Impl
                         frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
-                    frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
-
                     {
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
                         buffer_.push_back(frame);
@@ -777,7 +774,8 @@ struct AVProducer::Impl
             std::lock_guard<std::mutex> lock(buffer_mutex_);
 
             if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                frame_       = core::draw_frame::still(buffer_[0].frame);
+                auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+                frame_       = core::draw_frame::still(frame);
                 frame_time_  = buffer_[0].pts + buffer_[0].duration;
                 frame_flush_ = false;
             }
@@ -807,8 +805,8 @@ struct AVProducer::Impl
                 }
             }
 
-            frame       = buffer_[0].frame;
-            frame_      = core::draw_frame::still(buffer_[0].frame);
+            frame       = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+            frame_      = core::draw_frame::still(frame);
             frame_time_ = buffer_[0].pts + buffer_[0].duration;
             buffer_.pop_front();
 
