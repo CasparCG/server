@@ -504,15 +504,6 @@ struct AVProducer::Impl
                         break;
                     }
 
-                    // TODO (fix) This gives assertion warnings.
-                    //if (buffer_.size() > buffer_capacity_ / 2) {
-                    //    task_context_.set_priority(tbb::priority_low);
-                    //} else if (buffer_.size() > 2) {
-                    //    task_context_.set_priority(tbb::priority_normal);
-                    //} else {
-                    //    task_context_.set_priority(tbb::priority_high);
-                    //}
-
                     caspar::timer frame_timer;
                     CASPAR_SCOPE_EXIT
                     {
@@ -520,6 +511,12 @@ struct AVProducer::Impl
                     };
 
                     std::unique_lock<std::mutex> lock(mutex_);
+
+                    if (buffer_.size() > buffer_capacity_ / 2) {
+                      cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
+                    } else if (buffer_.size() > 2) {
+                      cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                    }
 
                     // TODO (perf) seek as soon as input is past duration or eof.
                     {
