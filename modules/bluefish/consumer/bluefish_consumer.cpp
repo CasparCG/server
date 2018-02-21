@@ -151,6 +151,11 @@ struct bluefish_consumer : boost::noncopyable
 	hardware_downstream_keyer_mode								hardware_keyer_;
 	hardware_downstream_keyer_audio_source						keyer_audio_source_;
 	bluefish_hardware_output_channel							device_output_channel_;
+
+    std::shared_ptr<std::thread>								hardware_watchdog_thread_;
+    tbb::atomic<bool>											end_hardware_watchdog_thread_;
+    unsigned int                                                interrupts_to_wait_;
+
 public:
 	bluefish_consumer(
 			const core::video_format_desc& format_desc,
@@ -162,7 +167,8 @@ public:
 			hardware_downstream_keyer_mode keyer,
 			hardware_downstream_keyer_audio_source keyer_audio_source,
 			int channel_index,
-			bluefish_hardware_output_channel device_output_channel)
+			bluefish_hardware_output_channel device_output_channel,
+            int watchdog_timeout)
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc)
@@ -177,6 +183,7 @@ public:
 		, key_only_(key_only)
 		, executor_(print())
 		, device_output_channel_(device_output_channel)
+        , interrupts_to_wait_(watchdog_timeout)
 	{
 		executor_.set_capacity(1);
 		presentation_delay_millis_ = 0;
@@ -190,6 +197,9 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
+        // configure watchdog
+        configure_watchdog();
+         
 		// Specify the video channel
 		setup_hardware_output_channel();
 
@@ -262,12 +272,19 @@ public:
 		{
 			executor_.invoke([&]
 			{
+                if (!end_hardware_watchdog_thread_)
+                    disable_watchdog();
+
+                end_hardware_watchdog_thread_ = true;
 				end_dma_thread_ = true;
 				disable_video_output();
 				blue_->detach();
 
 				if (dma_present_thread_)
 					dma_present_thread_->join();
+
+                if (hardware_watchdog_thread_)
+                    hardware_watchdog_thread_->join();
 			});
 		}
 		catch(...)
@@ -275,6 +292,73 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
+
+
+    void watchdog_thread_actual()
+    {
+        ensure_gpf_handler_installed_for_thread("bluefish HW watchdog thread");
+
+        bvc_wrapper watchdog_bvc;
+        watchdog_bvc.attach(device_index_);
+        EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
+        watchdog_bvc.set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel);
+        unsigned long fc = 0;
+        unsigned int blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_keepalive, interrupts_to_wait_);
+
+        while (!end_hardware_watchdog_thread_)
+        {
+            watchdog_bvc.wait_video_output_sync(UPD_FMT_FIELD, fc);
+            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);            
+        }
+        disable_watchdog();
+        watchdog_bvc.detach();
+    }
+
+    void configure_watchdog()
+    {
+        // First test if we even want to enable the watchdog, only on Ch 1 and if user has not explicitly set count to 0, and only if card has at least 1  input sdi, else dont do anything
+        unsigned int val = 0;
+        blue_->get_card_property32(CARD_FEATURE_STREAM_INFO, val);
+        unsigned int numInputStreams = CARD_FEATURE_GET_SDI_INPUT_STREAM_COUNT(val);
+        if (interrupts_to_wait_ && (device_output_channel_ == bluefish_hardware_output_channel::channel_a) && numInputStreams)
+        {
+            // check if it is already running
+            unsigned int blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_get_timer_activated_status, 0);
+            blue_->get_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+            if (EPOCH_WATCHDOG_TIMER_GET_VALUE_MACRO(blue_prop))
+            {
+                // watchdog timer is running already, switch it off. 
+                blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, (unsigned int)0);
+                blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+            }
+
+            //Setting up the watchdog properties
+            unsigned int watchdog_timer_gpo_port = 1;       //GPO port to use: 0 = none, 1 = port A, 2 = port B
+            blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_enable_gpo_on_active, watchdog_timer_gpo_port);
+            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+
+            if (interrupts_to_wait_ == 1)       // using too low a value can cause instability on the watchdog so always make sure we use a value of 2 or more...
+                interrupts_to_wait_++;
+
+            blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, interrupts_to_wait_);
+            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+
+            // start the thread if required.
+            if (hardware_watchdog_thread_ == 0)
+            {
+                end_hardware_watchdog_thread_ = false;
+                hardware_watchdog_thread_ = std::make_shared<std::thread>([this] {watchdog_thread_actual(); });
+            }
+        }
+    }
+
+    void disable_watchdog()
+    {
+        end_hardware_watchdog_thread_ = true;
+        unsigned int stop_value = 0;
+        unsigned int blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, stop_value);
+        blue_->get_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+    }
 
 	void setup_hardware_output_channel()
 	{
@@ -440,6 +524,11 @@ public:
 
 	void enable_video_output()
 	{
+        if (device_output_channel_ == bluefish_hardware_output_channel::channel_a)
+            blue_->set_card_property32(BYPASS_RELAY_A_ENABLE, 0);
+        else if (device_output_channel_ == bluefish_hardware_output_channel::channel_b)
+            blue_->set_card_property32(BYPASS_RELAY_B_ENABLE, 0);
+
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 0)))
 			CASPAR_LOG(error) << print() << TEXT(" Failed to disable video output.");
 	}
@@ -659,6 +748,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	hardware_downstream_keyer_mode			hardware_keyer_;
 	hardware_downstream_keyer_audio_source	hardware_keyer_audio_source_;
 	bluefish_hardware_output_channel		hardware_output_channel_;
+    int                                     watchdog_timeout_;
 
 public:
 
@@ -668,7 +758,8 @@ public:
 							hardware_downstream_keyer_mode keyer,
 							hardware_downstream_keyer_audio_source keyer_audio_source,
 							const core::audio_channel_layout& out_channel_layout,
-							bluefish_hardware_output_channel hardware_output_channel)
+							bluefish_hardware_output_channel hardware_output_channel,
+                            int watchdog_timeout)
 
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
@@ -677,6 +768,7 @@ public:
 		, hardware_keyer_audio_source_(keyer_audio_source)
 		, out_channel_layout_(out_channel_layout)
 		, hardware_output_channel_(hardware_output_channel)
+        , watchdog_timeout_(watchdog_timeout)
 	{
 	}
 
@@ -701,7 +793,8 @@ public:
 												hardware_keyer_,
 												hardware_keyer_audio_source_,
 												channel_index,
-												hardware_output_channel_));
+												hardware_output_channel_,
+                                                watchdog_timeout_));
 	}
 
 	std::future<bool> send(core::const_frame frame) override
@@ -800,6 +893,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(	const std::vector<std::ws
 	const auto channel_layout		= get_param(		L"CHANNEL_LAYOUT",	params);
 	const auto keyer_option			= contains_param(	L"KEYER",			params);
 	const auto keyer_audio_option	= contains_param(	L"INTERNAL-KEYER-AUDIO-SOURCE", params);
+    const auto watchdog_option      = contains_param(   L"WATCHDOG", params);
 
 	auto layout = core::audio_channel_layout::invalid();
 
@@ -838,7 +932,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(	const std::vector<std::ws
 	if (contains_param(L"VIDEOOUTPUTCHANNEL", params))
 		keyer_audio_source = hardware_downstream_keyer_audio_source::VideoOutputChannel;
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer, keyer_audio_source, layout, device_output_channel);
+    int watchdog_val = 2;                        
+    if (watchdog_option)         
+        watchdog_val = watchdog_option;
+    
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer, keyer_audio_source, layout, device_output_channel, watchdog_val);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -852,6 +950,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	const auto channel_layout	= ptree.get_optional<std::wstring>(	L"channel-layout");
 	const auto hardware_keyer_value = ptree.get(					L"keyer", L"disabled");
 	const auto keyer_audio_source_value = ptree.get(				L"internal-keyer-audio-source", L"videooutputchannel");
+    const auto watchdog_val     = ptree.get(                        L"watchdog",        2);
 
 	auto layout = core::audio_channel_layout::invalid();
 
@@ -892,7 +991,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		if (keyer_audio_source_value == L"sdivideoinput")
 			keyer_audio_source = hardware_downstream_keyer_audio_source::SDIVideoInput;
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer_mode, keyer_audio_source, layout, device_output_channel);
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer_mode, keyer_audio_source, layout, device_output_channel, watchdog_val);
 }
 
 }}
