@@ -95,9 +95,11 @@ class html_client
 
   public:
     html_client(spl::shared_ptr<core::frame_factory> frame_factory,
+                spl::shared_ptr<diagnostics::graph>  graph,
                 const core::video_format_desc&       format_desc,
                 const std::wstring&                  url)
         : url_(url)
+        , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(format_desc)
         , executor_(L"html_producer")
@@ -353,6 +355,7 @@ class html_producer : public core::frame_producer_base
     core::video_format_desc format_desc_;
     core::monitor::state    state_;
     const std::wstring      url_;
+    spl::shared_ptr<diagnostics::graph> graph_;
 
     CefRefPtr<html_client> client_;
 
@@ -364,7 +367,7 @@ class html_producer : public core::frame_producer_base
         , url_(url)
     {
         html::invoke([&] {
-            client_ = new html_client(frame_factory, format_desc, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, url_);
 
             CefWindowInfo window_info;
             window_info.width                        = format_desc.square_width;
