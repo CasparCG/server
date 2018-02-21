@@ -107,7 +107,7 @@ struct Decoder
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
         FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
-        //FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
+        // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
 
@@ -433,7 +433,7 @@ struct AVProducer::Impl
     std::mutex              buffer_mutex_;
     std::condition_variable buffer_cond_;
     std::deque<Frame>       buffer_;
-    std::atomic<bool>       buffer_eof_{ false };
+    std::atomic<bool>       buffer_eof_{false};
     int                     buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
 
     tbb::task_group_context task_context_;
@@ -462,8 +462,8 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
-        state_["file/name"]  = u8(name_);
-        state_["file/path"]  = u8(path_);
+        state_["file/name"] = u8(name_);
+        state_["file/path"] = u8(path_);
 
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -506,20 +506,22 @@ struct AVProducer::Impl
                     std::unique_lock<std::mutex> lock(mutex_);
 
                     if (buffer_.size() > buffer_capacity_ / 2) {
-                      cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
-                      frame_timer.restart();
+                        cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
+                        frame_timer.restart();
                     } else if (buffer_.size() > 2) {
-                      cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                      frame_timer.restart();
+                        cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                        frame_timer.restart();
                     }
 
                     // TODO (perf) seek as soon as input is past duration or eof.
                     {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        auto end = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
-                        auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+                        auto end   = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
+                        auto time  = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
 
-                        buffer_eof_ = (video_filter_.eof && audio_filter_.eof) || av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+                        buffer_eof_ =
+                            (video_filter_.eof && audio_filter_.eof) ||
+                            av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
 
                         if (buffer_eof_) {
                             if (loop_) {
@@ -535,16 +537,18 @@ struct AVProducer::Impl
                         }
                     }
 
-                    std::atomic<int> progress{ schedule() };
+                    std::atomic<int> progress{schedule()};
 
                     tbb::parallel_invoke(
                         [&] {
-                            tbb::parallel_for_each(decoders_.begin(), decoders_.end(), [&](auto& p) {
-                                progress.fetch_or(decode_frame(p.second));
-                            }, task_context_);
+                            tbb::parallel_for_each(decoders_.begin(),
+                                                   decoders_.end(),
+                                                   [&](auto& p) { progress.fetch_or(decode_frame(p.second)); },
+                                                   task_context_);
                         },
                         [&] { progress.fetch_or(filter_frame(video_filter_)); },
-                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); }, task_context_);
+                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); },
+                        task_context_);
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         if (!progress) {
@@ -609,7 +613,7 @@ struct AVProducer::Impl
         auto result = false;
         input_([&](std::shared_ptr<AVPacket>& packet) {
             // TODO (refactor) std::min_element
-            std::pair<int, int> min{ -1, std::numeric_limits<int>::max() };
+            std::pair<int, int> min{-1, std::numeric_limits<int>::max()};
             for (auto& p : decoders_) {
                 const auto size = static_cast<int>(p.second.input.size());
                 if (size < min.first && !p.second.eof) {
@@ -905,7 +909,7 @@ struct AVProducer::Impl
         input_.seek(time);
         input_.paused(false);
         frame_flush_ = true;
-        buffer_eof_ = false;
+        buffer_eof_  = false;
 
         for (auto& p : decoders_) {
             reset_decoder(p.second);

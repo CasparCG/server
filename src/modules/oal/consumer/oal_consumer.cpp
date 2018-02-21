@@ -269,7 +269,7 @@ struct oal_consumer : public core::frame_consumer
             }
 
             // TODO (fix)
-            //if (std::abs(delta) > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
+            // if (std::abs(delta) > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
             //    // TODO FF error
             //    CASPAR_THROW_EXCEPTION(invalid_argument());
             //}

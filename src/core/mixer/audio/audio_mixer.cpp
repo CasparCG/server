@@ -29,10 +29,10 @@
 
 #include <common/diagnostics/graph.h>
 
+#include <boost/container/flat_map.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/container/flat_map.hpp>
 
 #include <atomic>
 #include <map>
@@ -53,11 +53,11 @@ typedef std::vector<double> audio_buffer_ps;
 
 struct audio_mixer::impl : boost::noncopyable
 {
-    monitor::state                             state_;
-    std::stack<core::audio_transform>          transform_stack_;
-    std::vector<audio_item>                    items_;
-    std::atomic<float>                         master_volume_{1.0f};
-    spl::shared_ptr<diagnostics::graph>        graph_;
+    monitor::state                      state_;
+    std::stack<core::audio_transform>   transform_stack_;
+    std::vector<audio_item>             items_;
+    std::atomic<float>                  master_volume_{1.0f};
+    spl::shared_ptr<diagnostics::graph> graph_;
 
   public:
     impl(spl::shared_ptr<diagnostics::graph> graph)
@@ -94,7 +94,7 @@ struct audio_mixer::impl : boost::noncopyable
     array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples)
     {
         auto channels = format_desc.audio_channels;
-        auto items    = std::move(items_); 
+        auto items    = std::move(items_);
         auto result   = std::vector<int32_t>(nb_samples * channels, 0);
 
         if (items.empty()) {
@@ -122,7 +122,7 @@ struct audio_mixer::impl : boost::noncopyable
                 result[n] = static_cast<int32_t>(sample);
             }
         }
- 
+
         auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
         for (size_t n = 0; n < result.size(); n += channels) {
             for (int ch = 0; ch < channels; ++ch) {
@@ -147,12 +147,15 @@ audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph)
     : impl_(new impl(std::move(graph)))
 {
 }
-void           audio_mixer::push(const frame_transform& transform) { impl_->push(transform); }
-void           audio_mixer::visit(const const_frame& frame) { impl_->visit(frame); }
-void           audio_mixer::pop() { impl_->pop(); }
-void           audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
-float          audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
-array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples) { return impl_->mix(format_desc, nb_samples); }
-const monitor::state&       audio_mixer::state() const { return impl_->state_; }
+void                 audio_mixer::push(const frame_transform& transform) { impl_->push(transform); }
+void                 audio_mixer::visit(const const_frame& frame) { impl_->visit(frame); }
+void                 audio_mixer::pop() { impl_->pop(); }
+void                 audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
+float                audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
+array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples)
+{
+    return impl_->mix(format_desc, nb_samples);
+}
+const monitor::state& audio_mixer::state() const { return impl_->state_; }
 
 }} // namespace caspar::core

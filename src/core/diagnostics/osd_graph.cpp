@@ -201,7 +201,7 @@ class context : public drawable
         CASPAR_LOG(trace) << "osd_graph::tick()";
         window_->draw(*this);
         window_->display();
-        
+
         display_time_.restart();
         if (executor_.is_running()) {
             executor_.begin_invoke([this] { tick(); });

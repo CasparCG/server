@@ -104,16 +104,17 @@ struct Filter
                 filter_spec = "null";
             }
             if (format_desc.field_count == 2) {
-              filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
+                filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
             }
-            filter_spec += (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator()).str();
+            filter_spec +=
+                (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator())
+                    .str();
         } else {
             if (filter_spec.empty()) {
                 filter_spec = "anull";
             }
             filter_spec +=
-              (boost::format(",aresample=sample_rate=%d:async=2000") % format_desc.audio_sample_rate)
-              .str();
+                (boost::format(",aresample=sample_rate=%d:async=2000") % format_desc.audio_sample_rate).str();
         }
 
         AVFilterInOut* outputs = nullptr;
@@ -176,9 +177,9 @@ struct Filter
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             format_desc.width % format_desc.height % AV_PIX_FMT_UYVY422 % 1 %
-                             AV_TIME_BASE % sar.numerator() % sar.denominator() %
-                             format_desc.framerate.numerator() % (format_desc.framerate.denominator() * format_desc.field_count))
+                             format_desc.width % format_desc.height % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE %
+                             sar.numerator() % sar.denominator() % format_desc.framerate.numerator() %
+                             (format_desc.framerate.denominator() * format_desc.field_count))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
@@ -402,14 +403,14 @@ class decklink_producer : public IDeckLinkInputCallback
                     BMDTimeValue time;
                     BMDTimeValue duration;
                     if (SUCCEEDED(video->GetStreamTime(&time, &duration, AV_TIME_BASE))) {
-                      src->pts = time;
+                        src->pts = time;
                     }
 
                     if (video_filter_.video_source) {
-                      FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
+                        FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
                     }
                     if (audio_filter_.video_source) {
-                      FF(av_buffersrc_write_frame(audio_filter_.video_source, src.get()));
+                        FF(av_buffersrc_write_frame(audio_filter_.video_source, src.get()));
                     }
                 }
             }
@@ -431,14 +432,14 @@ class decklink_producer : public IDeckLinkInputCallback
 
                     BMDTimeValue time;
                     if (SUCCEEDED(audio->GetPacketTime(&time, format_desc_.audio_sample_rate))) {
-                      src->pts = time;
+                        src->pts = time;
                     }
 
                     if (video_filter_.audio_source) {
-                      FF(av_buffersrc_write_frame(video_filter_.audio_source, src.get()));
+                        FF(av_buffersrc_write_frame(video_filter_.audio_source, src.get()));
                     }
                     if (audio_filter_.audio_source) {
-                      FF(av_buffersrc_write_frame(audio_filter_.audio_source, src.get()));
+                        FF(av_buffersrc_write_frame(audio_filter_.audio_source, src.get()));
                     }
                 }
             }

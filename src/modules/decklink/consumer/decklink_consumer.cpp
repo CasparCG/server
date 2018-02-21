@@ -267,7 +267,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::queue<core::const_frame> buffer_;
     int                           buffer_capacity_ = 1;
 
-    const int                     buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
+    const int buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
     long long video_scheduled_ = 0;
     long long audio_scheduled_ = 0;
@@ -454,12 +454,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::shared_ptr<void>     image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
             std::vector<std::int32_t> audio_data;
 
-            std::vector<core::const_frame> frames { pop() };
+            std::vector<core::const_frame> frames{pop()};
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
                 std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
 
                 frames.push_back(pop());
-                
+
                 if (abort_request_) {
                     return E_FAIL;
                 }

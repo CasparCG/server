@@ -194,7 +194,8 @@ frame_consumer_registry::create_consumer(const std::wstring&                    
         CASPAR_THROW_EXCEPTION(user_error()
                                << msg_info(L"No consumer factory registered for element name " + element_name));
 
-    return spl::make_shared<destroy_consumer_proxy>(spl::make_shared<print_consumer_proxy>(found->second(element, channels)));
+    return spl::make_shared<destroy_consumer_proxy>(
+        spl::make_shared<print_consumer_proxy>(found->second(element, channels)));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()

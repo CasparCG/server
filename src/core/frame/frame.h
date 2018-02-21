@@ -45,7 +45,7 @@ class mutable_frame final
     std::size_t width() const;
 
     std::size_t height() const;
-     
+
     class frame_geometry&       geometry();
     const class frame_geometry& geometry() const;
 
@@ -81,7 +81,7 @@ class const_frame final
     std::size_t size() const;
 
     const boost::any& opaque() const;
-    
+
     const class frame_geometry& geometry() const;
 
     bool operator==(const const_frame& other) const;

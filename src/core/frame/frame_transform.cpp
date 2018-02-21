@@ -248,15 +248,12 @@ audio_transform audio_transform::tween(double                 time,
                                        const tweener&         tween)
 {
     audio_transform result;
-    result.volume   = do_tween(time, source.volume, dest.volume, duration, tween);
+    result.volume = do_tween(time, source.volume, dest.volume, duration, tween);
 
     return result;
 }
 
-bool operator==(const audio_transform& lhs, const audio_transform& rhs)
-{
-    return eq(lhs.volume, rhs.volume);
-}
+bool operator==(const audio_transform& lhs, const audio_transform& rhs) { return eq(lhs.volume, rhs.volume); }
 
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return !(lhs == rhs); }
 

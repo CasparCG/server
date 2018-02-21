@@ -28,16 +28,16 @@ class array final
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
             ptr_         = reinterpret_cast<T*>(storage.get());
             std::memset(ptr_, 0, size_);
-            storage_     = std::make_shared<boost::any>(std::move(storage));
+            storage_ = std::make_shared<boost::any>(std::move(storage));
         }
     }
 
     array(std::vector<T> other)
     {
         auto storage = std::make_shared<std::vector<T>>(std::move(other));
-        ptr_ = storage->data();
-        size_ = storage->size();
-        storage_ = std::make_shared<boost::any>(std::move(storage));
+        ptr_         = storage->data();
+        size_        = storage->size();
+        storage_     = std::make_shared<boost::any>(std::move(storage));
     }
 
     template <typename S>
@@ -55,7 +55,7 @@ class array final
         , size_(other.size_)
         , storage_(std::move(other.storage_))
     {
-        other.ptr_ = nullptr;
+        other.ptr_  = nullptr;
         other.size_ = 0;
     }
 
@@ -63,8 +63,8 @@ class array final
 
     array& operator=(array&& other)
     {
-        ptr_ = std::move(other.ptr_);
-        size_ = std::move(other.size_);
+        ptr_     = std::move(other.ptr_);
+        size_    = std::move(other.size_);
         storage_ = std::move(other.storage_);
 
         return *this;
@@ -105,16 +105,16 @@ class array<const T> final
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
             ptr_         = reinterpret_cast<T*>(storage.get());
             std::memset(ptr_, 0, size_);
-            storage_     = std::make_shared<boost::any>(storage);
+            storage_ = std::make_shared<boost::any>(storage);
         }
     }
 
     array(const std::vector<T>& other)
     {
         auto storage = std::make_shared<std::vector<T>>(std::move(other));
-        ptr_ = storage->data();
-        size_ = storage->size();
-        storage_ = std::make_shared<boost::any>(std::move(storage));
+        ptr_         = storage->data();
+        size_        = storage->size();
+        storage_     = std::make_shared<boost::any>(std::move(storage));
     }
 
     template <typename S>
@@ -137,19 +137,19 @@ class array<const T> final
         , size_(other.size_)
         , storage_(other.storage_)
     {
-        other.ptr_ = nullptr;
-        other.size_ = 0;
+        other.ptr_     = nullptr;
+        other.size_    = 0;
         other.storage_ = nullptr;
     }
 
     array& operator=(const array& other)
     {
-        ptr_ = other.ptr_;
-        size_ = other.size_;
+        ptr_     = other.ptr_;
+        size_    = other.size_;
         storage_ = other.storage_;
         return *this;
     }
- 
+
     const T*    begin() const { return ptr_; }
     const T*    data() const { return ptr_; }
     const T*    end() const { return ptr_ + size_; }

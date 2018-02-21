@@ -352,9 +352,9 @@ class html_client
 
 class html_producer : public core::frame_producer_base
 {
-    core::video_format_desc format_desc_;
-    core::monitor::state    state_;
-    const std::wstring      url_;
+    core::video_format_desc             format_desc_;
+    core::monitor::state                state_;
+    const std::wstring                  url_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
     CefRefPtr<html_client> client_;

@@ -140,10 +140,7 @@ struct const_frame::impl
         }
     }
 
-    const array<const std::uint8_t>& image_data(std::size_t index) const
-    {
-        return image_data_.at(index);
-    }
+    const array<const std::uint8_t>& image_data(std::size_t index) const { return image_data_.at(index); }
 
     std::size_t width() const { return desc_.planes.at(0).width; }
 
@@ -152,9 +149,7 @@ struct const_frame::impl
     std::size_t size() const { return desc_.planes.at(0).size; }
 };
 
-const_frame::const_frame()
-{
-}
+const_frame::const_frame() {}
 const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const core::pixel_format_desc&         desc)
@@ -169,9 +164,7 @@ const_frame::const_frame(const const_frame& other)
     : impl_(other.impl_)
 {
 }
-const_frame::~const_frame() 
-{
-}
+const_frame::~const_frame() {}
 const_frame& const_frame::operator=(const const_frame& other)
 {
     impl_ = other.impl_;
@@ -189,8 +182,5 @@ std::size_t                      const_frame::height() const { return impl_->hei
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
 const boost::any&                const_frame::opaque() const { return impl_->opaque_; }
-const_frame::                    operator bool() const
-{
-    return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid;
-}
+const_frame::operator bool() const { return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
 }} // namespace caspar::core

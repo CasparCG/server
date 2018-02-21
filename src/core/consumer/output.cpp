@@ -23,8 +23,8 @@
 #include "frame_consumer.h"
 
 #include "../frame/frame.h"
-#include "../video_format.h"
 #include "../monitor/monitor.h"
+#include "../video_format.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -33,8 +33,8 @@
 #include <boost/optional.hpp>
 
 #include <chrono>
-#include <thread>
 #include <map>
+#include <thread>
 
 namespace caspar { namespace core {
 
@@ -42,10 +42,10 @@ typedef decltype(std::chrono::high_resolution_clock::now()) time_point_t;
 
 struct output::impl
 {
-    monitor::state                                 state_;
-    spl::shared_ptr<diagnostics::graph>            graph_;
-    const int                                      channel_index_;
-    video_format_desc                              format_desc_;
+    monitor::state                      state_;
+    spl::shared_ptr<diagnostics::graph> graph_;
+    const int                           channel_index_;
+    video_format_desc                   format_desc_;
 
     std::mutex                                     consumers_mutex_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
@@ -75,7 +75,7 @@ struct output::impl
     void remove(int index)
     {
         std::lock_guard<std::mutex> lock(consumers_mutex_);
-        auto it = consumers_.find(index);
+        auto                        it = consumers_.find(index);
         if (it != consumers_.end()) {
             consumers_.erase(it);
         }
@@ -99,7 +99,7 @@ struct output::impl
                 }
             }
             format_desc_ = format_desc;
-            time_ = boost::none;
+            time_        = boost::none;
             return;
         }
 
@@ -146,9 +146,8 @@ struct output::impl
             state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
         }
 
-        const auto needs_sync = std::all_of(consumers_.begin(), consumers_.end(), [](auto& p) {
-            return !p.second->has_synchronization_clock();
-        });
+        const auto needs_sync = std::all_of(
+            consumers_.begin(), consumers_.end(), [](auto& p) { return !p.second->has_synchronization_clock(); });
 
         if (needs_sync) {
             if (!time) {

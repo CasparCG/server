@@ -33,8 +33,8 @@
 namespace caspar { namespace core { namespace monitor {
 
 typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring> data_t;
-typedef boost::container::small_vector<data_t, 2> vector_t;
-typedef boost::container::flat_map<std::string, vector_t> data_map_t;
+typedef boost::container::small_vector<data_t, 2>                                                  vector_t;
+typedef boost::container::flat_map<std::string, vector_t>                                          data_map_t;
 
 class state_proxy
 {
@@ -67,7 +67,7 @@ class state_proxy
     template <typename T>
     state_proxy& operator=(const std::vector<T>& data)
     {
-        auto data2 = vector_t(data.begin(), data.end());
+        auto                        data2 = vector_t(data.begin(), data.end());
         std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = std::move(data2);
         return *this;
@@ -75,7 +75,7 @@ class state_proxy
 
     state_proxy& operator=(std::initializer_list<data_t> data)
     {
-        auto data2 = vector_t(std::move(data));
+        auto                        data2 = vector_t(std::move(data));
         std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = std::move(data2);
         return *this;

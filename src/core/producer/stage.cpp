@@ -299,6 +299,9 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc, int nb_samples) { return (*impl_)(format_desc, nb_samples); }
-const monitor::state&            stage::state() const { return impl_->state_; }
+std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc, int nb_samples)
+{
+    return (*impl_)(format_desc, nb_samples);
+}
+const monitor::state& stage::state() const { return impl_->state_; }
 }} // namespace caspar::core

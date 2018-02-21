@@ -114,7 +114,7 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
 struct audio_transform final
 {
-    double volume   = 1.0;
+    double volume = 1.0;
 
     audio_transform& operator*=(const audio_transform& other);
     audio_transform  operator*(const audio_transform& other) const;
