@@ -19,9 +19,9 @@ Development using Visual Studio
 
 2. Install CMake (http://www.cmake.org/download/).
 
-3. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server casparcg-server-2.2.0`
+3. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 
-4. `cd casparcg-server-2.2.0`
+4. `cd casparcg-server-master`
 
 5. `mkdir build`
 
@@ -37,8 +37,8 @@ Linux
 Building inside Docker
 ----------------------
 
-1. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server casparcg-server-2.2.0`
-2. `cd casparcg-server-2.2.0`
+1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+2. `cd casparcg-server-master`
 3. `tools/linux/build-in-docker`
 
 If all goes to plan, a docker image has been created containing CasparCG Server.
@@ -56,9 +56,9 @@ Development
 1. Install dependencies `apt-get install .... (coming soon)`
 2. Build boost and ffmpeg as per the docker images inside of `tools/linux` they should be saved in `/opt/boost` and `/opt/ffmpeg`
 3. Download CEF from the link near the top of `tools/linux/Dockerfile`, and extract to `/opt/cef`
-4. `git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server` casparcg-server-2.2.0
-5. `mkdir casparcg-server-2.2.0-build && cd casparcg-server-2.2.0-build`
-6. `cmake ../casparcg-server-2.2.0`
+4. `git clone --single-branch --branch master https://github.com/CasparCG/server` casparcg-server-master
+5. `mkdir casparcg-server-master-build && cd casparcg-server-master-build`
+6. `cmake ../casparcg-server-master
 7. `make -j8`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
