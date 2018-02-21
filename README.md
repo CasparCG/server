@@ -13,7 +13,7 @@ Development
 -----------
 
 ```bash
-git clone --single-branch --branch 2.2.0 https://github.com/CasparCG/server
+git clone --single-branch --branch master https://github.com/CasparCG/server
 ```
 
 See [BUILDING](BUILDING.md) for instructions on how to build the CasparCG Server from source manually.
