@@ -103,14 +103,17 @@ struct Filter
             if (filter_spec.empty()) {
                 filter_spec = "null";
             }
+            if (format_desc.field_count == 2) {
+              filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
+            }
+            filter_spec += (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator()).str();
         } else {
             if (filter_spec.empty()) {
                 filter_spec = "anull";
             }
-        }
-
-        if (type == AVMEDIA_TYPE_VIDEO && format_desc.field_count == 2) {
-            filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
+            filter_spec +=
+              (boost::format(",aresample=sample_rate=%d:async=2000") % format_desc.audio_sample_rate)
+              .str();
         }
 
         AVFilterInOut* outputs = nullptr;
