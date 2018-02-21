@@ -213,7 +213,7 @@ struct Filter
             auto count = std::count_if(av_streams.begin(), av_streams.end(), [](auto s) {
                 return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
             });
-            
+
             // TODO (fix) Use some form of stream meta data to do this.
             // https://github.com/CasparCG/server/issues/833
             if (count > 1) {
@@ -488,6 +488,8 @@ struct AVProducer::Impl
 
         thread_ = std::thread([=] {
             try {
+                caspar::timer frame_timer;
+
                 set_thread_name(L"[ffmpeg::av_producer]");
 
                 boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
@@ -504,18 +506,14 @@ struct AVProducer::Impl
                         break;
                     }
 
-                    caspar::timer frame_timer;
-                    CASPAR_SCOPE_EXIT
-                    {
-                        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-                    };
-
                     std::unique_lock<std::mutex> lock(mutex_);
 
                     if (buffer_.size() > buffer_capacity_ / 2) {
                       cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
+                      frame_timer.restart();
                     } else if (buffer_.size() > 2) {
                       cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                      frame_timer.restart();
                     }
 
                     // TODO (perf) seek as soon as input is past duration or eof.
@@ -533,6 +531,7 @@ struct AVProducer::Impl
                             } else {
                                 // TODO (perf) Avoid polling.
                                 cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                                frame_timer.restart();
                             }
                             // TODO (fix) Limit live polling due to bugs.
                             continue;
@@ -591,6 +590,8 @@ struct AVProducer::Impl
                     }
 
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+
+                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
                 }
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
