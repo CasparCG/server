@@ -39,7 +39,7 @@
 
 #include <GL/glew.h>
 
-#include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/any.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -222,14 +222,14 @@ class image_renderer
     }
 };
 
-struct image_mixer::impl : public core::frame_factory
+struct image_mixer::impl : public core::frame_factory, public std::enable_shared_from_this<impl>
 {
     spl::shared_ptr<device>            ogl_;
     image_renderer                     renderer_;
     std::vector<core::image_transform> transform_stack_;
     std::vector<layer>                 layers_; // layer/stream/items
     std::vector<layer*>                layer_stack_;
-
+ 
   public:
     impl(const spl::shared_ptr<device>& ogl, int channel_id)
         : ogl_(ogl)
@@ -271,11 +271,18 @@ struct image_mixer::impl : public core::frame_factory
         item.transform = transform_stack_.back();
         item.geometry  = frame.geometry();
 
-        for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
-            item.textures.push_back(ogl_->copy_async(frame.image_data(n),
-                                                     item.pix_desc.planes[n].width,
-                                                     item.pix_desc.planes[n].height,
-                                                     item.pix_desc.planes[n].stride));
+        auto textures_ptr = boost::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+
+        if (textures_ptr) {
+            item.textures = *textures_ptr;
+        } else {
+            for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
+                item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
+                                           item.pix_desc.planes[n].width,
+                                           item.pix_desc.planes[n].height,
+                                           item.pix_desc.planes[n].stride));
+            }
+        }
 
         layer_stack_.back()->items.push_back(item);
     }
@@ -298,7 +305,21 @@ struct image_mixer::impl : public core::frame_factory
             image_data.push_back(ogl_->create_array(plane.size));
         }
 
-        return core::mutable_frame(tag, std::move(image_data), array<int32_t>{}, desc);
+        std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
+        return core::mutable_frame(tag, std::move(image_data), array<int32_t>{}, desc, [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
+            auto self = weak_self.lock();
+            if (!self) {
+                return boost::any{};
+            }
+            std::vector<future_texture> textures;
+            for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+                textures.emplace_back(self->ogl_->copy_async(image_data[n],
+                                      desc.planes[n].width,
+                                      desc.planes[n].height,
+                                      desc.planes[n].stride));
+            }
+            return std::make_shared<decltype(textures)>(std::move(textures));
+        });
     }
 };
 

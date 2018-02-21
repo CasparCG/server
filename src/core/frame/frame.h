@@ -2,8 +2,11 @@
 
 #include <common/array.h>
 
+#include <boost/any.hpp>
+
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -14,10 +17,13 @@ class mutable_frame final
     friend class const_frame;
 
   public:
+    typedef std::function<boost::any(std::vector<array<const std::uint8_t>>)> commit_t;
+
     explicit mutable_frame(const void*                      tag,
                            std::vector<array<std::uint8_t>> image_data,
                            array<std::int32_t>              audio_data,
-                           const struct pixel_format_desc&  desc);
+                           const struct pixel_format_desc&  desc,
+                           commit_t                         commit = nullptr);
     mutable_frame(const mutable_frame&) = delete;
     mutable_frame(mutable_frame&& other);
 
@@ -39,7 +45,7 @@ class mutable_frame final
     std::size_t width() const;
 
     std::size_t height() const;
- 
+     
     class frame_geometry&       geometry();
     const class frame_geometry& geometry() const;
 
@@ -73,6 +79,8 @@ class const_frame final
     std::size_t height() const;
 
     std::size_t size() const;
+
+    const boost::any& opaque() const;
     
     const class frame_geometry& geometry() const;
 

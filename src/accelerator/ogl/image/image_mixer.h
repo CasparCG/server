@@ -56,7 +56,7 @@ class image_mixer final : public core::image_mixer
 
   private:
     struct impl;
-    std::unique_ptr<impl> impl_;
+    std::shared_ptr<impl> impl_;
 };
 
 }}} // namespace caspar::accelerator::ogl
