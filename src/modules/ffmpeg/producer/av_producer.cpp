@@ -466,7 +466,6 @@ struct AVProducer::Impl
 
         state_["file/name"]  = u8(name_);
         state_["file/path"]  = u8(path_);
-        state_["file/time"]  = {time(), this->duration().value_or(0) / format_desc_.fps};
 
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
