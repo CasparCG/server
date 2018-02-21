@@ -34,6 +34,7 @@
 #include <core/frame/pixel_format.h>
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include <boost/lexical_cast.hpp>
@@ -47,15 +48,18 @@ struct mutable_frame::impl : boost::noncopyable
     const core::pixel_format_desc    desc_;
     const void*                      tag_;
     frame_geometry                   geometry_ = frame_geometry::get_default();
+    mutable_frame::commit_t          commit_;
 
     impl(const void*                      tag,
          std::vector<array<std::uint8_t>> image_data,
          array<std::int32_t>              audio_data,
-         const core::pixel_format_desc&   desc)
+         const core::pixel_format_desc&   desc,
+         commit_t                         commit)
         : tag_(tag)
         , image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
+        , commit_(std::move(commit))
     {
     }
 };
@@ -63,8 +67,9 @@ struct mutable_frame::impl : boost::noncopyable
 mutable_frame::mutable_frame(const void*                      tag,
                              std::vector<array<std::uint8_t>> image_data,
                              array<int32_t>                   audio_data,
-                             const core::pixel_format_desc&   desc)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
+                             const core::pixel_format_desc&   desc,
+                             commit_t                         commit)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, std::move(commit)))
 {
 }
 mutable_frame::mutable_frame(mutable_frame&& other)
@@ -94,6 +99,7 @@ struct const_frame::impl
     array<const std::int32_t>              audio_data_;
     core::pixel_format_desc                desc_     = pixel_format::invalid;
     frame_geometry                         geometry_ = frame_geometry::get_default();
+    boost::any                             opaque_;
 
     impl(std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
@@ -128,6 +134,9 @@ struct const_frame::impl
     {
         if (desc_.planes.size() != image_data_.size()) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
+        }
+        if (other.impl_->commit_) {
+            opaque_ = other.impl_->commit_(image_data_);
         }
     }
 
@@ -179,6 +188,7 @@ std::size_t                      const_frame::width() const { return impl_->widt
 std::size_t                      const_frame::height() const { return impl_->height(); }
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
+const boost::any&                const_frame::opaque() const { return impl_->opaque_; }
 const_frame::                    operator bool() const
 {
     return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid;
