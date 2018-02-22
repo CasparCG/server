@@ -278,6 +278,9 @@ class decklink_producer : public IDeckLinkInputCallback
     std::vector<int>                     audio_cadence_ = format_desc_.audio_cadence;
     spl::shared_ptr<core::frame_factory> frame_factory_;
 
+    double in_sync_ = 0.0;
+    double out_sync_ = 0.0;
+
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
 
     std::exception_ptr exception_;
@@ -303,13 +306,15 @@ class decklink_producer : public IDeckLinkInputCallback
     {
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
-        frame_buffer_.set_capacity(field_count_);
+        frame_buffer_.set_capacity(field_count_ + 1);
 
-        graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+        //graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("in-sync", diagnostics::color(1.0f, 0.2f, 0.0f));
+        graph_->set_color("out-sync", diagnostics::color(0.0f, 0.2f, 1.0f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
@@ -380,8 +385,11 @@ class decklink_producer : public IDeckLinkInputCallback
         };
 
         try {
-            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            //graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
+
+            BMDTimeValue in_video_pts = 0LL;
+            BMDTimeValue in_audio_pts = 0LL;
 
             {
                 auto src    = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
@@ -400,10 +408,9 @@ class decklink_producer : public IDeckLinkInputCallback
                     src->data[0]     = reinterpret_cast<uint8_t*>(video_bytes);
                     src->linesize[0] = video->GetRowBytes();
 
-                    BMDTimeValue time;
                     BMDTimeValue duration;
-                    if (SUCCEEDED(video->GetStreamTime(&time, &duration, AV_TIME_BASE))) {
-                        src->pts = time;
+                    if (SUCCEEDED(video->GetStreamTime(&in_video_pts, &duration, AV_TIME_BASE))) {
+                        src->pts = in_video_pts;
                     }
 
                     if (video_filter_.video_source) {
@@ -430,9 +437,8 @@ class decklink_producer : public IDeckLinkInputCallback
                     src->linesize[0] = src->nb_samples * src->channels *
                                        av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
 
-                    BMDTimeValue time;
-                    if (SUCCEEDED(audio->GetPacketTime(&time, format_desc_.audio_sample_rate))) {
-                        src->pts = time;
+                    if (SUCCEEDED(audio->GetPacketTime(&in_audio_pts, format_desc_.audio_sample_rate))) {
+                        src->pts = in_audio_pts;
                     }
 
                     if (video_filter_.audio_source) {
@@ -465,6 +471,27 @@ class decklink_producer : public IDeckLinkInputCallback
 
                 av_buffersink_get_frame(video_filter_.sink, av_video.get());
                 av_buffersink_get_samples(audio_filter_.sink, av_audio.get(), audio_cadence_[0]);
+
+                auto video_tb = av_buffersink_get_time_base(video_filter_.sink);
+                auto audio_tb = av_buffersink_get_time_base(audio_filter_.sink);
+
+                CASPAR_LOG(debug) << av_video->pts << " " << av_audio->pts;
+
+                auto in_sync  = static_cast<double>(in_video_pts) / AV_TIME_BASE - static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
+                auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den - static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
+
+                if (std::abs(in_sync - in_sync_) > 0.01) {
+                    CASPAR_LOG(warning) << print() << " in-sync changed: " << in_sync;
+                }
+                in_sync_ = in_sync;
+
+                if (std::abs(out_sync - out_sync_) > 0.01) {
+                  CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
+                }
+                out_sync_ = out_sync;
+
+                graph_->set_value("in-sync", in_sync * 2.0 + 0.5);
+                graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
 
                 auto frame = core::draw_frame(make_frame(this, *frame_factory_, av_video, av_audio));
                 if (!frame_buffer_.try_push(frame)) {
