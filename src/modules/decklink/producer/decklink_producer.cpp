@@ -308,7 +308,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
         frame_buffer_.set_capacity(field_count_ + 1);
 
-        //graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+        graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -385,7 +385,7 @@ class decklink_producer : public IDeckLinkInputCallback
         };
 
         try {
-            //graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
 
             BMDTimeValue in_video_pts = 0LL;
