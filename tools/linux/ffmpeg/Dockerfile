@@ -87,5 +87,5 @@ FROM casparcg/base:1.0.0 as BUILD
 		make -j8 && \
 		make install
 
-FROM ubuntu:artful
+FROM scratch
 	COPY --from=BUILD /opt/ffmpeg /opt/ffmpeg
