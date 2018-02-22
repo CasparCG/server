@@ -480,6 +480,7 @@ struct AVProducer::Impl
             reset(input_.start_time().value_or(0));
         }
 
+        // TODO (fix) This is a hack for stream->discard.
         input_.paused(false);
 
         thread_ = std::thread([=] {

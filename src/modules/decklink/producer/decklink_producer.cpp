@@ -469,6 +469,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 auto av_video = alloc_frame();
                 auto av_audio = alloc_frame();
 
+                // TODO (fix) auto V/A sync even if decklink is wrong.
+
                 av_buffersink_get_frame(video_filter_.sink, av_video.get());
                 av_buffersink_get_samples(audio_filter_.sink, av_audio.get(), audio_cadence_[0]);
 
