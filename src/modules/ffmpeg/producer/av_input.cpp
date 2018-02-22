@@ -31,6 +31,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
     // TODO (fix) check if filename is http
+    FF(av_dict_set(&options, "http_persistent", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+    FF(av_dict_set(&options, "http_multiple", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
     FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
                                                            // TODO (fix) timeout?
     FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
