@@ -3,5 +3,5 @@ FROM casparcg/base:1.0.0 as BUILD
 	WORKDIR /opt
 	RUN tar -jxf cef.tar.bz2 && mv /opt/cef_binary_* /opt/cef
 
-FROM ubuntu:artful
+FROM scratch
 	COPY --from=BUILD /opt/cef /opt/cef

@@ -1,5 +1,5 @@
 FROM casparcg/base:1.0.0 as BUILD
-	ENV FFMPEG_VERSION 3.4.1
+	ENV FFMPEG_COMMIT acdea9e7c56b74b05c56b4733acc855b959ba073
 
 	RUN apt-get install -yq --no-install-recommends \
 		autoconf \
@@ -57,10 +57,9 @@ FROM casparcg/base:1.0.0 as BUILD
 		libx265-dev \
 		libxvidcore-dev \
 		libfdk-aac-dev
-	RUN wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
-		tar zxf ffmpeg-${FFMPEG_VERSION}.tar.gz && \
-		cd ffmpeg-${FFMPEG_VERSION}
-	WORKDIR ffmpeg-${FFMPEG_VERSION}
+	RUN wget https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT}.tar.gz && \
+		tar zxf ${FFMPEG_COMMIT}.tar.gz
+	WORKDIR FFmpeg-${FFMPEG_COMMIT}
 	RUN ./configure \
 			--enable-version3 \
 			--enable-gpl \
@@ -87,5 +86,5 @@ FROM casparcg/base:1.0.0 as BUILD
 		make -j8 && \
 		make install
 
-FROM ubuntu:artful
+FROM scratch
 	COPY --from=BUILD /opt/ffmpeg /opt/ffmpeg

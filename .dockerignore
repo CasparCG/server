@@ -4,3 +4,4 @@ resources
 .git
 .vscode
 CMakeFiles
+casparcg_server

@@ -7,5 +7,5 @@ FROM casparcg/base:1.0.0 as BUILD
 		./bootstrap.sh --prefix=/opt/boost && \
 		./b2 --with=all -j8 install || exit 0
 
-FROM ubuntu:artful
+FROM scratch
 	COPY --from=BUILD /opt/boost /opt/boost
