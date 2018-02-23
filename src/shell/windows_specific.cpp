@@ -84,7 +84,7 @@ void setup_console_window()
     // Disable close button in console to avoid shutdown without cleanup.
     EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_GRAYED);
     DrawMenuBar(GetConsoleWindow());
-    // SetConsoleCtrlHandler(HandlerRoutine, true);
+    SetConsoleCtrlHandler(NULL, true);
 
     // Configure console size and position.
     auto coord = GetLargestConsoleWindowSize(hOut);
