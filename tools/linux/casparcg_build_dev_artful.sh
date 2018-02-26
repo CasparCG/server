@@ -1,12 +1,3 @@
-mkdir build_deps
-cd build_deps
-wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz
-tar -zvxf boost_1_66_0.tar.gz
-cd boost_1_66_0
-./bootstrap.sh --prefix=/opt/boost
-./b2 --with=all -j8 install
-
-
 apt-get install -yq --no-install-recommends \
                 autoconf \
                 automake \
@@ -62,44 +53,63 @@ apt-get install -yq --no-install-recommends \
                 libx264-dev \
                 libx265-dev \
                 libxvidcore-dev \
-                libfdk-aac-dev
+                libfdk-aac-dev \
+		libwebp-dev \
+		build-essential \
+		cmake \
+		libtbb-dev \
+		libxrandr-dev \
+		libxcursor-dev \
+		libxinerama-dev \
+		libxi-dev \
+		libglfw3-dev \
+		libsfml-dev
 
-cd ../build_deps
-wget https://github.com/FFmpeg/FFmpeg/archive/acdea9e7c56b74b05c56b4733acc855b959ba073.tar.gz
-tar -zxvf  acdea9e7c56b74b05c56b4733acc855b959ba073.tar.gz
-cd FFmpeg-acdea9e7c56b74b05c56b4733acc855b959ba073
-./configure \
-                        --enable-version3 \
-                        --enable-gpl \
-                        --enable-nonfree \
-                        --enable-small \
-                        --enable-libmp3lame \
-                        --enable-libx264 \
-                        --enable-libx265 \
-                        --enable-libvpx \
-                        --enable-libtheora \
-                        --enable-libvorbis \
-                        --enable-libopus \
-                        --enable-libfdk-aac \
-                        --enable-libass \
-                        --enable-libwebp \
-                        --enable-librtmp \
-                        --enable-postproc \
-                        --enable-avresample \
-                        --enable-libfreetype \
-                        --enable-openssl \
-                        --disable-debug \
-                        --prefix=/opt/ffmpeg
+mkdir build_deps
+cd build_deps
+#wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz
+#tar -zvxf boost_1_66_0.tar.gz
+#cd boost_1_66_0
+#./bootstrap.sh --prefix=/opt/boost
+#./b2 --with=all -j8 install
 
-make -j8
-make install
 
-wget http://opensource.spotify.com/cefbuilds/cef_binary_3.3239.1723.g071d1c1_linux64_minimal.tar.bz2 -O /opt/cef.tar.bz2
-cd /opt
-tar -jxvf cef.tar.bz2 && mv /opt/cef_binary_* /opt/cef
-rm -rf /opt/cef.tar.bz2
+#cd ../
+#wget https://github.com/FFmpeg/FFmpeg/archive/acdea9e7c56b74b05c56b4733acc855b959ba073.tar.gz
+#tar -zxvf  acdea9e7c56b74b05c56b4733acc855b959ba073.tar.gz
+#cd FFmpeg-acdea9e7c56b74b05c56b4733acc855b959ba073
+#./configure \
+#                        --enable-version3 \
+#                        --enable-gpl \
+#                        --enable-nonfree \
+#                        --enable-small \
+#                        --enable-libmp3lame \
+#                        --enable-libx264 \
+#                        --enable-libx265 \
+#                        --enable-libvpx \
+#                        --enable-libtheora \
+#                        --enable-libvorbis \
+#                        --enable-libopus \
+#                        --enable-libfdk-aac \
+#                        --enable-libass \
+#                        --enable-libwebp \
+#                        --enable-librtmp \
+#                        --enable-postproc \
+#                        --enable-avresample \
+#                        --enable-libfreetype \
+#                        --enable-openssl \
+ #                       --disable-debug \
+#                        --prefix=/opt/ffmpeg
 
-cd ~/casparcg_server_master
+#make -j8
+#make install
+
+#wget http://opensource.spotify.com/cefbuilds/cef_binary_3.3239.1723.g071d1c1_linux64_minimal.tar.bz2 -O /opt/cef.tar.bz2
+#cd /opt
+#tar -jxvf cef.tar.bz2 && mv /opt/cef_binary_* /opt/cef
+#rm -rf /opt/cef.tar.bz2
+
+cd ~/casparcg-server-master
 mkdir build
 cd build
 
