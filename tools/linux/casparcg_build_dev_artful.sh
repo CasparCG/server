@@ -138,6 +138,6 @@ make -j8
 
 cd ..
 # Find a better way to copy deps
-ln -s staging build/staging
+ln -s build/staging staging
 src/shell/copy_deps.sh build/shell/casparcg staging/lib
 echo "DONE - See staging/ for app"
