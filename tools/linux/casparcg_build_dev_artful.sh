@@ -63,7 +63,14 @@ apt-get install -yq --no-install-recommends \
 		libxinerama-dev \
 		libxi-dev \
 		libglfw3-dev \
-		libsfml-dev
+		libsfml-dev \
+		libxcomposite-dev \
+		libpangocairo-1.0-0 \
+		libxss-dev \
+		libatk1.0-dev \
+		libcups2-dev \
+		libgtk2.0-dev \
+		libgdk-pixbuf2.0-dev
 
 
 mkdir build_deps
