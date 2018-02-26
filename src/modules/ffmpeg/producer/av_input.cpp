@@ -23,28 +23,12 @@ namespace caspar { namespace ffmpeg {
 
 Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
     : graph_(graph)
+    , filename_(filename)
 {
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
-    AVDictionary* options = nullptr;
-    CASPAR_SCOPE_EXIT { av_dict_free(&options); };
-
-    // TODO (fix) check if filename is http
-    FF(av_dict_set(&options, "http_persistent", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
-    FF(av_dict_set(&options, "http_multiple", "0", 0));    // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
-    FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
-                                                           // TODO (fix) timeout?
-    FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
-
-    AVFormatContext* ic = nullptr;
-    FF(avformat_open_input(&ic, filename.c_str(), nullptr, &options));
-    ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
-
-    ic_->interrupt_callback.callback = Input::interrupt_cb;
-    ic_->interrupt_callback.opaque   = this;
-
-    FF(avformat_find_stream_info(ic_.get(), nullptr));
+    reset();
 
     for (auto n = 0U; n < ic_->nb_streams; ++n) {
         ic_->streams[n]->discard = AVDISCARD_ALL;
@@ -124,6 +108,41 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
 AVFormatContext* Input::operator->() { return ic_.get(); }
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
+void Input::reset()
+{
+    AVDictionary* options = nullptr;
+    CASPAR_SCOPE_EXIT{ av_dict_free(&options); };
+
+    // TODO (fix) check if filename is http
+    FF(av_dict_set(&options, "http_persistent", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+    FF(av_dict_set(&options, "http_multiple", "0", 0));    // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+    FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
+                                                           // TODO (fix) timeout?
+    FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
+
+    std::vector<AVDiscard> discard;
+    for (auto n = 0U; ic_ && n < ic_->nb_streams; ++n) {
+        discard.push_back(ic_->streams[n]->discard);
+    }
+
+    AVFormatContext* ic = nullptr;
+    FF(avformat_open_input(&ic, filename_.c_str(), nullptr, &options));
+    ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
+
+    for (auto& p : to_map(&options)) {
+        CASPAR_LOG(warning) << "av_input[" + filename_ + "]" << " Unused option " << p.first << "=" << p.second;
+    }
+
+    ic_->interrupt_callback.callback = Input::interrupt_cb;
+    ic_->interrupt_callback.opaque = this;
+
+    FF(avformat_find_stream_info(ic_.get(), nullptr));
+
+    for (auto n = 0U; n < discard.size(); ++n) {
+        ic_->streams[n]->discard = discard[n];
+    }
+}
+
 boost::optional<int64_t> Input::start_time() const
 {
     return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>();
@@ -148,7 +167,11 @@ void Input::seek(int64_t ts, bool flush)
 {
     std::lock_guard<std::mutex> lock(ic_mutex_);
 
-    FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
+    if (ts != ic_->start_time) {
+        FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
+    } else {
+        reset();
+    }
 
     {
         std::lock_guard<std::mutex> output_lock(mutex_);

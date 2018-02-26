@@ -81,34 +81,6 @@ namespace caspar { namespace ffmpeg {
 // TODO run video filter, video encoder, audio filter, audio encoder in separate threads.
 // TODO realtime with smaller buffer?
 
-AVDictionary* to_dict(std::map<std::string, std::string>&& map)
-{
-    AVDictionary* dict = nullptr;
-    for (auto& p : map) {
-        if (!p.second.empty()) {
-            av_dict_set(&dict, p.first.c_str(), p.second.c_str(), 0);
-        }
-    }
-    return dict;
-}
-
-std::map<std::string, std::string> to_map(AVDictionary** dict)
-{
-    std::map<std::string, std::string> map;
-    AVDictionaryEntry*                 t = nullptr;
-    while (*dict) {
-        t = av_dict_get(*dict, "", t, AV_DICT_IGNORE_SUFFIX);
-        if (!t) {
-            break;
-        }
-        if (t->value) {
-            map[t->key] = t->value;
-        }
-    }
-    av_dict_free(dict);
-    return map;
-}
-
 struct Stream
 {
     std::shared_ptr<AVFilterGraph> graph  = nullptr;

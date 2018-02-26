@@ -43,6 +43,9 @@ class Input
     void seek(int64_t ts, bool flush = true);
 
   private:
+    void reset();
+
+    std::string                         filename_;
     std::shared_ptr<diagnostics::graph> graph_;
 
     mutable std::mutex               ic_mutex_;
