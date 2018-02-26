@@ -190,14 +190,16 @@ struct server::impl : boost::noncopyable
             core::diagnostics::scoped_call_context save;
             core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-            for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration) {
-                auto name = xml_consumer.first;
+            if (xml_channels.at(channel->index() - 1).get_child_optional(L"consumers")) {
+                for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration) {
+                    auto name = xml_consumer.first;
 
-                try {
-                    if (name != L"<xmlcomment>")
-                        channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, channels_));
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
+                    try {
+                        if (name != L"<xmlcomment>")
+                            channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, channels_));
+                    } catch (...) {
+                        CASPAR_LOG_CURRENT_EXCEPTION();
+                    }
                 }
             }
         }
