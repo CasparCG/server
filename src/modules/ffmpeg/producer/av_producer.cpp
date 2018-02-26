@@ -320,9 +320,6 @@ struct Filter
                     CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
                                                             << msg_info_t("invalid filter input media type"));
                 }
-
-                // TODO (refactor)
-                it->second.st->discard = AVDISCARD_NONE;
             }
         }
 

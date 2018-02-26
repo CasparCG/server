@@ -30,10 +30,6 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
     reset();
 
-    for (auto n = 0U; n < ic_->nb_streams; ++n) {
-        ic_->streams[n]->discard = AVDISCARD_ALL;
-    }
-
     thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
@@ -120,11 +116,6 @@ void Input::reset()
                                                            // TODO (fix) timeout?
     FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
 
-    std::vector<AVDiscard> discard;
-    for (auto n = 0U; ic_ && n < ic_->nb_streams; ++n) {
-        discard.push_back(ic_->streams[n]->discard);
-    }
-
     AVFormatContext* ic = nullptr;
     FF(avformat_open_input(&ic, filename_.c_str(), nullptr, &options));
     ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
@@ -137,10 +128,6 @@ void Input::reset()
     ic_->interrupt_callback.opaque = this;
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
-
-    for (auto n = 0U; n < discard.size(); ++n) {
-        ic_->streams[n]->discard = discard[n];
-    }
 }
 
 boost::optional<int64_t> Input::start_time() const
