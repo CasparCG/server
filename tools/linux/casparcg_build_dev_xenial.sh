@@ -70,7 +70,8 @@ apt-get install -yq --no-install-recommends \
 		libatk1.0-dev \
 		libcups2-dev \
 		libgtk2.0-dev \
-		libgdk-pixbuf2.0-dev
+		libgdk-pixbuf2.0-dev \
+		libicu-dev
 
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
 apt-get update
