@@ -50,6 +50,19 @@ Extracting CasparCG Server from Docker
 
 You will then find a folder called `casparcg_server` which should contain everything you need to run CasparCG Server.
 
+Development under Ubuntu
+-----------
+
+2 Scripts have been created to install dependencies and build boost/ffmpeg/cef.
+
+Ubuntu 16.04 (Xenial):
+From the base of the git repo, please run tools/linux/casparcg_build_dev_xenial.sh
+
+Ubuntu 17.10 (Artful):
+From the base of the git repo, please run tools/linux/casparcg_build_dev_artful.sh
+
+If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
+
 Development
 -----------
 

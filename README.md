@@ -51,7 +51,12 @@ INSTALLATION ON WINDOWS
 
 INSTALLATION ON LINUX
 ---------------------
-   
+
+DEVELOPMENT / BUILDING FROM SOURCE 
+---------------------
+Please refer to BUILDING.md
+
+
 RESOLVING COMMON ISSUES ON LINUX
 --------------------------------
 
