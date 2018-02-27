@@ -423,10 +423,13 @@ class decklink_producer : public IDeckLinkInputCallback
             }
 
             {
-                auto src      = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-                src->format   = AV_SAMPLE_FMT_S32;
-                src->channels = format_desc_.audio_channels;
-                src->sample_rate = format_desc_.audio_sample_rate;
+                auto src             = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+                src->format          = AV_SAMPLE_FMT_S32;
+                src->channels        = format_desc_.audio_channels;
+                src->color_trc       = src->width >= 1280 ? AVCOL_TRC_BT709 : src->color_trc;
+                src->color_primaries = src->width >= 1280 ? AVCOL_PRI_BT709 : src->color_primaries;
+                src->colorspace      = src->width >= 1280 ? AVCOL_SPC_BT709 : src->colorspace;
+                src->sample_rate     = format_desc_.audio_sample_rate;
 
                 void* audio_bytes = nullptr;
                 if (audio && SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
