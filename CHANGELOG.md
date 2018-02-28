@@ -1,4 +1,4 @@
-CasparCG 2.2.0 Alpha 1
+CasparCG 2.2.0 Beta
 ==========================================
 
 General
