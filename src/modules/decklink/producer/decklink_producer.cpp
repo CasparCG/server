@@ -115,7 +115,7 @@ struct Filter
                 //else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
                 //}
                 if (!colorspace.empty()) {
-                    filter_spec = (boost::format("colorspace=iall=%s:all=%s,") % colorspace).str() + filter_spec;
+                    filter_spec = (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
                 }
             }
 
