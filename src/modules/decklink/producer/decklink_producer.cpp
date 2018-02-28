@@ -97,19 +97,32 @@ struct Filter
     AVFilterContext*               video_source = nullptr;
     AVFilterContext*               audio_source = nullptr;
 
-    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc)
+    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc, IDeckLinkDisplayMode* dm)
     {
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
             }
-            // TODO (fix) Smarter colorspace selection.
-            if (format_desc.width >= 1280) {
-                filter_spec = "colorspace=iall=bt709:all=bt709," + filter_spec;
+
+            {
+                std::string colorspace = ""; // TODO (fix) 6-625 or 6-525?
+                if (dm->GetFlags() & bmdDisplayModeColorspaceRec601) {
+                    colorspace = "bt601-6-625";
+                } else if (dm->GetFlags() & bmdDisplayModeColorspaceRec709) {
+                    colorspace = "bt709";
+                }
+                // TODO (fix) bmd doesn't have 2020 in flags?
+                //else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
+                //}
+                if (!colorspace.empty()) {
+                    filter_spec = (boost::format("colorspace=iall=%s:all=%s,") % colorspace).str() + filter_spec;
+                }
             }
+
             if (format_desc.field_count == 2) {
                 filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
             }
+
             filter_spec +=
                 (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator())
                     .str();
@@ -305,8 +318,8 @@ class decklink_producer : public IDeckLinkInputCallback
         : device_index_(device_index)
         , format_desc_(format_desc)
         , frame_factory_(frame_factory)
-        , video_filter_(vfilter, AVMEDIA_TYPE_VIDEO, format_desc_)
-        , audio_filter_(afilter, AVMEDIA_TYPE_AUDIO, format_desc_)
+        , video_filter_(vfilter, AVMEDIA_TYPE_VIDEO, format_desc_, mode_)
+        , audio_filter_(afilter, AVMEDIA_TYPE_AUDIO, format_desc_, mode_)
     {
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
