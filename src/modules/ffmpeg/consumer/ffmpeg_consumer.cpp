@@ -406,7 +406,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.try_push(core::const_frame{});
+            frame_buffer_.push(core::const_frame{});
             frame_thread_.join();
         }
     }
