@@ -396,7 +396,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     {
         state_["file/path"] = u8(path_);
 
-        frame_buffer_.set_capacity(realtime_ ? 1 : 128);
+        frame_buffer_.set_capacity(realtime_ ? 1 : 64);
 
         diagnostics::register_graph(graph_);
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -508,7 +508,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                 }
 
                 tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
-                packet_buffer.set_capacity(realtime_ ? 1 : 64);
+                packet_buffer.set_capacity(realtime_ ? 1 : 128);
                 auto packet_thread = std::thread([&] {
                     try {
                         CASPAR_SCOPE_EXIT
