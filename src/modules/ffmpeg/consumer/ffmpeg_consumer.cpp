@@ -70,6 +70,7 @@ extern "C"
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_invoke.h>
 
 #include <memory>
 #include <thread>
@@ -553,12 +554,15 @@ struct ffmpeg_consumer : public core::frame_consumer
                     frame_buffer_.pop(frame);
 
                     caspar::timer frame_timer;
-                    if (video_stream) {
-                        video_stream->send(frame, format_desc, packet_cb);
-                    }
-                    if (audio_stream) {
-                        audio_stream->send(frame, format_desc, packet_cb);
-                    }
+                    tbb::parallel_invoke([&] {
+                        if (video_stream) {
+                            video_stream->send(frame, format_desc, packet_cb);
+                        }
+                    }, [&] {
+                        if (audio_stream) {
+                            audio_stream->send(frame, format_desc, packet_cb);
+                        }
+                    });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
                     if (!frame) {
