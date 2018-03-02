@@ -97,6 +97,7 @@ struct Stream
            std::string                         suffix,
            AVCodecID                           codec_id,
            const core::video_format_desc&      format_desc,
+           bool                                realtime,
            std::map<std::string, std::string>& options)
     {
         std::map<std::string, std::string> stream_options;
@@ -295,6 +296,10 @@ struct Stream
             // TODO
         }
 
+        if (realtime && codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
+            enc->thread_type = FF_THREAD_SLICE;
+        }
+
         auto dict = to_dict(std::move(stream_options));
         CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
@@ -477,13 +482,13 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
-                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, options);
+                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, options);
                     state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
                 }
 
                 boost::optional<Stream> audio_stream;
                 if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
-                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, options);
+                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, options);
                 }
 
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
