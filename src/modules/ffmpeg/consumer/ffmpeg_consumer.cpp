@@ -401,6 +401,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         diagnostics::register_graph(graph_);
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+        graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
     }
 
     ~ffmpeg_consumer()
@@ -552,6 +553,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
+                    graph_->set_value("input", (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
 
                     caspar::timer frame_timer;
                     tbb::parallel_invoke([&] {
@@ -591,6 +593,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
+        graph_->set_value("input", (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
 
         return make_ready_future(true);
     }
