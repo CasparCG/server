@@ -508,7 +508,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                 }
 
                 tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
-                packet_buffer.set_capacity(realtime_ ? 1 : 128);
+                packet_buffer.set_capacity(realtime_ ? 1 : 64);
                 auto packet_thread = std::thread([&] {
                     try {
                         CASPAR_SCOPE_EXIT
