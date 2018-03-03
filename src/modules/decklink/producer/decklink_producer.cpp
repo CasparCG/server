@@ -97,7 +97,7 @@ struct Filter
     AVFilterContext*               video_source = nullptr;
     AVFilterContext*               audio_source = nullptr;
 
-    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc, IDeckLinkDisplayMode* dm)
+    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc, com_ptr<IDeckLinkDisplayMode> dm)
     {
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
