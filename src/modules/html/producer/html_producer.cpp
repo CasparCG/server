@@ -355,6 +355,7 @@ class html_producer : public core::frame_producer_base
     core::video_format_desc             format_desc_;
     core::monitor::state                state_;
     const std::wstring                  url_;
+    const std::wstring                  filename_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
     CefRefPtr<html_client> client_;
@@ -362,9 +363,11 @@ class html_producer : public core::frame_producer_base
   public:
     html_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
                   const core::video_format_desc&              format_desc,
-                  const std::wstring&                         url)
+                  const std::wstring&                         url,
+                  const std::wstring&                         filename)
         : format_desc_(format_desc)
         , url_(url)
+        , filename_(filename)
     {
         html::invoke([&] {
             client_ = new html_client(frame_factory, graph_, format_desc, url_);
@@ -383,6 +386,9 @@ class html_producer : public core::frame_producer_base
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
         });
+        if (!filename_.empty()) {
+            state_["file/name"] = u8(filename_);
+        }
         state_["file/path"] = u8(url_);
     }
 
@@ -430,8 +436,9 @@ class html_producer : public core::frame_producer_base
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,
                                                          const std::vector<std::wstring>&         params)
 {
-    const auto filename       = env::template_folder() + params.at(0) + L".html";
-    const auto found_filename = find_case_insensitive(filename);
+    const auto filename       = params.at(0) + L".html";
+    const auto full_filename = env::template_folder() + filename;
+    const auto found_filename = find_case_insensitive(full_filename);
     const auto http_prefix    = boost::algorithm::istarts_with(params.at(0), L"http:") ||
                              boost::algorithm::istarts_with(params.at(0), L"https:");
 
@@ -441,14 +448,15 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
     const auto url = found_filename ? L"file://" + *found_filename : params.at(0);
 
     return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url, found_filename ? filename : L""));
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
-    const auto filename       = env::template_folder() + params.at(0) + L".html";
-    const auto found_filename = find_case_insensitive(filename);
+    const auto filename = params.at(0) + L".html";
+    const auto full_filename       = env::template_folder() + filename;
+    const auto found_filename = find_case_insensitive(full_filename);
     const auto html_prefix    = boost::iequals(params.at(0), L"[HTML]");
 
     if (!found_filename && !html_prefix)
@@ -461,7 +469,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         return core::frame_producer::empty();
 
     return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url, found_filename ? filename : L""));
 }
 
 }} // namespace caspar::html
