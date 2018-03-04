@@ -181,9 +181,9 @@ struct Stream
             if (codec->type == AVMEDIA_TYPE_VIDEO) {
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
- 
+
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             format_desc.width % format_desc.height % AV_PIX_FMT_YUVA444P % format_desc.duration %
+                             format_desc.width % format_desc.height % AV_PIX_FMT_YUVA422P % format_desc.duration %
                              format_desc.time_scale % sar.numerator() % sar.denominator() %
                              format_desc.framerate.numerator() % format_desc.framerate.denominator())
                                 .str();
@@ -331,7 +331,7 @@ struct Stream
 
         sws.reset(sws_getContext(
             width, height, AV_PIX_FMT_BGRA,
-            width, height, AV_PIX_FMT_YUVA444P,
+            width, height, AV_PIX_FMT_YUVA422P,
             0, nullptr, nullptr, nullptr
         ), [](SwsContext* ptr) { sws_freeContext(ptr); });
 
@@ -395,13 +395,13 @@ struct Stream
                     frame2->sample_aspect_ratio = frame->sample_aspect_ratio;
                     frame2->width               = frame->width;
                     frame2->height              = frame->height;
-                    frame2->format              = AV_PIX_FMT_YUVA444P;
+                    frame2->format              = AV_PIX_FMT_YUVA422P;
                     frame2->colorspace          = AVCOL_SPC_BT709;
                     frame2->color_primaries     = AVCOL_PRI_BT709;
                     frame2->color_range         = AVCOL_RANGE_MPEG;
                     frame2->color_trc           = AVCOL_TRC_BT709;
                     av_frame_get_buffer(frame2.get(), 64);
- 
+
                     int h = frame->height / 8;
                     tbb::parallel_for(0, 8, [&](int i) {
                         auto sws = get_sws(frame->width, h);
