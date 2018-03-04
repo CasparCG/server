@@ -36,6 +36,7 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/logic/tribool.hpp>
 
 #include <cstdint>
 
@@ -179,45 +180,57 @@ struct ffmpeg_producer : public core::frame_producer_base
     const core::monitor::state& state() const override { return producer_.state(); }
 };
 
-bool is_valid_file(const std::wstring& filename)
-{
-    static const auto invalid_exts = {L".png",
-                                      L".tga",
-                                      L".bmp",
-                                      L".jpg",
-                                      L".jpeg",
-                                      L".gif",
-                                      L".tiff",
-                                      L".tif",
-                                      L".jp2",
-                                      L".jpx",
-                                      L".j2k",
-                                      L".j2c",
-                                      L".swf",
-                                      L".ct"};
-    static const auto valid_exts   = {L".m2t",
-                                    L".mov",
-                                    L".mp4",
-                                    L".dv",
-                                    L".flv",
-                                    L".mpg",
-                                    L".dnxhd",
-                                    L".h264",
-                                    L".prores",
-                                    L".mkv",
-                                    L".mxf",
-                                    L".ts",
-                                    L".mp3",
-                                    L".wav",
-                                    L".wma"};
+boost::tribool has_valid_extension(const std::wstring& filename) {
+    static const auto invalid_exts = { L".png",
+        L".tga",
+        L".bmp",
+        L".jpg",
+        L".jpeg",
+        L".gif",
+        L".tiff",
+        L".tif",
+        L".jp2",
+        L".jpx",
+        L".j2k",
+        L".j2c",
+        L".swf",
+        L".ct",
+        L".html",
+        L".htm" };
+    static const auto valid_exts = { L".m2t",
+        L".mov",
+        L".mp4",
+        L".dv",
+        L".flv",
+        L".mpg",
+        L".dnxhd",
+        L".h264",
+        L".prores",
+        L".mkv",
+        L".mxf",
+        L".ts",
+        L".mp3",
+        L".wav",
+        L".wma" };
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 
     if (std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end()) {
-        return true;
+        return boost::tribool(true);
     }
 
     if (std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end()) {
+        return boost::tribool(false);
+    }
+    return boost::tribool(boost::indeterminate);
+}
+bool is_valid_file(const std::wstring& filename)
+{
+    const auto valid_ext = has_valid_extension(filename);
+    if (valid_ext) {
+        return true;
+    }
+    else if (!valid_ext) {
         return false;
     }
 
@@ -274,13 +287,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto name = params.at(0);
     auto path = name;
 
-    if (boost::contains(path, L".html")) {
-        return core::frame_producer::empty();
-    }
 
     if (!boost::contains(path, L"://")) {
         path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
         name += boost::filesystem::path(path).extension().wstring();
+    }
+    else if (!has_valid_extension(path)) {
+        return core::frame_producer::empty();
     }
 
     if (path.empty()) {
