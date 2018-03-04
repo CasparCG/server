@@ -274,6 +274,10 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto name = params.at(0);
     auto path = name;
 
+    if (boost::contains(path, L".html")) {
+        return core::frame_producer::empty();
+    }
+
     if (!boost::contains(path, L"://")) {
         path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
         name += boost::filesystem::path(path).extension().wstring();
