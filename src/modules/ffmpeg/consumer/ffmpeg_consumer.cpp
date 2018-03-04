@@ -523,17 +523,25 @@ struct ffmpeg_consumer : public core::frame_consumer
                             }
                         };
 
+                        std::map<int, int64_t> count;
+
                         std::shared_ptr<AVPacket> pkt;
                         while (true) {
                             packet_buffer.pop(pkt);
                             if (!pkt) {
                                 break;
                             }
+                            count[pkt->stream_index] += 1;
                             FF(av_interleaved_write_frame(oc, pkt.get()));
                         }
 
-                        // TODO (fix) This can crash if no package written?
-                        FF(av_write_trailer(oc));
+                        auto video_st = video_stream ? video_stream->st : nullptr;
+                        auto audio_st = audio_stream ? audio_stream->st : nullptr;
+
+                        if ((!video_st || count[video_st->index]) && (!audio_st || count[audio_st->index])) {
+                            FF(av_write_trailer(oc));
+                        }
+
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                         // TODO
