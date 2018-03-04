@@ -320,10 +320,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
-    auto producer = spl::make_shared<ffmpeg_producer>(
-        dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop);
-
-    return core::create_destroy_proxy(std::move(producer));
+    try {
+        auto producer = spl::make_shared<ffmpeg_producer>(
+            dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop);
+        return core::create_destroy_proxy(std::move(producer));
+    }
+    catch (...) {
+        CASPAR_LOG_CURRENT_EXCEPTION();
+    }
+    return core::frame_producer::empty();
 }
 
 }} // namespace caspar::ffmpeg
