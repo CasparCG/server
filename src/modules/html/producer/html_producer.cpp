@@ -383,6 +383,7 @@ class html_producer : public core::frame_producer_base
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
         });
+        state_["file/path"] = u8(url_);
     }
 
     ~html_producer()
