@@ -28,8 +28,6 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
-    reset();
-
     thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
@@ -38,7 +36,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
                     cond_.wait(lock, [&] {
-                        return ((!eof_ && !paused_) && output_.size() < output_capacity_) || abort_request_;
+                        return ic_ && ((!eof_ && !paused_) && output_.size() < output_capacity_) || abort_request_;
                     });
                 }
 
@@ -115,7 +113,7 @@ void Input::reset()
         FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
     }
                                                            // TODO (fix) timeout?
-    FF(av_dict_set(&options, "rw_timeout", "5000000", 0)); // 5 second IO timeout
+    FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
 
     AVFormatContext* ic = nullptr;
     FF(avformat_open_input(&ic, filename_.c_str(), nullptr, &options));
@@ -133,12 +131,14 @@ void Input::reset()
 
 boost::optional<int64_t> Input::start_time() const
 {
-    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>();
+    auto ic = ic_;
+    return ic && ic->start_time != AV_NOPTS_VALUE ? ic->start_time : boost::optional<int64_t>();
 }
 
 boost::optional<int64_t> Input::duration() const
 {
-    return ic_->duration != AV_NOPTS_VALUE ? ic_->duration : boost::optional<int64_t>();
+    auto ic = ic_;
+    return ic && ic->duration != AV_NOPTS_VALUE ? ic->duration : boost::optional<int64_t>();
 }
 
 bool Input::paused() const { return paused_; }
@@ -155,7 +155,7 @@ void Input::seek(int64_t ts, bool flush)
 {
     std::lock_guard<std::mutex> lock(ic_mutex_);
 
-    if (ts != ic_->start_time) {
+    if (ts != ic_->start_time && ts != AV_NOPTS_VALUE) {
         FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
     } else {
         reset();

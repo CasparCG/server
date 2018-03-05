@@ -36,6 +36,7 @@ class Input
     boost::optional<int64_t> start_time() const;
     boost::optional<int64_t> duration() const;
 
+    void reset();
     bool paused() const;
     void paused(bool value);
     bool eof() const;
@@ -43,7 +44,6 @@ class Input
     void seek(int64_t ts, bool flush = true);
 
   private:
-    void reset();
 
     std::string                         filename_;
     std::shared_ptr<diagnostics::graph> graph_;
