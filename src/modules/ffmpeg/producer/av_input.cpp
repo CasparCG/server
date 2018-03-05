@@ -28,8 +28,6 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
-    reset();
-
     thread_ = std::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
@@ -133,12 +131,14 @@ void Input::reset()
 
 boost::optional<int64_t> Input::start_time() const
 {
-    return ic_->start_time != AV_NOPTS_VALUE ? ic_->start_time : boost::optional<int64_t>();
+    auto ic = ic_;
+    return ic && ic->start_time != AV_NOPTS_VALUE ? ic->start_time : boost::optional<int64_t>();
 }
 
 boost::optional<int64_t> Input::duration() const
 {
-    return ic_->duration != AV_NOPTS_VALUE ? ic_->duration : boost::optional<int64_t>();
+    auto ic = ic_;
+    return ic && ic->duration != AV_NOPTS_VALUE ? ic->duration : boost::optional<int64_t>();
 }
 
 bool Input::paused() const { return paused_; }
@@ -155,7 +155,11 @@ void Input::seek(int64_t ts, bool flush)
 {
     std::lock_guard<std::mutex> lock(ic_mutex_);
 
-    if (ts != ic_->start_time) {
+    if (!ic_ && ts != AV_NOPTS_VALUE) {
+        reset();
+    }
+
+    if (ts != ic_->start_time && ts != AV_NOPTS_VALUE) {
         FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
     } else {
         reset();

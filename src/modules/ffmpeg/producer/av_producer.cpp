@@ -470,22 +470,23 @@ struct AVProducer::Impl
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
 
-        if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
-            duration_ = input_->duration;
-        }
-
-        if (start_ != AV_NOPTS_VALUE) {
-            input_.seek(start_);
-            reset(start_);
-        } else {
-            reset(input_.start_time().value_or(0));
-        }
-
-        // TODO (fix) This is a hack for stream->discard.
-        input_.paused(false);
-
         thread_ = std::thread([=] {
             try {
+                input_.seek(start_);
+
+                if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+                    duration_ = input_->duration;
+                }
+
+                if (start_ != AV_NOPTS_VALUE) {
+                    reset(start_);
+                } else {
+                    reset(input_.start_time().value_or(0));
+                }
+
+                // TODO (fix) This is a hack for stream->discard.
+                input_.paused(false);
+
                 caspar::timer frame_timer;
 
                 set_thread_name(L"[ffmpeg::av_producer]");
