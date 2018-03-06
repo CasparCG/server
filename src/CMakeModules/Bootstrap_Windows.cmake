@@ -3,7 +3,7 @@ find_package(Git)
 set(CONFIG_VERSION_GIT_REV "0")
 set(CONFIG_VERSION_GIT_HASH "N/A")
 
-if (GIT_FOUND)
+if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/../.git")
 	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
 			ARGS rev-list --all --count
 			OUTPUT_VARIABLE CONFIG_VERSION_GIT_REV)
