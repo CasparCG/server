@@ -58,7 +58,8 @@ if (MSVC)
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
-		zlibstat.lib
+		debug zlibstaticd.lib
+		optimized zlibstatic.lib
 		debug sfml-graphics-d.lib
 		debug sfml-window-d.lib
 		debug sfml-system-d.lib
