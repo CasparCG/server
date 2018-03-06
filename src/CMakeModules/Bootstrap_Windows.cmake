@@ -120,8 +120,7 @@ add_definitions( -DGLEW_NO_GLU )
 casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 
 # SFML
-set(SFML_INCLUDE_PATH "${PACKAGES_FOLDER}/sfml-2.4.2/include")
-
+set(SFML_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/sfml-system.2.4.2.0/build/native/include")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Release/dynamic")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-window.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
