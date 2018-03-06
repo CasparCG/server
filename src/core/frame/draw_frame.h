@@ -34,6 +34,7 @@ class draw_frame final
     static draw_frame push(draw_frame frame);
     static draw_frame push(draw_frame frame, const struct frame_transform& transform);
     static draw_frame pop(draw_frame frame);
+    static draw_frame empty();
 
     draw_frame();
     draw_frame(const draw_frame& other);
