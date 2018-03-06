@@ -430,15 +430,16 @@ class html_producer : public core::frame_producer_base
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,
                                                          const std::vector<std::wstring>&         params)
 {
-    const auto filename       = env::template_folder() + params.at(0) + L".html";
+    const auto param_url      = boost::iequals(params.at(0), L"[HTML]") ? params.at(1) : params.at(0);
+    const auto filename       = env::template_folder() + param_url + L".html";
     const auto found_filename = find_case_insensitive(filename);
-    const auto http_prefix    = boost::algorithm::istarts_with(params.at(0), L"http:") ||
-                             boost::algorithm::istarts_with(params.at(0), L"https:");
+    const auto http_prefix    = boost::algorithm::istarts_with(param_url, L"http:") ||
+                             boost::algorithm::istarts_with(param_url, L"https:");
 
     if (!found_filename && !http_prefix)
         return core::frame_producer::empty();
 
-    const auto url = found_filename ? L"file://" + *found_filename : params.at(0);
+    const auto url = found_filename ? L"file://" + *found_filename : param_url;
 
     return core::create_destroy_proxy(
         spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
@@ -447,21 +448,7 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
-    const auto filename       = env::template_folder() + params.at(0) + L".html";
-    const auto found_filename = find_case_insensitive(filename);
-    const auto html_prefix    = boost::iequals(params.at(0), L"[HTML]");
-
-    if (!found_filename && !html_prefix)
-        return core::frame_producer::empty();
-
-    const auto url = found_filename ? L"file://" + *found_filename : params.at(1);
-
-    if (!html_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") ||
-                         boost::algorithm::ends_with(url, "_ALPHA")))
-        return core::frame_producer::empty();
-
-    return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+    return create_cg_producer(dependencies, params);
 }
 
 }} // namespace caspar::html
