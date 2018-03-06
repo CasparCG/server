@@ -283,8 +283,14 @@ class flash_renderer
         if (!ax_->IsReadyToRender())
             return head_;
 
-        if (is_empty())
-            return core::draw_frame{};
+        if (is_empty())  {
+            // TODO (perf) Optimize.
+            core::pixel_format_desc desc = core::pixel_format::bgra;
+            desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
+            auto frame = frame_factory_->create_frame(this, desc);
+            std::memset(frame.image_data(0).begin(), 0, width_ * height_ * 4);
+            return frame;
+        }
 
         if (sync > 0.00001)
             timer_.tick(frame_time * sync); // This will block the thread.
