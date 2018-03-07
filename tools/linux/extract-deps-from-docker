@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# CEF
+echo "Extracting CEF"
+rm -Rf /opt/cef
+tempContainer=$(docker create casparcg/cef:3.3239.1723-2 sh)
+docker cp $tempContainer:/opt/cef /opt/cef
+docker rm -v $tempContainer
+
+# FFmpeg
+echo "Extracting FFmpeg"
+rm -Rf /opt/ffmpeg
+tempContainer=$(docker create casparcg/ffmpeg:master-acdea9e-2 sh)
+docker cp $tempContainer:/opt/ffmpeg /opt/ffmpeg
+docker rm -v $tempContainer
+
+# Boost
+echo "Extracting Boost"
+rm -Rf /opt/boost
+tempContainer=$(docker create casparcg/boost:1.66-2 sh)
+docker cp $tempContainer:/opt/boost /opt/boost
+docker rm -v $tempContainer
+
+
