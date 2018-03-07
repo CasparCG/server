@@ -11,6 +11,10 @@ FROM casparcg/base:1.2.0 as build-casparcg
 
 	ENV BOOST_ROOT=/opt/boost
 	ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
+
+	ARG GIT_REV
+	ARG GIT_HASH
+
 	RUN cmake /source
 	RUN make -j8
 
@@ -20,6 +24,8 @@ FROM casparcg/base:1.2.0 as build-casparcg
 
 FROM ubuntu:bionic
 	COPY --from=build-casparcg /staging /opt/casparcg
+
+	# This can be removed once bionic is more stable, as this image currently has an older version of libc than buildpack-deps:bionic
 	RUN apt-get update && apt-get dist-upgrade -y && rm -rf /var/lib/apt/lists/*
 
 	WORKDIR /opt/casparcg
