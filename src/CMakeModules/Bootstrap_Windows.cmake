@@ -120,8 +120,7 @@ add_definitions( -DGLEW_NO_GLU )
 casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 
 # SFML
-set(SFML_INCLUDE_PATH "${PACKAGES_FOLDER}/sfml-2.4.2/include")
-
+set(SFML_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/sfml-system.2.4.2.0/build/native/include")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Release/dynamic")
 link_directories("${NUGET_PACKAGES_FOLDER}/sfml-window.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
@@ -136,12 +135,15 @@ casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4
 casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4.2.0/build/native/bin/x64/v140/Release/dynamic/sfml-system-2.dll")
 
 # FREEIMAGE
-set(FREEIMAGE_INCLUDE_PATH "${PACKAGES_FOLDER}/freeimage/include")
-set(FREEIMAGE_BIN_PATH "${PACKAGES_FOLDER}/freeimage/bin/win32")
-link_directories("${PACKAGES_FOLDER}/freeimage/lib/win32")
-link_directories("${PACKAGES_FOLDER}/zlib/lib")
+set(FREEIMAGE_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.3.17.0/build/native/include")
+set(FREEIMAGE_BIN_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.redist.3.17.0/build/native/bin/x64/dynamic")
+link_directories("${NUGET_PACKAGES_FOLDER}/native.freeimage.3.17.0/build/native/lib/x64/dynamic")
 casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImage.dll")
-casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImaged.dll")
+
+#ZLIB
+set(ZLIB_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/include")
+link_directories("${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/lib_release")
+link_directories("${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/lib_debug")
 
 # OPENAL
 set(OPENAL_INCLUDE_PATH "${PACKAGES_FOLDER}/openal/include")
