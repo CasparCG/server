@@ -1,4 +1,4 @@
-FROM casparcg/base:1.0.0 as BUILD
+FROM casparcg/base:1.2.0 as BUILD
 	ENV FFMPEG_COMMIT acdea9e7c56b74b05c56b4733acc855b959ba073
 
 	RUN apt-get install -yq --no-install-recommends \

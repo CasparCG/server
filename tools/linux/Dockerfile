@@ -1,7 +1,7 @@
-FROM casparcg/base:1.1.0 as build-casparcg
-	COPY --from=casparcg/boost:1.66-1 /opt/boost /opt/boost
-	COPY --from=casparcg/ffmpeg:master-acdea9e-1 /opt/ffmpeg /opt/ffmpeg
-	COPY --from=casparcg/cef:3.3239.1723-1 /opt/cef /opt/cef
+FROM casparcg/base:1.2.0 as build-casparcg
+	COPY --from=casparcg/boost:1.66-2 /opt/boost /opt/boost
+	COPY --from=casparcg/ffmpeg:master-acdea9e-2 /opt/ffmpeg /opt/ffmpeg
+	COPY --from=casparcg/cef:3.3239.1723-2 /opt/cef /opt/cef
 
 	RUN mkdir /source && mkdir /build && mkdir /install
 
@@ -18,6 +18,9 @@ FROM casparcg/base:1.1.0 as build-casparcg
 	RUN ln -s /build/staging /staging && \
 		/source/shell/copy_deps.sh shell/casparcg /staging/lib
 
-FROM ubuntu:artful
+FROM ubuntu:bionic
 	COPY --from=build-casparcg /staging /opt/casparcg
+	RUN apt-get update && apt-get dist-upgrade -y && rm -rf /var/lib/apt/lists/*
+
 	WORKDIR /opt/casparcg
+	ENTRYPOINT ["/opt/casparcg/run.sh"]

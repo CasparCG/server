@@ -1,4 +1,4 @@
-FROM casparcg/base:1.0.0 as BUILD
+FROM casparcg/base:1.2.0 as BUILD
 	ENV LIBBOOST_VERSION 1_66_0
 
 	RUN wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_${LIBBOOST_VERSION}.tar.gz && \
