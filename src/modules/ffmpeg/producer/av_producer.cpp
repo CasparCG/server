@@ -495,6 +495,8 @@ struct AVProducer::Impl
 
                 Frame frame;
 
+                int warning_debounce = 0;
+
                 while (!abort_request_) {
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
@@ -554,12 +556,23 @@ struct AVProducer::Impl
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         if (!progress) {
+                            if (warning_debounce++ > 100) {
+                                if (!video_filter_.frame && !video_filter_.eof) {
+                                    CASPAR_LOG(warning) << print() << " Waiting for video frame...";
+                                } else if (!audio_filter_.frame && !audio_filter_.eof) {
+                                    CASPAR_LOG(warning) << print() << " Waiting for audio frame...";
+                                } else {
+                                    CASPAR_LOG(warning) << print() << " Waiting for frame...";
+                                }
+                            }
                             // TODO (perf) Avoid polling.
                             cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
                         }
                         // TODO (fix) Limit live polling due to bugs.
                         continue;
                     }
+
+                    warning_debounce = 0;
 
                     // TODO (fix)
                     // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
