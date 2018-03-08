@@ -77,7 +77,7 @@ inline std::wstring get_stack_trace()
 
 #define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                 \
     try {                                                                                                              \
-        CASPAR_LOG(error) << caspar::u16(::caspar::log::current_exception_diagnostic_information()) << L"\r\n" << caspar::log::get_stack_trace();                   \
+        CASPAR_LOG(error) << L"Exception: " << caspar::u16(::caspar::log::current_exception_diagnostic_information()) << L"\r\n" << caspar::log::get_stack_trace();                   \
     } catch (...) {                                                                                                    \
     }
 
