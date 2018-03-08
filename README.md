@@ -7,8 +7,6 @@ CasparCG Server has been in 24/7 broadcast production since 2006.
 
 The CasparCG Server works on Windows and Linux.
 
-See [README](README?raw=true) and [CHANGELOG](CHANGELOG?raw=true) for more information.
-
 Development
 -----------
 
