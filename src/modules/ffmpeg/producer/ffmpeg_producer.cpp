@@ -61,7 +61,7 @@ struct ffmpeg_producer : public core::frame_producer_base
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
 
-    AVProducer producer_;
+    std::shared_ptr<AVProducer> producer_;
 
   public:
     explicit ffmpeg_producer(spl::shared_ptr<core::frame_factory> frame_factory,
@@ -76,7 +76,7 @@ struct ffmpeg_producer : public core::frame_producer_base
         : format_desc_(format_desc)
         , filename_(filename)
         , frame_factory_(frame_factory)
-        , producer_(frame_factory_,
+        , producer_(new AVProducer(frame_factory_,
                     format_desc_,
                     u8(path),
                     u8(filename),
@@ -84,25 +84,36 @@ struct ffmpeg_producer : public core::frame_producer_base
                     u8(afilter),
                     start,
                     duration,
-                    loop)
+                    loop))
     {
+    }
+
+    ~ffmpeg_producer()
+    {
+        std::thread([producer = std::move(producer_)] () mutable {
+            try {
+              producer.reset();
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+        }).detach();
     }
 
     // frame_producer
 
-    core::draw_frame last_frame() override { return producer_.prev_frame(); }
+    core::draw_frame last_frame() override { return producer_->prev_frame(); }
 
-    core::draw_frame receive_impl(int nb_samples) override { return producer_.next_frame(); }
+    core::draw_frame receive_impl(int nb_samples) override { return producer_->next_frame(); }
 
     std::uint32_t frame_number() const override
     {
-        return static_cast<std::uint32_t>(producer_.time() * format_desc_.fps);
+        return static_cast<std::uint32_t>(producer_->time() * format_desc_.fps);
     }
 
     std::uint32_t nb_frames() const override
     {
-        return producer_.loop() ? std::numeric_limits<std::uint32_t>::max()
-                                : static_cast<std::uint32_t>(producer_.duration() * format_desc_.fps);
+        return producer_->loop() ? std::numeric_limits<std::uint32_t>::max()
+                                 : static_cast<std::uint32_t>(producer_->duration() * format_desc_.fps);
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -117,38 +128,38 @@ struct ffmpeg_producer : public core::frame_producer_base
 
         if (boost::iequals(cmd, L"loop")) {
             if (!value.empty()) {
-                producer_.loop(boost::lexical_cast<bool>(value));
+                producer_->loop(boost::lexical_cast<bool>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_.loop());
+            result = boost::lexical_cast<std::wstring>(producer_->loop());
         } else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start")) {
             if (!value.empty()) {
-                producer_.start(boost::lexical_cast<int64_t>(value));
+                producer_->start(boost::lexical_cast<int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_.start());
+            result = boost::lexical_cast<std::wstring>(producer_->start());
         } else if (boost::iequals(cmd, L"out")) {
             if (!value.empty()) {
-                producer_.duration(boost::lexical_cast<int64_t>(value) - producer_.start());
+                producer_->duration(boost::lexical_cast<int64_t>(value) - producer_->start());
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_.start() + producer_.duration());
+            result = boost::lexical_cast<std::wstring>(producer_->start() + producer_->duration());
         } else if (boost::iequals(cmd, L"length")) {
             if (!value.empty()) {
-                producer_.duration(boost::lexical_cast<std::int64_t>(value));
+                producer_->duration(boost::lexical_cast<std::int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_.duration());
+            result = boost::lexical_cast<std::wstring>(producer_->duration());
         } else if (boost::iequals(cmd, L"seek") && !value.empty()) {
             int64_t seek;
             if (boost::iequals(value, L"rel")) {
-                seek = producer_.time();
+                seek = producer_->time();
             } else if (boost::iequals(value, L"in")) {
-                seek = producer_.start();
+                seek = producer_->start();
             } else if (boost::iequals(value, L"out")) {
-                seek = producer_.start() + producer_.duration();
+                seek = producer_->start() + producer_->duration();
             } else if (boost::iequals(value, L"end")) {
-                seek = producer_.duration();
+                seek = producer_->duration();
             } else {
                 seek = boost::lexical_cast<int64_t>(value);
             }
@@ -157,7 +168,7 @@ struct ffmpeg_producer : public core::frame_producer_base
                 seek += boost::lexical_cast<int64_t>(params.at(2));
             }
 
-            producer_.seek(seek);
+            producer_->seek(seek);
 
             result = boost::lexical_cast<std::wstring>(seek);
         } else {
@@ -171,13 +182,13 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     std::wstring print() const override
     {
-        return L"ffmpeg[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(producer_.time()) + L"/" +
-               boost::lexical_cast<std::wstring>(producer_.duration()) + L"]";
+        return L"ffmpeg[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(producer_->time()) + L"/" +
+               boost::lexical_cast<std::wstring>(producer_->duration()) + L"]";
     }
 
     std::wstring name() const override { return L"ffmpeg"; }
 
-    const core::monitor::state& state() const override { return producer_.state(); }
+    const core::monitor::state& state() const override { return producer_->state(); }
 };
 
 boost::tribool has_valid_extension(const std::wstring& filename) {
