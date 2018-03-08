@@ -399,7 +399,7 @@ struct Filter
 struct AVProducer::Impl
 {
     core::monitor::state                state_;
-    std::shared_ptr<diagnostics::graph> graph_ = std::make_shared<diagnostics::graph>();
+    spl::shared_ptr<diagnostics::graph> graph_;
 
     const std::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_desc              format_desc_;
@@ -465,7 +465,7 @@ struct AVProducer::Impl
         state_["file/name"] = u8(name_);
         state_["file/path"] = u8(path_);
 
-        diagnostics::register_graph(spl::make_shared_ptr(graph_));
+        diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
@@ -615,7 +615,7 @@ struct AVProducer::Impl
 
     ~Impl()
     {
-        graph_.reset();
+        graph_ = spl::shared_ptr<diagnostics::graph>();
         abort_request_ = true;
         cond_.notify_all();
         buffer_cond_.notify_all();
