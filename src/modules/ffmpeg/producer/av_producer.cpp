@@ -602,11 +602,11 @@ struct AVProducer::Impl
 
     ~Impl()
     {
+        graph_.reset();
         abort_request_ = true;
         cond_.notify_all();
         buffer_cond_.notify_all();
         thread_.join();
-        graph_.reset();
     }
 
     bool schedule()
