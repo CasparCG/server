@@ -82,7 +82,12 @@ struct configuration
     bool      key_only          = false;
     int       base_buffer_depth = 3;
 
-    int buffer_depth() const { return base_buffer_depth + (latency == latency_t::low_latency ? 0 : 1); }
+    int buffer_depth() const 
+    { 
+        return base_buffer_depth + 
+               (latency == latency_t::low_latency ? 0 : 1) + 
+               (embedded_audio ? 1 : 0); // TODO: Do we need this?
+    }
 
     int key_device_index() const { return key_device_idx == 0 ? device_index + 1 : key_device_idx; }
 };
@@ -334,10 +339,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         if (config.embedded_audio) {
-            auto nb_samples =
-                format_desc_.audio_cadence[buffer_size_ % format_desc_.audio_cadence.size()] * field_count_;
-            // Preroll one extra frame worth of audio
-            schedule_next_audio(std::vector<int32_t>(nb_samples * format_desc_.audio_channels, 0), nb_samples);
             output_->EndAudioPreroll();
         }
 
