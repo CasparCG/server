@@ -388,15 +388,18 @@ class decklink_producer : public IDeckLinkInputCallback
         {
             state_["file/name"]              = model_name_;
             state_["file/path"]              = device_index_;
-            state_["file/video/width"]       = video->GetWidth();
-            state_["file/video/height"]      = video->GetHeight();
             state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
             state_["file/audio/channels"]    = format_desc_.audio_channels;
             state_["file/fps"]               = format_desc_.fps;
             state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
             state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
 
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps / format_desc_.field_count * 0.5);
+            if (video) {
+                state_["file/video/width"]  = video->GetWidth();
+                state_["file/video/height"] = video->GetHeight();
+            }
+
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             graph_->set_value("output-buffer",
                               static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
         };
@@ -408,7 +411,7 @@ class decklink_producer : public IDeckLinkInputCallback
             BMDTimeValue in_video_pts = 0LL;
             BMDTimeValue in_audio_pts = 0LL;
 
-            {
+            if (video) {
                 auto src    = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
                 src->format = AV_PIX_FMT_UYVY422;
                 src->width  = video->GetWidth();
@@ -418,7 +421,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 src->key_frame        = 1;
 
                 void* video_bytes = nullptr;
-                if (video && SUCCEEDED(video->GetBytes(&video_bytes)) && video_bytes) {
+                if (SUCCEEDED(video->GetBytes(&video_bytes)) && video_bytes) {
                     video->AddRef();
                     src = std::shared_ptr<AVFrame>(src.get(), [src, video](AVFrame* ptr) { video->Release(); });
 
@@ -439,14 +442,14 @@ class decklink_producer : public IDeckLinkInputCallback
                 }
             }
 
-            {
+            if (audio) {
                 auto src             = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
                 src->format          = AV_SAMPLE_FMT_S32;
                 src->channels        = format_desc_.audio_channels;
                 src->sample_rate     = format_desc_.audio_sample_rate;
 
                 void* audio_bytes = nullptr;
-                if (audio && SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
+                if (SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
                     audio->AddRef();
                     src = std::shared_ptr<AVFrame>(src.get(), [src, audio](AVFrame* ptr) { audio->Release(); });
                     src->nb_samples  = audio->GetSampleFrameCount();
@@ -471,6 +474,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 {
                     auto av_video = alloc_frame();
                     auto av_audio = alloc_frame();
+
+                    // TODO (fix) this may get stuck if the decklink sends a frame of video or audio
 
                     if (av_buffersink_get_frame_flags(video_filter_.sink, av_video.get(), AV_BUFFERSINK_FLAG_PEEK) <
                         0) {
