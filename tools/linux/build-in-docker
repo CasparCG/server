@@ -1,2 +1,10 @@
 #! /bin/bash
-docker build -t casparcg/server -f $PWD/tools/linux/Dockerfile $PWD
+
+GIT_REV=$(git rev-list --all --count)
+GIT_HASH=$(git rev-parse --verify --short HEAD)
+
+docker build -t casparcg/server \
+	--build-arg GIT_REV="$GIT_REV" \
+	--build-arg GIT_HASH="$GIT_HASH" \
+	-f $PWD/tools/linux/Dockerfile $PWD
+

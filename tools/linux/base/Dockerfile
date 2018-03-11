@@ -1,4 +1,4 @@
-FROM buildpack-deps:artful
+FROM buildpack-deps:bionic
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
 	cmake \
@@ -32,12 +32,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libnspr4 \
 	libgconf-2-4 \
 	libasound2 \
-	libfreeimage-dev \
-	libglew-dev \
-	libtbb-dev \
-	libopenal-dev \
-	libglfw3-dev \
-	libsfml-dev \
 	libopus-dev \
 	libgsm1-dev \
 	libmodplug-dev \
@@ -55,4 +49,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libx264-dev \
 	libxvidcore-dev \
 	libx265-dev \
-	libxss1
+	libxss1 \
+	libgtk2.0-0 \
+	libssl1.0.0

@@ -34,4 +34,11 @@ do
     fi
 done
 
+# Dynamic deps
+cp "/usr/lib/x86_64-linux-gnu/nss/libsoftokn3.so" "$2"
+cp "/usr/lib/x86_64-linux-gnu/nss/libnssckbi.so" "$2"
+
+# Remove debug symbols from CEF
+strip "$2/libcef.so"
+
 echo "Done!"
