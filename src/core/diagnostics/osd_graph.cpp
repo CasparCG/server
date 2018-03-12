@@ -51,7 +51,7 @@
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
 static const int PREFERRED_VERTICAL_GRAPHS = 8;
-static const int RENDERING_WIDTH           = 750;
+static const int RENDERING_WIDTH           = 1024;
 static const int RENDERING_HEIGHT          = RENDERING_WIDTH / PREFERRED_VERTICAL_GRAPHS;
 
 sf::Color get_sfml_color(int color)
@@ -259,7 +259,7 @@ class line : public drawable
 
   public:
     line()
-        : res_(750)
+        : res_(1024)
     {
         tick_data_ = -1.0f;
         color_     = 0xFFFFFFFF;
