@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
@@ -245,7 +245,7 @@ struct screen_consumer : boost::noncopyable
     ~screen_consumer()
     {
         is_running_ = false;
-        frame_buffer_.try_push(core::const_frame{});
+        frame_buffer_.push(core::const_frame{});
         thread_.join();
     }
 
