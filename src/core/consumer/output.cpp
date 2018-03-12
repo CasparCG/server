@@ -85,6 +85,15 @@ struct output::impl
 
     void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
     {
+        if (!input_frame) {
+            return;
+        }
+
+        if (input_frame.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
+            return;
+        }
+
         auto time = std::move(time_);
 
         if (format_desc_ != format_desc) {
@@ -107,15 +116,6 @@ struct output::impl
         {
             std::lock_guard<std::mutex> lock(consumers_mutex_);
             consumers = consumers_;
-        }
-
-        if (!input_frame) {
-            return;
-        }
-
-        if (input_frame.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
-            return;
         }
 
         std::map<int, std::future<bool>> futures;
