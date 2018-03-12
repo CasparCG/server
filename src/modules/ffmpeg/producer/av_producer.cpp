@@ -556,7 +556,7 @@ struct AVProducer::Impl
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         if (!progress) {
-                            if (warning_debounce++ > 100) {
+                            if (warning_debounce++ % 500 == 100) {
                                 if (!video_filter_.frame && !video_filter_.eof) {
                                     CASPAR_LOG(warning) << print() << " Waiting for video frame...";
                                 } else if (!audio_filter_.frame && !audio_filter_.eof) {
@@ -572,9 +572,7 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    if (warning_debounce > 0) {
-                        warning_debounce -= 1;
-                    }
+                    warning_debounce = 0;
 
                     // TODO (fix)
                     // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
