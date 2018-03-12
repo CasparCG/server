@@ -229,6 +229,8 @@ struct screen_consumer : boost::noncopyable
                 while (is_running_) {
                     tick();
                 }
+            } catch (tbb::user_abort&) {
+                // Do nothing
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
                 is_running_ = false;
@@ -245,7 +247,7 @@ struct screen_consumer : boost::noncopyable
     ~screen_consumer()
     {
         is_running_ = false;
-        frame_buffer_.push(core::const_frame{});
+        frame_buffer_.abort();
         thread_.join();
     }
 
