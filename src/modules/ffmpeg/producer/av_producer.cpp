@@ -467,7 +467,6 @@ struct AVProducer::Impl
 
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
-        graph_->set_color("waiting", diagnostics::color(1.0f, 0.3f, 0.7f));
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
 
@@ -557,7 +556,6 @@ struct AVProducer::Impl
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                         if (!progress) {
-                            graph_->set_tag(diagnostics::tag_severity::WARNING, "waiting");
                             if (warning_debounce++ > 100) {
                                 if (!video_filter_.frame && !video_filter_.eof) {
                                     CASPAR_LOG(warning) << print() << " Waiting for video frame...";
