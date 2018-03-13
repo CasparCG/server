@@ -112,7 +112,7 @@ void Input::reset()
         FF(av_dict_set(&options, "http_persistent", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "http_multiple", "0", 0));    // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
-        FF(av_dict_set(&options, "referer", filename_.c_str(), 0));        // HTTP reconnect
+        FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
     }
                                                            // TODO (fix) timeout?
     FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
