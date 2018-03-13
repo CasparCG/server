@@ -45,7 +45,8 @@ if(MSVC)
 		common
 		core
 
-		FreeImage.lib
+		optimized FreeImage.lib
+		debug FreeImaged.lib
 	)
 else()
 	target_link_libraries(image

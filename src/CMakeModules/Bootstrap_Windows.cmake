@@ -135,10 +135,11 @@ casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4
 casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4.2.0/build/native/bin/x64/v140/Release/dynamic/sfml-system-2.dll")
 
 # FREEIMAGE
-set(FREEIMAGE_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.3.17.0/build/native/include")
-set(FREEIMAGE_BIN_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.redist.3.17.0/build/native/bin/x64/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/native.freeimage.3.17.0/build/native/lib/x64/dynamic")
+set(FREEIMAGE_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.3.17.0/build/native/include")
+set(FREEIMAGE_BIN_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.redist.3.17.0/build/native/bin/x64/dynamic")
+link_directories("${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.3.17.0/build/native/lib/x64")
 casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImage.dll")
+casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImaged.dll")
 
 #ZLIB
 set(ZLIB_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/include")
