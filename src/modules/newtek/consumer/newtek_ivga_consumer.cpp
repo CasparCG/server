@@ -79,9 +79,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
                                         format_desc.height,
                                         format_desc.time_scale,
                                         format_desc.duration,
-                                        false,
-                                        static_cast<float>(format_desc.square_width) /
-                                            static_cast<float>(format_desc.square_height),
+                                        true,
+                                        static_cast<float>(format_desc.square_width) / static_cast<float>(format_desc.square_height),
                                         true,
                                         format_desc.audio_channels,
                                         format_desc.audio_sample_rate),
