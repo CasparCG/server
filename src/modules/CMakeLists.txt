@@ -10,6 +10,7 @@ add_subdirectory(html)
 if (MSVC)
 	add_subdirectory(flash)
 	add_subdirectory(newtek)
+	add_subdirectory(bluefish)
 endif()
 
 add_subdirectory(image)
