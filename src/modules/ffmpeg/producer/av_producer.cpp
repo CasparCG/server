@@ -630,12 +630,12 @@ struct AVProducer::Impl
             std::pair<int, int> min{-1, std::numeric_limits<int>::max()};
             for (auto& p : decoders_) {
                 const auto size = static_cast<int>(p.second.input.size());
-                if (size < min.first && !p.second.eof) {
+                if (size < min.second && !p.second.eof) {
                     min = std::pair<int, int>(p.first, size);
                 }
             }
 
-            if (min.first > 0) {
+            if (min.second > 0) {
                 return false;
             }
 

@@ -270,7 +270,7 @@ struct screen_consumer : boost::noncopyable
     {
         core::const_frame in_frame;
 
-        while (!frame_buffer_.try_pop(in_frame)) {
+        while (!frame_buffer_.try_pop(in_frame) && is_running_) {
             // TODO (fix)
             if (!poll()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(2));
