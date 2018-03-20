@@ -31,7 +31,7 @@ BraceWrapping:
   AfterObjCDeclaration: false
   AfterStruct: true
   AfterUnion: true
-  AfterExternBlock: true
+  #AfterExternBlock: true
   BeforeCatch: false
   BeforeElse: false
   IndentBraces: false
@@ -69,7 +69,7 @@ IncludeCategories:
     Priority: 1
 IncludeIsMainRegex: '(Test)?$'
 IndentCaseLabels: true
-IndentPPDirectives: None
+#IndentPPDirectives: None
 IndentWidth: 4
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
@@ -85,10 +85,10 @@ PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
-RawStringFormats: 
-  - Delimiter: pb
-    Language: TextProto
-    BasedOnStyle: google
+#RawStringFormats: 
+#  - Delimiter: pb
+#    Language: TextProto
+#    BasedOnStyle: google
 ReflowComments: true
 SortIncludes: true
 SortUsingDeclarations: true
