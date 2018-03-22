@@ -784,7 +784,7 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, input_.duration().value_or(0) / format_desc_.fps};
+            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
         };
 
         {
