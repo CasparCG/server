@@ -194,8 +194,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             if (swap_transforms)
                 std::swap(tweens_, other_impl->tweens_);
         };
-
-        return executor_.begin_invoke([=] { other_impl->executor_.invoke(func); });
+        
+        return invoke_both(other, func);
     }
 
     std::future<void> swap_layer(int index, int other_index, bool swap_transforms)
@@ -228,8 +228,19 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
             };
 
-            return executor_.begin_invoke([=] { other_impl->executor_.invoke(func); });
+            return invoke_both(other, func);
         }
+    }
+    
+    std::future<void> invoke_both(stage& other, std::function<void()> func)
+    {
+        auto other_impl = other.impl_;
+
+        if (other_impl->channel_index_ < channel_index_){
+            return other_impl->executor_.begin_invoke([=] { executor_.invoke(func); });
+        }
+
+        return executor_.begin_invoke([=] { other_impl->executor_.invoke(func); });
     }
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index)
