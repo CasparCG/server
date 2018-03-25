@@ -128,6 +128,7 @@ struct layer::impl
 
             state_.clear();
             state_["paused"] = is_paused_;
+            state_["background"] = background_->print();
             state_.insert_or_assign(foreground_->state());
 
             return frame;
