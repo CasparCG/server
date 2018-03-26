@@ -17,14 +17,13 @@
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Robert Nagy, ronag89@gmail.com
+          James Wise, james.wise@bluefish444.com
 */
 
 #pragma once
 
 #include <Windows.h>
-
-#include <tbb/scalable_allocator.h>
-
+#include <boost/align.hpp>
 #include <vector>
 
 namespace caspar { namespace bluefish {
@@ -54,8 +53,8 @@ private:
 	int id_;
 	size_t image_size_;
 	size_t hanc_size_;
-	std::vector<BYTE> image_buffer_;
-	std::vector<BYTE> hanc_buffer_;
+    std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64> > image_buffer_;
+    std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64> > hanc_buffer_;
 };
 typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
 

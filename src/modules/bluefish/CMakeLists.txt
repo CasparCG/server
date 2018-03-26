@@ -3,12 +3,14 @@ project (bluefish)
 
 set(SOURCES
 		consumer/bluefish_consumer.cpp
+        producer/bluefish_producer.cpp
 		util/blue_velvet.cpp
 		bluefish.cpp
 		StdAfx.cpp
 )
 set(HEADERS
 		consumer/bluefish_consumer.h
+         producer/bluefish_producer.h
         interop/BlueVelvetC.h
         interop/BlueVelvetCUtils.h
         util/blue_velvet.h
@@ -30,6 +32,7 @@ include_directories(${FFMPEG_INCLUDE_PATH})
 set_target_properties(bluefish PROPERTIES FOLDER modules)
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
+source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources\\interop interop/*)
 
