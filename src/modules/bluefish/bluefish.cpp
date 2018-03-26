@@ -25,6 +25,7 @@
 #include "bluefish.h"
 
 #include "consumer/bluefish_consumer.h"
+#include "producer/bluefish_producer.h"
 
 #include "util/blue_velvet.h"
 
@@ -85,6 +86,7 @@ void init(core::module_dependencies dependencies)
 
 	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
+    dependencies.producer_registry->register_producer_factory(L"Bluefish Producer", create_producer);
 }
 
 }}

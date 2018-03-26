@@ -118,6 +118,9 @@ public:
 
 	BLUE_UINT32 get_card_property32(const int iProperty, unsigned int& nValue);
 	BLUE_UINT32 set_card_property32(const int iProperty, const unsigned int nValue);
+
+    BLUE_UINT32 get_card_property64(const int iProperty, unsigned long long& nValue);
+    BLUE_UINT32 set_card_property64(const int iProperty, const unsigned long long nValue);
 	
 	BLUE_UINT32 system_buffer_write(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
 	BLUE_UINT32 system_buffer_read(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
@@ -139,9 +142,10 @@ public:
 	BLUE_UINT32 get_frame_info_for_video_mode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive);
 	BLUE_UINT32 get_bytes_per_frame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame);
 
-  std::string get_string_for_card_type(unsigned int nCardType);
+    std::string get_string_for_card_type(unsigned int nCardType);
+    std::wstring get_wstring_for_video_mode(unsigned int nVideoMode);
 
-  int         get_num_audio_samples_for_frame(const BLUE_UINT32 nVideoMode, const BLUE_UINT32 nFrameNo);
+    int         get_num_audio_samples_for_frame(const BLUE_UINT32 nVideoMode, const BLUE_UINT32 nFrameNo);
 
 private:
 	bool					init_function_pointers();

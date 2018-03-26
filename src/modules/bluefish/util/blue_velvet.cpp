@@ -154,6 +154,16 @@ namespace caspar { namespace bluefish {
 		return bfcSetCardProperty32(bvc_.get(), iProperty, nValue);
 	}
 
+    BLUE_UINT32 bvc_wrapper::get_card_property64(const int iProperty, unsigned long long& nValue)
+    {
+        return (BLUE_UINT32)bfcQueryCardProperty64(bvc_.get(), iProperty, nValue);
+    }
+
+    BLUE_UINT32 bvc_wrapper::set_card_property64(const int iProperty, const unsigned long long nValue)
+    {
+        return bfcSetCardProperty64(bvc_.get(), iProperty, nValue);
+    }
+
 	BLUE_UINT32 bvc_wrapper::enumerate(int & iDevices)
 	{
 		return bfcEnumerate(bvc_.get(), iDevices);
@@ -233,13 +243,66 @@ namespace caspar { namespace bluefish {
 
 	BLUE_UINT32 bvc_wrapper::get_bytes_per_frame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame)
 	{
-		return bfcGetBytesPerFrame(nVideoMode, nMemoryFormat, nUpdateMethod, nBytesPerFrame);
+        return bfcGetGoldenValue(nVideoMode, nMemoryFormat, nUpdateMethod, nBytesPerFrame);
 	}
 
-  std::string bvc_wrapper::get_string_for_card_type(unsigned int nCardType)
-  {
-    return bfcUtilsGetStringForCardType(nCardType);
-  }
+    std::string bvc_wrapper::get_string_for_card_type(unsigned int nCardType)
+    {
+        return bfcUtilsGetStringForCardType(nCardType);
+    }
+
+    std::wstring bvc_wrapper::get_wstring_for_video_mode(unsigned int nVideoMode)
+    {
+        std::wstring mode_desc;
+        switch (nVideoMode)
+        {
+        case  VID_FMT_PAL:	        mode_desc = L"pal";
+            break;
+        case  VID_FMT_NTSC:     	mode_desc = L"ntsc";
+            break;
+        case  VID_FMT_720P_2398:	mode_desc = L"720p23";
+            break;
+        case  VID_FMT_720P_2400:	mode_desc = L"720p24";
+            break;
+        case  VID_FMT_720P_2500:	mode_desc = L"720p25";
+            break;
+        case  VID_FMT_720P_5000:	mode_desc = L"720p50";
+            break;
+        case  VID_FMT_720P_2997:	mode_desc = L"720p29";
+            break;
+        case  VID_FMT_720P_5994:	mode_desc = L"720p59";
+            break;
+        case  VID_FMT_720P_3000:	mode_desc = L"720p30";
+            break;
+        case  VID_FMT_720P_6000:	mode_desc = L"720p60";
+            break;
+        case  VID_FMT_1080P_2397:	mode_desc = L"1080p23";
+            break;
+        case  VID_FMT_1080P_2400:	mode_desc = L"1080p24";
+            break;
+        case  VID_FMT_1080I_5000:	mode_desc = L"1080i50";
+            break;
+        case  VID_FMT_1080I_5994:	mode_desc = L"1080i59";
+            break;
+        case  VID_FMT_1080I_6000:	mode_desc = L"1080i60";
+            break;
+        case  VID_FMT_1080P_2500:	mode_desc = L"1080p25";
+            break;
+        case  VID_FMT_1080P_2997:	mode_desc = L"1080p29";
+            break;
+        case  VID_FMT_1080P_3000:	mode_desc = L"1080p30";
+            break;
+        case  VID_FMT_1080P_5000:	mode_desc = L"1080p50";
+            break;
+        case  VID_FMT_1080P_5994:	mode_desc = L"1080p59";
+            break;
+        case  VID_FMT_1080P_6000:	mode_desc = L"1080p60";
+            break;
+        default:					mode_desc = L"invalid";
+            break;
+        }
+        return mode_desc;
+    }
 
   int  bvc_wrapper::get_num_audio_samples_for_frame(const BLUE_UINT32 nVideoMode, const BLUE_UINT32 nFrameNo)
   {
@@ -324,36 +387,40 @@ bool is_epoch_neutron_3o_card(bvc_wrapper& blue)
 		return false;
 }
 
-// also fix this damn confusion between the 2 funcs !! 
 std::wstring get_card_desc(bvc_wrapper blue, int device_id)
 {
-  // TODO: 1. can we use bfcUtils here?
-  // TODO: 2. - should we make it return name and Fw typoe ie... "Neutron 2i2o"
   std::wstring card_desc;
-
   int card_type = 0;
   blue.query_card_type(card_type, device_id);
 
   switch (card_type)
   {
-  case CRD_BLUE_EPOCH_2K_CORE:		  card_desc = L"Blue Epoch 2K Core";
-  case CRD_BLUE_EPOCH_2K_ULTRA:		  card_desc = L"Blue Epoch 2K Ultra";
-  case CRD_BLUE_EPOCH_HORIZON:		  card_desc = L"Blue Epoch Horizon";
-  case CRD_BLUE_EPOCH_CORE:			    card_desc = L"Blue Epoch Core";
-  case CRD_BLUE_EPOCH_ULTRA:			  card_desc = L"Blue Epoch Ultra";
-  case CRD_BLUE_CREATE_HD:			    card_desc = L"Blue Create HD";
-  case CRD_BLUE_CREATE_2K:			    card_desc = L"Blue Create 2K";
-  case CRD_BLUE_CREATE_2K_ULTRA:		card_desc = L"Blue Create 2K Ultra";
-  case CRD_BLUE_SUPER_NOVA:			    card_desc = L"Blue SuperNova";
-  case CRD_BLUE_SUPER_NOVA_S_PLUS:	card_desc = L"Blue SuperNova s+";
-  case CRD_BLUE_NEUTRON:				    card_desc = L"Blue Neutron 4k";
-  case CRD_BLUE_EPOCH_CG:				    card_desc = L"Blue Epopch CG";
-  default:							            card_desc = L"Unknown";
+  case CRD_BLUE_EPOCH_2K_CORE:		    card_desc = L"Bluefish Epoch 2K Core";
+      break;
+  case CRD_BLUE_EPOCH_2K_ULTRA:		    card_desc = L"Bluefish Epoch 2K Ultra";
+      break;
+  case CRD_BLUE_EPOCH_HORIZON:		    card_desc = L"Bluefish Epoch Horizon";
+      break;
+  case CRD_BLUE_EPOCH_CORE:			    card_desc = L"Blufishe Epoch Core";
+      break;
+  case CRD_BLUE_EPOCH_ULTRA:			card_desc = L"Bluefish Epoch Ultra";
+      break;
+  case CRD_BLUE_CREATE_HD:			    card_desc = L"Bluefish Create HD";
+      break;
+  case CRD_BLUE_CREATE_2K:			    card_desc = L"Bluefish Create 2K";
+      break;
+  case CRD_BLUE_CREATE_2K_ULTRA:		card_desc = L"Bluefish Create 2K Ultra";
+      break;
+  case CRD_BLUE_SUPER_NOVA:			    card_desc = L"Bluefish SuperNova";
+      break;
+  case CRD_BLUE_SUPER_NOVA_S_PLUS:	    card_desc = L"Bluefish SuperNova s+";
+      break;
+  case CRD_BLUE_NEUTRON:				card_desc = L"Bluefish Neutron 4k";
+      break;
+  case CRD_BLUE_EPOCH_CG:				card_desc = L"Bluefish Epoch CG";
+      break;
+  default:							    card_desc = L"Unknown";
   }
-
-  // refine the card name by adding xixo  to infomr the specific variant.  eg "Blue Neutron 4k 3o"
-
-  // TODO: do this!!!!
   return card_desc;
 }
 
@@ -396,9 +463,7 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, E
 	core::video_format_desc fmt;
 	unsigned int width, height, duration = 0, time_scale = 0, rate = 0, bIs1001 = 0, is_progressive = 0, size = 0;
 	std::vector<int>	audio_cadence;
-  int field_count = 1;
-
-	//core::field_mode video_field_mode = core::field_mode::progressive;
+    int field_count = 1;
 
 	blue.get_frame_info_for_video_mode(vid_fmt, width, height, rate, bIs1001, is_progressive);
 	blue.get_bytes_per_frame(vid_fmt, mem_fmt, UPD_FMT_FRAME, size);
@@ -410,7 +475,6 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, E
 		duration = 30000;
 		time_scale = 1001;
 		audio_cadence = { 1601,1602,1601,1602,1602 };
-	//	video_field_mode = core::field_mode::upper;
 		break;
 	case VID_FMT_2048_1080P_2500:
 	case VID_FMT_2048_1080PSF_2500:
@@ -490,12 +554,15 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, E
 		break;
 	}
 
-  if (!is_progressive)
-    field_count = 2;
+    if (!is_progressive)
+        field_count = 2;
 
-  fmt.field_count = 2;
-  fmt = get_caspar_video_format(vid_fmt);
-  fmt.size = size;
+    fmt.field_count = field_count;
+    fmt = get_caspar_video_format(vid_fmt);
+    fmt.size = size;
+    fmt.audio_cadence = audio_cadence;
+    fmt.name = blue.get_wstring_for_video_mode(vid_fmt);
+
 	return fmt;
 }
 
