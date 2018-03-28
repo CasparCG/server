@@ -407,7 +407,7 @@ class html_producer : public core::frame_producer_base
             return client_->receive();
         }
 
-        return core::draw_frame{};
+        return core::draw_frame::empty();
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
