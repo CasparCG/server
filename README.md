@@ -98,8 +98,9 @@ CONFIGURATION
 1. Configure the server by editing the self-documented "casparcg.config" file in
    a text editor.
 
-2. On Windows, start the "casparcg.exe" program, or on Linux start the "run.sh"
-   program.
+2. 
+   1. Windows: start `casparcg_auto_restart.bat`, or `casparcg.exe` and `scanner.exe` separately.
+   1. Linux: start the `run.sh` program.
 
 3. Connect to the Server from a client software, such as the "CasparCG Client"
    which is available as a separate download.
