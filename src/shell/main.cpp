@@ -212,6 +212,7 @@ int main(int argc, char** argv)
         if (argc >= 2)
             config_file_name = caspar::u16(argv[1]);
 
+        log::add_cout_sink();
         env::configure(config_file_name);
 
         log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
@@ -220,7 +221,6 @@ int main(int argc, char** argv)
             wait_for_remote_debugging();
 
         // Start logging to file.
-        log::add_cout_sink();
         log::add_file_sink(env::log_folder() + L"caspar");
         std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 
