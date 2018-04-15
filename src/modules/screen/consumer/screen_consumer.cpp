@@ -90,6 +90,7 @@ struct frame
 {
     GLuint pbo   = 0;
     GLuint tex   = 0;
+    GLuint fbo   = 0;
     char*  ptr   = nullptr;
     GLsync fence = 0;
 };
@@ -179,7 +180,7 @@ struct screen_consumer : boost::noncopyable
                 auto window_style = config_.borderless ? sf::Style::None
                                                        : (config_.windowed ? sf::Style::Resize | sf::Style::Close
                                                                            : sf::Style::Fullscreen);
-                window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
+                window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style, sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setSize(sf::Vector2u(screen_width_, screen_height_));
                 window_.setMouseCursorVisible(config_.interactive);
@@ -189,8 +190,10 @@ struct screen_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
                 }
 
-                if (!GLEW_VERSION_4_5) {
-                    CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 4.5 support."));
+                if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
+                    CASPAR_THROW_EXCEPTION(not_supported()
+                                                   << msg_info("Your graphics card does not meet the minimum hardware requirements "
+                                                               "since it does not support OpenGL 4.5 or higher."));
                 }
 
                 for (int n = 0; n < 2; ++n) {
@@ -204,19 +207,21 @@ struct screen_consumer : boost::noncopyable
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
                     GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+
+                    GL(glCreateFramebuffers(1, &frame.fbo));
+                    GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, frame.fbo));
+                    GL(glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frame.tex, 0));
 
                     frames_.push_back(frame);
                 }
 
-                GL(glEnable(GL_TEXTURE_2D));
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
                 GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-                GL(glLoadIdentity());
 
                 calculate_aspect();
 
@@ -238,6 +243,7 @@ struct screen_consumer : boost::noncopyable
             for (auto frame : frames_) {
                 GL(glUnmapNamedBuffer(frame.pbo));
                 glDeleteBuffers(1, &frame.pbo);
+                glDeleteFramebuffers(1, &frame.fbo);
                 glDeleteTextures(1, &frame.tex);
             }
             window_.close();
@@ -323,22 +329,13 @@ struct screen_consumer : boost::noncopyable
         {
             auto& frame = frames_.back();
 
-            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
             GL(glClear(GL_COLOR_BUFFER_BIT));
 
-            // TODO (perf)
-            glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex2f(-width_, -height_);
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex2f(width_, -height_);
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex2f(width_, height_);
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex2f(-width_, height_);
-            glEnd();
-
-            GL(glBindTexture(GL_TEXTURE_2D, 0));
+            GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, frame.fbo));
+            GL(glBlitFramebuffer(0, 0, format_desc_.width, format_desc_.height,
+                                 0, screen_height_, screen_width_, 0,
+                                 GL_COLOR_BUFFER_BIT, GL_LINEAR));
+            GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
         }
 
         window_.display();

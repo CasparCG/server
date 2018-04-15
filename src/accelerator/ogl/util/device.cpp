@@ -74,6 +74,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     impl()
         : work_(make_work_guard(service_))
+        , device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -83,16 +84,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
 
-        if (!GLEW_VERSION_4_5) {
+        version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
+                   u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
+
+        CASPAR_LOG(info) << L"Initialized OpenGL " << version();
+
+        if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
             CASPAR_THROW_EXCEPTION(not_supported()
                                    << msg_info("Your graphics card does not meet the minimum hardware requirements "
                                                "since it does not support OpenGL 4.5 or higher."));
         }
-
-        version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
-                   u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
-
-        CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
