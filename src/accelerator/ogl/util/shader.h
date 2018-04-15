@@ -42,6 +42,8 @@ class shader final
     void set(const std::string& name, double value0, double value1);
     void set(const std::string& name, double value);
 
+    GLint get_attrib_location(const char* name);
+
     template <typename E>
     typename std::enable_if<std::is_enum<E>::value, void>::type set(const std::string& name, E value)
     {

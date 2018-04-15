@@ -310,10 +310,10 @@ struct image_kernel::impl
             double h = static_cast<double>(params.background->height());
 
             GL(glEnable(GL_SCISSOR_TEST));
-            glScissor(static_cast<int>(m_p[0] * w),
+            GL(glScissor(static_cast<int>(m_p[0] * w),
                       static_cast<int>(m_p[1] * h),
                       std::max(0, static_cast<int>(m_s[0] * w)),
-                      std::max(0, static_cast<int>(m_s[1] * h)));
+                      std::max(0, static_cast<int>(m_s[1] * h))));
         }
 
         // Set render target
@@ -364,17 +364,18 @@ struct image_kernel::impl
 
         // Draw
         switch (params.geometry.type()) {
-            case core::frame_geometry::geometry_type::quad:
-            case core::frame_geometry::geometry_type::quad_list: {
-                glClientActiveTexture(GL_TEXTURE0);
+            case core::frame_geometry::geometry_type::triangles: {
 
-                glDisableClientState(GL_EDGE_FLAG_ARRAY);
-                glDisableClientState(GL_COLOR_ARRAY);
-                glDisableClientState(GL_INDEX_ARRAY);
-                glDisableClientState(GL_NORMAL_ARRAY);
+                GLuint vao;
+                GLuint vbo;
 
-                glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-                glEnableClientState(GL_VERTEX_ARRAY);
+                GL(glGenVertexArrays(1, &vao));
+                GL(glGenBuffers(1, &vbo));
+
+                GL(glBindVertexArray(vao));
+                GL(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+
+                GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords.size(), coords.data(), GL_STATIC_DRAW));
 
                 auto stride               = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
                 auto vertex_coord_member  = &core::frame_geometry::coord::vertex_x;
@@ -383,16 +384,28 @@ struct image_kernel::impl
                 auto vertex_coord_ptr     = &(data_ptr->*vertex_coord_member);
                 auto texture_coord_ptr    = &(data_ptr->*texture_coord_member);
 
-                glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
-                glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
+                auto vtx_loc = shader_->get_attrib_location("Position");
+                auto tex_loc = shader_->get_attrib_location("TexCoordIn");
 
-                for (int i = 0; i < coords.size(); i += 4) {
-                    glDrawArrays(GL_QUADS, i, 4);
-                    glTextureBarrier();
+                GL(glEnableVertexAttribArray(vtx_loc));
+                GL(glEnableVertexAttribArray(tex_loc));
+
+                GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
+                GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, nullptr));
+
+                for (int i = 0; i < coords.size(); i += 3) {
+                    GL(glDrawArrays(GL_TRIANGLES, i, 3));
+                    GL(glTextureBarrier());
                 }
 
-                glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-                glDisableClientState(GL_VERTEX_ARRAY);
+                GL(glDisableVertexAttribArray(vtx_loc));
+                GL(glDisableVertexAttribArray(tex_loc));
+
+                GL(glBindVertexArray(0));
+                GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
+
+                GL(glDeleteVertexArrays(1, &vao));
+                GL(glDeleteBuffers(1, &vbo));
                 break;
             }
             default:

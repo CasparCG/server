@@ -9,3 +9,6 @@
 build
 CMakeFiles
 casparcg_server
+
+src/cmake-build-*
+src/.idea
