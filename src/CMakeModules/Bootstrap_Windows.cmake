@@ -163,6 +163,7 @@ set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
 link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64")
 
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/swiftshader")
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef.pak")
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef_100_percent.pak")
 casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef_200_percent.pak")
