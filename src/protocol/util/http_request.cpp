@@ -18,7 +18,7 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
     // Get a list of endpoints corresponding to the server name.
     tcp::resolver           resolver(io_service);
-    tcp::resolver::query    query(host, port);
+    tcp::resolver::query    query(host, port, boost::asio::ip::resolver_query_base::numeric_service);
     tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
     // Try each endpoint until we successfully establish a connection.
