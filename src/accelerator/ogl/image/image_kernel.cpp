@@ -377,12 +377,7 @@ struct image_kernel::impl
 
                 GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords.size(), coords.data(), GL_STATIC_DRAW));
 
-                auto stride               = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
-                auto vertex_coord_member  = &core::frame_geometry::coord::vertex_x;
-                auto texture_coord_member = &core::frame_geometry::coord::texture_x;
-                auto data_ptr             = coords.data();
-                auto vertex_coord_ptr     = &(data_ptr->*vertex_coord_member);
-                auto texture_coord_ptr    = &(data_ptr->*texture_coord_member);
+                auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
 
                 auto vtx_loc = shader_->get_attrib_location("Position");
                 auto tex_loc = shader_->get_attrib_location("TexCoordIn");
