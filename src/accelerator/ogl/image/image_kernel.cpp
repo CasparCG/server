@@ -114,11 +114,25 @@ struct image_kernel::impl
 {
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
+    GLuint vao_;
+    GLuint vbo_;
 
     impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
     {
+        ogl_->dispatch_sync([&] {
+            GL(glGenVertexArrays(1, &vao_));
+            GL(glGenBuffers(1, &vbo_));
+        });
+    }
+
+    ~impl()
+    {
+        ogl_->dispatch_sync([&] {
+            GL(glDeleteVertexArrays(1, &vao_));
+            GL(glDeleteBuffers(1, &vbo_));
+        });
     }
 
     void draw(draw_params params)
@@ -365,15 +379,8 @@ struct image_kernel::impl
         // Draw
         switch (params.geometry.type()) {
             case core::frame_geometry::geometry_type::triangles: {
-
-                GLuint vao;
-                GLuint vbo;
-
-                GL(glGenVertexArrays(1, &vao));
-                GL(glGenBuffers(1, &vbo));
-
-                GL(glBindVertexArray(vao));
-                GL(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+                GL(glBindVertexArray(vao_));
+                GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
 
                 GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords.size(), coords.data(), GL_STATIC_DRAW));
 
@@ -399,8 +406,6 @@ struct image_kernel::impl
                 GL(glBindVertexArray(0));
                 GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
 
-                GL(glDeleteVertexArrays(1, &vao));
-                GL(glDeleteBuffers(1, &vbo));
                 break;
             }
             default:
