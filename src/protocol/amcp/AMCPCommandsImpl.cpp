@@ -89,10 +89,11 @@
 403 [command] ERROR		invalid parameter
 404 [command] ERROR		file not found
 
-500 FAILED				internal error
-501 [command] FAILED	internal error
-502 [command] FAILED	could not read file
-503 [command] FAILED	access denied
+500 FAILED						internal error
+501 [command] FAILED			internal error
+502 [command] FAILED			could not read file
+503 [command] FAILED			access denied
+504 [command] QUEUE OVERFLOW	command queue overflow
 
 600 [command] FAILED	[command] not implemented
 */
