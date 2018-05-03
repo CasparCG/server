@@ -32,8 +32,7 @@ class frame_geometry
   public:
     enum class geometry_type
     {
-        quad,
-        quad_list
+        triangles
     };
 
     struct coord
