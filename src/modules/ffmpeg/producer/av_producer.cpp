@@ -743,7 +743,13 @@ struct AVProducer::Impl
             frame->pts = frame->best_effort_timestamp;
             // TODO (fix) is this always best?
 
-            decoder.next_pts = frame->pts + frame->pkt_duration;
+            auto duration = frame->pkt_duration;
+            if (duration <= 0) {
+                const auto framerate = av_guess_frame_rate(nullptr, decoder.st, frame.get());
+                duration = av_rescale_q(framerate.num, framerate, decoder.st->time_base);
+            }
+
+            decoder.next_pts = frame->pts + duration;
             decoder.frame    = std::move(frame);
         }
 
