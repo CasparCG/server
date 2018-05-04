@@ -474,6 +474,12 @@ struct AVProducer::Impl
             try {
                 input_.reset();
 
+                for (auto n = 0UL; n < input_->nb_streams; ++n) {
+                    auto st = input_->streams[n];
+                    auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
+                    state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num, framerate.den };
+                }
+
                 if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
                     duration_ = input_->duration;
                 }
