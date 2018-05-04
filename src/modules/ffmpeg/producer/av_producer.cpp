@@ -755,7 +755,12 @@ struct AVProducer::Impl
                 duration = av_rescale_q(framerate.num, framerate, decoder.st->time_base);
             }
 
-            decoder.next_pts = frame->pts + duration;
+            if (duration > 0) {
+                decoder.next_pts = frame->pts + duration;
+            } else {
+                decoder.next_pts = AV_NOPTS_VALUE;
+            }
+
             decoder.frame    = std::move(frame);
         }
 
