@@ -916,6 +916,10 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> duration() const
     {
+        if (duration_ != AV_NOPTS_VALUE) {
+            return av_rescale_q(duration_, TIME_BASE_Q, format_tb_);
+        }
+
         if (!input_.duration()) {
             return boost::none;
         }
