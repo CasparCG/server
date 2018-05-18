@@ -378,11 +378,13 @@ struct image_kernel::impl
 
         // Draw
         switch (params.geometry.type()) {
-            case core::frame_geometry::geometry_type::triangles: {
+            case core::frame_geometry::geometry_type::quad: {
                 GL(glBindVertexArray(vao_));
                 GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
 
-                GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords.size(), coords.data(), GL_STATIC_DRAW));
+                std::vector<core::frame_geometry::coord> coords_triangles { coords[0], coords[1], coords[2], coords[0], coords[2], coords[3] };
+
+                GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(), coords_triangles.data(), GL_STATIC_DRAW));
 
                 auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
 
@@ -393,9 +395,9 @@ struct image_kernel::impl
                 GL(glEnableVertexAttribArray(tex_loc));
 
                 GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
-                GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, nullptr));
+                GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
-                for (int i = 0; i < coords.size(); i += 3) {
+                for (int i = 0; i < coords_triangles.size(); i += 3) {
                     GL(glDrawArrays(GL_TRIANGLES, i, 3));
                     GL(glTextureBarrier());
                 }

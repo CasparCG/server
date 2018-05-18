@@ -43,11 +43,8 @@ struct frame_geometry::impl
     impl(frame_geometry::geometry_type type, std::vector<coord> data)
         : type_(type)
     {
-        if (type == geometry_type::triangles) {
-            if (data.size() % 3 != 0)
-                CASPAR_THROW_EXCEPTION(invalid_argument()
-                                       << msg_info("The number of coordinates needs to be a multiple of 3"));
-        }
+        if (type == geometry_type::quad && data.size() != 4)
+            CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be 4"));
 
         data_ = std::move(data);
     }
@@ -71,11 +68,9 @@ const frame_geometry& frame_geometry::get_default()
         {0.0, 0.0, 0.0, 0.0}, // upper left
         {1.0, 0.0, 1.0, 0.0}, // upper right
         {1.0, 1.0, 1.0, 1.0}, // lower right
-        {0.0, 0.0, 0.0, 0.0}, // upper left
-        {1.0, 1.0, 1.0, 1.0}, // lower right
         {0.0, 1.0, 0.0, 1.0}  // lower left
     };
-    static const frame_geometry g(frame_geometry::geometry_type::triangles, data);
+    static const frame_geometry g(frame_geometry::geometry_type::quad, data);
 
     return g;
 }
