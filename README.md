@@ -110,9 +110,9 @@ DOCUMENTATION
 -------------
 
 The most up-to-date documentation is always available at
-http://casparcg.com/wiki/
+https://github.com/CasparCG/server/wiki
 
-Ask questions in the forum: http://casparcg.com/forum/
+Ask questions in the forum: https://casparcgforum.org/
 
 
 LICENSING
@@ -124,8 +124,8 @@ see the file LICENSE.txt for details.
 More information, samples and documentation at:
 
 http://casparcg.com/
-http://casparcg.com/forum/
-http://casparcg.com/wiki/
+https://casparcgforum.org/
+https://github.com/CasparCG/server/wiki
 
 CasparCG Server uses FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence.
 FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
