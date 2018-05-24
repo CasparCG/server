@@ -30,7 +30,7 @@ More information is available at http://casparcg.com/
 
 
 More information about CasparCG is available at http://casparcg.com/ and
-in the forum at http://casparcg.com/forum/
+in the forum at https://casparcgforum.org/
 
 
 COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX
