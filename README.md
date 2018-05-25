@@ -16,18 +16,12 @@ git clone --single-branch --branch master https://github.com/CasparCG/server
 
 See [BUILDING](BUILDING.md) for instructions on how to build the CasparCG Server from source manually.
 
-**Join our development IRC channel on the Freenode network.**
-
-[![Visit our IRC channel](https://kiwiirc.com/buttons/sinisalo.freenode.net/CasparCG.png)](https://kiwiirc.com/client/sinisalo.freenode.net/?nick=Guest|?#CasparCG)
 
 License
 -------
 
 CasparCG Server is distributed under the GNU General Public License GPLv3 or
 higher, see [LICENSE](LICENSE.md) for details.
-
-More information is available at http://casparcg.com/
-
 
 More information about CasparCG is available at http://casparcg.com/ and
 in the forum at https://casparcgforum.org/
@@ -110,7 +104,7 @@ DOCUMENTATION
 -------------
 
 The most up-to-date documentation is always available at
-https://github.com/CasparCG/server/wiki
+https://github.com/CasparCG/help/wiki
 
 Ask questions in the forum: https://casparcgforum.org/
 
@@ -125,7 +119,7 @@ More information, samples and documentation at:
 
 http://casparcg.com/
 https://casparcgforum.org/
-https://github.com/CasparCG/server/wiki
+https://github.com/CasparCG/help/wiki
 
 CasparCG Server uses FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence.
 FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
