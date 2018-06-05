@@ -156,6 +156,8 @@ struct output::impl
                 std::this_thread::sleep_until(*time);
             }
             time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps));
+        } else {
+            time_.reset();
         }
     }
 
