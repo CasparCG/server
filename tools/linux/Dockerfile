@@ -12,7 +12,6 @@ FROM casparcg/base:1.2.0 as build-casparcg
 	ENV BOOST_ROOT=/opt/boost
 	ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
 
-	ARG GIT_REV
 	ARG GIT_HASH
 
 	RUN cmake /source
