@@ -458,7 +458,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     configuration config;
 
     if (params.size() > 1) {
-        config.screen_index = boost::lexical_cast<int>(params.at(1));
+        try {
+            config.screen_index = boost::lexical_cast<int>(params.at(1));
+        } catch (...) {
+        }
     }
 
     config.windowed    = !contains_param(L"FULLSCREEN", params);
