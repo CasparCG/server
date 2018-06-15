@@ -12,7 +12,17 @@ set(HEADERS
 	screen.h
 )
 
-add_library(screen ${SOURCES} ${HEADERS})
+if (MSVC)
+else ()
+	set(OS_SPECIFIC_HEADERS
+			util/x11_util.h
+			)
+	set(OS_SPECIFIC_SOURCES
+			util/x11_util.cpp
+			)
+endif ()
+
+add_library(screen ${SOURCES} ${OS_SPECIFIC_SOURCES} ${HEADERS} ${OS_SPECIFIC_HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

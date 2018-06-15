@@ -54,6 +54,8 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
+#else
+#include "../util/x11_util.h"
 #endif
 
 namespace caspar { namespace screen {
@@ -88,6 +90,7 @@ struct configuration
     bool            vsync        = false;
     bool            interactive  = true;
     bool            borderless   = false;
+    bool            always_on_top= false;
 };
 
 struct frame
@@ -202,7 +205,7 @@ struct screen_consumer : boost::noncopyable
 
         thread_ = std::thread([this] {
             try {
-                auto window_style = config_.borderless ? sf::Style::None
+                const auto window_style = config_.borderless ? sf::Style::None
                                                        : (config_.windowed ? sf::Style::Resize | sf::Style::Close
                                                                            : sf::Style::Fullscreen);
                 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
@@ -211,6 +214,15 @@ struct screen_consumer : boost::noncopyable
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
                 window_.setActive(true);
+
+                if (config_.always_on_top) {
+#ifdef _MSC_VER
+                    HWND hwnd = window_.getSystemHandle();
+                    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+#else
+                    window_always_on_top(window_);
+#endif
+                }
 
                 if (glewInit() != GLEW_OK) {
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
@@ -514,6 +526,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.vsync        = ptree.get(L"vsync", config.vsync);
     config.interactive  = ptree.get(L"interactive", config.interactive);
     config.borderless   = ptree.get(L"borderless", config.borderless);
+    config.always_on_top= ptree.get(L"always-on-top", config.always_on_top);
 
     auto stretch_str = ptree.get(L"stretch", L"fill");
     if (stretch_str == L"none") {
