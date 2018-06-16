@@ -184,10 +184,10 @@ struct screen_consumer : boost::noncopyable
         }
 #endif
 
-        screen_x_ += config.screen_x;
-        screen_y_ += config.screen_y;
-
         if (config.windowed) {
+            screen_x_ += config.screen_x;
+            screen_y_ += config.screen_y;
+
             if (config.screen_width > 0 && config.screen_height > 0) {
                 screen_width_ = config.screen_width;
                 screen_height_ = config.screen_height;
