@@ -1,5 +1,7 @@
 #include "http_request.h"
 
+#include <common/except.h>
+
 #include <boost/asio.hpp>
 #include <iomanip>
 #include <sstream>
@@ -22,8 +24,16 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
     // Try each endpoint until we successfully establish a connection.
-    tcp::socket socket(io_service);
-    asio::connect(socket, endpoint_iterator);
+    tcp::socket               socket(io_service);
+    boost::system::error_code error;
+    asio::connect(socket, endpoint_iterator, error);
+    if (error == asio::error::connection_refused) {
+        res.status_code = 503;
+        res.status_message = error.message();
+        return res;
+    } else if (error) {
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info(error.message()));
+    }
 
     // Form the request. We specify the "Connection: close" header so that the
     // server will close the socket after transmitting the response. This will
@@ -53,12 +63,12 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
     if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
         // TODO
-        throw std::runtime_error("Invalid Response");
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
     }
 
     if (res.status_code < 200 || res.status_code >= 300) {
         // TODO
-        throw std::runtime_error("Invalid Response");
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
     }
 
     // Read the response headers, which are terminated by a blank line.
@@ -78,13 +88,12 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     }
 
     // Read until EOF, writing data to output as we go.
-    boost::system::error_code error;
     while (asio::read(socket, response, asio::transfer_at_least(1), error)) {
         body << &response;
     }
 
     if (error != asio::error::eof) {
-        throw boost::system::system_error(error);
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info(error.message()));
     }
 
     res.body = body.str();
