@@ -70,7 +70,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             try {
                 for (auto& t: tweens_)
-                    t.second.tick();
+                    t.second.tick(1);
 
                 // TODO (perf) parallel_for
                 for (auto& p : layers_) {
@@ -109,8 +109,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 auto& tween = tweens_[std::get<0>(transform)];
                 auto  src   = tween.fetch();
                 auto  dst   = std::get<1>(transform)(tween.dest());
-                auto  index = std::get<0>(transform);
-                tweens_[index] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
+                tweens_[std::get<0>(transform)] =
+                        tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
             }
         });
     }
