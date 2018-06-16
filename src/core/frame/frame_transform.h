@@ -166,7 +166,7 @@ class tweened_transform
     const frame_transform& dest() const;
 
     frame_transform fetch();
-    frame_transform fetch_and_tick(int num);
+    void tick(int num);
 };
 
 boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str);

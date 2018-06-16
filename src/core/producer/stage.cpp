@@ -69,11 +69,14 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
+                for (auto& t: tweens_)
+                    t.second.tick();
+
                 // TODO (perf) parallel_for
                 for (auto& p : layers_) {
                     auto& layer     = p.second;
                     auto& tween     = tweens_[p.first];
-                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch_and_tick(1));
+                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
                 }
 
                 state_.clear();
@@ -106,8 +109,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 auto& tween = tweens_[std::get<0>(transform)];
                 auto  src   = tween.fetch();
                 auto  dst   = std::get<1>(transform)(tween.dest());
-                tweens_[std::get<0>(transform)] =
-                    tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
+                auto  index = std::get<0>(transform);
+                tweens_[index] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
             }
         });
     }
