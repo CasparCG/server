@@ -67,6 +67,15 @@ https://launchpad.net/ubuntu/+archive/primary/+files/libgcrypt11_1.5.3-2ubuntu4.
 Install central cgroup manager daemon (client library):
 sudo apt install libcgmanager0
 
+5. Error while loading shared libraries: libgconf-2.so.4
+Install GNOME configuration database system:
+sudo apt -y install libgconf2-4
+
+6. lib/libz.so.1: version `ZLIB_1.2.9' not found
+cd your_casparcg_directory/lib/
+sudo mv libz.so.1 libz.so.1.old
+sudo ln -s /lib/x86_64-linux-gnu/libz.so.1
+
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 -------------------------------------------
 
