@@ -249,8 +249,8 @@ int main(int argc, char** argv)
         wait_for_keypress();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums "
-                             L"(www.casparcg.com/forum).";
+        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the GitHub project page "
+                             L"(www.github.com/casparcg/server/issues).";
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file "
                       L"folder for more information.\n\n";
