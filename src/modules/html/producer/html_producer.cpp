@@ -71,6 +71,7 @@ class html_client
     , public CefRenderHandler
     , public CefLifeSpanHandler
     , public CefLoadHandler
+    , public CefDisplayHandler
 {
     std::wstring                        url_;
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -243,11 +244,22 @@ class html_client
         return false;
     }
 
+    bool OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                          const CefString&      message,
+                          const CefString&      source,
+                          int                   line) override
+    {
+        CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+        return true;
+    }
+
     CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
 
     CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
 
     CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
+
+    CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
 
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override
     {
