@@ -178,4 +178,42 @@ spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr
     return spl::make_shared<transition_producer>(destination, info);
 }
 
+bool try_match_transition(const std::wstring& message, transition_info& transitionInfo)
+{
+    static const boost::wregex expr(
+        LR"(.*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\s*(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
+    boost::wsmatch what;
+    if (!boost::regex_match(message, what, expr)) {
+        return false;
+    }
+
+    auto transition         = what["TRANSITION"].str();
+    transitionInfo.duration = boost::lexical_cast<int>(what["DURATION"].str());
+    auto direction          = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
+    auto tween              = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
+    transitionInfo.tweener  = tween;
+
+    if (transition == L"CUT")
+        transitionInfo.type = transition_type::cut;
+    else if (transition == L"MIX")
+        transitionInfo.type = transition_type::mix;
+    else if (transition == L"PUSH")
+        transitionInfo.type = transition_type::push;
+    else if (transition == L"SLIDE")
+        transitionInfo.type = transition_type::slide;
+    else if (transition == L"WIPE")
+        transitionInfo.type = transition_type::wipe;
+
+    if (direction == L"FROMLEFT")
+        transitionInfo.direction = transition_direction::from_left;
+    else if (direction == L"FROMRIGHT")
+        transitionInfo.direction = transition_direction::from_right;
+    else if (direction == L"LEFT")
+        transitionInfo.direction = transition_direction::from_right;
+    else if (direction == L"RIGHT")
+        transitionInfo.direction = transition_direction::from_left;
+
+    return true;
+}
+
 }} // namespace caspar::core
