@@ -48,6 +48,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/layer.h>
 #include <core/producer/stage.h>
+#include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/video_format.h>
 
@@ -221,45 +222,6 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 
 std::wstring loadbg_command(command_context& ctx)
 {
-    transition_info transitionInfo;
-
-    // TRANSITION
-
-    std::wstring message;
-    for (size_t n = 0; n < ctx.parameters.size(); ++n)
-        message += boost::to_upper_copy(ctx.parameters[n]) + L" ";
-
-    static const boost::wregex expr(
-        LR"(.*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\s*(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
-    boost::wsmatch what;
-    if (boost::regex_match(message, what, expr)) {
-        auto transition         = what["TRANSITION"].str();
-        transitionInfo.duration = boost::lexical_cast<size_t>(what["DURATION"].str());
-        auto direction          = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
-        auto tween              = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
-        transitionInfo.tweener  = tween;
-
-        if (transition == L"CUT")
-            transitionInfo.type = transition_type::cut;
-        else if (transition == L"MIX")
-            transitionInfo.type = transition_type::mix;
-        else if (transition == L"PUSH")
-            transitionInfo.type = transition_type::push;
-        else if (transition == L"SLIDE")
-            transitionInfo.type = transition_type::slide;
-        else if (transition == L"WIPE")
-            transitionInfo.type = transition_type::wipe;
-
-        if (direction == L"FROMLEFT")
-            transitionInfo.direction = transition_direction::from_left;
-        else if (direction == L"FROMRIGHT")
-            transitionInfo.direction = transition_direction::from_right;
-        else if (direction == L"LEFT")
-            transitionInfo.direction = transition_direction::from_right;
-        else if (direction == L"RIGHT")
-            transitionInfo.direction = transition_direction::from_left;
-    }
-
     // Perform loading of the clip
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
@@ -273,11 +235,29 @@ std::wstring loadbg_command(command_context& ctx)
 
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
-    auto pFP2 = create_transition_producer(pFP, transitionInfo);
+    spl::shared_ptr<frame_producer> transition_producer = frame_producer::empty();
+    transition_info                 transitionInfo;
+    sting_info                      stingInfo;
+    int                             duration;
+
+    if (try_match_sting(ctx.parameters, stingInfo)) {
+        transition_producer = create_sting_producer(get_producer_dependencies(channel, ctx), pFP, stingInfo);
+        duration = stingInfo.duration;
+    } else {
+        std::wstring message;
+        for (size_t n = 0; n < ctx.parameters.size(); ++n)
+            message += boost::to_upper_copy(ctx.parameters[n]) + L" ";
+
+        // Always fallback to transition
+        try_match_transition(message, transitionInfo);
+        transition_producer = create_transition_producer(pFP, transitionInfo);
+        duration            = transitionInfo.duration;
+    }
+
     if (auto_play)
-        channel->stage().load(ctx.layer_index(), pFP2, false, transitionInfo.duration); // TODO: LOOP
+        channel->stage().load(ctx.layer_index(), transition_producer, false, duration); // TODO: LOOP
     else
-        channel->stage().load(ctx.layer_index(), pFP2, false); // TODO: LOOP
+        channel->stage().load(ctx.layer_index(), transition_producer, false); // TODO: LOOP
 
     return L"202 LOADBG OK\r\n";
 }
