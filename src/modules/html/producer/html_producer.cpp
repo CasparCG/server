@@ -324,7 +324,7 @@ class html_client
             std::lock_guard<std::mutex> lock(last_frame_mutex_);
             last_frame_ = frame;
         } else {
-            graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+            graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
         }
     }
 
