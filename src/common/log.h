@@ -64,7 +64,8 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, caspar_logger)
 
 void add_file_sink(const std::wstring& file);
 void add_cout_sink();
-void set_log_level(const std::wstring& lvl);
+bool set_log_level(const std::wstring& lvl);
+std::wstring& get_log_level();
 
 inline std::wstring get_stack_trace()
 {

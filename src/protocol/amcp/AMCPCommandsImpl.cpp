@@ -410,7 +410,17 @@ std::wstring print_command(command_context& ctx)
 
 std::wstring log_level_command(command_context& ctx)
 {
-    log::set_log_level(ctx.parameters.at(0));
+    if (ctx.parameters.size() == 0) {
+        std::wstringstream replyString;
+        replyString << L"201 LOG OK\r\n"
+                    << boost::to_upper_copy(log::get_log_level()) << L"\r\n";
+
+        return replyString.str();
+    }
+
+    if (!log::set_log_level(ctx.parameters.at(0))) {
+        return L"403 LOG FAILED\r\n";
+    }
 
     return L"202 LOG OK\r\n";
 }
@@ -1384,7 +1394,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo.register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
-    repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 1);
+    repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo.register_channel_command(L"Basic Commands", L"SET", set_command, 2);
     repo.register_command(L"Basic Commands", L"LOCK", lock_command, 2);
 
