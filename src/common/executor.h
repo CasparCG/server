@@ -55,8 +55,7 @@ class executor final
 
     ~executor()
     {
-        stop();
-        thread_.join();
+        stop_and_wait();
     }
 
     template <typename Func>
@@ -110,6 +109,11 @@ class executor final
         }
         is_running_ = false;
         queue_.push(nullptr);
+    }
+
+    void stop_and_wait() {
+        stop();
+        thread_.join();
     }
 
     void wait()

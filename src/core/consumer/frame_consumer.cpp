@@ -114,7 +114,7 @@ class destroy_consumer_proxy : public frame_consumer
             .detach();
     }
 
-    std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }
+    std::future<bool> send(frame_timecode timecode, const_frame frame) override { return consumer_->send(std::move(timecode), std::move(frame)); }
     void              initialize(const video_format_desc& format_desc, int channel_index) override
     {
         return consumer_->initialize(format_desc, channel_index);
@@ -144,7 +144,7 @@ class print_consumer_proxy : public frame_consumer
         CASPAR_LOG(info) << str << L" Uninitialized.";
     }
 
-    std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }
+    std::future<bool> send(frame_timecode timecode, const_frame frame) override { return consumer_->send(std::move(timecode), std::move(frame)); }
     void              initialize(const video_format_desc& format_desc, int channel_index) override
     {
         consumer_->initialize(format_desc, channel_index);
@@ -202,7 +202,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
     class empty_frame_consumer : public frame_consumer
     {
       public:
-        std::future<bool> send(const_frame) override { return make_ready_future(false); }
+        std::future<bool> send(frame_timecode timecode, const_frame) override { return make_ready_future(false); }
         void              initialize(const video_format_desc&, int) override {}
         std::wstring      print() const override { return L"empty"; }
         std::wstring      name() const override { return L"empty"; }
