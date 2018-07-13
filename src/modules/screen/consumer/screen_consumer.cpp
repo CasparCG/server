@@ -38,7 +38,10 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
+#include <core/frame/geometry.h>
 #include <core/video_format.h>
+
+#include "./screen_shader.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -97,7 +100,6 @@ struct frame
 {
     GLuint pbo   = 0;
     GLuint tex   = 0;
-    GLuint fbo   = 0;
     char*  ptr   = nullptr;
     GLsync fence = 0;
 };
@@ -116,18 +118,19 @@ struct screen_consumer : boost::noncopyable
     int square_height_ = format_desc_.square_height;
     int screen_x_      = 0;
     int screen_y_      = 0;
-    int draw_width_    = screen_width_;
-    int draw_height_   = screen_height_;
-    int draw_x_        = 0;
-    int draw_y_        = 0;
+
+    std::vector<core::frame_geometry::coord> draw_coords_;
 
     sf::Window window_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
-    caspar::timer                       perf_timer_;
     caspar::timer                       tick_timer_;
 
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
+
+    std::unique_ptr<accelerator::ogl::shader> shader_;
+    GLuint vao_;
+    GLuint vbo_;
 
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
@@ -234,6 +237,16 @@ struct screen_consumer : boost::noncopyable
                                                                "since it does not support OpenGL 4.5 or higher."));
                 }
 
+                GL(glGenVertexArrays(1, &vao_));
+                GL(glGenBuffers(1, &vbo_));
+                GL(glBindVertexArray(vao_));
+                GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
+
+                shader_ = get_shader();
+                shader_->use();
+                shader_->set("background", 0);
+                shader_->set("key_only", config_.key_only);
+
                 for (int n = 0; n < 2; ++n) {
                     screen::frame frame;
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
@@ -250,15 +263,12 @@ struct screen_consumer : boost::noncopyable
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
                     GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
 
-                    GL(glCreateFramebuffers(1, &frame.fbo));
-                    GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, frame.fbo));
-                    GL(glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frame.tex, 0));
-
                     frames_.push_back(frame);
                 }
 
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+                GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
 
                 calculate_aspect();
 
@@ -280,9 +290,13 @@ struct screen_consumer : boost::noncopyable
             for (auto frame : frames_) {
                 GL(glUnmapNamedBuffer(frame.pbo));
                 glDeleteBuffers(1, &frame.pbo);
-                glDeleteFramebuffers(1, &frame.fbo);
                 glDeleteTextures(1, &frame.tex);
             }
+
+            shader_.reset();
+            GL(glDeleteVertexArrays(1, &vao_));
+            GL(glDeleteBuffers(1, &vbo_));
+
             window_.close();
         });
     }
@@ -340,19 +354,7 @@ struct screen_consumer : boost::noncopyable
                 }
             }
 
-            if (config_.key_only) {
-                for (int n = 0; n < format_desc_.height; ++n) {
-                    aligned_memshfl(frame.ptr + n * format_desc_.width * 4,
-                                    in_frame.image_data(0).begin() + n * format_desc_.width * 4,
-                                    format_desc_.width * 4,
-                                    0x0F0F0F0F,
-                                    0x0B0B0B0B,
-                                    0x07070707,
-                                    0x03030303);
-                }
-            } else {
-                std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
-            }
+            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
 
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
             GL(glTextureSubImage2D(
@@ -368,11 +370,28 @@ struct screen_consumer : boost::noncopyable
 
             GL(glClear(GL_COLOR_BUFFER_BIT));
 
-            GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, frame.fbo));
-            GL(glBlitFramebuffer(0, 0, format_desc_.width, format_desc_.height,
-                                 draw_x_, draw_height_ + draw_y_, draw_width_ + draw_x_, draw_y_,
-                                 GL_COLOR_BUFFER_BIT, GL_LINEAR));
-            GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
+            GL(glActiveTexture(GL_TEXTURE0));
+            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+
+            GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(), draw_coords_.data(), GL_STATIC_DRAW));
+
+            auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
+
+            auto vtx_loc = shader_->get_attrib_location("Position");
+            auto tex_loc = shader_->get_attrib_location("TexCoordIn");
+
+            GL(glEnableVertexAttribArray(vtx_loc));
+            GL(glEnableVertexAttribArray(tex_loc));
+
+            GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
+            GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
+
+            GL(glDrawArrays(GL_TRIANGLES, 0, draw_coords_.size()));
+
+            GL(glDisableVertexAttribArray(vtx_loc));
+            GL(glDisableVertexAttribArray(tex_loc));
+
+            GL(glBindTexture(GL_TEXTURE_2D, 0));
         }
 
         window_.display();
@@ -405,6 +424,8 @@ struct screen_consumer : boost::noncopyable
             screen_width_  = window_.getSize().x;
         }
 
+        GL(glViewport(0, 0, screen_width_, screen_height_));
+
         std::pair<float, float> target_ratio = none();
         if (config_.stretch == screen::stretch::fill) {
             target_ratio = Fill();
@@ -414,10 +435,16 @@ struct screen_consumer : boost::noncopyable
             target_ratio = uniform_to_fill();
         }
 
-        draw_width_  = target_ratio.first * screen_width_;
-        draw_height_ = target_ratio.second * screen_height_;
-        draw_x_ = (screen_width_ - draw_width_) / 2;
-        draw_y_ = (screen_height_ - draw_height_) / 2;
+        draw_coords_ = {
+            //    vertex    texture
+            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+            {target_ratio.first, target_ratio.second, 1.0, 0.0}, // upper right
+            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+
+            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+            {-target_ratio.first, -target_ratio.second, 0.0, 1.0}  // lower left
+        };
     }
 
     std::pair<float, float> none()

@@ -3,11 +3,13 @@ project (screen)
 
 set(SOURCES
 	consumer/screen_consumer.cpp
+	consumer/screen_shader.cpp
 
 	screen.cpp
 )
 set(HEADERS
 	consumer/screen_consumer.h
+	consumer/screen_shader.h
 
 	screen.h
 )
@@ -37,7 +39,7 @@ set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
-target_link_libraries(screen common core ffmpeg)
+target_link_libraries(screen common core accelerator ffmpeg)
 
 casparcg_add_include_statement("modules/screen/screen.h")
 casparcg_add_init_statement("screen::init" "screen")
