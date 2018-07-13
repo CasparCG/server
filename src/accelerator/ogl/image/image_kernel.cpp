@@ -397,10 +397,8 @@ struct image_kernel::impl
                 GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
                 GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
-                for (int i = 0; i < coords_triangles.size(); i += 3) {
-                    GL(glDrawArrays(GL_TRIANGLES, i, 3));
-                    GL(glTextureBarrier());
-                }
+                GL(glDrawArrays(GL_TRIANGLES, 0, coords_triangles.size()));
+                GL(glTextureBarrier());
 
                 GL(glDisableVertexAttribArray(vtx_loc));
                 GL(glDisableVertexAttribArray(tex_loc));

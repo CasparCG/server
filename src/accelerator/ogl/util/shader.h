@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <GL/glew.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
