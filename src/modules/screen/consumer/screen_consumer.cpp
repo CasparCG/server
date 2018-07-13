@@ -89,6 +89,7 @@ struct configuration
     screen::stretch stretch       = screen::stretch::fill;
     bool            windowed      = true;
     bool            key_only      = false;
+    bool            sbs_key       = false;
     aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
     bool            vsync         = false;
     bool            interactive   = true;
@@ -212,7 +213,8 @@ struct screen_consumer : boost::noncopyable
                                                              : (config_.windowed ? sf::Style::Resize | sf::Style::Close
                                                                                  : sf::Style::Fullscreen);
                 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-                sf::VideoMode mode(screen_width_, screen_height_, desktop.bitsPerPixel);
+                sf::VideoMode mode(
+                    config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
                 window_.create(mode,
                                u8(print()),
                                window_style,
@@ -249,7 +251,6 @@ struct screen_consumer : boost::noncopyable
                 shader_ = get_shader();
                 shader_->use();
                 shader_->set("background", 0);
-                shader_->set("key_only", config_.key_only);
 
                 for (int n = 0; n < 2; ++n) {
                     screen::frame frame;
@@ -272,7 +273,8 @@ struct screen_consumer : boost::noncopyable
 
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-                GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+                GL(glViewport(
+                    0, 0, config_.sbs_key ? format_desc_.width * 2 : format_desc_.width, format_desc_.height));
 
                 calculate_aspect();
 
@@ -393,7 +395,20 @@ struct screen_consumer : boost::noncopyable
             GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
             GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
-            GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
+            if (config_.sbs_key) {
+                auto coords_size = static_cast<GLsizei>(draw_coords_.size());
+
+                // First half fill
+                shader_->set("key_only", false);
+                GL(glDrawArrays(GL_TRIANGLES, 0, coords_size / 2));
+
+                // Second half key
+                shader_->set("key_only", true);
+                GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
+            } else {
+                shader_->set("key_only", config_.key_only);
+                GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
+            }
 
             GL(glDisableVertexAttribArray(vtx_loc));
             GL(glDisableVertexAttribArray(tex_loc));
@@ -442,21 +457,44 @@ struct screen_consumer : boost::noncopyable
             target_ratio = uniform_to_fill();
         }
 
-        draw_coords_ = {
-            //    vertex    texture
-            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-            {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
-            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+        if (config_.sbs_key) {
+            draw_coords_ = {
+                // First half fill
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {0, target_ratio.second, 1.0, 0.0},                   // upper right
+                {0, -target_ratio.second, 1.0, 1.0},                  // lower right
 
-            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
-            {-target_ratio.first, -target_ratio.second, 0.0, 1.0} // lower left
-        };
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0},  // upper left
+                {0, -target_ratio.second, 1.0, 1.0},                   // lower right
+                {-target_ratio.first, -target_ratio.second, 0.0, 1.0}, // lower left
+
+                // Second half key
+                {0, target_ratio.second, 0.0, 0.0},                   // upper left
+                {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+
+                {0, target_ratio.second, 0.0, 0.0},                   // upper left
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+                {0, -target_ratio.second, 0.0, 1.0}                   // lower left
+            };
+        } else {
+            draw_coords_ = {
+                //    vertex    texture
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+                {-target_ratio.first, -target_ratio.second, 0.0, 1.0} // lower left
+            };
+        }
     }
 
     std::pair<float, float> none()
     {
-        float width  = static_cast<float>(square_width_) / static_cast<float>(screen_width_);
+        float width =
+            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
         float height = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
 
         return std::make_pair(width, height);
@@ -464,7 +502,8 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform()
     {
-        float aspect = static_cast<float>(square_width_) / static_cast<float>(square_height_);
+        float aspect = static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) /
+                       static_cast<float>(square_height_);
         float width  = std::min(1.0f, static_cast<float>(screen_height_) * aspect / static_cast<float>(screen_width_));
         float height = static_cast<float>(screen_width_ * width) / static_cast<float>(screen_height_ * aspect);
 
@@ -475,7 +514,8 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform_to_fill()
     {
-        float wr    = static_cast<float>(square_width_) / static_cast<float>(screen_width_);
+        float wr =
+            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
         float hr    = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
         float r_inv = 1.0f / std::min(wr, hr);
 
@@ -534,6 +574,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     config.windowed    = !contains_param(L"FULLSCREEN", params);
     config.key_only    = contains_param(L"KEY_ONLY", params);
+    config.sbs_key     = contains_param(L"SBS_KEY", params);
     config.interactive = !contains_param(L"NON_INTERACTIVE", params);
     config.borderless  = contains_param(L"BORDERLESS", params);
 
@@ -557,6 +598,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.screen_height = ptree.get(L"height", config.screen_height);
     config.windowed      = ptree.get(L"windowed", config.windowed);
     config.key_only      = ptree.get(L"key-only", config.key_only);
+    config.sbs_key       = ptree.get(L"sbs-key", config.sbs_key);
     config.vsync         = ptree.get(L"vsync", config.vsync);
     config.interactive   = ptree.get(L"interactive", config.interactive);
     config.borderless    = ptree.get(L"borderless", config.borderless);
