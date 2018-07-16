@@ -37,7 +37,8 @@ std::tuple<float, float, float, float> color(int code);
 enum class tag_severity
 {
     WARNING,
-    INFO
+    INFO,
+    SILENT,
 };
 
 class graph : boost::noncopyable
