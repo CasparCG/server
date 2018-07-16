@@ -386,7 +386,7 @@ struct screen_consumer : boost::noncopyable
             GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
             GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
-            GL(glDrawArrays(GL_TRIANGLES, 0, draw_coords_.size()));
+            GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
 
             GL(glDisableVertexAttribArray(vtx_loc));
             GL(glDisableVertexAttribArray(tex_loc));
