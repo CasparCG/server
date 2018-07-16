@@ -95,6 +95,7 @@ struct image_transform final
     core::chroma          chroma;
 
     bool             is_key      = false;
+    bool             invert      = false;
     bool             is_mix      = false;
     core::blend_mode blend_mode  = blend_mode::normal;
     int              layer_depth = 0;

@@ -778,6 +778,25 @@ std::wstring mixer_keyer_command(command_context& ctx)
     return L"202 MIXER OK\r\n";
 }
 
+std::wstring mixer_invert_command(command_context& ctx)
+{
+    if (ctx.parameters.empty())
+        return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.invert ? 1 : 0; });
+
+    transforms_applier transforms(ctx);
+    bool               value = boost::lexical_cast<int>(ctx.parameters.at(0));
+    transforms.add(stage::transform_tuple_t(ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+        transform.image_transform.invert = value;
+        return transform;
+    },
+        0,
+        tweener(L"linear")));
+    transforms.apply();
+
+    return L"202 MIXER OK\r\n";
+}
+
 std::wstring ANIMATION_SYNTAX = L" {[duration:int] {[tween:string]|linear}|0 linear}}";
 
 std::wstring mixer_chroma_command(command_context& ctx)
@@ -1477,6 +1496,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Template Commands", L"CG INVOKE", cg_invoke_command, 2);
 
     repo.register_channel_command(L"Mixer Commands", L"MIXER KEYER", mixer_keyer_command, 0);
+    repo.register_channel_command(L"Mixer Commands", L"MIXER INVERT", mixer_invert_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER CHROMA", mixer_chroma_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER BLEND", mixer_blend_command, 0);
     repo.register_channel_command(L"Mixer Commands", L"MIXER OPACITY", mixer_opacity_command, 0);

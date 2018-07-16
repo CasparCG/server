@@ -159,6 +159,7 @@ std::string get_fragment()
 			uniform int			keyer;
 			uniform int			pixel_format;
 
+            uniform bool        invert;
 			uniform float		opacity;
 			uniform bool		levels;
 			uniform float		min_input;
@@ -283,6 +284,8 @@ std::string get_fragment()
 					if(has_layer_key)
 						color *= texture(layer_key, TexCoord2.st).r;
 					color *= opacity;
+                    if (invert)
+                        color = 1.0 - color;
                     if (blend_mode >= 0)
 					    color = blend(color);
 					fragColor = color.bgra;
