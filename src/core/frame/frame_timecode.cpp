@@ -174,6 +174,9 @@ bool frame_timecode::create(uint8_t         hours,
                             uint8_t         fps,
                             frame_timecode& res)
 {
+    if (fps > 30)
+        fps /= 2;
+
     if (hours > 23 || minutes > 59 || seconds > 59 || frames > fps)
         return false;
 
