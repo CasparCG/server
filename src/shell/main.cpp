@@ -112,8 +112,6 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     // Create a dummy client which prints amcp responses to console.
     auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-    bool should_restart;
-
     auto amcp = protocol::amcp::create_wchar_amcp_strategy_factory(L"Console",
                                                                    caspar_server->get_amcp_command_repository(),
                                                                    caspar_server->get_amcp_command_scheduler())

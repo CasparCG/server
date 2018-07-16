@@ -305,7 +305,7 @@ struct server::impl : boost::noncopyable
 
                         std::wstring res = cmd->Execute(amcp_command_repo_->channels()).get();
                         console_client->send(std::move(res), false);
-                    } catch (const user_error& e) {
+                    } catch (const user_error&) {
                         CASPAR_LOG(error) << "Failed to parse command: " << command;
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();

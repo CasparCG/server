@@ -150,10 +150,10 @@ class stage_delayed final : public stage_base
   public:
     stage_delayed(std::shared_ptr<stage>& st, int index);
 
-    long count_queued() const { return executor_.size(); }
-    void   release() { waiter_.set_value(); }
-    void   abort() { executor_.clear(); }
-    void   wait()
+    int64_t count_queued() const { return executor_.size(); }
+    void    release() { waiter_.set_value(); }
+    void    abort() { executor_.clear(); }
+    void    wait()
     {
         executor_.stop_and_wait();
     }
