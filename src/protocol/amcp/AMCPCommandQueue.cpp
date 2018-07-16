@@ -48,7 +48,7 @@ exec_cmd(std::shared_ptr<AMCPCommand> cmd, const std::vector<channel_context>& c
             caspar::timer timer;
 
             auto name = cmd->name();
-            CASPAR_LOG(warning) << "Executing command: " << name;
+            CASPAR_LOG(debug) << "Executing command: " << name;
 
             auto res = cmd->Execute(channels).share();
             return std::async(std::launch::async, [cmd, res, reply_without_req_id, timer, name]() -> bool {
