@@ -431,8 +431,6 @@ struct AVProducer::Impl
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    boost::mutex              buffer_mutex_;
-    boost::condition_variable buffer_cond_;
     std::deque<Frame>         buffer_;
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
@@ -504,20 +502,18 @@ struct AVProducer::Impl
                 int warning_debounce = 0;
 
                 while (!boost::this_thread::interruption_requested()) {
-                    {
-                        boost::unique_lock<boost::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
-                    }
-                    
                     boost::unique_lock<boost::mutex> lock(mutex_);
 
+                    cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });                    
+
+                    // NOTE: Throttle.
                     if (buffer_.size() > buffer_capacity_ / 2) {
                         cond_.wait_for(lock, boost::chrono::milliseconds(10));
-                        frame_timer.restart();
                     } else if (buffer_.size() > 2) {
                         cond_.wait_for(lock, boost::chrono::milliseconds(5));
-                        frame_timer.restart();
                     }
+
+                    frame_timer.restart();
 
                     if (seek_ != AV_NOPTS_VALUE) {
                         seek_ = AV_NOPTS_VALUE;
@@ -604,10 +600,7 @@ struct AVProducer::Impl
                         frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
-                    {
-                        boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
-                        buffer_.push_back(frame);
-                    }
+                    buffer_.push_back(frame);
 
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
@@ -804,7 +797,7 @@ struct AVProducer::Impl
         };
 
         {
-            std::lock_guard<boost::mutex> lock(buffer_mutex_);
+            std::lock_guard<boost::mutex> lock(mutex_);
 
             if (!buffer_.empty() && (frame_flush_ || !frame_)) {
                 auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
@@ -819,33 +812,31 @@ struct AVProducer::Impl
 
     core::draw_frame next_frame()
     {
+        std::lock_guard<boost::mutex> lock(mutex_);
+
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
             state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        };
+        };        
 
-        core::draw_frame frame;
-        {
-            std::lock_guard<boost::mutex> lock(buffer_mutex_);
-
-            if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-                if (buffer_eof_) {
-                    return frame_;
-                } else {
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                    return core::draw_frame{};
-                }
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
+            if (buffer_eof_) {
+                return frame_;
+            } else {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                return core::draw_frame{};
             }
-
-            frame       = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-            frame_      = core::draw_frame::still(frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            buffer_.pop_front();
-
-            frame_flush_ = false;
         }
-        buffer_cond_.notify_all();
+
+        auto frame  = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+        frame_      = core::draw_frame::still(frame);
+        frame_time_ = buffer_[0].pts + buffer_[0].duration;
+        buffer_.pop_front();
+
+        frame_flush_ = false;
+
+        cond_.notify_all();
 
         return frame;
     }
@@ -854,12 +845,8 @@ struct AVProducer::Impl
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
 
-        {
-            boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
-            buffer_.clear();
-            seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
-        }
-        buffer_cond_.notify_all();
+        buffer_.clear();
+        seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
         cond_.notify_all();
     }
