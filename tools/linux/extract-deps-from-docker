@@ -3,7 +3,7 @@
 # CEF
 echo "Extracting CEF"
 rm -Rf /opt/cef
-tempContainer=$(docker create casparcg/cef:3.3239.1723-2 sh)
+tempContainer=$(docker create casparcg/cef:3.3239.1723-3 sh)
 docker cp $tempContainer:/opt/cef /opt/cef
 docker rm -v $tempContainer
 

@@ -1,7 +1,7 @@
 FROM casparcg/base:1.2.0 as build-casparcg
 	COPY --from=casparcg/boost:1.66-2 /opt/boost /opt/boost
 	COPY --from=casparcg/ffmpeg:master-acdea9e-2 /opt/ffmpeg /opt/ffmpeg
-	COPY --from=casparcg/cef:3.3239.1723-2 /opt/cef /opt/cef
+	COPY --from=casparcg/cef:3.3239.1723-3 /opt/cef /opt/cef
 
 	RUN mkdir /source && mkdir /build && mkdir /install
 
