@@ -516,7 +516,10 @@ struct AVProducer::Impl
                     if (seek_ != AV_NOPTS_VALUE) {
                         seek_ = AV_NOPTS_VALUE;
                         seek_internal(seek_);
-                    } else {
+                        continue;
+                    }
+
+                    {
                         // TODO (perf) seek as soon as input is past duration or eof.
 
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
