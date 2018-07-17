@@ -29,7 +29,7 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     asio::connect(socket, endpoint_iterator, error);
     if (error == asio::error::connection_refused) {
         res.status_code = 503;
-        res.status_message = error.message();
+        res.status_message = "Connection refused";
         return res;
     } else if (error) {
         CASPAR_THROW_EXCEPTION(io_error() << msg_info(error.message()));
