@@ -61,8 +61,6 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 
-using namespace std::chrono_literals;
-
 const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 
 struct Frame
