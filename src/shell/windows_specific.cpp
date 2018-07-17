@@ -79,27 +79,33 @@ void change_icon(const HICON hNewIcon)
 
 void setup_console_window()
 {
-    auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    auto hIn = GetStdHandle(STD_INPUT_HANDLE);
+    auto  hOut           = GetStdHandle(STD_OUTPUT_HANDLE);
+    auto  hIn            = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD dwPreviousMode = 0;
 
-    // Disable Win 10 QuickEdit Mode.
-    SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS | ENABLE_INSERT_MODE);
+    if (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &dwPreviousMode)) {
+        dwPreviousMode &= (~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS; // disable quick edit mode
+        dwPreviousMode &= ENABLE_PROCESSED_INPUT | ~ENABLE_MOUSE_INPUT;      // allow mouse wheel scrolling
+        SetConsoleMode(hIn, dwPreviousMode);
+    }
 
     // Disable close button in console to avoid shutdown without cleanup.
     EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_GRAYED);
     DrawMenuBar(GetConsoleWindow());
     SetConsoleCtrlHandler(NULL, true);
 
-    // Configure console size and position.
-    auto coord = GetLargestConsoleWindowSize(hOut);
-    coord.X /= 2;
+    if (hOut != INVALID_HANDLE_VALUE) {
+        // Configure console size and position.
+        auto coord = GetLargestConsoleWindowSize(hOut);
+        coord.X /= 2;
 
-    SetConsoleScreenBufferSize(hOut, coord);
+        SetConsoleScreenBufferSize(hOut, coord);
 
-    SMALL_RECT DisplayArea = {0, 0, 0, 0};
-    DisplayArea.Right      = coord.X - 1;
-    DisplayArea.Bottom     = (coord.Y - 1) / 2;
-    SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
+        SMALL_RECT DisplayArea = {0, 0, 0, 0};
+        DisplayArea.Right      = coord.X - 1;
+        DisplayArea.Bottom     = (coord.Y - 1) / 2;
+        SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
+    }
 
     change_icon(::LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(101)));
 
@@ -130,7 +136,8 @@ std::shared_ptr<void> setup_debugging_environment()
 {
 #ifdef _DEBUG
     HANDLE hLogFile;
-    hLogFile = CreateFile(L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    hLogFile =
+        CreateFile(L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     std::shared_ptr<void> crt_log(nullptr, [](HANDLE h) { ::CloseHandle(h); });
 
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
