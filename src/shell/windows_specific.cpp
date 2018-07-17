@@ -98,12 +98,12 @@ void setup_console_window()
         // Configure console size and position.
         auto coord = GetLargestConsoleWindowSize(hOut);
         coord.X /= 2;
-
+        coord.Y *= 10;
         SetConsoleScreenBufferSize(hOut, coord);
 
         SMALL_RECT DisplayArea = {0, 0, 0, 0};
         DisplayArea.Right      = coord.X - 1;
-        DisplayArea.Bottom     = (coord.Y - 1) / 2;
+        DisplayArea.Bottom     = (coord.Y / 10 - 1) / 2;
         SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
     }
 
