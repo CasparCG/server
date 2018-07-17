@@ -159,7 +159,7 @@ bool frame_timecode::parse_string(const std::wstring& str, uint8_t fps, frame_ti
 
         // smpte doesn't handle high-p
         if (fps > 30)
-            frames *= 2;
+            fps /= 2;
 
         return create(hours, minutes, seconds, frames, fps, res);
     } catch (...) {

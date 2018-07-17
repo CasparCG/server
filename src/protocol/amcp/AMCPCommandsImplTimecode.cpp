@@ -35,12 +35,12 @@ std::wstring time_command(command_context& ctx)
 
     if (ctx.parameters.size() > 0) {
         if (!ch->is_free())
-            return L"4xx TIME FAILED\r\n";
+            return L"403 TIME FAILED\r\n";
 
         core::frame_timecode tc;
         const uint8_t        fps = static_cast<uint8_t>(round(ctx.channel.raw_channel->video_format_desc().fps));
         if (!core::frame_timecode::parse_string(ctx.parameters.at(0), fps, tc))
-            return L"4xx TIME FAILED\r\n";
+            return L"403 TIME FAILED\r\n";
 
         ch->timecode(tc);
     }
