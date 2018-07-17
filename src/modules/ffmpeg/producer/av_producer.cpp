@@ -629,15 +629,13 @@ struct AVProducer::Impl
             state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
         };
 
-        {
-            std::lock_guard<boost::mutex> lock(mutex_);
+        std::lock_guard<boost::mutex> lock(mutex_);
 
-            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-                frame_       = core::draw_frame::still(frame);
-                frame_time_  = buffer_[0].pts + buffer_[0].duration;
-                frame_flush_ = false;
-            }
+        if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+            auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+            frame_       = core::draw_frame::still(frame);
+            frame_time_  = buffer_[0].pts + buffer_[0].duration;
+            frame_flush_ = false;
         }
 
         return frame_;
