@@ -644,13 +644,13 @@ struct AVProducer::Impl
 
     core::draw_frame next_frame()
     {
-        std::lock_guard<boost::mutex> lock(mutex_);
-
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
             state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
         };        
+
+        std::lock_guard<boost::mutex> lock(mutex_);
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
