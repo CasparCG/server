@@ -85,9 +85,9 @@ add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
 add_definitions( -DBOOST_COROUTINES_NO_DEPRECATION_WARNING )
 
 # FFMPEG
-set(FFMPEG_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180219.1.0/build/native/include")
-set(FFMPEG_BIN_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180219.1.0/build/native/bin/x64")
-link_directories("${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180219.1.0/build/native/lib/x64")
+set(FFMPEG_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/include")
+set(FFMPEG_BIN_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/bin/x64")
+link_directories("${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/lib/x64")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-58.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-58.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-7.dll")

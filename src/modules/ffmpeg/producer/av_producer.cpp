@@ -10,6 +10,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -48,20 +51,15 @@ extern "C"
 
 #include <algorithm>
 #include <atomic>
-#include <condition_variable>
 #include <deque>
 #include <exception>
 #include <iomanip>
 #include <memory>
-#include <mutex>
 #include <queue>
 #include <sstream>
 #include <string>
-#include <thread>
 
 namespace caspar { namespace ffmpeg {
-
-using namespace std::chrono_literals;
 
 const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 
@@ -418,28 +416,26 @@ struct AVProducer::Impl
 
     int64_t start_    = AV_NOPTS_VALUE;
     int64_t duration_ = AV_NOPTS_VALUE;
+    int64_t seek_     = AV_NOPTS_VALUE;
     bool    loop_     = false;
 
     std::string afilter_;
     std::string vfilter_;
 
-    mutable std::mutex      mutex_;
-    std::condition_variable cond_;
+    mutable boost::mutex      mutex_;
+    boost::condition_variable cond_;
 
     int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    std::mutex              buffer_mutex_;
-    std::condition_variable buffer_cond_;
-    std::deque<Frame>       buffer_;
-    std::atomic<bool>       buffer_eof_{false};
-    int                     buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
+    std::deque<Frame>         buffer_;
+    std::atomic<bool>         buffer_eof_{false};
+    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
 
-    tbb::task_group_context task_context_;
+    tbb::task_group_context   task_context_;
 
-    std::atomic<bool> abort_request_{false};
-    std::thread       thread_;
+    boost::thread             thread_;
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
          core::video_format_desc              format_desc,
@@ -470,7 +466,7 @@ struct AVProducer::Impl
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_text(u16(print()));
 
-        thread_ = std::thread([=] {
+        thread_ = boost::thread([=] {
             try {
                 input_.reset();
 
@@ -503,28 +499,29 @@ struct AVProducer::Impl
 
                 int warning_debounce = 0;
 
-                while (!abort_request_) {
-                    {
-                        std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
-                    }
+                while (!boost::this_thread::interruption_requested()) {
+                    boost::unique_lock<boost::mutex> lock(mutex_);
 
-                    if (abort_request_) {
-                        break;
-                    }
+                    cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });                    
 
-                    std::unique_lock<std::mutex> lock(mutex_);
-
+                    // NOTE: Throttle.
                     if (buffer_.size() > buffer_capacity_ / 2) {
-                        cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
-                        frame_timer.restart();
+                        cond_.wait_for(lock, boost::chrono::milliseconds(10));
                     } else if (buffer_.size() > 2) {
-                        cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                        frame_timer.restart();
+                        cond_.wait_for(lock, boost::chrono::milliseconds(5));
                     }
 
-                    // TODO (perf) seek as soon as input is past duration or eof.
+                    frame_timer.restart();
+
+                    if (seek_ != AV_NOPTS_VALUE) {
+                        seek_ = AV_NOPTS_VALUE;
+                        seek_internal(seek_);
+                        continue;
+                    }
+
                     {
+                        // TODO (perf) seek as soon as input is past duration or eof.
+
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
                         auto end   = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
                         auto time  = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
@@ -539,7 +536,7 @@ struct AVProducer::Impl
                                 seek_internal(start_);
                             } else {
                                 // TODO (perf) Avoid polling.
-                                cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                                cond_.wait_for(lock, boost::chrono::milliseconds(5));
                                 frame_timer.restart();
                             }
                             // TODO (fix) Limit live polling due to bugs.
@@ -572,7 +569,7 @@ struct AVProducer::Impl
                                 }
                             }
                             // TODO (perf) Avoid polling.
-                            cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
+                            cond_.wait_for(lock, boost::chrono::milliseconds(5));
                         }
                         // TODO (fix) Limit live polling due to bugs.
                         continue;
@@ -604,15 +601,14 @@ struct AVProducer::Impl
                         frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
                     }
 
-                    {
-                        std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                        buffer_.push_back(frame);
-                    }
+                    buffer_.push_back(frame);
 
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
                 }
+            } catch (boost::thread_interrupted&) {
+                // Do nothing...
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
@@ -621,19 +617,143 @@ struct AVProducer::Impl
 
     ~Impl()
     {
-        graph_ = spl::shared_ptr<diagnostics::graph>();
-        abort_request_ = true;
-        cond_.notify_all();
-        buffer_cond_.notify_all();
+        thread_.interrupt();
         thread_.join();
     }
+
+    core::draw_frame prev_frame()
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            graph_->set_text(u16(print()));
+            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+        };
+
+        std::lock_guard<boost::mutex> lock(mutex_);
+
+        if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+            auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+            frame_       = core::draw_frame::still(frame);
+            frame_time_  = buffer_[0].pts + buffer_[0].duration;
+            frame_flush_ = false;
+        }
+
+        return frame_;
+    }
+
+    core::draw_frame next_frame()
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            graph_->set_text(u16(print()));
+            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+        };        
+
+        std::lock_guard<boost::mutex> lock(mutex_);
+
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
+            if (buffer_eof_) {
+                return frame_;
+            } else {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                return core::draw_frame{};
+            }
+        }
+
+        auto frame  = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+        frame_      = core::draw_frame::still(frame);
+        frame_time_ = buffer_[0].pts + buffer_[0].duration;
+        buffer_.pop_front();
+
+        frame_flush_ = false;
+
+        cond_.notify_all();
+
+        return frame;
+    }
+
+    void seek(int64_t time)
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        buffer_.clear();
+        seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
+
+        cond_.notify_all();
+    }
+
+    int64_t time() const
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        // TODO (fix) How to handle NOPTS case?
+        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
+    }
+
+    void loop(bool loop)
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        loop_ = loop;
+
+        cond_.notify_all();
+    }
+
+    bool loop() const {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        return loop_;
+    }
+
+    void start(int64_t start)
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+ 
+        start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
+
+        cond_.notify_all();
+    }
+
+    boost::optional<int64_t> start() const
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
+    }
+
+    void duration(int64_t duration)
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+      
+        duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
+        input_.paused(false);
+
+        cond_.notify_all();
+    }
+
+    boost::optional<int64_t> duration() const
+    {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+
+        if (duration_ != AV_NOPTS_VALUE) {
+            return av_rescale_q(duration_, TIME_BASE_Q, format_tb_);
+        }
+
+        if (!input_.duration()) {
+            return boost::none;
+        }
+
+        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
+    }
+
+  private:
 
     bool schedule()
     {
         auto result = false;
         input_([&](std::shared_ptr<AVPacket>& packet) {
             // TODO (refactor) std::min_element
-            std::pair<int, int> min{-1, std::numeric_limits<int>::max()};
+            std::pair<int, int> min{ -1, std::numeric_limits<int>::max() };
             for (auto& p : decoders_) {
                 const auto size = static_cast<int>(p.second.input.size());
                 if (size < min.second && !p.second.eof) {
@@ -723,7 +843,7 @@ struct AVProducer::Impl
         }
 
         auto frame = alloc_frame();
-        auto ret   = avcodec_receive_frame(decoder.ctx.get(), frame.get());
+        auto ret = avcodec_receive_frame(decoder.ctx.get(), frame.get());
 
         if (ret == AVERROR(EAGAIN)) {
             if (decoder.input.empty()) {
@@ -733,10 +853,10 @@ struct AVProducer::Impl
             decoder.input.pop();
         } else if (ret == AVERROR_EOF) {
             avcodec_flush_buffers(decoder.ctx.get());
-            frame->pts       = decoder.next_pts;
-            decoder.eof      = true;
+            frame->pts = decoder.next_pts;
+            decoder.eof = true;
             decoder.next_pts = AV_NOPTS_VALUE;
-            decoder.frame    = std::move(frame);
+            decoder.frame = std::move(frame);
         } else {
             FF_RET(ret, "avcodec_receive_frame");
 
@@ -761,7 +881,7 @@ struct AVProducer::Impl
                 decoder.next_pts = AV_NOPTS_VALUE;
             }
 
-            decoder.frame    = std::move(frame);
+            decoder.frame = std::move(frame);
         }
 
         return true;
@@ -774,19 +894,19 @@ struct AVProducer::Impl
         }
 
         if (!filter.sink || filter.sources.empty()) {
-            filter.eof   = true;
+            filter.eof = true;
             filter.frame = nullptr;
             return true;
         }
 
         auto frame = alloc_frame();
-        auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                   : av_buffersink_get_frame(filter.sink, frame.get());
+        auto ret = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+            : av_buffersink_get_frame(filter.sink, frame.get());
 
         if (ret == AVERROR(EAGAIN)) {
             return false;
         } else if (ret == AVERROR_EOF) {
-            filter.eof   = true;
+            filter.eof = true;
             filter.frame = nullptr;
             return true;
         } else {
@@ -796,137 +916,6 @@ struct AVProducer::Impl
         }
     }
 
-    core::draw_frame prev_frame()
-    {
-        CASPAR_SCOPE_EXIT
-        {
-            graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        };
-
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-                frame_       = core::draw_frame::still(frame);
-                frame_time_  = buffer_[0].pts + buffer_[0].duration;
-                frame_flush_ = false;
-            }
-        }
-
-        return frame_;
-    }
-
-    core::draw_frame next_frame()
-    {
-        CASPAR_SCOPE_EXIT
-        {
-            graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        };
-
-        core::draw_frame frame;
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-            if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-                if (buffer_eof_) {
-                    return frame_;
-                } else {
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                    return core::draw_frame{};
-                }
-            }
-
-            frame       = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-            frame_      = core::draw_frame::still(frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            buffer_.pop_front();
-
-            frame_flush_ = false;
-        }
-        buffer_cond_.notify_all();
-
-        return frame;
-    }
-
-    void seek(int64_t time)
-    {
-        // TODO (fix) Validate input.
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            {
-                std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                buffer_.clear();
-            }
-            buffer_cond_.notify_all();
-
-            seek_internal(av_rescale_q(time, format_tb_, TIME_BASE_Q));
-        }
-
-        cond_.notify_all();
-    }
-
-    int64_t time() const
-    {
-        // TODO (fix) How to handle NOPTS case?
-        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
-    }
-
-    void loop(bool loop)
-    {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            loop_ = loop;
-        }
-        cond_.notify_all();
-    }
-
-    bool loop() const { return loop_; }
-
-    void start(int64_t start)
-    {
-        // TODO (fix) Validate input.
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-        }
-        cond_.notify_all();
-    }
-
-    boost::optional<int64_t> start() const
-    {
-        return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
-    }
-
-    void duration(int64_t duration)
-    {
-        // TODO (fix) Validate input.
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-            input_.paused(false);
-        }
-        cond_.notify_all();
-    }
-
-    boost::optional<int64_t> duration() const
-    {
-        if (duration_ != AV_NOPTS_VALUE) {
-            return av_rescale_q(duration_, TIME_BASE_Q, format_tb_);
-        }
-
-        if (!input_.duration()) {
-            return boost::none;
-        }
-        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
-    }
-
-  private:
     std::string print() const
     {
         std::ostringstream str;
