@@ -1,7 +1,7 @@
 #!/bin/bash
 
 docker build -t casparcg/base:1.2.0 tools/linux/base
-docker build -t casparcg/cef:3.3239.1723-2 tools/linux/cef
+docker build -t casparcg/cef:3.3239.1723-3 tools/linux/cef
 docker build -t casparcg/boost:1.66-2 tools/linux/boost
 docker build -t casparcg/ffmpeg:master-acdea9e-2 tools/linux/ffmpeg
 
