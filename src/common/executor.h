@@ -113,7 +113,9 @@ class executor final
 
     void stop_and_wait() {
         stop();
-        thread_.join();
+
+        if (thread_.joinable())
+            thread_.join();
     }
 
     void wait()
