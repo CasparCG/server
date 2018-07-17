@@ -620,174 +620,6 @@ struct AVProducer::Impl
         thread_.join();
     }
 
-    bool schedule()
-    {
-        auto result = false;
-        input_([&](std::shared_ptr<AVPacket>& packet) {
-            // TODO (refactor) std::min_element
-            std::pair<int, int> min{-1, std::numeric_limits<int>::max()};
-            for (auto& p : decoders_) {
-                const auto size = static_cast<int>(p.second.input.size());
-                if (size < min.second && !p.second.eof) {
-                    min = std::pair<int, int>(p.first, size);
-                }
-            }
-
-            if (min.second > 0) {
-                return false;
-            }
-
-            if (!packet) {
-                for (auto& p : decoders_) {
-                    if (!p.second.eof) {
-                        p.second.input.push(nullptr);
-                    }
-                }
-                result = true;
-            } else if (sources_.find(packet->stream_index) != sources_.end()) {
-                auto it = decoders_.find(packet->stream_index);
-                if (it == decoders_.end()) {
-                    return true;
-                }
-
-                if (it->second.input.size() >= 256) {
-                    if (min.first != -1) {
-                        decoders_[min.first].input.push(nullptr);
-                        return true;
-                    }
-                    return false;
-                }
-
-                result = true;
-
-                it->second.input.push(std::move(packet));
-            }
-
-            return true;
-        });
-
-        std::vector<int> eof;
-
-        for (auto& p : sources_) {
-            auto it = decoders_.find(p.first);
-            if (it == decoders_.end() || !it->second.frame) {
-                continue;
-            }
-
-            auto nb_requests = 0U;
-            for (auto source : p.second) {
-                nb_requests = std::max(nb_requests, av_buffersrc_get_nb_failed_requests(source));
-            }
-
-            if (nb_requests == 0) {
-                continue;
-            }
-
-            auto frame = std::move(it->second.frame);
-
-            for (auto& source : p.second) {
-                if (frame && !frame->data[0]) {
-                    FF(av_buffersrc_close(source, frame->pts, 0));
-                } else {
-                    // TODO (fix) Guard against overflow?
-                    FF(av_buffersrc_write_frame(source, frame.get()));
-                }
-                result = true;
-            }
-
-            // End Of File
-            if (!frame->data[0]) {
-                eof.push_back(p.first);
-            }
-        }
-
-        for (auto index : eof) {
-            sources_.erase(index);
-        }
-
-        return result;
-    }
-
-    bool decode_frame(Decoder& decoder)
-    {
-        if (decoder.frame || decoder.eof) {
-            return false;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = avcodec_receive_frame(decoder.ctx.get(), frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            if (decoder.input.empty()) {
-                return false;
-            }
-            FF(avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get()));
-            decoder.input.pop();
-        } else if (ret == AVERROR_EOF) {
-            avcodec_flush_buffers(decoder.ctx.get());
-            frame->pts       = decoder.next_pts;
-            decoder.eof      = true;
-            decoder.next_pts = AV_NOPTS_VALUE;
-            decoder.frame    = std::move(frame);
-        } else {
-            FF_RET(ret, "avcodec_receive_frame");
-
-            // NOTE This is a workaround for DVCPRO HD.
-            if (frame->width > 1024 && frame->interlaced_frame) {
-                frame->top_field_first = 1;
-            }
-
-            // TODO (fix) is this always best?
-            frame->pts = frame->best_effort_timestamp;
-            // TODO (fix) is this always best?
-
-            auto duration = frame->pkt_duration;
-            if (duration <= 0) {
-                const auto framerate = av_guess_frame_rate(nullptr, decoder.st, frame.get());
-                duration = av_rescale_q(framerate.num, framerate, decoder.st->time_base);
-            }
-
-            if (duration > 0) {
-                decoder.next_pts = frame->pts + duration;
-            } else {
-                decoder.next_pts = AV_NOPTS_VALUE;
-            }
-
-            decoder.frame    = std::move(frame);
-        }
-
-        return true;
-    }
-
-    bool filter_frame(Filter& filter, int nb_samples = -1)
-    {
-        if (filter.frame || filter.eof) {
-            return false;
-        }
-
-        if (!filter.sink || filter.sources.empty()) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                   : av_buffersink_get_frame(filter.sink, frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            return false;
-        } else if (ret == AVERROR_EOF) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        } else {
-            FF_RET(ret, "av_buffersink_get_frame");
-            filter.frame = frame;
-            return true;
-        }
-    }
-
     core::draw_frame prev_frame()
     {
         CASPAR_SCOPE_EXIT
@@ -916,6 +748,175 @@ struct AVProducer::Impl
     }
 
   private:
+
+    bool schedule()
+    {
+        auto result = false;
+        input_([&](std::shared_ptr<AVPacket>& packet) {
+            // TODO (refactor) std::min_element
+            std::pair<int, int> min{ -1, std::numeric_limits<int>::max() };
+            for (auto& p : decoders_) {
+                const auto size = static_cast<int>(p.second.input.size());
+                if (size < min.second && !p.second.eof) {
+                    min = std::pair<int, int>(p.first, size);
+                }
+            }
+
+            if (min.second > 0) {
+                return false;
+            }
+
+            if (!packet) {
+                for (auto& p : decoders_) {
+                    if (!p.second.eof) {
+                        p.second.input.push(nullptr);
+                    }
+                }
+                result = true;
+            } else if (sources_.find(packet->stream_index) != sources_.end()) {
+                auto it = decoders_.find(packet->stream_index);
+                if (it == decoders_.end()) {
+                    return true;
+                }
+
+                if (it->second.input.size() >= 256) {
+                    if (min.first != -1) {
+                        decoders_[min.first].input.push(nullptr);
+                        return true;
+                    }
+                    return false;
+                }
+
+                result = true;
+
+                it->second.input.push(std::move(packet));
+            }
+
+            return true;
+        });
+
+        std::vector<int> eof;
+
+        for (auto& p : sources_) {
+            auto it = decoders_.find(p.first);
+            if (it == decoders_.end() || !it->second.frame) {
+                continue;
+            }
+
+            auto nb_requests = 0U;
+            for (auto source : p.second) {
+                nb_requests = std::max(nb_requests, av_buffersrc_get_nb_failed_requests(source));
+            }
+
+            if (nb_requests == 0) {
+                continue;
+            }
+
+            auto frame = std::move(it->second.frame);
+
+            for (auto& source : p.second) {
+                if (frame && !frame->data[0]) {
+                    FF(av_buffersrc_close(source, frame->pts, 0));
+                } else {
+                    // TODO (fix) Guard against overflow?
+                    FF(av_buffersrc_write_frame(source, frame.get()));
+                }
+                result = true;
+            }
+
+            // End Of File
+            if (!frame->data[0]) {
+                eof.push_back(p.first);
+            }
+        }
+
+        for (auto index : eof) {
+            sources_.erase(index);
+        }
+
+        return result;
+    }
+
+    bool decode_frame(Decoder& decoder)
+    {
+        if (decoder.frame || decoder.eof) {
+            return false;
+        }
+
+        auto frame = alloc_frame();
+        auto ret = avcodec_receive_frame(decoder.ctx.get(), frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            if (decoder.input.empty()) {
+                return false;
+            }
+            FF(avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get()));
+            decoder.input.pop();
+        } else if (ret == AVERROR_EOF) {
+            avcodec_flush_buffers(decoder.ctx.get());
+            frame->pts = decoder.next_pts;
+            decoder.eof = true;
+            decoder.next_pts = AV_NOPTS_VALUE;
+            decoder.frame = std::move(frame);
+        } else {
+            FF_RET(ret, "avcodec_receive_frame");
+
+            // NOTE This is a workaround for DVCPRO HD.
+            if (frame->width > 1024 && frame->interlaced_frame) {
+                frame->top_field_first = 1;
+            }
+
+            // TODO (fix) is this always best?
+            frame->pts = frame->best_effort_timestamp;
+            // TODO (fix) is this always best?
+
+            auto duration = frame->pkt_duration;
+            if (duration <= 0) {
+                const auto framerate = av_guess_frame_rate(nullptr, decoder.st, frame.get());
+                duration = av_rescale_q(framerate.num, framerate, decoder.st->time_base);
+            }
+
+            if (duration > 0) {
+                decoder.next_pts = frame->pts + duration;
+            } else {
+                decoder.next_pts = AV_NOPTS_VALUE;
+            }
+
+            decoder.frame = std::move(frame);
+        }
+
+        return true;
+    }
+
+    bool filter_frame(Filter& filter, int nb_samples = -1)
+    {
+        if (filter.frame || filter.eof) {
+            return false;
+        }
+
+        if (!filter.sink || filter.sources.empty()) {
+            filter.eof = true;
+            filter.frame = nullptr;
+            return true;
+        }
+
+        auto frame = alloc_frame();
+        auto ret = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
+            : av_buffersink_get_frame(filter.sink, frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            return false;
+        } else if (ret == AVERROR_EOF) {
+            filter.eof = true;
+            filter.frame = nullptr;
+            return true;
+        } else {
+            FF_RET(ret, "av_buffersink_get_frame");
+            filter.frame = frame;
+            return true;
+        }
+    }
+
     std::string print() const
     {
         std::ostringstream str;
