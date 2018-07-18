@@ -205,9 +205,15 @@ struct Filter
 
         std::vector<AVStream*> av_streams;
         for (auto n = 0U; n < input->nb_streams; ++n) {
-            auto disposition = input->streams[n]->disposition;
+            const auto st = input->streams[n];
+
+            if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && st->codecpar->channels == 0) {
+                continue;
+            }
+
+            auto disposition = st->disposition;
             if (!disposition || disposition == AV_DISPOSITION_DEFAULT) {
-                av_streams.push_back(input->streams[n]);
+                av_streams.push_back(st);
             }
         }
 
