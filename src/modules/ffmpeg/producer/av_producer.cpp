@@ -872,13 +872,17 @@ struct AVProducer::Impl
 
             auto duration_pts = frame->pkt_duration;
             if (duration_pts <= 0) {
-                const auto ticks = av_stream_get_parser(decoder.st)
-                    ? av_stream_get_parser(decoder.st)->repeat_pict + 1
-                    : decoder.ctx->ticks_per_frame;
-                duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * decoder.ctx->framerate.den * ticks) /
-                    decoder.ctx->framerate.num /
-                    decoder.ctx->ticks_per_frame;
-                duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, decoder.st->time_base);
+                if (decoder.ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    const auto ticks = av_stream_get_parser(decoder.st)
+                        ? av_stream_get_parser(decoder.st)->repeat_pict + 1
+                        : decoder.ctx->ticks_per_frame;
+                    duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * decoder.ctx->framerate.den * ticks) /
+                        decoder.ctx->framerate.num /
+                        decoder.ctx->ticks_per_frame;
+                    duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, decoder.st->time_base);
+                } else if (decoder.ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+                    duration_pts = av_rescale_q(frame->nb_samples, { 1, decoder.ctx->sample_rate }, decoder.st->time_base);
+                }
             }
 
             if (duration_pts > 0) {
