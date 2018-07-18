@@ -68,6 +68,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/regex.hpp>
@@ -101,6 +102,7 @@
 namespace caspar { namespace protocol { namespace amcp {
 
 using namespace core;
+namespace pt = boost::property_tree;
 
 std::wstring read_file_base64(const boost::filesystem::path& file)
 {
@@ -1307,11 +1309,99 @@ std::wstring tls_command(command_context& ctx)
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
 
+struct param_visitor : public boost::static_visitor<void>
+{
+    std::wstring path;
+    pt::wptree& o;
+
+    template <typename T>
+    param_visitor(std::string path, T& o)
+        : o(o)
+        , path(u16(path))
+    {
+    }
+
+    void operator()(const bool value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const int32_t value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const uint32_t value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const int64_t value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const uint64_t value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const float value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const double value)
+    {
+        o.add(path, value);
+    }
+
+    void operator()(const std::string& value)
+    {
+        o.add(path, u16(value));
+    }
+
+    void operator()(const std::wstring& value)
+    {
+        o.add(path, value);
+    }
+};
+
+std::wstring info_channel_command(command_context& ctx)
+{
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO OK\r\n";
+
+    pt::wptree info;
+    pt::wptree channel_info;
+    
+    auto state = ctx.channel.channel->state();
+
+    auto bundle = state.get();
+    for (const auto& p : bundle) {
+        const auto path = boost::algorithm::replace_all_copy(p.first, "/", ".");
+        param_visitor param_visitor(path, channel_info);
+        for (const auto& element : p.second) {
+            boost::apply_visitor(param_visitor, element);
+        }
+    }
+
+    info.add_child(L"channel", channel_info);
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, info, w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
 std::wstring info_command(command_context& ctx)
 {
     std::wstringstream replyString;
     // This is needed for backwards compatibility with old clients
     replyString << L"200 INFO OK\r\n";
+
     for (size_t n = 0; n < ctx.channels.size(); ++n) {
         replyString << n + 1 << L" " << ctx.channels.at(n).channel->video_format_desc().name << L" PLAYING\r\n";
     }
@@ -1449,6 +1539,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"BYE", bye_command, 0);
     repo.register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
+    repo.register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     repo.register_command(L"Query Commands", L"INFO", info_command, 0);
 }
 

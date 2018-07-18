@@ -115,6 +115,14 @@ class state
         return *this;
     }
 
+    state& operator=(state&& other)
+    {
+        auto                        data = other.get();
+        std::lock_guard<std::mutex> lock(mutex_);
+        data_ = std::move(data);
+        return *this;
+    }
+
     template <typename T>
     state& operator=(T&& data)
     {
