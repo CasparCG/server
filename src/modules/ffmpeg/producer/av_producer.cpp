@@ -870,14 +870,19 @@ struct AVProducer::Impl
             frame->pts = frame->best_effort_timestamp;
             // TODO (fix) is this always best?
 
-            auto duration = frame->pkt_duration;
-            if (duration <= 0) {
-                const auto framerate = av_guess_frame_rate(nullptr, decoder.st, frame.get());
-                duration = av_rescale_q(framerate.num, framerate, decoder.st->time_base);
+            auto duration_pts = frame->pkt_duration;
+            if (duration_pts <= 0) {
+                const auto ticks = av_stream_get_parser(decoder.st)
+                    ? av_stream_get_parser(decoder.st)->repeat_pict + 1
+                    : decoder.ctx->ticks_per_frame;
+                duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * decoder.ctx->framerate.den * ticks) /
+                    decoder.ctx->framerate.num /
+                    decoder.ctx->ticks_per_frame;
+                duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, decoder.st->time_base);
             }
 
-            if (duration > 0) {
-                decoder.next_pts = frame->pts + duration;
+            if (duration_pts > 0) {
+                decoder.next_pts = frame->pts + duration_pts;
             } else {
                 decoder.next_pts = AV_NOPTS_VALUE;
             }
