@@ -572,6 +572,7 @@ struct AVProducer::Impl
                             cond_.wait_for(lock, boost::chrono::milliseconds(5));
                         }
                         // TODO (fix) Limit live polling due to bugs.
+                        boost::this_thread::yield();
                         continue;
                     }
 
