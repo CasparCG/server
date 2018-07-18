@@ -152,7 +152,6 @@ struct Filter
 
             filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
 
-            // NOTE: trunc is for width % 4 == 0 or OpenGL will complain during texture uploads.
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
@@ -161,9 +160,11 @@ struct Filter
                 filter_spec = "anull";
             }
 
+            // NOTE: Put asetnsamples to resolve weird bug with aresample + async on some files.
+            // https://github.com/CasparCG/server/issues/1010
             filter_spec +=
-                (boost::format(",aresample=sample_rate=%d:async=2000:first_pts=%d") % format_desc.audio_sample_rate %
-                 av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}))
+                (boost::format(",asetnsamples=n=1024:p=0,aresample=async=2000:first_pts=%d,asetrate=r=%d,asetnsamples=n=1024:p=0") %
+                 av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) % format_desc.audio_sample_rate)
                     .str();
         }
 
