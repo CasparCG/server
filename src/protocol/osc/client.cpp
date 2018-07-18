@@ -73,6 +73,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
 
+    int64_t time_ = 0;
+
     std::mutex                mutex_;
     std::condition_variable   cond_;
     boost::optional<core::monitor::data_map_t> bundle_opt_;
@@ -112,10 +114,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         continue;
                     }
 
-                    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()),
-                                                  static_cast<unsigned long>(buffer_.size()));
+                    // TODO: Should use server clock.
+                    time_++;
 
-                    o << ::osc::BeginBundle();
+                    char buffer[8192];
+
+                    ::osc::OutboundPacketStream o(buffer_, 8192);
+
+                    o << ::osc::BeginBundle(time_);
 
                     for (auto& p : bundle) {
                         o << ::osc::BeginMessage(p.first.c_str());
@@ -126,13 +132,30 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         }
 
                         o << ::osc::EndMessage;
+
+                        if (o.Size() >= 1024) {
+                            o << ::osc::EndBundle;
+
+                            boost::system::error_code ec;
+                            for (const auto& endpoint : endpoints) {
+                                // TODO: async send
+                                socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
+                                // TODO Handle error
+                            }
+
+                            o.Clear();
+
+                            o << ::osc::BeginBundle(time_);
+                        }
                     }
 
                     o << ::osc::EndBundle;
 
                     boost::system::error_code ec;
                     for (const auto& endpoint : endpoints) {
+                        // TODO: async send
                         socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
+                        // TODO Handle error
                     }
                 }
             } catch (...) {
