@@ -55,7 +55,7 @@ namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
 
-struct ffmpeg_producer : public core::frame_producer_base
+struct ffmpeg_producer : public core::frame_producer
 {
     const std::wstring                   filename_;
     spl::shared_ptr<core::frame_factory> frame_factory_;
@@ -100,10 +100,12 @@ struct ffmpeg_producer : public core::frame_producer_base
     }
 
     // frame_producer
-
+    
     core::draw_frame last_frame() override { return producer_->prev_frame(); }
 
-    core::draw_frame receive_impl(int nb_samples) override { return producer_->next_frame(); }
+    core::draw_frame receive_impl(int nb_samples) override {
+        return producer_->next_frame();
+    }
 
     std::uint32_t frame_number() const override
     {

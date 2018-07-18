@@ -362,7 +362,7 @@ class html_client
     IMPLEMENT_REFCOUNTING(html_client);
 };
 
-class html_producer : public core::frame_producer_base
+class html_producer : public core::frame_producer
 {
     core::video_format_desc             format_desc_;
     core::monitor::state                state_;

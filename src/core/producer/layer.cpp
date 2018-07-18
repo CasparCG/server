@@ -42,44 +42,33 @@ struct layer::impl
 
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
-    ;
+  
     boost::optional<int32_t> auto_play_delta_;
-    bool                     is_paused_         = false;
-    int64_t                  current_frame_age_ = 0;
+    bool paused_ = false;
 
   public:
-    impl() {}
-
-    void set_foreground(spl::shared_ptr<frame_producer> producer) { foreground_ = std::move(producer); }
 
     void pause()
     {
-        foreground_->paused(true);
-        is_paused_ = true;
+        paused_ = true;
     }
 
     void resume()
     {
-        foreground_->paused(false);
-        is_paused_ = false;
+        paused_ = false;
     }
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
     {
         background_ = std::move(producer);
-
         auto_play_delta_ = auto_play_delta;
-
-        if (preview) {
-            // TODO (fix) Move receive into receive.
-            play();
-            receive(video_format::invalid, 0);
-            foreground_->paused(true);
-            is_paused_ = true;
-        }
+        paused_ = true;
 
         if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
             play();
+        } else if (preview) {
+            foreground_ = std::move(background_);
+            background_ = frame_producer::empty();
         }
     }
 
@@ -88,20 +77,18 @@ struct layer::impl
         if (background_ != frame_producer::empty()) {
             background_->leading_producer(foreground_);
 
-            set_foreground(background_);
-            background_ = std::move(frame_producer::empty());
+            foreground_ = std::move(background_);
+            background_ = frame_producer::empty();
 
             auto_play_delta_.reset();
         }
 
-        foreground_->paused(false);
-        is_paused_ = false;
+        paused_ = false;
     }
 
     void stop()
     {
-        set_foreground(frame_producer::empty());
-
+        foreground_ = frame_producer::empty();
         auto_play_delta_.reset();
     }
 
@@ -121,13 +108,12 @@ struct layer::impl
                 }
             }
 
-            auto frame = foreground_->receive(nb_samples);
+            auto frame = paused_ ? core::draw_frame{} : foreground_->receive(nb_samples);
             if (!frame) {
                 frame = foreground_->last_frame();
             }
 
             state_.clear();
-            state_["paused"] = is_paused_;
             state_.insert_or_assign(foreground_->state());
 
             return frame;

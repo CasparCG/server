@@ -36,7 +36,7 @@
 
 namespace caspar { namespace core {
 
-class transition_producer : public frame_producer_base
+class transition_producer : public frame_producer
 {
     monitor::state state_;
     int            current_frame_ = 0;
@@ -57,6 +57,14 @@ class transition_producer : public frame_producer_base
     }
 
     // frame_producer
+ 
+    core::draw_frame last_frame()
+    {
+        auto src = src_producer_->last_frame();
+        auto dst = dst_producer_->last_frame();
+
+        return dst && current_frame_ >= info_.duration ? dst : src;
+    }
 
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 

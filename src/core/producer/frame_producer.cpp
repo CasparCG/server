@@ -69,68 +69,14 @@ frame_producer_dependencies::frame_producer_dependencies(
 {
 }
 
-struct frame_producer_base::impl
-{
-    std::atomic<uint32_t> frame_number_;
-    std::atomic<bool>     paused_;
-    frame_producer_base&  self_;
-    draw_frame            last_frame_;
-
-    impl(frame_producer_base& self)
-        : self_(self)
-    {
-        frame_number_ = 0;
-        paused_       = false;
-    }
-
-    draw_frame receive(int nb_samples)
-    {
-        if (paused_)
-            return self_.last_frame();
-
-        auto frame = self_.receive_impl(nb_samples);
-        if (!frame) {
-            return self_.last_frame();
-        }
-
-        ++frame_number_;
-
-        return last_frame_ = draw_frame::push(frame);
-    }
-
-    void paused(bool value) { paused_ = value; }
-
-    draw_frame last_frame() { return draw_frame::still(last_frame_); }
-};
-
-frame_producer_base::frame_producer_base()
-    : impl_(new impl(*this))
-{
-}
-
-draw_frame frame_producer_base::receive(int nb_samples) { return impl_->receive(nb_samples); }
-
-void frame_producer_base::paused(bool value) { impl_->paused(value); }
-
-draw_frame frame_producer_base::last_frame() { return impl_->last_frame(); }
-
-std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&)
-{
-    CASPAR_THROW_EXCEPTION(not_supported());
-}
-
-uint32_t frame_producer_base::nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
-
-uint32_t frame_producer_base::frame_number() const { return impl_->frame_number_; }
-
 const spl::shared_ptr<frame_producer>& frame_producer::empty()
 {
     class empty_frame_producer : public frame_producer
     {
-      public:
+    public:
         empty_frame_producer() {}
-        draw_frame                receive(int nb_samples) override { return draw_frame{}; }
-        void                      paused(bool value) override {}
+
+        draw_frame receive_impl(int nb_samples) override { return draw_frame{}; }
         uint32_t                  nb_frames() const override { return 0; }
         std::wstring              print() const override { return L"empty"; }
         std::wstring              name() const override { return L"empty"; }
@@ -219,16 +165,15 @@ class destroy_producer_proxy : public frame_producer
         });
     }
 
-    draw_frame                receive(int nb_samples) override { return producer_->receive(nb_samples); }
+    draw_frame                receive_impl(int nb_samples) override { return producer_->receive_impl(nb_samples); }
     std::wstring              print() const override { return producer_->print(); }
-    void                      paused(bool value) override { producer_->paused(value); }
     std::wstring              name() const override { return producer_->name(); }
-    uint32_t                  frame_number() const override { return producer_->frame_number(); }
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override { return producer_->call(params); }
     void                      leading_producer(const spl::shared_ptr<frame_producer>& producer) override
     {
         return producer_->leading_producer(producer);
     }
+    uint32_t              frame_number() const override { return producer_->frame_number(); }
     uint32_t              nb_frames() const override { return producer_->nb_frames(); }
     draw_frame            last_frame() { return producer_->last_frame(); }
     const monitor::state& state() const { return producer_->state(); }

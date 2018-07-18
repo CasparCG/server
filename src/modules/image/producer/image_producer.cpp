@@ -55,12 +55,12 @@
 
 namespace caspar { namespace image {
 
-struct image_producer : public core::frame_producer_base
+struct image_producer : public core::frame_producer
 {
     core::monitor::state                       state_;
     const std::wstring                         description_;
     const spl::shared_ptr<core::frame_factory> frame_factory_;
-    const uint32_t                             length_;
+    const uint32_t                             length_ = 0;
     core::draw_frame                           frame_;
 
     image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
@@ -103,10 +103,14 @@ struct image_producer : public core::frame_producer_base
 
     // frame_producer
 
+    core::draw_frame last_frame() override
+    {
+        return frame_;
+    }
+
     core::draw_frame receive_impl(int nb_samples) override
     {
         state_["file/path"] = description_;
-
         return frame_;
     }
 

@@ -74,7 +74,7 @@ draw_frame create_color_frame(void*                                 tag,
     return create_color_frame(tag, frame_factory, values);
 }
 
-class color_producer : public frame_producer_base
+class color_producer : public frame_producer
 {
     monitor::state state_;
 

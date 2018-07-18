@@ -520,7 +520,7 @@ public:
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 };
 
-class bluefish_producer_proxy : public core::frame_producer_base
+class bluefish_producer_proxy : public core::frame_producer
 {
 	std::unique_ptr<bluefish_producer>	producer_;
 	const uint32_t						length_;

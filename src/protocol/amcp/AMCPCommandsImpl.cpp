@@ -286,7 +286,9 @@ std::wstring load_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
     auto pFP =
         ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
-    ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
+    auto pFP2 = create_transition_producer(pFP, transition_info{});
+
+    ctx.channel.channel->stage().load(ctx.layer_index(), pFP2, true);
 
     return L"202 LOAD OK\r\n";
 }

@@ -35,7 +35,7 @@
 
 namespace caspar { namespace core {
 
-class separated_producer : public frame_producer_base
+class separated_producer : public frame_producer
 {
     monitor::state state_;
 
@@ -53,6 +53,11 @@ class separated_producer : public frame_producer_base
     }
 
     // frame_producer
+
+    draw_frame last_frame() override
+    {
+        return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
+    }
 
     draw_frame receive_impl(int nb_samples) override
     {
@@ -87,9 +92,15 @@ class separated_producer : public frame_producer_base
         return frame;
     }
 
-    draw_frame last_frame() { return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame()); }
+    uint32_t frame_number() const override
+    {
+        return fill_producer_->frame_number();
+    }
 
-    uint32_t nb_frames() const override { return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames()); }
+    uint32_t nb_frames() const override
+    {
+        return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
+    }
 
     std::wstring print() const override
     {

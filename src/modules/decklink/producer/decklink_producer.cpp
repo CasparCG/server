@@ -582,7 +582,7 @@ class decklink_producer : public IDeckLinkInputCallback
     const core::monitor::state& state() { return state_; }
 };
 
-class decklink_producer_proxy : public core::frame_producer_base
+class decklink_producer_proxy : public core::frame_producer
 {
     std::unique_ptr<decklink_producer> producer_;
     const uint32_t                     length_;

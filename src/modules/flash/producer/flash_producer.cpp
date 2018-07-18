@@ -338,7 +338,7 @@ class flash_renderer
     }
 };
 
-struct flash_producer : public core::frame_producer_base
+struct flash_producer : public core::frame_producer
 {
     core::monitor::state                       state_;
     const std::wstring                         filename_;
