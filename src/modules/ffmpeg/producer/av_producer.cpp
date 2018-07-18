@@ -152,7 +152,8 @@ struct Filter
 
             filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
 
-            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
+            // NOTE: trunc is for width % 4 == 0 or OpenGL will complain during texture uploads.
+            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f,scale=trunc(iw/4)*4:ih") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
