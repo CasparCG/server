@@ -92,15 +92,9 @@ class separated_producer : public frame_producer
         return frame;
     }
 
-    uint32_t frame_number() const override
-    {
-        return fill_producer_->frame_number();
-    }
+    uint32_t frame_number() const override { return fill_producer_->frame_number(); }
 
-    uint32_t nb_frames() const override
-    {
-        return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
-    }
+    uint32_t nb_frames() const override { return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames()); }
 
     std::wstring print() const override
     {

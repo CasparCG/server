@@ -80,20 +80,20 @@ struct configuration
         aspect_invalid,
     };
 
-    std::wstring    name         = L"Screen consumer";
-    int             screen_index = 0;
-    int             screen_x     = 0;
-    int             screen_y     = 0;
-    int             screen_width = 0;
-    int             screen_height= 0;
-    screen::stretch stretch      = screen::stretch::fill;
-    bool            windowed     = true;
-    bool            key_only     = false;
-    aspect_ratio    aspect       = aspect_ratio::aspect_invalid;
-    bool            vsync        = false;
-    bool            interactive  = true;
-    bool            borderless   = false;
-    bool            always_on_top= false;
+    std::wstring    name          = L"Screen consumer";
+    int             screen_index  = 0;
+    int             screen_x      = 0;
+    int             screen_y      = 0;
+    int             screen_width  = 0;
+    int             screen_height = 0;
+    screen::stretch stretch       = screen::stretch::fill;
+    bool            windowed      = true;
+    bool            key_only      = false;
+    aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
+    bool            vsync         = false;
+    bool            interactive   = true;
+    bool            borderless    = false;
+    bool            always_on_top = false;
 };
 
 struct frame
@@ -129,8 +129,8 @@ struct screen_consumer : boost::noncopyable
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
 
     std::unique_ptr<accelerator::ogl::shader> shader_;
-    GLuint vao_;
-    GLuint vbo_;
+    GLuint                                    vao_;
+    GLuint                                    vbo_;
 
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
@@ -192,16 +192,16 @@ struct screen_consumer : boost::noncopyable
             screen_y_ += config.screen_y;
 
             if (config.screen_width > 0 && config.screen_height > 0) {
-                screen_width_ = config.screen_width;
+                screen_width_  = config.screen_width;
                 screen_height_ = config.screen_height;
             } else if (config.screen_width > 0) {
-                screen_width_ = config.screen_width;
+                screen_width_  = config.screen_width;
                 screen_height_ = square_height_ * config.screen_width / square_width_;
             } else if (config.screen_height > 0) {
                 screen_height_ = config.screen_height;
-                screen_width_ = square_width_ * config.screen_height / square_height_;
+                screen_width_  = square_width_ * config.screen_height / square_height_;
             } else {
-                screen_width_ = square_width_;
+                screen_width_  = square_width_;
                 screen_height_ = square_height_;
             }
         }
@@ -209,11 +209,14 @@ struct screen_consumer : boost::noncopyable
         thread_ = std::thread([this] {
             try {
                 const auto window_style = config_.borderless ? sf::Style::None
-                                                       : (config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                           : sf::Style::Fullscreen);
+                                                             : (config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                                 : sf::Style::Fullscreen);
                 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
                 sf::VideoMode mode(screen_width_, screen_height_, desktop.bitsPerPixel);
-                window_.create(mode, u8(print()), window_style, sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
+                window_.create(mode,
+                               u8(print()),
+                               window_style,
+                               sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
                 window_.setActive(true);
@@ -231,10 +234,11 @@ struct screen_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
                 }
 
-                if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
-                    CASPAR_THROW_EXCEPTION(not_supported()
-                                                   << msg_info("Your graphics card does not meet the minimum hardware requirements "
-                                                               "since it does not support OpenGL 4.5 or higher."));
+                if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
+                                                          "GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
+                    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(
+                                               "Your graphics card does not meet the minimum hardware requirements "
+                                               "since it does not support OpenGL 4.5 or higher."));
                 }
 
                 GL(glGenVertexArrays(1, &vao_));
@@ -373,7 +377,10 @@ struct screen_consumer : boost::noncopyable
             GL(glActiveTexture(GL_TEXTURE0));
             GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
 
-            GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(), draw_coords_.data(), GL_STATIC_DRAW));
+            GL(glBufferData(GL_ARRAY_BUFFER,
+                            static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
+                            draw_coords_.data(),
+                            GL_STATIC_DRAW));
 
             auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
 
@@ -438,12 +445,12 @@ struct screen_consumer : boost::noncopyable
         draw_coords_ = {
             //    vertex    texture
             {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-            {target_ratio.first, target_ratio.second, 1.0, 0.0}, // upper right
+            {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
             {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
 
             {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
             {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
-            {-target_ratio.first, -target_ratio.second, 0.0, 1.0}  // lower left
+            {-target_ratio.first, -target_ratio.second, 0.0, 1.0} // lower left
         };
     }
 
@@ -545,18 +552,18 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;
-    config.name         = ptree.get(L"name", config.name);
-    config.screen_index = ptree.get(L"device", config.screen_index + 1) - 1;
-    config.screen_x     = ptree.get(L"x", config.screen_x);
-    config.screen_y     = ptree.get(L"y", config.screen_y);
-    config.screen_width = ptree.get(L"width", config.screen_width);
-    config.screen_height= ptree.get(L"height", config.screen_height);
-    config.windowed     = ptree.get(L"windowed", config.windowed);
-    config.key_only     = ptree.get(L"key-only", config.key_only);
-    config.vsync        = ptree.get(L"vsync", config.vsync);
-    config.interactive  = ptree.get(L"interactive", config.interactive);
-    config.borderless   = ptree.get(L"borderless", config.borderless);
-    config.always_on_top= ptree.get(L"always-on-top", config.always_on_top);
+    config.name          = ptree.get(L"name", config.name);
+    config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
+    config.screen_x      = ptree.get(L"x", config.screen_x);
+    config.screen_y      = ptree.get(L"y", config.screen_y);
+    config.screen_width  = ptree.get(L"width", config.screen_width);
+    config.screen_height = ptree.get(L"height", config.screen_height);
+    config.windowed      = ptree.get(L"windowed", config.windowed);
+    config.key_only      = ptree.get(L"key-only", config.key_only);
+    config.vsync         = ptree.get(L"vsync", config.vsync);
+    config.interactive   = ptree.get(L"interactive", config.interactive);
+    config.borderless    = ptree.get(L"borderless", config.borderless);
+    config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
 
     auto stretch_str = ptree.get(L"stretch", L"fill");
     if (stretch_str == L"none") {

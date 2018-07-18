@@ -22,8 +22,8 @@
 #include "x11_util.h"
 
 #include <X11/X.h>
-#include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xlib.h>
 
 bool window_always_on_top(const sf::Window& window)
 {
@@ -33,29 +33,25 @@ bool window_always_on_top(const sf::Window& window)
 
     Window win = window.getSystemHandle();
 
-    Atom wm_state, wm_state_above;
+    Atom   wm_state, wm_state_above;
     XEvent event;
 
-    if ((wm_state = XInternAtom(disp, "_NET_WM_STATE", False)) != None)
-    {
-        if ((wm_state_above = XInternAtom(disp, "_NET_WM_STATE_ABOVE", False))
-            != None)
-        {
-            event.xclient.type = ClientMessage;
-            event.xclient.serial = 0;
-            event.xclient.send_event = True;
-            event.xclient.display = disp;
-            event.xclient.window = win;
+    if ((wm_state = XInternAtom(disp, "_NET_WM_STATE", False)) != None) {
+        if ((wm_state_above = XInternAtom(disp, "_NET_WM_STATE_ABOVE", False)) != None) {
+            event.xclient.type         = ClientMessage;
+            event.xclient.serial       = 0;
+            event.xclient.send_event   = True;
+            event.xclient.display      = disp;
+            event.xclient.window       = win;
             event.xclient.message_type = wm_state;
-            event.xclient.format = 32;
-            event.xclient.data.l[0] = 1;
-            event.xclient.data.l[1] = wm_state_above;
-            event.xclient.data.l[2] = 0;
-            event.xclient.data.l[3] = 0;
-            event.xclient.data.l[4] = 0;
+            event.xclient.format       = 32;
+            event.xclient.data.l[0]    = 1;
+            event.xclient.data.l[1]    = wm_state_above;
+            event.xclient.data.l[2]    = 0;
+            event.xclient.data.l[3]    = 0;
+            event.xclient.data.l[4]    = 0;
 
-            XSendEvent(disp, DefaultRootWindow(disp), False,
-                       SubstructureRedirectMask | SubstructureNotifyMask, &event);
+            XSendEvent(disp, DefaultRootWindow(disp), False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
         }
     }
 

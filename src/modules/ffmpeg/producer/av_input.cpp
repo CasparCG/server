@@ -11,8 +11,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-extern "C"
-{
+extern "C" {
 #include <libavformat/avformat.h>
 }
 #ifdef _MSC_VER
@@ -76,7 +75,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
 Input::~Input()
 {
-    graph_ = spl::shared_ptr<diagnostics::graph>();
+    graph_         = spl::shared_ptr<diagnostics::graph>();
     abort_request_ = true;
     cond_.notify_all();
     thread_.join();
@@ -106,15 +105,15 @@ AVFormatContext* const Input::operator->() const { return ic_.get(); }
 void Input::reset()
 {
     AVDictionary* options = nullptr;
-    CASPAR_SCOPE_EXIT{ av_dict_free(&options); };
+    CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
     if (filename_.find("http://") == 0 || filename_.find("https://") == 0) {
-        FF(av_dict_set(&options, "http_persistent", "0", 0));  // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
-        FF(av_dict_set(&options, "http_multiple", "0", 0));    // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
-        FF(av_dict_set(&options, "reconnect", "1", 0));        // HTTP reconnect
+        FF(av_dict_set(&options, "http_persistent", "0", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+        FF(av_dict_set(&options, "http_multiple", "0", 0));   // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+        FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
     }
-                                                           // TODO (fix) timeout?
+    // TODO (fix) timeout?
     FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
 
     AVFormatContext* ic = nullptr;
@@ -122,11 +121,12 @@ void Input::reset()
     ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
-        CASPAR_LOG(warning) << "av_input[" + filename_ + "]" << " Unused option " << p.first << "=" << p.second;
+        CASPAR_LOG(warning) << "av_input[" + filename_ + "]"
+                            << " Unused option " << p.first << "=" << p.second;
     }
 
     ic_->interrupt_callback.callback = Input::interrupt_cb;
-    ic_->interrupt_callback.opaque = this;
+    ic_->interrupt_callback.opaque   = this;
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
 }

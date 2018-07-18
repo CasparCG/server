@@ -284,7 +284,7 @@ class flash_renderer
             return head_;
         }
 
-        if (is_empty())  {
+        if (is_empty()) {
             return core::draw_frame::empty();
         }
 

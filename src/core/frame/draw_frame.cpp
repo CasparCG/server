@@ -167,10 +167,7 @@ draw_frame draw_frame::still(draw_frame frame)
     return frame;
 }
 
-draw_frame draw_frame::empty()
-{
-    return draw_frame(std::vector<draw_frame>{});
-}
+draw_frame draw_frame::empty() { return draw_frame(std::vector<draw_frame>{}); }
 
 draw_frame::operator bool() const { return impl_ && impl_->frame_.which() != 0; }
 

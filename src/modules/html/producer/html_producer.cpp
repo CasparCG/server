@@ -111,7 +111,7 @@ class html_client
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        loaded_  = false;
+        loaded_ = false;
         executor_.begin_invoke([&] { update(); });
     }
 
@@ -430,8 +430,8 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
     const auto param_url      = html_prefix ? params.at(1) : params.at(0);
     const auto filename       = env::template_folder() + param_url + L".html";
     const auto found_filename = find_case_insensitive(filename);
-    const auto http_prefix    = boost::algorithm::istarts_with(param_url, L"http:") ||
-                             boost::algorithm::istarts_with(param_url, L"https:");
+    const auto http_prefix =
+        boost::algorithm::istarts_with(param_url, L"http:") || boost::algorithm::istarts_with(param_url, L"https:");
 
     if (!found_filename && !http_prefix && !html_prefix)
         return core::frame_producer::empty();

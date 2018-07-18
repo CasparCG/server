@@ -42,27 +42,20 @@ struct layer::impl
 
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
-  
+
     boost::optional<int32_t> auto_play_delta_;
-    bool paused_ = false;
+    bool                     paused_ = false;
 
   public:
+    void pause() { paused_ = true; }
 
-    void pause()
-    {
-        paused_ = true;
-    }
-
-    void resume()
-    {
-        paused_ = false;
-    }
+    void resume() { paused_ = false; }
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
     {
-        background_ = std::move(producer);
+        background_      = std::move(producer);
         auto_play_delta_ = auto_play_delta;
-        paused_ = true;
+        paused_          = true;
 
         if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
             play();

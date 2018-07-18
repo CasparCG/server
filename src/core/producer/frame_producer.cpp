@@ -73,10 +73,10 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 {
     class empty_frame_producer : public frame_producer
     {
-    public:
+      public:
         empty_frame_producer() {}
 
-        draw_frame receive_impl(int nb_samples) override { return draw_frame{}; }
+        draw_frame                receive_impl(int nb_samples) override { return draw_frame{}; }
         uint32_t                  nb_frames() const override { return 0; }
         std::wstring              print() const override { return L"empty"; }
         std::wstring              name() const override { return L"empty"; }

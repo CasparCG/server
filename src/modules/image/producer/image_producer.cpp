@@ -103,10 +103,7 @@ struct image_producer : public core::frame_producer
 
     // frame_producer
 
-    core::draw_frame last_frame() override
-    {
-        return frame_;
-    }
+    core::draw_frame last_frame() override { return frame_; }
 
     core::draw_frame receive_impl(int nb_samples) override
     {

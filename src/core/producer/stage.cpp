@@ -69,7 +69,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
-                for (auto& t: tweens_)
+                for (auto& t : tweens_)
                     t.second.tick(1);
 
                 // TODO (perf) parallel_for
@@ -110,7 +110,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 auto  src   = tween.fetch();
                 auto  dst   = std::get<1>(transform)(tween.dest());
                 tweens_[std::get<0>(transform)] =
-                        tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
+                    tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
             }
         });
     }
@@ -197,7 +197,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             if (swap_transforms)
                 std::swap(tweens_, other_impl->tweens_);
         };
-        
+
         return invoke_both(other, func);
     }
 
@@ -234,12 +234,12 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             return invoke_both(other, func);
         }
     }
-    
+
     std::future<void> invoke_both(stage& other, std::function<void()> func)
     {
         auto other_impl = other.impl_;
 
-        if (other_impl->channel_index_ < channel_index_){
+        if (other_impl->channel_index_ < channel_index_) {
             return other_impl->executor_.begin_invoke([=] { executor_.invoke(func); });
         }
 
