@@ -80,7 +80,9 @@ struct mixer::impl : boost::noncopyable
         auto image = (*image_mixer_)(format_desc);
         auto audio = audio_mixer_(format_desc, nb_samples);
 
-        state_.insert_or_assign("audio", audio_mixer_.state());
+        monitor::state state;
+        state.insert_or_assign("audio", audio_mixer_.state());
+        state_ = std::move(state);
 
         buffer_.push(std::async(
             std::launch::deferred,

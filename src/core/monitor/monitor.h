@@ -40,26 +40,22 @@ class state_proxy
 {
     std::string key_;
     data_map_t& data_;
-    std::mutex& mutex_;
 
   public:
-    state_proxy(const std::string& key, data_map_t& data, std::mutex& mutex)
+    state_proxy(const std::string& key, data_map_t& data)
         : key_(key)
         , data_(data)
-        , mutex_(mutex)
     {
     }
 
     state_proxy& operator=(data_t data)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = { std::move(data) };
         return *this;
     }
 
     state_proxy& operator=(vector_t data)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
         data_[key_] = std::move(data);
         return *this;
     }
@@ -67,17 +63,13 @@ class state_proxy
     template <typename T>
     state_proxy& operator=(const std::vector<T>& data)
     {
-        auto                        data2 = vector_t(data.begin(), data.end());
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = std::move(data2);
+        data_[key_] = vector_t(data.begin(), data.end());
         return *this;
     }
 
     state_proxy& operator=(std::initializer_list<data_t> data)
     {
-        auto                        data2 = vector_t(std::move(data));
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = std::move(data2);
+        data_[key_] = vector_t(std::move(data));
         return *this;
     }
 };
@@ -87,63 +79,50 @@ class state
     mutable std::mutex mutex_;
     data_map_t         data_;
 
-    state(const state& other, const std::lock_guard<std::mutex>&)
-        : data_(other.data_)
-    {
-
-    }
-
   public:
     state() = default;
-    state(data_map_t&& data)
+    state(const state& other)
+        : data_(other.get())
+    {
+    }
+    state(data_map_t data)
         : data_(std::move(data))
     {
     }
-    state(const state& other)
-        : state(other, std::lock_guard<std::mutex>(other.mutex_))
-    {
-    }
-
-    state_proxy operator[](const std::string& key) { return state_proxy(key, data_, mutex_); }
-
-    void clear()
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_.clear();
-    }
-
     state& operator=(const state& other)
     {
-        auto                        data = other.get();
+        auto data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         data_ = std::move(data);
         return *this;
     }
 
+    state_proxy operator[](const std::string& key) { return state_proxy(key, data_); }
+
     data_map_t get() const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return data_;
+        data_map_t data;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            data = data_;
+        }
+        return data;
     }
 
     void insert_or_assign(const std::string& name, const state& other)
     {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& p : data) {
+        for (auto& p : other.data_) {
             data_[name + "/" + p.first] = std::move(p.second);
         }
     }
 
     void insert_or_assign(const state& other)
     {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
         if (data_.empty()) {
-            data_ = std::move(data);
+            data_ = other.data_;
         } else {
-            for (auto& p : data) {
-                data_[p.first] = std::move(p.second);
+            for (auto& p : other.data_) {
+                data_[p.first] = p.second;
             }
         }
     }

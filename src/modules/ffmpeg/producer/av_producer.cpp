@@ -476,12 +476,14 @@ struct AVProducer::Impl
             try {
                 input_.reset();
 
+                core::monitor::state state = state_;
                 for (auto n = 0UL; n < input_->nb_streams; ++n) {
                     auto st        = input_->streams[n];
                     auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
-                    state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = {framerate.num,
+                    state["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = {framerate.num,
                                                                                               framerate.den};
                 }
+                state_ = state;
 
                 if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
                     duration_ = input_->duration;
@@ -634,7 +636,9 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+            core::monitor::state state = state_;
+            state["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+            state_ = std::move(state);
         };
 
         std::lock_guard<boost::mutex> lock(mutex_);
@@ -654,7 +658,9 @@ struct AVProducer::Impl
         CASPAR_SCOPE_EXIT
         {
             graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+            core::monitor::state state = state_;
+            state["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+            state_ = std::move(state);
         };
 
         std::lock_guard<boost::mutex> lock(mutex_);

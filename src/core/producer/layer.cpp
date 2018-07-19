@@ -106,8 +106,9 @@ struct layer::impl
                 frame = foreground_->last_frame();
             }
 
-            state_.clear();
-            state_.insert_or_assign(foreground_->state());
+            monitor::state state;
+            state.insert_or_assign(foreground_->state());
+            state_ = std::move(state);
 
             return frame;
         } catch (...) {

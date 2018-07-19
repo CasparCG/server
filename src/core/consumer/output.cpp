@@ -141,10 +141,11 @@ struct output::impl
             }
         }
 
-        state_.clear();
+        monitor::state state;
         for (auto& p : consumers_) {
-            state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
+            state.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
         }
+        state_ = std::move(state);
 
         const auto needs_sync = std::all_of(
             consumers_.begin(), consumers_.end(), [](auto& p) { return !p.second->has_synchronization_clock(); });

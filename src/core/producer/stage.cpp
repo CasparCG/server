@@ -79,10 +79,11 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
                 }
 
-                state_.clear();
+                monitor::state state;
                 for (auto& p : layers_) {
-                    state_.insert_or_assign("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    state.insert_or_assign("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
                 }
+                state_ = std::move(state);
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
