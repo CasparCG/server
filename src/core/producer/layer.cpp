@@ -55,13 +55,13 @@ struct layer::impl
     {
         background_      = std::move(producer);
         auto_play_delta_ = auto_play_delta;
-        paused_          = true;
 
         if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
             play();
         } else if (preview) {
             foreground_ = std::move(background_);
             background_ = frame_producer::empty();
+            paused_     = true;
         }
     }
 
