@@ -159,9 +159,7 @@ struct Filter
                 filter_spec = "anull";
             }
 
-            // NOTE: Put asetnsamples to resolve weird bug with aresample + async on some files.
-            // https://github.com/CasparCG/server/issues/1010
-            filter_spec += (boost::format(",asetnsamples=n=1024:p=0,aresample=async=2000:first_pts=%d,asetrate=r=%d,"
+            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01,asetrate=r=%d,"
                                           "asetnsamples=n=1024:p=0") %
                             av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) %
                             format_desc.audio_sample_rate)
