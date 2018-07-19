@@ -43,8 +43,9 @@ struct layer::impl
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
 
-    bool auto_play_ = false;
-    bool paused_    = false;
+    bool auto_play_            = false;
+    bool paused_               = false;
+    bool background_previewed_ = false;
 
   public:
     void pause() { paused_ = true; }
@@ -53,8 +54,9 @@ struct layer::impl
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play)
     {
-        background_ = std::move(producer);
-        auto_play_  = auto_play;
+        background_           = std::move(producer);
+        auto_play_            = auto_play;
+        background_previewed_ = false;
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
@@ -128,6 +130,25 @@ struct layer::impl
             return draw_frame{};
         }
     }
+
+    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples)
+    {
+        try {
+            if (background_ == frame_producer::empty())
+                return core::draw_frame{};
+
+            if (background_previewed_)
+                return background_->last_frame();
+
+            background_previewed_ = true;
+            return background_->receive(nb_samples);
+
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            background_ = frame_producer::empty();
+            return draw_frame{};
+        }
+    }
 };
 
 layer::layer()
@@ -156,7 +177,12 @@ draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
 {
     return impl_->receive(format_desc, nb_samples);
 }
+draw_frame layer::receive_background(const video_format_desc& format_desc, int nb_samples)
+{
+    return impl_->receive_background(format_desc, nb_samples);
+}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
+bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }
 core::monitor::state            layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

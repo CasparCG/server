@@ -53,11 +53,13 @@ class layer final
     void stop();
 
     draw_frame receive(const video_format_desc& format_desc, int nb_samples);
+    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples);
 
     core::monitor::state state() const;
 
     spl::shared_ptr<frame_producer> foreground() const;
     spl::shared_ptr<frame_producer> background() const;
+    bool                            has_background() const;
 
   private:
     struct impl;
