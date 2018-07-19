@@ -38,11 +38,13 @@ CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 extern "C" {
-    // Force discrete nVidia GPU (http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf)
-    _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001; 
-    // Force discrete AMD GPU (https://community.amd.com/thread/169965 / https://gpuopen.com/amdpowerxpressrequesthighperformance/)
-    _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
-    }
+// Force discrete nVidia GPU
+// (http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf)
+_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+// Force discrete AMD GPU (https://community.amd.com/thread/169965 /
+// https://gpuopen.com/amdpowerxpressrequesthighperformance/)
+_declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
+}
 
 namespace caspar {
 

@@ -57,7 +57,7 @@ class transition_producer : public frame_producer
     }
 
     // frame_producer
- 
+
     core::draw_frame last_frame()
     {
         auto src = src_producer_->last_frame();

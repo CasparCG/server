@@ -82,10 +82,9 @@ struct configuration
     bool      key_only          = false;
     int       base_buffer_depth = 3;
 
-    int buffer_depth() const 
-    { 
-        return base_buffer_depth + 
-               (latency == latency_t::low_latency ? 0 : 1) + 
+    int buffer_depth() const
+    {
+        return base_buffer_depth + (latency == latency_t::low_latency ? 0 : 1) +
                (embedded_audio ? 1 : 0); // TODO: Do we need this?
     }
 

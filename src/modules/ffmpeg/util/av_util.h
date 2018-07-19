@@ -44,8 +44,7 @@ int codec_execute2(AVCodecContext* c,
                    int*  ret,
                    int   coun);
 
-
-AVDictionary* to_dict(std::map<std::string, std::string>&& map);
+AVDictionary*                      to_dict(std::map<std::string, std::string>&& map);
 std::map<std::string, std::string> to_map(AVDictionary** dict);
 
 }} // namespace caspar::ffmpeg

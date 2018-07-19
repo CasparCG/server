@@ -28,7 +28,7 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     boost::system::error_code error;
     asio::connect(socket, endpoint_iterator, error);
     if (error == asio::error::connection_refused) {
-        res.status_code = 503;
+        res.status_code    = 503;
         res.status_message = "Connection refused";
         return res;
     } else if (error) {

@@ -225,9 +225,6 @@ bool set_log_level(const std::wstring& lvl)
     return true;
 }
 
-std::wstring& get_log_level()
-{
-    return current_log_level;
-}
+std::wstring& get_log_level() { return current_log_level; }
 
 }} // namespace caspar::log

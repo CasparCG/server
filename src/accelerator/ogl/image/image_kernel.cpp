@@ -114,8 +114,8 @@ struct image_kernel::impl
 {
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
-    GLuint vao_;
-    GLuint vbo_;
+    GLuint                  vao_;
+    GLuint                  vbo_;
 
     impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -325,9 +325,9 @@ struct image_kernel::impl
 
             GL(glEnable(GL_SCISSOR_TEST));
             GL(glScissor(static_cast<int>(m_p[0] * w),
-                      static_cast<int>(m_p[1] * h),
-                      std::max(0, static_cast<int>(m_s[0] * w)),
-                      std::max(0, static_cast<int>(m_s[1] * h))));
+                         static_cast<int>(m_p[1] * h),
+                         std::max(0, static_cast<int>(m_s[0] * w)),
+                         std::max(0, static_cast<int>(m_s[1] * h))));
         }
 
         // Set render target
@@ -382,9 +382,13 @@ struct image_kernel::impl
                 GL(glBindVertexArray(vao_));
                 GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
 
-                std::vector<core::frame_geometry::coord> coords_triangles { coords[0], coords[1], coords[2], coords[0], coords[2], coords[3] };
+                std::vector<core::frame_geometry::coord> coords_triangles{
+                    coords[0], coords[1], coords[2], coords[0], coords[2], coords[3]};
 
-                GL(glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(), coords_triangles.data(), GL_STATIC_DRAW));
+                GL(glBufferData(GL_ARRAY_BUFFER,
+                                static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
+                                coords_triangles.data(),
+                                GL_STATIC_DRAW));
 
                 auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
 

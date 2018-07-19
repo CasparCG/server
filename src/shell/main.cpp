@@ -228,7 +228,9 @@ int main(int argc, char** argv)
 
         // Start logging to file.
         log::add_file_sink(env::log_folder() + L"caspar");
-        std::wcout << L"Logging [" <<  log::get_log_level() << L"] or higher severity to " << env::log_folder() << std::endl << std::endl;
+        std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
+                   << std::endl
+                   << std::endl;
 
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();

@@ -44,7 +44,6 @@ class Input
     void seek(int64_t ts, bool flush = true);
 
   private:
-
     std::string                         filename_;
     std::shared_ptr<diagnostics::graph> graph_;
 

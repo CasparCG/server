@@ -36,7 +36,7 @@ void SMFL_GLCheckError(const std::string&, const char* func, const char* file, u
     GLenum LastErrorCode = GL_NO_ERROR;
 
     for (GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError()) {
-        std::string str(reinterpret_cast< const char* >(glewGetErrorString(ErrorCode)));
+        std::string str(reinterpret_cast<const char*>(glewGetErrorString(ErrorCode)));
         CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << str;
         LastErrorCode = ErrorCode;
     }

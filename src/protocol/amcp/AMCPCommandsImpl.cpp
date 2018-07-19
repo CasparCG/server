@@ -67,8 +67,8 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/regex.hpp>
@@ -416,8 +416,7 @@ std::wstring log_level_command(command_context& ctx)
 {
     if (ctx.parameters.size() == 0) {
         std::wstringstream replyString;
-        replyString << L"201 LOG OK\r\n"
-                    << boost::to_upper_copy(log::get_log_level()) << L"\r\n";
+        replyString << L"201 LOG OK\r\n" << boost::to_upper_copy(log::get_log_level()) << L"\r\n";
 
         return replyString.str();
     }
@@ -1271,7 +1270,8 @@ std::wstring thumbnail_list_command(command_context& ctx)
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-    return make_request(ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
+    return make_request(
+        ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
 }
 
 std::wstring thumbnail_generate_command(command_context& ctx)
@@ -1292,27 +1292,18 @@ std::wstring cinf_command(command_context& ctx)
     return make_request(ctx, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
 }
 
-std::wstring cls_command(command_context& ctx)
-{
-    return make_request(ctx, "/cls", L"501 CLS FAILED\r\n");
-}
+std::wstring cls_command(command_context& ctx) { return make_request(ctx, "/cls", L"501 CLS FAILED\r\n"); }
 
-std::wstring fls_command(command_context& ctx)
-{
-    return make_request(ctx, "/fls", L"501 FLS FAILED\r\n");
-}
+std::wstring fls_command(command_context& ctx) { return make_request(ctx, "/fls", L"501 FLS FAILED\r\n"); }
 
-std::wstring tls_command(command_context& ctx)
-{
-    return make_request(ctx, "/tls", L"501 TLS FAILED\r\n");
-}
+std::wstring tls_command(command_context& ctx) { return make_request(ctx, "/tls", L"501 TLS FAILED\r\n"); }
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
 
 struct param_visitor : public boost::static_visitor<void>
 {
     std::wstring path;
-    pt::wptree& o;
+    pt::wptree&  o;
 
     template <typename T>
     param_visitor(std::string path, T& o)
@@ -1321,50 +1312,23 @@ struct param_visitor : public boost::static_visitor<void>
     {
     }
 
-    void operator()(const bool value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const bool value) { o.add(path, value); }
 
-    void operator()(const int32_t value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const int32_t value) { o.add(path, value); }
 
-    void operator()(const uint32_t value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const uint32_t value) { o.add(path, value); }
 
-    void operator()(const int64_t value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const int64_t value) { o.add(path, value); }
 
-    void operator()(const uint64_t value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const uint64_t value) { o.add(path, value); }
 
-    void operator()(const float value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const float value) { o.add(path, value); }
 
-    void operator()(const double value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const double value) { o.add(path, value); }
 
-    void operator()(const std::string& value)
-    {
-        o.add(path, u16(value));
-    }
+    void operator()(const std::string& value) { o.add(path, u16(value)); }
 
-    void operator()(const std::wstring& value)
-    {
-        o.add(path, value);
-    }
+    void operator()(const std::wstring& value) { o.add(path, value); }
 };
 
 std::wstring info_channel_command(command_context& ctx)
@@ -1375,12 +1339,12 @@ std::wstring info_channel_command(command_context& ctx)
 
     pt::wptree info;
     pt::wptree channel_info;
-    
+
     auto state = ctx.channel.channel->state();
 
     auto bundle = state.get();
     for (const auto& p : bundle) {
-        const auto path = boost::algorithm::replace_all_copy(p.first, "/", ".");
+        const auto    path = boost::algorithm::replace_all_copy(p.first, "/", ".");
         param_visitor param_visitor(path, channel_info);
         for (const auto& element : p.second) {
             boost::apply_visitor(param_visitor, element);

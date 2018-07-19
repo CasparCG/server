@@ -138,13 +138,13 @@ shader::shader(const std::string& vertex_source_str, const std::string& fragment
 {
 }
 shader::~shader() {}
-void shader::set(const std::string& name, bool value) { impl_->set(name, value); }
-void shader::set(const std::string& name, int value) { impl_->set(name, value); }
-void shader::set(const std::string& name, float value) { impl_->set(name, value); }
-void shader::set(const std::string& name, double value0, double value1) { impl_->set(name, value0, value1); }
-void shader::set(const std::string& name, double value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, bool value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, int value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, float value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, double value0, double value1) { impl_->set(name, value0, value1); }
+void  shader::set(const std::string& name, double value) { impl_->set(name, value); }
 GLint shader::get_attrib_location(const char* name) { return impl_->get_attrib_location(name); }
-int  shader::id() const { return impl_->program_; }
-void shader::use() const { impl_->use(); }
+int   shader::id() const { return impl_->program_; }
+void  shader::use() const { impl_->use(); }
 
 }}} // namespace caspar::accelerator::ogl

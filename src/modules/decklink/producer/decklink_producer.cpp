@@ -57,8 +57,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-extern "C"
-{
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
@@ -97,7 +96,10 @@ struct Filter
     AVFilterContext*               video_source = nullptr;
     AVFilterContext*               audio_source = nullptr;
 
-    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc, com_ptr<IDeckLinkDisplayMode> dm)
+    Filter(std::string                    filter_spec,
+           AVMediaType                    type,
+           const core::video_format_desc& format_desc,
+           com_ptr<IDeckLinkDisplayMode>  dm)
     {
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -112,10 +114,11 @@ struct Filter
                     colorspace = "bt709";
                 }
                 // TODO (fix) bmd doesn't have 2020 in flags?
-                //else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
+                // else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
                 //}
                 if (!colorspace.empty()) {
-                    filter_spec = (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
+                    filter_spec =
+                        (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
                 }
             }
 
@@ -295,7 +298,7 @@ class decklink_producer : public IDeckLinkInputCallback
     std::vector<int>                     audio_cadence_ = format_desc_.audio_cadence;
     spl::shared_ptr<core::frame_factory> frame_factory_;
 
-    double in_sync_ = 0.0;
+    double in_sync_  = 0.0;
     double out_sync_ = 0.0;
 
     bool freeze_on_lost_;
@@ -419,11 +422,9 @@ class decklink_producer : public IDeckLinkInputCallback
             BMDTimeValue in_audio_pts = 0LL;
 
             if (video) {
-
                 const auto flags = video->GetFlags();
-                has_signal_ = !(flags & bmdFrameHasNoInputSource);
-                if (freeze_on_lost_ && !has_signal_)
-                {
+                has_signal_      = !(flags & bmdFrameHasNoInputSource);
+                if (freeze_on_lost_ && !has_signal_) {
                     return S_OK;
                 }
 
@@ -458,10 +459,10 @@ class decklink_producer : public IDeckLinkInputCallback
             }
 
             if (audio) {
-                auto src             = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-                src->format          = AV_SAMPLE_FMT_S32;
-                src->channels        = format_desc_.audio_channels;
-                src->sample_rate     = format_desc_.audio_sample_rate;
+                auto src      = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+                src->format   = AV_SAMPLE_FMT_S32;
+                src->channels = format_desc_.audio_channels;
+                src->sample_rate = format_desc_.audio_sample_rate;
 
                 void* audio_bytes = nullptr;
                 if (SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
@@ -516,8 +517,10 @@ class decklink_producer : public IDeckLinkInputCallback
 
                 CASPAR_LOG(debug) << av_video->pts << " " << av_audio->pts;
 
-                auto in_sync  = static_cast<double>(in_video_pts) / AV_TIME_BASE - static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
-                auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den - static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
+                auto in_sync = static_cast<double>(in_video_pts) / AV_TIME_BASE -
+                               static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
+                auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den -
+                                static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
 
                 if (std::abs(in_sync - in_sync_) > 0.01) {
                     CASPAR_LOG(warning) << print() << " in-sync changed: " << in_sync;
@@ -525,7 +528,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 in_sync_ = in_sync;
 
                 if (std::abs(out_sync - out_sync_) > 0.01) {
-                  CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
+                    CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
                 }
                 out_sync_ = out_sync;
 
@@ -603,7 +606,8 @@ class decklink_producer_proxy : public core::frame_producer
         executor_.invoke([=] {
             core::diagnostics::call_context::for_thread() = ctx;
             com_initialize();
-            producer_.reset(new decklink_producer(format_desc, device_index, frame_factory, vfilter, afilter, freeze_on_lost));
+            producer_.reset(
+                new decklink_producer(format_desc, device_index, frame_factory, vfilter, afilter, freeze_on_lost));
         });
     }
 
@@ -652,8 +656,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
-    auto producer = spl::make_shared<decklink_producer_proxy>(
-        dependencies.format_desc, dependencies.frame_factory, device_index, u8(vfilter), u8(afilter), length, freeze_on_lost);
+    auto producer = spl::make_shared<decklink_producer_proxy>(dependencies.format_desc,
+                                                              dependencies.frame_factory,
+                                                              device_index,
+                                                              u8(vfilter),
+                                                              u8(afilter),
+                                                              length,
+                                                              freeze_on_lost);
     return core::create_destroy_proxy(producer);
 }
 }} // namespace caspar::decklink

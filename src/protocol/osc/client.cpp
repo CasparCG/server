@@ -36,10 +36,10 @@
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
 
-#include <mutex>
 #include <condition_variable>
-#include <vector>
+#include <mutex>
 #include <thread>
+#include <vector>
 
 using namespace boost::asio::ip;
 
@@ -73,11 +73,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
 
-    std::mutex                mutex_;
-    std::condition_variable   cond_;
+    std::mutex                                 mutex_;
+    std::condition_variable                    cond_;
     boost::optional<core::monitor::data_map_t> bundle_opt_;
-    std::atomic<bool>         abort_request_{ false };
-    std::thread               thread_;
+    std::atomic<bool>                          abort_request_{false};
+    std::thread                                thread_;
 
   public:
     impl(std::shared_ptr<boost::asio::io_service> service)
@@ -89,12 +89,12 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
-                    core::monitor::data_map_t bundle;
+                    core::monitor::data_map_t  bundle;
                     std::vector<udp::endpoint> endpoints;
 
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return bundle_opt_ || abort_request_;  });
+                        cond_.wait(lock, [&] { return bundle_opt_ || abort_request_; });
 
                         if (abort_request_) {
                             return;

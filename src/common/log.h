@@ -62,9 +62,9 @@ typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_l
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, caspar_logger)
 #define CASPAR_LOG(lvl) BOOST_LOG_SEV(::caspar::log::logger::get(), boost::log::trivial::severity_level::lvl)
 
-void add_file_sink(const std::wstring& file);
-void add_cout_sink();
-bool set_log_level(const std::wstring& lvl);
+void          add_file_sink(const std::wstring& file);
+void          add_cout_sink();
+bool          set_log_level(const std::wstring& lvl);
 std::wstring& get_log_level();
 
 inline std::wstring get_stack_trace()
@@ -78,7 +78,9 @@ inline std::wstring get_stack_trace()
 
 #define CASPAR_LOG_CURRENT_EXCEPTION()                                                                                 \
     try {                                                                                                              \
-        CASPAR_LOG(error) << L"Exception: " << caspar::u16(::caspar::log::current_exception_diagnostic_information()) << L"\r\n" << caspar::log::get_stack_trace();                   \
+        CASPAR_LOG(error) << L"Exception: " << caspar::u16(::caspar::log::current_exception_diagnostic_information())  \
+                          << L"\r\n"                                                                                   \
+                          << caspar::log::get_stack_trace();                                                           \
     } catch (...) {                                                                                                    \
     }
 
