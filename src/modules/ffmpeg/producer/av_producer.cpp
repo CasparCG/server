@@ -525,10 +525,10 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
-    int64_t          frame_count_ = 0;
-    bool             frame_flush_ = true;
-    bool             frame_eof_ = false;
-    int64_t          frame_time_ = AV_NOPTS_VALUE;
+    int64_t          frame_count_    = 0;
+    bool             frame_flush_    = true;
+    bool             frame_eof_      = false;
+    int64_t          frame_time_     = AV_NOPTS_VALUE;
     int64_t          frame_duration_ = AV_NOPTS_VALUE;
     core::draw_frame frame_;
 
@@ -745,9 +745,9 @@ struct AVProducer::Impl
     {
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
-        state_["file/clip"] = { start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
-        state_["file/time"] = { time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps };
-        state_["loop"] = loop_;
+        state_["file/clip"] = {start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+        state_["file/time"] = {time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps};
+        state_["loop"]      = loop_;
     }
 
     core::draw_frame prev_frame()
@@ -758,11 +758,11 @@ struct AVProducer::Impl
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
             if (!buffer_.empty()) {
-                frame_ = buffer_[0].frame;
-                frame_time_ = buffer_[0].pts;
+                frame_          = buffer_[0].frame;
+                frame_time_     = buffer_[0].pts;
                 frame_duration_ = buffer_[0].duration;
-                frame_flush_ = false;
-                frame_eof_ = false;
+                frame_flush_    = false;
+                frame_eof_      = false;
             }
         }
 
@@ -790,11 +790,11 @@ struct AVProducer::Impl
             latency_ = -1;
         }
 
-        frame_ = buffer_[0].frame;
-        frame_time_ = buffer_[0].pts;
+        frame_          = buffer_[0].frame;
+        frame_time_     = buffer_[0].pts;
         frame_duration_ = buffer_[0].duration;
-        frame_flush_ = false;
-        frame_eof_ = false;
+        frame_flush_    = false;
+        frame_eof_      = false;
 
         buffer_.pop_front();
         buffer_cond_.notify_all();

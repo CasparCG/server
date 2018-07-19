@@ -35,6 +35,21 @@
 
 namespace caspar { namespace core {
 
+enum route_mode
+{
+    foreground,
+    background,
+    next, // background if any, otherwise foreground
+};
+
+struct route_id
+{
+    int        index;
+    route_mode mode;
+
+    bool const operator==(const route_id& o) { return index == o.index && mode == o.mode; }
+};
+
 struct route
 {
     route()             = default;
@@ -77,7 +92,7 @@ class video_channel final
 
     int index() const;
 
-    std::shared_ptr<core::route> route(int index = -1);
+    std::shared_ptr<core::route> route(int index = -1, route_mode mode = route_mode::foreground);
 
   private:
     struct impl;

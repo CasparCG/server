@@ -63,19 +63,28 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
     }
 
-    std::map<int, draw_frame> operator()(const video_format_desc& format_desc, int nb_samples)
+    std::map<int, layer_frame>
+    operator()(const video_format_desc& format_desc, int nb_samples, std::vector<int>& fetch_background)
     {
         return executor_.invoke([=] {
-            std::map<int, draw_frame> frames;
+            std::map<int, layer_frame> frames;
 
             try {
                 for (auto& t : tweens_)
                     t.second.tick(1);
 
                 for (auto& p : layers_) {
-                    auto& layer     = p.second;
-                    auto& tween     = tweens_[p.first];
-                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
+                    auto& layer = p.second;
+                    auto& tween = tweens_[p.first];
+
+                    layer_frame res    = {};
+                    res.foreground     = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
+                    res.has_background = layer.has_background();
+                    if (std::find(fetch_background.begin(), fetch_background.end(), p.first) !=
+                        fetch_background.end()) {
+                        res.background = layer.receive_background(format_desc, nb_samples);
+                    }
+                    frames[p.first] = res;
                 }
 
                 monitor::state state;
@@ -307,9 +316,10 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc, int nb_samples)
+std::map<int, layer_frame>                   stage::
+                                             operator()(const video_format_desc& format_desc, int nb_samples, std::vector<int>& fetch_background)
 {
-    return (*impl_)(format_desc, nb_samples);
+    return (*impl_)(format_desc, nb_samples, fetch_background);
 }
 core::monitor::state stage::state() const { return impl_->state_; }
 }} // namespace caspar::core
