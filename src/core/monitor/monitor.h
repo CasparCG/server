@@ -53,7 +53,7 @@ class state_proxy
     state_proxy& operator=(data_t data)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = {std::move(data)};
+        data_[key_] = { std::move(data) };
         return *this;
     }
 
@@ -82,20 +82,25 @@ class state_proxy
     }
 };
 
-// TODO (perf) Optimize
 class state
 {
     mutable std::mutex mutex_;
     data_map_t         data_;
 
-  public:
-    state() = default;
-    state(const state& other)
+    state(const state& other, const std::lock_guard<std::mutex>&)
         : data_(other.data_)
     {
+
     }
-    state(state&& other)
-        : data_(std::move(other.data_))
+
+  public:
+    state() = default;
+    state(data_map_t&& data)
+        : data_(std::move(data))
+    {
+    }
+    state(const state& other)
+        : state(other, std::lock_guard<std::mutex>(other.mutex_))
     {
     }
 
@@ -112,22 +117,6 @@ class state
         auto                        data = other.get();
         std::lock_guard<std::mutex> lock(mutex_);
         data_ = std::move(data);
-        return *this;
-    }
-
-    state& operator=(state&& other)
-    {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_ = std::move(data);
-        return *this;
-    }
-
-    template <typename T>
-    state& operator=(T&& data)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_ = std::forward<T>(data);
         return *this;
     }
 
