@@ -113,8 +113,6 @@ void init_device()
 
 struct oal_consumer : public core::frame_consumer
 {
-    core::monitor::state state_;
-
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
     int                                 channel_index_ = -1;
@@ -315,8 +313,6 @@ struct oal_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 
     int index() const override { return 500; }
-
-    const core::monitor::state& state() const override { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

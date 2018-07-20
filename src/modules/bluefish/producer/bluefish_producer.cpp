@@ -148,6 +148,7 @@ struct bluefish_producer : boost::noncopyable
     spl::shared_ptr<bvc_wrapper> blue_;
 
     core::monitor::state                state_;
+    mutable std::mutex                  state_mutex_;
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
     caspar::timer                       processing_benchmark_timer_;
@@ -339,15 +340,18 @@ struct bluefish_producer : boost::noncopyable
 
         CASPAR_SCOPE_EXIT
         {
-            state_["file/name"]              = model_name_;
-            state_["file/path"]              = device_index_;
-            state_["file/video/width"]       = static_cast<long>(width);
-            state_["file/video/height"]      = static_cast<long>(height);
-            state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
-            state_["file/audio/channels"]    = format_desc_.audio_channels;
-            state_["file/fps"]               = static_cast<double>(fps);
-            state_["profiler/time"]          = {frame_timer.elapsed(), fps};
-            state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+            {
+                std::lock_guard<std::mutex> lock(state_mutex_);
+                state_["file/name"]              = model_name_;
+                state_["file/path"]              = device_index_;
+                state_["file/video/width"]       = static_cast<long>(width);
+                state_["file/video/height"]      = static_cast<long>(height);
+                state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
+                state_["file/audio/channels"]    = format_desc_.audio_channels;
+                state_["file/fps"]               = static_cast<double>(fps);
+                state_["profiler/time"]          = {frame_timer.elapsed(), fps};
+                state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+            }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * fps / format_desc_.field_count * 0.5);
             graph_->set_value("output-buffer",
@@ -519,7 +523,11 @@ struct bluefish_producer : boost::noncopyable
         return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
     }
 
-    const core::monitor::state& state() { return state_; }
+    core::monitor::state state() const
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
+    }
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 };
@@ -551,7 +559,7 @@ class bluefish_producer_proxy : public core::frame_producer
         executor_.invoke([=] { producer_.reset(); });
     }
 
-    const core::monitor::state& state() const { return producer_->state(); }
+    core::monitor::state state() const override { return producer_->state(); }
 
     // frame_producer
 

@@ -72,7 +72,7 @@ struct video_channel::impl final
 
     std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
 
-    std::function<void(const monitor::state&)> tick_;
+    std::function<void(core::monitor::state)> tick_;
 
     std::map<int, std::weak_ptr<core::route>> routes_;
     std::mutex                                routes_mutex_;
@@ -84,7 +84,7 @@ struct video_channel::impl final
     impl(int                                        index,
          const core::video_format_desc&             format_desc,
          std::unique_ptr<image_mixer>               image_mixer,
-         std::function<void(const monitor::state&)> tick)
+         std::function<void(core::monitor::state)> tick)
         : index_(index)
         , format_desc_(format_desc)
         , output_(graph_, format_desc, index)
@@ -155,11 +155,9 @@ struct video_channel::impl final
                         }
                     }
 
-                    monitor::state state;
-                    state.insert_or_assign("stage", stage_.state());
-                    state.insert_or_assign("mixer", mixer_.state());
-                    state.insert_or_assign("output", output_.state());
-                    state_ = std::move(state);
+                    state_["stage"] = stage_.state();
+                    state_["mixer"] = mixer_.state();
+                    state_["output"] = output_.state();
 
                     caspar::timer osc_timer;
                     tick_(state_);
@@ -221,7 +219,7 @@ struct video_channel::impl final
 video_channel::video_channel(int                                        index,
                              const core::video_format_desc&             format_desc,
                              std::unique_ptr<image_mixer>               image_mixer,
-                             std::function<void(const monitor::state&)> tick)
+                             std::function<void(core::monitor::state)> tick)
     : impl_(new impl(index, format_desc, std::move(image_mixer), tick))
 {
 }
@@ -239,7 +237,7 @@ void                           core::video_channel::video_format_desc(const core
     impl_->video_format_desc(format_desc);
 }
 int                   video_channel::index() const { return impl_->index(); }
-const monitor::state& video_channel::state() const { return impl_->state_; }
+core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index) { return impl_->route(index); }
 

@@ -176,7 +176,7 @@ class destroy_producer_proxy : public frame_producer
     uint32_t              frame_number() const override { return producer_->frame_number(); }
     uint32_t              nb_frames() const override { return producer_->nb_frames(); }
     draw_frame            last_frame() { return producer_->last_frame(); }
-    const monitor::state& state() const { return producer_->state(); }
+    core::monitor::state state() const { return producer_->state(); }
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)

@@ -32,6 +32,7 @@
 #include <tbb/parallel_invoke.h>
 
 #include <future>
+#include <mutex>
 
 namespace caspar { namespace core {
 
@@ -63,10 +64,8 @@ class separated_producer : public frame_producer
     {
         CASPAR_SCOPE_EXIT
         {
-            monitor::state state;
-            state.insert_or_assign(fill_producer_->state());
-            state.insert_or_assign("keyer", key_producer_->state());
-            state_ = std::move(state);
+            state_ = fill_producer_->state();
+            state_["keyer"] = key_producer_->state();
         };
 
         tbb::parallel_invoke(
@@ -110,7 +109,7 @@ class separated_producer : public frame_producer
 
     std::wstring name() const override { return L"separated"; }
 
-    const monitor::state& state() const { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill,

@@ -40,7 +40,6 @@ namespace caspar { namespace core {
 
 class route_producer : public frame_producer
 {
-    monitor::state                      state_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> buffer_;
@@ -101,8 +100,6 @@ class route_producer : public frame_producer
     std::wstring print() const override { return L"route[" + route_->name + L"]"; }
 
     std::wstring name() const override { return L"route"; }
-
-    const monitor::state& state() const { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_producer_dependencies& dependencies,

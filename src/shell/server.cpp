@@ -177,9 +177,9 @@ struct server::impl : boost::noncopyable
                 channel_id,
                 format_desc,
                 accelerator_.create_image_mixer(channel_id),
-                [channel_id, weak_client](const monitor::state& channel_state) {
+                [channel_id, weak_client](core::monitor::state channel_state) {
                     monitor::state state;
-                    state.insert_or_assign("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
+                    state[""]["channel"][channel_id] = channel_state;
                     auto client = weak_client.lock();
                     if (client) {
                         client->send(std::move(state));

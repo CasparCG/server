@@ -1341,9 +1341,7 @@ std::wstring info_channel_command(command_context& ctx)
     pt::wptree channel_info;
 
     auto state = ctx.channel.channel->state();
-
-    auto bundle = state.get();
-    for (const auto& p : bundle) {
+    for (const auto& p : state) {
         const auto    path = boost::algorithm::replace_all_copy(p.first, "/", ".");
         param_visitor param_visitor(path, channel_info);
         for (const auto& element : p.second) {

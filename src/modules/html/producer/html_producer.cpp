@@ -420,7 +420,7 @@ class html_producer : public core::frame_producer
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
 
-    const core::monitor::state& state() const { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,

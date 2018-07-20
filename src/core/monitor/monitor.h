@@ -23,7 +23,6 @@
 #include <boost/variant.hpp>
 
 #include <cstdint>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -36,53 +35,66 @@ typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::str
 typedef boost::container::small_vector<data_t, 2>                                                  vector_t;
 typedef boost::container::flat_map<std::string, vector_t>                                          data_map_t;
 
-class state_proxy
-{
-    std::string key_;
-    data_map_t& data_;
-
-  public:
-    state_proxy(const std::string& key, data_map_t& data)
-        : key_(key)
-        , data_(data)
-    {
-    }
-
-    state_proxy& operator=(data_t data)
-    {
-        data_[key_] = { std::move(data) };
-        return *this;
-    }
-
-    state_proxy& operator=(vector_t data)
-    {
-        data_[key_] = std::move(data);
-        return *this;
-    }
-
-    template <typename T>
-    state_proxy& operator=(const std::vector<T>& data)
-    {
-        data_[key_] = vector_t(data.begin(), data.end());
-        return *this;
-    }
-
-    state_proxy& operator=(std::initializer_list<data_t> data)
-    {
-        data_[key_] = vector_t(std::move(data));
-        return *this;
-    }
-};
-
 class state
 {
-    mutable std::mutex mutex_;
-    data_map_t         data_;
+    data_map_t data_;
+
+    class state_proxy
+    {
+        std::string key_;
+        data_map_t& data_;
+
+    public:
+        state_proxy(const std::string& key, data_map_t& data)
+            : key_(key)
+            , data_(data)
+        {
+        }
+
+        state_proxy& operator=(data_t data)
+        {
+            data_[key_] = { std::move(data) };
+            return *this;
+        }
+
+        state_proxy& operator=(vector_t data)
+        {
+            data_[key_] = std::move(data);
+            return *this;
+        }
+
+        template<typename T>
+        state_proxy operator[](const T& key)
+        {
+            return state_proxy(key_ + "/" + boost::lexical_cast<std::string>(key), data_);
+        }
+
+        template <typename T>
+        state_proxy& operator=(const std::vector<T>& data)
+        {
+            data_[key_] = vector_t(data.begin(), data.end());
+            return *this;
+        }
+
+        state_proxy& operator=(std::initializer_list<data_t> data)
+        {
+            data_[key_] = vector_t(std::move(data));
+            return *this;
+        }
+
+        state_proxy& operator=(const state& other)
+        {
+            for (auto& p : other) {
+                data_[key_ + "/" + p.first] = std::move(p.second);
+            }
+            return *this;
+        }
+    };
 
   public:
     state() = default;
     state(const state& other)
-        : data_(other.get())
+        : data_(other.data_)
     {
     }
     state(data_map_t data)
@@ -91,40 +103,24 @@ class state
     }
     state& operator=(const state& other)
     {
-        auto data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_ = std::move(data);
+        data_ = other.data_;
         return *this;
     }
 
-    state_proxy operator[](const std::string& key) { return state_proxy(key, data_); }
-
-    data_map_t get() const
+    template<typename T>
+    state_proxy operator[](const T& key)
     {
-        data_map_t data;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            data = data_;
-        }
-        return data;
+        return state_proxy(boost::lexical_cast<std::string>(key), data_);
     }
 
-    void insert_or_assign(const std::string& name, const state& other)
+    data_map_t::const_iterator begin() const
     {
-        for (auto& p : other.data_) {
-            data_[name + "/" + p.first] = std::move(p.second);
-        }
+        return data_.begin();
     }
 
-    void insert_or_assign(const state& other)
+    data_map_t::const_iterator end() const
     {
-        if (data_.empty()) {
-            data_ = other.data_;
-        } else {
-            for (auto& p : other.data_) {
-                data_[p.first] = p.second;
-            }
-        }
+        return data_.end();
     }
 };
 

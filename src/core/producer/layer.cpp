@@ -106,9 +106,7 @@ struct layer::impl
                 frame = foreground_->last_frame();
             }
 
-            monitor::state state;
-            state.insert_or_assign(foreground_->state());
-            state_ = std::move(state);
+            state_ = foreground_->state();
 
             return frame;
         } catch (...) {
@@ -149,5 +147,5 @@ draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
 }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-const monitor::state&           layer::state() const { return impl_->state_; }
+core::monitor::state           layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

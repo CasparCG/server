@@ -285,6 +285,7 @@ class decklink_producer : public IDeckLinkInputCallback
 {
     const int                           device_index_;
     core::monitor::state                state_;
+    mutable std::mutex                  state_mutex_;
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
@@ -395,18 +396,21 @@ class decklink_producer : public IDeckLinkInputCallback
 
         CASPAR_SCOPE_EXIT
         {
-            state_["file/name"]              = model_name_;
-            state_["file/path"]              = device_index_;
-            state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
-            state_["file/audio/channels"]    = format_desc_.audio_channels;
-            state_["file/fps"]               = format_desc_.fps;
-            state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
-            state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
-            state_["has_signal"]             = has_signal_;
+            {
+                std::lock_guard<std::mutex> lock(state_mutex_);
+                state_["file/name"]              = model_name_;
+                state_["file/path"]              = device_index_;
+                state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
+                state_["file/audio/channels"]    = format_desc_.audio_channels;
+                state_["file/fps"]               = format_desc_.fps;
+                state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
+                state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+                state_["has_signal"]             = has_signal_;
 
-            if (video) {
-                state_["file/video/width"]  = video->GetWidth();
-                state_["file/video/height"] = video->GetHeight();
+                if (video) {
+                    state_["file/video/width"]  = video->GetWidth();
+                    state_["file/video/height"] = video->GetHeight();
+                }
             }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
@@ -582,7 +586,11 @@ class decklink_producer : public IDeckLinkInputCallback
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 
-    const core::monitor::state& state() { return state_; }
+    core::monitor::state state() const
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
+    }
 };
 
 class decklink_producer_proxy : public core::frame_producer
@@ -619,7 +627,7 @@ class decklink_producer_proxy : public core::frame_producer
         });
     }
 
-    const core::monitor::state& state() const { return producer_->state(); }
+    core::monitor::state state() const override { return producer_->state(); }
 
     // frame_producer
 

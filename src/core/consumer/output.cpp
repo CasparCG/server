@@ -143,7 +143,7 @@ struct output::impl
 
         monitor::state state;
         for (auto& p : consumers_) {
-            state.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
+            state["port"][p.first] = p.second->state();
         }
         state_ = std::move(state);
 
@@ -178,5 +178,5 @@ void output::operator()(const_frame frame, const video_format_desc& format_desc)
 {
     return (*impl_)(std::move(frame), format_desc);
 }
-const monitor::state& output::state() const { return impl_->state_; }
+core::monitor::state output::state() const { return impl_->state_; }
 }} // namespace caspar::core

@@ -117,7 +117,7 @@ struct image_producer : public core::frame_producer
 
     std::wstring name() const override { return L"image"; }
 
-    const core::monitor::state& state() const { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 class ieq

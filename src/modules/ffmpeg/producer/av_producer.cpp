@@ -403,6 +403,8 @@ struct Filter
 struct AVProducer::Impl
 {
     core::monitor::state                state_;
+    mutable boost::mutex                state_mutex_;
+
     spl::shared_ptr<diagnostics::graph> graph_;
 
     const std::shared_ptr<core::frame_factory> frame_factory_;
@@ -464,26 +466,24 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
-        state_["file/name"] = u8(name_);
-        state_["file/path"] = u8(path_);
-
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
-        graph_->set_text(u16(print()));
+
+        state_["file/name"] = u8(name_);
+        state_["file/path"] = u8(path_);
+        update_state();
 
         thread_ = boost::thread([=] {
             try {
                 input_.reset();
 
-                core::monitor::state state = state_;
                 for (auto n = 0UL; n < input_->nb_streams; ++n) {
-                    auto st        = input_->streams[n];
+                    auto st = input_->streams[n];
                     auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
-                    state["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = {framerate.num,
-                                                                                              framerate.den};
+                    state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num,
+                        framerate.den };
                 }
-                state_ = state;
 
                 if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
                     duration_ = input_->duration;
@@ -631,14 +631,18 @@ struct AVProducer::Impl
         thread_.join();
     }
 
+    void update_state()
+    {
+        graph_->set_text(u16(print()));
+        boost::lock_guard<boost::mutex> lock(state_mutex_);
+        state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+    }
+
     core::draw_frame prev_frame()
     {
         CASPAR_SCOPE_EXIT
         {
-            graph_->set_text(u16(print()));
-            core::monitor::state state = state_;
-            state["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-            state_ = std::move(state);
+            update_state();
         };
 
         std::lock_guard<boost::mutex> lock(mutex_);
@@ -657,10 +661,7 @@ struct AVProducer::Impl
     {
         CASPAR_SCOPE_EXIT
         {
-            graph_->set_text(u16(print()));
-            core::monitor::state state = state_;
-            state["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-            state_ = std::move(state);
+            update_state();
         };
 
         std::lock_guard<boost::mutex> lock(mutex_);
@@ -1054,6 +1055,9 @@ AVProducer& AVProducer::duration(int64_t duration)
 
 int64_t AVProducer::duration() const { return impl_->duration().value_or(std::numeric_limits<int64_t>::max()); }
 
-const core::monitor::state& AVProducer::state() const { return impl_->state_; }
+core::monitor::state AVProducer::state() const {
+    boost::lock_guard<boost::mutex> lock(impl_->state_mutex_);
+    return impl_->state_;
+}
 
 }} // namespace caspar::ffmpeg

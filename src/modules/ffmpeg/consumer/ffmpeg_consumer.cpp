@@ -450,6 +450,7 @@ struct Stream
 struct ffmpeg_consumer : public core::frame_consumer
 {
     core::monitor::state    state_;
+    mutable std::mutex      state_mutex_;
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
     bool                    realtime_ = false;
@@ -560,7 +561,11 @@ struct ffmpeg_consumer : public core::frame_consumer
                         options["preset:v"] = "veryfast";
                     }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, options);
-                    state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
+
+                    {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
+                    }
                 }
 
                 boost::optional<Stream> audio_stream;
@@ -639,7 +644,10 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 std::int32_t frame_number = 0;
                 while (true) {
-                    state_["file/frame"] = frame_number++;
+                    {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        state_["file/frame"] = frame_number++;
+                    }
 
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
@@ -699,7 +707,11 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     int index() const override { return 100000 + channel_index_; }
 
-    const core::monitor::state& state() const { return state_; }
+    core::monitor::state state() const override
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

@@ -611,7 +611,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-    core::monitor::state               state_;
     const configuration                config_;
     std::unique_ptr<decklink_consumer> consumer_;
     core::video_format_desc            format_desc_;
@@ -654,8 +653,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
     int index() const override { return 300 + config_.device_index; }
 
     bool has_synchronization_clock() const override { return true; }
-
-    const core::monitor::state& state() { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

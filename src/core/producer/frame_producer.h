@@ -73,7 +73,7 @@ class frame_producer
         CASPAR_THROW_EXCEPTION(not_implemented());
     }
 
-    virtual const monitor::state& state() const
+    virtual core::monitor::state state() const
     {
         static const monitor::state empty;
         return empty;

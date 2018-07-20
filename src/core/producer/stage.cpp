@@ -81,7 +81,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 monitor::state state;
                 for (auto& p : layers_) {
-                    state.insert_or_assign("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    state["layer"][p.first] = p.second.state();
                 }
                 state_ = std::move(state);
             } catch (...) {
@@ -318,5 +318,5 @@ std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc
 {
     return (*impl_)(format_desc, nb_samples);
 }
-const monitor::state& stage::state() const { return impl_->state_; }
+core::monitor::state stage::state() const { return impl_->state_; }
 }} // namespace caspar::core

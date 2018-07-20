@@ -170,7 +170,7 @@ class transition_producer : public frame_producer
         return draw_frame::over(src_frame, dst_frame);
     }
 
-    const monitor::state& state() { return state_; }
+    core::monitor::state state() { return state_; }
 };
 
 spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,

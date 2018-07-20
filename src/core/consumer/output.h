@@ -50,7 +50,7 @@ class output final
     void remove(const spl::shared_ptr<frame_consumer>& consumer);
     void remove(int index);
 
-    const monitor::state& state() const;
+    core::monitor::state state() const;
 
   private:
     struct impl;

@@ -185,7 +185,7 @@ struct ffmpeg_producer : public core::frame_producer
 
     std::wstring name() const override { return L"ffmpeg"; }
 
-    const core::monitor::state& state() const override { return producer_->state(); }
+    core::monitor::state state() const override { return producer_->state(); }
 };
 
 boost::tribool has_valid_extension(const std::wstring& filename)

@@ -75,7 +75,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
     std::mutex                                 mutex_;
     std::condition_variable                    cond_;
-    boost::optional<core::monitor::data_map_t> bundle_opt_;
+    boost::optional<core::monitor::state>      bundle_opt_;
     std::atomic<bool>                          abort_request_{false};
     std::thread                                thread_;
 
@@ -89,7 +89,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
-                    core::monitor::data_map_t  bundle;
+                    core::monitor::state  bundle;
                     std::vector<udp::endpoint> endpoints;
 
                     {
@@ -175,16 +175,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
-    void send(const core::monitor::state& state)
+    void send(core::monitor::state state)
     {
-        auto bundle = state.get();
-        if (bundle.empty()) {
-            return;
-        }
-
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            bundle_opt_ = std::move(bundle);
+            bundle_opt_ = state;
         }
         cond_.notify_all();
     }
@@ -213,6 +208,6 @@ std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp:
     return impl_->get_subscription_token(endpoint);
 }
 
-void client::send(const core::monitor::state& state) { impl_->send(state); }
+void client::send(core::monitor::state state) { impl_->send(state); }
 
 }}} // namespace caspar::protocol::osc
