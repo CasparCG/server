@@ -472,6 +472,7 @@ struct AVProducer::Impl
 
         state_["file/name"] = u8(name_);
         state_["file/path"] = u8(path_);
+        state_["loop"]      = loop;
         update_state();
 
         thread_ = boost::thread([=] {
