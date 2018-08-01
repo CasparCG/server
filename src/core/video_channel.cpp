@@ -154,7 +154,7 @@ struct video_channel::impl final
                             }
                         }
                     }
-
+                    state_           = {};
                     state_["stage"] = stage_.state();
                     state_["mixer"] = mixer_.state();
                     state_["output"] = output_.state();
