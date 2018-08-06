@@ -106,8 +106,13 @@ struct layer::impl
                 frame = foreground_->last_frame();
             }
 
-            state_ = foreground_->state();
-            state_["paused"] = paused_;
+            state_ = {};
+            state_["foreground"] = foreground_->state();
+            state_["foreground"]["producer"] = foreground_->name();
+            state_["foreground"]["paused"] = paused_;
+
+            state_["background"] = background_->state();
+            state_["background"]["producer"] = background_->name();
 
             return frame;
         } catch (...) {
