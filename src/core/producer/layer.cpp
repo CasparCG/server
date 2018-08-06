@@ -107,7 +107,9 @@ struct layer::impl
             }
 
             state_ = foreground_->state();
+            state_["producer"]               = foreground_->name();
             state_["background"] = background_->state();
+            state_["background"]["producer"] = background_->name();
             state_["paused"] = paused_;
 
             return frame;
