@@ -107,6 +107,7 @@ struct layer::impl
             }
 
             state_ = foreground_->state();
+            state_["background"] = background_->state();
             state_["paused"] = paused_;
 
             return frame;
