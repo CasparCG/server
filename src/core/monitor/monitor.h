@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
 #include <cstdint>
