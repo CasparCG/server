@@ -439,7 +439,7 @@ struct AVProducer::Impl
 
     std::deque<Frame> buffer_;
     std::atomic<bool> buffer_eof_{false};
-    int               buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
+    int               buffer_capacity_ = static_cast<int>(format_desc_.fps);
 
     tbb::task_group_context task_context_;
 
