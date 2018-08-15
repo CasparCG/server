@@ -437,6 +437,7 @@ struct AVProducer::Impl
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
+    bool              bufferring_ = true;
     std::deque<Frame> buffer_;
     std::atomic<bool> buffer_eof_{false};
     int               buffer_capacity_ = static_cast<int>(format_desc_.fps);
@@ -629,7 +630,9 @@ struct AVProducer::Impl
     ~Impl()
     {
         thread_.interrupt();
-        thread_.join();
+        if (thread_.joinable()) {
+            thread_.join();
+        }
     }
 
     void update_state()
@@ -667,7 +670,7 @@ struct AVProducer::Impl
 
         std::lock_guard<boost::mutex> lock(mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (bufferring_ && buffer_.size() < buffer_capacity_ / 2)) {
             if (buffer_eof_) {
                 return frame_;
             } else {
@@ -682,6 +685,7 @@ struct AVProducer::Impl
         buffer_.pop_front();
 
         frame_flush_ = false;
+        bufferring_ = false;
 
         cond_.notify_all();
 
@@ -693,6 +697,7 @@ struct AVProducer::Impl
         boost::lock_guard<boost::mutex> lock(mutex_);
 
         buffer_.clear();
+        bufferring_ = true;
         seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
         cond_.notify_all();
