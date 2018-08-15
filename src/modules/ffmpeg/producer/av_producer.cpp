@@ -75,7 +75,7 @@ struct Frame
 
 struct Decoder
 {
-    AVStream*                             st;
+    AVStream*                             st = nullptr;
     std::shared_ptr<AVCodecContext>       ctx;
     int64_t                               next_pts = AV_NOPTS_VALUE;
     std::queue<std::shared_ptr<AVPacket>> input;
@@ -863,7 +863,7 @@ struct AVProducer::Impl
 
     bool decode_frame(Decoder& decoder)
     {
-        if (decoder.frame || decoder.eof) {
+        if (decoder.frame || decoder.eof || !decoder.st) {
             return false;
         }
 
@@ -970,20 +970,9 @@ struct AVProducer::Impl
         frame_flush_ = true;
         buffer_eof_  = false;
 
-        for (auto& p : decoders_) {
-            reset_decoder(p.second);
-        }
+        decoders_.clear();
 
         reset(time);
-    }
-
-    void reset_decoder(Decoder& decoder)
-    {
-        avcodec_flush_buffers(decoder.ctx.get());
-        decoder.next_pts = AV_NOPTS_VALUE;
-        decoder.frame    = nullptr;
-        decoder.eof      = false;
-        decoder.input    = decltype(decoder.input){};
     }
 
     void reset(int64_t start_time)
@@ -999,11 +988,16 @@ struct AVProducer::Impl
             sources_[p.first].push_back(p.second);
         }
 
+        std::vector<int> keys;
         // Flush unused inputs.
         for (auto& p : decoders_) {
             if (sources_.find(p.first) == sources_.end()) {
-                reset_decoder(p.second);
+                keys.push_back(p.first);
             }
+        }
+
+        for (auto& key : keys) {
+            decoders_.erase(key);
         }
     }
 };
