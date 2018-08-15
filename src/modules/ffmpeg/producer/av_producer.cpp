@@ -437,7 +437,7 @@ struct AVProducer::Impl
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    bool              bufferring_ = true;
+    bool              prerolling_ = true;
     std::deque<Frame> buffer_;
     std::atomic<bool> buffer_eof_{false};
     int               buffer_capacity_ = static_cast<int>(format_desc_.fps);
@@ -516,10 +516,14 @@ struct AVProducer::Impl
                     cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
 
                     // NOTE: Throttle.
-                    if (buffer_.size() > buffer_capacity_ / 2) {
-                        cond_.wait_for(lock, boost::chrono::milliseconds(10));
-                    } else if (buffer_.size() > 2) {
-                        cond_.wait_for(lock, boost::chrono::milliseconds(5));
+                    if (!prerolling_) {
+                        if (buffer_.size() > buffer_capacity_ / 2) {
+                            cond_.wait_for(lock, boost::chrono::milliseconds(10));
+                        } else if (buffer_.size() > 2) {
+                            cond_.wait_for(lock, boost::chrono::milliseconds(5));
+                        }
+                    } else {
+                        boost::this_thread::yield();
                     }
 
                     frame_timer.restart();
@@ -670,7 +674,7 @@ struct AVProducer::Impl
 
         std::lock_guard<boost::mutex> lock(mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (bufferring_ && buffer_.size() < buffer_capacity_ / 2)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 2)) {
             if (buffer_eof_) {
                 return frame_;
             } else {
@@ -683,9 +687,9 @@ struct AVProducer::Impl
         frame_      = core::draw_frame::still(frame);
         frame_time_ = buffer_[0].pts + buffer_[0].duration;
         buffer_.pop_front();
-
+ 
         frame_flush_ = false;
-        bufferring_ = false;
+        prerolling_ = false;
 
         cond_.notify_all();
 
@@ -697,7 +701,7 @@ struct AVProducer::Impl
         boost::lock_guard<boost::mutex> lock(mutex_);
 
         buffer_.clear();
-        bufferring_ = true;
+        prerolling_ = true;
         seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
         cond_.notify_all();
