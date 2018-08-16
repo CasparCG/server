@@ -149,7 +149,7 @@ struct Filter
                 filter_spec = "null";
             }
 
-            filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
+            // filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
