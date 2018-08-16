@@ -669,7 +669,7 @@ struct AVProducer::Impl
 
         std::lock_guard<boost::mutex> lock(mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 2)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
             if (buffer_eof_) {
                 return frame_;
             } else {
