@@ -102,6 +102,8 @@ struct Decoder
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
+
+        // TODO (fix): Remove limit.
         FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
@@ -253,7 +255,8 @@ struct Filter
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
 
-        graph->nb_threads = 16;
+        // TODO (fix): Remove limit.
+        graph->nb_threads = 4;
         graph->execute    = graph_execute;
 
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
@@ -515,16 +518,8 @@ struct AVProducer::Impl
 
                     cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
 
-                    // NOTE: Throttle.
-                    if (!prerolling_) {
-                        if (buffer_.size() > buffer_capacity_ / 2) {
-                            cond_.wait_for(lock, boost::chrono::milliseconds(10));
-                        } else if (buffer_.size() > 2) {
-                            cond_.wait_for(lock, boost::chrono::milliseconds(5));
-                        }
-                    } else {
-                        boost::this_thread::yield();
-                    }
+                    // TODO (fix): Smarter throttle
+                    cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 20 : 5));
 
                     frame_timer.restart();
 
