@@ -673,10 +673,11 @@ struct AVProducer::Impl
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
             if (buffer_eof_) {
                 return frame_;
-            } else {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                return core::draw_frame{};
             }
+            if (!prerolling_) {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            }
+            return core::draw_frame{};
         }
 
         auto frame  = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
