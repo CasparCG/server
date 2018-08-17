@@ -542,6 +542,7 @@ struct AVProducer::Impl
 
                         if (buffer_eof_) {
                             if (loop_) {
+                                // TODO (fix): Don't loop if too short, e.g. image.
                                 frame = Frame{};
                                 seek_internal(start_);
                             } else {
@@ -648,7 +649,7 @@ struct AVProducer::Impl
             update_state();
         };
 
-        std::lock_guard<boost::mutex> lock(mutex_);
+        boost::lock_guard<boost::mutex> lock(mutex_);
 
         if (!buffer_.empty() && (frame_flush_ || !frame_)) {
             auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
@@ -667,7 +668,7 @@ struct AVProducer::Impl
             update_state();
         };
 
-        std::lock_guard<boost::mutex> lock(mutex_);
+        boost::lock_guard<boost::mutex> lock(mutex_);
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
             if (buffer_eof_) {
@@ -887,7 +888,6 @@ struct AVProducer::Impl
 
             // TODO (fix) is this always best?
             frame->pts = frame->best_effort_timestamp;
-            // TODO (fix) is this always best?
 
             auto duration_pts = frame->pkt_duration;
             if (duration_pts <= 0) {
