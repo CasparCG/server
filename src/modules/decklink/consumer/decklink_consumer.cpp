@@ -411,6 +411,13 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
                                                               BMDOutputFrameCompletionResult result)
     {
+#ifdef WIN32
+        thread_local auto priority_set = false;
+        if (!priority_set) {
+            priority_set = true;
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+        }
+#endif
         try {
             auto tick_time = tick_timer_.elapsed() * format_desc_.fps / field_count_ * 0.5;
             graph_->set_value("tick-time", tick_time);
@@ -456,8 +463,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
             std::vector<core::const_frame> frames{pop()};
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
-                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
-
                 frames.push_back(pop());
 
                 if (abort_request_) {
@@ -627,6 +632,9 @@ struct decklink_consumer_proxy : public core::frame_consumer
     ~decklink_consumer_proxy()
     {
         executor_.invoke([=] {
+#ifdef WIN32
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
             consumer_.reset();
             com_uninitialize();
         });

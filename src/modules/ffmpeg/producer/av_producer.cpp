@@ -519,7 +519,7 @@ struct AVProducer::Impl
                     cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
 
                     // TODO (fix): Smarter throttle
-                    cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 20 : 5));
+                    cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
 
                     frame_timer.restart();
 
