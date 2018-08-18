@@ -600,13 +600,13 @@ struct AVProducer::Impl
             duration_ = input_->duration;
         }
 
-        auto start = start_.load();
-        auto duration = duration_.load();
-
-        if (start != AV_NOPTS_VALUE) {
-            seek_internal(start);
-        } else {
-            reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
+        {
+            const auto start = start_.load();
+            if (start != AV_NOPTS_VALUE) {
+                seek_internal(start);
+            } else {
+                reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
+            }
         }
  
         caspar::timer frame_timer;
@@ -640,6 +640,9 @@ struct AVProducer::Impl
 
             {
                 // TODO (perf) seek as soon as input is past duration or eof.
+
+                auto start = start_.load();
+                auto duration = duration_.load();
 
                 start = start != AV_NOPTS_VALUE ? start : 0;
                 auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
