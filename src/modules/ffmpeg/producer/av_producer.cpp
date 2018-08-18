@@ -570,144 +570,7 @@ struct AVProducer::Impl
 
         thread_ = boost::thread([=] {
             try {
-                input_.reset();
-
-                for (auto n = 0UL; n < input_->nb_streams; ++n) {
-                    auto st = input_->streams[n];
-                    auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
-                    state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num,
-                        framerate.den };
-                }
-
-                if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
-                    duration_ = input_->duration;
-                }
-
-                if (start_ != AV_NOPTS_VALUE) {
-                    input_.seek(start_);
-                    reset(start_);
-                } else {
-                    reset(input_.start_time().value_or(0));
-                }
-
-                input_.paused(false);
-
-                caspar::timer frame_timer;
-
-                set_thread_name(L"[ffmpeg::av_producer]");
-
-                boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
-                Frame frame;
-
-                int warning_debounce = 0;
-
-                while (!boost::this_thread::interruption_requested()) {
-                    boost::unique_lock<boost::mutex> lock(mutex_);
-
-                    cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
-
-                    // TODO (fix): Smarter throttle
-                    cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
-
-                    frame_timer.restart();
-
-                    if (seek_ != AV_NOPTS_VALUE) {
-                        seek_ = AV_NOPTS_VALUE;
-                        seek_internal(seek_);
-                        continue;
-                    }
-
-                    {
-                        // TODO (perf) seek as soon as input is past duration or eof.
-
-                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        auto end   = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
-                        auto time  = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
-
-                        buffer_eof_ =
-                            (video_filter_.eof && audio_filter_.eof) ||
-                            av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
-
-                        if (buffer_eof_) {
-                            if (loop_) {
-                                // TODO (fix): Don't loop if too short, e.g. image.
-                                frame = Frame{};
-                                seek_internal(start_);
-                            } else {
-                                // TODO (perf) Avoid polling.
-                                cond_.wait_for(lock, boost::chrono::milliseconds(5));
-                                frame_timer.restart();
-                            }
-                            // TODO (fix) Limit live polling due to bugs.
-                            continue;
-                        }
-                    }
-
-                    std::atomic<int> progress{schedule()};
-
-                    tbb::parallel_invoke(
-                        [&] {
-                            tbb::parallel_for_each(decoders_.begin(),
-                                                   decoders_.end(),
-                                                   [&](auto& p) { progress.fetch_or(p.second()); },
-                                                   task_context_);
-                        },
-                        [&] { progress.fetch_or(video_filter_()); },
-                        [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); },
-                        task_context_);
-
-                    if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
-                        if (!progress) {
-                            if (warning_debounce++ % 500 == 100) {
-                                if (!video_filter_.frame && !video_filter_.eof) {
-                                    CASPAR_LOG(warning) << print() << " Waiting for video frame...";
-                                } else if (!audio_filter_.frame && !audio_filter_.eof) {
-                                    CASPAR_LOG(warning) << print() << " Waiting for audio frame...";
-                                } else {
-                                    CASPAR_LOG(warning) << print() << " Waiting for frame...";
-                                }
-                            }
-                            // TODO (perf) Avoid polling.
-                            cond_.wait_for(lock, boost::chrono::milliseconds(5));
-                        }
-                        // TODO (fix) Limit live polling due to bugs.
-                        boost::this_thread::yield();
-                        continue;
-                    }
-
-                    warning_debounce = 0;
-
-                    // TODO (fix)
-                    // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
-                    //    seek_internal(start_);
-                    //    continue;
-                    //}
-
-                    const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
-
-                    if (video_filter_.frame) {
-                        frame.video    = std::move(video_filter_.frame);
-                        const auto tb  = av_buffersink_get_time_base(video_filter_.sink);
-                        const auto fr  = av_buffersink_get_frame_rate(video_filter_.sink);
-                        frame.pts      = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
-                    }
-
-                    if (audio_filter_.frame) {
-                        frame.audio    = std::move(audio_filter_.frame);
-                        const auto tb  = av_buffersink_get_time_base(audio_filter_.sink);
-                        const auto sr  = av_buffersink_get_sample_rate(audio_filter_.sink);
-                        frame.pts      = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
-                    }
-
-                    buffer_.push_back(frame);
-
-                    boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
-                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-                }
+                run();
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
             } catch (...) {
@@ -721,6 +584,148 @@ struct AVProducer::Impl
         thread_.interrupt();
         if (thread_.joinable()) {
             thread_.join();
+        }
+    }
+
+    void run()
+    {
+        input_.reset();
+
+        for (auto n = 0UL; n < input_->nb_streams; ++n) {
+            auto st = input_->streams[n];
+            auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
+            state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num,
+                framerate.den };
+        }
+
+        if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+            duration_ = input_->duration;
+        }
+
+        if (start_ != AV_NOPTS_VALUE) {
+            input_.seek(start_);
+            reset(start_);
+        } else {
+            reset(input_.start_time().value_or(0));
+        }
+
+        input_.paused(false);
+
+        caspar::timer frame_timer;
+
+        set_thread_name(L"[ffmpeg::av_producer]");
+
+        boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+
+        Frame frame;
+
+        int warning_debounce = 0;
+
+        while (!boost::this_thread::interruption_requested()) {
+            boost::unique_lock<boost::mutex> lock(mutex_);
+
+            cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
+
+            // TODO (fix): Smarter throttle
+            cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
+
+            frame_timer.restart();
+
+            if (seek_ != AV_NOPTS_VALUE) {
+                seek_ = AV_NOPTS_VALUE;
+                seek_internal(seek_);
+                continue;
+            }
+
+            {
+                // TODO (perf) seek as soon as input is past duration or eof.
+
+                auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
+                auto end = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
+                auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+
+                buffer_eof_ =
+                    (video_filter_.eof && audio_filter_.eof) ||
+                    av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+
+                if (buffer_eof_) {
+                    if (loop_) {
+                        // TODO (fix): Don't loop if too short, e.g. image.
+                        frame = Frame{};
+                        seek_internal(start_);
+                    } else {
+                        // TODO (perf) Avoid polling.
+                        cond_.wait_for(lock, boost::chrono::milliseconds(5));
+                        frame_timer.restart();
+                    }
+                    // TODO (fix) Limit live polling due to bugs.
+                    continue;
+                }
+            }
+
+            std::atomic<int> progress{ schedule() };
+
+            tbb::parallel_invoke(
+                [&] {
+                tbb::parallel_for_each(decoders_.begin(),
+                                       decoders_.end(),
+                                       [&](auto& p) { progress.fetch_or(p.second()); },
+                                       task_context_);
+            },
+                [&] { progress.fetch_or(video_filter_()); },
+                [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); },
+                task_context_);
+
+            if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
+                if (!progress) {
+                    if (warning_debounce++ % 500 == 100) {
+                        if (!video_filter_.frame && !video_filter_.eof) {
+                            CASPAR_LOG(warning) << print() << " Waiting for video frame...";
+                        } else if (!audio_filter_.frame && !audio_filter_.eof) {
+                            CASPAR_LOG(warning) << print() << " Waiting for audio frame...";
+                        } else {
+                            CASPAR_LOG(warning) << print() << " Waiting for frame...";
+                        }
+                    }
+                    // TODO (perf) Avoid polling.
+                    cond_.wait_for(lock, boost::chrono::milliseconds(5));
+                }
+                // TODO (fix) Limit live polling due to bugs.
+                boost::this_thread::yield();
+                continue;
+            }
+
+            warning_debounce = 0;
+
+            // TODO (fix)
+            // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
+            //    seek_internal(start_);
+            //    continue;
+            //}
+
+            const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
+
+            if (video_filter_.frame) {
+                frame.video = std::move(video_filter_.frame);
+                const auto tb = av_buffersink_get_time_base(video_filter_.sink);
+                const auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
+                frame.pts = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
+                frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
+            }
+
+            if (audio_filter_.frame) {
+                frame.audio = std::move(audio_filter_.frame);
+                const auto tb = av_buffersink_get_time_base(audio_filter_.sink);
+                const auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
+                frame.pts = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
+                frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
+            }
+
+            buffer_.push_back(frame);
+
+            boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
         }
     }
 
