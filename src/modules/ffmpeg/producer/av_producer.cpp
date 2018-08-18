@@ -632,8 +632,6 @@ struct AVProducer::Impl
                 break;
             }
 
-            frame_timer.restart();
-
             {
                 const auto seek = seek_.exchange(AV_NOPTS_VALUE);
 
@@ -661,8 +659,6 @@ struct AVProducer::Impl
                     if (loop_ && frame_count_ > 2) {
                         frame = Frame{};
                         seek_internal(start);
-                    } else {
-                        frame_timer.restart();
                     }
                     // TODO (fix) Limit live polling due to bugs.
                     continue;
@@ -726,6 +722,7 @@ struct AVProducer::Impl
             boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            frame_timer.restart();
         }
     }
 
