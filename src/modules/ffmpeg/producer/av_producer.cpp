@@ -127,6 +127,66 @@ struct Decoder
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
     }
+
+
+    bool operator()()
+    {
+        if (frame || eof || !st) {
+            return false;
+        }
+
+        auto av_frame = alloc_frame();
+        auto ret = avcodec_receive_frame(ctx.get(), av_frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            if (input.empty()) {
+                return false;
+            }
+            FF(avcodec_send_packet(ctx.get(), input.front().get()));
+            input.pop();
+        } else if (ret == AVERROR_EOF) {
+            avcodec_flush_buffers(ctx.get());
+            av_frame->pts = next_pts;
+            eof = true;
+            next_pts = AV_NOPTS_VALUE;
+            frame = std::move(av_frame);
+        } else {
+            FF_RET(ret, "avcodec_receive_frame");
+
+            // NOTE This is a workaround for DVCPRO HD.
+            if (av_frame->width > 1024 && av_frame->interlaced_frame) {
+                av_frame->top_field_first = 1;
+            }
+
+            // TODO (fix) is this always best?
+            av_frame->pts = av_frame->best_effort_timestamp;
+
+            auto duration_pts = av_frame->pkt_duration;
+            if (duration_pts <= 0) {
+                if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    const auto ticks = av_stream_get_parser(st)
+                        ? av_stream_get_parser(st)->repeat_pict + 1
+                        : ctx->ticks_per_frame;
+                    duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks) /
+                        ctx->framerate.num / ctx->ticks_per_frame;
+                    duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, st->time_base);
+                } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+                    duration_pts =
+                        av_rescale_q(av_frame->nb_samples, { 1, ctx->sample_rate }, st->time_base);
+                }
+            }
+
+            if (duration_pts > 0) {
+                next_pts = av_frame->pts + duration_pts;
+            } else {
+                next_pts = AV_NOPTS_VALUE;
+            }
+
+            frame = std::move(av_frame);
+        }
+
+        return true;
+    }
 };
 
 struct Filter
@@ -401,6 +461,35 @@ struct Filter
 
         FF(avfilter_graph_config(graph.get(), nullptr));
     }
+
+    bool operator()(int nb_samples = -1)
+    {
+        if (frame || eof) {
+            return false;
+        }
+
+        if (!sink || sources.empty()) {
+            eof = true;
+            frame = nullptr;
+            return true;
+        }
+
+        auto av_frame = alloc_frame();
+        auto ret = nb_samples >= 0 ? av_buffersink_get_samples(sink, av_frame.get(), nb_samples)
+            : av_buffersink_get_frame(sink, av_frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            return false;
+        } else if (ret == AVERROR_EOF) {
+            eof = true;
+            frame = nullptr;
+            return true;
+        } else {
+            FF_RET(ret, "av_buffersink_get_frame");
+            frame = av_frame;
+            return true;
+        }
+    }
 };
 
 struct AVProducer::Impl
@@ -561,11 +650,11 @@ struct AVProducer::Impl
                         [&] {
                             tbb::parallel_for_each(decoders_.begin(),
                                                    decoders_.end(),
-                                                   [&](auto& p) { progress.fetch_or(decode_frame(p.second)); },
+                                                   [&](auto& p) { progress.fetch_or(p.second()); },
                                                    task_context_);
                         },
-                        [&] { progress.fetch_or(filter_frame(video_filter_)); },
-                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); },
+                        [&] { progress.fetch_or(video_filter_()); },
+                        [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); },
                         task_context_);
 
                     if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
@@ -856,94 +945,6 @@ struct AVProducer::Impl
         }
 
         return result;
-    }
-
-    bool decode_frame(Decoder& decoder)
-    {
-        if (decoder.frame || decoder.eof || !decoder.st) {
-            return false;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = avcodec_receive_frame(decoder.ctx.get(), frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            if (decoder.input.empty()) {
-                return false;
-            }
-            FF(avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get()));
-            decoder.input.pop();
-        } else if (ret == AVERROR_EOF) {
-            avcodec_flush_buffers(decoder.ctx.get());
-            frame->pts       = decoder.next_pts;
-            decoder.eof      = true;
-            decoder.next_pts = AV_NOPTS_VALUE;
-            decoder.frame    = std::move(frame);
-        } else {
-            FF_RET(ret, "avcodec_receive_frame");
-
-            // NOTE This is a workaround for DVCPRO HD.
-            if (frame->width > 1024 && frame->interlaced_frame) {
-                frame->top_field_first = 1;
-            }
-
-            // TODO (fix) is this always best?
-            frame->pts = frame->best_effort_timestamp;
-
-            auto duration_pts = frame->pkt_duration;
-            if (duration_pts <= 0) {
-                if (decoder.ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    const auto ticks = av_stream_get_parser(decoder.st)
-                                           ? av_stream_get_parser(decoder.st)->repeat_pict + 1
-                                           : decoder.ctx->ticks_per_frame;
-                    duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * decoder.ctx->framerate.den * ticks) /
-                                   decoder.ctx->framerate.num / decoder.ctx->ticks_per_frame;
-                    duration_pts = av_rescale_q(duration_pts, {1, AV_TIME_BASE}, decoder.st->time_base);
-                } else if (decoder.ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-                    duration_pts =
-                        av_rescale_q(frame->nb_samples, {1, decoder.ctx->sample_rate}, decoder.st->time_base);
-                }
-            }
-
-            if (duration_pts > 0) {
-                decoder.next_pts = frame->pts + duration_pts;
-            } else {
-                decoder.next_pts = AV_NOPTS_VALUE;
-            }
-
-            decoder.frame = std::move(frame);
-        }
-
-        return true;
-    }
-
-    bool filter_frame(Filter& filter, int nb_samples = -1)
-    {
-        if (filter.frame || filter.eof) {
-            return false;
-        }
-
-        if (!filter.sink || filter.sources.empty()) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                   : av_buffersink_get_frame(filter.sink, frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            return false;
-        } else if (ret == AVERROR_EOF) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        } else {
-            FF_RET(ret, "av_buffersink_get_frame");
-            filter.frame = frame;
-            return true;
-        }
     }
 
     std::string print() const
