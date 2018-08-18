@@ -535,6 +535,7 @@ struct AVProducer::Impl
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps);
 
     boost::thread thread_;
+    std::atomic<bool> abort_request_{ false };
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
          core::video_format_desc              format_desc,
@@ -579,10 +580,9 @@ struct AVProducer::Impl
 
     ~Impl()
     {
-        thread_.interrupt();
-        if (thread_.joinable()) {
-            thread_.join();
-        }
+        abort_request_ = true;
+        buffer_cond_.notify_all();
+        thread_.join();
     }
 
     void run()
@@ -619,13 +619,17 @@ struct AVProducer::Impl
 
         int warning_debounce = 0;
 
-        while (!boost::this_thread::interruption_requested()) {
+        while (true) {
             {
                 boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
-                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_; });
+                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
                 // TODO (fix): Smarter throttle
                 const auto throttle_duration = warning_debounce > 25 || buffer_.size() > buffer_capacity_ / 2 ? 10 : 1;
-                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(throttle_duration));
+                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(throttle_duration), [&] { return abort_request_.load(); });
+            }
+
+            if (abort_request_) {
+                break;
             }
 
             frame_timer.restart();
