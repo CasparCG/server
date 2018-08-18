@@ -605,8 +605,7 @@ struct AVProducer::Impl
         auto duration = duration_.load();
 
         if (start != AV_NOPTS_VALUE) {
-            input_.seek(start);
-            reset(start);
+            seek_internal(start);
         } else {
             reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
         }
@@ -631,10 +630,13 @@ struct AVProducer::Impl
 
             frame_timer.restart();
 
-            if (seek_ != AV_NOPTS_VALUE) {
-                seek_ = AV_NOPTS_VALUE;
-                seek_internal(seek_);
-                continue;
+            {
+                const auto seek = seek_.exchange(AV_NOPTS_VALUE);
+
+                if (seek != AV_NOPTS_VALUE) {
+                    seek_internal(seek);
+                    continue;
+                }
             }
 
             {
