@@ -514,25 +514,26 @@ struct AVProducer::Impl
 
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
-    int64_t start_    = AV_NOPTS_VALUE;
-    int64_t duration_ = AV_NOPTS_VALUE;
-    int64_t seek_     = AV_NOPTS_VALUE;
-    bool    loop_     = false;
+    std::atomic<int64_t> start_{ AV_NOPTS_VALUE };
+    std::atomic<int64_t> duration_{ AV_NOPTS_VALUE };
+    std::atomic<int64_t> seek_{ AV_NOPTS_VALUE };
+    std::atomic<bool>    loop_{ false };
 
     std::string afilter_;
     std::string vfilter_;
 
     mutable boost::mutex      mutex_;
-    boost::condition_variable cond_;
 
     int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    bool              prerolling_ = true;
-    std::deque<Frame> buffer_;
-    std::atomic<bool> buffer_eof_{false};
-    int               buffer_capacity_ = static_cast<int>(format_desc_.fps);
+    bool                      prerolling_ = true;
+    std::deque<Frame>         buffer_;
+    boost::mutex              buffer_mutex_;
+    boost::condition_variable buffer_cond_;
+    std::atomic<bool>         buffer_eof_{false};
+    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps);
 
     boost::thread thread_;
 
@@ -600,9 +601,12 @@ struct AVProducer::Impl
             duration_ = input_->duration;
         }
 
-        if (start_ != AV_NOPTS_VALUE) {
-            input_.seek(start_);
-            reset(start_);
+        auto start = start_.load();
+        auto duration = duration_.load();
+
+        if (start != AV_NOPTS_VALUE) {
+            input_.seek(start);
+            reset(start);
         } else {
             reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
         }
@@ -618,12 +622,12 @@ struct AVProducer::Impl
         int warning_debounce = 0;
 
         while (!boost::this_thread::interruption_requested()) {
-            boost::unique_lock<boost::mutex> lock(mutex_);
-
-            cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_; });
-
-            // TODO (fix): Smarter throttle
-            cond_.wait_for(lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
+            {
+                boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
+                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_; });
+                // TODO (fix): Smarter throttle
+                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
+            }
 
             frame_timer.restart();
 
@@ -636,8 +640,8 @@ struct AVProducer::Impl
             {
                 // TODO (perf) seek as soon as input is past duration or eof.
 
-                auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                auto end = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
+                start = start != AV_NOPTS_VALUE ? start : 0;
+                auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
                 auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
 
                 buffer_eof_ =
@@ -648,10 +652,8 @@ struct AVProducer::Impl
                     if (loop_) {
                         // TODO (fix): Don't loop if too short, e.g. image.
                         frame = Frame{};
-                        seek_internal(start_);
+                        seek_internal(start);
                     } else {
-                        // TODO (perf) Avoid polling.
-                        cond_.wait_for(lock, boost::chrono::milliseconds(5));
                         frame_timer.restart();
                     }
                     // TODO (fix) Limit live polling due to bugs.
@@ -677,11 +679,7 @@ struct AVProducer::Impl
                             CASPAR_LOG(warning) << print() << " Waiting for frame...";
                         }
                     }
-                    // TODO (perf) Avoid polling.
-                    cond_.wait_for(lock, boost::chrono::milliseconds(5));
                 }
-                // TODO (fix) Limit live polling due to bugs.
-                boost::this_thread::yield();
                 continue;
             }
 
@@ -711,7 +709,10 @@ struct AVProducer::Impl
                 frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
             }
 
-            buffer_.push_back(frame);
+            {
+                boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
+                buffer_.push_back(frame);
+            }
 
             boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
@@ -733,13 +734,15 @@ struct AVProducer::Impl
             update_state();
         };
 
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        {
+            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-            auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-            frame_       = core::draw_frame::still(frame);
-            frame_time_  = buffer_[0].pts + buffer_[0].duration;
-            frame_flush_ = false;
+            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
+                auto frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+                frame_ = core::draw_frame::still(frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                frame_flush_ = false;
+            }
         }
 
         return frame_;
@@ -752,86 +755,80 @@ struct AVProducer::Impl
             update_state();
         };
 
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        auto frame = core::draw_frame{};
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
-            if (buffer_eof_) {
-                return frame_;
+        {
+            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+
+            if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
+                if (buffer_eof_) {
+                    return frame_;
+                }
+                if (!prerolling_) {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                }
+                return core::draw_frame{};
             }
-            if (!prerolling_) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-            }
-            return core::draw_frame{};
+
+            frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+            frame_ = core::draw_frame::still(frame);
+            frame_time_ = buffer_[0].pts + buffer_[0].duration;
+            buffer_.pop_front();
         }
-
-        auto frame  = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-        frame_      = core::draw_frame::still(frame);
-        frame_time_ = buffer_[0].pts + buffer_[0].duration;
-        buffer_.pop_front();
+        buffer_cond_.notify_all();
  
         frame_flush_ = false;
         prerolling_ = false;
-
-        cond_.notify_all();
 
         return frame;
     }
 
     void seek(int64_t time)
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-
-        buffer_.clear();
-        prerolling_ = true;
         seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
-        cond_.notify_all();
+        {
+            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+            buffer_.clear();
+        }
+
+        prerolling_ = true;
     }
 
     int64_t time() const
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-
         // TODO (fix) How to handle NOPTS case?
         return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void loop(bool loop)
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
         loop_ = loop;
-        cond_.notify_all();
     }
 
     bool loop() const
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
         return loop_;
     }
 
     void start(int64_t start)
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-        cond_.notify_all();
     }
 
     boost::optional<int64_t> start() const
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-        return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
+        auto start = start_.load();
+        return start != AV_NOPTS_VALUE ? av_rescale_q(start, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
     }
 
     void duration(int64_t duration)
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
         duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-        cond_.notify_all();
     }
 
     boost::optional<int64_t> duration() const
     {
-        boost::lock_guard<boost::mutex> lock(mutex_);
         return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration_, TIME_BASE_Q, format_tb_)) : boost::none;
     }
 
