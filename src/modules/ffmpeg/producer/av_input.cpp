@@ -35,7 +35,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
                     cond_.wait(lock, [&] {
-                        return ic_ && ((!eof_ && !paused_) && output_.size() < output_capacity_) || abort_request_;
+                        return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_;
                     });
                 }
 
@@ -129,26 +129,6 @@ void Input::reset()
     ic_->interrupt_callback.opaque   = this;
 
     FF(avformat_find_stream_info(ic_.get(), nullptr));
-}
-
-boost::optional<int64_t> Input::start_time() const
-{
-    auto ic = ic_;
-    return ic && ic->start_time != AV_NOPTS_VALUE ? ic->start_time : boost::optional<int64_t>();
-}
-
-boost::optional<int64_t> Input::duration() const
-{
-    auto ic = ic_;
-    return ic && ic->duration != AV_NOPTS_VALUE ? ic->duration : boost::optional<int64_t>();
-}
-
-bool Input::paused() const { return paused_; }
-
-void Input::paused(bool value)
-{
-    paused_ = value;
-    cond_.notify_all();
 }
 
 bool Input::eof() const { return eof_; }

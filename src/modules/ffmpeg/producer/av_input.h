@@ -33,12 +33,7 @@ class Input
 
     AVFormatContext* const operator->() const;
 
-    boost::optional<int64_t> start_time() const;
-    boost::optional<int64_t> duration() const;
-
     void reset();
-    bool paused() const;
-    void paused(bool value);
     bool eof() const;
 
     void seek(int64_t ts, bool flush = true);
@@ -55,7 +50,6 @@ class Input
     std::size_t                           output_capacity_ = 64;
     std::queue<std::shared_ptr<AVPacket>> output_;
 
-    std::atomic<bool> paused_{true};
     std::atomic<bool> eof_{false};
 
     std::atomic<bool> abort_request_{false};

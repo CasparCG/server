@@ -606,11 +606,9 @@ struct AVProducer::Impl
             input_.seek(start_);
             reset(start_);
         } else {
-            reset(input_.start_time().value_or(0));
+            reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
         }
-
-        input_.paused(false);
-
+ 
         caspar::timer frame_timer;
 
         set_thread_name(L"[ffmpeg::av_producer]");
@@ -809,58 +807,40 @@ struct AVProducer::Impl
     void loop(bool loop)
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
         loop_ = loop;
-
         cond_.notify_all();
     }
 
     bool loop() const
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
         return loop_;
     }
 
     void start(int64_t start)
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-
         cond_.notify_all();
     }
 
     boost::optional<int64_t> start() const
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
         return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
     }
 
     void duration(int64_t duration)
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
         duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-        input_.paused(false);
-
         cond_.notify_all();
     }
 
     boost::optional<int64_t> duration() const
     {
         boost::lock_guard<boost::mutex> lock(mutex_);
-
-        if (duration_ != AV_NOPTS_VALUE) {
-            return av_rescale_q(duration_, TIME_BASE_Q, format_tb_);
-        }
-
-        if (!input_.duration()) {
-            return boost::none;
-        }
-
-        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
+        return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration_, TIME_BASE_Q, format_tb_)) : boost::none;
     }
 
   private:
@@ -952,23 +932,13 @@ struct AVProducer::Impl
         return result;
     }
 
-    std::string print() const
-    {
-        std::ostringstream str;
-        str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
-            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
-            << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
-        return str.str();
-    }
-
     void seek_internal(int64_t time)
     {
         time = time != AV_NOPTS_VALUE ? time : 0;
-        time = time + input_.start_time().value_or(0);
+        time = time + (input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
 
         // TODO (fix) Dont seek if time is close future.
         input_.seek(time);
-        input_.paused(false);
         frame_flush_ = true;
         buffer_eof_  = false;
 
@@ -1001,6 +971,15 @@ struct AVProducer::Impl
         for (auto& key : keys) {
             decoders_.erase(key);
         }
+    }
+
+    std::string print() const
+    {
+        std::ostringstream str;
+        str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
+            << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
+            << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den }) << "]";
+        return str.str();
     }
 };
 
