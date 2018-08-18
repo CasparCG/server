@@ -519,6 +519,7 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
+    int64_t          frame_count_ = 0;
     int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
@@ -657,8 +658,7 @@ struct AVProducer::Impl
                     av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
 
                 if (buffer_eof_) {
-                    if (loop_) {
-                        // TODO (fix): Don't loop if too short, e.g. image.
+                    if (loop_ && frame_count_ > 2) {
                         frame = Frame{};
                         seek_internal(start);
                     } else {
@@ -720,6 +720,7 @@ struct AVProducer::Impl
             {
                 boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
                 buffer_.push_back(frame);
+                frame_count_ += 1;
             }
 
             boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
@@ -796,7 +797,6 @@ struct AVProducer::Impl
             buffer_.clear();
             buffer_prerolling_ = true;
         }
-
     }
 
     int64_t time() const
@@ -933,6 +933,7 @@ struct AVProducer::Impl
         // TODO (fix) Dont seek if time is close future.
         input_.seek(time);
         frame_flush_ = true;
+        frame_count_ = 0;
         buffer_eof_  = false;
 
         decoders_.clear();
