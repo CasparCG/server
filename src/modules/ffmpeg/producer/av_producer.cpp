@@ -624,7 +624,8 @@ struct AVProducer::Impl
                 boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
                 buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_; });
                 // TODO (fix): Smarter throttle
-                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(buffer_.size() > buffer_capacity_ / 2 ? 10 : 1));
+                const auto throttle_duration = warning_debounce > 25 || buffer_.size() > buffer_capacity_ / 2 ? 10 : 1;
+                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(throttle_duration));
             }
 
             frame_timer.restart();
