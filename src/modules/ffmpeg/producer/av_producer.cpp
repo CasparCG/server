@@ -519,16 +519,14 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
-    mutable boost::mutex      mutex_;
-
     int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    bool                      prerolling_ = true;
     std::deque<Frame>         buffer_;
     boost::mutex              buffer_mutex_;
     boost::condition_variable buffer_cond_;
+    bool                      buffer_prerolling_ = true;
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps);
 
@@ -764,30 +762,26 @@ struct AVProducer::Impl
             update_state();
         };
 
-        auto frame = core::draw_frame{};
+        boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        {
-            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
-
-            if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
-                if (buffer_eof_) {
-                    return frame_;
-                }
-                if (!prerolling_) {
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                }
-                return core::draw_frame{};
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (buffer_prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
+            if (buffer_eof_) {
+                return frame_;
             }
-
-            frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-            frame_ = core::draw_frame::still(frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            buffer_.pop_front();
+            if (!buffer_prerolling_) {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            }
+            return core::draw_frame{};
         }
-        buffer_cond_.notify_all();
- 
+
+        auto frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+        frame_ = core::draw_frame::still(frame);
+        frame_time_ = buffer_[0].pts + buffer_[0].duration;
         frame_flush_ = false;
-        prerolling_ = false;
+
+        buffer_prerolling_ = false;
+        buffer_.pop_front();
+        buffer_cond_.notify_all();
 
         return frame;
     }
@@ -799,9 +793,9 @@ struct AVProducer::Impl
         {
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
             buffer_.clear();
+            buffer_prerolling_ = true;
         }
 
-        prerolling_ = true;
     }
 
     int64_t time() const
