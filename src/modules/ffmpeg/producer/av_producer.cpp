@@ -534,8 +534,6 @@ struct AVProducer::Impl
     std::atomic<bool> buffer_eof_{false};
     int               buffer_capacity_ = static_cast<int>(format_desc_.fps);
 
-    tbb::task_group_context task_context_;
-
     boost::thread thread_;
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
@@ -664,15 +662,9 @@ struct AVProducer::Impl
             std::atomic<int> progress{ schedule() };
 
             tbb::parallel_invoke(
-                [&] {
-                tbb::parallel_for_each(decoders_.begin(),
-                                       decoders_.end(),
-                                       [&](auto& p) { progress.fetch_or(p.second()); },
-                                       task_context_);
-            },
+                [&] { tbb::parallel_for_each(decoders_, [&](auto& p) { progress.fetch_or(p.second()); }); },
                 [&] { progress.fetch_or(video_filter_()); },
-                [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); },
-                task_context_);
+                [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); });
 
             if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                 if (!progress) {
