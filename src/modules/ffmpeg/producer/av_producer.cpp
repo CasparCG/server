@@ -576,6 +576,7 @@ struct AVProducer::Impl
 
     ~Impl()
     {
+        input_.abort();
         abort_request_ = true;
         buffer_cond_.notify_all();
         thread_.join();

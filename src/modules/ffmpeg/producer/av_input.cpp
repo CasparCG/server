@@ -81,6 +81,11 @@ Input::~Input()
     thread_.join();
 }
 
+void Input::abort()
+{
+    abort_request_ = true;
+}
+
 int Input::interrupt_cb(void* ctx)
 {
     auto input = reinterpret_cast<Input*>(ctx);
