@@ -204,7 +204,7 @@ int main(int argc, char** argv)
     // Increase process priority.
     increase_process_priority();
 
-    tbb::task_scheduler_init init;
+    tbb::task_scheduler_init init{ tbb::task_scheduler_init::default_num_threads() - 1 };
     std::wstring             config_file_name(L"casparcg.config");
 
     try {
