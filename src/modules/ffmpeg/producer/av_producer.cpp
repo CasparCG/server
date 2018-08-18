@@ -504,8 +504,6 @@ struct AVProducer::Impl
     const std::string                          name_;
     const std::string                          path_;
 
-    std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
-
     Input                  input_;
     std::map<int, Decoder> decoders_;
     Filter                 video_filter_;
@@ -587,6 +585,8 @@ struct AVProducer::Impl
 
     void run()
     {
+        std::vector<int> audio_cadence = format_desc_.audio_cadence;
+
         input_.reset();
 
         for (auto n = 0UL; n < input_->nb_streams; ++n) {
@@ -613,7 +613,7 @@ struct AVProducer::Impl
 
         set_thread_name(L"[ffmpeg::av_producer]");
 
-        boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+        boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
 
         Frame frame;
 
@@ -675,7 +675,7 @@ struct AVProducer::Impl
             tbb::parallel_invoke(
                 [&] { tbb::parallel_for_each(decoders_, [&](auto& p) { progress.fetch_or(p.second()); }); },
                 [&] { progress.fetch_or(video_filter_()); },
-                [&] { progress.fetch_or(audio_filter_(audio_cadence_[0])); });
+                [&] { progress.fetch_or(audio_filter_(audio_cadence[0])); });
 
             if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                 if (!progress) {
@@ -723,7 +723,7 @@ struct AVProducer::Impl
                 buffer_.push_back(frame);
             }
 
-            boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
+            boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
         }
