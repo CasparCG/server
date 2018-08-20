@@ -66,6 +66,7 @@ struct Frame
 {
     std::shared_ptr<AVFrame> video;
     std::shared_ptr<AVFrame> audio;
+    core::draw_frame         frame;
     int64_t                  pts      = AV_NOPTS_VALUE;
     int64_t                  duration = 0;
 };
@@ -708,6 +709,8 @@ struct AVProducer::Impl
                 frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
             }
 
+            frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
+
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             frame_timer.restart();
 
@@ -738,11 +741,11 @@ struct AVProducer::Impl
             update_state();
         };
 
-        {
+        if (frame_flush_ || !frame_) {
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                auto frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+            if (!buffer_.empty()) {
+                auto frame = buffer_[0].frame;
                 frame_ = core::draw_frame::still(frame);
                 frame_time_ = buffer_[0].pts + buffer_[0].duration;
                 frame_flush_ = false;
@@ -771,7 +774,7 @@ struct AVProducer::Impl
             return core::draw_frame{};
         }
 
-        auto frame = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
+        auto frame = buffer_[0].frame;
         frame_ = core::draw_frame::still(frame);
         frame_time_ = buffer_[0].pts + buffer_[0].duration;
         frame_flush_ = false;

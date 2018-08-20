@@ -72,7 +72,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& t : tweens_)
                     t.second.tick(1);
 
-                // TODO (perf) parallel_for
                 for (auto& p : layers_) {
                     auto& layer     = p.second;
                     auto& tween     = tweens_[p.first];

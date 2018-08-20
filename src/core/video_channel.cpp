@@ -96,6 +96,7 @@ struct video_channel::impl final
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_color("mix-time", caspar::diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
+        graph_->set_color("frame-time", caspar::diagnostics::color(1.0f, 0.4f, 0.4f, 0.8f));
         graph_->set_color("osc-time", caspar::diagnostics::color(0.3f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
         caspar::diagnostics::register_graph(graph_);
@@ -118,6 +119,8 @@ struct video_channel::impl final
                         nb_samples = audio_cadence_.front();
                     }
 
+                    caspar::timer frame_timer;
+
                     // Produce
                     caspar::timer produce_timer;
                     auto          stage_frames = stage_(format_desc, nb_samples);
@@ -132,6 +135,8 @@ struct video_channel::impl final
                     caspar::timer consume_timer;
                     output_(std::move(mixed_frame), format_desc);
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
+
+                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
                     {
                         std::vector<core::draw_frame> frames;

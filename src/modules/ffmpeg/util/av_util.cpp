@@ -49,11 +49,11 @@ core::mutable_frame make_frame(void*                    tag,
 
     if (video) {
         for (int n = 0; n < static_cast<int>(pix_desc.planes.size()); ++n) {
-            for (int y = 0; y < pix_desc.planes[n].height; ++y) {
+            tbb::parallel_for(0, pix_desc.planes[n].height, [&](int y) {
                 std::memcpy(frame.image_data(n).begin() + y * pix_desc.planes[n].linesize,
                             video->data[n] + y * video->linesize[n],
                             pix_desc.planes[n].linesize);
-            }
+            });
         }
     }
 
@@ -62,11 +62,11 @@ core::mutable_frame make_frame(void*                    tag,
         frame.audio_data() = std::vector<int32_t>(audio->nb_samples * 8, 0);
         auto dst           = frame.audio_data().data();
         auto src           = reinterpret_cast<int32_t*>(audio->data[0]);
-        for (auto i = 0; i < audio->nb_samples; ++i) {
+        tbb::parallel_for(0, audio->nb_samples, [&](int i) {
             for (auto j = 0; j < std::min(8, audio->channels); ++j) {
                 dst[i * 8 + j] = src[i * audio->channels + j];
             }
-        }
+        });
     }
 
     return frame;

@@ -30,8 +30,6 @@
 
 #include <common/scope_exit.h>
 
-#include <tbb/parallel_invoke.h>
-
 #include <future>
 
 namespace caspar { namespace core {
@@ -97,19 +95,15 @@ class transition_producer : public frame_producer
             }();
         };
 
-        tbb::parallel_invoke(
-            [&] {
-                dst_ = dst_producer_->receive(nb_samples);
-                if (!dst_) {
-                    dst_ = dst_producer_->last_frame();
-                }
-            },
-            [&] {
-                src_ = src_producer_->receive(nb_samples);
-                if (!src_) {
-                    src_ = src_producer_->last_frame();
-                }
-            });
+        dst_ = dst_producer_->receive(nb_samples);
+        if (!dst_) {
+            dst_ = dst_producer_->last_frame();
+        }
+
+        src_ = src_producer_->receive(nb_samples);
+        if (!src_) {
+            src_ = src_producer_->last_frame();
+        }
 
         if (!dst_) {
             return src_;

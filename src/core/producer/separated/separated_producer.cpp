@@ -29,8 +29,6 @@
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
-#include <tbb/parallel_invoke.h>
-
 #include <future>
 #include <mutex>
 
@@ -68,17 +66,13 @@ class separated_producer : public frame_producer
             state_["keyer"] = key_producer_->state();
         };
 
-        tbb::parallel_invoke(
-            [&] {
-                if (!fill_) {
-                    fill_ = fill_producer_->receive(nb_samples);
-                }
-            },
-            [&] {
-                if (!key_) {
-                    key_ = key_producer_->receive(nb_samples);
-                }
-            });
+        if (!fill_) {
+            fill_ = fill_producer_->receive(nb_samples);
+        }
+
+        if (!key_) {
+            key_ = key_producer_->receive(nb_samples);
+        }
 
         if (!fill_ || !key_) {
             return core::draw_frame{};
