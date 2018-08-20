@@ -620,17 +620,11 @@ struct AVProducer::Impl
 
         int warning_debounce = 0;
 
-        while (true) {
-            {
-                boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
-                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
-                // TODO (fix): Smarter throttle
-                const auto throttle_duration = warning_debounce > 25 || buffer_.size() > buffer_capacity_ / 2 ? 10 : 1;
-                buffer_cond_.wait_for(buffer_lock, boost::chrono::milliseconds(throttle_duration), [&] { return abort_request_.load(); });
-            }
-
-            if (abort_request_) {
-                break;
+        while (!abort_request_) {
+            if (warning_debounce > 25) {
+                boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
+            } else {
+                boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
             }
 
             {
@@ -714,18 +708,19 @@ struct AVProducer::Impl
                 frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
             }
 
-            {
-                boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
-                buffer_.push_back(frame);
-                buffer_cond_.notify_all();
-                frame_count_ += 1;
-                graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
-            }
-
-            boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
-
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
             frame_timer.restart();
+
+            {
+                boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
+                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
+                buffer_.push_back(frame);
+            }
+
+            frame_count_ += 1;
+            graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
+
+            boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
         }
     }
 
