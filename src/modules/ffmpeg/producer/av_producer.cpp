@@ -558,6 +558,7 @@ struct AVProducer::Impl
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("buffer", caspar::diagnostics::color(1.0f, 1.0f, 0.0f));
 
         state_["file/name"] = u8(name_);
         state_["file/path"] = u8(path_);
@@ -716,7 +717,9 @@ struct AVProducer::Impl
             {
                 boost::lock_guard<boost::mutex> buffer_lock(buffer_mutex_);
                 buffer_.push_back(frame);
+                buffer_cond_.notify_all();
                 frame_count_ += 1;
+                graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
             }
 
             boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
@@ -781,6 +784,7 @@ struct AVProducer::Impl
         buffer_prerolling_ = false;
         buffer_.pop_front();
         buffer_cond_.notify_all();
+        graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
 
         return frame;
     }
@@ -793,6 +797,8 @@ struct AVProducer::Impl
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
             buffer_.clear();
             buffer_prerolling_ = true;
+            buffer_cond_.notify_all();
+            graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
         }
     }
 
