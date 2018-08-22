@@ -105,7 +105,7 @@ struct Decoder
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
+        FF(av_opt_set_int(ctx.get(), "threads", 8, 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -530,7 +530,7 @@ struct AVProducer::Impl
     boost::condition_variable buffer_cond_;
     bool                      buffer_prerolling_ = true;
     std::atomic<bool>         buffer_eof_{false};
-    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps);
+    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
 
     boost::thread thread_;
     std::atomic<bool> abort_request_{ false };
@@ -622,12 +622,6 @@ struct AVProducer::Impl
         int warning_debounce = 0;
 
         while (!abort_request_) {
-            if (warning_debounce > 25) {
-                boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
-            } else {
-                boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
-            }
-
             {
                 const auto seek = seek_.exchange(AV_NOPTS_VALUE);
 
@@ -679,6 +673,9 @@ struct AVProducer::Impl
                             CASPAR_LOG(warning) << print() << " Waiting for frame...";
                         }
                     }
+
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 15 : 5));
+                    frame_timer.restart();
                 }
                 continue;
             }
@@ -764,7 +761,7 @@ struct AVProducer::Impl
 
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (buffer_prerolling_ && buffer_.size() < buffer_capacity_ / 4)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (buffer_prerolling_ && buffer_.size() < buffer_capacity_)) {
             if (buffer_eof_) {
                 return frame_;
             }
