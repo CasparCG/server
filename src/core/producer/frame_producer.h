@@ -52,6 +52,7 @@ class frame_producer
   public:
     static const spl::shared_ptr<frame_producer>& empty();
 
+    frame_producer(core::draw_frame frame) : frame_(std::move(frame)) {}
     frame_producer() {}
     virtual ~frame_producer() {}
 
@@ -67,7 +68,10 @@ class frame_producer
         return frame;
     }
 
-    virtual draw_frame                receive_impl(int nb_samples) = 0;
+    virtual draw_frame                receive_impl(int nb_samples)
+    {
+        return core::draw_frame{};
+    };
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params)
     {
         CASPAR_THROW_EXCEPTION(not_implemented());
@@ -78,8 +82,8 @@ class frame_producer
         static const monitor::state empty;
         return empty;
     }
-    virtual std::wstring print() const = 0;
-    virtual std::wstring name() const  = 0;
+    virtual std::wstring print() const { return L"frame_producer"; }
+    virtual std::wstring name() const { return L"frame_producer";  }
     virtual uint32_t     frame_number() const { return frame_number_; }
     virtual uint32_t     nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
     virtual draw_frame   last_frame()
@@ -87,7 +91,7 @@ class frame_producer
         if (!frame_) {
             frame_ = receive_impl(0);
         }
-        return frame_;
+        return core::draw_frame::still(frame_);
     }
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
     virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }

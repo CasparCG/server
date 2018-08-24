@@ -68,7 +68,11 @@ struct layer::impl
     void play()
     {
         if (background_ != frame_producer::empty()) {
-            background_->leading_producer(foreground_);
+            if (!paused_) {
+                background_->leading_producer(foreground_);
+            } else {
+                background_->leading_producer(spl::make_shared<core::frame_producer>(foreground_->last_frame()));
+            }
 
             foreground_ = std::move(background_);
             background_ = frame_producer::empty();
