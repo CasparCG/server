@@ -40,9 +40,11 @@
 #include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/regex.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -438,8 +440,31 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
     const auto url = found_filename ? L"file://" + *found_filename : param_url;
 
+    boost::optional<int> width;
+    boost::optional<int> height;
+    {
+        auto u8_url = u8(url);
+
+        boost::smatch what;
+        if (boost::regex_search(u8_url, what, boost::regex("width=([0-9]+)"))) {
+            width = boost::lexical_cast<int>(what[1].str());
+        }
+
+        if (boost::regex_search(u8_url, what, boost::regex("height=([0-9]+)"))) {
+            height = boost::lexical_cast<int>(what[1].str());
+        }
+    }
+
+    auto format_desc = dependencies.format_desc;
+    if (width && height) {
+        format_desc.width = *width;
+        format_desc.square_width = *width;
+        format_desc.height = *height;
+        format_desc.square_height = *height;
+    }
+
     return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, dependencies.format_desc, url));
+        spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

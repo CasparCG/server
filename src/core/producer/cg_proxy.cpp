@@ -221,6 +221,12 @@ struct cg_producer_registry::impl
             }
         }
 
+        // TODO (fix): This is a hack to allow query params.
+        for (auto& rec : records_by_extension_) {
+            if (rec.first == L".html")
+                return rec.second;
+        }
+
         return boost::none;
     }
 };
