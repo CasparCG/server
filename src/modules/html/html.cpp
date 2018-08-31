@@ -232,6 +232,9 @@ void init(core::module_dependencies dependencies)
     CefMainArgs main_args;
     g_cef_executor.reset(new executor(L"cef"));
     g_cef_executor->invoke([&] {
+#ifdef WIN32
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+#endif
         const bool  enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
         CefSettings settings;
         settings.command_line_args_disabled   = false;

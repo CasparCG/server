@@ -48,6 +48,7 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for.h>
 
 #include <mutex>
 
@@ -114,7 +115,14 @@ class html_client
         diagnostics::register_graph(graph_);
 
         loaded_ = false;
-        executor_.begin_invoke([&] { update(); });
+        executor_.begin_invoke([&] {
+#ifdef WIN32
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+#endif
+            for (auto n = 0; n < 4; ++n) {
+                update();
+            }
+        });
     }
 
     void close()
@@ -201,13 +209,17 @@ class html_client
         pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
 
         auto frame = frame_factory_->create_frame(this, pixel_desc);
-        std::memcpy(frame.image_data(0).begin(), buffer, width * height * 4);
+        auto src = (char*)buffer;
+        auto dst = (char*)frame.image_data(0).begin();
+        tbb::parallel_for(0, height, [&](auto y) {
+            std::memcpy(dst + y * width * 4, src + y * width * 4, width * 4);
+        });
 
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             frames_.push(core::draw_frame(std::move(frame)));
-            while (frames_.size() > 2) {
+            while (frames_.size() > 8) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -348,7 +360,7 @@ class html_client
             do_execute_javascript(javascript);
     }
 
-    std::wstring print() const { return L"html[" + url_ + L"]"; }
+    std::wstring print() const { return L"html[" + url_ + L"]" + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_width) + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_height) + L" " + boost::lexical_cast<std::wstring>(format_desc_.fps); }
 
     IMPLEMENT_REFCOUNTING(html_client);
 };
