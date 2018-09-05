@@ -122,10 +122,6 @@ struct Filter
                 }
             }
 
-            if (format_desc.field_count == 2) {
-                filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
-            }
-
             filter_spec +=
                 (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator())
                     .str();
@@ -345,7 +341,7 @@ class decklink_producer : public IDeckLinkInputCallback
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        if (FAILED(input_->EnableVideoInput(mode_->GetDisplayMode(), bmdFormat8BitYUV, 0))) {
+        if (FAILED(input_->EnableVideoInput(mode_->GetDisplayMode(), bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable video input.")
                                                       << boost::errinfo_api_function("EnableVideoInput"));
         }
@@ -382,10 +378,15 @@ class decklink_producer : public IDeckLinkInputCallback
     virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
     virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/,
+    virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
                                                               IDeckLinkDisplayMode* newDisplayMode,
                                                               BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
     {
+        input_->PauseStreams();
+        input_->EnableVideoInput(
+            newDisplayMode->GetDisplayMode(), bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection);
+        input_->FlushStreams();
+        input_->StartStreams();
         return S_OK;
     }
 
