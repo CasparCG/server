@@ -124,8 +124,16 @@ struct Filter
                 }
             }
 
-            if (dm->GetFieldDominance() != bmdProgressiveFrame) {
-                filter_spec += ",bwdif=mode=send_field:parity=auto:deint=interlaced";
+            switch (dm->GetFieldDominance()) {
+                case bmdUpperFieldFirst:
+                    filter_spec += ",bwdif=mode=send_field:parity=tff:deint=all";
+                    break;
+                case bmdLowerFieldFirst:
+                    filter_spec += ",bwdif=mode=send_field:parity=bff:deint=all";
+                    break;
+                case bmdUnknownFieldDominance:
+                    filter_spec += ",bwdif=mode=send_field:parity=auto:deint=interlaced";
+                    break;
             }
 
             if (dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width) {
