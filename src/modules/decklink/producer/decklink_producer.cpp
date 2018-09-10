@@ -125,7 +125,7 @@ struct Filter
             }
 
             if (dm->GetFieldDominance() != bmdProgressiveFrame) {
-                filter_spec += ",bwdif=mode=send_field:parity=auto:deint=all";
+                filter_spec += ",bwdif=mode=send_field:parity=auto:deint=interlaced";
             }
 
             if (dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width) {
@@ -352,7 +352,7 @@ class decklink_producer : public IDeckLinkInputCallback
         video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
         audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
-        field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame ? 2 : 1;
+        field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame && mode_->GetFieldDominance() != bmdProgressiveSegmentedFrame ? 2 : 1;
 
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
