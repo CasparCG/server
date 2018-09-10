@@ -319,7 +319,7 @@ class decklink_producer : public IDeckLinkInputCallback
     com_ptr<IDeckLinkDisplayMode> mode_;
     int                           field_count_;
 
-    core::video_format_desc& input_format;
+    core::video_format_desc input_format;
 
     std::string vfilter_;
     std::string afilter_;
