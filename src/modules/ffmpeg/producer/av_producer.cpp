@@ -534,7 +534,6 @@ struct AVProducer::Impl
     std::deque<Frame>         buffer_;
     boost::mutex              buffer_mutex_;
     boost::condition_variable buffer_cond_;
-    int                       buffer_prerolling_ = env::properties().get(L"ffmpeg.producer.pre-buffer", 0);
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
 
@@ -769,28 +768,25 @@ struct AVProducer::Impl
 
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || buffer_.size() < buffer_prerolling_) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
                 return frame_;
             }
-            if (buffer_prerolling_ == -1) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-            } else {
-                latency_ += 1;
-            }
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            latency_ += 1;
             return core::draw_frame{};
+        }
+
+        if (latency_ != -1) {
+            CASPAR_LOG(debug) << " latency: " << latency_;
+            latency_ = -1;
         }
 
         auto frame = buffer_[0].frame;
         frame_ = core::draw_frame::still(frame);
         frame_time_ = buffer_[0].pts + buffer_[0].duration;
         frame_flush_ = false;
-
-        if (buffer_prerolling_ != -1) {
-            buffer_prerolling_ = -1;
-            CASPAR_LOG(debug) << print() << " latency: " << latency_;
-        }
-
+        
         buffer_.pop_front();
         buffer_cond_.notify_all();
         graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
@@ -805,7 +801,6 @@ struct AVProducer::Impl
         {
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
             buffer_.clear();
-            buffer_prerolling_ = true;
             buffer_cond_.notify_all();
             graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
         }
