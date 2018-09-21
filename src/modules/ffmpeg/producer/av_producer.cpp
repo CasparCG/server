@@ -13,10 +13,12 @@
 #include <boost/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/os/thread.h>
+#include <common/env.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
 
@@ -105,7 +107,7 @@ struct Decoder
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", 8, 0));
+        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"ffmpeg.producer.threads", 4), 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -212,7 +214,11 @@ struct Filter
                 filter_spec = "null";
             }
 
-            filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=interlaced")).str();
+            auto deint = u8(env::properties().get<std::wstring>(L"ffmpeg.producer.auto-deinterlace", L"none"));
+
+            if (deint != "none") {
+                filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
+            }
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
@@ -528,9 +534,11 @@ struct AVProducer::Impl
     std::deque<Frame>         buffer_;
     boost::mutex              buffer_mutex_;
     boost::condition_variable buffer_cond_;
-    bool                      buffer_prerolling_ = true;
+    int                       buffer_prerolling_ = env::properties().get(L"ffmpeg.producer.pre-buffer", 0);
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
+
+    int                       latency_ = 0;
 
     boost::thread thread_;
     std::atomic<bool> abort_request_{ false };
@@ -558,8 +566,8 @@ struct AVProducer::Impl
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
-        graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
-        graph_->set_color("buffer", caspar::diagnostics::color(1.0f, 1.0f, 0.0f));
+        graph_->set_color("frame-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 
         state_["file/name"] = u8(name_);
         state_["file/path"] = u8(path_);
@@ -611,7 +619,7 @@ struct AVProducer::Impl
             }
         }
  
-        caspar::timer frame_timer;
+        timer frame_timer;
 
         set_thread_name(L"[ffmpeg::av_producer]");
 
@@ -674,7 +682,7 @@ struct AVProducer::Impl
                         }
                     }
 
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 15 : 5));
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 10 : 1));
                     frame_timer.restart();
                 }
                 continue;
@@ -761,12 +769,14 @@ struct AVProducer::Impl
 
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (buffer_prerolling_ && buffer_.size() < buffer_capacity_)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || buffer_.size() < buffer_prerolling_) {
             if (buffer_eof_) {
                 return frame_;
             }
-            if (!buffer_prerolling_) {
+            if (buffer_prerolling_ == -1) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            } else {
+                latency_ += 1;
             }
             return core::draw_frame{};
         }
@@ -776,7 +786,11 @@ struct AVProducer::Impl
         frame_time_ = buffer_[0].pts + buffer_[0].duration;
         frame_flush_ = false;
 
-        buffer_prerolling_ = false;
+        if (buffer_prerolling_ != -1) {
+            buffer_prerolling_ = -1;
+            CASPAR_LOG(debug) << print() << " latency: " << latency_;
+        }
+
         buffer_.pop_front();
         buffer_cond_.notify_all();
         graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
