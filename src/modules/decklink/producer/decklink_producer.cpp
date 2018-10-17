@@ -210,10 +210,15 @@ struct Filter
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
+                BMDTimeScale timeScale;
+                BMDTimeValue frameDuration;
+                dm->GetFrameRate(&frameDuration, &timeScale);
+
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE %
-                             sar.numerator() % sar.denominator() % format_desc.framerate.numerator() %
-                             (format_desc.framerate.denominator() * format_desc.field_count))
+                             sar.numerator() % sar.denominator() %
+                             ((timeScale / 1000) * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2)) %
+                             (frameDuration / 1000))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
