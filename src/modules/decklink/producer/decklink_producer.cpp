@@ -447,6 +447,8 @@ class decklink_producer : public IDeckLinkInputCallback
             input_format = new_fmt;
             mode_ = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
 
+            graph_->set_text(print());
+
             video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
             audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
