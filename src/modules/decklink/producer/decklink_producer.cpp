@@ -211,7 +211,7 @@ struct Filter
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             format_desc.width % format_desc.height % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE %
+                             dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE %
                              sar.numerator() % sar.denominator() % format_desc.framerate.numerator() %
                              (format_desc.framerate.denominator() * format_desc.field_count))
                                 .str();
@@ -325,7 +325,6 @@ class decklink_producer : public IDeckLinkInputCallback
     std::exception_ptr exception_;
 
     com_ptr<IDeckLinkDisplayMode> mode_;
-    int                           field_count_;
 
     core::video_format_desc input_format;
 
@@ -356,15 +355,13 @@ class decklink_producer : public IDeckLinkInputCallback
             input_format = core::video_format_desc(format);
         }
 
-        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
+        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
         video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
         audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
-        field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame && mode_->GetFieldDominance() != bmdProgressiveSegmentedFrame ? 2 : 1;
-
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
-        frame_buffer_.set_capacity(field_count_ + 1);
+        frame_buffer_.set_capacity(3);
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -428,27 +425,35 @@ class decklink_producer : public IDeckLinkInputCallback
                                                               IDeckLinkDisplayMode*            newDisplayMode,
                                                               BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
     {
-        auto mode = newDisplayMode->GetDisplayMode();
-        auto fmt     = get_caspar_video_format(mode);
+        try {
+            auto newMode = newDisplayMode->GetDisplayMode();
+            auto fmt  = get_caspar_video_format(newMode);
 
-        auto new_fmt     = core::video_format_desc(fmt);
 
-        CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to " << new_fmt.name;
+            auto new_fmt = core::video_format_desc(fmt);
 
-        input_format = new_fmt;
+            CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to "
+                             << new_fmt.name;
 
-        input_->PauseStreams();
 
-        // reinitializing filters because not all filters can handle on-the-fly format changes
-        video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
-        audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+            input_->PauseStreams();
 
-        // reinitializing video input with the new display mode
-        input_->EnableVideoInput(
-            newDisplayMode->GetDisplayMode(), bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection);
-        input_->FlushStreams();
-        input_->StartStreams();
-        return S_OK;
+            // reinitializing filters because not all filters can handle on-the-fly format changes
+            input_format = new_fmt;
+            mode_ = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+
+            video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
+            audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+
+            // reinitializing video input with the new display mode
+            input_->EnableVideoInput(newMode, bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection);
+            input_->FlushStreams();
+            input_->StartStreams();
+            return S_OK;
+        } catch (...) {
+            exception_ = std::current_exception();
+            return E_FAIL;
+        }
     }
 
     virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*  video,
