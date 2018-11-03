@@ -120,7 +120,9 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
     try {
         if (level == AV_LOG_VERBOSE)
-            CASPAR_LOG(debug) << L"[ffmpeg] " << line;
+            CASPAR_LOG(trace) << L"[ffmpeg] " << line;
+        else if (level == AV_LOG_DEBUG)
+            CASPAR_LOG(trace) << L"[ffmpeg] " << line;
         else if (level == AV_LOG_INFO)
             CASPAR_LOG(info) << L"[ffmpeg] " << line;
         else if (level == AV_LOG_WARNING)
