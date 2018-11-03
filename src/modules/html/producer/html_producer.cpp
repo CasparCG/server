@@ -211,9 +211,7 @@ class html_client
         auto frame = frame_factory_->create_frame(this, pixel_desc);
         auto src = (char*)buffer;
         auto dst = (char*)frame.image_data(0).begin();
-        tbb::parallel_for(0, height, [&](auto y) {
-            std::memcpy(dst + y * width * 4, src + y * width * 4, width * 4);
-        });
+        std::memcpy(dst, src, width * height * 4);
 
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
