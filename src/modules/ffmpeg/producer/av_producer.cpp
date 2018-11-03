@@ -738,6 +738,7 @@ struct AVProducer::Impl
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
         state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["loop"] = loop_;
     }
 
     core::draw_frame prev_frame()
@@ -798,6 +799,11 @@ struct AVProducer::Impl
 
     void seek(int64_t time)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
         {
@@ -816,6 +822,11 @@ struct AVProducer::Impl
 
     void loop(bool loop)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         loop_ = loop;
     }
 
@@ -826,6 +837,11 @@ struct AVProducer::Impl
 
     void start(int64_t start)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
     }
 
@@ -837,6 +853,11 @@ struct AVProducer::Impl
 
     void duration(int64_t duration)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
     }
 
