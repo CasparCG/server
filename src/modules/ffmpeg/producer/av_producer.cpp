@@ -656,6 +656,8 @@ struct AVProducer::Impl
                     if (loop_ && frame_count_ > 2) {
                         frame = Frame{};
                         seek_internal(start);
+                    } else {
+                        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
                     }
                     // TODO (fix) Limit live polling due to bugs.
                     continue;
