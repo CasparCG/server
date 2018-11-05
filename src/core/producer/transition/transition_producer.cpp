@@ -52,11 +52,12 @@ class transition_producer : public frame_producer
         : info_(info)
         , dst_producer_(dest)
     {
+        update_state();
     }
 
     // frame_producer
 
-    core::draw_frame last_frame()
+    core::draw_frame last_frame() override
     {
         auto src = src_producer_->last_frame();
         auto dst = dst_producer_->last_frame();
@@ -71,29 +72,31 @@ class transition_producer : public frame_producer
         return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
 
+    void update_state()
+    {
+        state_                     = dst_producer_->state();
+        state_["transition/frame"] = {current_frame_, info_.duration};
+        state_["transition/type"]  = [&]() -> std::string {
+            switch (info_.type) {
+                case transition_type::mix:
+                    return "mix";
+                case transition_type::wipe:
+                    return "wipe";
+                case transition_type::slide:
+                    return "slide";
+                case transition_type::push:
+                    return "push";
+                case transition_type::cut:
+                    return "cut";
+                default:
+                    return "n/a";
+            }
+        }();
+    }
+
     draw_frame receive_impl(int nb_samples) override
     {
-        CASPAR_SCOPE_EXIT
-        {
-            state_                     = dst_producer_->state();
-            state_["transition/frame"] = {current_frame_, info_.duration};
-            state_["transition/type"]  = [&]() -> std::string {
-                switch (info_.type) {
-                    case transition_type::mix:
-                        return "mix";
-                    case transition_type::wipe:
-                        return "wipe";
-                    case transition_type::slide:
-                        return "slide";
-                    case transition_type::push:
-                        return "push";
-                    case transition_type::cut:
-                        return "cut";
-                    default:
-                        return "n/a";
-                }
-            }();
-        };
+        CASPAR_SCOPE_EXIT { update_state(); };
 
         dst_ = dst_producer_->receive(nb_samples);
         if (!dst_) {
@@ -164,7 +167,7 @@ class transition_producer : public frame_producer
         return draw_frame::over(src_frame, dst_frame);
     }
 
-    core::monitor::state state() { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,

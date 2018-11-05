@@ -13,10 +13,12 @@
 #include <boost/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/os/thread.h>
+#include <common/env.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
 
@@ -105,7 +107,7 @@ struct Decoder
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", 8, 0));
+        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"ffmpeg.producer.threads", 4), 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -212,7 +214,11 @@ struct Filter
                 filter_spec = "null";
             }
 
-            filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=interlaced")).str();
+            auto deint = u8(env::properties().get<std::wstring>(L"ffmpeg.producer.auto-deinterlace", L"interlaced"));
+
+            if (deint != "none") {
+                filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
+            }
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
@@ -528,9 +534,10 @@ struct AVProducer::Impl
     std::deque<Frame>         buffer_;
     boost::mutex              buffer_mutex_;
     boost::condition_variable buffer_cond_;
-    bool                      buffer_prerolling_ = true;
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
+
+    int                       latency_ = 0;
 
     boost::thread thread_;
     std::atomic<bool> abort_request_{ false };
@@ -558,8 +565,8 @@ struct AVProducer::Impl
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
-        graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
-        graph_->set_color("buffer", caspar::diagnostics::color(1.0f, 1.0f, 0.0f));
+        graph_->set_color("frame-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 
         state_["file/name"] = u8(name_);
         state_["file/path"] = u8(path_);
@@ -611,7 +618,7 @@ struct AVProducer::Impl
             }
         }
  
-        caspar::timer frame_timer;
+        timer frame_timer;
 
         set_thread_name(L"[ffmpeg::av_producer]");
 
@@ -649,6 +656,8 @@ struct AVProducer::Impl
                     if (loop_ && frame_count_ > 2) {
                         frame = Frame{};
                         seek_internal(start);
+                    } else {
+                        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
                     }
                     // TODO (fix) Limit live polling due to bugs.
                     continue;
@@ -674,7 +683,7 @@ struct AVProducer::Impl
                         }
                     }
 
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 15 : 5));
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 10 : 1));
                     frame_timer.restart();
                 }
                 continue;
@@ -729,6 +738,7 @@ struct AVProducer::Impl
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
         state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["loop"] = loop_;
     }
 
     core::draw_frame prev_frame()
@@ -761,22 +771,25 @@ struct AVProducer::Impl
 
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4) || (buffer_prerolling_ && buffer_.size() < buffer_capacity_)) {
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
                 return frame_;
             }
-            if (!buffer_prerolling_) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-            }
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            latency_ += 1;
             return core::draw_frame{};
+        }
+
+        if (latency_ != -1) {
+            CASPAR_LOG(debug) << " latency: " << latency_;
+            latency_ = -1;
         }
 
         auto frame = buffer_[0].frame;
         frame_ = core::draw_frame::still(frame);
         frame_time_ = buffer_[0].pts + buffer_[0].duration;
         frame_flush_ = false;
-
-        buffer_prerolling_ = false;
+        
         buffer_.pop_front();
         buffer_cond_.notify_all();
         graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
@@ -786,12 +799,16 @@ struct AVProducer::Impl
 
     void seek(int64_t time)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
 
         {
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
             buffer_.clear();
-            buffer_prerolling_ = true;
             buffer_cond_.notify_all();
             graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
         }
@@ -805,6 +822,11 @@ struct AVProducer::Impl
 
     void loop(bool loop)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         loop_ = loop;
     }
 
@@ -815,6 +837,11 @@ struct AVProducer::Impl
 
     void start(int64_t start)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
     }
 
@@ -826,6 +853,11 @@ struct AVProducer::Impl
 
     void duration(int64_t duration)
     {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
         duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
     }
 
