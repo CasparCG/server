@@ -756,7 +756,7 @@ struct AVProducer::Impl
             if (!buffer_.empty()) {
                 auto frame = buffer_[0].frame;
                 frame_ = core::draw_frame::still(frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                frame_time_ = buffer_[0].pts;
                 frame_flush_ = false;
             }
         }
@@ -789,7 +789,7 @@ struct AVProducer::Impl
 
         auto frame = buffer_[0].frame;
         frame_ = core::draw_frame::still(frame);
-        frame_time_ = buffer_[0].pts + buffer_[0].duration;
+        frame_time_ = buffer_[0].pts;
         frame_flush_ = false;
         
         buffer_.pop_front();
