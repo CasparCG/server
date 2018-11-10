@@ -723,7 +723,9 @@ struct AVProducer::Impl
             {
                 boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
                 buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
-                buffer_.push_back(frame);
+                if (seek_ == AV_NOPTS_VALUE) {
+                    buffer_.push_back(frame);
+                }
             }
 
             frame_count_ += 1;
