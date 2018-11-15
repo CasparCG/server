@@ -38,9 +38,8 @@
 
 namespace caspar { namespace core {
 
-class route_producer : public frame_producer_base
+class route_producer : public frame_producer
 {
-    monitor::state                      state_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> buffer_;
@@ -50,6 +49,8 @@ class route_producer : public frame_producer_base
 
     std::shared_ptr<route>             route_;
     boost::signals2::scoped_connection connection_;
+
+    core::draw_frame frame_;
 
   public:
     route_producer(std::shared_ptr<route> route, int buffer)
@@ -74,12 +75,23 @@ class route_producer : public frame_producer_base
         CASPAR_LOG(debug) << print() << L" Initialized";
     }
 
+    draw_frame last_frame() override
+    {
+        if (!frame_) {
+            buffer_.try_pop(frame_);
+        }
+        return core::draw_frame::still(frame_);
+    }
+
     draw_frame receive_impl(int nb_samples) override
     {
         core::draw_frame frame;
         if (!buffer_.try_pop(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+        } else {
+            frame_ = frame;
         }
+
         graph_->set_value("consume-time", consume_timer_.elapsed() * route_->format_desc.fps * 0.5);
         consume_timer_.restart();
         return frame;
@@ -88,8 +100,6 @@ class route_producer : public frame_producer_base
     std::wstring print() const override { return L"route[" + route_->name + L"]"; }
 
     std::wstring name() const override { return L"route"; }
-
-    const monitor::state& state() const { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_producer_dependencies& dependencies,

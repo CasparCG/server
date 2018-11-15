@@ -33,18 +33,13 @@ class Input
 
     AVFormatContext* const operator->() const;
 
-    boost::optional<int64_t> start_time() const;
-    boost::optional<int64_t> duration() const;
-
     void reset();
-    bool paused() const;
-    void paused(bool value);
     bool eof() const;
+    void abort();
 
     void seek(int64_t ts, bool flush = true);
 
   private:
-
     std::string                         filename_;
     std::shared_ptr<diagnostics::graph> graph_;
 
@@ -53,10 +48,9 @@ class Input
 
     mutable std::mutex                    mutex_;
     std::condition_variable               cond_;
-    std::size_t                           output_capacity_ = 64;
+    std::size_t                           output_capacity_ = 256;
     std::queue<std::shared_ptr<AVPacket>> output_;
 
-    std::atomic<bool> paused_{true};
     std::atomic<bool> eof_{false};
 
     std::atomic<bool> abort_request_{false};

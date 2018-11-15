@@ -41,8 +41,7 @@
 #pragma warning(disable : 4996)
 #endif
 
-extern "C"
-{
+extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavdevice/avdevice.h>
@@ -121,7 +120,9 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
     try {
         if (level == AV_LOG_VERBOSE)
-            CASPAR_LOG(debug) << L"[ffmpeg] " << line;
+            CASPAR_LOG(trace) << L"[ffmpeg] " << line;
+        else if (level == AV_LOG_DEBUG)
+            CASPAR_LOG(trace) << L"[ffmpeg] " << line;
         else if (level == AV_LOG_INFO)
             CASPAR_LOG(info) << L"[ffmpeg] " << line;
         else if (level == AV_LOG_WARNING)

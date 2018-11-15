@@ -58,10 +58,10 @@ class video_channel final
     explicit video_channel(int                                        index,
                            const video_format_desc&                   format_desc,
                            std::unique_ptr<image_mixer>               image_mixer,
-                           std::function<void(const monitor::state&)> on_tick);
+                           std::function<void(core::monitor::state)> on_tick);
     ~video_channel();
 
-    const monitor::state& state() const;
+    core::monitor::state state() const;
 
     const core::stage&  stage() const;
     core::stage&        stage();

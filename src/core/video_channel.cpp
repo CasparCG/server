@@ -72,7 +72,7 @@ struct video_channel::impl final
 
     std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
 
-    std::function<void(const monitor::state&)> tick_;
+    std::function<void(core::monitor::state)> tick_;
 
     std::map<int, std::weak_ptr<core::route>> routes_;
     std::mutex                                routes_mutex_;
@@ -84,7 +84,7 @@ struct video_channel::impl final
     impl(int                                        index,
          const core::video_format_desc&             format_desc,
          std::unique_ptr<image_mixer>               image_mixer,
-         std::function<void(const monitor::state&)> tick)
+         std::function<void(core::monitor::state)> tick)
         : index_(index)
         , format_desc_(format_desc)
         , output_(graph_, format_desc, index)
@@ -96,6 +96,7 @@ struct video_channel::impl final
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
         graph_->set_color("mix-time", caspar::diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
         graph_->set_color("consume-time", caspar::diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
+        graph_->set_color("frame-time", caspar::diagnostics::color(1.0f, 0.4f, 0.4f, 0.8f));
         graph_->set_color("osc-time", caspar::diagnostics::color(0.3f, 0.4f, 0.0f, 0.8f));
         graph_->set_text(print());
         caspar::diagnostics::register_graph(graph_);
@@ -103,6 +104,10 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
         thread_ = std::thread([=] {
+#ifdef WIN32
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
             while (!abort_request_) {
                 try {
                     core::video_format_desc format_desc;
@@ -114,26 +119,24 @@ struct video_channel::impl final
                         nb_samples = audio_cadence_.front();
                     }
 
-                    state_.clear();
+                    caspar::timer frame_timer;
 
                     // Produce
                     caspar::timer produce_timer;
                     auto          stage_frames = stage_(format_desc, nb_samples);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
-                    state_.insert_or_assign("stage", stage_.state());
-
                     // Mix
                     caspar::timer mix_timer;
                     auto          mixed_frame = mixer_(stage_frames, format_desc, format_desc.audio_cadence[0]);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
-                    state_.insert_or_assign("mixer", mixer_.state());
-
                     // Consume
                     caspar::timer consume_timer;
                     output_(std::move(mixed_frame), format_desc);
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
+
+                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
                     {
                         std::vector<core::draw_frame> frames;
@@ -160,8 +163,11 @@ struct video_channel::impl final
                             }
                         }
                     }
-
-                    state_.insert_or_assign("output", output_.state());
+                    state_           = {};
+                    state_["stage"] = stage_.state();
+                    state_["mixer"] = mixer_.state();
+                    state_["output"] = output_.state();
+                    state_["framerate"] = { format_desc_.framerate.numerator(), format_desc_.framerate.denominator() };
 
                     caspar::timer osc_timer;
                     tick_(state_);
@@ -223,7 +229,7 @@ struct video_channel::impl final
 video_channel::video_channel(int                                        index,
                              const core::video_format_desc&             format_desc,
                              std::unique_ptr<image_mixer>               image_mixer,
-                             std::function<void(const monitor::state&)> tick)
+                             std::function<void(core::monitor::state)> tick)
     : impl_(new impl(index, format_desc, std::move(image_mixer), tick))
 {
 }
@@ -241,7 +247,7 @@ void                           core::video_channel::video_format_desc(const core
     impl_->video_format_desc(format_desc);
 }
 int                   video_channel::index() const { return impl_->index(); }
-const monitor::state& video_channel::state() const { return impl_->state_; }
+core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index) { return impl_->route(index); }
 

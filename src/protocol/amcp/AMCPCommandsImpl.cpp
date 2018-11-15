@@ -67,6 +67,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -89,10 +90,11 @@
 403 [command] ERROR		invalid parameter
 404 [command] ERROR		file not found
 
-500 FAILED				internal error
-501 [command] FAILED	internal error
-502 [command] FAILED	could not read file
-503 [command] FAILED	access denied
+500 FAILED						internal error
+501 [command] FAILED			internal error
+502 [command] FAILED			could not read file
+503 [command] FAILED			access denied
+504 [command] QUEUE OVERFLOW	command queue overflow
 
 600 [command] FAILED	[command] not implemented
 */
@@ -100,6 +102,7 @@
 namespace caspar { namespace protocol { namespace amcp {
 
 using namespace core;
+namespace pt = boost::property_tree;
 
 std::wstring read_file_base64(const boost::filesystem::path& file)
 {
@@ -285,7 +288,9 @@ std::wstring load_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
     auto pFP =
         ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
-    ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
+    auto pFP2 = create_transition_producer(pFP, transition_info{});
+
+    ctx.channel.channel->stage().load(ctx.layer_index(), pFP2, true);
 
     return L"202 LOAD OK\r\n";
 }
@@ -409,7 +414,16 @@ std::wstring print_command(command_context& ctx)
 
 std::wstring log_level_command(command_context& ctx)
 {
-    log::set_log_level(ctx.parameters.at(0));
+    if (ctx.parameters.size() == 0) {
+        std::wstringstream replyString;
+        replyString << L"201 LOG OK\r\n" << boost::to_upper_copy(log::get_log_level()) << L"\r\n";
+
+        return replyString.str();
+    }
+
+    if (!log::set_log_level(ctx.parameters.at(0))) {
+        return L"403 LOG FAILED\r\n";
+    }
 
     return L"202 LOG OK\r\n";
 }
@@ -1239,65 +1253,117 @@ std::wstring channel_grid_command(command_context& ctx)
 
 // Thumbnail Commands
 
+std::wstring make_request(command_context& ctx, const std::string path, const std::wstring default_response)
+{
+    auto res = http::request(ctx.proxy_host, ctx.proxy_port, path);
+    if (res.status_code >= 500 || res.body.size() == 0) {
+        CASPAR_LOG(error) << "Failed to connect to media-scanner. Is it running? \nReason: " << res.status_message;
+        return default_response;
+    }
+    return u16(res.body);
+}
+
 std::wstring thumbnail_list_command(command_context& ctx)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail");
-    return u16(res.body);
+    return make_request(ctx, "/thumbnail", L"501 THUMBNAIL LIST FAILED\r\n");
 }
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-    auto res =
-        http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))));
-    return u16(res.body);
+    return make_request(
+        ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
 }
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    auto res = http::request(
-        ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))));
-    return u16(res.body);
+    return make_request(
+        ctx, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/thumbnail/generate");
-    return u16(res.body);
+    return make_request(ctx, "/thumbnail/generate", L"501 THUMBNAIL GENERATE_ALL FAILED\r\n");
 }
 
 // Query Commands
 
 std::wstring cinf_command(command_context& ctx)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))));
-    return u16(res.body);
+    return make_request(ctx, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
 }
 
-std::wstring cls_command(command_context& ctx)
-{
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/cls");
-    return u16(res.body);
-}
+std::wstring cls_command(command_context& ctx) { return make_request(ctx, "/cls", L"501 CLS FAILED\r\n"); }
 
-std::wstring fls_command(command_context& ctx)
-{
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/fls");
-    return u16(res.body);
-}
+std::wstring fls_command(command_context& ctx) { return make_request(ctx, "/fls", L"501 FLS FAILED\r\n"); }
 
-std::wstring tls_command(command_context& ctx)
-{
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, "/tls");
-    return u16(res.body);
-}
+std::wstring tls_command(command_context& ctx) { return make_request(ctx, "/tls", L"501 TLS FAILED\r\n"); }
 
 std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
+
+struct param_visitor : public boost::static_visitor<void>
+{
+    std::wstring path;
+    pt::wptree&  o;
+
+    template <typename T>
+    param_visitor(std::string path, T& o)
+        : o(o)
+        , path(u16(path))
+    {
+    }
+
+    void operator()(const bool value) { o.add(path, value); }
+
+    void operator()(const int32_t value) { o.add(path, value); }
+
+    void operator()(const uint32_t value) { o.add(path, value); }
+
+    void operator()(const int64_t value) { o.add(path, value); }
+
+    void operator()(const uint64_t value) { o.add(path, value); }
+
+    void operator()(const float value) { o.add(path, value); }
+
+    void operator()(const double value) { o.add(path, value); }
+
+    void operator()(const std::string& value) { o.add(path, u16(value)); }
+
+    void operator()(const std::wstring& value) { o.add(path, value); }
+};
+
+std::wstring info_channel_command(command_context& ctx)
+{
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO OK\r\n";
+
+    pt::wptree info;
+    pt::wptree channel_info;
+
+    auto state = ctx.channel.channel->state();
+    for (const auto& p : state) {
+        const auto    path = boost::algorithm::replace_all_copy(p.first, "/", ".");
+        param_visitor param_visitor(path, channel_info);
+        for (const auto& element : p.second) {
+            boost::apply_visitor(param_visitor, element);
+        }
+    }
+
+    info.add_child(L"channel", channel_info);
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, info, w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
 
 std::wstring info_command(command_context& ctx)
 {
     std::wstringstream replyString;
     // This is needed for backwards compatibility with old clients
     replyString << L"200 INFO OK\r\n";
+
     for (size_t n = 0; n < ctx.channels.size(); ++n) {
         replyString << n + 1 << L" " << ctx.channels.at(n).channel->video_format_desc().name << L" PLAYING\r\n";
     }
@@ -1382,7 +1448,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo.register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
-    repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 1);
+    repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo.register_channel_command(L"Basic Commands", L"SET", set_command, 2);
     repo.register_command(L"Basic Commands", L"LOCK", lock_command, 2);
 
@@ -1435,6 +1501,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"BYE", bye_command, 0);
     repo.register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
+    repo.register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     repo.register_command(L"Query Commands", L"INFO", info_command, 0);
 }
 

@@ -10,10 +10,15 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/os/thread.h>
+#include <common/env.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
 
@@ -26,8 +31,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-extern "C"
-{
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
@@ -48,20 +52,15 @@ extern "C"
 
 #include <algorithm>
 #include <atomic>
-#include <condition_variable>
 #include <deque>
 #include <exception>
 #include <iomanip>
 #include <memory>
-#include <mutex>
 #include <queue>
 #include <sstream>
 #include <string>
-#include <thread>
 
 namespace caspar { namespace ffmpeg {
-
-using namespace std::chrono_literals;
 
 const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 
@@ -69,6 +68,7 @@ struct Frame
 {
     std::shared_ptr<AVFrame> video;
     std::shared_ptr<AVFrame> audio;
+    core::draw_frame         frame;
     int64_t                  pts      = AV_NOPTS_VALUE;
     int64_t                  duration = 0;
 };
@@ -78,7 +78,7 @@ struct Frame
 
 struct Decoder
 {
-    AVStream*                             st;
+    AVStream*                             st = nullptr;
     std::shared_ptr<AVCodecContext>       ctx;
     int64_t                               next_pts = AV_NOPTS_VALUE;
     std::queue<std::shared_ptr<AVPacket>> input;
@@ -105,7 +105,9 @@ struct Decoder
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
-        FF(av_opt_set_int(ctx.get(), "threads", 4, 0));
+
+        // TODO (fix): Remove limit.
+        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"ffmpeg.producer.threads", 4), 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -127,6 +129,66 @@ struct Decoder
         }
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
+    }
+
+
+    bool operator()()
+    {
+        if (frame || eof || !st) {
+            return false;
+        }
+
+        auto av_frame = alloc_frame();
+        auto ret = avcodec_receive_frame(ctx.get(), av_frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            if (input.empty()) {
+                return false;
+            }
+            FF(avcodec_send_packet(ctx.get(), input.front().get()));
+            input.pop();
+        } else if (ret == AVERROR_EOF) {
+            avcodec_flush_buffers(ctx.get());
+            av_frame->pts = next_pts;
+            eof = true;
+            next_pts = AV_NOPTS_VALUE;
+            frame = std::move(av_frame);
+        } else {
+            FF_RET(ret, "avcodec_receive_frame");
+
+            // NOTE This is a workaround for DVCPRO HD.
+            if (av_frame->width > 1024 && av_frame->interlaced_frame) {
+                av_frame->top_field_first = 1;
+            }
+
+            // TODO (fix) is this always best?
+            av_frame->pts = av_frame->best_effort_timestamp;
+
+            auto duration_pts = av_frame->pkt_duration;
+            if (duration_pts <= 0) {
+                if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    const auto ticks = av_stream_get_parser(st)
+                        ? av_stream_get_parser(st)->repeat_pict + 1
+                        : ctx->ticks_per_frame;
+                    duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks) /
+                        ctx->framerate.num / ctx->ticks_per_frame;
+                    duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, st->time_base);
+                } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+                    duration_pts =
+                        av_rescale_q(av_frame->nb_samples, { 1, ctx->sample_rate }, st->time_base);
+                }
+            }
+
+            if (duration_pts > 0) {
+                next_pts = av_frame->pts + duration_pts;
+            } else {
+                next_pts = AV_NOPTS_VALUE;
+            }
+
+            frame = std::move(av_frame);
+        }
+
+        return true;
     }
 };
 
@@ -152,7 +214,11 @@ struct Filter
                 filter_spec = "null";
             }
 
-            filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=all")).str();
+            auto deint = u8(env::properties().get<std::wstring>(L"ffmpeg.producer.auto-deinterlace", L"interlaced"));
+
+            if (deint != "none") {
+                filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
+            }
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
@@ -162,10 +228,11 @@ struct Filter
                 filter_spec = "anull";
             }
 
-            filter_spec +=
-                (boost::format(",aresample=sample_rate=%d:async=2000:first_pts=%d") % format_desc.audio_sample_rate %
-                 av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}))
-                    .str();
+            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01,asetrate=r=%d,"
+                                          "asetnsamples=n=1024:p=0") %
+                            av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) %
+                            format_desc.audio_sample_rate)
+                               .str();
         }
 
         AVFilterInOut* outputs = nullptr;
@@ -206,9 +273,15 @@ struct Filter
 
         std::vector<AVStream*> av_streams;
         for (auto n = 0U; n < input->nb_streams; ++n) {
-            auto disposition = input->streams[n]->disposition;
+            const auto st = input->streams[n];
+
+            if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && st->codecpar->channels == 0) {
+                continue;
+            }
+
+            auto disposition = st->disposition;
             if (!disposition || disposition == AV_DISPOSITION_DEFAULT) {
-                av_streams.push_back(input->streams[n]);
+                av_streams.push_back(st);
             }
         }
 
@@ -394,11 +467,42 @@ struct Filter
 
         FF(avfilter_graph_config(graph.get(), nullptr));
     }
+
+    bool operator()(int nb_samples = -1)
+    {
+        if (frame || eof) {
+            return false;
+        }
+
+        if (!sink || sources.empty()) {
+            eof = true;
+            frame = nullptr;
+            return true;
+        }
+
+        auto av_frame = alloc_frame();
+        auto ret = nb_samples >= 0 ? av_buffersink_get_samples(sink, av_frame.get(), nb_samples)
+            : av_buffersink_get_frame(sink, av_frame.get());
+
+        if (ret == AVERROR(EAGAIN)) {
+            return false;
+        } else if (ret == AVERROR_EOF) {
+            eof = true;
+            frame = nullptr;
+            return true;
+        } else {
+            FF_RET(ret, "av_buffersink_get_frame");
+            frame = av_frame;
+            return true;
+        }
+    }
 };
 
 struct AVProducer::Impl
 {
     core::monitor::state                state_;
+    mutable boost::mutex                state_mutex_;
+
     spl::shared_ptr<diagnostics::graph> graph_;
 
     const std::shared_ptr<core::frame_factory> frame_factory_;
@@ -407,8 +511,6 @@ struct AVProducer::Impl
     const std::string                          name_;
     const std::string                          path_;
 
-    std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
-
     Input                  input_;
     std::map<int, Decoder> decoders_;
     Filter                 video_filter_;
@@ -416,30 +518,29 @@ struct AVProducer::Impl
 
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
-    int64_t start_    = AV_NOPTS_VALUE;
-    int64_t duration_ = AV_NOPTS_VALUE;
-    bool    loop_     = false;
+    std::atomic<int64_t> start_{ AV_NOPTS_VALUE };
+    std::atomic<int64_t> duration_{ AV_NOPTS_VALUE };
+    std::atomic<int64_t> seek_{ AV_NOPTS_VALUE };
+    std::atomic<bool>    loop_{ false };
 
     std::string afilter_;
     std::string vfilter_;
 
-    mutable std::mutex      mutex_;
-    std::condition_variable cond_;
-
+    int64_t          frame_count_ = 0;
     int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
     core::draw_frame frame_;
 
-    std::mutex              buffer_mutex_;
-    std::condition_variable buffer_cond_;
-    std::deque<Frame>       buffer_;
-    std::atomic<bool>       buffer_eof_{false};
-    int                     buffer_capacity_ = static_cast<int>(format_desc_.fps / 2);
+    std::deque<Frame>         buffer_;
+    boost::mutex              buffer_mutex_;
+    boost::condition_variable buffer_cond_;
+    std::atomic<bool>         buffer_eof_{false};
+    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
 
-    tbb::task_group_context task_context_;
+    int                       latency_ = 0;
 
-    std::atomic<bool> abort_request_{false};
-    std::thread       thread_;
+    boost::thread thread_;
+    std::atomic<bool> abort_request_{ false };
 
     Impl(std::shared_ptr<core::frame_factory> frame_factory,
          core::video_format_desc              format_desc,
@@ -462,151 +563,21 @@ struct AVProducer::Impl
         , vfilter_(vfilter)
         , afilter_(afilter)
     {
-        state_["file/name"] = u8(name_);
-        state_["file/path"] = u8(path_);
-
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
-        graph_->set_color("frame-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
-        graph_->set_text(u16(print()));
+        graph_->set_color("frame-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 
-        thread_ = std::thread([=] {
+        state_["file/name"] = u8(name_);
+        state_["file/path"] = u8(path_);
+        state_["loop"]      = loop;
+        update_state();
+
+        thread_ = boost::thread([=] {
             try {
-                input_.reset();
-
-                if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
-                    duration_ = input_->duration;
-                }
-
-                if (start_ != AV_NOPTS_VALUE) {
-                    input_.seek(start_);
-                    reset(start_);
-                } else {
-                    reset(input_.start_time().value_or(0));
-                }
-
-                input_.paused(false);
-
-                caspar::timer frame_timer;
-
-                set_thread_name(L"[ffmpeg::av_producer]");
-
-                boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
-                Frame frame;
-
-                int warning_debounce = 0;
-
-                while (!abort_request_) {
-                    {
-                        std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
-                    }
-
-                    if (abort_request_) {
-                        break;
-                    }
-
-                    std::unique_lock<std::mutex> lock(mutex_);
-
-                    if (buffer_.size() > buffer_capacity_ / 2) {
-                        cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
-                        frame_timer.restart();
-                    } else if (buffer_.size() > 2) {
-                        cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                        frame_timer.restart();
-                    }
-
-                    // TODO (perf) seek as soon as input is past duration or eof.
-                    {
-                        auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
-                        auto end   = duration_ != AV_NOPTS_VALUE ? start + duration_ : INT64_MAX;
-                        auto time  = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
-
-                        buffer_eof_ =
-                            (video_filter_.eof && audio_filter_.eof) ||
-                            av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
-
-                        if (buffer_eof_) {
-                            if (loop_) {
-                                frame = Frame{};
-                                seek_internal(start_);
-                            } else {
-                                // TODO (perf) Avoid polling.
-                                cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                                frame_timer.restart();
-                            }
-                            // TODO (fix) Limit live polling due to bugs.
-                            continue;
-                        }
-                    }
-
-                    std::atomic<int> progress{schedule()};
-
-                    tbb::parallel_invoke(
-                        [&] {
-                            tbb::parallel_for_each(decoders_.begin(),
-                                                   decoders_.end(),
-                                                   [&](auto& p) { progress.fetch_or(decode_frame(p.second)); },
-                                                   task_context_);
-                        },
-                        [&] { progress.fetch_or(filter_frame(video_filter_)); },
-                        [&] { progress.fetch_or(filter_frame(audio_filter_, audio_cadence_[0])); },
-                        task_context_);
-
-                    if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
-                        if (!progress) {
-                            if (warning_debounce++ % 500 == 100) {
-                                if (!video_filter_.frame && !video_filter_.eof) {
-                                    CASPAR_LOG(warning) << print() << " Waiting for video frame...";
-                                } else if (!audio_filter_.frame && !audio_filter_.eof) {
-                                    CASPAR_LOG(warning) << print() << " Waiting for audio frame...";
-                                } else {
-                                    CASPAR_LOG(warning) << print() << " Waiting for frame...";
-                                }
-                            }
-                            // TODO (perf) Avoid polling.
-                            cond_.wait_for(lock, 5ms, [&] { return abort_request_.load(); });
-                        }
-                        // TODO (fix) Limit live polling due to bugs.
-                        continue;
-                    }
-
-                    warning_debounce = 0;
-
-                    // TODO (fix)
-                    // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
-                    //    seek_internal(start_);
-                    //    continue;
-                    //}
-
-                    const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
-
-                    if (video_filter_.frame) {
-                        frame.video    = std::move(video_filter_.frame);
-                        const auto tb  = av_buffersink_get_time_base(video_filter_.sink);
-                        const auto fr  = av_buffersink_get_frame_rate(video_filter_.sink);
-                        frame.pts      = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
-                    }
-
-                    if (audio_filter_.frame) {
-                        frame.audio    = std::move(audio_filter_.frame);
-                        const auto tb  = av_buffersink_get_time_base(audio_filter_.sink);
-                        const auto sr  = av_buffersink_get_sample_rate(audio_filter_.sink);
-                        frame.pts      = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
-                    }
-
-                    {
-                        std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                        buffer_.push_back(frame);
-                    }
-
-                    boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
-                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-                }
+                run();
+            } catch (boost::thread_interrupted&) {
+                // Do nothing...
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
@@ -615,13 +586,289 @@ struct AVProducer::Impl
 
     ~Impl()
     {
-        graph_ = spl::shared_ptr<diagnostics::graph>();
+        input_.abort();
         abort_request_ = true;
-        cond_.notify_all();
         buffer_cond_.notify_all();
         thread_.join();
     }
 
+    void run()
+    {
+        std::vector<int> audio_cadence = format_desc_.audio_cadence;
+
+        input_.reset();
+
+        for (auto n = 0UL; n < input_->nb_streams; ++n) {
+            auto st = input_->streams[n];
+            auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
+            state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num,
+                framerate.den };
+        }
+
+        if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+            duration_ = input_->duration;
+        }
+
+        {
+            const auto start = start_.load();
+            if (start != AV_NOPTS_VALUE) {
+                seek_internal(start);
+            } else {
+                reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
+            }
+        }
+ 
+        timer frame_timer;
+
+        set_thread_name(L"[ffmpeg::av_producer]");
+
+        boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
+
+        Frame frame;
+
+        int warning_debounce = 0;
+
+        while (!abort_request_) {
+            {
+                const auto seek = seek_.exchange(AV_NOPTS_VALUE);
+
+                if (seek != AV_NOPTS_VALUE) {
+                    seek_internal(seek);
+                    continue;
+                }
+            }
+
+            {
+                // TODO (perf) seek as soon as input is past duration or eof.
+
+                auto start = start_.load();
+                auto duration = duration_.load();
+
+                start = start != AV_NOPTS_VALUE ? start : 0;
+                auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
+                auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+
+                buffer_eof_ =
+                    (video_filter_.eof && audio_filter_.eof) ||
+                    av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+
+                if (buffer_eof_) {
+                    if (loop_ && frame_count_ > 2) {
+                        frame = Frame{};
+                        seek_internal(start);
+                    } else {
+                        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+                    }
+                    // TODO (fix) Limit live polling due to bugs.
+                    continue;
+                }
+            }
+
+            std::atomic<int> progress{ schedule() };
+
+            tbb::parallel_invoke(
+                [&] { tbb::parallel_for_each(decoders_, [&](auto& p) { progress.fetch_or(p.second()); }); },
+                [&] { progress.fetch_or(video_filter_()); },
+                [&] { progress.fetch_or(audio_filter_(audio_cadence[0])); });
+
+            if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
+                if (!progress) {
+                    if (warning_debounce++ % 500 == 100) {
+                        if (!video_filter_.frame && !video_filter_.eof) {
+                            CASPAR_LOG(warning) << print() << " Waiting for video frame...";
+                        } else if (!audio_filter_.frame && !audio_filter_.eof) {
+                            CASPAR_LOG(warning) << print() << " Waiting for audio frame...";
+                        } else {
+                            CASPAR_LOG(warning) << print() << " Waiting for frame...";
+                        }
+                    }
+
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 10 : 1));
+                    frame_timer.restart();
+                }
+                continue;
+            }
+
+            warning_debounce = 0;
+
+            // TODO (fix)
+            // if (start_ != AV_NOPTS_VALUE && frame.pts < start_) {
+            //    seek_internal(start_);
+            //    continue;
+            //}
+
+            const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
+
+            if (video_filter_.frame) {
+                frame.video = std::move(video_filter_.frame);
+                const auto tb = av_buffersink_get_time_base(video_filter_.sink);
+                const auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
+                frame.pts = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
+                frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
+            }
+
+            if (audio_filter_.frame) {
+                frame.audio = std::move(audio_filter_.frame);
+                const auto tb = av_buffersink_get_time_base(audio_filter_.sink);
+                const auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
+                frame.pts = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
+                frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
+            }
+
+            frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
+
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            frame_timer.restart();
+
+            {
+                boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
+                buffer_cond_.wait(buffer_lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
+                if (seek_ == AV_NOPTS_VALUE) {
+                    buffer_.push_back(frame);
+                }
+            }
+
+            frame_count_ += 1;
+            graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
+
+            boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
+        }
+    }
+
+    void update_state()
+    {
+        graph_->set_text(u16(print()));
+        boost::lock_guard<boost::mutex> lock(state_mutex_);
+        state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["loop"] = loop_;
+    }
+
+    core::draw_frame prev_frame()
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        if (frame_flush_ || !frame_) {
+            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+
+            if (!buffer_.empty()) {
+                auto frame = buffer_[0].frame;
+                frame_ = core::draw_frame::still(frame);
+                frame_time_ = buffer_[0].pts;
+                frame_flush_ = false;
+            }
+        }
+
+        return frame_;
+    }
+
+    core::draw_frame next_frame()
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+
+        if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
+            if (buffer_eof_) {
+                return frame_;
+            }
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+            latency_ += 1;
+            return core::draw_frame{};
+        }
+
+        if (latency_ != -1) {
+            CASPAR_LOG(debug) << " latency: " << latency_;
+            latency_ = -1;
+        }
+
+        auto frame = buffer_[0].frame;
+        frame_ = core::draw_frame::still(frame);
+        frame_time_ = buffer_[0].pts;
+        frame_flush_ = false;
+        
+        buffer_.pop_front();
+        buffer_cond_.notify_all();
+        graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
+
+        return frame;
+    }
+
+    void seek(int64_t time)
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        seek_ = av_rescale_q(time, format_tb_, TIME_BASE_Q);
+
+        {
+            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+            buffer_.clear();
+            buffer_cond_.notify_all();
+            graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
+        }
+    }
+
+    int64_t time() const
+    {
+        // TODO (fix) How to handle NOPTS case?
+        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
+    }
+
+    void loop(bool loop)
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        loop_ = loop;
+    }
+
+    bool loop() const
+    {
+        return loop_;
+    }
+
+    void start(int64_t start)
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
+    }
+
+    boost::optional<int64_t> start() const
+    {
+        auto start = start_.load();
+        return start != AV_NOPTS_VALUE ? av_rescale_q(start, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
+    }
+
+    void duration(int64_t duration)
+    {
+        CASPAR_SCOPE_EXIT
+        {
+            update_state();
+        };
+
+        duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
+    }
+
+    boost::optional<int64_t> duration() const
+    {
+        return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration_, TIME_BASE_Q, format_tb_)) : boost::none;
+    }
+
+  private:
     bool schedule()
     {
         auto result = false;
@@ -710,236 +957,20 @@ struct AVProducer::Impl
         return result;
     }
 
-    bool decode_frame(Decoder& decoder)
-    {
-        if (decoder.frame || decoder.eof) {
-            return false;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = avcodec_receive_frame(decoder.ctx.get(), frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            if (decoder.input.empty()) {
-                return false;
-            }
-            FF(avcodec_send_packet(decoder.ctx.get(), decoder.input.front().get()));
-            decoder.input.pop();
-        } else if (ret == AVERROR_EOF) {
-            avcodec_flush_buffers(decoder.ctx.get());
-            frame->pts       = decoder.next_pts;
-            decoder.eof      = true;
-            decoder.next_pts = AV_NOPTS_VALUE;
-            decoder.frame    = std::move(frame);
-        } else {
-            FF_RET(ret, "avcodec_receive_frame");
-
-            // NOTE This is a workaround for DVCPRO HD.
-            if (frame->width > 1024 && frame->interlaced_frame) {
-                frame->top_field_first = 1;
-            }
-
-            // TODO (fix) is this always best?
-            frame->pts = frame->best_effort_timestamp;
-            // TODO (fix) is this always best?
-
-            decoder.next_pts = frame->pts + frame->pkt_duration;
-            decoder.frame    = std::move(frame);
-        }
-
-        return true;
-    }
-
-    bool filter_frame(Filter& filter, int nb_samples = -1)
-    {
-        if (filter.frame || filter.eof) {
-            return false;
-        }
-
-        if (!filter.sink || filter.sources.empty()) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        }
-
-        auto frame = alloc_frame();
-        auto ret   = nb_samples >= 0 ? av_buffersink_get_samples(filter.sink, frame.get(), nb_samples)
-                                   : av_buffersink_get_frame(filter.sink, frame.get());
-
-        if (ret == AVERROR(EAGAIN)) {
-            return false;
-        } else if (ret == AVERROR_EOF) {
-            filter.eof   = true;
-            filter.frame = nullptr;
-            return true;
-        } else {
-            FF_RET(ret, "av_buffersink_get_frame");
-            filter.frame = frame;
-            return true;
-        }
-    }
-
-    core::draw_frame prev_frame()
-    {
-        CASPAR_SCOPE_EXIT
-        {
-            graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        };
-
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-            if (!buffer_.empty() && (frame_flush_ || !frame_)) {
-                auto frame   = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-                frame_       = core::draw_frame::still(frame);
-                frame_time_  = buffer_[0].pts + buffer_[0].duration;
-                frame_flush_ = false;
-            }
-        }
-
-        return frame_;
-    }
-
-    core::draw_frame next_frame()
-    {
-        CASPAR_SCOPE_EXIT
-        {
-            graph_->set_text(u16(print()));
-            state_["file/time"] = {time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        };
-
-        core::draw_frame frame;
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-            if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-                if (buffer_eof_) {
-                    return frame_;
-                } else {
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                    return core::draw_frame{};
-                }
-            }
-
-            frame       = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0].video, buffer_[0].audio));
-            frame_      = core::draw_frame::still(frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            buffer_.pop_front();
-
-            frame_flush_ = false;
-        }
-        buffer_cond_.notify_all();
-
-        return frame;
-    }
-
-    void seek(int64_t time)
-    {
-        // TODO (fix) Validate input.
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            {
-                std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                buffer_.clear();
-            }
-            buffer_cond_.notify_all();
-
-            seek_internal(av_rescale_q(time, format_tb_, TIME_BASE_Q));
-        }
-
-        cond_.notify_all();
-    }
-
-    int64_t time() const
-    {
-        // TODO (fix) How to handle NOPTS case?
-        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
-    }
-
-    void loop(bool loop)
-    {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            loop_ = loop;
-        }
-        cond_.notify_all();
-    }
-
-    bool loop() const { return loop_; }
-
-    void start(int64_t start)
-    {
-        // TODO (fix) Validate input.
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
-        }
-        cond_.notify_all();
-    }
-
-    boost::optional<int64_t> start() const
-    {
-        return start_ != AV_NOPTS_VALUE ? av_rescale_q(start_, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
-    }
-
-    void duration(int64_t duration)
-    {
-        // TODO (fix) Validate input.
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
-            input_.paused(false);
-        }
-        cond_.notify_all();
-    }
-
-    boost::optional<int64_t> duration() const
-    {
-        if (!input_.duration()) {
-            return boost::none;
-        }
-        return av_rescale_q(*input_.duration(), TIME_BASE_Q, format_tb_);
-    }
-
-  private:
-    std::string print() const
-    {
-        std::ostringstream str;
-        str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
-            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
-            << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
-        return str.str();
-    }
-
     void seek_internal(int64_t time)
     {
         time = time != AV_NOPTS_VALUE ? time : 0;
-        time = time + input_.start_time().value_or(0);
+        time = time + (input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
 
         // TODO (fix) Dont seek if time is close future.
         input_.seek(time);
-        input_.paused(false);
         frame_flush_ = true;
+        frame_count_ = 0;
         buffer_eof_  = false;
 
-        for (auto& p : decoders_) {
-            reset_decoder(p.second);
-        }
+        decoders_.clear();
 
         reset(time);
-    }
-
-    void reset_decoder(Decoder& decoder)
-    {
-        avcodec_flush_buffers(decoder.ctx.get());
-        decoder.next_pts = AV_NOPTS_VALUE;
-        decoder.frame    = nullptr;
-        decoder.eof      = false;
-        decoder.input    = decltype(decoder.input){};
     }
 
     void reset(int64_t start_time)
@@ -955,12 +986,26 @@ struct AVProducer::Impl
             sources_[p.first].push_back(p.second);
         }
 
+        std::vector<int> keys;
         // Flush unused inputs.
         for (auto& p : decoders_) {
             if (sources_.find(p.first) == sources_.end()) {
-                reset_decoder(p.second);
+                keys.push_back(p.first);
             }
         }
+
+        for (auto& key : keys) {
+            decoders_.erase(key);
+        }
+    }
+
+    std::string print() const
+    {
+        std::ostringstream str;
+        str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
+            << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
+            << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den }) << "]";
+        return str.str();
     }
 };
 
@@ -1021,6 +1066,9 @@ AVProducer& AVProducer::duration(int64_t duration)
 
 int64_t AVProducer::duration() const { return impl_->duration().value_or(std::numeric_limits<int64_t>::max()); }
 
-const core::monitor::state& AVProducer::state() const { return impl_->state_; }
+core::monitor::state AVProducer::state() const {
+    boost::lock_guard<boost::mutex> lock(impl_->state_mutex_);
+    return impl_->state_;
+}
 
 }} // namespace caspar::ffmpeg

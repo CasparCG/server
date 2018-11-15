@@ -82,10 +82,9 @@ struct configuration
     bool      key_only          = false;
     int       base_buffer_depth = 3;
 
-    int buffer_depth() const 
-    { 
-        return base_buffer_depth + 
-               (latency == latency_t::low_latency ? 0 : 1) + 
+    int buffer_depth() const
+    {
+        return base_buffer_depth + (latency == latency_t::low_latency ? 0 : 1) +
                (embedded_audio ? 1 : 0); // TODO: Do we need this?
     }
 
@@ -412,6 +411,13 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
                                                               BMDOutputFrameCompletionResult result)
     {
+#ifdef WIN32
+        thread_local auto priority_set = false;
+        if (!priority_set) {
+            priority_set = true;
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+        }
+#endif
         try {
             auto tick_time = tick_timer_.elapsed() * format_desc_.fps / field_count_ * 0.5;
             graph_->set_value("tick-time", tick_time);
@@ -457,8 +463,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
             std::vector<core::const_frame> frames{pop()};
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
-                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps)));
-
                 frames.push_back(pop());
 
                 if (abort_request_) {
@@ -612,7 +616,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-    core::monitor::state               state_;
     const configuration                config_;
     std::unique_ptr<decklink_consumer> consumer_;
     core::video_format_desc            format_desc_;
@@ -629,6 +632,9 @@ struct decklink_consumer_proxy : public core::frame_consumer
     ~decklink_consumer_proxy()
     {
         executor_.invoke([=] {
+#ifdef WIN32
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
             consumer_.reset();
             com_uninitialize();
         });
@@ -655,8 +661,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
     int index() const override { return 300 + config_.device_index; }
 
     bool has_synchronization_clock() const override { return true; }
-
-    const core::monitor::state& state() { return state_; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

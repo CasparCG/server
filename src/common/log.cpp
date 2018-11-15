@@ -202,7 +202,9 @@ void add_cout_sink()
     logging::core::get()->add_sink(stream_sink);
 }
 
-void set_log_level(const std::wstring& lvl)
+std::wstring current_log_level;
+
+bool set_log_level(const std::wstring& lvl)
 {
     if (boost::iequals(lvl, L"trace"))
         logging::core::get()->set_filter(logging::trivial::severity >= boost::log::trivial::trace);
@@ -216,6 +218,13 @@ void set_log_level(const std::wstring& lvl)
         logging::core::get()->set_filter(logging::trivial::severity >= boost::log::trivial::error);
     else if (boost::iequals(lvl, L"fatal"))
         logging::core::get()->set_filter(logging::trivial::severity >= boost::log::trivial::fatal);
+    else
+        return false;
+
+    current_log_level = lvl;
+    return true;
 }
+
+std::wstring& get_log_level() { return current_log_level; }
 
 }} // namespace caspar::log

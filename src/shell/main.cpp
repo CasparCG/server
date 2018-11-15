@@ -201,7 +201,7 @@ int main(int argc, char** argv)
     // Set debug mode.
     auto debugging_environment = setup_debugging_environment();
 
-    // Increase process priotity.
+    // Increase process priority.
     increase_process_priority();
 
     tbb::task_scheduler_init init;
@@ -212,17 +212,25 @@ int main(int argc, char** argv)
         if (argc >= 2)
             config_file_name = caspar::u16(argv[1]);
 
+        log::add_cout_sink();
         env::configure(config_file_name);
 
-        log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
+        {
+            std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");
+            if (!log::set_log_level(target_level)) {
+                log::set_log_level(L"info");
+                std::wcout << L"Failed to set log level [" << target_level << L"]" << std::endl;
+            }
+        }
 
         if (env::properties().get(L"configuration.debugging.remote", false))
             wait_for_remote_debugging();
 
         // Start logging to file.
-        log::add_cout_sink();
         log::add_file_sink(env::log_folder() + L"caspar");
-        std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
+        std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
+                   << std::endl
+                   << std::endl;
 
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();
@@ -249,8 +257,8 @@ int main(int argc, char** argv)
         wait_for_keypress();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums "
-                             L"(www.casparcg.com/forum).";
+        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the GitHub project page "
+                             L"(www.github.com/casparcg/server/issues).";
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file "
                       L"folder for more information.\n\n";

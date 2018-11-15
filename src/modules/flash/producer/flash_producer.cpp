@@ -178,8 +178,6 @@ class flash_renderer
         }
     } com_init_;
 
-    core::monitor::state& state_;
-
     const std::wstring filename_;
     const int          width_;
     const int          height_;
@@ -195,14 +193,12 @@ class flash_renderer
     spl::shared_ptr<diagnostics::graph> graph_;
 
   public:
-    flash_renderer(core::monitor::state&                       state,
-                   const spl::shared_ptr<diagnostics::graph>&  graph,
+    flash_renderer(const spl::shared_ptr<diagnostics::graph>&  graph,
                    const std::shared_ptr<core::frame_factory>& frame_factory,
                    const std::wstring&                         filename,
                    int                                         width,
                    int                                         height)
-        : state_(state)
-        , graph_(graph)
+        :  graph_(graph)
         , filename_(filename)
         , width_(width)
         , height_(height)
@@ -284,7 +280,7 @@ class flash_renderer
             return head_;
         }
 
-        if (is_empty())  {
+        if (is_empty()) {
             return core::draw_frame::empty();
         }
 
@@ -323,7 +319,6 @@ class flash_renderer
         }
 
         graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed() / frame_time) * 0.5f);
-        state_["renderer/profiler/time"] = {frame_timer.elapsed(), frame_time};
         return head_;
     }
 
@@ -338,7 +333,7 @@ class flash_renderer
     }
 };
 
-struct flash_producer : public core::frame_producer_base
+struct flash_producer : public core::frame_producer
 {
     core::monitor::state                       state_;
     const std::wstring                         filename_;
@@ -437,7 +432,7 @@ struct flash_producer : public core::frame_producer_base
                 bool initialize_renderer = !renderer_;
 
                 if (initialize_renderer) {
-                    renderer_.reset(new flash_renderer(state_, graph_, frame_factory_, filename_, width_, height_));
+                    renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
 
                     has_renderer_ = true;
                 }
@@ -467,7 +462,7 @@ struct flash_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"flash"; }
 
-    const core::monitor::state& state() { return state_; }
+    core::monitor::state state() const override { return state_; }
 
     // flash_producer
 

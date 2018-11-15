@@ -74,7 +74,7 @@ class stage final
     std::future<void>            swap_layer(int index, int other_index, bool swap_transforms);
     std::future<void>            swap_layer(int index, int other_index, stage& other, bool swap_transforms);
 
-    const monitor::state& state() const;
+    core::monitor::state state() const;
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index);
     std::future<std::shared_ptr<frame_producer>> background(int index);

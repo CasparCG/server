@@ -110,7 +110,6 @@ class destroy_consumer_proxy : public frame_consumer
             }
 
             pointer_guard.reset();
-
         })
             .detach();
     }
@@ -124,7 +123,7 @@ class destroy_consumer_proxy : public frame_consumer
     std::wstring          name() const override { return consumer_->name(); }
     bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
     int                   index() const override { return consumer_->index(); }
-    const monitor::state& state() const override { return consumer_->state(); }
+    core::monitor::state state() const override { return consumer_->state(); }
 };
 
 class print_consumer_proxy : public frame_consumer
@@ -155,7 +154,7 @@ class print_consumer_proxy : public frame_consumer
     std::wstring          name() const override { return consumer_->name(); }
     bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
     int                   index() const override { return consumer_->index(); }
-    const monitor::state& state() const override { return consumer_->state(); }
+    core::monitor::state state() const override { return consumer_->state(); }
 };
 
 spl::shared_ptr<core::frame_consumer>

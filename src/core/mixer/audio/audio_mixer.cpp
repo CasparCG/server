@@ -156,6 +156,6 @@ array<const int32_t> audio_mixer::operator()(const video_format_desc& format_des
 {
     return impl_->mix(format_desc, nb_samples);
 }
-const monitor::state& audio_mixer::state() const { return impl_->state_; }
+core::monitor::state audio_mixer::state() const { return impl_->state_; }
 
 }} // namespace caspar::core

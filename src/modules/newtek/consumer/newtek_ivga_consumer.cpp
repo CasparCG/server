@@ -26,7 +26,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
-#include <core/monitor/monitor.h>
 #include <core/video_format.h>
 
 #include <common/assert.h>
@@ -47,7 +46,6 @@ namespace caspar { namespace newtek {
 struct newtek_ivga_consumer : public core::frame_consumer
 {
     core::video_format_desc             format_desc_;
-    core::monitor::state                state_;
     std::shared_ptr<void>               air_send_;
     std::atomic<bool>                   connected_ = false;
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -80,7 +78,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
                                         format_desc.time_scale,
                                         format_desc.duration,
                                         true,
-                                        static_cast<float>(format_desc.square_width) / static_cast<float>(format_desc.square_height),
+                                        static_cast<float>(format_desc.square_width) /
+                                            static_cast<float>(format_desc.square_height),
                                         true,
                                         format_desc.audio_channels,
                                         format_desc.audio_sample_rate),
@@ -114,8 +113,6 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
         return make_ready_future(true);
     }
-
-    const core::monitor::state& state() const override { return state_; }
 
     std::wstring print() const override
     {

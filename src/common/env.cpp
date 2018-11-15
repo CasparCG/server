@@ -179,8 +179,8 @@ const std::wstring& font_folder()
 
 const std::wstring& version()
 {
-    static std::wstring ver = u16(EXPAND_AND_QUOTE(CASPAR_GEN) "." EXPAND_AND_QUOTE(CASPAR_MAYOR) "." EXPAND_AND_QUOTE(
-        CASPAR_MINOR) "." EXPAND_AND_QUOTE(CASPAR_REV) " " CASPAR_HASH " " CASPAR_TAG);
+    static std::wstring ver = u16(EXPAND_AND_QUOTE(CASPAR_GEN) "." EXPAND_AND_QUOTE(CASPAR_MAJOR) "." EXPAND_AND_QUOTE(
+        CASPAR_MINOR) " " CASPAR_HASH " " CASPAR_TAG);
     return ver;
 }
 

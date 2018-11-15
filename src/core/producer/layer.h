@@ -58,7 +58,7 @@ class layer final
 
     draw_frame receive(const video_format_desc& format_desc, int nb_samples);
 
-    const monitor::state& state() const;
+    core::monitor::state state() const;
 
     spl::shared_ptr<frame_producer> foreground() const;
     spl::shared_ptr<frame_producer> background() const;

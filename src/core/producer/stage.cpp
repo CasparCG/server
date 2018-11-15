@@ -69,17 +69,20 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             std::map<int, draw_frame> frames;
 
             try {
-                // TODO (perf) parallel_for
+                for (auto& t : tweens_)
+                    t.second.tick(1);
+
                 for (auto& p : layers_) {
                     auto& layer     = p.second;
                     auto& tween     = tweens_[p.first];
-                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch_and_tick(1));
+                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
                 }
 
-                state_.clear();
+                monitor::state state;
                 for (auto& p : layers_) {
-                    state_.insert_or_assign("layer/" + boost::lexical_cast<std::string>(p.first), p.second.state());
+                    state["layer"][p.first] = p.second.state();
                 }
+                state_ = std::move(state);
             } catch (...) {
                 layers_.clear();
                 CASPAR_LOG_CURRENT_EXCEPTION();
@@ -194,7 +197,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             if (swap_transforms)
                 std::swap(tweens_, other_impl->tweens_);
         };
-        
+
         return invoke_both(other, func);
     }
 
@@ -231,12 +234,12 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             return invoke_both(other, func);
         }
     }
-    
+
     std::future<void> invoke_both(stage& other, std::function<void()> func)
     {
         auto other_impl = other.impl_;
 
-        if (other_impl->channel_index_ < channel_index_){
+        if (other_impl->channel_index_ < channel_index_) {
             return other_impl->executor_.begin_invoke([=] { executor_.invoke(func); });
         }
 
@@ -314,5 +317,5 @@ std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc
 {
     return (*impl_)(format_desc, nb_samples);
 }
-const monitor::state& stage::state() const { return impl_->state_; }
+core::monitor::state stage::state() const { return impl_->state_; }
 }} // namespace caspar::core

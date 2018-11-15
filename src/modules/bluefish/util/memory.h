@@ -17,46 +17,47 @@
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Robert Nagy, ronag89@gmail.com
+          James Wise, james.wise@bluefish444.com
 */
 
 #pragma once
 
 #include <Windows.h>
-
-#include <tbb/scalable_allocator.h>
-
+#include <boost/align.hpp>
 #include <vector>
 
 namespace caspar { namespace bluefish {
-	
-static const size_t MAX_HANC_BUFFER_SIZE = 256*1024;
-static const size_t MAX_VBI_BUFFER_SIZE = 36*1920*4;
+
+static const size_t MAX_HANC_BUFFER_SIZE = 256 * 1024;
+static const size_t MAX_VBI_BUFFER_SIZE  = 36 * 1920 * 4;
 
 struct blue_dma_buffer
 {
-public:
-	blue_dma_buffer(int image_size, int id) 
-		: id_(id)
-		, image_size_(image_size)
-		, hanc_size_(MAX_HANC_BUFFER_SIZE)
-		, image_buffer_(image_size_)
-		, hanc_buffer_(hanc_size_){}
-			
-	int id() const {return id_;}
+  public:
+    blue_dma_buffer(int image_size, int id)
+        : id_(id)
+        , image_size_(image_size)
+        , hanc_size_(MAX_HANC_BUFFER_SIZE)
+        , image_buffer_(image_size_)
+        , hanc_buffer_(hanc_size_)
+    {
+    }
 
-	PBYTE image_data() { return image_buffer_.data(); }
-	PBYTE hanc_data() { return hanc_buffer_.data(); }
+    int id() const { return id_; }
 
-	size_t image_size() const { return image_size_; }
-	size_t hanc_size() const { return hanc_size_; }
+    PBYTE image_data() { return image_buffer_.data(); }
+    PBYTE hanc_data() { return hanc_buffer_.data(); }
 
-private:	
-	int id_;
-	size_t image_size_;
-	size_t hanc_size_;
-	std::vector<BYTE> image_buffer_;
-	std::vector<BYTE> hanc_buffer_;
+    size_t image_size() const { return image_size_; }
+    size_t hanc_size() const { return hanc_size_; }
+
+  private:
+    int                                                              id_;
+    size_t                                                           image_size_;
+    size_t                                                           hanc_size_;
+    std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64>> image_buffer_;
+    std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64>> hanc_buffer_;
 };
 typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
 
-}}
+}} // namespace caspar::bluefish

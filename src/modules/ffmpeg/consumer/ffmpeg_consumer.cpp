@@ -52,8 +52,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-extern "C"
-{
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
@@ -330,52 +329,33 @@ struct Stream
         }
 
         sws.reset(sws_getContext(
-            width, height, AV_PIX_FMT_BGRA,
-            width, height, AV_PIX_FMT_YUVA422P,
-            0, nullptr, nullptr, nullptr
-        ), [](SwsContext* ptr) { sws_freeContext(ptr); });
+                      width, height, AV_PIX_FMT_BGRA, width, height, AV_PIX_FMT_YUVA422P, 0, nullptr, nullptr, nullptr),
+                  [](SwsContext* ptr) { sws_freeContext(ptr); });
 
         if (!sws) {
             CASPAR_THROW_EXCEPTION(caspar_exception());
         }
 
-        int brigthness;
-        int contrast;
-        int saturation;
-        int in_full;
-        int out_full;
+        int        brigthness;
+        int        contrast;
+        int        saturation;
+        int        in_full;
+        int        out_full;
         const int* inv_table;
         const int* table;
 
         sws_getColorspaceDetails(
-            sws.get(),
-            (int**)&inv_table,
-            &in_full,
-            (int**)&table,
-            &out_full,
-            &brigthness,
-            &contrast,
-            &saturation);
+            sws.get(), (int**)&inv_table, &in_full, (int**)&table, &out_full, &brigthness, &contrast, &saturation);
 
         inv_table = sws_getCoefficients(AVCOL_SPC_RGB);
-        table = sws_getCoefficients(AVCOL_SPC_BT709);
+        table     = sws_getCoefficients(AVCOL_SPC_BT709);
 
-        in_full = AVCOL_RANGE_JPEG;
+        in_full  = AVCOL_RANGE_JPEG;
         out_full = AVCOL_RANGE_MPEG;
 
-        sws_setColorspaceDetails(
-            sws.get(),
-            inv_table,
-            in_full,
-            table,
-            out_full,
-            brigthness,
-            contrast,
-            saturation);
+        sws_setColorspaceDetails(sws.get(), inv_table, in_full, table, out_full, brigthness, contrast, saturation);
 
-        return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) {
-            sws_.push(sws);
-        });
+        return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
     }
 
     void send(core::const_frame                              in_frame,
@@ -391,7 +371,7 @@ struct Stream
                 frame = make_av_video_frame(in_frame, format_desc);
 
                 {
-                    auto frame2 = alloc_frame();
+                    auto frame2                 = alloc_frame();
                     frame2->sample_aspect_ratio = frame->sample_aspect_ratio;
                     frame2->width               = frame->width;
                     frame2->height              = frame->height;
@@ -407,13 +387,13 @@ struct Stream
                         auto sws = get_sws(frame->width, h);
 
                         uint8_t* src[4] = {};
-                        src[0] = frame->data[0] + frame->linesize[0] * (i * h);
+                        src[0]          = frame->data[0] + frame->linesize[0] * (i * h);
 
                         uint8_t* dst[4] = {};
-                        dst[0] = frame2->data[0] + frame2->linesize[0] * (i * h);
-                        dst[1] = frame2->data[1] + frame2->linesize[1] * (i * h);
-                        dst[2] = frame2->data[2] + frame2->linesize[2] * (i * h);
-                        dst[3] = frame2->data[3] + frame2->linesize[3] * (i * h);
+                        dst[0]          = frame2->data[0] + frame2->linesize[0] * (i * h);
+                        dst[1]          = frame2->data[1] + frame2->linesize[1] * (i * h);
+                        dst[2]          = frame2->data[2] + frame2->linesize[2] * (i * h);
+                        dst[3]          = frame2->data[3] + frame2->linesize[3] * (i * h);
 
                         sws_scale(sws.get(), src, frame->linesize, 0, h, dst, frame2->linesize);
                     });
@@ -470,6 +450,7 @@ struct Stream
 struct ffmpeg_consumer : public core::frame_consumer
 {
     core::monitor::state    state_;
+    mutable std::mutex      state_mutex_;
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
     bool                    realtime_ = false;
@@ -580,7 +561,11 @@ struct ffmpeg_consumer : public core::frame_consumer
                         options["preset:v"] = "veryfast";
                     }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, options);
-                    state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
+
+                    {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
+                    }
                 }
 
                 boost::optional<Stream> audio_stream;
@@ -659,22 +644,28 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 std::int32_t frame_number = 0;
                 while (true) {
-                    state_["file/frame"] = frame_number++;
+                    {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        state_["file/frame"] = frame_number++;
+                    }
 
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
-                    graph_->set_value("input", (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
+                    graph_->set_value("input",
+                                      (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
 
                     caspar::timer frame_timer;
-                    tbb::parallel_invoke([&] {
-                        if (video_stream) {
-                            video_stream->send(frame, format_desc, packet_cb);
-                        }
-                    }, [&] {
-                        if (audio_stream) {
-                            audio_stream->send(frame, format_desc, packet_cb);
-                        }
-                    });
+                    tbb::parallel_invoke(
+                        [&] {
+                            if (video_stream) {
+                                video_stream->send(frame, format_desc, packet_cb);
+                            }
+                        },
+                        [&] {
+                            if (audio_stream) {
+                                audio_stream->send(frame, format_desc, packet_cb);
+                            }
+                        });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
                     if (!frame) {
@@ -716,7 +707,11 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     int index() const override { return 100000 + channel_index_; }
 
-    const core::monitor::state& state() const { return state_; }
+    core::monitor::state state() const override
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,

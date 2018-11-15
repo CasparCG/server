@@ -46,12 +46,6 @@ struct frame_geometry::impl
         if (type == geometry_type::quad && data.size() != 4)
             CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be 4"));
 
-        if (type == geometry_type::quad_list) {
-            if (data.size() % 4 != 0)
-                CASPAR_THROW_EXCEPTION(invalid_argument()
-                                       << msg_info("The number of coordinates needs to be a multiple of 4"));
-        }
-
         data_ = std::move(data);
     }
 

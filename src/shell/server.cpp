@@ -18,8 +18,8 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-#include "included_modules.h"
 #include "server.h"
+#include "included_modules.h"
 
 #include <accelerator/accelerator.h>
 
@@ -172,16 +172,19 @@ struct server::impl : boost::noncopyable
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
-            auto channel_id = static_cast<int>(channels_.size() + 1);
-            auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id), [channel_id, weak_client](const monitor::state& channel_state)
-            {
-                monitor::state state;
-                state.insert_or_assign("/channel/" + boost::lexical_cast<std::string>(channel_id), channel_state);
-                auto client = weak_client.lock();
-                if (client) {
-                    client->send(std::move(state));
-                }
-            });
+            auto channel_id  = static_cast<int>(channels_.size() + 1);
+            auto channel     = spl::make_shared<video_channel>(
+                channel_id,
+                format_desc,
+                accelerator_.create_image_mixer(channel_id),
+                [channel_id, weak_client](core::monitor::state channel_state) {
+                    monitor::state state;
+                    state[""]["channel"][channel_id] = channel_state;
+                    auto client = weak_client.lock();
+                    if (client) {
+                        client->send(std::move(state));
+                    }
+                });
 
             channels_.push_back(channel);
         }
@@ -191,12 +194,14 @@ struct server::impl : boost::noncopyable
             core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
             if (xml_channels.at(channel->index() - 1).get_child_optional(L"consumers")) {
-                for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration) {
+                for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") |
+                                              welement_context_iteration) {
                     auto name = xml_consumer.first;
 
                     try {
                         if (name != L"<xmlcomment>")
-                            channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, channels_));
+                            channel->output().add(
+                                consumer_registry_->create_consumer(name, xml_consumer.second, channels_));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }
@@ -215,7 +220,8 @@ struct server::impl : boost::noncopyable
         auto predefined_clients           = pt.get_child_optional(L"configuration.osc.predefined-clients");
 
         if (predefined_clients) {
-            for (auto& predefined_client : pt | witerate_children(L"configuration.osc.predefined-clients") | welement_context_iteration) {
+            for (auto& predefined_client :
+                 pt | witerate_children(L"configuration.osc.predefined-clients") | welement_context_iteration) {
                 ptree_verify_element_name(predefined_client, L"predefined-client");
 
                 const auto address = ptree_get<std::wstring>(predefined_client.second, L"address");
@@ -224,25 +230,28 @@ struct server::impl : boost::noncopyable
                 boost::system::error_code ec;
                 auto                      ipaddr = address_v4::from_string(u8(address), ec);
                 if (!ec)
-                    predefined_osc_subscriptions_.push_back(osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
+                    predefined_osc_subscriptions_.push_back(
+                        osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
                 else
                     CASPAR_LOG(warning) << "Invalid OSC client. Must be valid ipv4 address: " << address;
             }
         }
 
         if (!disable_send_to_amcp_clients && primary_amcp_server_)
-            primary_amcp_server_->add_client_lifecycle_object_factory([=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
-                using namespace boost::asio::ip;
+            primary_amcp_server_->add_client_lifecycle_object_factory(
+                [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
+                    using namespace boost::asio::ip;
 
-                return std::make_pair(std::wstring(L"osc_subscribe"),
-                                      osc_client_->get_subscription_token(udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
-            });
+                    return std::make_pair(std::wstring(L"osc_subscribe"),
+                                          osc_client_->get_subscription_token(
+                                              udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
+                });
     }
 
     void setup_controllers(const boost::property_tree::wptree& pt)
     {
-        amcp_command_repo_ =
-            spl::make_shared<amcp::amcp_command_repository>(channels_, cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+            channels_, cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
         amcp::register_commands(*amcp_command_repo_);
 
         using boost::property_tree::wptree;
@@ -253,7 +262,9 @@ struct server::impl : boost::noncopyable
             if (name == L"tcp") {
                 auto port              = ptree_get<unsigned int>(xml_controller.second, L"port");
                 auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                    io_service_, create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)), static_cast<short>(port));
+                    io_service_,
+                    create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
+                    static_cast<short>(port));
                 async_servers_.push_back(asyncbootstrapper);
 
                 if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
@@ -263,17 +274,22 @@ struct server::impl : boost::noncopyable
         }
     }
 
-    IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name, const std::wstring& port_description) const
+    IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name,
+                                                             const std::wstring& port_description) const
     {
         using namespace IO;
 
         if (boost::iequals(name, L"AMCP"))
-            return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(port_description, spl::make_shared_ptr(amcp_command_repo_)));
+            return wrap_legacy_protocol("\r\n",
+                                        spl::make_shared<amcp::AMCPProtocolStrategy>(
+                                            port_description, spl::make_shared_ptr(amcp_command_repo_)));
         else if (boost::iequals(name, L"CII"))
-            return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
+            return wrap_legacy_protocol(
+                "\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
         else if (boost::iequals(name, L"CLOCK"))
             return spl::make_shared<to_unicode_adapter_factory>(
-                "ISO-8859-1", spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
+                "ISO-8859-1",
+                spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
 
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
     }
@@ -284,6 +300,9 @@ server::server(std::function<void(bool)> shutdown_server_now)
 {
 }
 void                                                     server::start() { impl_->start(); }
-spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
+spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const
+{
+    return spl::make_shared_ptr(impl_->amcp_command_repo_);
+}
 
 } // namespace caspar

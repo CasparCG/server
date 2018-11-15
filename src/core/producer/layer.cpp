@@ -42,66 +42,50 @@ struct layer::impl
 
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
-    ;
+
     boost::optional<int32_t> auto_play_delta_;
-    bool                     is_paused_         = false;
-    int64_t                  current_frame_age_ = 0;
+    bool                     paused_ = false;
 
   public:
-    impl() {}
+    void pause() { paused_ = true; }
 
-    void set_foreground(spl::shared_ptr<frame_producer> producer) { foreground_ = std::move(producer); }
-
-    void pause()
-    {
-        foreground_->paused(true);
-        is_paused_ = true;
-    }
-
-    void resume()
-    {
-        foreground_->paused(false);
-        is_paused_ = false;
-    }
+    void resume() { paused_ = false; }
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
     {
-        background_ = std::move(producer);
-
+        background_      = std::move(producer);
         auto_play_delta_ = auto_play_delta;
-
-        if (preview) {
-            // TODO (fix) Move receive into receive.
-            play();
-            receive(video_format::invalid, 0);
-            foreground_->paused(true);
-            is_paused_ = true;
-        }
 
         if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
             play();
+        } else if (preview) {
+            foreground_ = std::move(background_);
+            background_ = frame_producer::empty();
+            paused_     = true;
         }
     }
 
     void play()
     {
         if (background_ != frame_producer::empty()) {
-            background_->leading_producer(foreground_);
+            if (!paused_) {
+                background_->leading_producer(foreground_);
+            } else {
+                background_->leading_producer(spl::make_shared<core::frame_producer>(foreground_->last_frame()));
+            }
 
-            set_foreground(background_);
-            background_ = std::move(frame_producer::empty());
+            foreground_ = std::move(background_);
+            background_ = frame_producer::empty();
 
             auto_play_delta_.reset();
         }
 
-        foreground_->paused(false);
-        is_paused_ = false;
+        paused_ = false;
     }
 
     void stop()
     {
-        set_foreground(frame_producer::empty());
-
+        foreground_ = frame_producer::empty();
         auto_play_delta_.reset();
     }
 
@@ -121,14 +105,18 @@ struct layer::impl
                 }
             }
 
-            auto frame = foreground_->receive(nb_samples);
+            auto frame = paused_ ? core::draw_frame{} : foreground_->receive(nb_samples);
             if (!frame) {
                 frame = foreground_->last_frame();
             }
 
-            state_.clear();
-            state_["paused"] = is_paused_;
-            state_.insert_or_assign(foreground_->state());
+            state_ = {};
+            state_["foreground"] = foreground_->state();
+            state_["foreground"]["producer"] = foreground_->name();
+            state_["foreground"]["paused"] = paused_;
+
+            state_["background"] = background_->state();
+            state_["background"]["producer"] = background_->name();
 
             return frame;
         } catch (...) {
@@ -169,5 +157,5 @@ draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
 }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-const monitor::state&           layer::state() const { return impl_->state_; }
+core::monitor::state           layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

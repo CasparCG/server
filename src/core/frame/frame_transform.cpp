@@ -314,11 +314,7 @@ frame_transform tweened_transform::fetch()
                      static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
 }
 
-frame_transform tweened_transform::fetch_and_tick(int num)
-{
-    time_ = std::min(time_ + num, duration_);
-    return fetch();
-}
+void tweened_transform::tick(int num) { time_ = std::min(time_ + num, duration_); }
 
 boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
 {

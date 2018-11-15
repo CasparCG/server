@@ -80,7 +80,7 @@ struct mixer::impl : boost::noncopyable
         auto image = (*image_mixer_)(format_desc);
         auto audio = audio_mixer_(format_desc, nb_samples);
 
-        state_.insert_or_assign("audio", audio_mixer_.state());
+        state_["audio"] = audio_mixer_.state();
 
         buffer_.push(std::async(
             std::launch::deferred,
@@ -120,5 +120,5 @@ mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc
 {
     return impl_->image_mixer_->create_frame(tag, desc);
 }
-const monitor::state& mixer::state() const { return impl_->state_; }
+core::monitor::state mixer::state() const { return impl_->state_; }
 }} // namespace caspar::core

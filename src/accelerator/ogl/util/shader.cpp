@@ -31,7 +31,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 struct shader::impl : boost::noncopyable
 {
     GLuint                                 program_;
-    std::unordered_map<std::string, GLint> locations_;
+    std::unordered_map<std::string, GLint> uniform_locations_;
+    std::unordered_map<std::string, GLint> attrib_locations_;
 
   public:
     impl(const std::string& vertex_source_str, const std::string& fragment_source_str)
@@ -97,28 +98,36 @@ struct shader::impl : boost::noncopyable
 
     ~impl() { glDeleteProgram(program_); }
 
-    GLint get_location(const char* name)
+    GLint get_uniform_location(const char* name)
     {
-        auto it = locations_.find(name);
-        if (it == locations_.end())
-            it = locations_.insert(std::make_pair(name, glGetUniformLocation(program_, name))).first;
+        auto it = uniform_locations_.find(name);
+        if (it == uniform_locations_.end())
+            it = uniform_locations_.insert(std::make_pair(name, glGetUniformLocation(program_, name))).first;
+        return it->second;
+    }
+
+    GLint get_attrib_location(const char* name)
+    {
+        auto it = attrib_locations_.find(name);
+        if (it == attrib_locations_.end())
+            it = attrib_locations_.insert(std::make_pair(name, glGetAttribLocation(program_, name))).first;
         return it->second;
     }
 
     void set(const std::string& name, bool value) { set(name, value ? 1 : 0); }
 
-    void set(const std::string& name, int value) { GL(glUniform1i(get_location(name.c_str()), value)); }
+    void set(const std::string& name, int value) { GL(glUniform1i(get_uniform_location(name.c_str()), value)); }
 
-    void set(const std::string& name, float value) { GL(glUniform1f(get_location(name.c_str()), value)); }
+    void set(const std::string& name, float value) { GL(glUniform1f(get_uniform_location(name.c_str()), value)); }
 
     void set(const std::string& name, double value0, double value1)
     {
-        GL(glUniform2f(get_location(name.c_str()), static_cast<float>(value0), static_cast<float>(value1)));
+        GL(glUniform2f(get_uniform_location(name.c_str()), static_cast<float>(value0), static_cast<float>(value1)));
     }
 
     void set(const std::string& name, double value)
     {
-        GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
+        GL(glUniform1f(get_uniform_location(name.c_str()), static_cast<float>(value)));
     }
 
     void use() { GL(glUseProgramObjectARB(program_)); }
@@ -129,12 +138,13 @@ shader::shader(const std::string& vertex_source_str, const std::string& fragment
 {
 }
 shader::~shader() {}
-void shader::set(const std::string& name, bool value) { impl_->set(name, value); }
-void shader::set(const std::string& name, int value) { impl_->set(name, value); }
-void shader::set(const std::string& name, float value) { impl_->set(name, value); }
-void shader::set(const std::string& name, double value0, double value1) { impl_->set(name, value0, value1); }
-void shader::set(const std::string& name, double value) { impl_->set(name, value); }
-int  shader::id() const { return impl_->program_; }
-void shader::use() const { impl_->use(); }
+void  shader::set(const std::string& name, bool value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, int value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, float value) { impl_->set(name, value); }
+void  shader::set(const std::string& name, double value0, double value1) { impl_->set(name, value0, value1); }
+void  shader::set(const std::string& name, double value) { impl_->set(name, value); }
+GLint shader::get_attrib_location(const char* name) { return impl_->get_attrib_location(name); }
+int   shader::id() const { return impl_->program_; }
+void  shader::use() const { impl_->use(); }
 
 }}} // namespace caspar::accelerator::ogl

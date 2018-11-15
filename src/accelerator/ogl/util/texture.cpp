@@ -74,8 +74,15 @@ struct texture::impl : boost::noncopyable
     void copy_from(buffer& src)
     {
         src.bind();
-        // TODO (fix) This fails on weird dimensions.
+
+        if (width_ % 16 > 0) {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        } else {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        }
+
         GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], nullptr));
+
         src.unbind();
     }
 

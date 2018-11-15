@@ -74,7 +74,7 @@ draw_frame create_color_frame(void*                                 tag,
     return create_color_frame(tag, frame_factory, values);
 }
 
-class color_producer : public frame_producer_base
+class color_producer : public frame_producer
 {
     monitor::state state_;
 
@@ -100,8 +100,10 @@ class color_producer : public frame_producer_base
 
     draw_frame receive_impl(int nb_samples) override
     {
-        CASPAR_SCOPE_EXIT { state_["color"] = color_str_; };
-
+        CASPAR_SCOPE_EXIT
+        {
+          state_["color"] = color_str_;
+        };
         return frame_;
     }
 
@@ -109,7 +111,7 @@ class color_producer : public frame_producer_base
 
     std::wstring name() const override { return L"color"; }
 
-    const monitor::state& state() const override { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 std::wstring get_hex_color(const std::wstring& str)

@@ -57,8 +57,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-extern "C"
-{
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
@@ -97,7 +96,10 @@ struct Filter
     AVFilterContext*               video_source = nullptr;
     AVFilterContext*               audio_source = nullptr;
 
-    Filter(std::string filter_spec, AVMediaType type, const core::video_format_desc& format_desc, com_ptr<IDeckLinkDisplayMode> dm)
+    Filter(std::string                    filter_spec,
+           AVMediaType                    type,
+           const core::video_format_desc& format_desc,
+           com_ptr<IDeckLinkDisplayMode>  dm)
     {
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -112,10 +114,11 @@ struct Filter
                     colorspace = "bt709";
                 }
                 // TODO (fix) bmd doesn't have 2020 in flags?
-                //else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
+                // else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
                 //}
                 if (!colorspace.empty()) {
-                    filter_spec = (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
+                    filter_spec =
+                        (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
                 }
             }
 
@@ -282,6 +285,7 @@ class decklink_producer : public IDeckLinkInputCallback
 {
     const int                           device_index_;
     core::monitor::state                state_;
+    mutable std::mutex                  state_mutex_;
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
@@ -295,10 +299,14 @@ class decklink_producer : public IDeckLinkInputCallback
     std::vector<int>                     audio_cadence_ = format_desc_.audio_cadence;
     spl::shared_ptr<core::frame_factory> frame_factory_;
 
-    double in_sync_ = 0.0;
+    double in_sync_  = 0.0;
     double out_sync_ = 0.0;
 
+    bool freeze_on_lost_;
+    bool has_signal_;
+
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
+    core::draw_frame                                last_frame_;
 
     std::exception_ptr exception_;
 
@@ -314,10 +322,12 @@ class decklink_producer : public IDeckLinkInputCallback
                       int                                         device_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory,
                       const std::string&                          vfilter,
-                      const std::string&                          afilter)
+                      const std::string&                          afilter,
+                      bool                                        freeze_on_lost)
         : device_index_(device_index)
         , format_desc_(format_desc)
         , frame_factory_(frame_factory)
+        , freeze_on_lost_(freeze_on_lost)
         , video_filter_(vfilter, AVMEDIA_TYPE_VIDEO, format_desc_, mode_)
         , audio_filter_(afilter, AVMEDIA_TYPE_AUDIO, format_desc_, mode_)
     {
@@ -386,17 +396,21 @@ class decklink_producer : public IDeckLinkInputCallback
 
         CASPAR_SCOPE_EXIT
         {
-            state_["file/name"]              = model_name_;
-            state_["file/path"]              = device_index_;
-            state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
-            state_["file/audio/channels"]    = format_desc_.audio_channels;
-            state_["file/fps"]               = format_desc_.fps;
-            state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
-            state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+            {
+                std::lock_guard<std::mutex> lock(state_mutex_);
+                state_["file/name"]              = model_name_;
+                state_["file/path"]              = device_index_;
+                state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
+                state_["file/audio/channels"]    = format_desc_.audio_channels;
+                state_["file/fps"]               = format_desc_.fps;
+                state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
+                state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+                state_["has_signal"]             = has_signal_;
 
-            if (video) {
-                state_["file/video/width"]  = video->GetWidth();
-                state_["file/video/height"] = video->GetHeight();
+                if (video) {
+                    state_["file/video/width"]  = video->GetWidth();
+                    state_["file/video/height"] = video->GetHeight();
+                }
             }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
@@ -412,6 +426,12 @@ class decklink_producer : public IDeckLinkInputCallback
             BMDTimeValue in_audio_pts = 0LL;
 
             if (video) {
+                const auto flags = video->GetFlags();
+                has_signal_      = !(flags & bmdFrameHasNoInputSource);
+                if (freeze_on_lost_ && !has_signal_) {
+                    return S_OK;
+                }
+
                 auto src    = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
                 src->format = AV_PIX_FMT_UYVY422;
                 src->width  = video->GetWidth();
@@ -443,10 +463,10 @@ class decklink_producer : public IDeckLinkInputCallback
             }
 
             if (audio) {
-                auto src             = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-                src->format          = AV_SAMPLE_FMT_S32;
-                src->channels        = format_desc_.audio_channels;
-                src->sample_rate     = format_desc_.audio_sample_rate;
+                auto src      = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+                src->format   = AV_SAMPLE_FMT_S32;
+                src->channels = format_desc_.audio_channels;
+                src->sample_rate = format_desc_.audio_sample_rate;
 
                 void* audio_bytes = nullptr;
                 if (SUCCEEDED(audio->GetBytes(&audio_bytes)) && audio_bytes) {
@@ -501,8 +521,10 @@ class decklink_producer : public IDeckLinkInputCallback
 
                 CASPAR_LOG(debug) << av_video->pts << " " << av_audio->pts;
 
-                auto in_sync  = static_cast<double>(in_video_pts) / AV_TIME_BASE - static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
-                auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den - static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
+                auto in_sync = static_cast<double>(in_video_pts) / AV_TIME_BASE -
+                               static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
+                auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den -
+                                static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
 
                 if (std::abs(in_sync - in_sync_) > 0.01) {
                     CASPAR_LOG(warning) << print() << " in-sync changed: " << in_sync;
@@ -510,7 +532,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 in_sync_ = in_sync;
 
                 if (std::abs(out_sync - out_sync_) > 0.01) {
-                  CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
+                    CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
                 }
                 out_sync_ = out_sync;
 
@@ -544,7 +566,11 @@ class decklink_producer : public IDeckLinkInputCallback
         core::draw_frame frame;
 
         if (!frame_buffer_.try_pop(frame)) {
+            if (freeze_on_lost_)
+                frame = last_frame_;
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+        } else {
+            last_frame_ = frame;
         }
 
         graph_->set_value("output-buffer",
@@ -560,10 +586,14 @@ class decklink_producer : public IDeckLinkInputCallback
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 
-    const core::monitor::state& state() { return state_; }
+    core::monitor::state state() const
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
+    }
 };
 
-class decklink_producer_proxy : public core::frame_producer_base
+class decklink_producer_proxy : public core::frame_producer
 {
     std::unique_ptr<decklink_producer> producer_;
     const uint32_t                     length_;
@@ -575,7 +605,8 @@ class decklink_producer_proxy : public core::frame_producer_base
                                      int                                         device_index,
                                      const std::string&                          vfilter,
                                      const std::string&                          afilter,
-                                     uint32_t                                    length)
+                                     uint32_t                                    length,
+                                     bool                                        freeze_on_lost)
         : executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
         , length_(length)
     {
@@ -583,7 +614,8 @@ class decklink_producer_proxy : public core::frame_producer_base
         executor_.invoke([=] {
             core::diagnostics::call_context::for_thread() = ctx;
             com_initialize();
-            producer_.reset(new decklink_producer(format_desc, device_index, frame_factory, vfilter, afilter));
+            producer_.reset(
+                new decklink_producer(format_desc, device_index, frame_factory, vfilter, afilter, freeze_on_lost));
         });
     }
 
@@ -595,7 +627,7 @@ class decklink_producer_proxy : public core::frame_producer_base
         });
     }
 
-    const core::monitor::state& state() const { return producer_->state(); }
+    core::monitor::state state() const override { return producer_->state(); }
 
     // frame_producer
 
@@ -620,6 +652,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (device_index == -1)
         device_index = boost::lexical_cast<int>(params.at(1));
 
+    auto freeze_on_lost = contains_param(L"FREEZE_ON_LOST", params);
+
     auto filter_str = get_param(L"FILTER", params);
     auto length     = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 
@@ -630,8 +664,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
-    auto producer = spl::make_shared<decklink_producer_proxy>(
-        dependencies.format_desc, dependencies.frame_factory, device_index, u8(vfilter), u8(afilter), length);
+    auto producer = spl::make_shared<decklink_producer_proxy>(dependencies.format_desc,
+                                                              dependencies.frame_factory,
+                                                              device_index,
+                                                              u8(vfilter),
+                                                              u8(afilter),
+                                                              length,
+                                                              freeze_on_lost);
     return core::create_destroy_proxy(producer);
 }
 }} // namespace caspar::decklink

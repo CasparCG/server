@@ -87,7 +87,7 @@ std::string get_blend_color_func()
 
 				vec4 blend(vec4 fore)
 				{
-				   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;
+				   vec4 back = texture(background, TexCoord2.st).bgra;
 				   if(blend_mode != 0)
 						fore.rgb = get_blend_color(back.rgb/(back.a+0.0000001), fore.rgb/(fore.a+0.0000001))*fore.a;
 					switch(keyer)
@@ -118,15 +118,22 @@ std::string get_chroma_func()
 std::string get_vertex()
 {
     return R"shader(
+
+			#version 450
+            in vec4 TexCoordIn;
+            in vec2 Position;
+
+            out vec4 TexCoord;
+            out vec4 TexCoord2;
+
 			void main()
 			{
-				gl_TexCoord[0] = gl_MultiTexCoord0;
-			//	gl_TexCoord[1] = gl_MultiTexCoord1;
-				vec4 pos = ftransform();
-				gl_TexCoord[1] = vec4(pos.xy, 0.0, 0.0);
+				TexCoord = TexCoordIn;
+                vec4 pos = vec4(Position, 0, 1);
+				TexCoord2 = vec4(pos.xy, 0.0, 0.0);
 				pos.x = pos.x*2.0 - 1.0;
 				pos.y = pos.y*2.0 - 1.0;
-				gl_Position    = pos;
+				gl_Position = pos;
 			}
 	)shader";
 }
@@ -135,7 +142,11 @@ std::string get_fragment()
 {
     return R"shader(
 
-			#version 130
+			#version 450
+            in vec4 TexCoord;
+            in vec4 TexCoord2;
+            out vec4 fragColor;
+
 			uniform sampler2D	background;
 			uniform sampler2D	plane[4];
 			uniform sampler2D	local_key;
@@ -183,46 +194,6 @@ std::string get_fragment()
            +
 
            R"shader(
-            vec4 cubic(float v){
-                vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
-                vec4 s = n * n * n;
-                float x = s.x;
-                float y = s.y - 4.0 * s.x;
-                float z = s.z - 4.0 * s.y + 6.0 * s.x;
-                float w = 6.0 - x - y - z;
-                return vec4(x, y, z, w) * (1.0/6.0);
-            }
-
-            vec4 textureBicubic(sampler2D sampler, vec2 texCoords) {
-                vec2 texSize = textureSize(sampler, 0);
-                vec2 invTexSize = 1.0 / texSize;
-
-                texCoords = texCoords * texSize - 0.5;
-
-                vec2 fxy = fract(texCoords);
-                texCoords -= fxy;
-
-                vec4 xcubic = cubic(fxy.x);
-                vec4 ycubic = cubic(fxy.y);
-
-                vec4 c = texCoords.xxyy + vec2 (-0.5, +1.5).xyxy;
-
-                vec4 s = vec4(xcubic.xz + xcubic.yw, ycubic.xz + ycubic.yw);
-                vec4 offset = c + vec4 (xcubic.yw, ycubic.yw) / s;
-
-                offset *= invTexSize.xxyy;
-
-                vec4 sample0 = texture(sampler, offset.xz);
-                vec4 sample1 = texture(sampler, offset.yz);
-                vec4 sample2 = texture(sampler, offset.xw);
-                vec4 sample3 = texture(sampler, offset.yw);
-
-                float sx = s.x / (s.x + s.y);
-                float sy = s.z / (s.z + s.w);
-
-                return mix(mix(sample3, sample2, sx), mix(sample1, sample0, sx), sy);
-            }
-
 			vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)
 			{
 				vec4 rgba;
@@ -253,7 +224,7 @@ std::string get_fragment()
 
 			vec4 get_sample(sampler2D sampler, vec2 coords)
 			{
-				return textureBicubic(sampler, coords);
+				return texture2D(sampler, coords);
 			}
 
 			vec4 get_rgba_color()
@@ -261,39 +232,39 @@ std::string get_fragment()
 				switch(pixel_format)
 				{
 				case 0:		//gray
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rrr, 1.0);
+					return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rrr, 1.0);
 				case 1:		//bgra,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).bgra;
+					return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra;
 				case 2:		//rgba,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rgba;
+					return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
 				case 3:		//argb,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).argb;
+					return get_sample(plane[0], TexCoord.st / TexCoord.q).argb;
 				case 4:		//abgr,
-					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).gbar;
+					return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar;
 				case 5:		//ycbcr,
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
+						float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
+						float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
 						return ycbcra_to_rgba(y, cb, cr, 1.0);
 					}
 				case 6:		//ycbcra
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
-						float a  = get_sample(plane[3], gl_TexCoord[0].st / gl_TexCoord[0].q).r;
+						float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
+						float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
+						float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
+						float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r;
 						return ycbcra_to_rgba(y, cb, cr, a);
 					}
 				case 7:		//luma
 					{
-						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rrr;
+						vec3 y3 = get_sample(plane[0], TexCoord.st / TexCoord.q).rrr;
 						return vec4((y3-0.065)/0.859, 1.0);
 					}
 				case 8:		//bgr,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).bgr, 1.0);
+					return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).bgr, 1.0);
 				case 9:		//rgb,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q).rgb, 1.0);
+					return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb, 1.0);
 				}
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
@@ -308,13 +279,13 @@ std::string get_fragment()
 					if(csb)
 						color.rgb = ContrastSaturationBrightness(color, brt, sat, con);
 					if(has_local_key)
-						color *= texture2D(local_key, gl_TexCoord[1].st).r;
+						color *= texture(local_key, TexCoord2.st).r;
 					if(has_layer_key)
-						color *= texture2D(layer_key, gl_TexCoord[1].st).r;
+						color *= texture(layer_key, TexCoord2.st).r;
 					color *= opacity;
                     if (blend_mode >= 0)
 					    color = blend(color);
-					gl_FragColor = color.bgra;
+					fragColor = color.bgra;
 			}
 	)shader";
 }

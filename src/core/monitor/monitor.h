@@ -20,10 +20,10 @@
  */
 #pragma once
 
+#include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
 #include <cstdint>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -36,57 +36,61 @@ typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::str
 typedef boost::container::small_vector<data_t, 2>                                                  vector_t;
 typedef boost::container::flat_map<std::string, vector_t>                                          data_map_t;
 
-class state_proxy
-{
-    std::string key_;
-    data_map_t& data_;
-    std::mutex& mutex_;
-
-  public:
-    state_proxy(const std::string& key, data_map_t& data, std::mutex& mutex)
-        : key_(key)
-        , data_(data)
-        , mutex_(mutex)
-    {
-    }
-
-    state_proxy& operator=(data_t data)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = {std::move(data)};
-        return *this;
-    }
-
-    state_proxy& operator=(vector_t data)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = std::move(data);
-        return *this;
-    }
-
-    template <typename T>
-    state_proxy& operator=(const std::vector<T>& data)
-    {
-        auto                        data2 = vector_t(data.begin(), data.end());
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = std::move(data2);
-        return *this;
-    }
-
-    state_proxy& operator=(std::initializer_list<data_t> data)
-    {
-        auto                        data2 = vector_t(std::move(data));
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_[key_] = std::move(data2);
-        return *this;
-    }
-};
-
-// TODO (perf) Optimize
 class state
 {
-    mutable std::mutex mutex_;
-    data_map_t         data_;
+    data_map_t data_;
+
+    class state_proxy
+    {
+        std::string key_;
+        data_map_t& data_;
+
+    public:
+        state_proxy(const std::string& key, data_map_t& data)
+            : key_(key)
+            , data_(data)
+        {
+        }
+
+        state_proxy& operator=(data_t data)
+        {
+            data_[key_] = { std::move(data) };
+            return *this;
+        }
+
+        state_proxy& operator=(vector_t data)
+        {
+            data_[key_] = std::move(data);
+            return *this;
+        }
+
+        template<typename T>
+        state_proxy operator[](const T& key)
+        {
+            return state_proxy(key_ + "/" + boost::lexical_cast<std::string>(key), data_);
+        }
+
+        template <typename T>
+        state_proxy& operator=(const std::vector<T>& data)
+        {
+            data_[key_] = vector_t(data.begin(), data.end());
+            return *this;
+        }
+
+        state_proxy& operator=(std::initializer_list<data_t> data)
+        {
+            data_[key_] = vector_t(std::move(data));
+            return *this;
+        }
+
+        state_proxy& operator=(const state& other)
+        {
+            for (auto& p : other) {
+                data_[key_ + "/" + p.first] = std::move(p.second);
+            }
+            return *this;
+        }
+    };
 
   public:
     state() = default;
@@ -94,61 +98,30 @@ class state
         : data_(other.data_)
     {
     }
-    state(state&& other)
-        : data_(std::move(other.data_))
+    state(data_map_t data)
+        : data_(std::move(data))
     {
     }
-
-    state_proxy operator[](const std::string& key) { return state_proxy(key, data_, mutex_); }
-
-    void clear()
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_.clear();
-    }
-
     state& operator=(const state& other)
     {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_ = std::move(data);
+        data_ = other.data_;
         return *this;
     }
 
-    template <typename T>
-    state& operator=(T&& data)
+    template<typename T>
+    state_proxy operator[](const T& key)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        data_ = std::forward<T>(data);
-        return *this;
+        return state_proxy(boost::lexical_cast<std::string>(key), data_);
     }
 
-    data_map_t get() const
+    data_map_t::const_iterator begin() const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return data_;
+        return data_.begin();
     }
 
-    void insert_or_assign(const std::string& name, const state& other)
+    data_map_t::const_iterator end() const
     {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& p : data) {
-            data_[name + "/" + p.first] = std::move(p.second);
-        }
-    }
-
-    void insert_or_assign(const state& other)
-    {
-        auto                        data = other.get();
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (data_.empty()) {
-            data_ = std::move(data);
-        } else {
-            for (auto& p : data) {
-                data_[p.first] = std::move(p.second);
-            }
-        }
+        return data_.end();
     }
 };
 

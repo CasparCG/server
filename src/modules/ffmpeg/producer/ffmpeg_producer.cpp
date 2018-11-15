@@ -42,8 +42,7 @@
 
 #pragma warning(push, 1)
 
-extern "C"
-{
+extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavformat/avformat.h>
@@ -55,7 +54,7 @@ namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
 
-struct ffmpeg_producer : public core::frame_producer_base
+struct ffmpeg_producer : public core::frame_producer
 {
     const std::wstring                   filename_;
     spl::shared_ptr<core::frame_factory> frame_factory_;
@@ -77,26 +76,27 @@ struct ffmpeg_producer : public core::frame_producer_base
         , filename_(filename)
         , frame_factory_(frame_factory)
         , producer_(new AVProducer(frame_factory_,
-                    format_desc_,
-                    u8(path),
-                    u8(filename),
-                    u8(vfilter),
-                    u8(afilter),
-                    start,
-                    duration,
-                    loop))
+                                   format_desc_,
+                                   u8(path),
+                                   u8(filename),
+                                   u8(vfilter),
+                                   u8(afilter),
+                                   start,
+                                   duration,
+                                   loop))
     {
     }
 
     ~ffmpeg_producer()
     {
-        std::thread([producer = std::move(producer_)] () mutable {
+        std::thread([producer = std::move(producer_)]() mutable {
             try {
-              producer.reset();
+                producer.reset();
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
-        }).detach();
+        })
+            .detach();
     }
 
     // frame_producer
@@ -105,15 +105,12 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     core::draw_frame receive_impl(int nb_samples) override { return producer_->next_frame(); }
 
-    std::uint32_t frame_number() const override
-    {
-        return static_cast<std::uint32_t>(producer_->time() * format_desc_.fps);
-    }
+    std::uint32_t frame_number() const override { return static_cast<std::uint32_t>(producer_->time()); }
 
     std::uint32_t nb_frames() const override
     {
         return producer_->loop() ? std::numeric_limits<std::uint32_t>::max()
-                                 : static_cast<std::uint32_t>(producer_->duration() * format_desc_.fps);
+                                 : static_cast<std::uint32_t>(producer_->duration());
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -188,41 +185,42 @@ struct ffmpeg_producer : public core::frame_producer_base
 
     std::wstring name() const override { return L"ffmpeg"; }
 
-    const core::monitor::state& state() const override { return producer_->state(); }
+    core::monitor::state state() const override { return producer_->state(); }
 };
 
-boost::tribool has_valid_extension(const std::wstring& filename) {
-    static const auto invalid_exts = { L".png",
-        L".tga",
-        L".bmp",
-        L".jpg",
-        L".jpeg",
-        L".gif",
-        L".tiff",
-        L".tif",
-        L".jp2",
-        L".jpx",
-        L".j2k",
-        L".j2c",
-        L".swf",
-        L".ct",
-        L".html",
-        L".htm" };
-    static const auto valid_exts = { L".m2t",
-        L".mov",
-        L".mp4",
-        L".dv",
-        L".flv",
-        L".mpg",
-        L".dnxhd",
-        L".h264",
-        L".prores",
-        L".mkv",
-        L".mxf",
-        L".ts",
-        L".mp3",
-        L".wav",
-        L".wma" };
+boost::tribool has_valid_extension(const std::wstring& filename)
+{
+    static const auto invalid_exts = {L".png",
+                                      L".tga",
+                                      L".bmp",
+                                      L".jpg",
+                                      L".jpeg",
+                                      L".gif",
+                                      L".tiff",
+                                      L".tif",
+                                      L".jp2",
+                                      L".jpx",
+                                      L".j2k",
+                                      L".j2c",
+                                      L".swf",
+                                      L".ct",
+                                      L".html",
+                                      L".htm"};
+    static const auto valid_exts   = {L".m2t",
+                                    L".mov",
+                                    L".mp4",
+                                    L".dv",
+                                    L".flv",
+                                    L".mpg",
+                                    L".dnxhd",
+                                    L".h264",
+                                    L".prores",
+                                    L".mkv",
+                                    L".mxf",
+                                    L".ts",
+                                    L".mp3",
+                                    L".wav",
+                                    L".wma"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 
@@ -240,8 +238,7 @@ bool is_valid_file(const std::wstring& filename)
     const auto valid_ext = has_valid_extension(filename);
     if (valid_ext) {
         return true;
-    }
-    else if (!valid_ext) {
+    } else if (!valid_ext) {
         return false;
     }
 
@@ -298,12 +295,10 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto name = params.at(0);
     auto path = name;
 
-
     if (!boost::contains(path, L"://")) {
         path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
         name += boost::filesystem::path(path).extension().wstring();
-    }
-    else if (!has_valid_extension(path)) {
+    } else if (!has_valid_extension(path)) {
         return core::frame_producer::empty();
     }
 
@@ -348,8 +343,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         auto producer = spl::make_shared<ffmpeg_producer>(
             dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop);
         return core::create_destroy_proxy(std::move(producer));
-    }
-    catch (...) {
+    } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
     }
     return core::frame_producer::empty();

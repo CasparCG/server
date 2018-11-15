@@ -141,10 +141,11 @@ struct output::impl
             }
         }
 
-        state_.clear();
+        monitor::state state;
         for (auto& p : consumers_) {
-            state_.insert_or_assign("port/" + boost::lexical_cast<std::string>(p.first), p.second->state());
+            state["port"][p.first] = p.second->state();
         }
+        state_ = std::move(state);
 
         const auto needs_sync = std::all_of(
             consumers_.begin(), consumers_.end(), [](auto& p) { return !p.second->has_synchronization_clock(); });
@@ -156,6 +157,8 @@ struct output::impl
                 std::this_thread::sleep_until(*time);
             }
             time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps));
+        } else {
+            time_.reset();
         }
     }
 
@@ -175,5 +178,5 @@ void output::operator()(const_frame frame, const video_format_desc& format_desc)
 {
     return (*impl_)(std::move(frame), format_desc);
 }
-const monitor::state& output::state() const { return impl_->state_; }
+core::monitor::state output::state() const { return impl_->state_; }
 }} // namespace caspar::core

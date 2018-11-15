@@ -44,8 +44,6 @@
 #include <string>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
-#include <tbb/parallel_for.h>
-#include <tbb/parallel_for_each.h>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
