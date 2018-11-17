@@ -4,7 +4,13 @@ project (newtek)
 set(SOURCES
 		consumer/newtek_ivga_consumer.cpp
 
+		consumer/newtek_ndi_consumer.cpp
+
+		producer/newtek_ndi_producer.cpp
+        
 		util/air_send.cpp
+
+		util/ndi.cpp
 
 		newtek.cpp
 
@@ -13,9 +19,29 @@ set(SOURCES
 set(HEADERS
 		consumer/newtek_ivga_consumer.h
 
+		consumer/newtek_ndi_consumer.h
+
+		producer/newtek_ndi_producer.h
+        
 		util/air_send.h
 
+		util/ndi.h
+
 		newtek.h
+
+		interop/Processing.NDI.compat.h
+		interop/Processing.NDI.deprecated.h
+		interop/Processing.NDI.DynamicLoad.h
+		interop/Processing.NDI.Find.h
+		interop/Processing.NDI.FrameSync.h
+		interop/Processing.NDI.Lib.cplusplus.h
+		interop/Processing.NDI.Lib.h
+		interop/Processing.NDI.Recv.ex.h
+		interop/Processing.NDI.Recv.h
+		interop/Processing.NDI.Routing.h
+		interop/Processing.NDI.Send.h
+		interop/Processing.NDI.structs.h
+		interop/Processing.NDI.utilities.h
 
 		StdAfx.h
 )
@@ -28,15 +54,19 @@ include_directories(..)
 include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
+include_directories(${FFMPEG_INCLUDE_PATH})
 
 set_target_properties(newtek PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
+source_group(sources\\producer producer/*)
+source_group(sources\\interop interop/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(newtek
 	common
 	core
+    ffmpeg
 )
 
 casparcg_add_include_statement("modules/newtek/newtek.h")
