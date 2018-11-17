@@ -634,6 +634,7 @@ struct AVProducer::Impl
 
                 if (seek != AV_NOPTS_VALUE) {
                     seek_internal(seek);
+                    frame = Frame{};
                     continue;
                 }
             }
