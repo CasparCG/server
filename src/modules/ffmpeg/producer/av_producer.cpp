@@ -69,8 +69,9 @@ struct Frame
     std::shared_ptr<AVFrame> video;
     std::shared_ptr<AVFrame> audio;
     core::draw_frame         frame;
-    int64_t                  pts      = AV_NOPTS_VALUE;
-    int64_t                  duration = 0;
+    int64_t                  start_time = AV_NOPTS_VALUE;
+    int64_t                  pts        = AV_NOPTS_VALUE;
+    int64_t                  duration   = 0;
 };
 
 // TODO (fix) Handle ts discontinuities.
@@ -527,8 +528,8 @@ struct AVProducer::Impl
     std::string vfilter_;
 
     int64_t          frame_count_ = 0;
-    int64_t          frame_time_  = 0;
     bool             frame_flush_ = true;
+    Frame            frame2_;
     core::draw_frame frame_;
 
     std::deque<Frame>         buffer_;
@@ -704,6 +705,7 @@ struct AVProducer::Impl
                 frame.video = std::move(video_filter_.frame);
                 const auto tb = av_buffersink_get_time_base(video_filter_.sink);
                 const auto fr = av_buffersink_get_frame_rate(video_filter_.sink);
+                frame.start_time = start_time;
                 frame.pts = av_rescale_q(frame.video->pts, tb, TIME_BASE_Q) - start_time;
                 frame.duration = av_rescale_q(1, av_inv_q(fr), TIME_BASE_Q);
             }
@@ -712,6 +714,7 @@ struct AVProducer::Impl
                 frame.audio = std::move(audio_filter_.frame);
                 const auto tb = av_buffersink_get_time_base(audio_filter_.sink);
                 const auto sr = av_buffersink_get_sample_rate(audio_filter_.sink);
+                frame.start_time = start_time;
                 frame.pts = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
                 frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, sr }, TIME_BASE_Q);
             }
@@ -740,7 +743,8 @@ struct AVProducer::Impl
     {
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
-        state_["file/time"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["file/stime"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["file/time"] = { file_time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps };
         state_["loop"] = loop_;
     }
 
@@ -757,7 +761,7 @@ struct AVProducer::Impl
             if (!buffer_.empty()) {
                 auto frame = buffer_[0].frame;
                 frame_ = core::draw_frame::still(frame);
-                frame_time_ = buffer_[0].pts;
+                frame2_ = buffer_[0];
                 frame_flush_ = false;
             }
         }
@@ -790,7 +794,7 @@ struct AVProducer::Impl
 
         auto frame = buffer_[0].frame;
         frame_ = core::draw_frame::still(frame);
-        frame_time_ = buffer_[0].pts;
+        frame2_ = buffer_[0];
         frame_flush_ = false;
         
         buffer_.pop_front();
@@ -820,7 +824,13 @@ struct AVProducer::Impl
     int64_t time() const
     {
         // TODO (fix) How to handle NOPTS case?
-        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
+        return frame2_.pts != AV_NOPTS_VALUE ? av_rescale_q(frame2_.pts, TIME_BASE_Q, format_tb_) : 0;
+    }
+
+    int64_t file_time() const
+    {
+        // TODO (fix) How to handle NOPTS case?
+        return frame2_.pts != AV_NOPTS_VALUE ? av_rescale_q(frame2_.start_time + frame2_.pts, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void loop(bool loop)
@@ -867,6 +877,11 @@ struct AVProducer::Impl
     boost::optional<int64_t> duration() const
     {
         return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration_, TIME_BASE_Q, format_tb_)) : boost::none;
+    }
+
+    boost::optional<int64_t> file_duration() const
+    {
+        return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(start_ + duration_, TIME_BASE_Q, format_tb_)) : boost::none;
     }
 
   private:
