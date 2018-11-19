@@ -141,6 +141,27 @@ unsigned int extract_pcm_data_from_hanc(bvc_wrapper&               blue,
     return decode_struct->no_audio_samples;
 }
 
+bool is_video_format_interlaced(const core::video_format format)
+{
+    bool interlaced = false;
+    if (format == core::video_format::x1080i5000 || format == core::video_format::x1080i5994 ||
+        format == core::video_format::x1080i6000 || format == core::video_format::pal ||
+        format == core::video_format::ntsc)
+        interlaced = true;
+
+    return interlaced;
+}
+
+bool is_bluefish_format_interlaced(unsigned int vid_mode)
+{
+    bool interlaced = false;
+    if (vid_mode == VID_FMT_PAL || vid_mode == VID_FMT_NTSC || vid_mode == VID_FMT_1080I_5000 ||
+        vid_mode == VID_FMT_1080I_5994 || vid_mode == VID_FMT_1080I_6000)
+        interlaced = true;
+
+    return interlaced;
+}
+
 struct bluefish_producer : boost::noncopyable
 {
     const int                    device_index_;
@@ -158,9 +179,10 @@ struct bluefish_producer : boost::noncopyable
 
     std::atomic_bool                   process_capture_ = true;
     std::shared_ptr<std::thread>       capture_thread_;
-    std::array<blue_dma_buffer_ptr, 4> reserved_frames_;
+    std::array<blue_dma_buffer_ptr, 1> reserved_frames_;
 
     core::video_format_desc format_desc_;
+    core::video_format_desc channel_format_desc_;
     unsigned int            mode_;
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
@@ -175,8 +197,11 @@ struct bluefish_producer : boost::noncopyable
     struct hanc_decode_struct hanc_decode_struct_;
     std::vector<uint32_t>     decoded_audio_bytes_;
     unsigned int              memory_format_on_card_;
-    int                       frames_captured = 0;
-    uint64_t                  capture_ts      = 0;
+    unsigned int              sync_format_;
+    bool                      first_frame_              = true;
+    int                       frames_captured           = 0;
+    uint64_t                  capture_ts                = 0;
+    int                       remainaing_audio_samples_ = 0;
 
   public:
     bluefish_producer(const core::video_format_desc&              format_desc,
@@ -184,11 +209,13 @@ struct bluefish_producer : boost::noncopyable
                       int                                         stream_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory)
         : blue_(create_blue(device_index))
+        , channel_format_desc_(format_desc)
         , device_index_(device_index)
         , stream_index_(stream_index)
         , frame_factory_(frame_factory)
         , model_name_(get_card_desc(*blue_, device_index))
         , memory_format_on_card_(MEM_FMT_RGB)
+        , sync_format_(UPD_FMT_FRAME)
     {
         mode_ = static_cast<unsigned int>(VID_FMT_INVALID);
         frame_buffer_.set_capacity(2);
@@ -215,10 +242,6 @@ struct bluefish_producer : boost::noncopyable
         if (BLUE_FAIL(configure_input_routing(bf_channel, true))) // to do: tofix pass rgba vs use actual dual link!!
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input routing."));
 
-        // Select Update Mode for input
-        if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_UPDATE_TYPE, UPD_FMT_FRAME)))
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input update type."));
-
         // Select input memory format
         if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_MEMORY_FORMAT, memory_format_on_card_)))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input memory format."));
@@ -239,6 +262,17 @@ struct bluefish_producer : boost::noncopyable
             format_desc_ = get_format_desc(
                 *blue_, static_cast<EVideoMode>(mode_), static_cast<EMemoryFormat>(memory_format_on_card_));
             audio_cadence_ = format_desc_.audio_cadence;
+
+            // If we have an interlaced input AND and interlaced project then we need to handle the incoming frames
+            // differently and sync on fields, instead of frame barriers
+            if (is_video_format_interlaced(format_desc.format) && is_bluefish_format_interlaced(mode_))
+                sync_format_ = UPD_FMT_FIELD;
+
+            // Select Update Mode for input
+            if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_UPDATE_TYPE,
+                                                     UPD_FMT_FRAME))) /// HERE: this *might need to be sync format, but
+                                                                      /// currently we will leave as Frame UPD
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input update type."));
 
             // Generate dma buffers
             int n = 0;
@@ -310,10 +344,12 @@ struct bluefish_producer : boost::noncopyable
 
     void schedule_capture()
     {
-        blue_->render_buffer_capture(BlueBuffer_Image_HANC(schedule_capture_frame_id_));
-        dma_ready_captured_frame_id_ = capturing_frame_id_;
-        capturing_frame_id_          = schedule_capture_frame_id_;
-        schedule_capture_frame_id_   = (++schedule_capture_frame_id_ % 4);
+        if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_)) {
+            blue_->render_buffer_capture(BlueBuffer_Image_HANC(schedule_capture_frame_id_));
+            dma_ready_captured_frame_id_ = capturing_frame_id_;
+            capturing_frame_id_          = schedule_capture_frame_id_;
+            schedule_capture_frame_id_   = (++schedule_capture_frame_id_ % 4);
+        }
     }
 
     void get_capture_time() { blue_->get_card_property64(BTC_TIMER, capture_ts); }
@@ -332,7 +368,7 @@ struct bluefish_producer : boost::noncopyable
         blue_->get_frame_info_for_video_mode(mode_, width, height, rate, is_1001, is_progressive);
         blue_->get_bytes_per_frame(static_cast<EVideoMode>(mode_),
                                    static_cast<EMemoryFormat>(memory_format_on_card_),
-                                   UPD_FMT_FRAME,
+                                   static_cast<EUpdateMethod>(sync_format_),
                                    image_size);
         double fps = rate;
         if (is_1001)
@@ -379,34 +415,59 @@ struct bluefish_producer : boost::noncopyable
                 video_bytes       = reserved_frames_.front()->image_data();
                 if (reserved_frames_.front() && video_bytes) {
                     src_video->data[0]     = reinterpret_cast<uint8_t*>(reserved_frames_.front()->image_data());
-                    src_video->linesize[0] = static_cast<int>(image_size / height);
+                    src_video->linesize[0] = static_cast<int>(width * 3); // image_size / height);
                 }
 
                 // Audio
                 src_audio->format      = AV_SAMPLE_FMT_S32;
                 src_audio->channels    = format_desc_.audio_channels;
                 src_audio->sample_rate = format_desc_.audio_sample_rate;
+                src_audio->nb_samples  = 0;
+                int samples_decoded    = 0;
 
-                void* audio_bytes = nullptr;
-                auto  hanc_buffer = reinterpret_cast<uint8_t*>(reserved_frames_.front()->hanc_data());
-                if (hanc_buffer) {
-                    int card_type = CRD_INVALID;
-                    blue_->query_card_type(card_type, device_index_);
-                    auto no_extracted_pcm_samples =
-                        extract_pcm_data_from_hanc(*blue_,
-                                                   &hanc_decode_struct_,
-                                                   card_type,
-                                                   reinterpret_cast<unsigned int*>(hanc_buffer),
-                                                   reinterpret_cast<unsigned int*>(&decoded_audio_bytes_[0]),
-                                                   src_audio->channels);
+                // hmm is audio on first frame or do we need to wait till snd feild to get audio?
+                if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && first_frame_)) {
+                    void* audio_bytes = nullptr;
+                    auto  hanc_buffer = reinterpret_cast<uint8_t*>(reserved_frames_.front()->hanc_data());
+                    if (hanc_buffer) {
+                        int card_type = CRD_INVALID;
+                        blue_->query_card_type(card_type, device_index_);
+                        auto no_extracted_pcm_samples =
+                            extract_pcm_data_from_hanc(*blue_,
+                                                       &hanc_decode_struct_,
+                                                       card_type,
+                                                       reinterpret_cast<unsigned int*>(hanc_buffer),
+                                                       reinterpret_cast<unsigned int*>(&decoded_audio_bytes_[0]),
+                                                       src_audio->channels);
 
-                    audio_bytes = reinterpret_cast<int32_t*>(&decoded_audio_bytes_[0]);
+                        audio_bytes = reinterpret_cast<int32_t*>(&decoded_audio_bytes_[0]);
 
-                    src_audio->nb_samples  = no_extracted_pcm_samples / src_audio->channels;
-                    src_audio->data[0]     = reinterpret_cast<uint8_t*>(audio_bytes);
-                    src_audio->linesize[0] = src_audio->nb_samples * src_audio->channels *
-                                             av_get_bytes_per_sample(static_cast<AVSampleFormat>(src_audio->format));
-                    src_audio->pts = capture_ts;
+                        samples_decoded       = no_extracted_pcm_samples / src_audio->channels;
+                        src_audio->nb_samples = samples_decoded;
+                        src_audio->data[0]    = reinterpret_cast<uint8_t*>(audio_bytes);
+                        src_audio->linesize[0] =
+                            src_audio->nb_samples * src_audio->channels *
+                            av_get_bytes_per_sample(static_cast<AVSampleFormat>(src_audio->format));
+                        src_audio->pts = capture_ts;
+                    }
+                }
+
+                if (sync_format_ == UPD_FMT_FIELD) {
+                    // since we provide an entire frame for each field in interlaced modes, we need to adjust the
+                    // src_audio
+                    if (first_frame_) {
+                        remainaing_audio_samples_ = src_audio->nb_samples - (src_audio->nb_samples / 2);
+                        src_audio->nb_samples     = (src_audio->nb_samples / 2);
+                    } else {
+                        auto audio_bytes = reinterpret_cast<uint8_t*>(&decoded_audio_bytes_[0]);
+                        if (audio_bytes) {
+                            src_audio->nb_samples     = remainaing_audio_samples_;
+                            int bytes_left  = remainaing_audio_samples_ * 4 * src_audio->channels;
+                            src_audio->data[0]        = audio_bytes + bytes_left;
+                            src_audio->linesize[0]    = bytes_left;
+                            remainaing_audio_samples_ = 0;
+                        }
+                    }
                 }
 
                 // pass to caspar
@@ -416,9 +477,12 @@ struct bluefish_producer : boost::noncopyable
                     frame_buffer_.try_pop(dummy);
                     frame_buffer_.try_push(frame);
                     graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                    CASPAR_LOG(warning) << print() << TEXT(" ERROR dropped frame.");
                 }
+
+                if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_))
+                    boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
             }
-            boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
         } catch (...) {
             exception_ = std::current_exception();
             return E_FAIL;
@@ -431,19 +495,27 @@ struct bluefish_producer : boost::noncopyable
     {
         try {
             if (reserved_frames_.front()->image_data()) {
-                blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
-                                          static_cast<unsigned long>(reserved_frames_.front()->image_size()),
-                                          BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_IMAGE),
-                                          0);
+                if (sync_format_ == UPD_FMT_FIELD && !first_frame_) {
+                    blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
+                                              static_cast<unsigned long>(reserved_frames_.front()->image_size()),
+                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_FRAME),
+                                              0);
+                } else if (sync_format_ == UPD_FMT_FRAME) {
+                    blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
+                                              static_cast<unsigned long>(reserved_frames_.front()->image_size()),
+                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_IMAGE),
+                                              0);
+                }
+            } else
+                CASPAR_LOG(warning) << print() << TEXT(" NO image data in reserved frames list.");
+            if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_)) {
+                if (reserved_frames_.front()->hanc_data()) {
+                    blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->hanc_data()),
+                                              static_cast<unsigned long>(reserved_frames_.front()->hanc_size()),
+                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_HANC),
+                                              0);
+                }
             }
-
-            if (reserved_frames_.front()->hanc_data()) {
-                blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->hanc_data()),
-                                          static_cast<unsigned long>(reserved_frames_.front()->hanc_size()),
-                                          BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_HANC),
-                                          0);
-            }
-
         } catch (...) {
             exception_ = std::current_exception();
             return;
@@ -462,11 +534,11 @@ struct bluefish_producer : boost::noncopyable
         last_field_count  = current_field_count;
         start_field_count = current_field_count;
 
+        blue_->wait_video_input_sync(UPD_FMT_FRAME, current_field_count);
         while (process_capture_) {
             // tell the card to capture another frame at the next interrupt
             schedule_capture();
-
-            blue_->wait_video_input_sync(UPD_FMT_FRAME, current_field_count);
+            blue_->wait_video_input_sync((EUpdateMethod)sync_format_, current_field_count);
             get_capture_time();
 
             if (last_field_count + 3 < current_field_count)
@@ -484,10 +556,14 @@ struct bluefish_producer : boost::noncopyable
                 grab_frame_from_bluefishcard();
                 process_data();
                 processing_benchmark_timer_.restart();
+            }
+            if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_))
                 boost::range::rotate(reserved_frames_, std::begin(reserved_frames_) + 1);
 
-                frames_captured++;
-            }
+            frames_captured++;
+
+            if (sync_format_ == UPD_FMT_FIELD)
+                first_frame_ = !first_frame_;
         }
     }
 
@@ -596,5 +672,4 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     return create_destroy_proxy(producer);
 }
-
 }} // namespace caspar::bluefish
