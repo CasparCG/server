@@ -607,7 +607,9 @@ struct AVProducer::Impl
                 framerate.den };
         }
 
-        input_duration_ = input_->duration;
+        if (input_duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+            input_duration_ = input_->duration;
+        }
 
         if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
             duration_ = input_->duration;
