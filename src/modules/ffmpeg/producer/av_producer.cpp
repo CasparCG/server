@@ -746,7 +746,7 @@ struct AVProducer::Impl
     {
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
-        state_["file/stime"] = { time() / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["file/clip"] = { start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
         state_["file/time"] = { file_time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps };
         state_["loop"] = loop_;
     }
