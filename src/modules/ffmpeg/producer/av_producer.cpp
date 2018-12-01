@@ -521,6 +521,7 @@ struct AVProducer::Impl
 
     std::atomic<int64_t> start_{ AV_NOPTS_VALUE };
     std::atomic<int64_t> duration_{ AV_NOPTS_VALUE };
+    std::atomic<int64_t> input_duration_{ AV_NOPTS_VALUE };
     std::atomic<int64_t> seek_{ AV_NOPTS_VALUE };
     std::atomic<bool>    loop_{ false };
 
@@ -605,6 +606,8 @@ struct AVProducer::Impl
             state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = { framerate.num,
                 framerate.den };
         }
+
+        input_duration_ = input_->duration;
 
         if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
             duration_ = input_->duration;
@@ -876,12 +879,14 @@ struct AVProducer::Impl
 
     boost::optional<int64_t> duration() const
     {
-        return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration_, TIME_BASE_Q, format_tb_)) : boost::none;
+        const auto duration = duration_.load();
+        return duration != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration, TIME_BASE_Q, format_tb_)) : boost::none;
     }
 
     boost::optional<int64_t> file_duration() const
     {
-        return duration_ != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(start_ + duration_, TIME_BASE_Q, format_tb_)) : boost::none;
+        const auto input_duration = input_duration_.load();
+        return input_duration != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(input_duration, TIME_BASE_Q, format_tb_)) : boost::none;
     }
 
   private:
