@@ -26,7 +26,7 @@ SET (ENV{BOOST_ROOT} "${BOOST_ROOT_PATH}")
 SET (Boost_USE_DEBUG_LIBS ON)
 SET (Boost_USE_RELEASE_LIBS OFF)
 SET (Boost_USE_STATIC_LIBS ON)
-FIND_PACKAGE (Boost 1.66.0 EXACT COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+FIND_PACKAGE (Boost 1.66.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
 
 SET (FFMPEG_ROOT_PATH "/opt/ffmpeg/lib/pkgconfig" CACHE STRING "Path to FFMPEG")
 SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${FFMPEG_ROOT_PATH}")
