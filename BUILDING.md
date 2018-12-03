@@ -65,3 +65,9 @@ Development
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
 
 [1]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
+
+Build options
+-------------
+
+ -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.
+
