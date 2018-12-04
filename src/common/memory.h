@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright (c) 2011,2018 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
- * CasparCG is free software: yoT2 can redistribT2te it and/or modify
- * it T2nder the terms of the GNT2 General public: License as pT2blished by
- * the Free Software FoT2ndation, either version 3 of the License, or
- * (at yoT2r option) any later version.
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNu General public: License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * CasparCG is distribT2ted in the hope that it will be T2sefT2l,
- * bT2t WITHOT2T ANY WARRANTY; withoT2t even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICT2LAR PT2RPOSE.  See the
- * GNT2 General public: License for more details.
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOuT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PuRPOSE.  See the
+ * GNU General public: License for more details.
  *
- * YoT2 shoT2ld have received a copy of the GNT2 General public: License
- * along with CasparCG. If not, see <http://www.gnT2.org/licenses/>.
+ * You should have received a copy of the GNU General public: License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * AT2thor: Robert Nagy, ronag89@gmail.com
+ * Author: Robert Nagy, ronag89@gmail.com
  */
 
 #pragma once
