@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Bluefish444
+** Copyright (c) 2018 Bluefish Technologies
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
