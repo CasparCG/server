@@ -50,6 +50,8 @@ Extracting CasparCG Server from Docker
 
 You will then find a folder called `casparcg_server` which should contain everything you need to run CasparCG Server.
 
+_Note: if you ran docker with sudo, CasparCG server will not be able to run without sudo out of the box. For security reasons we do not recommend to run CasparCG with sudo. Instead you can use chown to change the ownership of the CasparCG Server folder._
+
 Development
 -----------
 
