@@ -71,22 +71,33 @@ class sting_producer : public frame_producer
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
+        auto duration = auto_play_delta();
+        return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
+    }
+
+    boost::optional<int64_t> auto_play_delta() const override {
+        auto duration = static_cast<int64_t>(mask_producer_->nb_frames());
+        // ffmpeg will return -1 when media is still loading, so we need to cast duration first
+        if (duration > -1) {
+            return boost::optional<int64_t>(duration);
+        }
+        return boost::none;
     }
 
     draw_frame receive_impl(int nb_samples) override
     {
+        auto duration = auto_play_delta();
+
         CASPAR_SCOPE_EXIT
         {
             state_                     = dst_producer_->state();
-            state_["transition/frame"] = {static_cast<int>(current_frame_), static_cast<int>(info_.duration)};
-            state_["transition/type"]  = L"sting";
+            state_["transition/type"]  = std::string("sting");
+
+            if (duration)
+                state_["transition/frame"] = { static_cast<int>(current_frame_), static_cast<int>(*duration) };
         };
 
-        // TODO - cleanup at end of loop?
-
-        if (current_frame_ >= info_.duration) {
-            // TODO cleanup??
+        if (duration && current_frame_ >= *duration) {
             return dst_producer_->receive(nb_samples);
         }
 
@@ -170,7 +181,8 @@ class sting_producer : public frame_producer
     draw_frame
     compose(draw_frame dst_frame, draw_frame src_frame, draw_frame mask_frame, draw_frame overlay_frame) const
     {
-        const double delta = audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration));
+        const auto duration = auto_play_delta();
+        const double delta = duration ? audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(*duration)) : 0;
 
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
@@ -200,7 +212,6 @@ spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_depen
 {
     // Any producer which exposes a fixed duration will work here, not just ffmpeg
     auto mask_producer = dependencies.producer_registry->create_producer(dependencies, info.mask_filename);
-    info.duration      = mask_producer->nb_frames();
 
     auto overlay_producer = frame_producer::empty();
     if (info.overlay_filename != L"") {

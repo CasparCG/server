@@ -36,9 +36,6 @@ struct sting_info
     std::wstring mask_filename    = L"";
     std::wstring overlay_filename = L"";
     uint32_t     trigger_point    = 0;
-
-    // out parameter
-    uint32_t duration = 0;
 };
 
 bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo);

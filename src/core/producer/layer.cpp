@@ -43,20 +43,20 @@ struct layer::impl
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
 
-    boost::optional<int32_t> auto_play_delta_;
-    bool                     paused_ = false;
+    bool auto_play_ = false;
+    bool paused_    = false;
 
   public:
     void pause() { paused_ = true; }
 
     void resume() { paused_ = false; }
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+    void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play)
     {
-        background_      = std::move(producer);
-        auto_play_delta_ = auto_play_delta;
+        background_ = std::move(producer);
+        auto_play_  = auto_play;
 
-        if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
+        if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
         } else if (preview) {
             foreground_ = std::move(background_);
@@ -77,7 +77,7 @@ struct layer::impl
             foreground_ = std::move(background_);
             background_ = frame_producer::empty();
 
-            auto_play_delta_.reset();
+            auto_play_ = false;
         }
 
         paused_ = false;
@@ -86,7 +86,7 @@ struct layer::impl
     void stop()
     {
         foreground_ = frame_producer::empty();
-        auto_play_delta_.reset();
+        auto_play_ = false;
     }
 
     draw_frame receive(const video_format_desc& format_desc, int nb_samples)
@@ -96,12 +96,15 @@ struct layer::impl
                 foreground_ = foreground_->following_producer();
             }
 
-            if (auto_play_delta_) {
-                auto time        = static_cast<std::int64_t>(foreground_->frame_number());
-                auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
-                auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
-                if (frames_left < 1) {
-                    play();
+            if (auto_play_) {
+                auto auto_play_delta = background_->auto_play_delta();
+                if (auto_play_delta) {
+                    auto time = static_cast<std::int64_t>(foreground_->frame_number());
+                    auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                    auto frames_left = duration - time - *auto_play_delta;
+                    if (frames_left < 1) {
+                        play();
+                    }
                 }
             }
 
@@ -143,9 +146,9 @@ layer& layer::operator=(layer&& other)
 void layer::swap(layer& other) { impl_.swap(other.impl_); }
 void layer::load(spl::shared_ptr<frame_producer> frame_producer,
                  bool                            preview,
-                 const boost::optional<int32_t>& auto_play_delta)
+                 bool                            auto_play)
 {
-    return impl_->load(std::move(frame_producer), preview, auto_play_delta);
+    return impl_->load(std::move(frame_producer), preview, auto_play);
 }
 void       layer::play() { impl_->play(); }
 void       layer::pause() { impl_->pause(); }

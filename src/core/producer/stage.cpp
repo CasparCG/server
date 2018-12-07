@@ -145,9 +145,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::future<void> load(int                                    index,
                            const spl::shared_ptr<frame_producer>& producer,
                            bool                                   preview,
-                           const boost::optional<int32_t>&        auto_play_delta)
+                           bool                                   auto_play)
     {
-        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play_delta); });
+        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
 
     std::future<void> pause(int index)
@@ -289,9 +289,9 @@ std::future<frame_transform> stage::get_current_transform(int index) { return im
 std::future<void>            stage::load(int                                    index,
                               const spl::shared_ptr<frame_producer>& producer,
                               bool                                   preview,
-                              const boost::optional<int32_t>&        auto_play_delta)
+                              bool                                   auto_play)
 {
-    return impl_->load(index, producer, preview, auto_play_delta);
+    return impl_->load(index, producer, preview, auto_play);
 }
 std::future<void> stage::pause(int index) { return impl_->pause(index); }
 std::future<void> stage::resume(int index) { return impl_->resume(index); }
