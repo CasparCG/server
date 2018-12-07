@@ -237,11 +237,9 @@ std::wstring loadbg_command(command_context& ctx)
     spl::shared_ptr<frame_producer> transition_producer = frame_producer::empty();
     transition_info                 transitionInfo;
     sting_info                      stingInfo;
-    int                             duration;
 
     if (try_match_sting(ctx.parameters, stingInfo)) {
         transition_producer = create_sting_producer(get_producer_dependencies(channel, ctx), pFP, stingInfo);
-        duration = stingInfo.duration;
     } else {
         std::wstring message;
         for (size_t n = 0; n < ctx.parameters.size(); ++n)
@@ -250,13 +248,9 @@ std::wstring loadbg_command(command_context& ctx)
         // Always fallback to transition
         try_match_transition(message, transitionInfo);
         transition_producer = create_transition_producer(pFP, transitionInfo);
-        duration            = transitionInfo.duration;
     }
 
-    if (auto_play)
-        channel->stage().load(ctx.layer_index(), transition_producer, false, duration); // TODO: LOOP
-    else
-        channel->stage().load(ctx.layer_index(), transition_producer, false); // TODO: LOOP
+    channel->stage().load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
 
     return L"202 LOADBG OK\r\n";
 }

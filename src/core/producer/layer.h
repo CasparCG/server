@@ -29,8 +29,6 @@
 #include <common/forward.h>
 #include <common/memory.h>
 
-#include <boost/optional.hpp>
-
 #include <string>
 
 namespace caspar { namespace core {
@@ -50,7 +48,7 @@ class layer final
 
     void load(spl::shared_ptr<frame_producer> producer,
               bool                            preview,
-              const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
+              bool                            auto_play = false);
     void play();
     void pause();
     void resume();

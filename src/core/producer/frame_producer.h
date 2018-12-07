@@ -31,6 +31,7 @@
 #include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -95,6 +96,7 @@ class frame_producer
     }
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
     virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
+    virtual boost::optional<int64_t>        auto_play_delta() const { return boost::none; }
 };
 
 class frame_producer_registry;

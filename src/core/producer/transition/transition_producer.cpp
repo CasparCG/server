@@ -74,6 +74,8 @@ class transition_producer : public frame_producer
         return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
 
+    boost::optional<int64_t> auto_play_delta() const override { return info_.duration; }
+
     void update_state()
     {
         state_                     = dst_producer_->state();
