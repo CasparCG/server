@@ -31,13 +31,11 @@
 #include <common/param.h>
 #include <common/scope_exit.h>
 
-#include <tbb/parallel_invoke.h>
-
 #include <future>
 
 namespace caspar { namespace core {
 
-class sting_producer : public frame_producer_base
+class sting_producer : public frame_producer
 {
     monitor::state  state_;
     uint32_t        current_frame_ = 0;
@@ -85,48 +83,72 @@ class sting_producer : public frame_producer_base
             state_["transition/type"]  = L"sting";
         };
 
-        bool started_dst = current_frame_ >= info_.trigger_point;
-
-        tbb::parallel_invoke(
-            [&] {
-                if (!started_dst)
-                    return;
-
-                dst_ = dst_producer_->receive(nb_samples);
-                if (!dst_) {
-                    dst_ = dst_producer_->last_frame();
-                }
-            },
-            [&] {
-                src_ = src_producer_->receive(nb_samples);
-                if (!src_) {
-                    src_ = src_producer_->last_frame();
-                }
-            },
-            [&] {
-                mask_ = mask_producer_->receive(nb_samples);
-                if (!mask_) {
-                    mask_ = mask_producer_->last_frame();
-                }
-            },
-            [&] {
-                overlay_ = overlay_producer_->receive(nb_samples);
-                if (!overlay_) {
-                    overlay_ = overlay_producer_->last_frame();
-                }
-            });
-
-        if (!mask_) {
-            return src_;
-        }
+        // TODO - cleanup at end of loop?
 
         if (current_frame_ >= info_.duration) {
-            return dst_;
+            // TODO cleanup??
+            return dst_producer_->receive(nb_samples);
         }
 
-        current_frame_ += 1;
+        if (!src_) {
+            src_ = src_producer_->receive(nb_samples);
+            if (!src_) {
+                src_ = src_producer_->last_frame();
+            }
+        }
 
-        return compose(dst_, src_, mask_, overlay_);
+        bool started_dst = current_frame_ >= info_.trigger_point;
+        if (!dst_ && started_dst) {
+            dst_ = dst_producer_->receive(nb_samples);
+            if (!dst_) {
+                dst_ = dst_producer_->last_frame();
+            }
+
+            if (!dst_) { // Not ready yet
+                auto res = src_;
+                src_ = draw_frame{};
+                return res;
+            }
+        }
+
+        if (!mask_) {
+            mask_ = mask_producer_->receive(nb_samples);
+        }
+        bool expecting_overlay = overlay_producer_ != core::frame_producer::empty();
+        if (expecting_overlay && !overlay_) {
+            overlay_ = overlay_producer_->receive(nb_samples);
+        }
+
+        // Not started, and mask or overlay is not ready
+        bool mask_and_overlay_valid = mask_ && (!expecting_overlay || overlay_);
+        if (current_frame_ == 0 && !mask_and_overlay_valid) {
+            auto res = src_;
+            src_ = draw_frame{};
+            return res;
+        }
+
+        // Ensure mask and overlay are in perfect sync
+        auto mask = mask_;
+        auto overlay = overlay_;
+        if (!mask_and_overlay_valid) {
+            // If one is behind, then fetch the last_frame of both
+            mask = mask_producer_->last_frame();
+            overlay = overlay_producer_->last_frame();
+        }
+
+        auto res = compose(dst_, src_, mask, overlay);
+
+        dst_ = draw_frame{};
+        src_ = draw_frame{};
+
+        if (mask_and_overlay_valid) {
+            mask_ = draw_frame{};
+            overlay_ = draw_frame{};
+
+            current_frame_ += 1;
+        }
+
+        return res;
     }
 
     uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
@@ -169,7 +191,7 @@ class sting_producer : public frame_producer_base
         return draw_frame(std::move(frames));
     }
 
-    const monitor::state& state() { return state_; }
+    monitor::state state() const override { return state_; }
 };
 
 spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,
