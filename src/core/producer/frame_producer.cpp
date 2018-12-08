@@ -165,7 +165,7 @@ class destroy_producer_proxy : public frame_producer
         });
     }
 
-    draw_frame                receive_impl(int nb_samples) override { return producer_->receive_impl(nb_samples); }
+    draw_frame                receive_impl(int nb_samples) override { return producer_->receive(nb_samples); }
     std::wstring              print() const override { return producer_->print(); }
     std::wstring              name() const override { return producer_->name(); }
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override { return producer_->call(params); }
