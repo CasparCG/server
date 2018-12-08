@@ -57,20 +57,18 @@ class stage final
     std::future<void>            clear_transforms(int index);
     std::future<void>            clear_transforms();
     std::future<frame_transform> get_current_transform(int index);
-    std::future<void>            load(int                                    index,
-                                      const spl::shared_ptr<frame_producer>& producer,
-                                      bool                                   preview   = false,
-                                      bool                                   auto_play = false);
-    std::future<void>            pause(int index);
-    std::future<void>            resume(int index);
-    std::future<void>            play(int index);
-    std::future<void>            stop(int index);
-    std::future<std::wstring>    call(int index, const std::vector<std::wstring>& params);
-    std::future<void>            clear(int index);
-    std::future<void>            clear();
-    std::future<void>            swap_layers(stage& other, bool swap_transforms);
-    std::future<void>            swap_layer(int index, int other_index, bool swap_transforms);
-    std::future<void>            swap_layer(int index, int other_index, stage& other, bool swap_transforms);
+    std::future<void>
+                              load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false);
+    std::future<void>         pause(int index);
+    std::future<void>         resume(int index);
+    std::future<void>         play(int index);
+    std::future<void>         stop(int index);
+    std::future<std::wstring> call(int index, const std::vector<std::wstring>& params);
+    std::future<void>         clear(int index);
+    std::future<void>         clear();
+    std::future<void>         swap_layers(stage& other, bool swap_transforms);
+    std::future<void>         swap_layer(int index, int other_index, bool swap_transforms);
+    std::future<void>         swap_layer(int index, int other_index, stage& other, bool swap_transforms);
 
     core::monitor::state state() const;
 
