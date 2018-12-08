@@ -43,9 +43,8 @@ struct layer::impl
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
 
-    bool auto_play_            = false;
-    bool paused_               = false;
-    bool background_previewed_ = false;
+    bool auto_play_ = false;
+    bool paused_    = false;
 
   public:
     void pause() { paused_ = true; }
@@ -54,9 +53,8 @@ struct layer::impl
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play)
     {
-        background_           = std::move(producer);
-        auto_play_            = auto_play;
-        background_previewed_ = false;
+        background_ = std::move(producer);
+        auto_play_  = auto_play;
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
@@ -134,14 +132,7 @@ struct layer::impl
     draw_frame receive_background(const video_format_desc& format_desc, int nb_samples)
     {
         try {
-            if (background_ == frame_producer::empty())
-                return core::draw_frame{};
-
-            if (background_previewed_)
-                return background_->last_frame();
-
-            background_previewed_ = true;
-            return background_->receive(nb_samples);
+            return background_->first_frame();
 
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();

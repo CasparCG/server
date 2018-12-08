@@ -87,6 +87,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
             return make_ready_future(std::wstring(L""));
         }
         draw_frame last_frame() { return draw_frame{}; }
+        draw_frame first_frame() { return draw_frame{}; }
     };
 
     static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
@@ -176,6 +177,7 @@ class destroy_producer_proxy : public frame_producer
     uint32_t             frame_number() const override { return producer_->frame_number(); }
     uint32_t             nb_frames() const override { return producer_->nb_frames(); }
     draw_frame           last_frame() override { return producer_->last_frame(); }
+    draw_frame           first_frame() override { return producer_->first_frame(); }
     core::monitor::state state() const override { return producer_->state(); }
 };
 
