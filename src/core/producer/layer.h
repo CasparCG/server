@@ -46,9 +46,7 @@ class layer final
 
     void swap(layer& other);
 
-    void load(spl::shared_ptr<frame_producer> producer,
-              bool                            preview,
-              bool                            auto_play = false);
+    void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play = false);
     void play();
     void pause();
     void resume();

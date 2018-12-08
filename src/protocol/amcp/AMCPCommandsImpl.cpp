@@ -753,12 +753,12 @@ std::wstring mixer_invert_command(command_context& ctx)
     transforms_applier transforms(ctx);
     bool               value = boost::lexical_cast<int>(ctx.parameters.at(0));
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
-        [=](frame_transform transform) -> frame_transform {
-        transform.image_transform.invert = value;
-        return transform;
-    },
-        0,
-        tweener(L"linear")));
+                                            [=](frame_transform transform) -> frame_transform {
+                                                transform.image_transform.invert = value;
+                                                return transform;
+                                            },
+                                            0,
+                                            tweener(L"linear")));
     transforms.apply();
 
     return L"202 MIXER OK\r\n";

@@ -75,7 +75,8 @@ class sting_producer : public frame_producer
         return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
     }
 
-    boost::optional<int64_t> auto_play_delta() const override {
+    boost::optional<int64_t> auto_play_delta() const override
+    {
         auto duration = static_cast<int64_t>(mask_producer_->nb_frames());
         // ffmpeg will return -1 when media is still loading, so we need to cast duration first
         if (duration > -1) {
@@ -90,11 +91,11 @@ class sting_producer : public frame_producer
 
         CASPAR_SCOPE_EXIT
         {
-            state_                     = dst_producer_->state();
-            state_["transition/type"]  = std::string("sting");
+            state_                    = dst_producer_->state();
+            state_["transition/type"] = std::string("sting");
 
             if (duration)
-                state_["transition/frame"] = { static_cast<int>(current_frame_), static_cast<int>(*duration) };
+                state_["transition/frame"] = {static_cast<int>(current_frame_), static_cast<int>(*duration)};
         };
 
         if (duration && current_frame_ >= *duration) {
@@ -117,7 +118,7 @@ class sting_producer : public frame_producer
 
             if (!dst_) { // Not ready yet
                 auto res = src_;
-                src_ = draw_frame{};
+                src_     = draw_frame{};
                 return res;
             }
         }
@@ -134,16 +135,16 @@ class sting_producer : public frame_producer
         bool mask_and_overlay_valid = mask_ && (!expecting_overlay || overlay_);
         if (current_frame_ == 0 && !mask_and_overlay_valid) {
             auto res = src_;
-            src_ = draw_frame{};
+            src_     = draw_frame{};
             return res;
         }
 
         // Ensure mask and overlay are in perfect sync
-        auto mask = mask_;
+        auto mask    = mask_;
         auto overlay = overlay_;
         if (!mask_and_overlay_valid) {
             // If one is behind, then fetch the last_frame of both
-            mask = mask_producer_->last_frame();
+            mask    = mask_producer_->last_frame();
             overlay = overlay_producer_->last_frame();
         }
 
@@ -153,7 +154,7 @@ class sting_producer : public frame_producer
         src_ = draw_frame{};
 
         if (mask_and_overlay_valid) {
-            mask_ = draw_frame{};
+            mask_    = draw_frame{};
             overlay_ = draw_frame{};
 
             current_frame_ += 1;
@@ -181,8 +182,8 @@ class sting_producer : public frame_producer
     draw_frame
     compose(draw_frame dst_frame, draw_frame src_frame, draw_frame mask_frame, draw_frame overlay_frame) const
     {
-        const auto duration = auto_play_delta();
-        const double delta = duration ? audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(*duration)) : 0;
+        const auto   duration = auto_play_delta();
+        const double delta    = duration ? audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(*duration)) : 0;
 
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
