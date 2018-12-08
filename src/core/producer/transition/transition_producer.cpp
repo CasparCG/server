@@ -59,7 +59,7 @@ class transition_producer : public frame_producer
 
     core::draw_frame last_frame() override
     {
-        CASPAR_SCOPE_EXIT{ update_state(); };
+        CASPAR_SCOPE_EXIT { update_state(); };
 
         auto src = src_producer_->last_frame();
         auto dst = dst_producer_->last_frame();

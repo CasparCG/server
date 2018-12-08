@@ -110,12 +110,12 @@ struct layer::impl
                 frame = foreground_->last_frame();
             }
 
-            state_ = {};
-            state_["foreground"] = foreground_->state();
+            state_                           = {};
+            state_["foreground"]             = foreground_->state();
             state_["foreground"]["producer"] = foreground_->name();
-            state_["foreground"]["paused"] = paused_;
+            state_["foreground"]["paused"]   = paused_;
 
-            state_["background"] = background_->state();
+            state_["background"]             = background_->state();
             state_["background"]["producer"] = background_->name();
 
             return frame;
@@ -157,5 +157,5 @@ draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
 }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-core::monitor::state           layer::state() const { return impl_->state_; }
+core::monitor::state            layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

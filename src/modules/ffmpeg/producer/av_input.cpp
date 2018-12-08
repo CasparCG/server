@@ -34,9 +34,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
             while (true) {
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(lock, [&] {
-                        return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_;
-                    });
+                    cond_.wait(lock,
+                               [&] { return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_; });
                 }
 
                 if (abort_request_) {
@@ -81,10 +80,7 @@ Input::~Input()
     thread_.join();
 }
 
-void Input::abort()
-{
-    abort_request_ = true;
-}
+void Input::abort() { abort_request_ = true; }
 
 int Input::interrupt_cb(void* ctx)
 {

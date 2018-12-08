@@ -43,9 +43,9 @@ class audio_mixer final : public frame_visitor
   public:
     audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph);
 
-    array<const int32_t>  operator()(const struct video_format_desc& format_desc, int nb_samples);
-    void                  set_master_volume(float volume);
-    float                 get_master_volume();
+    array<const int32_t> operator()(const struct video_format_desc& format_desc, int nb_samples);
+    void                 set_master_volume(float volume);
+    float                get_master_volume();
     core::monitor::state state() const;
 
     virtual void push(const struct frame_transform& transform);

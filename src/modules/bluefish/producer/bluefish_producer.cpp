@@ -462,7 +462,7 @@ struct bluefish_producer : boost::noncopyable
                         auto audio_bytes = reinterpret_cast<uint8_t*>(&decoded_audio_bytes_[0]);
                         if (audio_bytes) {
                             src_audio->nb_samples     = remainaing_audio_samples_;
-                            int bytes_left  = remainaing_audio_samples_ * 4 * src_audio->channels;
+                            int bytes_left            = remainaing_audio_samples_ * 4 * src_audio->channels;
                             src_audio->data[0]        = audio_bytes + bytes_left;
                             src_audio->linesize[0]    = bytes_left;
                             remainaing_audio_samples_ = 0;

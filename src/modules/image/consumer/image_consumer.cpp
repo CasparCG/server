@@ -54,7 +54,7 @@ namespace caspar { namespace image {
 
 struct image_consumer : public core::frame_consumer
 {
-    std::wstring         filename_;
+    std::wstring filename_;
 
   public:
     // frame_consumer

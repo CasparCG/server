@@ -209,8 +209,8 @@ class html_client
         pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
 
         auto frame = frame_factory_->create_frame(this, pixel_desc);
-        auto src = (char*)buffer;
-        auto dst = (char*)frame.image_data(0).begin();
+        auto src   = (char*)buffer;
+        auto dst   = (char*)frame.image_data(0).begin();
         std::memcpy(dst, src, width * height * 4);
 
         {
@@ -358,7 +358,12 @@ class html_client
             do_execute_javascript(javascript);
     }
 
-    std::wstring print() const { return L"html[" + url_ + L"]" + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_width) + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_height) + L" " + boost::lexical_cast<std::wstring>(format_desc_.fps); }
+    std::wstring print() const
+    {
+        return L"html[" + url_ + L"]" + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_width) + L" " +
+               boost::lexical_cast<std::wstring>(format_desc_.square_height) + L" " +
+               boost::lexical_cast<std::wstring>(format_desc_.fps);
+    }
 
     IMPLEMENT_REFCOUNTING(html_client);
 };
@@ -467,14 +472,13 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
     auto format_desc = dependencies.format_desc;
     if (width && height) {
-        format_desc.width = *width;
-        format_desc.square_width = *width;
-        format_desc.height = *height;
+        format_desc.width         = *width;
+        format_desc.square_width  = *width;
+        format_desc.height        = *height;
         format_desc.square_height = *height;
     }
 
-    return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
+    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

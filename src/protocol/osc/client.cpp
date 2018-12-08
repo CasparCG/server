@@ -73,11 +73,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
 
-    std::mutex                                 mutex_;
-    std::condition_variable                    cond_;
-    boost::optional<core::monitor::state>      bundle_opt_;
-    std::atomic<bool>                          abort_request_{false};
-    std::thread                                thread_;
+    std::mutex                            mutex_;
+    std::condition_variable               cond_;
+    boost::optional<core::monitor::state> bundle_opt_;
+    std::atomic<bool>                     abort_request_{false};
+    std::thread                           thread_;
 
   public:
     impl(std::shared_ptr<boost::asio::io_service> service)
@@ -89,7 +89,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
-                    core::monitor::state  bundle;
+                    core::monitor::state       bundle;
                     std::vector<udp::endpoint> endpoints;
 
                     {

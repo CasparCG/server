@@ -81,9 +81,9 @@ struct video_channel::impl final
     std::thread       thread_;
 
   public:
-    impl(int                                        index,
-         const core::video_format_desc&             format_desc,
-         std::unique_ptr<image_mixer>               image_mixer,
+    impl(int                                       index,
+         const core::video_format_desc&            format_desc,
+         std::unique_ptr<image_mixer>              image_mixer,
          std::function<void(core::monitor::state)> tick)
         : index_(index)
         , format_desc_(format_desc)
@@ -163,11 +163,11 @@ struct video_channel::impl final
                             }
                         }
                     }
-                    state_           = {};
-                    state_["stage"] = stage_.state();
-                    state_["mixer"] = mixer_.state();
-                    state_["output"] = output_.state();
-                    state_["framerate"] = { format_desc_.framerate.numerator(), format_desc_.framerate.denominator() };
+                    state_              = {};
+                    state_["stage"]     = stage_.state();
+                    state_["mixer"]     = mixer_.state();
+                    state_["output"]    = output_.state();
+                    state_["framerate"] = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
 
                     caspar::timer osc_timer;
                     tick_(state_);
@@ -226,9 +226,9 @@ struct video_channel::impl final
     int index() const { return index_; }
 };
 
-video_channel::video_channel(int                                        index,
-                             const core::video_format_desc&             format_desc,
-                             std::unique_ptr<image_mixer>               image_mixer,
+video_channel::video_channel(int                                       index,
+                             const core::video_format_desc&            format_desc,
+                             std::unique_ptr<image_mixer>              image_mixer,
                              std::function<void(core::monitor::state)> tick)
     : impl_(new impl(index, format_desc, std::move(image_mixer), tick))
 {
@@ -246,7 +246,7 @@ void                           core::video_channel::video_format_desc(const core
 {
     impl_->video_format_desc(format_desc);
 }
-int                   video_channel::index() const { return impl_->index(); }
+int                  video_channel::index() const { return impl_->index(); }
 core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index) { return impl_->route(index); }

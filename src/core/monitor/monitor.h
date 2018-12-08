@@ -45,7 +45,7 @@ class state
         std::string key_;
         data_map_t& data_;
 
-    public:
+      public:
         state_proxy(const std::string& key, data_map_t& data)
             : key_(key)
             , data_(data)
@@ -54,7 +54,7 @@ class state
 
         state_proxy& operator=(data_t data)
         {
-            data_[key_] = { std::move(data) };
+            data_[key_] = {std::move(data)};
             return *this;
         }
 
@@ -64,7 +64,7 @@ class state
             return *this;
         }
 
-        template<typename T>
+        template <typename T>
         state_proxy operator[](const T& key)
         {
             return state_proxy(key_ + "/" + boost::lexical_cast<std::string>(key), data_);
@@ -108,21 +108,15 @@ class state
         return *this;
     }
 
-    template<typename T>
+    template <typename T>
     state_proxy operator[](const T& key)
     {
         return state_proxy(boost::lexical_cast<std::string>(key), data_);
     }
 
-    data_map_t::const_iterator begin() const
-    {
-        return data_.begin();
-    }
+    data_map_t::const_iterator begin() const { return data_.begin(); }
 
-    data_map_t::const_iterator end() const
-    {
-        return data_.end();
-    }
+    data_map_t::const_iterator end() const { return data_.end(); }
 };
 
 }}} // namespace caspar::core::monitor

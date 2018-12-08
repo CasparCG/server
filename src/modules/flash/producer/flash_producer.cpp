@@ -198,7 +198,7 @@ class flash_renderer
                    const std::wstring&                         filename,
                    int                                         width,
                    int                                         height)
-        :  graph_(graph)
+        : graph_(graph)
         , filename_(filename)
         , width_(width)
         , height_(height)

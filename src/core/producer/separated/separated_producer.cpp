@@ -62,7 +62,7 @@ class separated_producer : public frame_producer
     {
         CASPAR_SCOPE_EXIT
         {
-            state_ = fill_producer_->state();
+            state_          = fill_producer_->state();
             state_["keyer"] = key_producer_->state();
         };
 

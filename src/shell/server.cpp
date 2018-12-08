@@ -173,18 +173,18 @@ struct server::impl : boost::noncopyable
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_.size() + 1);
-            auto channel     = spl::make_shared<video_channel>(
-                channel_id,
-                format_desc,
-                accelerator_.create_image_mixer(channel_id),
-                [channel_id, weak_client](core::monitor::state channel_state) {
-                    monitor::state state;
-                    state[""]["channel"][channel_id] = channel_state;
-                    auto client = weak_client.lock();
-                    if (client) {
-                        client->send(std::move(state));
-                    }
-                });
+            auto channel =
+                spl::make_shared<video_channel>(channel_id,
+                                                format_desc,
+                                                accelerator_.create_image_mixer(channel_id),
+                                                [channel_id, weak_client](core::monitor::state channel_state) {
+                                                    monitor::state state;
+                                                    state[""]["channel"][channel_id] = channel_state;
+                                                    auto client                      = weak_client.lock();
+                                                    if (client) {
+                                                        client->send(std::move(state));
+                                                    }
+                                                });
 
             channels_.push_back(channel);
         }
