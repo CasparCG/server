@@ -423,6 +423,8 @@ class html_producer : public core::frame_producer
         return core::draw_frame::empty();
     }
 
+    core::draw_frame first_frame() override { return receive_impl(0); }
+
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         if (!client_)

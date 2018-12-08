@@ -163,6 +163,8 @@ class sting_producer : public frame_producer
         return res;
     }
 
+    core::draw_frame first_frame() override { return dst_producer_->first_frame(); }
+
     uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
 
     uint32_t frame_number() const override { return dst_producer_->frame_number(); }

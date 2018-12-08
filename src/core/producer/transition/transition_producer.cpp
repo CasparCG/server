@@ -67,6 +67,8 @@ class transition_producer : public frame_producer
         return dst && current_frame_ >= info_.duration ? dst : src;
     }
 
+    core::draw_frame first_frame() override { return dst_producer_->first_frame(); }
+
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 
     spl::shared_ptr<frame_producer> following_producer() const override
