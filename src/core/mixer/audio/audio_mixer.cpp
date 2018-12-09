@@ -97,10 +97,6 @@ struct audio_mixer::impl : boost::noncopyable
         auto items    = std::move(items_);
         auto result   = std::vector<int32_t>(nb_samples * channels, 0);
 
-        if (items.empty()) {
-            return result;
-        }
-
         auto mixed = std::vector<double>(nb_samples * channels, 0.0f);
 
         for (auto& item : items) {
