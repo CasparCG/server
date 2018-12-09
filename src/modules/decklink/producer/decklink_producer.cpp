@@ -499,6 +499,14 @@ class decklink_producer : public IDeckLinkInputCallback
             BMDTimeValue in_video_pts = 0LL;
             BMDTimeValue in_audio_pts = 0LL;
 
+            // If the video is delayed too much, audio only will be delivered
+            // we don't want audio only since the buffer is small and we keep avcodec
+            // very busy processing all the (unnecessary) packets. Also, because there is
+            // no audio, the sync values will be incorrect.
+            if (!audio) {
+                return S_OK;
+            }
+
             if (video) {
                 const auto flags = video->GetFlags();
                 has_signal_      = !(flags & bmdFrameHasNoInputSource);
