@@ -402,12 +402,12 @@ class decklink_producer : public IDeckLinkInputCallback
         }
 
         if (FAILED(input_->SetCallback(this)) != S_OK) {
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input callback.")
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to set input callback.")
                                                       << boost::errinfo_api_function("SetCallback"));
         }
 
         if (FAILED(input_->StartStreams())) {
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start input stream.")
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to start input stream.")
                                                       << boost::errinfo_api_function("StartStreams"));
         }
 
@@ -432,20 +432,18 @@ class decklink_producer : public IDeckLinkInputCallback
     {
         try {
             auto newMode = newDisplayMode->GetDisplayMode();
-            auto fmt  = get_caspar_video_format(newMode);
-
+            auto fmt     = get_caspar_video_format(newMode);
 
             auto new_fmt = core::video_format_desc(fmt);
 
             CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to "
                              << new_fmt.name;
 
-
             input_->PauseStreams();
 
             // reinitializing filters because not all filters can handle on-the-fly format changes
             input_format = new_fmt;
-            mode_ = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+            mode_        = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
 
             graph_->set_text(print());
 
@@ -453,8 +451,20 @@ class decklink_producer : public IDeckLinkInputCallback
             audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
             // reinitializing video input with the new display mode
-            input_->EnableVideoInput(newMode, bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection);
-            input_->FlushStreams();
+            if (FAILED(input_->EnableVideoInput(newMode, bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection))) {
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to enable video input.")
+                                                          << boost::errinfo_api_function("EnableVideoInput"));
+            }
+
+            if (FAILED(input_->FlushStreams())) {
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to flush input stream.")
+                                                          << boost::errinfo_api_function("FlushStreams"));
+            }
+
+            if (FAILED(input_->StartStreams())) {
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to start input stream.")
+                                                          << boost::errinfo_api_function("StartStreams"));
+            }
             input_->StartStreams();
             return S_OK;
         } catch (...) {
