@@ -603,11 +603,11 @@ struct AVProducer::Impl
             state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = {framerate.num, framerate.den};
         }
 
-        if (input_duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+        if (input_duration_ == AV_NOPTS_VALUE) {
             input_duration_ = input_->duration;
         }
 
-        if (duration_ == AV_NOPTS_VALUE && input_->duration_estimation_method != AVFMT_DURATION_FROM_BITRATE) {
+        if (duration_ == AV_NOPTS_VALUE) {
             duration_ = input_->duration;
         }
 
