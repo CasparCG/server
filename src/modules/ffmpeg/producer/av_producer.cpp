@@ -527,11 +527,13 @@ struct AVProducer::Impl
 
     int64_t          frame_count_ = 0;
     bool             frame_flush_ = true;
-    Frame            frame2_;
+    bool             frame_eof_ = false;
+    int64_t          frame_time_ = AV_NOPTS_VALUE;
+    int64_t          frame_duration_ = AV_NOPTS_VALUE;
     core::draw_frame frame_;
 
     std::deque<Frame>         buffer_;
-    boost::mutex              buffer_mutex_;
+    mutable boost::mutex      buffer_mutex_;
     boost::condition_variable buffer_cond_;
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
@@ -743,9 +745,9 @@ struct AVProducer::Impl
     {
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
-        state_["file/clip"] = {start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
-        state_["file/time"] = {file_time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps};
-        state_["loop"]      = loop_;
+        state_["file/clip"] = { start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
+        state_["file/time"] = { time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps };
+        state_["loop"] = loop_;
     }
 
     core::draw_frame prev_frame()
@@ -756,14 +758,15 @@ struct AVProducer::Impl
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
             if (!buffer_.empty()) {
-                auto frame   = buffer_[0].frame;
-                frame_       = core::draw_frame::still(frame);
-                frame2_      = buffer_[0];
+                frame_ = buffer_[0].frame;
+                frame_time_ = buffer_[0].pts;
+                frame_duration_ = buffer_[0].duration;
                 frame_flush_ = false;
+                frame_eof_ = false;
             }
         }
 
-        return frame_;
+        return core::draw_frame::still(frame_);
     }
 
     core::draw_frame next_frame()
@@ -774,6 +777,7 @@ struct AVProducer::Impl
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
+                frame_eof_ = true;
                 return frame_;
             }
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
@@ -786,16 +790,18 @@ struct AVProducer::Impl
             latency_ = -1;
         }
 
-        auto frame   = buffer_[0].frame;
-        frame_       = core::draw_frame::still(frame);
-        frame2_      = buffer_[0];
+        frame_ = buffer_[0].frame;
+        frame_time_ = buffer_[0].pts;
+        frame_duration_ = buffer_[0].duration;
         frame_flush_ = false;
+        frame_eof_ = false;
 
         buffer_.pop_front();
         buffer_cond_.notify_all();
+
         graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
 
-        return frame;
+        return frame_;
     }
 
     void seek(int64_t time)
@@ -814,15 +820,18 @@ struct AVProducer::Impl
 
     int64_t time() const
     {
-        // TODO (fix) How to handle NOPTS case?
-        return frame2_.pts != AV_NOPTS_VALUE ? av_rescale_q(frame2_.pts, TIME_BASE_Q, format_tb_) : 0;
-    }
+        if (frame_time_ == AV_NOPTS_VALUE) {
+            // TODO (fix) How to handle NOPTS case?
+            return 0;
+        }
 
-    int64_t file_time() const
-    {
-        // TODO (fix) How to handle NOPTS case?
-        return frame2_.pts != AV_NOPTS_VALUE ? av_rescale_q(frame2_.start_time + frame2_.pts, TIME_BASE_Q, format_tb_)
-                                             : 0;
+        auto frame_time = frame_time_;
+
+        if (frame_eof_ && frame_duration_ != AV_NOPTS_VALUE) {
+            frame_time += frame_duration_;
+        }
+
+        return av_rescale_q(frame_time, TIME_BASE_Q, format_tb_);
     }
 
     void loop(bool loop)
