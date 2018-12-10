@@ -226,9 +226,9 @@ struct video_channel::impl final
                     state["mixer"]           = mixer_.state();
                     state["output"]          = output_.state();
                     state["framerate"]       = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
-                    state["timecode"]        = timecode.string();
+                    state["timecode"]        = timecode.string(false);
                     state["timecode/source"] = timecode_->source_name();
-                    stat_                    = state;
+                    state_                   = state;
 
                     caspar::timer osc_timer;
                     tick_(state_);

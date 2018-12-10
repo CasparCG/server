@@ -471,7 +471,7 @@ class decklink_producer : public IDeckLinkInputCallback
                         if (SUCCEEDED(tc->GetComponents(&hours, &minutes, &seconds, &frames))) {
                             const uint8_t fps = static_cast<uint8_t>(ceil(format_desc_.fps));
                             if (core::frame_timecode::create(hours, minutes, seconds, frames, fps, new_timecode)) {
-                                state_["file/timecode"] = new_timecode.string();
+                                state_["file/timecode"] = new_timecode.string(true);
                             }
                         }
 

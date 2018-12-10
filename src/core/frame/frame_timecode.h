@@ -37,7 +37,7 @@ struct frame_timecode
 
     unsigned int       bcd() const;
     int64_t            pts() const;
-    const std::wstring string() const;
+    const std::wstring string(bool smpte_frames) const;
 
     static const frame_timecode& empty();
     static bool                  parse_string(const std::wstring& str, uint8_t fps, frame_timecode& res);

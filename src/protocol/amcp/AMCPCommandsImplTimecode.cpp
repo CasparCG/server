@@ -47,7 +47,7 @@ std::wstring time_command(command_context& ctx)
 
     std::wstringstream replyString;
     replyString << L"201 TIME OK\r\n";
-    replyString << ch->timecode().string();
+    replyString << ch->timecode().string(false);
     replyString << L"\r\n";
     return replyString.str();
 }
@@ -74,7 +74,7 @@ std::wstring schedule_list_format(const std::vector<std::tuple<int, core::frame_
     replyString << L"200 SCHEDULE LIST OK\r\n";
 
     for (auto entry : data) {
-        replyString << std::get<0>(entry) << L" " << std::get<1>(entry).string() << L" " << std::get<2>(entry)
+        replyString << std::get<0>(entry) << L" " << std::get<1>(entry).string(false) << L" " << std::get<2>(entry)
                     << "\r\n";
     }
 
@@ -113,7 +113,7 @@ std::wstring schedule_info_command(command_context& ctx)
 
     std::wstringstream replyString;
     replyString << L"201 SCHEDULE INFO OK\r\n";
-    replyString << info.first.string();
+    replyString << info.first.string(false);
     replyString << L"\r\n";
     return replyString.str();
 }

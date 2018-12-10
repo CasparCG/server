@@ -564,7 +564,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (format_desc_.field_count != 1)
                         tc += 1;
 
-                    av_dict_set(&oc->metadata, "timecode", u8(tc.string()).c_str(), 0);
+                    av_dict_set(&oc->metadata, "timecode", u8(tc.string(true)).c_str(), 0);
                 }
 
                 boost::optional<Stream> video_stream;

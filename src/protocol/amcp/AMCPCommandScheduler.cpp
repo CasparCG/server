@@ -200,7 +200,7 @@ class AMCPCommandSchedulerQueue
 
         if (delta > last_timecode_.fps() || delta < 0) {
             CASPAR_LOG(warning) << L"timecode[" << index_ << L"] jump detected. Skipping scheduling for: "
-                                << last_timecode_.string() << L" to " << (timecode + 1).string();
+                                << last_timecode_.string(false) << L" to " << (timecode + 1).string(false);
             return timecode_range(timecode, timecode + 1);
         }
 

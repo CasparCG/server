@@ -126,10 +126,10 @@ int64_t frame_timecode::pts() const
     return res;
 }
 
-const std::wstring frame_timecode::string() const
+const std::wstring frame_timecode::string(bool smpte_frames) const
 {
     uint8_t hours, minutes, seconds, frames;
-    get_components(hours, minutes, seconds, frames, true);
+    get_components(hours, minutes, seconds, frames, smpte_frames);
     return (boost::wformat(L"%02i:%02i:%02i:%02i") % hours % minutes % seconds % frames).str();
 }
 
@@ -157,10 +157,6 @@ bool frame_timecode::parse_string(const std::wstring& str, uint8_t fps, frame_ti
         const uint8_t seconds = static_cast<uint8_t>(std::stoi(strs[2]));
         uint8_t       frames  = static_cast<uint8_t>(std::stoi(strs[3]));
 
-        // smpte doesn't handle high-p
-        if (fps > 30)
-            fps /= 2;
-
         return create(hours, minutes, seconds, frames, fps, res);
     } catch (...) {
         return false;
@@ -174,9 +170,6 @@ bool frame_timecode::create(uint8_t         hours,
                             uint8_t         fps,
                             frame_timecode& res)
 {
-    if (fps > 30)
-        fps /= 2;
-
     if (hours > 23 || minutes > 59 || seconds > 59 || frames > fps)
         return false;
 
