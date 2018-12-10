@@ -59,6 +59,7 @@
 #include <memory>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
@@ -1342,7 +1343,10 @@ std::wstring info_channel_command(command_context& ctx)
 
     auto state = ctx.channel.channel->state();
     for (const auto& p : state) {
-        const auto    path = boost::algorithm::replace_all_copy(p.first, "/", ".");
+        const auto replaced = boost::algorithm::replace_all_copy(p.first, "/", ".");
+        // avoid digit-only nodes in XML
+        const auto path  = boost::algorithm::replace_all_regex_copy(
+            replaced, boost::regex("\\.(.*?)\\.([0-9]*?)\\."), boost::lexical_cast<std::string>(".$1.$1_$2."));
         param_visitor param_visitor(path, channel_info);
         for (const auto& element : p.second) {
             boost::apply_visitor(param_visitor, element);
