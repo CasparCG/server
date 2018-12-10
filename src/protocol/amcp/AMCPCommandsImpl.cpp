@@ -398,10 +398,16 @@ std::wstring remove_command(command_context& ctx)
     if (index == std::numeric_limits<int>::min()) {
         replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
 
+        if (ctx.parameters.size() == 0) {
+            return L"402 REMOVE FAILED\r\n";
+        }
+
         index = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))->index();
     }
 
-    ctx.channel.channel->output().remove(index);
+    if (!ctx.channel.channel->output().remove(index)) {
+        return L"404 REMOVE FAILED\r\n";
+    }
 
     return L"202 REMOVE OK\r\n";
 }
