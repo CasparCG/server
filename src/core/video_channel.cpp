@@ -107,6 +107,7 @@ struct video_channel::impl final
 #ifdef WIN32
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
+            set_thread_name(L"channel-" + boost::lexical_cast<std::wstring>(index_));
 
             while (!abort_request_) {
                 try {
@@ -163,11 +164,13 @@ struct video_channel::impl final
                             }
                         }
                     }
-                    state_              = {};
-                    state_["stage"]     = stage_.state();
-                    state_["mixer"]     = mixer_.state();
-                    state_["output"]    = output_.state();
-                    state_["framerate"] = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
+
+                    monitor::state state = {};
+                    state["stage"]       = stage_.state();
+                    state["mixer"]       = mixer_.state();
+                    state["output"]      = output_.state();
+                    state["framerate"]   = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
+                    state_               = state;
 
                     caspar::timer osc_timer;
                     tick_(state_);
