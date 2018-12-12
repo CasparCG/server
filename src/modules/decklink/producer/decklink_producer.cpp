@@ -465,7 +465,6 @@ class decklink_producer : public IDeckLinkInputCallback
                 CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to start input stream.")
                                                           << boost::errinfo_api_function("StartStreams"));
             }
-            input_->StartStreams();
             return S_OK;
         } catch (...) {
             exception_ = std::current_exception();
