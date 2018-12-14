@@ -43,6 +43,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/regex.hpp>
 #include <boost/thread.hpp>
 
 #include <tbb/parallel_for.h>
@@ -273,15 +274,30 @@ int                                   newtek_ndi_producer::instances_ = 0;
 spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_producer_dependencies& dependencies,
                                                           const std::vector<std::wstring>&         params)
 {
-    if (params.size() < 2 || !boost::iequals(params.at(0), "ndi"))
+    const bool ndi_prefix  = boost::iequals(params.at(0), "NDI");
+    auto       name_or_url = ndi_prefix ? params.at(1) : params.at(0);
+    const bool ndi_url     = boost::algorithm::istarts_with(name_or_url, L"ndi:");
+    if (!ndi_prefix && !ndi_url)
         return core::frame_producer::empty();
 
-    auto name          = params.at(1);
-    bool low_bandwidth = contains_param(L"LOW_BANDWIDTH", params);
+    if (ndi_url) {
+        boost::replace_all(name_or_url, L"+", L" ");
+        boost::wregex expression(L"^ndi://([^/]+)/([^/]+)");
+
+        boost::match_results<std::wstring::const_iterator> match;
+        if (regex_search(name_or_url, match, expression)) {
+            std::wstring device(match[1].first, match[1].second);
+            std::wstring source(match[2].first, match[2].second);
+            name_or_url = device + L" (" + source + L")";
+        } else {
+            return core::frame_producer::empty();
+        }
+    }
+    const bool low_bandwidth = contains_param(L"LOW_BANDWIDTH", params);
 
     try {
         auto producer = spl::make_shared<newtek_ndi_producer>(
-            dependencies.frame_factory, dependencies.format_desc, name, low_bandwidth);
+            dependencies.frame_factory, dependencies.format_desc, name_or_url, low_bandwidth);
         return core::create_destroy_proxy(std::move(producer));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();

@@ -233,6 +233,19 @@ boost::tribool has_valid_extension(const std::wstring& filename)
     }
     return boost::tribool(boost::indeterminate);
 }
+
+bool has_invalid_protocol(const std::wstring& filename)
+{
+    static const auto invalid_protocols = {L"ndi:"};
+
+    auto protocol = boost::to_lower_copy(boost::filesystem::path(filename).root_name().wstring());
+
+    if (std::find(invalid_protocols.begin(), invalid_protocols.end(), protocol) != invalid_protocols.end()) {
+        return true;
+    }
+    return false;
+}
+
 bool is_valid_file(const std::wstring& filename)
 {
     const auto valid_ext = has_valid_extension(filename);
@@ -298,7 +311,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (!boost::contains(path, L"://")) {
         path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
         name += boost::filesystem::path(path).extension().wstring();
-    } else if (!has_valid_extension(path)) {
+    } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
         return core::frame_producer::empty();
     }
 
