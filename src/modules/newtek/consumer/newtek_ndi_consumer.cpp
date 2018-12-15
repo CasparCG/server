@@ -50,6 +50,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     const bool         allow_fields_;
 
     core::video_format_desc              format_desc_;
+    int                                  channel_index_;
     NDIlib_v3*                           ndi_lib_;
     NDIlib_video_frame_v2_t              ndi_video_frame_;
     NDIlib_audio_frame_interleaved_32f_t ndi_audio_frame_;
@@ -67,6 +68,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         , instance_no_(instances_++)
         , frame_no_(0)
         , allow_fields_(allow_fields)
+        , channel_index_(0)
     {
         ndi_lib_ = ndi::load_library();
         if (!ndi_lib_) {
@@ -86,7 +88,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
-        format_desc_ = format_desc;
+        format_desc_   = format_desc;
+        channel_index_ = channel_index;
 
         NDIlib_send_create_t NDI_send_create_desc;
 
@@ -117,6 +120,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_audio_frame_.no_channels = format_desc_.audio_channels;
         ndi_audio_frame_.timecode    = NDIlib_send_timecode_synthesize;
 
+        graph_->set_text(print());
         // CASPAR_VERIFY(ndi_send_instance_);
     }
 
@@ -151,7 +155,14 @@ struct newtek_ndi_consumer : public core::frame_consumer
         return make_ready_future(true);
     }
 
-    std::wstring print() const override { return L"ndi[" + name_ + L"]"; } // TODO: maybe put tally status in the name
+    std::wstring print() const override
+    {
+        if (channel_index_) {
+            return L"ndi_consumer[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + name_ + L"]";
+        } else {
+            return L"[ndi_consumer]";
+        }
+    }
 
     std::wstring name() const override { return L"ndi"; }
 
