@@ -51,7 +51,6 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     core::video_format_desc              format_desc_;
     NDIlib_v3*                           ndi_lib_;
-    NDIlib_send_instance_t               ndi_send_instance_;
     NDIlib_video_frame_v2_t              ndi_video_frame_;
     NDIlib_audio_frame_interleaved_32f_t ndi_audio_frame_;
     std::shared_ptr<uint8_t>             field_data_;
@@ -60,6 +59,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
     caspar::timer                        frame_timer_;
     int                                  frame_no_;
 
+    std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
+
   public:
     newtek_ndi_consumer(std::wstring name, bool allow_fields)
         : name_(!name.empty() ? name : default_ndi_name())
@@ -67,7 +68,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         , frame_no_(0)
         , allow_fields_(allow_fields)
     {
-        if (!ndi::load_library()) {
+        ndi_lib_ = ndi::load_library();
+        if (!ndi_lib_) {
             ndi::not_installed();
         }
 
@@ -78,7 +80,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         diagnostics::register_graph(graph_);
     }
 
-    ~newtek_ndi_consumer() { ndi_lib_->NDIlib_send_destroy(ndi_send_instance_); }
+    ~newtek_ndi_consumer() {}
 
     // frame_consumer
 
@@ -86,13 +88,13 @@ struct newtek_ndi_consumer : public core::frame_consumer
     {
         format_desc_ = format_desc;
 
-        ndi_lib_ = ndi::load_library();
         NDIlib_send_create_t NDI_send_create_desc;
 
         auto tmp_name                   = u8(name_);
         NDI_send_create_desc.p_ndi_name = tmp_name.c_str();
 
-        ndi_send_instance_ = ndi_lib_->NDIlib_send_create(&NDI_send_create_desc);
+        ndi_send_instance_ = {new NDIlib_send_instance_t(ndi_lib_->NDIlib_send_create(&NDI_send_create_desc)),
+                              [this](auto p) { this->ndi_lib_->NDIlib_send_destroy(*p); }};
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
@@ -115,7 +117,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_audio_frame_.no_channels = format_desc_.audio_channels;
         ndi_audio_frame_.timecode    = NDIlib_send_timecode_synthesize;
 
-        CASPAR_VERIFY(ndi_send_instance_);
+        // CASPAR_VERIFY(ndi_send_instance_);
     }
 
     std::future<bool> send(core::const_frame frame) override
@@ -130,7 +132,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_audio_frame_.no_samples     = audio_data_size / format_desc_.audio_channels;
         std::vector<float> audio_buffer = ndi::audio_32_to_32f(audio_data.data(), audio_data_size);
         ndi_audio_frame_.p_data         = const_cast<float*>(audio_buffer.data());
-        ndi_lib_->NDIlib_util_send_send_audio_interleaved_32f(ndi_send_instance_, &ndi_audio_frame_);
+        ndi_lib_->NDIlib_util_send_send_audio_interleaved_32f(*ndi_send_instance_, &ndi_audio_frame_);
         if (format_desc_.field_count == 2 && allow_fields_) {
             ndi_video_frame_.frame_format_type =
                 (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
@@ -142,7 +144,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         } else {
             ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
         }
-        ndi_lib_->NDIlib_send_send_video_v2(ndi_send_instance_, &ndi_video_frame_);
+        ndi_lib_->NDIlib_send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
         frame_no_++;
         graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
 
