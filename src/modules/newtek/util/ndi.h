@@ -21,6 +21,7 @@
 #pragma once
 
 #include "../interop/Processing.NDI.Lib.h"
+#include "protocol/amcp/AMCPCommand.h"
 #include <string>
 
 namespace caspar { namespace newtek { namespace ndi {
@@ -45,6 +46,8 @@ NDIlib_v3*                             load_library();
 std::map<std::string, NDIlib_source_t> get_current_sources();
 void                                   not_initialized();
 void                                   not_installed();
+
+std::wstring list_command(protocol::amcp::command_context& ctx);
 
 std::vector<int32_t> audio_16_to_32(const short* audio_data, int size);
 std::vector<float>   audio_32_to_32f(const int* audio_data, int size);

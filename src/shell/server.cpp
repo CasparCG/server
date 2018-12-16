@@ -119,7 +119,10 @@ struct server::impl : boost::noncopyable
     {
         caspar::core::diagnostics::osd::register_sink();
 
-        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_);
+        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+            cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+
+        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_);
 
         initialize_modules(dependencies);
         core::init_cg_proxy_as_producer(dependencies);
@@ -173,18 +176,18 @@ struct server::impl : boost::noncopyable
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_.size() + 1);
-            auto channel     = spl::make_shared<video_channel>(
-                channel_id,
-                format_desc,
-                accelerator_.create_image_mixer(channel_id),
-                [channel_id, weak_client](core::monitor::state channel_state) {
-                    monitor::state state;
-                    state[""]["channel"][channel_id] = channel_state;
-                    auto client = weak_client.lock();
-                    if (client) {
-                        client->send(std::move(state));
-                    }
-                });
+            auto channel =
+                spl::make_shared<video_channel>(channel_id,
+                                                format_desc,
+                                                accelerator_.create_image_mixer(channel_id),
+                                                [channel_id, weak_client](core::monitor::state channel_state) {
+                                                    monitor::state state;
+                                                    state[""]["channel"][channel_id] = channel_state;
+                                                    auto client                      = weak_client.lock();
+                                                    if (client) {
+                                                        client->send(std::move(state));
+                                                    }
+                                                });
 
             channels_.push_back(channel);
         }
@@ -250,8 +253,7 @@ struct server::impl : boost::noncopyable
 
     void setup_controllers(const boost::property_tree::wptree& pt)
     {
-        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
-            channels_, cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+        amcp_command_repo_->init(channels_);
         amcp::register_commands(*amcp_command_repo_);
 
         using boost::property_tree::wptree;
