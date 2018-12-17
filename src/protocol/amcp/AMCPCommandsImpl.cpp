@@ -367,7 +367,7 @@ std::wstring remove_command(command_context& ctx)
         index = ctx.static_context->consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))->index();
     }
 
-    if (!ctx.channel.channel->output().remove(index)) {
+    if (!ctx.channel.raw_channel->output().remove(index)) {
         return L"404 REMOVE FAILED\r\n";
     }
 

@@ -165,7 +165,7 @@ struct video_channel::impl final
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto          stage_frames = (*stage_)(format_desc, nb_samples);
+                    auto          stage_frames = (*stage_)(format_desc, nb_samples, background_routes);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Ensure it is accurate now the producer has run

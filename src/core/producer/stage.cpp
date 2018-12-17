@@ -375,9 +375,9 @@ std::future<frame_transform> stage_delayed::get_current_transform(int index)
 std::future<void> stage_delayed::load(int                                    index,
                                       const spl::shared_ptr<frame_producer>& producer,
                                       bool                                   preview,
-                                      const boost::optional<int32_t>&        auto_play_delta)
+                                      bool                                   auto_play)
 {
-    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play_delta).get(); });
+    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
 }
 std::future<void> stage_delayed::pause(int index)
 {
