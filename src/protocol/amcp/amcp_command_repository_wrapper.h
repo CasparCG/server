@@ -54,7 +54,7 @@ class amcp_command_repository_wrapper
     amcp_command_repository_wrapper(std::shared_ptr<amcp_command_repository> repo,
                                     std::shared_ptr<command_context_factory> ctx)
         : repo_(repo)
-        , ctx_(ctx)
+        , context_factory_(ctx)
     {
     }
 
@@ -80,7 +80,7 @@ class amcp_command_repository_wrapper
 
   private:
     std::shared_ptr<amcp_command_repository> repo_;
-    std::weak_ptr<command_context_factory>   ctx_;
+    std::weak_ptr<command_context_factory>   context_factory_;
 };
 
 }}} // namespace caspar::protocol::amcp

@@ -321,7 +321,12 @@ struct server::impl : boost::noncopyable
 
                 // Run it on the stage to ensure the producer creation has completed fully
                 channel->stage()->execute([channel, layer]() {
-                    const std::shared_ptr<frame_producer> producer = channel->stage()->foreground(layer).get();
+                    std::shared_ptr<frame_producer> producer = channel->stage()->foreground(layer).get();
+
+                    // Unwrap to remove the transition
+                    if (producer->following_producer(true) != frame_producer::empty())
+                        producer = producer->following_producer(true);
+
                     if (!channel->timecode()->set_weak_source(producer)) {
                         CASPAR_LOG(error)
                             << L"timecode[" << channel->index() << L"] failed to set timecode from layer " << layer;

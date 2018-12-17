@@ -30,14 +30,14 @@ void amcp_command_repository_wrapper::register_command(std::wstring             
                                                        amcp_command_impl_func    command,
                                                        int                       min_num_params)
 {
-    std::weak_ptr<command_context_factory> ctx3 = ctx_;
-    auto func = [ctx3, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
-        auto ctx4 = ctx3.lock();
-        if (!ctx4)
+    std::weak_ptr<command_context_factory> weak_context_factory = context_factory_;
+    auto func = [weak_context_factory, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
+        auto context_factory = weak_context_factory.lock();
+        if (!context_factory)
             return make_ready_future<std::wstring>(L"");
 
-        auto ctx2 = ctx4->create(ctx, channels);
-        return command(ctx2);
+        auto context = context_factory->create(ctx, channels);
+        return command(context);
     };
 
     repo_->register_command(category, name, func, min_num_params);
@@ -48,14 +48,14 @@ void amcp_command_repository_wrapper::register_command(std::wstring             
                                                        amcp_command_impl_func2   command,
                                                        int                       min_num_params)
 {
-    std::weak_ptr<command_context_factory> ctx3 = ctx_;
-    auto func = [ctx3, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
-        auto ctx4 = ctx3.lock();
-        if (!ctx4)
+    std::weak_ptr<command_context_factory> weak_context_factory = context_factory_;
+    auto func = [weak_context_factory, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
+        auto context_factory = weak_context_factory.lock();
+        if (!context_factory)
             return make_ready_future<std::wstring>(L"");
 
-        auto ctx2 = ctx4->create(ctx, channels);
-        return make_ready_future(command(ctx2));
+        auto context = context_factory->create(ctx, channels);
+        return make_ready_future(command(context));
     };
 
     repo_->register_command(category, name, func, min_num_params);
@@ -66,14 +66,14 @@ void amcp_command_repository_wrapper::register_channel_command(std::wstring     
                                                                amcp_command_impl_func    command,
                                                                int                       min_num_params)
 {
-    std::weak_ptr<command_context_factory> ctx3 = ctx_;
-    auto func = [ctx3, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
-        auto ctx4 = ctx3.lock();
-        if (!ctx4)
+    std::weak_ptr<command_context_factory> weak_context_factory = context_factory_;
+    auto func = [weak_context_factory, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
+        auto context_factory = weak_context_factory.lock();
+        if (!context_factory)
             return make_ready_future<std::wstring>(L"");
 
-        auto ctx2 = ctx4->create(ctx, channels);
-        return command(ctx2);
+        auto context = context_factory->create(ctx, channels);
+        return command(context);
     };
 
     repo_->register_channel_command(category, name, func, min_num_params);
@@ -84,14 +84,14 @@ void amcp_command_repository_wrapper::register_channel_command(std::wstring     
                                                                amcp_command_impl_func2   command,
                                                                int                       min_num_params)
 {
-    std::weak_ptr<command_context_factory> ctx3 = ctx_;
-    auto func = [ctx3, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
-        auto ctx4 = ctx3.lock();
-        if (!ctx4)
+    std::weak_ptr<command_context_factory> weak_context_factory = context_factory_;
+    auto func = [weak_context_factory, command](const command_context_simple& ctx, const std::vector<channel_context>& channels) {
+        auto context_factory = weak_context_factory.lock();
+        if (!context_factory)
             return make_ready_future<std::wstring>(L"");
 
-        auto ctx2 = ctx4->create(ctx, channels);
-        return make_ready_future(command(ctx2));
+        auto context = context_factory->create(ctx, channels);
+        return make_ready_future(command(context));
     };
 
     repo_->register_channel_command(category, name, func, min_num_params);
