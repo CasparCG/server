@@ -39,7 +39,7 @@ std::wstring time_command(command_context& ctx)
 
         core::frame_timecode tc;
         const uint8_t        fps = static_cast<uint8_t>(round(ctx.channel.raw_channel->video_format_desc().fps));
-        if (!core::frame_timecode::parse_string(ctx.parameters.at(0), fps, false, tc))
+        if (!core::frame_timecode::parse_string(ctx.parameters.at(0), fps, true, tc))
             return L"403 TIME FAILED\r\n";
 
         ch->timecode(tc);
@@ -47,7 +47,7 @@ std::wstring time_command(command_context& ctx)
 
     std::wstringstream replyString;
     replyString << L"201 TIME OK\r\n";
-    replyString << ch->timecode().string(false);
+    replyString << ch->timecode().string(true);
     replyString << L"\r\n";
     return replyString.str();
 }
@@ -74,7 +74,7 @@ std::wstring schedule_list_format(const std::vector<std::tuple<int, core::frame_
     replyString << L"200 SCHEDULE LIST OK\r\n";
 
     for (auto entry : data) {
-        replyString << std::get<0>(entry) << L" " << std::get<1>(entry).string(false) << L" " << std::get<2>(entry)
+        replyString << std::get<0>(entry) << L" " << std::get<1>(entry).string(true) << L" " << std::get<2>(entry)
                     << "\r\n";
     }
 
@@ -95,7 +95,7 @@ std::wstring schedule_list_command(command_context& ctx)
 
     auto          timecode = core::frame_timecode::empty();
     const uint8_t fps      = static_cast<uint8_t>(round(ctx.channels[index].raw_channel->video_format_desc().fps));
-    if (ctx.parameters.size() > 1 && !core::frame_timecode::parse_string(ctx.parameters.at(1), fps, false, timecode)) {
+    if (ctx.parameters.size() > 1 && !core::frame_timecode::parse_string(ctx.parameters.at(1), fps, true, timecode)) {
         return L"403 SCHEDULE LIST ERROR\r\n";
     }
 
@@ -113,7 +113,7 @@ std::wstring schedule_info_command(command_context& ctx)
 
     std::wstringstream replyString;
     replyString << L"201 SCHEDULE INFO OK\r\n";
-    replyString << info.first.string(false);
+    replyString << info.first.string(true);
     replyString << L"\r\n";
     return replyString.str();
 }
@@ -141,7 +141,7 @@ std::wstring schedule_set_command(command_context& ctx)
 
     core::frame_timecode schedule_timecode = core::frame_timecode::empty();
     const uint8_t fps = static_cast<uint8_t>(round(ctx.channels[channel_index].raw_channel->video_format_desc().fps));
-    if (!core::frame_timecode::parse_string(ctx.parameters.at(1), fps, false, schedule_timecode) ||
+    if (!core::frame_timecode::parse_string(ctx.parameters.at(1), fps, true, schedule_timecode) ||
         !schedule_timecode.is_valid()) {
         return L"403 SCHEDULE SET ERROR\r\n";
     }
@@ -168,7 +168,7 @@ std::wstring timecode_command(command_context& ctx)
     }
     if (boost::iequals(ctx.parameters.at(0), L"LAYER")) {
         if (ctx.parameters.size() < 2) {
-            return L"202 TIMECODE SOURCE OK\r\n";
+            return L"402 TIMECODE SOURCE FAILED\r\n";
         }
 
         const int  layer    = boost::lexical_cast<int>(ctx.parameters.at(1));

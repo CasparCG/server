@@ -227,6 +227,7 @@ struct video_channel::impl final
                     state["output"]          = output_.state();
                     state["framerate"]       = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
                     state["timecode"]        = timecode.string(false);
+                    state["timecode/smpte"]  = timecode.string(true);
                     state["timecode/source"] = timecode_->source_name();
                     state_                   = state;
 
