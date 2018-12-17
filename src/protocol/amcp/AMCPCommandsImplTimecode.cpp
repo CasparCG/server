@@ -39,7 +39,7 @@ std::wstring time_command(command_context& ctx)
 
         core::frame_timecode tc;
         const uint8_t        fps = static_cast<uint8_t>(round(ctx.channel.raw_channel->video_format_desc().fps));
-        if (!core::frame_timecode::parse_string(ctx.parameters.at(0), fps, tc))
+        if (!core::frame_timecode::parse_string(ctx.parameters.at(0), fps, false, tc))
             return L"403 TIME FAILED\r\n";
 
         ch->timecode(tc);
@@ -95,7 +95,7 @@ std::wstring schedule_list_command(command_context& ctx)
 
     auto          timecode = core::frame_timecode::empty();
     const uint8_t fps      = static_cast<uint8_t>(round(ctx.channels[index].raw_channel->video_format_desc().fps));
-    if (ctx.parameters.size() > 1 && !core::frame_timecode::parse_string(ctx.parameters.at(1), fps, timecode)) {
+    if (ctx.parameters.size() > 1 && !core::frame_timecode::parse_string(ctx.parameters.at(1), fps, false, timecode)) {
         return L"403 SCHEDULE LIST ERROR\r\n";
     }
 
@@ -141,7 +141,7 @@ std::wstring schedule_set_command(command_context& ctx)
 
     core::frame_timecode schedule_timecode = core::frame_timecode::empty();
     const uint8_t fps = static_cast<uint8_t>(round(ctx.channels[channel_index].raw_channel->video_format_desc().fps));
-    if (!core::frame_timecode::parse_string(ctx.parameters.at(1), fps, schedule_timecode) ||
+    if (!core::frame_timecode::parse_string(ctx.parameters.at(1), fps, false, schedule_timecode) ||
         !schedule_timecode.is_valid()) {
         return L"403 SCHEDULE SET ERROR\r\n";
     }

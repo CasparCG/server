@@ -140,7 +140,7 @@ const frame_timecode& frame_timecode::empty()
     return def;
 }
 
-bool frame_timecode::parse_string(const std::wstring& str, uint8_t fps, frame_timecode& res)
+bool frame_timecode::parse_string(const std::wstring& str, uint8_t fps, bool smpte_frames, frame_timecode& res)
 {
     if (str.length() != 11)
         return false;
@@ -157,7 +157,7 @@ bool frame_timecode::parse_string(const std::wstring& str, uint8_t fps, frame_ti
         const uint8_t seconds = static_cast<uint8_t>(std::stoi(strs[2]));
         uint8_t       frames  = static_cast<uint8_t>(std::stoi(strs[3]));
 
-        return create(hours, minutes, seconds, frames, fps, res);
+        return create(hours, minutes, seconds, frames, fps, smpte_frames, res);
     } catch (...) {
         return false;
     }
@@ -168,8 +168,13 @@ bool frame_timecode::create(uint8_t         hours,
                             uint8_t         seconds,
                             uint8_t         frames,
                             uint8_t         fps,
+                            bool            smpte_frames,
                             frame_timecode& res)
 {
+    if (smpte_frames && fps > 30)
+        frames *= 2;
+
+
     if (hours > 23 || minutes > 59 || seconds > 59 || frames > fps)
         return false;
 

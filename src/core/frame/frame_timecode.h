@@ -40,9 +40,9 @@ struct frame_timecode
     const std::wstring string(bool smpte_frames) const;
 
     static const frame_timecode& empty();
-    static bool                  parse_string(const std::wstring& str, uint8_t fps, frame_timecode& res);
+    static bool                  parse_string(const std::wstring& str, uint8_t fps, bool smpte_frames, frame_timecode& res);
     static bool
-    create(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t frames, uint8_t fps, frame_timecode& res);
+    create(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t frames, uint8_t fps, bool smpte_frames, frame_timecode& res);
 
     bool operator<(const frame_timecode& other) const;
     bool operator>(const frame_timecode& other) const;
