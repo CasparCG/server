@@ -53,10 +53,7 @@ class executor final
     {
     }
 
-    ~executor()
-    {
-        stop_and_wait();
-    }
+    ~executor() { stop_and_wait(); }
 
     template <typename Func>
     auto begin_invoke(Func&& func)
@@ -111,7 +108,8 @@ class executor final
         queue_.push(nullptr);
     }
 
-    void stop_and_wait() {
+    void stop_and_wait()
+    {
         stop();
 
         if (thread_.joinable())

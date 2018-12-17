@@ -120,7 +120,7 @@ parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, in
 
 struct amcp_command_repository::impl
 {
-    const std::vector<channel_context>           channels_;
+    const std::vector<channel_context> channels_;
 
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands{};
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands{};

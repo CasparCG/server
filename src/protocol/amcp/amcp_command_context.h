@@ -47,8 +47,8 @@ struct amcp_command_static_context
                                 const spl::shared_ptr<AMCPCommandScheduler>                scheduler,
                                 const std::shared_ptr<amcp_command_repository>             parser,
                                 std::function<void(bool)>                                  shutdown_server_now,
-                                std::string                                               proxy_host,
-                                std::string                                               proxy_port)
+                                std::string                                                proxy_host,
+                                std::string                                                proxy_port)
         : cg_registry(std::move(cg_registry))
         , producer_registry(std::move(producer_registry))
         , consumer_registry(std::move(consumer_registry))

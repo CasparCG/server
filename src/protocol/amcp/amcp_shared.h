@@ -13,8 +13,8 @@ class channel_context
   public:
     explicit channel_context() {}
     explicit channel_context(std::shared_ptr<core::video_channel> c,
-                             std::shared_ptr<core::stage_base> s,
-                             const std::wstring&                         lifecycle_key)
+                             std::shared_ptr<core::stage_base>    s,
+                             const std::wstring&                  lifecycle_key)
         : raw_channel(std::move(c))
         , stage(std::move(s))
         , lock(std::make_shared<caspar::IO::lock_container>(lifecycle_key))
@@ -24,7 +24,7 @@ class channel_context
     const std::shared_ptr<core::video_channel>        raw_channel;
     const std::shared_ptr<core::stage_base>           stage;
     const std::shared_ptr<caspar::IO::lock_container> lock;
-    const std::wstring lifecycle_key_;
+    const std::wstring                                lifecycle_key_;
 };
 
 struct command_context_simple
@@ -36,9 +36,9 @@ struct command_context_simple
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
-    command_context_simple(IO::ClientInfoPtr               client,
-                           int                             channel_index,
-                           int                             layer_id,
+    command_context_simple(IO::ClientInfoPtr                client,
+                           int                              channel_index,
+                           int                              layer_id,
                            const std::vector<std::wstring>& parameters)
         : client(std::move(client))
         , channel_index(channel_index)

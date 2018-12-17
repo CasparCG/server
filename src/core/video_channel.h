@@ -33,8 +33,8 @@
 
 #include <boost/signals2.hpp>
 
-#include <functional>
 #include <common/diagnostics/graph.h>
+#include <functional>
 
 namespace caspar { namespace core {
 
@@ -79,7 +79,7 @@ class video_channel final
                            std::function<void(core::monitor::state)> on_tick);
     ~video_channel();
 
-    core::monitor::state state() const;
+    core::monitor::state                    state() const;
     std::shared_ptr<core::channel_timecode> timecode() const;
 
     const std::shared_ptr<core::stage>& stage() const;

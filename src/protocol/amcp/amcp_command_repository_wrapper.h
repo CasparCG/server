@@ -58,25 +58,20 @@ class amcp_command_repository_wrapper
     {
     }
 
-    void register_command(std::wstring              category,
-                          std::wstring              name,
-                          amcp_command_impl_func    command,
-                          int                       min_num_params);
+    void register_command(std::wstring category, std::wstring name, amcp_command_impl_func command, int min_num_params);
 
-    void register_command(std::wstring              category,
-                          std::wstring              name,
-                          amcp_command_impl_func2   command,
-                          int                       min_num_params);
+    void
+    register_command(std::wstring category, std::wstring name, amcp_command_impl_func2 command, int min_num_params);
 
-    void register_channel_command(std::wstring              category,
-                                  std::wstring              name,
-                                  amcp_command_impl_func    command,
-                                  int                       min_num_params);
+    void register_channel_command(std::wstring           category,
+                                  std::wstring           name,
+                                  amcp_command_impl_func command,
+                                  int                    min_num_params);
 
-    void register_channel_command(std::wstring              category,
-                                  std::wstring              name,
-                                  amcp_command_impl_func2   command,
-                                  int                       min_num_params);
+    void register_channel_command(std::wstring            category,
+                                  std::wstring            name,
+                                  amcp_command_impl_func2 command,
+                                  int                     min_num_params);
 
   private:
     std::shared_ptr<amcp_command_repository> repo_;

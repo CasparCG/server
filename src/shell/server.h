@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/AMCPCommandScheduler.h>
+#include <protocol/amcp/amcp_command_repository.h>
 
 #include <boost/noncopyable.hpp>
 

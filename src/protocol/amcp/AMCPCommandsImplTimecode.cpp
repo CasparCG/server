@@ -19,8 +19,8 @@
  * Author: Julian Waller, julian@superfly.tv
  */
 
-#include "amcp_command_context.h"
 #include "AMCPCommandsImplTimecode.h"
+#include "amcp_command_context.h"
 
 #include <core/producer/frame_producer.h>
 

@@ -67,19 +67,17 @@ class stage_base
     virtual std::future<void>            clear_transforms(int index)      = 0;
     virtual std::future<void>            clear_transforms()               = 0;
     virtual std::future<frame_transform> get_current_transform(int index) = 0;
-    virtual std::future<void>            load(int                                    index,
-                                              const spl::shared_ptr<frame_producer>& producer,
-                                              bool                                   preview = false,
-                                              bool                                   auto_play = false) = 0;
-    virtual std::future<void>            pause(int index)                                                 = 0;
-    virtual std::future<void>            resume(int index)                                                = 0;
-    virtual std::future<void>            play(int index)                                                  = 0;
-    virtual std::future<void>            stop(int index)                                                  = 0;
-    virtual std::future<std::wstring>    call(int index, const std::vector<std::wstring>& params)         = 0;
-    virtual std::future<void>            clear(int index)                                                 = 0;
-    virtual std::future<void>            clear()                                                          = 0;
-    virtual std::future<void> swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms) = 0;
-    virtual std::future<void> swap_layer(int index, int other_index, bool swap_transforms)                = 0;
+    virtual std::future<void>
+                                      load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false) = 0;
+    virtual std::future<void>         pause(int index)                                                            = 0;
+    virtual std::future<void>         resume(int index)                                                           = 0;
+    virtual std::future<void>         play(int index)                                                             = 0;
+    virtual std::future<void>         stop(int index)                                                             = 0;
+    virtual std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)                    = 0;
+    virtual std::future<void>         clear(int index)                                                            = 0;
+    virtual std::future<void>         clear()                                                                     = 0;
+    virtual std::future<void>         swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms) = 0;
+    virtual std::future<void>         swap_layer(int index, int other_index, bool swap_transforms)                = 0;
     virtual std::future<void>
     swap_layer(int index, int other_index, const std::shared_ptr<stage_base>& other, bool swap_transforms) = 0;
 
@@ -114,7 +112,7 @@ class stage final : public stage_base
     std::future<frame_transform> get_current_transform(int index) override;
     std::future<void>            load(int                                    index,
                                       const spl::shared_ptr<frame_producer>& producer,
-                                      bool                                   preview = false,
+                                      bool                                   preview   = false,
                                       bool                                   auto_play = false) override;
     std::future<void>            pause(int index) override;
     std::future<void>            resume(int index) override;
@@ -153,10 +151,7 @@ class stage_delayed final : public stage_base
     int64_t count_queued() const { return executor_.size(); }
     void    release() { waiter_.set_value(); }
     void    abort() { executor_.clear(); }
-    void    wait()
-    {
-        executor_.stop_and_wait();
-    }
+    void    wait() { executor_.stop_and_wait(); }
 
     std::future<void>            apply_transforms(const std::vector<transform_tuple_t>& transforms) override;
     std::future<void>            apply_transform(int                     index,
@@ -168,7 +163,7 @@ class stage_delayed final : public stage_base
     std::future<frame_transform> get_current_transform(int index) override;
     std::future<void>            load(int                                    index,
                                       const spl::shared_ptr<frame_producer>& producer,
-                                      bool                                   preview = false,
+                                      bool                                   preview   = false,
                                       bool                                   auto_play = false) override;
     std::future<void>            pause(int index) override;
     std::future<void>            resume(int index) override;
@@ -187,7 +182,7 @@ class stage_delayed final : public stage_base
     std::future<std::shared_ptr<frame_producer>> foreground(int index) override;
     std::future<std::shared_ptr<frame_producer>> background(int index) override;
 
-    std::future<void> execute(std::function<void()> k) override;
+    std::future<void>            execute(std::function<void()> k) override;
     std::unique_lock<std::mutex> get_lock() const { return stage_->get_lock(); }
 
   private:

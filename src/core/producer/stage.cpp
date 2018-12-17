@@ -327,7 +327,7 @@ std::map<int, layer_frame>                   stage::
 {
     return (*impl_)(format_desc, nb_samples, fetch_background);
 }
-core::monitor::state stage::state() const { return impl_->state_; }
+core::monitor::state         stage::state() const { return impl_->state_; }
 std::unique_lock<std::mutex> stage::get_lock() const { return impl_->get_lock(); }
 std::future<void>            stage::execute(std::function<void()> func)
 {
@@ -372,10 +372,8 @@ std::future<frame_transform> stage_delayed::get_current_transform(int index)
 {
     return executor_.begin_invoke([=]() { return stage_->get_current_transform(index).get(); });
 }
-std::future<void> stage_delayed::load(int                                    index,
-                                      const spl::shared_ptr<frame_producer>& producer,
-                                      bool                                   preview,
-                                      bool                                   auto_play)
+std::future<void>
+stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
 {
     return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
 }

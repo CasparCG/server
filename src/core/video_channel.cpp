@@ -222,11 +222,11 @@ struct video_channel::impl final
                     }
 
                     monitor::state state = {};
-                    state["stage"]           = stage_->state();
-                    state["mixer"]           = mixer_.state();
-                    state["output"]          = output_.state();
-                    state["framerate"]       = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
-                    state["timecode"]        = timecode.string(false);
+                    state["stage"]       = stage_->state();
+                    state["mixer"]       = mixer_.state();
+                    state["output"]      = output_.state();
+                    state["framerate"]   = {format_desc_.framerate.numerator(), format_desc_.framerate.denominator()};
+                    state["timecode"]    = timecode.string(false);
                     state["timecode/smpte"]  = timecode.string(true);
                     state["timecode/source"] = timecode_->source_name();
                     state_                   = state;

@@ -114,8 +114,11 @@ class destroy_consumer_proxy : public frame_consumer
             .detach();
     }
 
-    std::future<bool> send(frame_timecode timecode, const_frame frame) override { return consumer_->send(std::move(timecode), std::move(frame)); }
-    void              initialize(const video_format_desc& format_desc, int channel_index) override
+    std::future<bool> send(frame_timecode timecode, const_frame frame) override
+    {
+        return consumer_->send(std::move(timecode), std::move(frame));
+    }
+    void initialize(const video_format_desc& format_desc, int channel_index) override
     {
         return consumer_->initialize(format_desc, channel_index);
     }
@@ -144,8 +147,11 @@ class print_consumer_proxy : public frame_consumer
         CASPAR_LOG(info) << str << L" Uninitialized.";
     }
 
-    std::future<bool> send(frame_timecode timecode, const_frame frame) override { return consumer_->send(std::move(timecode), std::move(frame)); }
-    void              initialize(const video_format_desc& format_desc, int channel_index) override
+    std::future<bool> send(frame_timecode timecode, const_frame frame) override
+    {
+        return consumer_->send(std::move(timecode), std::move(frame));
+    }
+    void initialize(const video_format_desc& format_desc, int channel_index) override
     {
         consumer_->initialize(format_desc, channel_index);
         CASPAR_LOG(info) << consumer_->print() << L" Initialized.";

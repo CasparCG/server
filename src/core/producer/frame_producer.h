@@ -114,8 +114,11 @@ class frame_producer : public timecode_source
         return core::draw_frame::still(first_frame_);
     }
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
-    virtual spl::shared_ptr<frame_producer> following_producer(bool peek) const { return core::frame_producer::empty(); }
-    virtual boost::optional<int64_t>        auto_play_delta() const { return boost::none; }
+    virtual spl::shared_ptr<frame_producer> following_producer(bool peek) const
+    {
+        return core::frame_producer::empty();
+    }
+    virtual boost::optional<int64_t> auto_play_delta() const { return boost::none; }
 
     virtual const frame_timecode& timecode() { return frame_timecode::empty(); }
     virtual bool                  has_timecode() { return false; }
