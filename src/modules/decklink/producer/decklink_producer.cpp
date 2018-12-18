@@ -509,6 +509,12 @@ class decklink_producer : public IDeckLinkInputCallback
                 }
             }
 
+            if (new_timecode != core::frame_timecode::empty())
+            {
+                // Account for latency introduced by ffmpeg filter
+                new_timecode = new_timecode - (format_desc_.field_count > 1 ? 3 : 1);
+            }
+
             while (true) {
                 {
                     auto av_video = alloc_frame();
@@ -537,8 +543,6 @@ class decklink_producer : public IDeckLinkInputCallback
 
                 auto video_tb = av_buffersink_get_time_base(video_filter_.sink);
                 auto audio_tb = av_buffersink_get_time_base(audio_filter_.sink);
-
-                CASPAR_LOG(debug) << av_video->pts << " " << av_audio->pts;
 
                 auto in_sync = static_cast<double>(in_video_pts) / AV_TIME_BASE -
                                static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
