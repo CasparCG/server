@@ -150,11 +150,11 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IUnknown
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
 
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return ++ref_count_; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return ++ref_count_; }
 
-    virtual ULONG STDMETHODCALLTYPE Release()
+    ULONG STDMETHODCALLTYPE Release() override
     {
         if (--ref_count_ == 0) {
             delete this;
@@ -167,23 +167,24 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IDecklinkVideoFrame
 
-    virtual long STDMETHODCALLTYPE GetWidth() { return static_cast<long>(format_desc_.width); }
-    virtual long STDMETHODCALLTYPE GetHeight() { return static_cast<long>(format_desc_.height); }
-    virtual long STDMETHODCALLTYPE GetRowBytes() { return static_cast<long>(format_desc_.width * 4); }
-    virtual BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() { return bmdFormat8BitBGRA; }
-    virtual BMDFrameFlags STDMETHODCALLTYPE GetFlags() { return bmdFrameFlagDefault; }
+    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
+    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
+    BMDFrameFlags STDMETHODCALLTYPE GetFlags() override { return bmdFrameFlagDefault; }
 
-    virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
+    HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
     {
         *buffer = data_.get();
         return S_OK;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)
+    HRESULT STDMETHODCALLTYPE GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode) override
     {
         return S_FALSE;
     }
-    virtual HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) { return S_FALSE; }
+
+    HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) override { return S_FALSE; }
 
     int nb_samples() const { return nb_samples_; }
 };
@@ -232,14 +233,14 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() { return S_OK; }
+    HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override { return S_OK; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
-                                                              BMDOutputFrameCompletionResult result)
+    HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
+                                                              BMDOutputFrameCompletionResult result) override
     {
         ++scheduled_frames_completed_;
 
@@ -398,18 +399,18 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped()
+    HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override
     {
         CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
         return S_OK;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
-                                                              BMDOutputFrameCompletionResult result)
+    HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
+                                                              BMDOutputFrameCompletionResult result) override
     {
 #ifdef WIN32
         thread_local auto priority_set = false;
