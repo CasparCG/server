@@ -39,22 +39,6 @@
 
 namespace caspar { namespace newtek { namespace ndi {
 
-NDIlib_framesync_instance_t (*fs_create)(NDIlib_recv_instance_t p_receiver) = nullptr;
-void (*fs_destroy)(NDIlib_framesync_instance_t p_instance)                  = nullptr;
-void (*fs_capture_audio)(NDIlib_framesync_instance_t p_instance,
-                         NDIlib_audio_frame_v2_t*    p_audio_data,
-                         int                         sample_rate,
-                         int                         no_channels,
-                         int                         no_samples)                                    = nullptr;
-
-void (*fs_free_audio)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v2_t* p_audio_data) = nullptr;
-
-void (*fs_capture_video)(NDIlib_framesync_instance_t p_instance,
-                         NDIlib_video_frame_v2_t*    p_video_data,
-                         NDIlib_frame_format_type_e  field_type) = nullptr;
-
-void (*fs_free_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data) = nullptr;
-
 const std::wstring& dll_name()
 {
     static std::wstring name = u16(NDILIB_LIBRARY_NAME);
@@ -116,26 +100,6 @@ NDIlib_v3* load_library()
         not_initialized();
     }
 
-#ifdef _WIN32
-    // these functions have to be loaded this way because they aren't in NDIlib_v3 struct
-    fs_create  = reinterpret_cast<decltype(fs_create)>(GetProcAddress(module, "NDIlib_framesync_create"));
-    fs_destroy = reinterpret_cast<decltype(fs_destroy)>(GetProcAddress(module, "NDIlib_framesync_destroy"));
-    fs_capture_audio =
-        reinterpret_cast<decltype(fs_capture_audio)>(GetProcAddress(module, "NDIlib_framesync_capture_audio"));
-    fs_free_audio = reinterpret_cast<decltype(fs_free_audio)>(GetProcAddress(module, "NDIlib_framesync_free_audio"));
-    fs_capture_video =
-        reinterpret_cast<decltype(fs_capture_video)>(GetProcAddress(module, "NDIlib_framesync_capture_video"));
-    fs_free_video = reinterpret_cast<decltype(fs_free_video)>(GetProcAddress(module, "NDIlib_framesync_free_video"));
-
-#else
-    *((void**)&fs_create)        = dlsym(hNDILib, "NDIlib_framesync_create");
-    *((void**)&fs_destroy)       = dlsym(hNDILib, "NDIlib_framesync_destroy");
-    *((void**)&fs_capture_audio) = dlsym(hNDILib, "NDIlib_framesync_capture_audio");
-    *((void**)&fs_free_audio)    = dlsym(hNDILib, "NDIlib_framesync_free_audio");
-    *((void**)&fs_capture_video) = dlsym(hNDILib, "NDIlib_framesync_capture_video");
-    *((void**)&fs_free_video)    = dlsym(hNDILib, "NDIlib_framesync_free_video");
-
-#endif
     find_instance.reset(new NDIlib_find_instance_t(ndi_lib->NDIlib_find_create_v2(nullptr)),
                         [](NDIlib_find_instance_t* p) { ndi_lib->NDIlib_find_destroy(*p); });
     return ndi_lib;

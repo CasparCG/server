@@ -25,21 +25,6 @@
 #include <string>
 
 namespace caspar { namespace newtek { namespace ndi {
-extern NDIlib_framesync_instance_t (*fs_create)(NDIlib_recv_instance_t p_receiver);
-extern void (*fs_destroy)(NDIlib_framesync_instance_t p_instance);
-extern void (*fs_capture_audio)(NDIlib_framesync_instance_t p_instance,
-                                NDIlib_audio_frame_v2_t*    p_audio_data,
-                                int                         sample_rate,
-                                int                         no_channels,
-                                int                         no_samples);
-
-extern void (*fs_free_audio)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v2_t* p_audio_data);
-
-extern void (*fs_capture_video)(NDIlib_framesync_instance_t p_instance,
-                                NDIlib_video_frame_v2_t*    p_video_data,
-                                NDIlib_frame_format_type_e  field_type);
-
-extern void (*fs_free_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data);
 
 const std::wstring&                    dll_name();
 NDIlib_v3*                             load_library();

@@ -123,7 +123,7 @@ struct newtek_ndi_producer : public core::frame_producer
     ~newtek_ndi_producer()
     {
         executor_.stop();
-        ndi::fs_destroy(ndi_framesync_);
+        ndi_lib_->NDIlib_framesync_destroy(ndi_framesync_);
         ndi_lib_->NDIlib_recv_destroy(ndi_recv_instance_);
     }
 
@@ -161,12 +161,13 @@ struct newtek_ndi_producer : public core::frame_producer
             frame_timer_.restart();
             NDIlib_video_frame_v2_t video_frame;
             NDIlib_audio_frame_v2_t audio_frame;
-            ndi::fs_capture_video(ndi_framesync_, &video_frame, NDIlib_frame_format_type_progressive);
-            ndi::fs_capture_audio(ndi_framesync_,
-                                  &audio_frame,
-                                  format_desc_.audio_sample_rate,
-                                  format_desc_.audio_channels,
-                                  format_desc_.audio_cadence[++cadence_counter_ %= cadence_length_]);
+            ndi_lib_->NDIlib_framesync_capture_video(
+                ndi_framesync_, &video_frame, NDIlib_frame_format_type_progressive);
+            ndi_lib_->NDIlib_framesync_capture_audio(ndi_framesync_,
+                                                     &audio_frame,
+                                                     format_desc_.audio_sample_rate,
+                                                     format_desc_.audio_channels,
+                                                     format_desc_.audio_cadence[++cadence_counter_ %= cadence_length_]);
             if (video_frame.p_data != nullptr) {
                 std::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* frame) { av_frame_free(&frame); });
                 std::shared_ptr<AVFrame> a_frame(av_frame_alloc(), [](AVFrame* frame) { av_frame_free(&frame); });
@@ -222,8 +223,8 @@ struct newtek_ndi_producer : public core::frame_producer
                         CASPAR_LOG(info) << print() << "Frame dropped";
                     }
                 }
-                ndi::fs_free_audio(ndi_framesync_, &audio_frame);
-                ndi::fs_free_video(ndi_framesync_, &video_frame);
+                ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
+                ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
                 delete[] audio_frame_16s.p_data;
             }
 
@@ -256,7 +257,7 @@ struct newtek_ndi_producer : public core::frame_producer
         }
         NDI_recv_create_desc.p_ndi_recv_name = src_name.c_str();
         ndi_recv_instance_                   = ndi_lib_->NDIlib_recv_create_v3(&NDI_recv_create_desc);
-        ndi_framesync_                       = ndi::fs_create(ndi_recv_instance_);
+        ndi_framesync_                       = ndi_lib_->NDIlib_framesync_create(ndi_recv_instance_);
         CASPAR_VERIFY(ndi_recv_instance_);
     }
 
