@@ -198,18 +198,15 @@ struct newtek_ndi_producer : public core::frame_producer
                 av_frame->interlaced_frame =
                     video_frame.frame_format_type == NDIlib_frame_format_type_interleaved ? 1 : 0;
                 av_frame->top_field_first = av_frame->interlaced_frame;
-                NDIlib_audio_frame_interleaved_16s_t audio_frame_16s;
-                std::vector<int>                     audio_data_32s;
-                audio_frame_16s.p_data = new short[audio_frame.no_samples * audio_frame.no_channels];
+                NDIlib_audio_frame_interleaved_32s_t audio_frame_32s;
+                audio_frame_32s.p_data = new int32_t[audio_frame.no_samples * audio_frame.no_channels];
                 if (audio_frame.p_data != nullptr) {
-                    audio_frame_16s.reference_level = 0;
-                    ndi_lib_->NDIlib_util_audio_to_interleaved_16s_v2(&audio_frame, &audio_frame_16s);
-                    a_frame->channels    = audio_frame_16s.no_channels;
-                    a_frame->sample_rate = audio_frame_16s.sample_rate;
-                    a_frame->nb_samples  = audio_frame_16s.no_samples;
-                    audio_data_32s =
-                        ndi::audio_16_to_32(audio_frame_16s.p_data, audio_frame.no_samples * audio_frame.no_channels);
-                    a_frame->data[0] = reinterpret_cast<uint8_t*>(audio_data_32s.data());
+                    audio_frame_32s.reference_level = 0;
+                    ndi_lib_->NDIlib_util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
+                    a_frame->channels    = audio_frame_32s.no_channels;
+                    a_frame->sample_rate = audio_frame_32s.sample_rate;
+                    a_frame->nb_samples  = audio_frame_32s.no_samples;
+                    a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
                 }
                 auto mframe =
                     ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
@@ -225,7 +222,7 @@ struct newtek_ndi_producer : public core::frame_producer
                 }
                 ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
                 ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
-                delete[] audio_frame_16s.p_data;
+                delete[] audio_frame_32s.p_data;
             }
 
             graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);

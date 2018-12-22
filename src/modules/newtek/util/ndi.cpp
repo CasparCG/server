@@ -147,26 +147,4 @@ std::wstring list_command(protocol::amcp::command_context& ctx)
     return replyString.str();
 }
 
-std::vector<int32_t> audio_16_to_32(const short* audio_data, int size)
-{
-    auto output32 = std::vector<int32_t>();
-
-    output32.reserve(size);
-    for (int n = 0; n < size; ++n)
-        output32.push_back((audio_data[n] & 0xFFFFFFFF) << 16);
-
-    return output32;
-}
-
-std::vector<float> audio_32_to_32f(const int* audio_data, int size)
-{
-    auto output32 = std::vector<float>();
-
-    output32.reserve(size);
-    for (int n = 0; n < size; ++n)
-        output32.push_back((1.0f * audio_data[n]) / INT32_MAX);
-
-    return output32;
-}
-
 }}} // namespace caspar::newtek::ndi

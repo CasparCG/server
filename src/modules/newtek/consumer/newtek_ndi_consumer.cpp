@@ -53,7 +53,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     int                                  channel_index_;
     NDIlib_v3*                           ndi_lib_;
     NDIlib_video_frame_v2_t              ndi_video_frame_;
-    NDIlib_audio_frame_interleaved_32f_t ndi_audio_frame_;
+    NDIlib_audio_frame_interleaved_32s_t ndi_audio_frame_;
     std::shared_ptr<uint8_t>             field_data_;
     spl::shared_ptr<diagnostics::graph>  graph_;
     caspar::timer                        tick_timer_;
@@ -131,12 +131,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
         frame_timer_.restart();
-        auto audio_data                 = frame.audio_data();
-        int  audio_data_size            = static_cast<int>(audio_data.size());
-        ndi_audio_frame_.no_samples     = audio_data_size / format_desc_.audio_channels;
-        std::vector<float> audio_buffer = ndi::audio_32_to_32f(audio_data.data(), audio_data_size);
-        ndi_audio_frame_.p_data         = const_cast<float*>(audio_buffer.data());
-        ndi_lib_->NDIlib_util_send_send_audio_interleaved_32f(*ndi_send_instance_, &ndi_audio_frame_);
+        auto audio_data             = frame.audio_data();
+        int  audio_data_size        = static_cast<int>(audio_data.size());
+        ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
+        ndi_audio_frame_.p_data     = const_cast<int*>(audio_data.data());
+        ndi_lib_->NDIlib_util_send_send_audio_interleaved_32s(*ndi_send_instance_, &ndi_audio_frame_);
         if (format_desc_.field_count == 2 && allow_fields_) {
             ndi_video_frame_.frame_format_type =
                 (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);

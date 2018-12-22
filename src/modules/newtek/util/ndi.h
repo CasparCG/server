@@ -34,7 +34,4 @@ void                                   not_installed();
 
 std::wstring list_command(protocol::amcp::command_context& ctx);
 
-std::vector<int32_t> audio_16_to_32(const short* audio_data, int size);
-std::vector<float>   audio_32_to_32f(const int* audio_data, int size);
-
 }}} // namespace caspar::newtek::ndi
