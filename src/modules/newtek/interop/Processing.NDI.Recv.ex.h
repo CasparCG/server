@@ -23,7 +23,6 @@
 //
 //***********************************************************************************************************************************************
 
-//**************************************************************************************************************************************************************
 // Has this receiver got PTZ control. Note that it might take a second or two after the connection for this value to be set.
 // To avoid the need to poll this function, you can know when the value of this function might have changed when the 
 // NDILib_recv_capture* call would return NDIlib_frame_type_status_change
@@ -36,7 +35,6 @@ bool NDIlib_recv_ptz_is_supported(NDIlib_recv_instance_t p_instance);
 PROCESSINGNDILIB_API
 bool NDIlib_recv_recording_is_supported(NDIlib_recv_instance_t p_instance);
 
-//**************************************************************************************************************************************************************
 // PTZ Controls
 // Zoom to an absolute value. 
 // zoom_value = 0.0 (zoomed in) ... 1.0 (zoomed out)
@@ -116,11 +114,10 @@ bool NDIlib_recv_ptz_exposure_auto(NDIlib_recv_instance_t p_instance);
 PROCESSINGNDILIB_API
 bool NDIlib_recv_ptz_exposure_manual(NDIlib_recv_instance_t p_instance, const float exposure_level);
 
-//**************************************************************************************************************************************************************
 // Recording control
 // This will start recording.If the recorder was already recording then the message is ignored.A filename is passed in as a "hint".Since the recorder might 
 // already be recording(or might not allow complete flexibility over its filename), the filename might or might not be used.If the filename is empty, or 
-// not present, a name will be chosen automatically. If you do not with to provide a filename hint you can simply pass nullptr. 
+// not present, a name will be chosen automatically. If you do not with to provide a filename hint you can simply pass NULL. 
 PROCESSINGNDILIB_API
 bool NDIlib_recv_recording_start(NDIlib_recv_instance_t p_instance, const char* p_filename_hint);
 
@@ -139,15 +136,15 @@ bool NDIlib_recv_recording_set_audio_level(NDIlib_recv_instance_t p_instance, co
 PROCESSINGNDILIB_API
 bool NDIlib_recv_recording_is_recording(NDIlib_recv_instance_t p_instance);
 
-// Get the current filename for recording. When this is set it will return a non-nullptr value which is owned by you and freed using NDIlib_recv_free_string. 
+// Get the current filename for recording. When this is set it will return a non-NULL value which is owned by you and freed using NDIlib_recv_free_string. 
 // If a file was already being recorded by another client, the massage will contain the name of that file. The filename contains a UNC path (when one is available) 
 // to the recorded file, and can be used to access the file on your local machine for playback.  If a UNC path is not available, then this will represent the local 
 // filename. This will remain valid even after the file has stopped being recorded until the next file is started.
 PROCESSINGNDILIB_API
 const char* NDIlib_recv_recording_get_filename(NDIlib_recv_instance_t p_instance);
 
-// This will tell you whether there was a recording error and what that string is. When this is set it will return a non-nullptr value which is owned by you and 
-// freed using NDIlib_recv_free_string. When there is no error it will return nullptr.
+// This will tell you whether there was a recording error and what that string is. When this is set it will return a non-NULL value which is owned by you and 
+// freed using NDIlib_recv_free_string. When there is no error it will return NULL.
 PROCESSINGNDILIB_API
 const char* NDIlib_recv_recording_get_error(NDIlib_recv_instance_t p_instance);
 
