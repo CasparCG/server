@@ -87,10 +87,10 @@ struct amcp_command_repository::impl
     {
     }
 
-    void init(const std::vector<spl::shared_ptr<core::video_channel>>& channs)
+    void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
     {
         int index = 0;
-        for (const auto& channel : channs) {
+        for (const auto& channel : video_channels) {
             std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
