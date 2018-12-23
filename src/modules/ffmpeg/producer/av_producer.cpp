@@ -778,7 +778,7 @@ struct AVProducer::Impl
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
                 frame_eof_ = true;
-                return frame_;
+                return core::draw_frame::still(frame_);
             }
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
             latency_ += 1;
