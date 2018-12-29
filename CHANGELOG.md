@@ -1,4 +1,4 @@
-CasparCG 2.2.0 Beta
+CasparCG 2.2.0
 ==========================================
 
 General
@@ -90,7 +90,7 @@ FFMPEG
 
 Bluefish
 --------
- * Bluefish Consumer removed (moved to 3.0.0).
+ * Misc cleanup and fixes.
 
 OAL
 ------------
