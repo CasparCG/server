@@ -1,7 +1,10 @@
 #include <memory>
 
+#include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/monitor/monitor.h>
+#include <core/video_format.h>
 
 #include <boost/optional.hpp>
 #include <boost/rational.hpp>
@@ -39,7 +42,7 @@ class AVProducer
     AVProducer& duration(int64_t duration);
     int64_t     duration() const;
 
-    core::monitor::state state() const;
+    caspar::core::monitor::state state() const;
 
   private:
     struct Impl;

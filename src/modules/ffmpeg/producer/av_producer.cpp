@@ -498,7 +498,7 @@ struct Filter
 
 struct AVProducer::Impl
 {
-    core::monitor::state state_;
+    caspar::core::monitor::state state_;
     mutable boost::mutex state_mutex_;
 
     spl::shared_ptr<diagnostics::graph> graph_;

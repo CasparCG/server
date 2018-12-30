@@ -27,6 +27,7 @@
 #include "../util/shader.h"
 #include "../util/texture.h"
 
+#include <common/assert.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>
