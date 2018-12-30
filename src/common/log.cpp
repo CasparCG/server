@@ -23,6 +23,9 @@
 #include "except.h"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <boost/locale.hpp>
 #include <boost/log/attributes/attribute_value.hpp>
 #include <boost/log/attributes/function.hpp>

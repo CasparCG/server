@@ -1,5 +1,7 @@
 #pragma once
 
+#include <core/mixer/mixer.h>
+
 #include <memory>
 #include <string>
 
@@ -14,7 +16,7 @@ class accelerator
 
     accelerator& operator=(accelerator&) = delete;
 
-    std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id);
+    std::unique_ptr<caspar::core::image_mixer> create_image_mixer(int channel_id);
 
   private:
     struct impl;

@@ -23,6 +23,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/range/algorithm/equal.hpp>
 
+#include <cmath>
+
 namespace caspar { namespace core {
 
 // image_transform
