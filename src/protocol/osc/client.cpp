@@ -187,7 +187,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
-    void send(core::monitor::state state)
+    void send(const core::monitor::state& state)
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);

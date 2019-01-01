@@ -217,7 +217,7 @@ spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_depen
     auto mask_producer = dependencies.producer_registry->create_producer(dependencies, info.mask_filename);
 
     auto overlay_producer = frame_producer::empty();
-    if (info.overlay_filename != L"") {
+    if (!info.overlay_filename.empty()) {
         // This could be any producer, no requirement for it to be of fixed length
         overlay_producer = dependencies.producer_registry->create_producer(dependencies, info.overlay_filename);
     }

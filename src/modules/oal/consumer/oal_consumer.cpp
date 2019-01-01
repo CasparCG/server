@@ -241,7 +241,7 @@ struct oal_consumer : public core::frame_consumer
             alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
 
             auto in_duration  = swr_get_delay(swr_.get(), 48000);
-            auto out_duration = static_cast<int64_t>(processed * duration_);
+            auto out_duration = static_cast<int64_t>(processed) * duration_;
             auto delta        = static_cast<int>(out_duration - in_duration);
 
             ALenum state;

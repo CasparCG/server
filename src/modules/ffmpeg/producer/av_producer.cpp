@@ -490,7 +490,7 @@ struct Filter
             return true;
         } else {
             FF_RET(ret, "av_buffersink_get_frame");
-            frame = av_frame;
+            frame = std::move(av_frame);
             return true;
         }
     }

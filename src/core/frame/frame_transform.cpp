@@ -188,7 +188,7 @@ image_transform image_transform::tween(double                 time,
     result.chroma.enable    = dest.chroma.enable;
     result.chroma.show_mask = dest.chroma.show_mask;
     result.is_key           = source.is_key | dest.is_key;
-    result.is_key           = source.invert | dest.invert;
+    result.invert           = source.invert | dest.invert;
     result.is_mix           = source.is_mix | dest.is_mix;
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;

@@ -172,8 +172,9 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
 static std::wstring get_mode_name(const com_ptr<IDeckLinkDisplayMode>& mode)
 {
     String mode_name;
-    mode->GetName(&mode_name);
-    return u16(mode_name);
+    if (SUCCEEDED(mode->GetName(&mode_name)))
+        return to_string(mode_name);
+    return L"Unknown";
 }
 
 template <typename T, typename F>
@@ -219,13 +220,12 @@ template <typename T>
 static std::wstring version(T iterator)
 {
     auto info = iface_cast<IDeckLinkAPIInformation>(iterator);
-    if (!info)
-        return L"Unknown";
-
-    String ver;
-    info->GetString(BMDDeckLinkAPIVersion, &ver);
-
-    return u16(ver);
+    if (info) {
+        String ver;
+        if (SUCCEEDED(info->GetString(BMDDeckLinkAPIVersion, &ver)))
+            return to_string(ver);
+    }
+    return L"Not found";
 }
 
 static com_ptr<IDeckLink> get_device(size_t device_index)
@@ -253,8 +253,9 @@ template <typename T>
 static std::wstring get_model_name(const T& device)
 {
     String pModelName;
-    device->GetModelName(&pModelName);
-    return u16(pModelName);
+    if (SUCCEEDED(device->GetModelName(&pModelName)))
+        return to_string(pModelName);
+    return L"Unknown";
 }
 
 class reference_signal_detector

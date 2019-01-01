@@ -358,7 +358,7 @@ struct Stream
         return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
     }
 
-    void send(core::const_frame                              in_frame,
+    void send(core::const_frame&                             in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
@@ -403,7 +403,7 @@ struct Stream
                         // TODO
                     }
 
-                    frame = frame2;
+                    frame = std::move(frame2);
                 }
 
                 frame->pts = pts;
@@ -720,7 +720,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
 
-    auto                     path = u8(params.size() > 1 ? params.at(1) : L"");
+    auto                     path = u8(params.at(1));
     std::vector<std::string> args;
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));

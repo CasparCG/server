@@ -127,7 +127,7 @@ template_host get_template_host(const core::video_format_desc& desc)
             template_hosts, [&](template_host template_host) { return template_host.video_mode == desc.name; });
         if (template_host_it == template_hosts.end())
             template_host_it = boost::find_if(
-                template_hosts, [&](template_host template_host) { return template_host.video_mode == L""; });
+                template_hosts, [&](template_host template_host) { return template_host.video_mode.empty(); });
 
         if (template_host_it != template_hosts.end())
             return *template_host_it;
@@ -221,7 +221,7 @@ class flash_renderer
         if (FAILED(ax_->QueryControl(&spFlash)))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
 
-        if (FAILED(spFlash->put_Playing(true)))
+        if (FAILED(spFlash->put_Playing(VARIANT_TRUE)))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
 
         // Concurrent initialization of two template hosts causes a

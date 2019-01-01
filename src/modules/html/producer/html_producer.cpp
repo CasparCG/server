@@ -228,7 +228,7 @@ class html_client
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-        browser_ = browser;
+        browser_ = std::move(browser);
     }
 
     void OnBeforeClose(CefRefPtr<CefBrowser> browser) override
@@ -428,13 +428,13 @@ class html_producer : public core::frame_producer
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         if (!client_)
-            return make_ready_future(std::wstring(L""));
+            return make_ready_future(std::wstring());
 
         auto javascript = params.at(0);
 
         client_->execute_javascript(javascript);
 
-        return make_ready_future(std::wstring(L""));
+        return make_ready_future(std::wstring());
     }
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }

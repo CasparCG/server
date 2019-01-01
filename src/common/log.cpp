@@ -107,7 +107,10 @@ class column_writer
     std::atomic<int> column_width_;
 
   public:
-    column_writer(int initial_width = 0) { column_width_ = initial_width; }
+    column_writer(int initial_width = 0)
+        : column_width_(initial_width)
+    {
+    }
 
     template <typename Stream, typename Val>
     void write(Stream& out, const Val& value)

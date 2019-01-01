@@ -142,7 +142,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 #endif
 
             // If the cmd is empty, no point trying to parse it
-            if (wcmd != L"") {
+            if (!wcmd.empty()) {
                 if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
                     boost::iequals(wcmd, L"BYE")) {
                     CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";

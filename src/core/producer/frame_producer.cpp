@@ -56,11 +56,11 @@ void frame_producer_registry::register_producer_factory(std::wstring name, const
 }
 
 frame_producer_dependencies::frame_producer_dependencies(
-    const spl::shared_ptr<core::frame_factory>&          frame_factory,
-    const std::vector<spl::shared_ptr<video_channel>>&   channels,
-    const video_format_desc&                             format_desc,
-    const spl::shared_ptr<const frame_producer_registry> producer_registry,
-    const spl::shared_ptr<const cg_producer_registry>    cg_registry)
+    const spl::shared_ptr<core::frame_factory>&           frame_factory,
+    const std::vector<spl::shared_ptr<video_channel>>&    channels,
+    const video_format_desc&                              format_desc,
+    const spl::shared_ptr<const frame_producer_registry>& producer_registry,
+    const spl::shared_ptr<const cg_producer_registry>&    cg_registry)
     : frame_factory(frame_factory)
     , channels(channels)
     , format_desc(format_desc)
@@ -84,7 +84,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
         std::future<std::wstring> call(const std::vector<std::wstring>& params) override
         {
             CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
-            return make_ready_future(std::wstring(L""));
+            return make_ready_future(std::wstring());
         }
         draw_frame last_frame() { return draw_frame{}; }
         draw_frame first_frame() { return draw_frame{}; }
@@ -195,39 +195,33 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
     }
 
-    auto producer = frame_producer::empty();
-
-    if (producer == frame_producer::empty()) {
-        producer = create_color_producer(dependencies.frame_factory, params);
-    }
-
+    auto producer = create_color_producer(dependencies.frame_factory, params);
     if (producer != frame_producer::empty()) {
         return producer;
     }
 
-    if (producer == frame_producer::empty()) {
-        producer = create_route_producer(dependencies, params);
-    }
-
+    producer = create_route_producer(dependencies, params);
     if (producer != frame_producer::empty()) {
         return producer;
     }
 
-    std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool {
-        try {
-            producer = factory(dependencies, params);
-        } catch (user_error&) {
-            throw;
-        } catch (...) {
-            if (throw_on_fail)
+    if (std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool {
+            try {
+                producer = factory(dependencies, params);
+            } catch (user_error&) {
                 throw;
-            else
-                CASPAR_LOG_CURRENT_EXCEPTION();
-        }
-        return producer != frame_producer::empty();
-    });
-
-    return producer;
+            } catch (...) {
+                if (throw_on_fail)
+                    throw;
+                else
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+            return producer != frame_producer::empty();
+        })) {
+        return producer;
+    } else {
+        return frame_producer::empty();
+    }
 }
 
 spl::shared_ptr<core::frame_producer>
@@ -242,13 +236,11 @@ frame_producer_registry::create_producer(const frame_producer_dependencies& depe
         try // to find a key file.
         {
             auto params_copy = params;
-            if (params_copy.size() > 0) {
-                params_copy[0] += L"_A";
+            params_copy[0] += L"_A";
+            key_producer = do_create_producer(dependencies, params_copy, producer_factories);
+            if (key_producer == frame_producer::empty()) {
+                params_copy[0] += L"LPHA";
                 key_producer = do_create_producer(dependencies, params_copy, producer_factories);
-                if (key_producer == frame_producer::empty()) {
-                    params_copy[0] += L"LPHA";
-                    key_producer = do_create_producer(dependencies, params_copy, producer_factories);
-                }
             }
         } catch (...) {
         }
