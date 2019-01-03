@@ -66,7 +66,7 @@ void WriteCommand::Setup(const std::vector<std::wstring>& parameters)
             dataStream << L"</templateData>";
             xmlData_ = dataStream.str();
         }
-    } catch (std::exception) {
+    } catch (std::exception&) {
     }
 }
 
@@ -171,7 +171,7 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters)
         titleName_.resize(4);
         for (int i = 0; i < 4; ++i) {
             if (parameters[1][i + 3] < 176) {
-                titleName_ = L"";
+                titleName_.clear();
                 break;
             }
             titleName_[i] = parameters[1][i + 3] - 144;

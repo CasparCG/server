@@ -643,7 +643,7 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, E
     fmt.field_count   = field_count;
     fmt               = get_caspar_video_format(vid_fmt);
     fmt.size          = size;
-    fmt.audio_cadence = audio_cadence;
+    fmt.audio_cadence = std::move(audio_cadence);
     fmt.name          = blue.get_wstring_for_video_mode(vid_fmt);
 
     return fmt;

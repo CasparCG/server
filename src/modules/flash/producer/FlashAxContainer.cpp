@@ -652,7 +652,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
     CComPtr<IShockwaveFlash> spFlash;
     HRESULT                  hr = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**)&spFlash);
     if (hr == S_OK && spFlash) {
-        hr = spFlash->SetReturnValue(L"<null/>");
+        hr = spFlash->SetReturnValue(SysAllocString(L"<null/>"));
     }
 }
 
@@ -748,10 +748,10 @@ FlashAxContainer::CreateAxControl()
             HRESULT                  hResultQuality;
             HRESULT                  hr2 = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**)&spFlash);
             if (hr2 == S_OK && spFlash) {
-                if (FAILED(spFlash->put_WMode(L"Transparent")))
+                if (FAILED(spFlash->put_WMode(SysAllocString(L"Transparent"))))
                     CASPAR_LOG(warning) << print_() << L" Failed to set flash container to transparent mode.";
                 // spFlash->put_WMode(TEXT("ogl"));
-                hResultQuality = spFlash->put_Quality2(L"Best");
+                hResultQuality = spFlash->put_Quality2(SysAllocString(L"Best"));
             }
             if (SUCCEEDED(DispEventAdvise(spFlash, &DIID__IShockwaveFlashEvents))) {
             }

@@ -62,7 +62,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     }
 
                     output_.push(std::move(packet));
-                    graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
+                    graph_->set_value(
+                        "input", (static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_)));
                 }
                 cond_.notify_all();
             }
@@ -95,7 +96,8 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
         while (!output_.empty() && fn(output_.front())) {
             output_.pop();
         }
-        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
+        graph_->set_value("input",
+                          (static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_)));
     }
     cond_.notify_all();
 }

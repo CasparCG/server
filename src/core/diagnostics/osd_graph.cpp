@@ -255,7 +255,7 @@ class line : public drawable
     std::atomic<bool>  tick_tag_;
     std::atomic<int>   color_;
 
-    double x_delta_ = 1.0 / (res_ - 1);
+    double x_delta_ = 1.0 / (static_cast<double>(res_) - 1.0);
 
   public:
     line()

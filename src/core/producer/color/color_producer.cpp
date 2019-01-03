@@ -83,7 +83,7 @@ class color_producer : public frame_producer
 
   public:
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, uint32_t value)
-        : color_str_(L"")
+        : color_str_()
         , frame_(create_color_frame(this, frame_factory, value))
     {
         CASPAR_LOG(info) << print() << L" Initialized";
@@ -178,7 +178,7 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory,
                                                       const std::vector<std::wstring>&      params)
 {
-    if (params.size() < 0)
+    if (params.size() < 1)
         return core::frame_producer::empty();
 
     uint32_t value = 0;

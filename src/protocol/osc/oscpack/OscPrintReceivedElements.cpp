@@ -107,6 +107,7 @@ std::ostream& operator<<(std::ostream& os, const ReceivedMessageArgument& arg)
                 s[len - 1] = '\0';
 
             os << " " << s;
+            delete[] s;
         } break;
 
         case DOUBLE_TYPE_TAG:

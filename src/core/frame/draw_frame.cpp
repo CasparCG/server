@@ -154,7 +154,7 @@ draw_frame draw_frame::push(draw_frame frame, const frame_transform& transform)
     return result;
 }
 
-draw_frame draw_frame::pop(draw_frame frame)
+draw_frame draw_frame::pop(const draw_frame& frame)
 {
     draw_frame result;
     result.impl_->frame_ = frame.impl_->frame_;

@@ -1253,7 +1253,7 @@ std::wstring channel_grid_command(command_context& ctx)
 
 // Thumbnail Commands
 
-std::wstring make_request(command_context& ctx, const std::string path, const std::wstring default_response)
+std::wstring make_request(command_context& ctx, const std::string& path, const std::wstring& default_response)
 {
     auto res = http::request(ctx.proxy_host, ctx.proxy_port, path);
     if (res.status_code >= 500 || res.body.size() == 0) {

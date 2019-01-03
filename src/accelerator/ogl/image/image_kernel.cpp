@@ -388,7 +388,7 @@ struct image_kernel::impl
                     coords[0], coords[1], coords[2], coords[0], coords[2], coords[3]};
 
                 GL(glBufferData(GL_ARRAY_BUFFER,
-                                static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
+                                static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
                                 coords_triangles.data(),
                                 GL_STATIC_DRAW));
 

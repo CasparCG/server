@@ -348,7 +348,7 @@ struct bluefish_producer : boost::noncopyable
             blue_->render_buffer_capture(BlueBuffer_Image_HANC(schedule_capture_frame_id_));
             dma_ready_captured_frame_id_ = capturing_frame_id_;
             capturing_frame_id_          = schedule_capture_frame_id_;
-            schedule_capture_frame_id_   = (++schedule_capture_frame_id_ % 4);
+            schedule_capture_frame_id_   = (schedule_capture_frame_id_ + 1) % 4;
         }
     }
 
@@ -372,7 +372,7 @@ struct bluefish_producer : boost::noncopyable
                                    image_size);
         double fps = rate;
         if (is_1001)
-            fps = (rate * 1000) / 1001;
+            fps = (static_cast<double>(rate) * 1000) / 1001;
 
         CASPAR_SCOPE_EXIT
         {
@@ -411,8 +411,7 @@ struct bluefish_producer : boost::noncopyable
                 src_video->display_picture_number = frames_captured;
                 src_video->pts                    = capture_ts;
 
-                void* video_bytes = nullptr;
-                video_bytes       = reserved_frames_.front()->image_data();
+                void* video_bytes = reserved_frames_.front()->image_data();
                 if (reserved_frames_.front() && video_bytes) {
                     src_video->data[0]     = reinterpret_cast<uint8_t*>(reserved_frames_.front()->image_data());
                     src_video->linesize[0] = static_cast<int>(width * 3); // image_size / height);

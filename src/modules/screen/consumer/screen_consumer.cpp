@@ -378,7 +378,7 @@ struct screen_consumer : boost::noncopyable
             GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
 
             GL(glBufferData(GL_ARRAY_BUFFER,
-                            static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
+                            static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
                             draw_coords_.data(),
                             GL_STATIC_DRAW));
 
