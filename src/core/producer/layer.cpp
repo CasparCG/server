@@ -96,12 +96,13 @@ struct layer::impl
                 foreground_ = foreground_->following_producer();
             }
 
+            int64_t frames_left = 0;
             if (auto_play_) {
                 auto auto_play_delta = background_->auto_play_delta();
                 if (auto_play_delta) {
                     auto time        = static_cast<std::int64_t>(foreground_->frame_number());
                     auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
-                    auto frames_left = duration - time - *auto_play_delta;
+                    frames_left = duration - time - *auto_play_delta;
                     if (frames_left < 1) {
                         play();
                     }
@@ -117,6 +118,10 @@ struct layer::impl
             state_["foreground"]             = foreground_->state();
             state_["foreground"]["producer"] = foreground_->name();
             state_["foreground"]["paused"]   = paused_;
+
+            if (frames_left > 0) {
+                state_["foreground"]["frames_left"]   = frames_left;
+            }
 
             state_["background"]             = background_->state();
             state_["background"]["producer"] = background_->name();
