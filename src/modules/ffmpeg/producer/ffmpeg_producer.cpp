@@ -105,7 +105,10 @@ struct ffmpeg_producer : public core::frame_producer
 
     core::draw_frame receive_impl(int nb_samples) override { return producer_->next_frame(); }
 
-    std::uint32_t frame_number() const override { return static_cast<std::uint32_t>(producer_->time()); }
+    std::uint32_t frame_number() const override
+    {
+        return static_cast<std::uint32_t>(producer_->time() - producer_->start());
+    }
 
     std::uint32_t nb_frames() const override
     {
