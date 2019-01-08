@@ -110,6 +110,7 @@ class destroy_consumer_proxy : public frame_consumer
             }
 
             pointer_guard.reset();
+            counter--;
         })
             .detach();
     }
