@@ -35,4 +35,9 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
         return boost::none;
 }
 
+std::wstring clean_path(std::wstring path)
+{
+    return path;
+}
+
 } // namespace caspar
