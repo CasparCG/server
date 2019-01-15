@@ -16,8 +16,8 @@ class array final
     friend class array;
 
   public:
-    typedef T*       iterator;
-    typedef const T* const_iterator;
+    using iterator       = T*;
+    using const_iterator = const T*;
 
     array() = default;
 
@@ -93,8 +93,8 @@ template <typename T>
 class array<const T> final
 {
   public:
-    typedef const T* iterator;
-    typedef const T* const_iterator;
+    using iterator       = const T*;
+    using const_iterator = const T*;
 
     array() = default;
 

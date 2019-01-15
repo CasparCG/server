@@ -30,13 +30,13 @@
 
 namespace caspar { namespace IO {
 
-typedef spl::shared_ptr<client_connection<wchar_t>> ClientInfoPtr;
+using ClientInfoPtr = spl::shared_ptr<client_connection<wchar_t>>;
 
 struct ConsoleClientInfo : public client_connection<wchar_t>
 {
     void send(std::wstring&& data, bool skip_log) override
     {
-        std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?')) << std::flush;
+        std::wcout << L"#" + caspar::log::replace_nonprintable_copy(data, L'?') << std::flush;
     }
     void         disconnect() override {}
     std::wstring address() const override { return L"Console"; }

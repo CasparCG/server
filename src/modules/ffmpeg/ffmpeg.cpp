@@ -54,7 +54,7 @@ extern "C" {
 namespace caspar { namespace ffmpeg {
 int ffmpeg_lock_callback(void** mutex, enum AVLockOp op)
 {
-    if (!mutex)
+    if (mutex == nullptr)
         return 0;
 
     auto my_mutex = reinterpret_cast<std::recursive_mutex*>(*mutex);
@@ -65,12 +65,12 @@ int ffmpeg_lock_callback(void** mutex, enum AVLockOp op)
             break;
         }
         case AV_LOCK_OBTAIN: {
-            if (my_mutex)
+            if (my_mutex != nullptr)
                 my_mutex->lock();
             break;
         }
         case AV_LOCK_RELEASE: {
-            if (my_mutex)
+            if (my_mutex != nullptr)
                 my_mutex->unlock();
             break;
         }
@@ -85,7 +85,7 @@ int ffmpeg_lock_callback(void** mutex, enum AVLockOp op)
 
 static void sanitize(uint8_t* line)
 {
-    while (*line) {
+    while (*line != 0u) {
         if (*line < 0x08 || (*line > 0x0D && *line < 0x20))
             *line = '?';
         line++;
@@ -97,16 +97,17 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     static thread_local bool print_prefix_tss = true;
 
     char     line[1024];
-    AVClass* avc = ptr ? *(AVClass**)ptr : NULL;
+    AVClass* avc = ptr != nullptr ? *static_cast<AVClass**>(ptr) : nullptr;
     if (level > AV_LOG_DEBUG)
         return;
     line[0] = 0;
 
 #undef fprintf
-    if (print_prefix_tss && avc) {
-        if (avc->parent_log_context_offset) {
-            AVClass** parent = *(AVClass***)(((uint8_t*)ptr) + avc->parent_log_context_offset);
-            if (parent && *parent)
+    if (print_prefix_tss && (avc != nullptr)) {
+        if (avc->parent_log_context_offset != 0) {
+            AVClass** parent =
+                *reinterpret_cast<AVClass***>(static_cast<uint8_t*>(ptr) + avc->parent_log_context_offset);
+            if ((parent != nullptr) && (*parent != nullptr))
                 std::snprintf(line, sizeof(line), "[%s @ %p] ", (*parent)->item_name(parent), parent);
         }
         std::snprintf(line + strlen(line), sizeof(line) - strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
@@ -114,9 +115,9 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
     std::vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
 
-    print_prefix_tss = strlen(line) && line[strlen(line) - 1] == '\n';
+    print_prefix_tss = (strlen(line) != 0u) && line[strlen(line) - 1] == '\n';
 
-    sanitize((uint8_t*)line);
+    sanitize(reinterpret_cast<uint8_t*>(line));
 
     try {
         if (level == AV_LOG_VERBOSE)

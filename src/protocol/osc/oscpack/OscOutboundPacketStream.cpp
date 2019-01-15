@@ -32,9 +32,9 @@
 
 #include "OscOutboundPacketStream.h"
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 #include <common/endian.h>
 
@@ -134,7 +134,7 @@ static void FromUInt64(char* p, uint64 x)
 #endif
 }
 
-static inline long RoundUp4(long x) { return ((x - 1) & (~0x03L)) + 4; }
+static inline long RoundUp4(long x) { return (x - 1 & ~0x03L) + 4; }
 
 OutboundPacketStream::OutboundPacketStream(char* buffer, unsigned long capacity)
     : data_(buffer)
@@ -142,7 +142,7 @@ OutboundPacketStream::OutboundPacketStream(char* buffer, unsigned long capacity)
     , typeTagsCurrent_(end_)
     , messageCursor_(data_)
     , argumentCurrent_(data_)
-    , elementSizePtr_(0)
+    , elementSizePtr_(nullptr)
     , messageIsInProgress_(false)
 {
 }
@@ -151,28 +151,26 @@ OutboundPacketStream::~OutboundPacketStream() {}
 
 char* OutboundPacketStream::BeginElement(char* beginPtr)
 {
-    if (elementSizePtr_ == 0) {
+    if (elementSizePtr_ == nullptr) {
         elementSizePtr_ = reinterpret_cast<uint32*>(data_);
 
         return beginPtr;
-
-    } else {
-        // store an offset to the old element size ptr in the element size slot
-        // we store an offset rather than the actual pointer to be 64 bit clean.
-        *reinterpret_cast<uint32*>(beginPtr) = (uint32)(reinterpret_cast<char*>(elementSizePtr_) - data_);
-
-        elementSizePtr_ = reinterpret_cast<uint32*>(beginPtr);
-
-        return beginPtr + 4;
     }
+    // store an offset to the old element size ptr in the element size slot
+    // we store an offset rather than the actual pointer to be 64 bit clean.
+    *reinterpret_cast<uint32*>(beginPtr) = (uint32)(reinterpret_cast<char*>(elementSizePtr_) - data_);
+
+    elementSizePtr_ = reinterpret_cast<uint32*>(beginPtr);
+
+    return beginPtr + 4;
 }
 
 void OutboundPacketStream::EndElement(char* endPtr)
 {
-    assert(elementSizePtr_ != 0);
+    assert(elementSizePtr_ != nullptr);
 
     if (elementSizePtr_ == reinterpret_cast<uint32*>(data_)) {
-        elementSizePtr_ = 0;
+        elementSizePtr_ = nullptr;
 
     } else {
         // while building an element, an offset to the containing element's
@@ -190,11 +188,11 @@ void OutboundPacketStream::EndElement(char* endPtr)
     }
 }
 
-bool OutboundPacketStream::ElementSizeSlotRequired() const { return (elementSizePtr_ != 0); }
+bool OutboundPacketStream::ElementSizeSlotRequired() const { return elementSizePtr_ != nullptr; }
 
 void OutboundPacketStream::CheckForAvailableBundleSpace()
 {
-    unsigned long required = Size() + ((ElementSizeSlotRequired()) ? 4 : 0) + 16;
+    unsigned long required = Size() + (ElementSizeSlotRequired() ? 4 : 0) + 16;
 
     if (required > Capacity())
         throw OutOfBufferMemoryException(required);
@@ -203,7 +201,7 @@ void OutboundPacketStream::CheckForAvailableBundleSpace()
 void OutboundPacketStream::CheckForAvailableMessageSpace(const char* addressPattern)
 {
     // plus 4 for at least four bytes of type tag
-    unsigned long required = Size() + ((ElementSizeSlotRequired()) ? 4 : 0) +
+    unsigned long required = Size() + (ElementSizeSlotRequired() ? 4 : 0) +
                              RoundUp4(static_cast<unsigned long>(strlen(addressPattern)) + 1) + 4;
 
     if (required > Capacity())
@@ -225,7 +223,7 @@ void OutboundPacketStream::Clear()
     typeTagsCurrent_     = end_;
     messageCursor_       = data_;
     argumentCurrent_     = data_;
-    elementSizePtr_      = 0;
+    elementSizePtr_      = nullptr;
     messageIsInProgress_ = false;
 }
 
@@ -245,11 +243,11 @@ unsigned int OutboundPacketStream::Size() const
 
 const char* OutboundPacketStream::Data() const { return data_; }
 
-bool OutboundPacketStream::IsReady() const { return (!IsMessageInProgress() && !IsBundleInProgress()); }
+bool OutboundPacketStream::IsReady() const { return !IsMessageInProgress() && !IsBundleInProgress(); }
 
 bool OutboundPacketStream::IsMessageInProgress() const { return messageIsInProgress_; }
 
-bool OutboundPacketStream::IsBundleInProgress() const { return (elementSizePtr_ != 0); }
+bool OutboundPacketStream::IsBundleInProgress() const { return elementSizePtr_ != nullptr; }
 
 OutboundPacketStream& OutboundPacketStream::operator<<(const BundleInitiator& rhs)
 {
@@ -334,10 +332,10 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const MessageTerminator& 
         messageCursor_[0] = ',';
         // copy type tags in reverse (really forward) order
         for (int i = 0; i < typeTagsCount; ++i)
-            messageCursor_[i + 1] = tempTypeTags[(typeTagsCount - 1) - i];
+            messageCursor_[i + 1] = tempTypeTags[typeTagsCount - 1 - i];
 
         char* p = messageCursor_ + 1 + typeTagsCount;
-        for (int i = 0; i < (typeTagSlotSize - (typeTagsCount + 1)); ++i)
+        for (int i = 0; i < typeTagSlotSize - (typeTagsCount + 1); ++i)
             *p++ = '\0';
 
         typeTagsCurrent_ = end_;
@@ -366,7 +364,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(bool rhs)
 {
     CheckForAvailableArgumentSpace(0);
 
-    *(--typeTagsCurrent_) = (char)((rhs) ? TRUE_TYPE_TAG : FALSE_TYPE_TAG);
+    *--typeTagsCurrent_ = (char)(rhs ? TRUE_TYPE_TAG : FALSE_TYPE_TAG);
 
     return *this;
 }
@@ -376,7 +374,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const NilType& rhs)
     (void)rhs;
     CheckForAvailableArgumentSpace(0);
 
-    *(--typeTagsCurrent_) = NIL_TYPE_TAG;
+    *--typeTagsCurrent_ = NIL_TYPE_TAG;
 
     return *this;
 }
@@ -386,7 +384,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const InfinitumType& rhs)
     (void)rhs;
     CheckForAvailableArgumentSpace(0);
 
-    *(--typeTagsCurrent_) = INFINITUM_TYPE_TAG;
+    *--typeTagsCurrent_ = INFINITUM_TYPE_TAG;
 
     return *this;
 }
@@ -395,7 +393,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(int32 rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
-    *(--typeTagsCurrent_) = INT32_TYPE_TAG;
+    *--typeTagsCurrent_ = INT32_TYPE_TAG;
     FromInt32(argumentCurrent_, rhs);
     argumentCurrent_ += 4;
 
@@ -406,7 +404,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(float rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
-    *(--typeTagsCurrent_) = FLOAT_TYPE_TAG;
+    *--typeTagsCurrent_ = FLOAT_TYPE_TAG;
 
 #ifdef OSC_HOST_LITTLE_ENDIAN
     union
@@ -434,7 +432,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(char rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
-    *(--typeTagsCurrent_) = CHAR_TYPE_TAG;
+    *--typeTagsCurrent_ = CHAR_TYPE_TAG;
     FromInt32(argumentCurrent_, rhs);
     argumentCurrent_ += 4;
 
@@ -445,7 +443,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const RgbaColor& rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
-    *(--typeTagsCurrent_) = RGBA_COLOR_TYPE_TAG;
+    *--typeTagsCurrent_ = RGBA_COLOR_TYPE_TAG;
     FromUInt32(argumentCurrent_, rhs);
     argumentCurrent_ += 4;
 
@@ -456,7 +454,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const MidiMessage& rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
-    *(--typeTagsCurrent_) = MIDI_MESSAGE_TYPE_TAG;
+    *--typeTagsCurrent_ = MIDI_MESSAGE_TYPE_TAG;
     FromUInt32(argumentCurrent_, rhs);
     argumentCurrent_ += 4;
 
@@ -467,7 +465,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(int64 rhs)
 {
     CheckForAvailableArgumentSpace(8);
 
-    *(--typeTagsCurrent_) = INT64_TYPE_TAG;
+    *--typeTagsCurrent_ = INT64_TYPE_TAG;
     FromInt64(argumentCurrent_, rhs);
     argumentCurrent_ += 8;
 
@@ -478,7 +476,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const TimeTag& rhs)
 {
     CheckForAvailableArgumentSpace(8);
 
-    *(--typeTagsCurrent_) = TIME_TAG_TYPE_TAG;
+    *--typeTagsCurrent_ = TIME_TAG_TYPE_TAG;
     FromUInt64(argumentCurrent_, rhs);
     argumentCurrent_ += 8;
 
@@ -489,7 +487,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(double rhs)
 {
     CheckForAvailableArgumentSpace(8);
 
-    *(--typeTagsCurrent_) = DOUBLE_TYPE_TAG;
+    *--typeTagsCurrent_ = DOUBLE_TYPE_TAG;
 
 #ifdef OSC_HOST_LITTLE_ENDIAN
     union
@@ -521,7 +519,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const char* rhs)
 {
     CheckForAvailableArgumentSpace(RoundUp4(static_cast<long>(strlen(rhs)) + 1));
 
-    *(--typeTagsCurrent_) = STRING_TYPE_TAG;
+    *--typeTagsCurrent_ = STRING_TYPE_TAG;
     strcpy(argumentCurrent_, rhs);
     unsigned long rhsLength = static_cast<unsigned long>(strlen(rhs));
     argumentCurrent_ += rhsLength + 1;
@@ -540,7 +538,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const Symbol& rhs)
 {
     CheckForAvailableArgumentSpace(RoundUp4(static_cast<long>(strlen(rhs)) + 1));
 
-    *(--typeTagsCurrent_) = SYMBOL_TYPE_TAG;
+    *--typeTagsCurrent_ = SYMBOL_TYPE_TAG;
     strcpy(argumentCurrent_, rhs);
     unsigned long rhsLength = static_cast<unsigned long>(strlen(rhs));
     argumentCurrent_ += rhsLength + 1;
@@ -559,7 +557,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const Blob& rhs)
 {
     CheckForAvailableArgumentSpace(4 + RoundUp4(rhs.size));
 
-    *(--typeTagsCurrent_) = BLOB_TYPE_TAG;
+    *--typeTagsCurrent_ = BLOB_TYPE_TAG;
     FromUInt32(argumentCurrent_, rhs.size);
     argumentCurrent_ += 4;
 

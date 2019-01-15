@@ -18,8 +18,9 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-#include "server.h"
 #include "included_modules.h"
+
+#include "server.h"
 
 #include <accelerator/accelerator.h>
 
@@ -54,12 +55,12 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
 #include <future>
 #include <thread>
+#include <utility>
 
 namespace caspar {
 
@@ -115,7 +116,7 @@ struct server::impl : boost::noncopyable
         : accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
         , producer_registry_(spl::make_shared<core::frame_producer_registry>())
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
-        , shutdown_server_now_(shutdown_server_now)
+        , shutdown_server_now_(std::move(shutdown_server_now))
     {
         caspar::core::diagnostics::osd::register_sink();
 
@@ -263,7 +264,7 @@ struct server::impl : boost::noncopyable
                 auto port              = ptree_get<unsigned int>(xml_controller.second, L"port");
                 auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
                     io_service_,
-                    create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
+                    create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
                     static_cast<short>(port));
                 async_servers_.push_back(asyncbootstrapper);
 
@@ -283,10 +284,10 @@ struct server::impl : boost::noncopyable
             return wrap_legacy_protocol("\r\n",
                                         spl::make_shared<amcp::AMCPProtocolStrategy>(
                                             port_description, spl::make_shared_ptr(amcp_command_repo_)));
-        else if (boost::iequals(name, L"CII"))
+        if (boost::iequals(name, L"CII"))
             return wrap_legacy_protocol(
                 "\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
-        else if (boost::iequals(name, L"CLOCK"))
+        if (boost::iequals(name, L"CLOCK"))
             return spl::make_shared<to_unicode_adapter_factory>(
                 "ISO-8859-1",
                 spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
@@ -296,7 +297,7 @@ struct server::impl : boost::noncopyable
 };
 
 server::server(std::function<void(bool)> shutdown_server_now)
-    : impl_(new impl(shutdown_server_now))
+    : impl_(new impl(std::move(shutdown_server_now)))
 {
 }
 void                                                     server::start() { impl_->start(); }

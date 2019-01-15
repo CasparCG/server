@@ -36,7 +36,7 @@ struct html_cg_proxy::impl
     spl::shared_ptr<core::frame_producer> producer;
 };
 
-html_cg_proxy::html_cg_proxy(spl::shared_ptr<core::frame_producer> producer)
+html_cg_proxy::html_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer)
     : impl_(new impl{producer})
 {
 }

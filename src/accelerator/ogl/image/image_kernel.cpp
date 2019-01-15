@@ -37,7 +37,6 @@
 #include <core/video_format.h>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
 #include <GL/glew.h>
@@ -69,8 +68,8 @@ bool get_line_intersection(double  p0_x,
 
     if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
         // Collision detected
-        result_x = p0_x + (t * s1_x);
-        result_y = p0_y + (t * s1_y);
+        result_x = p0_x + t * s1_x;
+        result_y = p0_y + t * s1_y;
 
         return true;
     }
@@ -118,7 +117,7 @@ struct image_kernel::impl
     GLuint                  vao_;
     GLuint                  vbo_;
 
-    impl(const spl::shared_ptr<device>& ogl)
+    explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
     {
@@ -318,8 +317,8 @@ struct image_kernel::impl
 
         bool scissor = m_p[0] > std::numeric_limits<double>::epsilon() ||
                        m_p[1] > std::numeric_limits<double>::epsilon() ||
-                       m_s[0] < (1.0 - std::numeric_limits<double>::epsilon()) ||
-                       m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
+                       m_s[0] < 1.0 - std::numeric_limits<double>::epsilon() ||
+                       m_s[1] < 1.0 - std::numeric_limits<double>::epsilon();
 
         if (scissor) {
             double w = static_cast<double>(params.background->width());

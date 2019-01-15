@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif

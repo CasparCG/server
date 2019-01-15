@@ -28,6 +28,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
+#include <utility>
 
 namespace caspar { namespace core {
 
@@ -85,41 +86,36 @@ const std::vector<video_format_desc> format_descs = {
     {video_format::x2160p6000, 1, 3840, 2160, 3840, 2160, 60000, 1000, L"2160p6000", {800}},
     {video_format::invalid, 1, 0, 0, 0, 0, 1, 1, L"invalid", {1}}};
 
-video_format_desc::video_format_desc(video_format            format,
-                                     int                     field_count,
-                                     int                     width,
-                                     int                     height,
-                                     int                     square_width,
-                                     int                     square_height,
-                                     int                     time_scale,
-                                     int                     duration,
-                                     const std::wstring&     name,
-                                     const std::vector<int>& audio_cadence)
+video_format_desc::video_format_desc(video_format     format,
+                                     int              field_count,
+                                     int              width,
+                                     int              height,
+                                     int              square_width,
+                                     int              square_height,
+                                     int              time_scale,
+                                     int              duration,
+                                     std::wstring     name,
+                                     std::vector<int> audio_cadence)
     : format(format)
-    , field_count(field_count)
     , width(width)
     , height(height)
     , square_width(square_width)
     , square_height(square_height)
+    , field_count(field_count)
     , fps(static_cast<double>(time_scale) / static_cast<double>(duration))
     , framerate(time_scale, duration)
     , time_scale(time_scale)
     , duration(duration)
     , size(width * height * 4)
-    , name(name)
+    , name(std::move(name))
     , audio_sample_rate(48000)
-    , audio_cadence(audio_cadence)
+    , audio_cadence(std::move(audio_cadence))
 {
 }
 
-video_format_desc::video_format_desc(video_format format)
-    : format(video_format::invalid)
-{
-    *this = format_descs.at(static_cast<int>(format));
-}
+video_format_desc::video_format_desc(video_format format) { *this = format_descs.at(static_cast<int>(format)); }
 
 video_format_desc::video_format_desc(const std::wstring& name)
-    : format(video_format::invalid)
 {
     *this = video_format_desc(video_format::invalid);
     for (auto it = std::begin(format_descs); it != std::end(format_descs) - 1; ++it) {

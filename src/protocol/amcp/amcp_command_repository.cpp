@@ -88,7 +88,7 @@ struct amcp_command_repository::impl
     {
         int index = 0;
         for (const auto& channel : channels) {
-            std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
+            std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
         }

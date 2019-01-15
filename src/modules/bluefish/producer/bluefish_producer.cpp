@@ -93,8 +93,8 @@ static const size_t MAX_DECODED_AUDIO_BUFFER_SIZE = 2002 * 16; // max 2002 sampl
 template <typename T>
 std::wstring to_string(const T& cadence)
 {
-    return boost::join(
-        cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
+    return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<int>(i); }),
+                       L", ");
 }
 
 unsigned int get_bluesdk_input_videochannel_from_streamid(int stream_id)
@@ -208,12 +208,12 @@ struct bluefish_producer : boost::noncopyable
                       int                                         device_index,
                       int                                         stream_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory)
-        : blue_(create_blue(device_index))
-        , channel_format_desc_(format_desc)
-        , device_index_(device_index)
+        : device_index_(device_index)
         , stream_index_(stream_index)
-        , frame_factory_(frame_factory)
+        , blue_(create_blue(device_index))
         , model_name_(get_card_desc(*blue_, device_index))
+        , channel_format_desc_(format_desc)
+        , frame_factory_(frame_factory)
         , memory_format_on_card_(MEM_FMT_RGB)
         , sync_format_(UPD_FMT_FRAME)
     {
@@ -229,14 +229,14 @@ struct bluefish_producer : boost::noncopyable
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        memset(&hanc_decode_struct_, 0, sizeof(hanc_decode_struct_));
+        std::memset(&hanc_decode_struct_, 0, sizeof(hanc_decode_struct_));
         hanc_decode_struct_.audio_input_source = AUDIO_INPUT_SOURCE_EMB;
 
         decoded_audio_bytes_.resize(MAX_DECODED_AUDIO_BUFFER_SIZE);
 
         // Configure input connector and routing
         unsigned int bf_channel = get_bluesdk_input_videochannel_from_streamid(stream_index);
-        if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_INPUT_CHANNEL, (bf_channel))))
+        if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_INPUT_CHANNEL, bf_channel)))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input channel."));
 
         if (BLUE_FAIL(configure_input_routing(bf_channel, true))) // to do: tofix pass rgba vs use actual dual link!!
@@ -338,8 +338,8 @@ struct bluefish_producer : boost::noncopyable
         if (dual_link) {
             blue_->set_card_property32(MR2_ROUTING, routing_value);
             return blue_->set_card_property32(MR2_ROUTING, routing_value_b);
-        } else
-            return blue_->set_card_property32(MR2_ROUTING, routing_value);
+        }
+        return blue_->set_card_property32(MR2_ROUTING, routing_value);
     }
 
     void schedule_capture()
@@ -371,8 +371,8 @@ struct bluefish_producer : boost::noncopyable
                                    static_cast<EUpdateMethod>(sync_format_),
                                    image_size);
         double fps = rate;
-        if (is_1001)
-            fps = (static_cast<double>(rate) * 1000) / 1001;
+        if (is_1001 != 0u)
+            fps = static_cast<double>(rate) * 1000 / 1001;
 
         CASPAR_SCOPE_EXIT
         {
@@ -406,7 +406,7 @@ struct bluefish_producer : boost::noncopyable
                 src_video->width                  = width;
                 src_video->height                 = height;
                 src_video->interlaced_frame       = !is_progressive;
-                src_video->top_field_first        = (height != 486);
+                src_video->top_field_first        = height != 486;
                 src_video->key_frame              = 1;
                 src_video->display_picture_number = frames_captured;
                 src_video->pts                    = capture_ts;
@@ -455,8 +455,8 @@ struct bluefish_producer : boost::noncopyable
                     // since we provide an entire frame for each field in interlaced modes, we need to adjust the
                     // src_audio
                     if (first_frame_) {
-                        remainaing_audio_samples_ = src_audio->nb_samples - (src_audio->nb_samples / 2);
-                        src_audio->nb_samples     = (src_audio->nb_samples / 2);
+                        remainaing_audio_samples_ = src_audio->nb_samples - src_audio->nb_samples / 2;
+                        src_audio->nb_samples     = src_audio->nb_samples / 2;
                     } else {
                         auto audio_bytes = reinterpret_cast<uint8_t*>(&decoded_audio_bytes_[0]);
                         if (audio_bytes) {
@@ -517,7 +517,6 @@ struct bluefish_producer : boost::noncopyable
             }
         } catch (...) {
             exception_ = std::current_exception();
-            return;
         }
     }
 
@@ -541,7 +540,7 @@ struct bluefish_producer : boost::noncopyable
             get_capture_time();
 
             if (last_field_count + 3 < current_field_count)
-                CASPAR_LOG(warning) << L"Error: dropped " << ((current_field_count - last_field_count - 2) / 2)
+                CASPAR_LOG(warning) << L"Error: dropped " << (current_field_count - last_field_count - 2) / 2
                                     << L" frames" << L"Current " << current_field_count << L"  Old "
                                     << last_field_count;
 
@@ -595,7 +594,7 @@ struct bluefish_producer : boost::noncopyable
 
     std::wstring print() const
     {
-        return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
+        return model_name_ + L" [" + std::to_wstring(device_index_) + L"|" + format_desc_.name + L"]";
     }
 
     core::monitor::state state() const
@@ -619,8 +618,8 @@ class bluefish_producer_proxy : public core::frame_producer
                                      int                                         device_index,
                                      int                                         stream_index,
                                      uint32_t                                    length)
-        : executor_(L"bluefish_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
-        , length_(length)
+        : length_(length)
+        , executor_(L"bluefish_producer[" + std::to_wstring(device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {

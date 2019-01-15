@@ -48,7 +48,7 @@ create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factor
     auto frame = frame_factory->create_frame(tag, desc);
 
     for (int i = 0; i < values.size(); ++i)
-        *reinterpret_cast<uint32_t*>(frame.image_data(0).begin() + (i * 4)) = values.at(i);
+        *reinterpret_cast<uint32_t*>(frame.image_data(0).begin() + i * 4) = values.at(i);
 
     return core::draw_frame(std::move(frame));
 }
@@ -83,8 +83,7 @@ class color_producer : public frame_producer
 
   public:
     color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, uint32_t value)
-        : color_str_()
-        , frame_(create_color_frame(this, frame_factory, value))
+        : frame_(create_color_frame(this, frame_factory, value))
     {
         CASPAR_LOG(info) << print() << L" Initialized";
     }

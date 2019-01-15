@@ -37,16 +37,16 @@ int color(float r, float g, float b, float a)
 
 std::tuple<float, float, float, float> color(int code)
 {
-    float r = static_cast<float>((code >> 24) & 255) / 255.0f;
-    float g = static_cast<float>((code >> 16) & 255) / 255.0f;
-    float b = static_cast<float>((code >> 8) & 255) / 255.0f;
-    float a = static_cast<float>((code >> 0) & 255) / 255.0f;
+    float r = static_cast<float>(code >> 24 & 255) / 255.0f;
+    float g = static_cast<float>(code >> 16 & 255) / 255.0f;
+    float b = static_cast<float>(code >> 8 & 255) / 255.0f;
+    float a = static_cast<float>(code >> 0 & 255) / 255.0f;
     return std::make_tuple(r, g, b, a);
 }
 
-typedef std::vector<spi::sink_factory_t> sink_factories_t;
-static std::mutex                        g_sink_factories_mutex;
-static sink_factories_t                  g_sink_factories;
+using sink_factories_t = std::vector<spi::sink_factory_t>;
+static std::mutex       g_sink_factories_mutex;
+static sink_factories_t g_sink_factories;
 
 std::vector<spl::shared_ptr<spi::graph_sink>> create_sinks()
 {

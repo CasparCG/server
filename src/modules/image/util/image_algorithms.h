@@ -43,7 +43,7 @@ class rgba_weighting
 
   public:
     template <class RGBAPixel>
-    inline void add_pixel(const RGBAPixel& pixel, uint8_t weight)
+    void add_pixel(const RGBAPixel& pixel, uint8_t weight)
     {
         r += pixel.r() * weight;
         g += pixel.g() * weight;
@@ -54,7 +54,7 @@ class rgba_weighting
     }
 
     template <class RGBAPixel>
-    inline void store_result(RGBAPixel& pixel)
+    void store_result(RGBAPixel& pixel)
     {
         pixel.r() = static_cast<uint8_t>(r / total_weight);
         pixel.g() = static_cast<uint8_t>(g / total_weight);

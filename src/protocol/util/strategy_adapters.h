@@ -47,7 +47,7 @@ class to_unicode_adapter_factory : public protocol_strategy_factory<char>
     to_unicode_adapter_factory(const std::string&                             codepage,
                                const protocol_strategy_factory<wchar_t>::ptr& unicode_strategy_factory);
 
-    virtual protocol_strategy<char>::ptr create(const client_connection<char>::ptr& client_connection);
+    protocol_strategy<char>::ptr create(const client_connection<char>::ptr& client_connection) override;
 };
 
 /**
@@ -70,7 +70,7 @@ class delimiter_based_chunking_strategy : public protocol_strategy<CharT>
     {
     }
 
-    virtual void parse(const std::basic_string<CharT>& data)
+    void parse(const std::basic_string<CharT>& data) override
     {
         input_ += data;
 
@@ -98,8 +98,8 @@ class delimiter_based_chunking_strategy_factory : public protocol_strategy_facto
     {
     }
 
-    virtual typename protocol_strategy<CharT>::ptr
-    create(const typename client_connection<CharT>::ptr& client_connection)
+    typename protocol_strategy<CharT>::ptr
+    create(const typename client_connection<CharT>::ptr& client_connection) override
     {
         return spl::make_shared<delimiter_based_chunking_strategy<CharT>>(delimiter_,
                                                                           strategy_factory_->create(client_connection));
@@ -120,7 +120,7 @@ class legacy_strategy_adapter_factory : public protocol_strategy_factory<wchar_t
   public:
     legacy_strategy_adapter_factory(const ProtocolStrategyPtr& strategy);
 
-    virtual protocol_strategy<wchar_t>::ptr create(const client_connection<wchar_t>::ptr& client_connection);
+    protocol_strategy<wchar_t>::ptr create(const client_connection<wchar_t>::ptr& client_connection) override;
 };
 
 /**

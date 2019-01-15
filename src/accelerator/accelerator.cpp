@@ -9,7 +9,9 @@
 
 #include <core/mixer/image/image_mixer.h>
 
+#include <memory>
 #include <mutex>
+#include <utility>
 
 namespace caspar { namespace accelerator {
 
@@ -19,15 +21,15 @@ struct accelerator::impl
     std::mutex                   mutex_;
     std::shared_ptr<ogl::device> ogl_device_;
 
-    impl(const std::wstring& path)
-        : path_(path)
+    impl(std::wstring path)
+        : path_(std::move(path))
     {
     }
 
     std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id)
     {
         if (!ogl_device_) {
-            ogl_device_.reset(new ogl::device());
+            ogl_device_ = std::make_shared<ogl::device>();
         }
 
         return std::make_unique<ogl::image_mixer>(spl::make_shared_ptr(ogl_device_), channel_id);

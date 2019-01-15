@@ -18,8 +18,9 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-#include "filesystem.h"
 #include "except.h"
+
+#include "filesystem.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>

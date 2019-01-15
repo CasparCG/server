@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #include <algorithm>
 #include <atomic>
 //#include <boost/algorithm/string.hpp>
@@ -75,6 +73,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -92,7 +91,6 @@
 #include <stdexcept>
 #include <string>
 #include <tbb/concurrent_queue.h>
-#include <time.h>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>

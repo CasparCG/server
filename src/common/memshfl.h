@@ -36,14 +36,12 @@ static void* aligned_memshfl(void* dest, const void* source, size_t count, int m
 
     count /= 16; // 128 bit
 
-    __m128i xmm0, xmm1, xmm2, xmm3;
-
     const __m128i mask128 = _mm_set_epi32(m1, m2, m3, m4);
     for (size_t n = 0; n < count / 4; ++n) {
-        xmm0 = _mm_load_si128(source128++);
-        xmm1 = _mm_load_si128(source128++);
-        xmm2 = _mm_load_si128(source128++);
-        xmm3 = _mm_load_si128(source128++);
+        __m128i xmm0 = _mm_load_si128(source128++);
+        __m128i xmm1 = _mm_load_si128(source128++);
+        __m128i xmm2 = _mm_load_si128(source128++);
+        __m128i xmm3 = _mm_load_si128(source128++);
 
         _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm0, mask128));
         _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm1, mask128));

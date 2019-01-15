@@ -35,10 +35,10 @@ class MediaCommand : public ICIICommand
     {
     }
 
-    virtual int GetMinimumParameters() { return 1; }
+    int GetMinimumParameters() override { return 1; }
 
-    virtual void Setup(const std::vector<std::wstring>& parameters);
-    virtual void Execute();
+    void Setup(const std::vector<std::wstring>& parameters) override;
+    void Execute() override;
 
   private:
     std::wstring graphicProfile_;
@@ -54,10 +54,10 @@ class WriteCommand : public ICIICommand
     {
     }
 
-    virtual int GetMinimumParameters() { return 2; }
+    int GetMinimumParameters() override { return 2; }
 
-    virtual void Setup(const std::vector<std::wstring>& parameters);
-    virtual void Execute();
+    void Setup(const std::vector<std::wstring>& parameters) override;
+    void Execute() override;
 
   private:
     std::wstring targetName_;
@@ -71,16 +71,16 @@ class MiscellaneousCommand : public ICIICommand
 {
   public:
     MiscellaneousCommand(CIIProtocolStrategy* pPS)
-        : pCIIStrategy_(pPS)
-        , state_(-1)
+        : state_(-1)
         , layer_(0)
+        , pCIIStrategy_(pPS)
     {
     }
 
-    virtual int GetMinimumParameters() { return 5; }
+    int GetMinimumParameters() override { return 5; }
 
-    virtual void Setup(const std::vector<std::wstring>& parameters);
-    virtual void Execute();
+    void Setup(const std::vector<std::wstring>& parameters) override;
+    void Execute() override;
 
   private:
     std::wstring filename_;
@@ -99,10 +99,10 @@ class ImagestoreCommand : public ICIICommand
     {
     }
 
-    virtual int GetMinimumParameters() { return 1; }
+    int GetMinimumParameters() override { return 1; }
 
-    virtual void Setup(const std::vector<std::wstring>& parameters);
-    virtual void Execute();
+    void Setup(const std::vector<std::wstring>& parameters) override;
+    void Execute() override;
 
   private:
     std::wstring titleName_;
@@ -114,17 +114,17 @@ class KeydataCommand : public ICIICommand
 {
   public:
     KeydataCommand(CIIProtocolStrategy* pPS)
-        : pCIIStrategy_(pPS)
-        , state_(-1)
+        : state_(-1)
         , layer_(0)
         , casparLayer_(0)
+        , pCIIStrategy_(pPS)
     {
     }
 
-    virtual int GetMinimumParameters() { return 1; }
+    int GetMinimumParameters() override { return 1; }
 
-    virtual void Setup(const std::vector<std::wstring>& parameters);
-    virtual void Execute();
+    void Setup(const std::vector<std::wstring>& parameters) override;
+    void Execute() override;
 
   private:
     std::wstring titleName_;

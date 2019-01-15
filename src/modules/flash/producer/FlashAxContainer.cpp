@@ -40,14 +40,14 @@ _ATL_FUNC_INFO fnInfoFlashCallEvent        = {CC_STDCALL, VT_EMPTY, 1, {VT_BSTR}
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = {CC_STDCALL, VT_EMPTY, 1, {VT_I4}};
 
 FlashAxContainer::FlashAxContainer()
-    : bInPlaceActive_(FALSE)
-    , pTimerHelper(0)
+    : pTimerHelper(nullptr)
     , bInvalidRect_(false)
     , bReadyToRender_(false)
-    , bHasNewTiming_(false)
-    , m_lpDD4(0)
-    , timerCount_(0)
     , bIsEmpty_(true)
+    , bHasNewTiming_(false)
+    , m_lpDD4(nullptr)
+    , timerCount_(0)
+    , bInPlaceActive_(FALSE)
 {
 }
 FlashAxContainer::~FlashAxContainer()
@@ -57,7 +57,7 @@ FlashAxContainer::~FlashAxContainer()
         delete m_lpDD4;
     }
 
-    if (pTimerHelper != 0)
+    if (pTimerHelper != nullptr)
         delete pTimerHelper;
 }
 
@@ -75,7 +75,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::SetSite(IUnknown* pUnkSite)
         ATLASSERT(!hr && _T("No ServiceProvider!"));
     }
 
-    if (pUnkSite == NULL)
+    if (pUnkSite == nullptr)
         m_spServices.Release();
 
     return hr;
@@ -103,15 +103,15 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetMoniker(DWORD dwAssign, DWORD dwW
             }
         }
     */
-    if (ppmk != NULL)
-        *ppmk = NULL;
+    if (ppmk != nullptr)
+        *ppmk = nullptr;
     return E_FAIL;
 }
 
 HRESULT STDMETHODCALLTYPE FlashAxContainer::GetContainer(IOleContainer** ppContainer)
 {
     ATLTRACE(_T("IOleClientSite::GetContainer\n"));
-    (*ppContainer) = NULL;
+    *ppContainer = nullptr;
     return E_NOINTERFACE;
 }
 
@@ -139,7 +139,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::RequestNewObjectLayout()
 HRESULT STDMETHODCALLTYPE FlashAxContainer::GetWindow(HWND* pHwnd)
 {
     ATLTRACE(_T("IOleInPlaceSite::GetWindow\n"));
-    (*pHwnd) = NULL; // GetApplication()->GetMainWindow()->getHwnd();
+    *pHwnd = nullptr; // GetApplication()->GetMainWindow()->getHwnd();
     return E_FAIL;
 }
 HRESULT STDMETHODCALLTYPE FlashAxContainer::ContextSensitiveHelp(BOOL fEnterMode)
@@ -174,18 +174,18 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetWindowContext(IOleInPlaceFrame** 
                                                              LPOLEINPLACEFRAMEINFO pFrameInfo)
 {
     ATLTRACE(_T("IOleInPlaceSite::GetWindowContext\n"));
-    if (ppFrame != NULL)
-        *ppFrame = NULL;
-    if (ppDoc != NULL)
-        *ppDoc = NULL;
+    if (ppFrame != nullptr)
+        *ppFrame = nullptr;
+    if (ppDoc != nullptr)
+        *ppDoc = nullptr;
 
-    if (ppFrame == NULL || ppDoc == NULL || lprcPosRect == NULL || lprcClipRect == NULL)
+    if (ppFrame == nullptr || ppDoc == nullptr || lprcPosRect == nullptr || lprcClipRect == nullptr)
         return E_POINTER;
 
     pFrameInfo->fMDIApp       = FALSE;
-    pFrameInfo->haccel        = NULL;
+    pFrameInfo->haccel        = nullptr;
     pFrameInfo->cAccelEntries = 0;
-    pFrameInfo->hwndFrame     = NULL;
+    pFrameInfo->hwndFrame     = nullptr;
 
     lprcPosRect->top    = m_rcPos.top;
     lprcPosRect->left   = m_rcPos.left;
@@ -255,11 +255,11 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::OnInPlaceActivateEx(BOOL* pfNoRedraw
     if (dwFlags & ACTIVATE_WINDOWLESS) {
         hr = m_spOleObject->QueryInterface(__uuidof(IOleInPlaceObjectWindowless), (void**)&m_spInPlaceObjectWindowless);
 
-        if (m_spInPlaceObjectWindowless != NULL)
+        if (m_spInPlaceObjectWindowless != nullptr)
             m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &m_rcPos);
     }
 
-    return (m_spInPlaceObjectWindowless != NULL) ? S_OK : E_FAIL;
+    return m_spInPlaceObjectWindowless != nullptr ? S_OK : E_FAIL;
 }
 
 HRESULT STDMETHODCALLTYPE FlashAxContainer::OnInPlaceDeactivateEx(BOOL fNoRedraw)
@@ -387,7 +387,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetExtendedControl(IDispatch** ppDis
 {
     ATLTRACE(_T("IOleControlSite::GetExtendedControl"));
 
-    if (ppDisp == NULL)
+    if (ppDisp == nullptr)
         return E_POINTER;
     return m_spOleObject.QueryInterface(ppDisp);
 }
@@ -455,9 +455,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService(REFGUID rsid, REFIID ri
     // object
 
     ATLASSERT(ppvObj != NULL);
-    if (ppvObj == NULL)
+    if (ppvObj == nullptr)
         return E_POINTER;
-    *ppvObj = NULL;
+    *ppvObj = nullptr;
 
     HRESULT hr;
     // Author: Makarov Igor
@@ -466,10 +466,10 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService(REFGUID rsid, REFIID ri
     if (IsEqualGUID(rsid, IID_IDirectDraw3)) {
         if (!m_lpDD4) {
             m_lpDD4 = new IDirectDraw4Ptr;
-            hr      = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER);
+            hr      = m_lpDD4->CreateInstance(CLSID_DirectDraw, nullptr, CLSCTX_INPROC_SERVER);
             if (FAILED(hr)) {
                 delete m_lpDD4;
-                m_lpDD4 = NULL;
+                m_lpDD4 = nullptr;
                 CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
                 return E_NOINTERFACE;
             }
@@ -493,9 +493,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService(REFGUID rsid, REFIID ri
 HRESULT STDMETHODCALLTYPE FlashAxContainer::CreateTimer(ITimer* pReferenceTimer, ITimer** ppNewTimer)
 {
     ATLTRACE(_T("ITimerService::CreateTimer\n"));
-    if (pTimerHelper != 0) {
+    if (pTimerHelper != nullptr) {
         delete pTimerHelper;
-        pTimerHelper = 0;
+        pTimerHelper = nullptr;
     }
     pTimerHelper = new TimerHelper();
     return QueryInterface(__uuidof(ITimer), (void**)ppNewTimer);
@@ -504,10 +504,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::CreateTimer(ITimer* pReferenceTimer,
 HRESULT STDMETHODCALLTYPE FlashAxContainer::GetNamedTimer(REFGUID rguidName, ITimer** ppTimer)
 {
     ATLTRACE(_T("ITimerService::GetNamedTimer"));
-    if (ppTimer == NULL)
+    if (ppTimer == nullptr)
         return E_POINTER;
-    else
-        *ppTimer = NULL;
+    *ppTimer = nullptr;
 
     return E_FAIL;
 }
@@ -530,28 +529,28 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT     vtimeMin,
 {
     ATLTRACE(_T("Timer::Advise\n"));
 
-    if (pdwCookie == 0)
+    if (pdwCookie == nullptr)
         return E_POINTER;
 
-    if (pTimerHelper != 0) {
+    if (pTimerHelper != nullptr) {
         // static tbb::atomic<DWORD> NEXT_ID;
         pTimerHelper->Setup(0, vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
         *pdwCookie     = pTimerHelper->ID;
         bHasNewTiming_ = true;
 
         return S_OK;
-    } else
-        return E_OUTOFMEMORY;
+    }
+    return E_OUTOFMEMORY;
 }
 
 HRESULT STDMETHODCALLTYPE FlashAxContainer::Unadvise(/* [in] */ DWORD dwCookie)
 {
     ATLTRACE(_T("Timer::Unadvice\n"));
-    if (pTimerHelper != 0) {
-        pTimerHelper->pTimerSink = 0;
+    if (pTimerHelper != nullptr) {
+        pTimerHelper->pTimerSink = nullptr;
         return S_OK;
-    } else
-        return E_FAIL;
+    }
+    return E_FAIL;
 }
 
 HRESULT STDMETHODCALLTYPE FlashAxContainer::Freeze(/* [in] */ BOOL fFreeze)
@@ -563,7 +562,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::Freeze(/* [in] */ BOOL fFreeze)
 HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT* pvtime)
 {
     ATLTRACE(_T("Timer::GetTime\n"));
-    if (pvtime == 0)
+    if (pvtime == nullptr)
         return E_POINTER;
 
     //	return E_NOTIMPL;
@@ -573,8 +572,8 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT* pvtime)
 
 double FlashAxContainer::GetFPS()
 {
-    if (pTimerHelper != 0 && pTimerHelper->interval > 0)
-        return (1000.0 / static_cast<double>(pTimerHelper->interval));
+    if (pTimerHelper != nullptr && pTimerHelper->interval > 0)
+        return 1000.0 / static_cast<double>(pTimerHelper->interval);
 
     return 0.0;
 }
@@ -583,7 +582,7 @@ bool FlashAxContainer::IsReadyToRender() const { return bReadyToRender_; }
 
 void FlashAxContainer::EnterFullscreen()
 {
-    if (m_spInPlaceObjectWindowless != 0) {
+    if (m_spInPlaceObjectWindowless != nullptr) {
         LRESULT result;
         m_spInPlaceObjectWindowless->OnWindowMessage(WM_LBUTTONDOWN, 0, MAKELPARAM(1, 1), &result);
         m_spInPlaceObjectWindowless->OnWindowMessage(WM_LBUTTONUP, 0, MAKELPARAM(1, 1), &result);
@@ -666,33 +665,33 @@ void FlashAxContainer::DestroyAxControl()
 {
     GetControllingUnknown()->AddRef();
 
-    if ((!m_spViewObject) == false)
-        m_spViewObject->SetAdvise(DVASPECT_CONTENT, 0, NULL);
+    if (!m_spViewObject == false)
+        m_spViewObject->SetAdvise(DVASPECT_CONTENT, 0, nullptr);
 
-    if ((!m_spOleObject) == false) {
+    if (!m_spOleObject == false) {
         DispEventUnadvise(m_spOleObject, &DIID__IShockwaveFlashEvents);
         m_spOleObject->Unadvise(m_dwOleObject);
         m_spOleObject->Close(OLECLOSE_NOSAVE);
-        m_spOleObject->SetClientSite(NULL);
+        m_spOleObject->SetClientSite(nullptr);
     }
 
-    if ((!m_spUnknown) == false) {
+    if (!m_spUnknown == false) {
         CComPtr<IObjectWithSite> spSite;
         m_spUnknown->QueryInterface(__uuidof(IObjectWithSite), (void**)&spSite);
-        if (spSite != NULL)
-            spSite->SetSite(NULL);
+        if (spSite != nullptr)
+            spSite->SetSite(nullptr);
     }
 
-    if ((!m_spViewObject) == false)
+    if (!m_spViewObject == false)
         m_spViewObject.Release();
 
-    if ((!m_spInPlaceObjectWindowless) == false)
+    if (!m_spInPlaceObjectWindowless == false)
         m_spInPlaceObjectWindowless.Release();
 
-    if ((!m_spOleObject) == false)
+    if (!m_spOleObject == false)
         m_spOleObject.Release();
 
-    if ((!m_spUnknown) == false)
+    if (!m_spUnknown == false)
         m_spUnknown.Release();
 }
 
@@ -708,7 +707,7 @@ FlashAxContainer::CreateAxControl()
     CLSID   clsid;
     HRESULT hr = CLSIDFromString((LPOLESTR)flashGUID_, &clsid);
     if (SUCCEEDED(hr))
-        hr = CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER, __uuidof(IUnknown), (void**)&m_spUnknown);
+        hr = CoCreateInstance(clsid, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUnknown), (void**)&m_spUnknown);
 
     // Start ActivateAx
     if (SUCCEEDED(hr)) {
@@ -729,7 +728,7 @@ FlashAxContainer::CreateAxControl()
             {
                 // Clean up and return
                 if (m_dwMiscStatus & OLEMISC_SETCLIENTSITEFIRST)
-                    m_spOleObject->SetClientSite(NULL);
+                    m_spOleObject->SetClientSite(nullptr);
 
                 m_dwMiscStatus = 0;
                 m_spOleObject.Release();
@@ -745,13 +744,12 @@ FlashAxContainer::CreateAxControl()
             }
 
             CComPtr<IShockwaveFlash> spFlash;
-            HRESULT                  hResultQuality;
             HRESULT                  hr2 = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**)&spFlash);
             if (hr2 == S_OK && spFlash) {
                 if (FAILED(spFlash->put_WMode(SysAllocString(L"Transparent"))))
                     CASPAR_LOG(warning) << print_() << L" Failed to set flash container to transparent mode.";
                 // spFlash->put_WMode(TEXT("ogl"));
-                hResultQuality = spFlash->put_Quality2(SysAllocString(L"Best"));
+                HRESULT hResultQuality = spFlash->put_Quality2(SysAllocString(L"Best"));
             }
             if (SUCCEEDED(DispEventAdvise(spFlash, &DIID__IShockwaveFlashEvents))) {
             }
@@ -780,18 +778,18 @@ FlashAxContainer::CreateAxControl()
                 m_rcPos.bottom = m_rcPos.top + m_pxSize.cy;
 
                 CComQIPtr<IOleClientSite> spClientSite(GetControllingUnknown());
-                hr = m_spOleObject->DoVerb(OLEIVERB_INPLACEACTIVATE, NULL, spClientSite, 0, NULL, &m_rcPos);
+                hr = m_spOleObject->DoVerb(OLEIVERB_INPLACEACTIVATE, nullptr, spClientSite, 0, nullptr, &m_rcPos);
             }
         }
         CComPtr<IObjectWithSite> spSite;
         m_spUnknown->QueryInterface(__uuidof(IObjectWithSite), (void**)&spSite);
-        if (spSite != NULL)
+        if (spSite != nullptr)
             spSite->SetSite(GetControllingUnknown());
     }
     // End ActivateAx
 
     //	hr = E_FAIL;
-    if (FAILED(hr) || m_spUnknown == NULL) {
+    if (FAILED(hr) || m_spUnknown == nullptr) {
         return E_FAIL;
         // We don't have a control or something failed so release
         //		ReleaseAll();
@@ -802,7 +800,7 @@ FlashAxContainer::CreateAxControl()
 
 void FlashAxContainer::SetSize(size_t width, size_t height)
 {
-    if (m_spInPlaceObjectWindowless != 0) {
+    if (m_spInPlaceObjectWindowless != nullptr) {
         m_rcPos.top    = 0;
         m_rcPos.left   = 0;
         m_rcPos.right  = width;
@@ -826,10 +824,9 @@ HRESULT
 FlashAxContainer::QueryControl(REFIID iid, void** ppUnk)
 {
     ATLASSERT(ppUnk != NULL);
-    if (ppUnk == NULL)
+    if (ppUnk == nullptr)
         return E_POINTER;
-    HRESULT hr;
-    hr = m_spOleObject->QueryInterface(iid, ppUnk);
+    HRESULT hr = m_spOleObject->QueryInterface(iid, ppUnk);
     return hr;
 }
 
@@ -837,7 +834,8 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 {
     //	ATLTRACE(_T("FlashAxContainer::DrawControl\n"));
     DVASPECTINFO aspectInfo = {sizeof(DVASPECTINFO), DVASPECTINFOFLAG_CANOPTIMIZE};
-    HRESULT hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
+    HRESULT      hr         = m_spViewObject->Draw(
+        DVASPECT_CONTENT, -1, &aspectInfo, nullptr, nullptr, targetDC, nullptr, nullptr, nullptr, NULL);
     bInvalidRect_ = false;
     /*	const video_format_desc& fmtDesc = video_format_desc::FormatDescriptions[format_];
 
@@ -859,7 +857,7 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
         bDirtyRects_.clear();
     */
 
-    return (hr == S_OK);
+    return hr == S_OK;
 }
 
 void FlashAxContainer::Tick()

@@ -48,8 +48,8 @@ class device final : public std::enable_shared_from_this<device>
     template <typename Func>
     auto dispatch_async(Func&& func)
     {
-        typedef decltype(func())                  result_type;
-        typedef std::packaged_task<result_type()> task_type;
+        using result_type = decltype(func());
+        using task_type   = std::packaged_task<result_type()>;
 
         auto task   = std::make_shared<task_type>(std::forward<Func>(func));
         auto future = task->get_future();

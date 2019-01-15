@@ -243,8 +243,7 @@ static com_ptr<IDeckLink> get_device(size_t device_index)
 
     if (n != device_index || !decklink)
         CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info("Decklink device " + boost::lexical_cast<std::string>(device_index) +
-                                           " not found."));
+                               << msg_info("Decklink device " + std::to_string(device_index) + " not found."));
 
     return decklink;
 }

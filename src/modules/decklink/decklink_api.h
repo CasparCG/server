@@ -41,8 +41,8 @@
 
 namespace caspar { namespace decklink {
 
-typedef BSTR         String;
-typedef unsigned int UINT32;
+using String = BSTR;
+using UINT32 = unsigned int;
 
 static std::wstring to_string(String bstr_string)
 {
@@ -73,8 +73,8 @@ static P<T> wrap_raw(T* ptr, bool already_referenced = false)
         P<T> p;
         p.Attach(ptr);
         return p;
-    } else
-        return P<T>(ptr);
+    }
+    return P<T>(ptr);
 }
 
 static com_ptr<IDeckLinkIterator> create_iterator()
@@ -115,11 +115,11 @@ T* get_raw(const CComPtr<T>& ptr)
 
 namespace caspar { namespace decklink {
 
-typedef const char* String;
-typedef bool        BOOL;
+using String = const char*;
+using BOOL   = bool;
 #define TRUE true
 #define FALSE false
-typedef uint32_t    UINT32;
+using UINT32 = uint32_t;
 
 static std::wstring to_string(String utf16_string) { return u16(utf16_string); }
 

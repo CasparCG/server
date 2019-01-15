@@ -187,9 +187,9 @@ image_transform image_transform::tween(double                 time,
         do_tween(time, source.chroma.spill_suppress_saturation, dest.chroma.spill_suppress_saturation, duration, tween);
     result.chroma.enable    = dest.chroma.enable;
     result.chroma.show_mask = dest.chroma.show_mask;
-    result.is_key           = source.is_key | dest.is_key;
-    result.invert           = source.invert | dest.invert;
-    result.is_mix           = source.is_mix | dest.is_mix;
+    result.is_key           = source.is_key || dest.is_key;
+    result.invert           = source.invert || dest.invert;
+    result.is_mix           = source.is_mix || dest.is_mix;
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;
 
@@ -325,9 +325,11 @@ boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
 {
     if (boost::iequals(str, L"none")) {
         return chroma::legacy_type::none;
-    } else if (boost::iequals(str, L"green")) {
+    }
+    if (boost::iequals(str, L"green")) {
         return chroma::legacy_type::green;
-    } else if (boost::iequals(str, L"blue")) {
+    }
+    if (boost::iequals(str, L"blue")) {
         return chroma::legacy_type::blue;
     } else {
         return boost::none;

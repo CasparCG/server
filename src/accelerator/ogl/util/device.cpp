@@ -52,15 +52,15 @@ using namespace boost::asio;
 
 struct device::impl : public std::enable_shared_from_this<impl>
 {
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<texture>> texture_queue_t;
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>  buffer_queue_t;
+    using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
+    using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     sf::Context device_;
 
     std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>  host_pools_;
 
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>> sync_queue_t;
+    using sync_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     sync_queue_t sync_queue_;
 
@@ -73,8 +73,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::thread                         thread_;
 
     impl()
-        : work_(make_work_guard(service_))
-        , device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -130,8 +130,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template <typename Func>
     auto spawn_async(Func&& func)
     {
-        typedef decltype(func(std::declval<yield_context>()))  result_type;
-        typedef std::packaged_task<result_type(yield_context)> task_type;
+        using result_type = decltype(func(std::declval<yield_context>()));
+        using task_type   = std::packaged_task<result_type(yield_context)>;
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
@@ -142,8 +142,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template <typename Func>
     auto dispatch_async(Func&& func)
     {
-        typedef decltype(func())                  result_type;
-        typedef std::packaged_task<result_type()> task_type;
+        using result_type = decltype(func());
+        using task_type   = std::packaged_task<result_type()>;
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
@@ -165,7 +165,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
-        auto pool = &device_pools_[stride - 1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+        auto pool = &device_pools_[stride - 1][width << 16 & 0xFFFF0000 | height & 0x0000FFFF];
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
@@ -213,7 +213,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         return dispatch_async([=] {
             std::shared_ptr<buffer> buf;
 
-            auto tmp = source.template storage<std::shared_ptr<buffer>>();
+            auto tmp = source.storage<std::shared_ptr<buffer>>();
             if (tmp) {
                 buf = *tmp;
             } else {

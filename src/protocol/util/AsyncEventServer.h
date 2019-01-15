@@ -31,8 +31,8 @@
 
 namespace caspar { namespace IO {
 
-typedef std::function<std::pair<std::wstring, std::shared_ptr<void>>(const std::string& ipv4_address)>
-    lifecycle_factory_t;
+using lifecycle_factory_t =
+    std::function<std::pair<std::wstring, std::shared_ptr<void>>(const std::string& ipv4_address)>;
 
 class AsyncEventServer : boost::noncopyable
 {

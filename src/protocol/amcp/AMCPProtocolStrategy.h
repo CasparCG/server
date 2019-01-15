@@ -44,8 +44,8 @@ class AMCPProtocolStrategy
 
     virtual ~AMCPProtocolStrategy();
 
-    virtual void        Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
-    virtual std::string GetCodepage() const { return "UTF-8"; }
+    void        Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) override;
+    std::string GetCodepage() const override { return "UTF-8"; }
 
   private:
     struct impl;

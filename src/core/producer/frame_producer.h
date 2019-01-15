@@ -134,9 +134,8 @@ struct frame_producer_dependencies
                                 const spl::shared_ptr<const cg_producer_registry>&    cg_registry);
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
-                                                            const std::vector<std::wstring>&)>
-    producer_factory_t;
+using producer_factory_t = std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
+                                                                               const std::vector<std::wstring>&)>;
 
 class frame_producer_registry : boost::noncopyable
 {

@@ -53,8 +53,8 @@ class stage final
     stage& operator=(const stage&);
 
   public:
-    typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
-    typedef std::tuple<int, transform_func_t, unsigned int, tweener>      transform_tuple_t;
+    using transform_func_t  = std::function<struct frame_transform(struct frame_transform)>;
+    using transform_tuple_t = std::tuple<int, transform_func_t, unsigned int, tweener>;
 
     explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
 

@@ -64,10 +64,10 @@ class bitmap
   public:
     bitmap(int width, int height)
         : bmp_data_(nullptr)
-        , hdc_(CreateCompatibleDC(0), DeleteDC)
+        , hdc_(CreateCompatibleDC(nullptr), DeleteDC)
     {
         BITMAPINFO info;
-        memset(&info, 0, sizeof(BITMAPINFO));
+        std::memset(&info, 0, sizeof(BITMAPINFO));
         info.bmiHeader.biBitCount    = 32;
         info.bmiHeader.biCompression = BI_RGB;
         info.bmiHeader.biHeight      = static_cast<LONG>(-height);
@@ -75,9 +75,10 @@ class bitmap
         info.bmiHeader.biSize        = sizeof(BITMAPINFO);
         info.bmiHeader.biWidth       = static_cast<LONG>(width);
 
-        bmp_.reset(CreateDIBSection(
-                       static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0),
-                   DeleteObject);
+        bmp_.reset(
+            CreateDIBSection(
+                static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), nullptr, 0),
+            DeleteObject);
         SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());
 
         if (!bmp_data_)
@@ -198,12 +199,12 @@ class flash_renderer
                    const std::wstring&                         filename,
                    int                                         width,
                    int                                         height)
-        : graph_(graph)
-        , filename_(filename)
+        : filename_(filename)
         , width_(width)
         , height_(height)
         , frame_factory_(frame_factory)
         , bmp_(width, height)
+        , graph_(graph)
     {
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -306,7 +307,7 @@ class flash_renderer
 
         MSG msg;
         while (PeekMessage(&msg,
-                           NULL,
+                           nullptr,
                            NULL,
                            NULL,
                            PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
@@ -329,7 +330,7 @@ class flash_renderer
     std::wstring print()
     {
         return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring() + L"|" +
-               boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_) + L"]";
+               std::to_wstring(width_) + L"x" + std::to_wstring(height_) + L"]";
     }
 };
 
@@ -456,8 +457,7 @@ struct flash_producer : public core::frame_producer
 
     std::wstring print() const override
     {
-        return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" +
-               boost::lexical_cast<std::wstring>(fps_) + L"]";
+        return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + std::to_wstring(fps_) + L"]";
     }
 
     std::wstring name() const override { return L"flash"; }
@@ -534,11 +534,10 @@ struct flash_producer : public core::frame_producer
 
         if (frame_buffer_.empty()) {
             return false;
-        } else {
-            output_buffer_.push(std::move(frame_buffer_.front()));
-            frame_buffer_.pop();
-            return true;
         }
+        output_buffer_.push(std::move(frame_buffer_.front()));
+        frame_buffer_.pop();
+        return true;
     }
 
     core::draw_frame render_frame(bool allow_faster_rendering)

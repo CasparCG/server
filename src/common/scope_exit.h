@@ -64,7 +64,7 @@ class scope_exit_helper
 };
 
 template <typename T>
-scope_exit<typename std::decay<T>::type> operator+(scope_exit_helper, T&& exitScope)
+scope_exit<typename std::decay<T>::type> operator+(scope_exit_helper /*unused*/, T&& exitScope)
 {
     return scope_exit<typename std::decay<T>::type>(std::forward<T>(exitScope));
 }

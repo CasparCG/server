@@ -39,6 +39,7 @@
 
 #include <future>
 #include <string>
+#include <utility>
 
 namespace caspar { namespace flash {
 
@@ -61,7 +62,7 @@ class flash_cg_proxy
     explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer,
                             std::wstring                                 base_folder = env::template_folder())
         : flash_producer_(producer)
-        , base_folder_(base_folder)
+        , base_folder_(std::move(base_folder))
     {
     }
 
@@ -75,7 +76,7 @@ class flash_cg_proxy
     {
         auto filename = template_name;
 
-        if (filename.size() > 0 && filename[0] == L'/')
+        if (!filename.empty() && filename[0] == L'/')
             filename = filename.substr(1, filename.size() - 1);
 
         filename = (boost::filesystem::path(base_folder_) / filename).wstring();
@@ -127,7 +128,7 @@ class flash_cg_proxy
         flash_producer_->call(std::move(params));
     }
 
-    void stop(int layer, unsigned int) override
+    void stop(int layer, unsigned int /*mix_out_duration*/) override
     {
         verify_flash_player();
 
@@ -257,7 +258,7 @@ std::wstring version()
 
         dwType = REG_SZ;
         dwSize = sizeof(ver_str);
-        RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Version"), nullptr, &dwType, reinterpret_cast<PBYTE>(&ver_str), &dwSize);
 
         version = ver_str;
 

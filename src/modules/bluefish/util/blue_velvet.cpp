@@ -19,9 +19,12 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "blue_velvet.h"
 #include "../StdAfx.h"
+
 #include "../interop/BlueVelvetCUtils.h"
+
+#include "blue_velvet.h"
+
 #include <common/utf.h>
 #include <core/video_format.h>
 
@@ -66,9 +69,9 @@ bool bvc_wrapper::init_function_pointers()
     bool res = false;
 #if defined(_WIN32)
 #ifdef _DEBUG
-    h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64_d.dll", NULL, 0), FreeLibrary);
+    h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64_d.dll", nullptr, 0), FreeLibrary);
 #else
-    h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64.dll", NULL, 0), FreeLibrary);
+    h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64.dll", nullptr, 0), FreeLibrary);
 #endif
 
 #elif defined(__APPLE__)
@@ -444,8 +447,7 @@ bool is_epoch_neutron_1i2o_card(bvc_wrapper& blue)
     blue.get_card_property32(EPOCH_GET_PRODUCT_ID, val);
     if (val == ORAC_NEUTRON_1_IN_2_OUT_FIRMWARE_PRODUCTID)
         return true;
-    else
-        return false;
+    return false;
 }
 
 bool is_epoch_neutron_3o_card(bvc_wrapper& blue)
@@ -455,8 +457,7 @@ bool is_epoch_neutron_3o_card(bvc_wrapper& blue)
 
     if (val == ORAC_NEUTRON_0_IN_3_OUT_FIRMWARE_PRODUCTID)
         return true;
-    else
-        return false;
+    return false;
 }
 
 std::wstring get_card_desc(bvc_wrapper blue, int device_id)
@@ -510,11 +511,10 @@ std::wstring get_card_desc(bvc_wrapper blue, int device_id)
 
 EVideoMode get_video_mode(bvc_wrapper& blue, const core::video_format_desc& format_desc)
 {
-    EVideoMode  vid_fmt     = VID_FMT_INVALID;
     BLUE_UINT32 invalid_fmt = 0;
     BErr        err         = 0;
     err                     = blue.get_card_property32(INVALID_VIDEO_MODE_FLAG, invalid_fmt);
-    vid_fmt                 = vid_fmt_from_video_format(format_desc.format);
+    EVideoMode vid_fmt      = vid_fmt_from_video_format(format_desc.format);
 
     if (vid_fmt == VID_FMT_INVALID)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"video-mode not supported: " + format_desc.name));
@@ -637,7 +637,7 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, E
             break;
     }
 
-    if (!is_progressive)
+    if (is_progressive == 0u)
         field_count = 2;
 
     fmt.field_count   = field_count;
