@@ -378,8 +378,8 @@ class decklink_producer : public IDeckLinkInputCallback
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        int status = 0;
-        int flags  = bmdVideoInputEnableFormatDetection;
+        BOOL status = FALSE;
+        int  flags  = bmdVideoInputEnableFormatDetection;
 
         if (!format.empty()) {
             flags = 0;
