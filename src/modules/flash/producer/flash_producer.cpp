@@ -50,10 +50,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
-
-#include <tbb/spin_mutex.h>
 
 #include <functional>
 

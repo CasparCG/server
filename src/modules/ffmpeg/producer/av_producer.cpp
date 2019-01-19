@@ -7,7 +7,6 @@
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>

@@ -90,13 +90,6 @@ namespace caspar { namespace bluefish {
 
 static const size_t MAX_DECODED_AUDIO_BUFFER_SIZE = 2002 * 16; // max 2002 samples, 16 channels.
 
-template <typename T>
-std::wstring to_string(const T& cadence)
-{
-    return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<int>(i); }),
-                       L", ");
-}
-
 unsigned int get_bluesdk_input_videochannel_from_streamid(int stream_id)
 {
     /*This function would return the corresponding EBlueVideoChannel from them stream_id argument */

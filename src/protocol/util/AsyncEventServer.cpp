@@ -31,7 +31,6 @@
 #include <string>
 
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_queue.h>
@@ -205,8 +204,7 @@ class connection : public spl::enable_shared_from_this<connection>
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
         , service_(service)
-        , listen_port_(socket_->is_open() ? boost::lexical_cast<std::wstring>(socket_->local_endpoint().port())
-                                          : L"no-port")
+        , listen_port_(socket_->is_open() ? std::to_wstring(socket_->local_endpoint().port()) : L"no-port")
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
         , is_writing_(false)
@@ -344,7 +342,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
     std::wstring print() const
     {
-        return L"async_event_server[:" + boost::lexical_cast<std::wstring>(acceptor_.local_endpoint().port()) + L"]";
+        return L"async_event_server[:" + std::to_wstring(acceptor_.local_endpoint().port()) + L"]";
     }
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)

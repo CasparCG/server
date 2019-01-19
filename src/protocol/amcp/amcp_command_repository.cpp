@@ -25,7 +25,6 @@
 
 #include <common/env.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <map>

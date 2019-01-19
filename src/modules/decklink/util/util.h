@@ -27,8 +27,6 @@
 
 #include "../decklink_api.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <string>
 
 namespace caspar { namespace decklink {
@@ -190,8 +188,8 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode f
     }
 
     if (!m)
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info("Device could not find requested video-format: " +
-                                                        boost::lexical_cast<std::string>(format)));
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Device could not find requested video-format: " + std::to_string(format)));
 
     com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 

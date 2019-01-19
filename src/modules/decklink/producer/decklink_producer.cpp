@@ -82,13 +82,6 @@ using namespace caspar::ffmpeg;
 
 namespace caspar { namespace decklink {
 
-template <typename T>
-std::wstring to_string(const T& cadence)
-{
-    return boost::join(
-        cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
-}
-
 struct Filter
 {
     std::shared_ptr<AVFilterGraph> graph        = nullptr;
@@ -672,7 +665,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
     std::wstring print() const
     {
-        return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + input_format.name + L"]";
+        return model_name_ + L" [" + std::to_wstring(device_index_) + L"|" + input_format.name + L"]";
     }
 
     boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
@@ -700,7 +693,7 @@ class decklink_producer_proxy : public core::frame_producer
                                      const std::wstring&                         format,
                                      bool                                        freeze_on_lost)
         : length_(length)
-        , executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+        , executor_(L"decklink_producer[" + std::to_wstring(device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {

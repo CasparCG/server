@@ -35,9 +35,7 @@
 
 #include <core/frame/frame_transform.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
 
 #include <functional>
 #include <future>

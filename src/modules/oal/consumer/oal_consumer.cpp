@@ -29,7 +29,6 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
-#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -37,9 +36,6 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>

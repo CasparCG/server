@@ -31,9 +31,6 @@
 
 #include <common/timer.h>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/optional.hpp>
-
 namespace caspar { namespace core {
 
 struct layer::impl

@@ -1230,7 +1230,7 @@ std::wstring channel_grid_command(command_context& ctx)
     ctx.channel_index = self.channel->index();
     ctx.channel       = self;
     ctx.parameters.clear();
-    ctx.parameters.push_back(boost::lexical_cast<std::wstring>(square_side_length));
+    ctx.parameters.push_back(std::to_wstring(square_side_length));
     mixer_grid_command(ctx);
 
     return L"202 CHANNEL_GRID OK\r\n";

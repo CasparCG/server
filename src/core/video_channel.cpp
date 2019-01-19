@@ -42,8 +42,6 @@
 #include <core/diagnostics/call_context.h>
 #include <core/mixer/image/image_mixer.h>
 
-#include <boost/lexical_cast.hpp>
-
 #include <mutex>
 #include <string>
 #include <unordered_map>

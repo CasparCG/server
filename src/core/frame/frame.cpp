@@ -37,8 +37,6 @@
 #include <functional>
 #include <vector>
 
-#include <boost/lexical_cast.hpp>
-
 namespace caspar { namespace core {
 
 struct mutable_frame::impl : boost::noncopyable

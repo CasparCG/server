@@ -27,7 +27,6 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 

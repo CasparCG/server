@@ -30,7 +30,6 @@
 #include <common/diagnostics/graph.h>
 
 #include <boost/container/flat_map.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 

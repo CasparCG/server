@@ -41,8 +41,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/lexical_cast.hpp>
-
 #include <tbb/concurrent_queue.h>
 
 #include <atomic>

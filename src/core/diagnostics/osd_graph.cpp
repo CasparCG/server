@@ -34,7 +34,6 @@
 #include <SFML/Graphics.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
