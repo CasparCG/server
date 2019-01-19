@@ -214,7 +214,7 @@ struct cg_producer_registry::impl
                 return rec.second;
         }
 
-        auto protocol = caspar::protocol_split(filename).at(0);
+        auto protocol = caspar::protocol_split(filename).first;
         if (!protocol.empty()) {
             auto ext = path(filename).extension().wstring();
 

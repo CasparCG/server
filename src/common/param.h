@@ -49,20 +49,14 @@ void replace_placeholders(const std::wstring& placeholder, const std::wstring& r
         boost::ireplace_all(param, placeholder, replacement);
 }
 
-static std::vector<std::wstring> protocol_split(const std::wstring& s)
+static std::pair<std::wstring, std::wstring> protocol_split(const std::wstring& s)
 {
-    std::vector<std::wstring> result;
-    size_t                    pos;
-
+    size_t pos;
     if ((pos = s.find(L"://")) != std::wstring::npos) {
-        result.push_back(s.substr(0, pos));
-        result.push_back(s.substr(pos + 3));
-    } else {
-        result.push_back(L"");
-        result.push_back(s);
+        return std::make_pair(s.substr(0, pos), s.substr(pos + 3));
     }
 
-    return result;
+    return std::make_pair(L"", s);
 }
 
 template <typename T, typename C>

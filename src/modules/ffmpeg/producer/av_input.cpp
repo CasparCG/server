@@ -5,7 +5,10 @@
 
 #include <common/except.h>
 #include <common/os/thread.h>
+#include <common/param.h>
 #include <common/scope_exit.h>
+
+#include <set>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -108,17 +111,27 @@ void Input::reset()
     AVDictionary* options = nullptr;
     CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
-    if (filename_.find("http://") == 0 || filename_.find("https://") == 0) {
+    static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = {L"dshow", L"v4l2", L"iec61883"};
+
+    AVInputFormat* input_format = nullptr;
+    auto           url_parts    = caspar::protocol_split(u16(filename_));
+    if (url_parts.first == L"http" || url_parts.first == L"https") {
         FF(av_dict_set(&options, "http_persistent", "0", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "http_multiple", "0", 0));   // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
+    } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
+        input_format = av_find_input_format(u8(url_parts.first).c_str());
+        filename_    = u8(url_parts.second);
     }
-    // TODO (fix) timeout?
-    FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
+
+    if (input_format == nullptr) {
+        // TODO (fix) timeout?
+        FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
+    }
 
     AVFormatContext* ic = nullptr;
-    FF(avformat_open_input(&ic, filename_.c_str(), nullptr, &options));
+    FF(avformat_open_input(&ic, filename_.c_str(), input_format, &options));
     ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
