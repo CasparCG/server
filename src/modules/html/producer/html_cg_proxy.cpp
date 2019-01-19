@@ -59,7 +59,7 @@ void html_cg_proxy::remove(int layer) { impl_->producer->call({L"remove()"}); }
 
 void html_cg_proxy::play(int layer) { impl_->producer->call({L"play()"}); }
 
-void html_cg_proxy::stop(int layer, unsigned int mix_out_duration) { impl_->producer->call({L"stop()"}); }
+void html_cg_proxy::stop(int layer) { impl_->producer->call({L"stop()"}); }
 
 void html_cg_proxy::next(int layer) { impl_->producer->call({L"next()"}); }
 

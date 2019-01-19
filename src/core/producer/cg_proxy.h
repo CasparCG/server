@@ -44,13 +44,13 @@ class cg_proxy
                              const std::wstring& template_name,
                              bool                play_on_load,
                              const std::wstring& start_from_label = L"",
-                             const std::wstring& data             = L"")            = 0;
-    virtual void         remove(int layer)                              = 0;
-    virtual void         play(int layer)                                = 0;
-    virtual void         stop(int layer, unsigned int mix_out_duration) = 0;
-    virtual void         next(int layer)                                = 0;
-    virtual void         update(int layer, const std::wstring& data)    = 0;
-    virtual std::wstring invoke(int layer, const std::wstring& label)   = 0;
+                             const std::wstring& data             = L"")          = 0;
+    virtual void         remove(int layer)                            = 0;
+    virtual void         play(int layer)                              = 0;
+    virtual void         stop(int layer)                              = 0;
+    virtual void         next(int layer)                              = 0;
+    virtual void         update(int layer, const std::wstring& data)  = 0;
+    virtual std::wstring invoke(int layer, const std::wstring& label) = 0;
 
     static const spl::shared_ptr<cg_proxy>& empty();
 };

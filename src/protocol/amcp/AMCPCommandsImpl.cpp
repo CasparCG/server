@@ -622,7 +622,7 @@ spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 std::wstring cg_stop_command(command_context& ctx)
 {
     int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
-    get_expected_cg_proxy(ctx)->stop(layer, 0);
+    get_expected_cg_proxy(ctx)->stop(layer);
 
     return L"202 CG OK\r\n";
 }

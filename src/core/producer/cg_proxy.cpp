@@ -52,7 +52,7 @@ const spl::shared_ptr<cg_proxy>& cg_proxy::empty()
         void         add(int, const std::wstring&, bool, const std::wstring&, const std::wstring&) override {}
         void         remove(int) override {}
         void         play(int) override {}
-        void         stop(int, unsigned int) override {}
+        void         stop(int) override {}
         void         next(int) override {}
         void         update(int, const std::wstring&) override {}
         std::wstring invoke(int, const std::wstring&) override { return L""; }

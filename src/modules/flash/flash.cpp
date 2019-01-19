@@ -128,7 +128,7 @@ class flash_cg_proxy
         flash_producer_->call(std::move(params));
     }
 
-    void stop(int layer, unsigned int /*mix_out_duration*/) override
+    void stop(int layer) override
     {
         verify_flash_player();
 
