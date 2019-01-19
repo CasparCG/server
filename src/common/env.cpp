@@ -32,7 +32,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -51,14 +51,6 @@ void check_is_configured()
 {
     if (pt.empty())
         CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
-}
-
-std::wstring clean_path(std::wstring path)
-{
-    boost::replace_all(path, L"\\\\", L"/");
-    boost::replace_all(path, L"\\", L"/");
-
-    return path;
 }
 
 std::wstring ensure_trailing_slash(std::wstring folder)

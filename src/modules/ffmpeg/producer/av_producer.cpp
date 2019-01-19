@@ -908,13 +908,7 @@ struct AVProducer::Impl
                     return true;
                 }
 
-                if (it->second.input.size() >= 256) {
-                    if (min.first != -1) {
-                        decoders_[min.first].input.push(nullptr);
-                        return true;
-                    }
-                    return false;
-                }
+                // TODO (fix): limit it->second.input.size()?
 
                 result = true;
 

@@ -152,6 +152,9 @@ struct cg_producer_registry::impl
             diagnostics::call_context::for_thread().layer         = render_layer;
 
             producer = found->producer_factory(dependencies, filename);
+            if (producer == core::frame_producer::empty())
+                return cg_proxy::empty();
+
             video_channel->stage().load(render_layer, producer);
             video_channel->stage().play(render_layer);
         }
@@ -211,7 +214,7 @@ struct cg_producer_registry::impl
                 return rec.second;
         }
 
-        auto protocol = caspar::protocol_split(filename).at(0);
+        auto protocol = caspar::protocol_split(filename).first;
         if (!protocol.empty()) {
             auto ext = path(filename).extension().wstring();
 
