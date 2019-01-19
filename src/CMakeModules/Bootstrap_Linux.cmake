@@ -75,11 +75,21 @@ ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
 
 ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
 ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
-ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-terminate -Wno-multichar -Wno-cpp)
 ADD_COMPILE_OPTIONS (-msse3)
 ADD_COMPILE_OPTIONS (-mssse3)
 ADD_COMPILE_OPTIONS (-msse4.1)
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
+
+ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)
+IF (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    ADD_COMPILE_OPTIONS (-Wno-terminate)
+ELSEIF (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Help TBB figure out what compiler support for c++11 features
+    # https://github.com/01org/tbb/issues/22
+    string(REPLACE "." "0" TBB_USE_GLIBCXX_VERSION ${CMAKE_CXX_COMPILER_VERSION})
+    message(STATUS "ADDING: -DTBB_USE_GLIBCXX_VERSION=${TBB_USE_GLIBCXX_VERSION}")
+    add_definitions(-DTBB_USE_GLIBCXX_VERSION=${TBB_USE_GLIBCXX_VERSION})
+ENDIF ()
 
 IF (POLICY CMP0045)
 	CMAKE_POLICY (SET CMP0045 OLD)

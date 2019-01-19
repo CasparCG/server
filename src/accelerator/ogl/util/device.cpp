@@ -165,7 +165,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
-        auto pool = &device_pools_[stride - 1][width << 16 & 0xFFFF0000 | height & 0x0000FFFF];
+        auto pool = &device_pools_[stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {

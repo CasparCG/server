@@ -652,7 +652,7 @@ struct AVProducer::Impl
                 auto end  = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
                 auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
 
-                buffer_eof_ = video_filter_.eof && audio_filter_.eof ||
+                buffer_eof_ = (video_filter_.eof && audio_filter_.eof) ||
                               av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
 
                 if (buffer_eof_) {
@@ -674,7 +674,7 @@ struct AVProducer::Impl
                 [&] { progress.fetch_or(video_filter_()); },
                 [&] { progress.fetch_or(audio_filter_(audio_cadence[0])); });
 
-            if (!video_filter_.frame && !video_filter_.eof || !audio_filter_.frame && !audio_filter_.eof) {
+            if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                 if (!progress) {
                     if (warning_debounce++ % 500 == 100) {
                         if (!video_filter_.frame && !video_filter_.eof) {

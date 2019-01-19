@@ -193,6 +193,7 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
             av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
             break;
         case core::pixel_format::gray:
+        case core::pixel_format::luma:
             av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
             break;
         case core::pixel_format::ycbcr: {
@@ -216,6 +217,9 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
         }
         case core::pixel_format::ycbcra:
             av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
+            break;
+        case core::pixel_format::count:
+        case core::pixel_format::invalid:
             break;
     }
 

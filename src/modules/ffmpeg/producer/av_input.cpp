@@ -35,7 +35,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
                     cond_.wait(lock,
-                               [&] { return ic_ && (!eof_ && output_.size() < output_capacity_) || abort_request_; });
+                               [&] { return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_; });
                 }
 
                 if (abort_request_) {

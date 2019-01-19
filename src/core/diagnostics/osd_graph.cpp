@@ -177,6 +177,8 @@ class context : public drawable
                     scroll_position_ += e.mouseWheel.delta * 15;
                     calculate_view_ = true;
                     break;
+                default:
+                    break;
             }
         }
 
