@@ -41,15 +41,15 @@ void prec_timer::tick_nanos(int64_t ticks_to_wait)
     auto t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 
     if (time_ != 0) {
-        bool done = 0;
+        bool done = false;
         do {
             auto ticks_passed = t - time_;
             auto ticks_left   = ticks_to_wait - ticks_passed;
 
             if (t < time_) // time wrap
-                done = 1;
+                done = true;
             if (ticks_passed >= ticks_to_wait)
-                done = 1;
+                done = true;
 
             if (!done) {
                 // if > 0.002s left, do Sleep(1), which will actually sleep some

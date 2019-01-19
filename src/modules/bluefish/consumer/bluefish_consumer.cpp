@@ -253,7 +253,7 @@ struct bluefish_consumer : boost::noncopyable
         if (BLUE_FAIL(blue_->set_card_property32(VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_PLAYBACK)))
             CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");
 
-        if (is_epoch_card((*blue_)))
+        if (is_epoch_card(*blue_))
             setup_hardware_downstream_keyer(config.hardware_keyer_value, config.keyer_audio_source);
 
         // ok here we create a bunch of Bluefish buffers, that contain video and encoded hanc....
@@ -268,7 +268,7 @@ struct bluefish_consumer : boost::noncopyable
         tmp_audio_buf_.reserve(SIZE_TEMP_AUDIO_BUFFER);
 
         // start the thread if required.
-        if (dma_present_thread_ == 0) {
+        if (dma_present_thread_ == nullptr) {
             dma_present_thread_ = std::make_shared<std::thread>([this] { dma_present_thread_actual(); });
 #if defined(_WIN32)
             HANDLE handle = (HANDLE)dma_present_thread_->native_handle();
@@ -326,8 +326,8 @@ struct bluefish_consumer : boost::noncopyable
         unsigned int val = 0;
         blue_->get_card_property32(CARD_FEATURE_STREAM_INFO, val);
         unsigned int num_input_streams = CARD_FEATURE_GET_SDI_INPUT_STREAM_COUNT(val);
-        if (interrupts_to_wait_ && (config_.device_stream == bluefish_hardware_output_channel::channel_1) &&
-            num_input_streams) {
+        if ((interrupts_to_wait_ != 0u) && config_.device_stream == bluefish_hardware_output_channel::channel_1 &&
+            (num_input_streams != 0u)) {
             // check if it is already running
             unsigned int blue_prop =
                 EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_get_timer_activated_status, 0);
@@ -352,7 +352,7 @@ struct bluefish_consumer : boost::noncopyable
             blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
 
             // start the thread if required.
-            if (hardware_watchdog_thread_ == 0) {
+            if (hardware_watchdog_thread_ == nullptr) {
                 end_hardware_watchdog_thread_ = false;
                 hardware_watchdog_thread_     = std::make_shared<std::thread>([this] { watchdog_thread_actual(); });
             }
@@ -371,7 +371,7 @@ struct bluefish_consumer : boost::noncopyable
     {
         // This function would be used to setup the logic video channel in the bluefish hardware
         EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(config_.device_stream);
-        if (is_epoch_card((*blue_))) {
+        if (is_epoch_card(*blue_)) {
             if (out_vid_channel != BLUE_VIDEOCHANNEL_INVALID) {
                 if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel)))
                     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set video stream."));
@@ -393,8 +393,8 @@ struct bluefish_consumer : boost::noncopyable
 
             if ((config_.device_stream == bluefish_hardware_output_channel::channel_1 ||
                  config_.device_stream == bluefish_hardware_output_channel::channel_3) &&
-                    (config_.hardware_keyer_value == hardware_downstream_keyer_mode::external) ||
-                (config_.hardware_keyer_value == hardware_downstream_keyer_mode::internal)) {
+                    config_.hardware_keyer_value == hardware_downstream_keyer_mode::external ||
+                config_.hardware_keyer_value == hardware_downstream_keyer_mode::internal) {
                 duallink_4224_enabled = true;
             }
 
@@ -414,7 +414,7 @@ struct bluefish_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to MR 2 routing."));
 
                 // If single link 422, but on second channel AND on Neutron we need to set Genlock to Aux.
-                if (is_epoch_neutron_1i2o_card((*blue_))) {
+                if (is_epoch_neutron_1i2o_card(*blue_)) {
                     if (blue_video_output_channel == BLUE_VIDEO_OUTPUT_CHANNEL_B) {
                         ULONG genlock_source = BlueGenlockAux;
                         if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genlock_source)))
@@ -422,7 +422,7 @@ struct bluefish_consumer : boost::noncopyable
                                                    << msg_info("Failed to set GenLock to Aux Input."));
                     }
                 }
-                if (is_epoch_neutron_3o_card((*blue_))) {
+                if (is_epoch_neutron_3o_card(*blue_)) {
                     if (blue_video_output_channel == BLUE_VIDEO_OUTPUT_CHANNEL_C) {
                         ULONG genlock_source = BlueGenlockAux;
                         if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genlock_source)))
@@ -450,14 +450,14 @@ struct bluefish_consumer : boost::noncopyable
                     if (BLUE_FAIL(blue_->set_card_property32(MR2_ROUTING, routing_value)))
                         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to MR 2 routing."));
 
-                    if (is_epoch_neutron_1i2o_card((*blue_))) // Neutron cards require setting the Genlock conector to
-                                                              // Aux to enable them to do Dual-Link
+                    if (is_epoch_neutron_1i2o_card(*blue_)) // Neutron cards require setting the Genlock conector to
+                                                            // Aux to enable them to do Dual-Link
                     {
                         ULONG genLockSource = BlueGenlockAux;
                         if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
                             CASPAR_THROW_EXCEPTION(caspar_exception()
                                                    << msg_info("Failed to set GenLock to Aux Input."));
-                    } else if (is_epoch_neutron_3o_card((*blue_))) {
+                    } else if (is_epoch_neutron_3o_card(*blue_)) {
                         if (blue_video_output_channel == BLUE_VIDEO_OUTPUT_CHANNEL_C) {
                             ULONG genLockSource = BlueGenlockAux;
                             if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
@@ -532,7 +532,7 @@ struct bluefish_consumer : boost::noncopyable
         }
 
         if (audio_source == hardware_downstream_keyer_audio_source::SDIVideoInput &&
-            (keyer == hardware_downstream_keyer_mode::internal))
+            keyer == hardware_downstream_keyer_mode::internal)
             keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_USE_INPUT_ANCILLARY(keyer_control_value);
         else if (audio_source == hardware_downstream_keyer_audio_source::VideoOutputChannel)
             keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_USE_OUTPUT_ANCILLARY(keyer_control_value);
@@ -626,7 +626,7 @@ struct bluefish_consumer : boost::noncopyable
                         CASPAR_LOG(warning) << print() << TEXT(" video_playback_present failed.");
                 }
 
-                scheduled_frames_completed_++;
+                ++scheduled_frames_completed_;
                 reserved_frames_.push(buf);
             }
 
@@ -686,9 +686,9 @@ struct bluefish_consumer : boost::noncopyable
 
                         encode_hanc(reinterpret_cast<BLUE_UINT32*>(last_field_buf_->hanc_data()),
                                     reinterpret_cast<void*>(tmp_audio_buf_.data()),
-                                    (audio_samples_for_next_frame),
+                                    audio_samples_for_next_frame,
                                     static_cast<int>(format_desc_.audio_channels));
-                        audio_frames_filled_++;
+                        ++audio_frames_filled_;
                     }
                 }
                 // push to in use Q.
@@ -711,9 +711,9 @@ struct bluefish_consumer : boost::noncopyable
                     if (frame.audio_data().size()) {
                         encode_hanc(reinterpret_cast<BLUE_UINT32*>(buf->hanc_data()),
                                     (void*)frame.audio_data().data(),
-                                    (audio_samples_for_next_frame),
+                                    audio_samples_for_next_frame,
                                     static_cast<int>(format_desc_.audio_channels));
-                        audio_frames_filled_++;
+                        ++audio_frames_filled_;
                     }
                 }
                 // push to in use Q.
@@ -743,7 +743,7 @@ struct bluefish_consumer : boost::noncopyable
             emb_audio_flag |= blue_emb_audio_group4_enable;
 
         hanc_stream_info_struct hanc_stream_info;
-        memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
+        std::memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
 
         hanc_stream_info.AudioDBNArray[0] = -1;
         hanc_stream_info.AudioDBNArray[1] = -1;
@@ -760,9 +760,8 @@ struct bluefish_consumer : boost::noncopyable
 
     std::wstring print() const
     {
-        return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-               boost::lexical_cast<std::wstring>(config_.device_index) + L"Stream: " +
-               boost::lexical_cast<std::wstring>(static_cast<unsigned int>(config_.device_stream)) + L"|" +
+        return model_name_ + L" [" + std::to_wstring(channel_index_) + L"-" + std::to_wstring(config_.device_index) +
+               L"Stream: " + std::to_wstring(static_cast<unsigned int>(config_.device_stream)) + L"|" +
                format_desc_.name + L"]";
     }
 
@@ -777,9 +776,9 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     executor                           executor_;
 
   public:
-    bluefish_consumer_proxy(const configuration& config)
+    explicit bluefish_consumer_proxy(const configuration& config)
         : config_(config)
-        , executor_(L"bluefish_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
+        , executor_(L"bluefish_consumer[" + std::to_wstring(config.device_index) + L"]")
     {
     }
 

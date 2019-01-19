@@ -127,8 +127,7 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
                                      [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel; });
 
     if (channel_it == dependencies.channels.end()) {
-        CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel)));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + std::to_wstring(channel)));
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);

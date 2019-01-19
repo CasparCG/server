@@ -32,9 +32,9 @@
 
 namespace caspar { namespace core { namespace monitor {
 
-typedef boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring> data_t;
-typedef boost::container::small_vector<data_t, 2>                                                  vector_t;
-typedef boost::container::flat_map<std::string, vector_t>                                          data_map_t;
+using data_t     = boost::variant<bool, std::int32_t, std::int64_t, float, double, std::string, std::wstring>;
+using vector_t   = boost::container::small_vector<data_t, 2>;
+using data_map_t = boost::container::flat_map<std::string, vector_t>;
 
 class state
 {

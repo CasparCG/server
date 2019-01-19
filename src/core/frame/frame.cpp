@@ -55,10 +55,10 @@ struct mutable_frame::impl : boost::noncopyable
          array<std::int32_t>              audio_data,
          const core::pixel_format_desc&   desc,
          commit_t                         commit)
-        : tag_(tag)
-        , image_data_(std::move(image_data))
+        : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
+        , tag_(tag)
         , commit_(std::move(commit))
     {
     }

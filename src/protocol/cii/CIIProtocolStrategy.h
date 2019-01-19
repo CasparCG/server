@@ -43,8 +43,8 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
                         const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                         const spl::shared_ptr<const core::frame_producer_registry>& producer_registry);
 
-    void        Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo);
-    std::string GetCodepage() const { return "ISO-8859-1"; } // ISO 8859-1
+    void        Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo) override;
+    std::string GetCodepage() const override { return "ISO-8859-1"; } // ISO 8859-1
 
     void SetProfile(const std::wstring& profile) { currentProfile_ = profile; }
 
@@ -98,7 +98,7 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
     };
 
   private:
-    typedef std::list<TitleHolder>        TitleList;
+    using TitleList = std::list<TitleHolder>;
     TitleList                             titles_;
     spl::shared_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
     void PutPreparedTemplate(const std::wstring& name, const spl::shared_ptr<core::frame_producer>& pframe_producer);

@@ -21,8 +21,8 @@ extern "C" {
 namespace caspar { namespace ffmpeg {
 
 Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
-    : graph_(graph)
-    , filename_(filename)
+    : filename_(filename)
+    , graph_(graph)
 {
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -35,7 +35,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 {
                     std::unique_lock<std::mutex> lock(mutex_);
                     cond_.wait(lock,
-                               [&] { return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_; });
+                               [&] { return ic_ && (!eof_ && output_.size() < output_capacity_) || abort_request_; });
                 }
 
                 if (abort_request_) {
@@ -54,7 +54,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
                     if (ret == AVERROR_EXIT) {
                         break;
-                    } else if (ret == AVERROR_EOF) {
+                    }
+                    if (ret == AVERROR_EOF) {
                         eof_   = true;
                         packet = nullptr;
                     } else {
@@ -63,7 +64,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
                     output_.push(std::move(packet));
                     graph_->set_value(
-                        "input", (static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_)));
+                        "input", static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_));
                 }
                 cond_.notify_all();
             }
@@ -96,8 +97,7 @@ void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
         while (!output_.empty() && fn(output_.front())) {
             output_.pop();
         }
-        graph_->set_value("input",
-                          (static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_)));
+        graph_->set_value("input", static_cast<double>(output_.size() + 0.001) / static_cast<double>(output_capacity_));
     }
     cond_.notify_all();
 }

@@ -28,7 +28,7 @@
 
 namespace caspar { namespace core {
 
-typedef boost::variant<boost::blank, const_frame, std::vector<draw_frame>> frame_t;
+using frame_t = boost::variant<boost::blank, const_frame, std::vector<draw_frame>>;
 
 struct draw_frame::impl
 {
@@ -54,7 +54,7 @@ struct draw_frame::impl
             {
             }
 
-            void operator()(boost::blank) const {}
+            void operator()(boost::blank /*unused*/) const {}
 
             void operator()(const const_frame& frame) const { visitor.visit(frame); }
 

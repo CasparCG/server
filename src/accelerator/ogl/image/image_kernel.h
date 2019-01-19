@@ -57,7 +57,7 @@ class image_kernel final
     image_kernel& operator=(const image_kernel&);
 
   public:
-    image_kernel(const spl::shared_ptr<class device>& ogl);
+    explicit image_kernel(const spl::shared_ptr<class device>& ogl);
     ~image_kernel();
 
     void draw(const draw_params& params);

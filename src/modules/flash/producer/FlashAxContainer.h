@@ -133,88 +133,88 @@ class ATL_NO_VTABLE FlashAxContainer
     void STDMETHODCALLTYPE OnReadyStateChange(long newState);
 
     // IObjectWithSite
-    STDMETHOD(SetSite)(IUnknown* pUnkSite);
+    STDMETHOD(SetSite)(IUnknown* pUnkSite) override;
 
     // IOleClientSite
-    STDMETHOD(SaveObject)();
-    STDMETHOD(GetMoniker)(DWORD dwAssign, DWORD dwWhichMoniker, IMoniker** ppmk);
-    STDMETHOD(GetContainer)(IOleContainer** ppContainer);
-    STDMETHOD(ShowObject)();
-    STDMETHOD(OnShowWindow)(BOOL fShow);
-    STDMETHOD(RequestNewObjectLayout)();
+    STDMETHOD(SaveObject)() override;
+    STDMETHOD(GetMoniker)(DWORD dwAssign, DWORD dwWhichMoniker, IMoniker** ppmk) override;
+    STDMETHOD(GetContainer)(IOleContainer** ppContainer) override;
+    STDMETHOD(ShowObject)() override;
+    STDMETHOD(OnShowWindow)(BOOL fShow) override;
+    STDMETHOD(RequestNewObjectLayout)() override;
 
     // IOleInPlaceSite
-    STDMETHOD(GetWindow)(HWND* pHwnd);
-    STDMETHOD(ContextSensitiveHelp)(BOOL fEnterMode);
-    STDMETHOD(CanInPlaceActivate)();
-    STDMETHOD(OnInPlaceActivate)();
-    STDMETHOD(OnInPlaceDeactivate)();
-    STDMETHOD(OnUIActivate)();
-    STDMETHOD(OnUIDeactivate)(BOOL fUndoable);
+    STDMETHOD(GetWindow)(HWND* pHwnd) override;
+    STDMETHOD(ContextSensitiveHelp)(BOOL fEnterMode) override;
+    STDMETHOD(CanInPlaceActivate)() override;
+    STDMETHOD(OnInPlaceActivate)() override;
+    STDMETHOD(OnInPlaceDeactivate)() override;
+    STDMETHOD(OnUIActivate)() override;
+    STDMETHOD(OnUIDeactivate)(BOOL fUndoable) override;
     STDMETHOD(GetWindowContext)
     (IOleInPlaceFrame**    ppFrame,
      IOleInPlaceUIWindow** ppDoc,
      LPRECT                lprcPosRect,
      LPRECT                lprcClipRect,
-     LPOLEINPLACEFRAMEINFO pFrameInfo);
-    STDMETHOD(Scroll)(SIZE scrollExtant);
-    STDMETHOD(DiscardUndoState)();
-    STDMETHOD(DeactivateAndUndo)();
-    STDMETHOD(OnPosRectChange)(LPCRECT lprcPosRect);
+     LPOLEINPLACEFRAMEINFO pFrameInfo) override;
+    STDMETHOD(Scroll)(SIZE scrollExtant) override;
+    STDMETHOD(DiscardUndoState)() override;
+    STDMETHOD(DeactivateAndUndo)() override;
+    STDMETHOD(OnPosRectChange)(LPCRECT lprcPosRect) override;
 
     // IOleInPlaceSiteEx
-    STDMETHOD(OnInPlaceActivateEx)(BOOL* pfNoRedraw, DWORD dwFlags);
-    STDMETHOD(OnInPlaceDeactivateEx)(BOOL fNoRedraw);
-    STDMETHOD(RequestUIActivate)();
+    STDMETHOD(OnInPlaceActivateEx)(BOOL* pfNoRedraw, DWORD dwFlags) override;
+    STDMETHOD(OnInPlaceDeactivateEx)(BOOL fNoRedraw) override;
+    STDMETHOD(RequestUIActivate)() override;
 
     // IOleInPlaceSiteWindowless
-    STDMETHOD(CanWindowlessActivate)();
-    STDMETHOD(GetCapture)();
-    STDMETHOD(SetCapture)(BOOL fCapture);
-    STDMETHOD(GetFocus)();
-    STDMETHOD(SetFocus)(BOOL fGotFocus);
-    STDMETHOD(GetDC)(LPCRECT pRect, DWORD grfFlags, HDC* phDC);
-    STDMETHOD(ReleaseDC)(HDC hDC);
-    STDMETHOD(InvalidateRect)(LPCRECT pRect, BOOL fErase);
-    STDMETHOD(InvalidateRgn)(HRGN hRGN, BOOL fErase);
-    STDMETHOD(ScrollRect)(INT dx, INT dy, LPCRECT pRectScroll, LPCRECT pRectClip);
-    STDMETHOD(AdjustRect)(LPRECT prc);
-    STDMETHOD(OnDefWindowMessage)(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT* plResult);
+    STDMETHOD(CanWindowlessActivate)() override;
+    STDMETHOD(GetCapture)() override;
+    STDMETHOD(SetCapture)(BOOL fCapture) override;
+    STDMETHOD(GetFocus)() override;
+    STDMETHOD(SetFocus)(BOOL fGotFocus) override;
+    STDMETHOD(GetDC)(LPCRECT pRect, DWORD grfFlags, HDC* phDC) override;
+    STDMETHOD(ReleaseDC)(HDC hDC) override;
+    STDMETHOD(InvalidateRect)(LPCRECT pRect, BOOL fErase) override;
+    STDMETHOD(InvalidateRgn)(HRGN hRGN, BOOL fErase) override;
+    STDMETHOD(ScrollRect)(INT dx, INT dy, LPCRECT pRectScroll, LPCRECT pRectClip) override;
+    STDMETHOD(AdjustRect)(LPRECT prc) override;
+    STDMETHOD(OnDefWindowMessage)(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT* plResult) override;
 
     // IOleControlSite
-    STDMETHOD(OnControlInfoChanged)();
-    STDMETHOD(LockInPlaceActive)(BOOL fLock);
-    STDMETHOD(GetExtendedControl)(IDispatch** ppDisp);
-    STDMETHOD(TransformCoords)(POINTL* pPtlHimetric, POINTF* pPtfContainer, DWORD dwFlags);
+    STDMETHOD(OnControlInfoChanged)() override;
+    STDMETHOD(LockInPlaceActive)(BOOL fLock) override;
+    STDMETHOD(GetExtendedControl)(IDispatch** ppDisp) override;
+    STDMETHOD(TransformCoords)(POINTL* pPtlHimetric, POINTF* pPtfContainer, DWORD dwFlags) override;
     STDMETHOD(TranslateAccelerator)(LPMSG lpMsg, DWORD grfModifiers);
-    STDMETHOD(OnFocus)(BOOL fGotFocus);
-    STDMETHOD(ShowPropertyFrame)();
+    STDMETHOD(OnFocus)(BOOL fGotFocus) override;
+    STDMETHOD(ShowPropertyFrame)() override;
 
     // IAdviseSink
-    STDMETHOD_(void, OnDataChange)(FORMATETC* pFormatetc, STGMEDIUM* pStgmed);
-    STDMETHOD_(void, OnViewChange)(DWORD dwAspect, LONG lindex);
-    STDMETHOD_(void, OnRename)(IMoniker* pmk);
-    STDMETHOD_(void, OnSave)();
-    STDMETHOD_(void, OnClose)();
+    STDMETHOD_(void, OnDataChange)(FORMATETC* pFormatetc, STGMEDIUM* pStgmed) override;
+    STDMETHOD_(void, OnViewChange)(DWORD dwAspect, LONG lindex) override;
+    STDMETHOD_(void, OnRename)(IMoniker* pmk) override;
+    STDMETHOD_(void, OnSave)() override;
+    STDMETHOD_(void, OnClose)() override;
 
     // IServiceProvider
-    STDMETHOD(QueryService)(REFGUID rsid, REFIID riid, void** ppvObj);
+    STDMETHOD(QueryService)(REFGUID rsid, REFIID riid, void** ppvObj) override;
 
     // IOleContainer
-    STDMETHOD(ParseDisplayName)(IBindCtx*, LPOLESTR, ULONG*, IMoniker**)
+    STDMETHOD(ParseDisplayName)(IBindCtx*, LPOLESTR, ULONG*, IMoniker**) override
     {
         ATLTRACENOTIMPL(_T("IOleContainer::ParseDisplayName"));
     }
-    STDMETHOD(EnumObjects)(DWORD, IEnumUnknown** ppenum)
+    STDMETHOD(EnumObjects)(DWORD, IEnumUnknown** ppenum) override
     {
-        if (ppenum == NULL)
+        if (ppenum == nullptr)
             return E_POINTER;
-        *ppenum = NULL;
-        typedef CComObject<CComEnum<IEnumUnknown, &__uuidof(IEnumUnknown), IUnknown*, _CopyInterface<IUnknown>>>
-                 enumunk;
-        enumunk* p = NULL;
+        *ppenum = nullptr;
+        using enumunk =
+            CComObject<CComEnum<IEnumUnknown, &__uuidof(IEnumUnknown), IUnknown*, _CopyInterface<IUnknown>>>;
+        enumunk* p = nullptr;
         ATLTRY(p = new enumunk);
-        if (p == NULL)
+        if (p == nullptr)
             return E_OUTOFMEMORY;
         IUnknown* pTemp = m_spUnknown;
         // There is always only one object.
@@ -228,24 +228,20 @@ class ATL_NO_VTABLE FlashAxContainer
             delete p;
         return hRes;
     }
-    STDMETHOD(LockContainer)(BOOL) { ATLTRACENOTIMPL(_T("IOleContainer::LockContainer")); }
+    STDMETHOD(LockContainer)(BOOL) override { ATLTRACENOTIMPL(_T("IOleContainer::LockContainer")); }
 
     // ITimerService
-    STDMETHOD(CreateTimer)(ITimer* pReferenceTimer, ITimer** ppNewTimer);
-    STDMETHOD(GetNamedTimer)(REFGUID rguidName, ITimer** ppTimer);
-    STDMETHOD(SetNamedTimerReference)(REFGUID rguidName, ITimer* pReferenceTimer);
+    STDMETHOD(CreateTimer)(ITimer* pReferenceTimer, ITimer** ppNewTimer) override;
+    STDMETHOD(GetNamedTimer)(REFGUID rguidName, ITimer** ppTimer) override;
+    STDMETHOD(SetNamedTimerReference)(REFGUID rguidName, ITimer* pReferenceTimer) override;
 
     // ITimer
     STDMETHOD(Advise)
-    (VARIANT     vtimeMin,
-     VARIANT     vtimeMax,
-     VARIANT     vtimeInterval,
-     DWORD       dwFlags,
-     ITimerSink* pTimerSink,
-     DWORD*      pdwCookie);
-    STDMETHOD(Unadvise)(DWORD dwCookie);
-    STDMETHOD(Freeze)(BOOL fFreeze);
-    STDMETHOD(GetTime)(VARIANT* pvtime);
+    (VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink* pTimerSink, DWORD* pdwCookie)
+        override;
+    STDMETHOD(Unadvise)(DWORD dwCookie) override;
+    STDMETHOD(Freeze)(BOOL fFreeze) override;
+    STDMETHOD(GetTime)(VARIANT* pvtime) override;
     double GetFPS();
 
     void set_print(const std::function<std::wstring()>& print) { print_ = print; }

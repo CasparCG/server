@@ -58,6 +58,6 @@ struct blue_dma_buffer
     std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64>> image_buffer_;
     std::vector<BYTE, boost::alignment::aligned_allocator<BYTE, 64>> hanc_buffer_;
 };
-typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
+using blue_dma_buffer_ptr = std::shared_ptr<blue_dma_buffer>;
 
 }} // namespace caspar::bluefish

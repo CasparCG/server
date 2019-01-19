@@ -74,8 +74,8 @@ class graph_sink : boost::noncopyable
     virtual void auto_reset()                                            = 0;
 };
 
-typedef std::function<spl::shared_ptr<graph_sink>()> sink_factory_t;
-void                                                 register_sink_factory(sink_factory_t factory);
+using sink_factory_t = std::function<spl::shared_ptr<graph_sink>()>;
+void register_sink_factory(sink_factory_t factory);
 
 } // namespace spi
 

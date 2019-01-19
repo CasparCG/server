@@ -62,12 +62,12 @@ class frame_consumer
     virtual int          index() const = 0;
 };
 
-typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
-                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
-    consumer_factory_t;
-typedef std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
-                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
-    preconfigured_consumer_factory_t;
+using consumer_factory_t =
+    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
+                                                  std::vector<spl::shared_ptr<video_channel>> channels)>;
+using preconfigured_consumer_factory_t =
+    std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
+                                                  std::vector<spl::shared_ptr<video_channel>> channels)>;
 
 class frame_consumer_registry : boost::noncopyable
 {

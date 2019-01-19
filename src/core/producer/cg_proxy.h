@@ -55,11 +55,11 @@ class cg_proxy
     static const spl::shared_ptr<cg_proxy>& empty();
 };
 
-typedef std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)> cg_proxy_factory;
-typedef std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
-                                                      const std::wstring&                filename)>
-                                                                 cg_producer_factory;
-typedef std::function<std::string(const std::wstring& filename)> meta_info_extractor;
+using cg_proxy_factory = std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)>;
+using cg_producer_factory =
+    std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
+                                                  const std::wstring&                filename)>;
+using meta_info_extractor = std::function<std::string(const std::wstring& filename)>;
 
 class cg_producer_registry : boost::noncopyable
 {

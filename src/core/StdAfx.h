@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <algorithm>

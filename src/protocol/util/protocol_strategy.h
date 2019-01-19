@@ -35,7 +35,7 @@ template <class CharT>
 class protocol_strategy
 {
   public:
-    typedef spl::shared_ptr<protocol_strategy<CharT>> ptr;
+    using ptr = spl::shared_ptr<protocol_strategy<CharT>>;
 
     virtual ~protocol_strategy() {}
 
@@ -58,7 +58,7 @@ template <class CharT>
 class client_connection
 {
   public:
-    typedef spl::shared_ptr<client_connection<CharT>> ptr;
+    using ptr = spl::shared_ptr<client_connection<CharT>>;
 
     virtual ~client_connection() {}
 
@@ -82,7 +82,7 @@ template <class CharT>
 class protocol_strategy_factory
 {
   public:
-    typedef spl::shared_ptr<protocol_strategy_factory<CharT>> ptr;
+    using ptr = spl::shared_ptr<protocol_strategy_factory<CharT>>;
 
     virtual ~protocol_strategy_factory() {}
     virtual typename protocol_strategy<CharT>::ptr

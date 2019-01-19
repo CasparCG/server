@@ -214,12 +214,12 @@ struct Filter
                 BMDTimeValue frameDuration;
                 dm->GetFrameRate(&frameDuration, &timeScale);
 
-                auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE %
-                             sar.numerator() % sar.denominator() %
-                             ((timeScale / 1000) * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2)) %
-                             (frameDuration / 1000))
-                                .str();
+                auto args =
+                    (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
+                     dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE % sar.numerator() %
+                     sar.denominator() % (timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2)) %
+                     (frameDuration / 1000))
+                        .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
                 FF(avfilter_graph_create_filter(
@@ -422,13 +422,13 @@ class decklink_producer : public IDeckLinkInputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
-                                                              IDeckLinkDisplayMode*            newDisplayMode,
-                                                              BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
+    HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
+                                                      IDeckLinkDisplayMode*            newDisplayMode,
+                                                      BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/) override
     {
         try {
             auto newMode = newDisplayMode->GetDisplayMode();
@@ -472,8 +472,8 @@ class decklink_producer : public IDeckLinkInputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*  video,
-                                                             IDeckLinkAudioInputPacket* audio)
+    HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*  video,
+                                                     IDeckLinkAudioInputPacket* audio) override
     {
         caspar::timer frame_timer;
 
@@ -699,8 +699,8 @@ class decklink_producer_proxy : public core::frame_producer
                                      uint32_t                                    length,
                                      const std::wstring&                         format,
                                      bool                                        freeze_on_lost)
-        : executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
-        , length_(length)
+        : length_(length)
+        , executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {

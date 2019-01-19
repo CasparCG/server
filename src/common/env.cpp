@@ -25,7 +25,7 @@
 #include "except.h"
 #include "log.h"
 #include "os/filesystem.h"
-#include "string.h"
+#include <cstring>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -75,16 +75,14 @@ std::wstring resolve_or_create(const std::wstring& folder)
 
     if (found_path)
         return *found_path;
-    else {
-        boost::system::error_code ec;
-        boost::filesystem::create_directories(folder, ec);
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(folder, ec);
 
-        if (ec)
-            CASPAR_THROW_EXCEPTION(user_error()
-                                   << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+    if (ec != nullptr)
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 
-        return folder;
-    }
+    return folder;
 }
 
 void ensure_writable(const std::wstring& folder)

@@ -100,9 +100,9 @@ struct layer::impl
             if (auto_play_) {
                 auto auto_play_delta = background_->auto_play_delta();
                 if (auto_play_delta) {
-                    auto time        = static_cast<std::int64_t>(foreground_->frame_number());
-                    auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
-                    frames_left = duration - time - *auto_play_delta;
+                    auto time     = static_cast<std::int64_t>(foreground_->frame_number());
+                    auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                    frames_left   = duration - time - *auto_play_delta;
                     if (frames_left < 1) {
                         play();
                     }
@@ -120,7 +120,7 @@ struct layer::impl
             state_["foreground"]["paused"]   = paused_;
 
             if (frames_left > 0) {
-                state_["foreground"]["frames_left"]   = frames_left;
+                state_["foreground"]["frames_left"] = frames_left;
             }
 
             state_["background"]             = background_->state();

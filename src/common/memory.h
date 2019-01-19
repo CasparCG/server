@@ -51,8 +51,8 @@ class unique_ptr
     friend class shared_ptr;
 
   public:
-    typedef T element_type;
-    typedef D deleter_type;
+    using element_type = T;
+    using deleter_type = D;
 
     unique_ptr()
         : p_(new T())
@@ -60,14 +60,15 @@ class unique_ptr
     }
 
     template <typename T2, typename D2>
-    unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    unique_ptr(unique_ptr<T2, D2>&& p,
+               typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p.p_.release(), p.p_.get_deleter())
     {
     }
 
     template <typename T2, typename D2>
     explicit unique_ptr(std::unique_ptr<T2, D2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -75,7 +76,7 @@ class unique_ptr
     }
 
     template <typename T2>
-    explicit unique_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit unique_ptr(T2* p, typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p)
     {
         if (!p_)
@@ -83,8 +84,8 @@ class unique_ptr
     }
 
     template <typename T2>
-    explicit unique_ptr(T2*                                       p,
-                        typename std::remove_reference<D>::type&& d,
+    explicit unique_ptr(T2*                                                  p,
+                        typename std::remove_reference /*unused*/<D>::type&& d,
                         typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p, d)
     {
@@ -333,19 +334,20 @@ class shared_ptr
     friend class shared_ptr;
 
   public:
-    typedef T element_type;
+    using element_type = T;
 
     shared_ptr(); // will constrT2ct new T object T2sing make_shared<T>()
 
     template <typename T2>
-    shared_ptr(shared_ptr<T2> other, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    shared_ptr(shared_ptr<T2> other,
+               typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(other.p_))
     {
     }
 
     template <typename T2>
     explicit shared_ptr(std::unique_ptr<T2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -354,7 +356,7 @@ class shared_ptr
 
     template <typename T2>
     explicit shared_ptr(spl::unique_ptr<T2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p.release(), p.get_deleter())
     {
         if (!p_)
@@ -363,7 +365,7 @@ class shared_ptr
 
     template <typename T2>
     explicit shared_ptr(std::shared_ptr<T2> p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -371,7 +373,7 @@ class shared_ptr
     }
 
     template <typename T2>
-    explicit shared_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(T2* p, typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p)
     {
         if (!p_)
@@ -379,7 +381,9 @@ class shared_ptr
     }
 
     template <typename T2, typename D>
-    explicit shared_ptr(T2* p, D d, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(T2* p,
+                        D   d,
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p, d)
     {
         if (!p_)
@@ -606,9 +610,9 @@ class enable_shared_from_this : public std::enable_shared_from_this<T>
   protected:
     enable_shared_from_this() {}
 
-    enable_shared_from_this(const enable_shared_from_this&) {}
+    enable_shared_from_this(const enable_shared_from_this& /*unused*/) {}
 
-    enable_shared_from_this& operator=(const enable_shared_from_this&) { return *this; }
+    enable_shared_from_this& operator=(const enable_shared_from_this& /*unused*/) { return *this; }
 
     ~enable_shared_from_this() {}
 };

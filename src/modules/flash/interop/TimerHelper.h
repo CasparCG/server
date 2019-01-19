@@ -54,7 +54,7 @@ class TimerHelper
     DWORD
     Invoke()
     {
-        if (pTimerSink != 0) {
+        if (pTimerSink != nullptr) {
             VARIANT value;
             value.vt    = VT_UI4;
             value.ulVal = currentTime;

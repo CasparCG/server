@@ -43,12 +43,12 @@ namespace caspar { namespace IO {
 
 class connection;
 
-typedef std::set<spl::shared_ptr<connection>> connection_set;
+using connection_set = std::set<spl::shared_ptr<connection>>;
 
 class connection : public spl::enable_shared_from_this<connection>
 {
-    typedef tbb::concurrent_hash_map<std::wstring, std::shared_ptr<void>> lifecycle_map_type;
-    typedef tbb::concurrent_queue<std::string>                            send_queue;
+    using lifecycle_map_type = tbb::concurrent_hash_map<std::wstring, std::shared_ptr<void>>;
+    using send_queue         = tbb::concurrent_queue<std::string>;
 
     const spl::shared_ptr<tcp::socket>       socket_;
     std::shared_ptr<boost::asio::io_service> service_;
@@ -94,8 +94,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
             if (conn)
                 return conn->ipv4_address();
-            else
-                return L"[destroyed-connection]";
+            return L"[destroyed-connection]";
         }
 
         void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override
@@ -112,8 +111,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
             if (conn)
                 return conn->remove_lifecycle_bound_object(key);
-            else
-                return std::shared_ptr<void>();
+            return std::shared_ptr<void>();
         }
     };
 
@@ -214,7 +212,7 @@ class connection : public spl::enable_shared_from_this<connection>
         , is_writing_(false)
     {
         CASPAR_LOG(info) << print() << L" Accepted connection from " << ipv4_address() << L" ("
-                         << (connection_set_->size() + 1) << L" connections).";
+                         << connection_set_->size() + 1 << L" connections).";
     }
 
     void handle_read(const boost::system::error_code& error,

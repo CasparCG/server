@@ -30,7 +30,7 @@ namespace caspar { namespace html {
 class html_cg_proxy : public core::cg_proxy
 {
   public:
-    html_cg_proxy(spl::shared_ptr<core::frame_producer> producer);
+    explicit html_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer);
     ~html_cg_proxy();
 
     void         add(int                 layer,

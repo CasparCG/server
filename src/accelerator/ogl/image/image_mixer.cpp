@@ -46,7 +46,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-typedef std::shared_future<std::shared_ptr<texture>> future_texture;
+using future_texture = std::shared_future<std::shared_ptr<texture>>;
 
 struct item
 {
@@ -62,7 +62,7 @@ struct layer
     std::vector<item>  items;
     core::blend_mode   blend_mode;
 
-    layer(core::blend_mode blend_mode)
+    explicit layer(core::blend_mode blend_mode)
         : blend_mode(blend_mode)
     {
     }
@@ -74,7 +74,7 @@ class image_renderer
     image_kernel            kernel_;
 
   public:
-    image_renderer(const spl::shared_ptr<device>& ogl)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , kernel_(ogl_)
     {

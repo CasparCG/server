@@ -34,6 +34,6 @@ class IProtocolStrategy
     virtual void        Parse(const std::wstring& msg, ClientInfoPtr pClientInfo) = 0;
     virtual std::string GetCodepage() const                                       = 0;
 };
-typedef std::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
+using ProtocolStrategyPtr = std::shared_ptr<IProtocolStrategy>;
 
 }} // namespace caspar::IO

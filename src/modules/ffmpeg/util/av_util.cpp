@@ -293,7 +293,7 @@ int codec_execute2(AVCodecContext* c,
     std::array<std::vector<int>, 128> jobs;
 
     for (int jobnr = 0; jobnr < count; ++jobnr) {
-        jobs[(jobnr * c->thread_count) / count].push_back(jobnr);
+        jobs[jobnr * c->thread_count / count].push_back(jobnr);
     }
 
     tbb::parallel_for<int>(0, c->thread_count, [&](int threadnr) {

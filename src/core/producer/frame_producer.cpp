@@ -86,8 +86,8 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
             CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
             return make_ready_future(std::wstring());
         }
-        draw_frame last_frame() { return draw_frame{}; }
-        draw_frame first_frame() { return draw_frame{}; }
+        draw_frame last_frame() override { return draw_frame{}; }
+        draw_frame first_frame() override { return draw_frame{}; }
     };
 
     static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
@@ -101,7 +101,6 @@ std::shared_ptr<executor>& producer_destroyer()
         result->set_capacity(std::numeric_limits<unsigned int>::max());
         return result;
     }();
-    ;
 
     return destroyer;
 }
@@ -219,9 +218,8 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
             return producer != frame_producer::empty();
         })) {
         return producer;
-    } else {
-        return frame_producer::empty();
     }
+    return frame_producer::empty();
 }
 
 spl::shared_ptr<core::frame_producer>
@@ -264,9 +262,9 @@ spl::shared_ptr<core::frame_producer>
 frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies,
                                          const std::wstring&                params) const
 {
-    std::wstringstream                                                              iss(params);
-    std::vector<std::wstring>                                                       tokens;
-    typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t>> iterator;
+    std::wstringstream        iss(params);
+    std::vector<std::wstring> tokens;
+    using iterator = std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t>>;
     std::copy(iterator(iss), iterator(), std::back_inserter(tokens));
     return create_producer(dependencies, tokens);
 }

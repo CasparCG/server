@@ -57,7 +57,7 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
     {
     }
 
-    void parse(const std::basic_string<wchar_t>& data)
+    void parse(const std::basic_string<wchar_t>& data) override
     {
         for (int index = 0; index < data.length(); ++index) {
             wchar_t currentByte = data[index];

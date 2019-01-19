@@ -41,13 +41,13 @@ class image_mixer
     image_mixer() {}
     virtual ~image_mixer() {}
 
-    virtual void push(const struct frame_transform& frame) = 0;
-    virtual void visit(const class const_frame& frame)     = 0;
-    virtual void pop()                                     = 0;
+    void push(const struct frame_transform& frame) override = 0;
+    void visit(const class const_frame& frame) override     = 0;
+    void pop() override                                     = 0;
 
     virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
-    virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
+    class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
 };
 
 }} // namespace caspar::core

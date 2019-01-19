@@ -75,17 +75,17 @@ std::ostream& operator<<(std::ostream& os, const ReceivedMessageArgument& arg)
         case RGBA_COLOR_TYPE_TAG: {
             uint32 color = arg.AsRgbaColorUnchecked();
 
-            os << "RGBA:0x" << std::hex << std::setfill('0') << std::setw(2) << (int)((color >> 24) & 0xFF)
-               << std::setw(2) << (int)((color >> 16) & 0xFF) << std::setw(2) << (int)((color >> 8) & 0xFF)
-               << std::setw(2) << (int)(color & 0xFF) << std::setfill(' ');
+            os << "RGBA:0x" << std::hex << std::setfill('0') << std::setw(2) << (int)(color >> 24 & 0xFF)
+               << std::setw(2) << (int)(color >> 16 & 0xFF) << std::setw(2) << (int)(color >> 8 & 0xFF) << std::setw(2)
+               << (int)(color & 0xFF) << std::setfill(' ');
             os.unsetf(std::ios::basefield);
         } break;
 
         case MIDI_MESSAGE_TYPE_TAG: {
             uint32 m = arg.AsMidiMessageUnchecked();
             os << "midi (port, status, data1, data2):<<" << std::hex << std::setfill('0') << "0x" << std::setw(2)
-               << (int)((m >> 24) & 0xFF) << " 0x" << std::setw(2) << (int)((m >> 16) & 0xFF) << " 0x" << std::setw(2)
-               << (int)((m >> 8) & 0xFF) << " 0x" << std::setw(2) << (int)(m & 0xFF) << std::setfill(' ') << ">>";
+               << (int)(m >> 24 & 0xFF) << " 0x" << std::setw(2) << (int)(m >> 16 & 0xFF) << " 0x" << std::setw(2)
+               << (int)(m >> 8 & 0xFF) << " 0x" << std::setw(2) << (int)(m & 0xFF) << std::setfill(' ') << ">>";
             os.unsetf(std::ios::basefield);
         } break;
 

@@ -49,7 +49,9 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -102,7 +104,7 @@ struct frame
     GLuint pbo   = 0;
     GLuint tex   = 0;
     char*  ptr   = nullptr;
-    GLsync fence = 0;
+    GLsync fence = nullptr;
 };
 
 struct screen_consumer : boost::noncopyable
@@ -147,9 +149,9 @@ struct screen_consumer : boost::noncopyable
             // Use default values which are 4:3.
         } else {
             if (config_.aspect == configuration::aspect_ratio::aspect_16_9) {
-                square_width_ = (format_desc.height * 16) / 9;
+                square_width_ = format_desc.height * 16 / 9;
             } else if (config_.aspect == configuration::aspect_ratio::aspect_4_3) {
-                square_width_ = (format_desc.height * 4) / 3;
+                square_width_ = format_desc.height * 4 / 3;
             }
         }
 
@@ -164,7 +166,7 @@ struct screen_consumer : boost::noncopyable
 #if defined(_MSC_VER)
         DISPLAY_DEVICE              d_device = {sizeof(d_device), 0};
         std::vector<DISPLAY_DEVICE> displayDevices;
-        for (int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n) {
+        for (int n = 0; EnumDisplayDevices(nullptr, n, &d_device, NULL); ++n) {
             displayDevices.push_back(d_device);
         }
 
@@ -210,8 +212,8 @@ struct screen_consumer : boost::noncopyable
         thread_ = std::thread([this] {
             try {
                 const auto window_style = config_.borderless ? sf::Style::None
-                                                             : (config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                                 : sf::Style::Fullscreen);
+                                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                                : sf::Style::Fullscreen;
                 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
                 sf::VideoMode mode(
                     config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
@@ -236,8 +238,8 @@ struct screen_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
                 }
 
-                if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
-                                                          "GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
+                if (!GLEW_VERSION_4_5 && (glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
+                                                          "GL_ARB_direct_state_access GL_ARB_texture_barrier") == 0u)) {
                     CASPAR_THROW_EXCEPTION(not_supported() << msg_info(
                                                "Your graphics card does not meet the minimum hardware requirements "
                                                "since it does not support OpenGL 4.5 or higher."));
@@ -348,11 +350,11 @@ struct screen_consumer : boost::noncopyable
         {
             auto& frame = frames_.front();
 
-            while (frame.fence) {
+            while (frame.fence != nullptr) {
                 auto wait = glClientWaitSync(frame.fence, 0, 0);
                 if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
                     glDeleteSync(frame.fence);
-                    frame.fence = 0;
+                    frame.fence = nullptr;
                 }
                 if (!poll()) {
                     // TODO (fix)
@@ -424,7 +426,7 @@ struct screen_consumer : boost::noncopyable
         tick_timer_.restart();
     }
 
-    std::future<bool> send(core::const_frame frame)
+    std::future<bool> send(const core::const_frame& frame)
     {
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -434,7 +436,7 @@ struct screen_consumer : boost::noncopyable
 
     std::wstring channel_and_format() const
     {
-        return L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+        return L"[" + std::to_wstring(channel_index_) + L"|" + format_desc_.name + L"]";
     }
 
     std::wstring print() const { return config_.name + L" " + channel_and_format(); }
@@ -532,8 +534,8 @@ struct screen_consumer_proxy : public core::frame_consumer
     std::unique_ptr<screen_consumer> consumer_;
 
   public:
-    screen_consumer_proxy(const configuration& config)
-        : config_(config)
+    explicit screen_consumer_proxy(configuration config)
+        : config_(std::move(config))
     {
     }
 
@@ -542,7 +544,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
         consumer_.reset();
-        consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
+        consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_index);
     }
 
     std::future<bool> send(core::const_frame frame) override { return consumer_->send(frame); }
@@ -556,10 +558,10 @@ struct screen_consumer_proxy : public core::frame_consumer
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
-    if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN")) {
+    if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
     }
 
@@ -586,8 +588,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config;
     config.name          = ptree.get(L"name", config.name);

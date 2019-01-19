@@ -38,7 +38,7 @@
 
 namespace caspar { namespace core {
 
-typedef decltype(std::chrono::high_resolution_clock::now()) time_point_t;
+using time_point_t = decltype(std::chrono::high_resolution_clock::now());
 
 struct output::impl
 {
@@ -164,7 +164,7 @@ struct output::impl
         }
     }
 
-    std::wstring print() const { return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]"; }
+    std::wstring print() const { return L"output[" + std::to_wstring(channel_index_) + L"]"; }
 };
 
 output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)

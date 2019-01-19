@@ -37,7 +37,7 @@ class clk_protocol_strategy_factory : public IO::protocol_strategy_factory<wchar
                                   const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                                   const spl::shared_ptr<const core::frame_producer_registry>& producer_registry);
 
-    virtual IO::protocol_strategy<wchar_t>::ptr create(const IO::client_connection<wchar_t>::ptr& client_connection);
+    IO::protocol_strategy<wchar_t>::ptr create(const IO::client_connection<wchar_t>::ptr& client_connection) override;
 };
 
 }}} // namespace caspar::protocol::CLK

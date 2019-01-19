@@ -439,14 +439,17 @@ class ReceivedMessage
 
     const char* TypeTags() const { return typeTagsBegin_; }
 
-    typedef ReceivedMessageArgumentIterator const_iterator;
+    using const_iterator = ReceivedMessageArgumentIterator;
 
     ReceivedMessageArgumentIterator ArgumentsBegin() const
     {
         return ReceivedMessageArgumentIterator(typeTagsBegin_, arguments_);
     }
 
-    ReceivedMessageArgumentIterator ArgumentsEnd() const { return ReceivedMessageArgumentIterator(typeTagsEnd_, 0); }
+    ReceivedMessageArgumentIterator ArgumentsEnd() const
+    {
+        return ReceivedMessageArgumentIterator(typeTagsEnd_, nullptr);
+    }
 
     ReceivedMessageArgumentStream ArgumentStream() const
     {
@@ -472,7 +475,7 @@ class ReceivedBundle
 
     unsigned long ElementCount() const { return elementCount_; }
 
-    typedef ReceivedBundleElementIterator const_iterator;
+    using const_iterator = ReceivedBundleElementIterator;
 
     ReceivedBundleElementIterator ElementsBegin() const { return ReceivedBundleElementIterator(timeTag_ + 8); }
 

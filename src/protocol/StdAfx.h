@@ -38,10 +38,10 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <math.h>
 #include <memory>
 #include <queue>
 #include <set>
@@ -59,4 +59,4 @@
 #include <common/except.h>
 #include <common/log.h>
 
-#include <assert.h>
+#include <cassert>
