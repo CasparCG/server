@@ -34,9 +34,6 @@
 
 #include <atlbase.h>
 
-#include <atlcom.h>
-#include <atlhost.h>
-
 #pragma warning(pop)
 
 namespace caspar { namespace decklink {

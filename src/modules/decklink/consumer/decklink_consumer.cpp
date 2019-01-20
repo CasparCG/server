@@ -34,7 +34,6 @@
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/array.h>
-#include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/executor.h>

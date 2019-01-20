@@ -21,11 +21,8 @@
 
 #include "../StdAfx.h"
 
-#include "../interop/BlueVelvetCUtils.h"
-
 #include "blue_velvet.h"
 
-#include <common/utf.h>
 #include <core/video_format.h>
 
 #if defined(__APPLE__)

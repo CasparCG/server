@@ -26,10 +26,7 @@
 #include "frame_producer.h"
 
 #include "../frame/draw_frame.h"
-#include "../frame/frame_transform.h"
 #include "../video_format.h"
-
-#include <common/timer.h>
 
 namespace caspar { namespace core {
 

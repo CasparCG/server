@@ -21,18 +21,11 @@
 
 #pragma once
 
-#include "image/blend_modes.h"
-
 #include <common/forward.h>
 #include <common/memory.h>
 
 #include <core/fwd.h>
 #include <core/monitor/monitor.h>
-
-#include <boost/property_tree/ptree_fwd.hpp>
-
-#include <future>
-#include <map>
 
 FORWARD2(caspar, diagnostics, class graph);
 

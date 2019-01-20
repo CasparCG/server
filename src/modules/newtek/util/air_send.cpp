@@ -27,8 +27,6 @@
 
 #include <Windows.h>
 
-#include <common/except.h>
-
 namespace caspar { namespace newtek { namespace airsend {
 
 void* (*create)(const int   width,

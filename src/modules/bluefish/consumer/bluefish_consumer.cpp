@@ -41,7 +41,6 @@
 #include <condition_variable>
 #include <future>
 #include <mutex>
-#include <queue>
 
 namespace caspar { namespace bluefish {
 

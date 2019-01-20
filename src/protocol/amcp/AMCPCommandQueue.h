@@ -25,9 +25,6 @@
 
 #include <common/executor.h>
 #include <common/memory.h>
-#include <common/timer.h>
-
-#include <mutex>
 
 namespace caspar { namespace protocol { namespace amcp {
 

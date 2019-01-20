@@ -23,8 +23,6 @@
 
 #include "except.h"
 
-#include "memory.h"
-
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/property_tree/ptree.hpp>

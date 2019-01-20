@@ -40,7 +40,6 @@
 #include <core/producer/frame_producer.h>
 
 #include <common/array.h>
-#include <common/base64.h>
 #include <common/env.h>
 #include <common/log.h>
 #include <common/os/filesystem.h>

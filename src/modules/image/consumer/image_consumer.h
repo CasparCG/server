@@ -23,10 +23,8 @@
 
 #include <common/memory.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <core/consumer/frame_consumer.h>
-#include <core/video_format.h>
 
 #include <string>
 #include <vector>

@@ -24,9 +24,7 @@
 #include "CLKProtocolStrategy.h"
 #include "clk_commands.h"
 
-#include <algorithm>
 #include <boost/algorithm/string/case_conv.hpp>
-#include <locale>
 #include <sstream>
 #include <string>
 #include <vector>

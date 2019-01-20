@@ -27,7 +27,6 @@
 #include <common/array.h>
 #include <common/assert.h>
 #include <common/except.h>
-#include <common/future.h>
 #include <common/gl/gl_check.h>
 #include <common/os/thread.h>
 

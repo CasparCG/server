@@ -56,7 +56,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <locale>
 #include <string>
 #include <unordered_map>
 #include <vector>

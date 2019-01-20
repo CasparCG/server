@@ -23,9 +23,6 @@
 
 #include "../util/ProtocolStrategy.h"
 
-#include <core/producer/cg_proxy.h>
-#include <core/video_channel.h>
-
 #include <common/memory.h>
 
 #include <future>

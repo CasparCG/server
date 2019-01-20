@@ -29,12 +29,9 @@
 
 #include "util/blue_velvet.h"
 
-#include <common/log.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
-
-#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace bluefish {
 

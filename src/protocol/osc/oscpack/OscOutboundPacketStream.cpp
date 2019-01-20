@@ -33,7 +33,6 @@
 #include "OscOutboundPacketStream.h"
 
 #include <cassert>
-#include <cstdlib>
 #include <cstring>
 
 #include <common/endian.h>

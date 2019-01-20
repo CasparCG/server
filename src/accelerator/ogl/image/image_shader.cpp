@@ -23,11 +23,6 @@
 #include "../util/device.h"
 #include "../util/shader.h"
 
-#include <GL/glew.h>
-
-#include <common/env.h>
-#include <common/gl/gl_check.h>
-
 #include "ogl_image_vertex.h"
 #include "ogl_image_fragment.h"
 

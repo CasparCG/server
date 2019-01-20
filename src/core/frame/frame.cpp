@@ -25,13 +25,6 @@
 
 #include <common/array.h>
 #include <common/except.h>
-#include <common/future.h>
-#include <common/memshfl.h>
-#include <common/timer.h>
-
-#include <core/frame/frame_visitor.h>
-#include <core/frame/geometry.h>
-#include <core/frame/pixel_format.h>
 
 #include <cstdint>
 #include <functional>

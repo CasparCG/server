@@ -25,7 +25,6 @@
 #include "except.h"
 #include "log.h"
 #include "os/filesystem.h"
-#include <cstring>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -34,8 +33,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <fstream>
-#include <functional>
-#include <iostream>
 
 namespace caspar { namespace env {
 

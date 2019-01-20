@@ -33,7 +33,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
-#include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -48,7 +47,6 @@ extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavutil/channel_layout.h>
-#include <libavutil/opt.h>
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 }

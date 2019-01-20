@@ -28,12 +28,7 @@
 #include "amcp_shared.h"
 
 #include <algorithm>
-#include <cctype>
-#include <cstdio>
-#include <cstring>
-#include <future>
 
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>

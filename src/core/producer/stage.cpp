@@ -26,12 +26,10 @@
 #include "layer.h"
 
 #include "../frame/draw_frame.h"
-#include "../frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
 #include <common/future.h>
-#include <common/timer.h>
 
 #include <core/frame/frame_transform.h>
 

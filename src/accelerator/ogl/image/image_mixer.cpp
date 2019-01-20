@@ -28,8 +28,6 @@
 
 #include <common/array.h>
 #include <common/future.h>
-#include <common/gl/gl_check.h>
-#include <common/scope_exit.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>

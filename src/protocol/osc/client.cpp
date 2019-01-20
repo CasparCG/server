@@ -24,11 +24,9 @@
 
 #include "client.h"
 
-#include "oscpack/OscHostEndianness.h"
 #include "oscpack/OscOutboundPacketStream.h"
 
 #include <common/endian.h>
-#include <common/except.h>
 #include <common/utf.h>
 
 #include <core/monitor/monitor.h>

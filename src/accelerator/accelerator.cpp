@@ -5,8 +5,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 
-#include <common/env.h>
-
 #include <core/mixer/image/image_mixer.h>
 
 #include <memory>

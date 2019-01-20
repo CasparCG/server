@@ -25,8 +25,6 @@
 #include <string>
 #include <vector>
 
-#include <common/enum_class.h>
-
 #include <boost/rational.hpp>
 
 namespace caspar { namespace core {

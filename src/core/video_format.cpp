@@ -27,7 +27,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
 #include <utility>
 
 namespace caspar { namespace core {

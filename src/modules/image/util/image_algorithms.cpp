@@ -22,7 +22,7 @@
 #include "image_algorithms.h"
 
 #include <algorithm>
-#include <cstdint>
+#include <cmath>
 #include <vector>
 
 namespace caspar { namespace image {

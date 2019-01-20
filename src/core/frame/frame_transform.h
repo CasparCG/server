@@ -21,11 +21,9 @@
 
 #pragma once
 
-#include <common/env.h>
 #include <common/tweener.h>
 
 #include <core/mixer/image/blend_modes.h>
-#include <core/video_format.h>
 
 #include <boost/optional.hpp>
 

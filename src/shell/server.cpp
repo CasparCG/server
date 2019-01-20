@@ -34,11 +34,9 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/mixer/mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/stage.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 

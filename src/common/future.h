@@ -3,7 +3,6 @@
 #include <chrono>
 #include <future>
 #include <type_traits>
-#include <utility>
 
 namespace caspar {
 

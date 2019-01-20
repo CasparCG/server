@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "AMCPCommand.h"
-
 namespace caspar { namespace protocol { namespace amcp {
 
 void register_commands(class amcp_command_repository& repo);
