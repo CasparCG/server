@@ -38,7 +38,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
-#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
@@ -61,7 +60,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/timecode.h>
 #include <libswscale/swscale.h>
 }
 #ifdef _MSC_VER

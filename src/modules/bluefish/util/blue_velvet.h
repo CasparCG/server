@@ -25,11 +25,8 @@
 
 #include "../interop/BlueVelvetC.h"
 
-#include <common/except.h>
 #include <common/memory.h>
 #include <core/video_format.h>
-
-#include <core/fwd.h>
 
 namespace caspar { namespace bluefish {
 

@@ -25,8 +25,6 @@
 #include <string>
 #include <vector>
 
-#include <common/memory.h>
-
 #include <boost/function.hpp>
 
 namespace caspar { namespace protocol { namespace CLK {

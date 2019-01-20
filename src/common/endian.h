@@ -25,10 +25,6 @@
 #include <cstdint>
 #include <type_traits>
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
-
 namespace caspar {
 
 template <typename T>

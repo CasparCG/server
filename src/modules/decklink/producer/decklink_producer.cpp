@@ -38,18 +38,13 @@
 
 #include <core/diagnostics/call_context.h>
 #include <core/frame/draw_frame.h>
-#include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
-#include <core/frame/frame_transform.h>
-#include <core/frame/pixel_format.h>
-#include <core/mixer/audio/audio_mixer.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
 #include <tbb/concurrent_queue.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
@@ -75,8 +70,6 @@ extern "C" {
 #include <boost/format.hpp>
 
 #include "../decklink_api.h"
-
-#include <functional>
 
 using namespace caspar::ffmpeg;
 

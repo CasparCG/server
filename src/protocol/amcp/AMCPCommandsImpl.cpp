@@ -46,24 +46,20 @@
 #include <core/mixer/mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/layer.h>
 #include <core/producer/stage.h>
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/video_format.h>
 
 #include <algorithm>
-#include <cctype>
 #include <fstream>
 #include <future>
-#include <locale>
 #include <memory>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
-#include <boost/archive/iterators/transform_width.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>

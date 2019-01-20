@@ -2,8 +2,6 @@
 
 #include "except.h"
 
-#include <functional>
-
 namespace caspar {
 
 namespace detail {

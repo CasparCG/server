@@ -22,7 +22,6 @@
 #include "newtek.h"
 
 #include "consumer/newtek_ivga_consumer.h"
-#include "util/air_send.h"
 
 #include <core/consumer/frame_consumer.h>
 

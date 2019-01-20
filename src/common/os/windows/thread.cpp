@@ -1,6 +1,5 @@
 #include "../thread.h"
 
-#include <sstream>
 #include <thread>
 
 #include <windows.h>

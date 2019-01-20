@@ -22,7 +22,6 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/param.h>
-#include <common/scope_exit.h>
 #include <common/timer.h>
 
 #include <core/frame/draw_frame.h>

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../util/lock_container.h"
-#include <common/memory.h>
 #include <core/video_channel.h>
 
 namespace caspar { namespace protocol { namespace amcp {

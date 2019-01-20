@@ -26,10 +26,7 @@
 #include "../fwd.h"
 #include "../monitor/monitor.h"
 
-#include <common/forward.h>
 #include <common/memory.h>
-
-#include <string>
 
 namespace caspar { namespace core {
 

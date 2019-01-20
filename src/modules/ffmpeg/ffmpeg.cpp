@@ -29,10 +29,8 @@
 #include <common/log.h>
 
 #include <core/consumer/frame_consumer.h>
-#include <core/frame/draw_frame.h>
 #include <core/producer/frame_producer.h>
 
-#include <functional>
 #include <mutex>
 
 #if defined(_MSC_VER)
@@ -48,7 +46,6 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
-#include <libswscale/swscale.h>
 }
 
 namespace caspar { namespace ffmpeg {

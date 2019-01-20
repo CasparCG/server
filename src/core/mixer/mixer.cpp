@@ -29,22 +29,12 @@
 #include "image/image_mixer.h"
 
 #include <common/diagnostics/graph.h>
-#include <common/env.h>
-#include <common/except.h>
-#include <common/executor.h>
-#include <common/future.h>
-#include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
-#include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <tbb/concurrent_queue.h>
-
-#include <atomic>
-#include <mutex>
 #include <unordered_map>
 #include <vector>
 

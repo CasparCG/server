@@ -28,7 +28,6 @@
 
 #include <core/producer/cg_proxy.h>
 
-#include <algorithm>
 #include <sstream>
 
 #include <boost/algorithm/string/case_conv.hpp>

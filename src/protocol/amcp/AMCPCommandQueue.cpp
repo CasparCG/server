@@ -25,8 +25,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <common/except.h>
-
-#include <cmath>
+#include <common/timer.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 

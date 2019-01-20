@@ -21,7 +21,6 @@
 
 #include "../StdAfx.h"
 
-#include <future>
 #include <sstream>
 #include <stdexcept>
 

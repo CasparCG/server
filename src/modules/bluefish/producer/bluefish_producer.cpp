@@ -36,33 +36,23 @@
 #include <common/scope_exit.h>
 #include <common/timer.h>
 
-#include <ffmpeg/util/av_assert.h>
 #include <ffmpeg/util/av_util.h>
 
 #include <core/diagnostics/call_context.h>
 #include <core/frame/draw_frame.h>
-#include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
-#include <core/frame/frame_transform.h>
-#include <core/mixer/audio/audio_mixer.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
 #include <tbb/concurrent_queue.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/format.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/timer.hpp>
 
-#include <functional>
 #include <mutex>
 
 #ifdef _MSC_VER
@@ -70,12 +60,7 @@
 #pragma warning(disable : 4244)
 #endif
 extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavfilter/avfilter.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
-#include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timecode.h>

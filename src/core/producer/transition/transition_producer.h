@@ -22,7 +22,6 @@
 #pragma once
 
 #include "../../fwd.h"
-#include "../../video_format.h"
 
 #include <common/memory.h>
 #include <common/tweener.h>

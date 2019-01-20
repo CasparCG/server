@@ -23,8 +23,6 @@
 
 #include <protocol/amcp/amcp_command_repository.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <functional>
 #include <memory>
 

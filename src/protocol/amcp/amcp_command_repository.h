@@ -29,7 +29,6 @@
 #include <core/fwd.h>
 
 #include <functional>
-#include <future>
 
 namespace caspar { namespace protocol { namespace amcp {
 

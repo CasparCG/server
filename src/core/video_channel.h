@@ -26,7 +26,6 @@
 
 #include "monitor/monitor.h"
 
-#include <common/forward.h>
 #include <common/memory.h>
 
 #include <boost/signals2.hpp>

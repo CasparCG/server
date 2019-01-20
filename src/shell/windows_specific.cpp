@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 #include "platform_specific.h"
-#include "resource.h"
 
 #include <common/env.h>
 #include <common/log.h>

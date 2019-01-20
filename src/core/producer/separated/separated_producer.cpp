@@ -30,7 +30,6 @@
 #include <core/producer/frame_producer.h>
 
 #include <future>
-#include <mutex>
 
 namespace caspar { namespace core {
 

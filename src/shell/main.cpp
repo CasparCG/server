@@ -41,11 +41,8 @@
 
 #include <common/env.h>
 #include <common/except.h>
-#include <common/gl/gl_check.h>
 #include <common/log.h>
 
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
@@ -56,7 +53,6 @@
 
 #include <atomic>
 #include <future>
-#include <set>
 
 #include <clocale>
 #include <csignal>

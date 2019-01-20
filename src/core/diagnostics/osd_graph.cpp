@@ -27,7 +27,6 @@
 
 #include "call_context.h"
 
-#include <common/env.h>
 #include <common/executor.h>
 #include <common/timer.h>
 
@@ -44,7 +43,6 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <tuple>
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {

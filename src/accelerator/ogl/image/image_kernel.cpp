@@ -20,7 +20,6 @@
  */
 #include "image_kernel.h"
 
-#include "blending_glsl.h"
 #include "image_shader.h"
 
 #include "../util/device.h"
@@ -28,13 +27,10 @@
 #include "../util/texture.h"
 
 #include <common/assert.h>
-#include <common/env.h>
-#include <common/except.h>
 #include <common/gl/gl_check.h>
 
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
-#include <core/video_format.h>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/range/adaptor/transformed.hpp>

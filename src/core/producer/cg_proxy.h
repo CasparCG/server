@@ -29,8 +29,6 @@
 #include <set>
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
 
 class cg_proxy

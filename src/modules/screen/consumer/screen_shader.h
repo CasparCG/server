@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <common/memory.h>
-
 #include <accelerator/ogl/util/shader.h>
 
 namespace caspar { namespace screen {

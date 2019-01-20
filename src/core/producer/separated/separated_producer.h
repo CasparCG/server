@@ -23,8 +23,6 @@
 
 #include <common/memory.h>
 
-#include <string>
-
 namespace caspar { namespace core {
 
 spl::shared_ptr<class frame_producer> create_separated_producer(const spl::shared_ptr<class frame_producer>& fill,

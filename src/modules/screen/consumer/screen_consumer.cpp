@@ -32,7 +32,6 @@
 #include <common/memory.h>
 #include <common/memshfl.h>
 #include <common/param.h>
-#include <common/scope_exit.h>
 #include <common/timer.h>
 #include <common/utf.h>
 

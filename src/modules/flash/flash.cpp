@@ -29,7 +29,6 @@
 #include <common/env.h>
 #include <common/os/windows/windows.h>
 
-#include <core/frame/frame_factory.h>
 #include <core/producer/cg_proxy.h>
 #include <core/video_format.h>
 

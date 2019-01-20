@@ -25,8 +25,6 @@
 
 #include <chrono>
 
-#include "windows.h"
-
 using namespace std::chrono;
 
 namespace caspar {

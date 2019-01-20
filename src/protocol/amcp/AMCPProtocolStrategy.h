@@ -23,14 +23,10 @@
 
 #include "../util/ProtocolStrategy.h"
 
-#include <core/producer/cg_proxy.h>
-#include <core/video_channel.h>
-
 #include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <future>
 #include <string>
 
 namespace caspar { namespace protocol { namespace amcp {

@@ -23,8 +23,6 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <string>
-
 namespace caspar {
 
 boost::filesystem::path get_relative(const boost::filesystem::path& file, const boost::filesystem::path& relative_to);

@@ -46,7 +46,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
-#include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
@@ -57,7 +56,6 @@
 #include <include/cef_app.h>
 #include <include/cef_client.h>
 #include <include/cef_render_handler.h>
-#include <include/cef_task.h>
 #pragma warning(pop)
 
 #include <queue>

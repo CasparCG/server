@@ -24,24 +24,20 @@
 #include "cg_proxy.h"
 
 #include "../diagnostics/call_context.h"
-#include "../frame/draw_frame.h"
 #include "../module_dependencies.h"
 #include "../video_channel.h"
 #include "frame_producer.h"
 #include "stage.h"
 
 #include <common/env.h>
-#include <common/future.h>
 #include <common/os/filesystem.h>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 
 #include "common/param.h"
 #include <future>
 #include <map>
-#include <sstream>
 
 namespace caspar { namespace core {
 

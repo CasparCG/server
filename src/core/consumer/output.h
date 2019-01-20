@@ -27,7 +27,6 @@
 #include <common/forward.h>
 #include <common/memory.h>
 
-#include <future>
 #include <memory>
 
 FORWARD2(caspar, diagnostics, class graph);

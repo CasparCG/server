@@ -25,11 +25,6 @@
 
 #include "blending_glsl.h"
 
-#include <GL/glew.h>
-
-#include <common/env.h>
-#include <common/gl/gl_check.h>
-
 namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader> g_shader;

@@ -24,7 +24,6 @@
 #include <common/tweener.h>
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 
 namespace caspar { namespace image {

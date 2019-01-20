@@ -35,7 +35,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 
-#include <map>
 #include <memory>
 #include <utility>
 

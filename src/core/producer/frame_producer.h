@@ -30,7 +30,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/video_format.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 
 #include <cstdint>

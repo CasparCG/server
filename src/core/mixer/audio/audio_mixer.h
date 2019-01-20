@@ -27,9 +27,9 @@
 
 #include <core/frame/frame_visitor.h>
 #include <core/monitor/monitor.h>
+#include <core/video_format.h>
 
 #include <cstdint>
-#include <vector>
 
 FORWARD2(caspar, diagnostics, class graph);
 

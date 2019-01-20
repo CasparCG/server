@@ -30,8 +30,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
-#include <boost/property_tree/ptree.hpp>
-
 #include "decklink_api.h"
 
 namespace caspar { namespace decklink {
