@@ -569,7 +569,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     if (params.size() > 1) {
         try {
-            config.screen_index = boost::lexical_cast<int>(params.at(1));
+            config.screen_index = std::stoi(params.at(1));
         } catch (...) {
         }
     }

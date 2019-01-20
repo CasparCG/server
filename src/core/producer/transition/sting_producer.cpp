@@ -241,7 +241,7 @@ bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingI
     stingInfo.mask_filename = params.at(start_ind + 1);
 
     if (params.size() > start_ind + 2) {
-        stingInfo.trigger_point = boost::lexical_cast<int>(params.at(start_ind + 2));
+        stingInfo.trigger_point = std::stoi(params.at(start_ind + 2));
     }
 
     if (params.size() > start_ind + 3) {

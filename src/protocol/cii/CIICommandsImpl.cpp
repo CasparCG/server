@@ -99,7 +99,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
     // NEPTUNE:	V\5\13\1\X\Template\0\TabField1\TabField2...
     //			Add Template to layer X in the active templatehost
     if (parameters.size() > 5 && parameters[1] == L"5" && parameters[2] == L"13") {
-        layer_    = boost::lexical_cast<int>(parameters[4]);
+        layer_    = std::stoi(parameters[4]);
         filename_ = parameters[5];
         if (filename_.find(L"PK/") == std::wstring::npos && filename_.find(L"PK\\") == std::wstring::npos)
             filename_ = L"PK/" + filename_;
@@ -188,10 +188,10 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters)
         boost::split(split, str, boost::is_any_of("-"));
 
         try {
-            casparLayer_ = boost::lexical_cast<int>(split[0]);
+            casparLayer_ = std::stoi(split[0]);
 
             if (split.size() > 1)
-                layer_ = boost::lexical_cast<int>(split[1]);
+                layer_ = std::stoi(split[1]);
         } catch (...) {
             casparLayer_ = core::cg_proxy::DEFAULT_LAYER;
             layer_       = 0;

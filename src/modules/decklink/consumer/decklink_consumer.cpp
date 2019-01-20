@@ -673,7 +673,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     configuration config;
 
     if (params.size() > 1)
-        config.device_index = boost::lexical_cast<int>(params.at(1));
+        config.device_index = std::stoi(params.at(1));
 
     if (contains_param(L"INTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::internal_keyer;

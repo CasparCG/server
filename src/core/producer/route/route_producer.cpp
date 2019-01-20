@@ -112,8 +112,8 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
         return core::frame_producer::empty();
     }
 
-    auto channel = boost::lexical_cast<int>(what["CHANNEL"].str());
-    auto layer   = what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : -1;
+    auto channel = std::stoi(what["CHANNEL"].str());
+    auto layer   = what["LAYER"].matched ? std::stoi(what["LAYER"].str()) : -1;
 
     auto mode = core::route_mode::foreground;
     if (layer >= 0) {

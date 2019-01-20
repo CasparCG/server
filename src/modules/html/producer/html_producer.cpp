@@ -465,11 +465,11 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
         boost::smatch what;
         if (boost::regex_search(u8_url, what, boost::regex("width=([0-9]+)"))) {
-            width = boost::lexical_cast<int>(what[1].str());
+            width = std::stoi(what[1].str());
         }
 
         if (boost::regex_search(u8_url, what, boost::regex("height=([0-9]+)"))) {
-            height = boost::lexical_cast<int>(what[1].str());
+            height = std::stoi(what[1].str());
         }
     }
 

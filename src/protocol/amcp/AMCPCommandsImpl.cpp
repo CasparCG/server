@@ -337,15 +337,15 @@ std::wstring swap_command(command_context& ctx)
         boost::split(strs, ctx.parameters[0], boost::is_any_of("-"));
 
         auto ch1 = ctx.channel.channel;
-        auto ch2 = ctx.channels.at(boost::lexical_cast<int>(strs.at(0)) - 1);
+        auto ch2 = ctx.channels.at(std::stoi(strs.at(0)) - 1);
 
         int l1 = ctx.layer_index();
-        int l2 = boost::lexical_cast<int>(strs.at(1));
+        int l2 = std::stoi(strs.at(1));
 
         ch1->stage().swap_layer(l1, l2, ch2.channel->stage(), swap_transforms);
     } else {
         auto ch1 = ctx.channel.channel;
-        auto ch2 = ctx.channels.at(boost::lexical_cast<int>(ctx.parameters[0]) - 1);
+        auto ch2 = ctx.channels.at(std::stoi(ctx.parameters[0]) - 1);
         ch1->stage().swap_layers(ch2.channel->stage(), swap_transforms);
     }
 
@@ -547,7 +547,7 @@ std::wstring cg_add_command(command_context& ctx)
 {
     // CG 1 ADD 0 "template_folder/templatename" [STARTLABEL] 0/1 [DATA]
 
-    int          layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int          layer = std::stoi(ctx.parameters.at(0));
     std::wstring label;             //_parameters[2]
     bool         bDoStart  = false; //_parameters[2] alt. _parameters[3]
     unsigned int dataIndex = 3;
@@ -600,7 +600,7 @@ std::wstring cg_add_command(command_context& ctx)
 
 std::wstring cg_play_command(command_context& ctx)
 {
-    int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int layer = std::stoi(ctx.parameters.at(0));
     ctx.cg_registry
         ->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
         ->play(layer);
@@ -621,7 +621,7 @@ spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 
 std::wstring cg_stop_command(command_context& ctx)
 {
-    int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int layer = std::stoi(ctx.parameters.at(0));
     get_expected_cg_proxy(ctx)->stop(layer);
 
     return L"202 CG OK\r\n";
@@ -629,7 +629,7 @@ std::wstring cg_stop_command(command_context& ctx)
 
 std::wstring cg_next_command(command_context& ctx)
 {
-    int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int layer = std::stoi(ctx.parameters.at(0));
     get_expected_cg_proxy(ctx)->next(layer);
 
     return L"202 CG OK\r\n";
@@ -637,7 +637,7 @@ std::wstring cg_next_command(command_context& ctx)
 
 std::wstring cg_remove_command(command_context& ctx)
 {
-    int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int layer = std::stoi(ctx.parameters.at(0));
     get_expected_cg_proxy(ctx)->remove(layer);
 
     return L"202 CG OK\r\n";
@@ -652,7 +652,7 @@ std::wstring cg_clear_command(command_context& ctx)
 
 std::wstring cg_update_command(command_context& ctx)
 {
-    int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int layer = std::stoi(ctx.parameters.at(0));
 
     std::wstring dataString = ctx.parameters.at(1);
     if (dataString.at(0) != L'<' && dataString.at(0) != L'{') {
@@ -673,7 +673,7 @@ std::wstring cg_invoke_command(command_context& ctx)
 {
     std::wstringstream replyString;
     replyString << L"201 CG OK\r\n";
-    int  layer  = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int  layer  = std::stoi(ctx.parameters.at(0));
     auto result = get_expected_cg_proxy(ctx)->invoke(layer, ctx.parameters.at(1));
     replyString << result << L"\r\n";
 
@@ -739,7 +739,7 @@ std::wstring mixer_keyer_command(command_context& ctx)
         return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.is_key ? 1 : 0; });
 
     transforms_applier transforms(ctx);
-    bool               value = boost::lexical_cast<int>(ctx.parameters.at(0));
+    bool               value = std::stoi(ctx.parameters.at(0));
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) -> frame_transform {
                                                 transform.image_transform.is_key = value;
@@ -758,7 +758,7 @@ std::wstring mixer_invert_command(command_context& ctx)
         return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.invert ? 1 : 0; });
 
     transforms_applier transforms(ctx);
-    bool               value = boost::lexical_cast<int>(ctx.parameters.at(0));
+    bool               value = std::stoi(ctx.parameters.at(0));
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) -> frame_transform {
                                                 transform.image_transform.invert = value;
@@ -793,19 +793,18 @@ std::wstring mixer_chroma_command(command_context& ctx)
     auto legacy_mode = core::get_chroma_mode(ctx.parameters.at(0));
 
     if (legacy_mode) {
-        duration = ctx.parameters.size() > 4 ? boost::lexical_cast<int>(ctx.parameters.at(4)) : 0;
+        duration = ctx.parameters.size() > 4 ? std::stoi(ctx.parameters.at(4)) : 0;
         tween    = ctx.parameters.size() > 5 ? ctx.parameters.at(5) : L"linear";
 
         if (*legacy_mode == chroma::legacy_type::none) {
             chroma.enable = false;
         } else {
-            chroma.enable         = true;
-            chroma.hue_width      = 0.5 - boost::lexical_cast<double>(ctx.parameters.at(1)) * 0.5;
-            chroma.min_brightness = boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.min_saturation = boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.softness =
-                boost::lexical_cast<double>(ctx.parameters.at(2)) - boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.spill_suppress            = 180.0 - boost::lexical_cast<double>(ctx.parameters.at(3)) * 180.0;
+            chroma.enable                    = true;
+            chroma.hue_width                 = 0.5 - std::stod(ctx.parameters.at(1)) * 0.5;
+            chroma.min_brightness            = std::stod(ctx.parameters.at(1));
+            chroma.min_saturation            = std::stod(ctx.parameters.at(1));
+            chroma.softness                  = std::stod(ctx.parameters.at(2)) - std::stod(ctx.parameters.at(1));
+            chroma.spill_suppress            = 180.0 - std::stod(ctx.parameters.at(3)) * 180.0;
             chroma.spill_suppress_saturation = 1;
 
             if (*legacy_mode == chroma::legacy_type::green)
@@ -814,20 +813,20 @@ std::wstring mixer_chroma_command(command_context& ctx)
                 chroma.target_hue = 240;
         }
     } else {
-        duration = ctx.parameters.size() > 9 ? boost::lexical_cast<int>(ctx.parameters.at(9)) : 0;
+        duration = ctx.parameters.size() > 9 ? std::stoi(ctx.parameters.at(9)) : 0;
         tween    = ctx.parameters.size() > 10 ? ctx.parameters.at(10) : L"linear";
 
         chroma.enable = ctx.parameters.at(0) == L"1";
 
         if (chroma.enable) {
-            chroma.target_hue                = boost::lexical_cast<double>(ctx.parameters.at(1));
-            chroma.hue_width                 = boost::lexical_cast<double>(ctx.parameters.at(2));
-            chroma.min_saturation            = boost::lexical_cast<double>(ctx.parameters.at(3));
-            chroma.min_brightness            = boost::lexical_cast<double>(ctx.parameters.at(4));
-            chroma.softness                  = boost::lexical_cast<double>(ctx.parameters.at(5));
-            chroma.spill_suppress            = boost::lexical_cast<double>(ctx.parameters.at(6));
-            chroma.spill_suppress_saturation = boost::lexical_cast<double>(ctx.parameters.at(7));
-            chroma.show_mask                 = boost::lexical_cast<double>(ctx.parameters.at(8));
+            chroma.target_hue                = std::stod(ctx.parameters.at(1));
+            chroma.hue_width                 = std::stod(ctx.parameters.at(2));
+            chroma.min_saturation            = std::stod(ctx.parameters.at(3));
+            chroma.min_brightness            = std::stod(ctx.parameters.at(4));
+            chroma.softness                  = std::stod(ctx.parameters.at(5));
+            chroma.spill_suppress            = std::stod(ctx.parameters.at(6));
+            chroma.spill_suppress_saturation = std::stod(ctx.parameters.at(7));
+            chroma.show_mask                 = std::stod(ctx.parameters.at(8));
         }
     }
 
@@ -869,8 +868,8 @@ std::wstring single_double_animatable_mixer_command(command_context& ctx, const 
         return reply_value(ctx, getter);
 
     transforms_applier transforms(ctx);
-    double             value    = boost::lexical_cast<double>(ctx.parameters.at(0));
-    int                duration = ctx.parameters.size() > 1 ? boost::lexical_cast<int>(ctx.parameters[1]) : 0;
+    double             value    = std::stod(ctx.parameters.at(0));
+    int                duration = ctx.parameters.size() > 1 ? std::stoi(ctx.parameters[1]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 2 ? ctx.parameters[2] : L"linear";
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
@@ -928,12 +927,12 @@ std::wstring mixer_levels_command(command_context& ctx)
 
     transforms_applier transforms(ctx);
     levels             value;
-    value.min_input       = boost::lexical_cast<double>(ctx.parameters.at(0));
-    value.max_input       = boost::lexical_cast<double>(ctx.parameters.at(1));
-    value.gamma           = boost::lexical_cast<double>(ctx.parameters.at(2));
-    value.min_output      = boost::lexical_cast<double>(ctx.parameters.at(3));
-    value.max_output      = boost::lexical_cast<double>(ctx.parameters.at(4));
-    int          duration = ctx.parameters.size() > 5 ? boost::lexical_cast<int>(ctx.parameters[5]) : 0;
+    value.min_input       = std::stod(ctx.parameters.at(0));
+    value.max_input       = std::stod(ctx.parameters.at(1));
+    value.gamma           = std::stod(ctx.parameters.at(2));
+    value.min_output      = std::stod(ctx.parameters.at(3));
+    value.max_output      = std::stod(ctx.parameters.at(4));
+    int          duration = ctx.parameters.size() > 5 ? std::stoi(ctx.parameters[5]) : 0;
     std::wstring tween    = ctx.parameters.size() > 6 ? ctx.parameters[6] : L"linear";
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
@@ -959,12 +958,12 @@ std::wstring mixer_fill_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 4 ? boost::lexical_cast<int>(ctx.parameters[4]) : 0;
+    int                duration = ctx.parameters.size() > 4 ? std::stoi(ctx.parameters[4]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 5 ? ctx.parameters[5] : L"linear";
-    double             x        = boost::lexical_cast<double>(ctx.parameters.at(0));
-    double             y        = boost::lexical_cast<double>(ctx.parameters.at(1));
-    double             x_s      = boost::lexical_cast<double>(ctx.parameters.at(2));
-    double             y_s      = boost::lexical_cast<double>(ctx.parameters.at(3));
+    double             x        = std::stod(ctx.parameters.at(0));
+    double             y        = std::stod(ctx.parameters.at(1));
+    double             x_s      = std::stod(ctx.parameters.at(2));
+    double             y_s      = std::stod(ctx.parameters.at(3));
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) mutable -> frame_transform {
@@ -993,12 +992,12 @@ std::wstring mixer_clip_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 4 ? boost::lexical_cast<int>(ctx.parameters[4]) : 0;
+    int                duration = ctx.parameters.size() > 4 ? std::stoi(ctx.parameters[4]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 5 ? ctx.parameters[5] : L"linear";
-    double             x        = boost::lexical_cast<double>(ctx.parameters.at(0));
-    double             y        = boost::lexical_cast<double>(ctx.parameters.at(1));
-    double             x_s      = boost::lexical_cast<double>(ctx.parameters.at(2));
-    double             y_s      = boost::lexical_cast<double>(ctx.parameters.at(3));
+    double             x        = std::stod(ctx.parameters.at(0));
+    double             y        = std::stod(ctx.parameters.at(1));
+    double             x_s      = std::stod(ctx.parameters.at(2));
+    double             y_s      = std::stod(ctx.parameters.at(3));
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) -> frame_transform {
@@ -1024,10 +1023,10 @@ std::wstring mixer_anchor_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 2 ? boost::lexical_cast<int>(ctx.parameters[2]) : 0;
+    int                duration = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
-    double             x        = boost::lexical_cast<double>(ctx.parameters.at(0));
-    double             y        = boost::lexical_cast<double>(ctx.parameters.at(1));
+    double             x        = std::stod(ctx.parameters.at(0));
+    double             y        = std::stod(ctx.parameters.at(1));
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) mutable -> frame_transform {
@@ -1051,12 +1050,12 @@ std::wstring mixer_crop_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 4 ? boost::lexical_cast<int>(ctx.parameters[4]) : 0;
+    int                duration = ctx.parameters.size() > 4 ? std::stoi(ctx.parameters[4]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 5 ? ctx.parameters[5] : L"linear";
-    double             ul_x     = boost::lexical_cast<double>(ctx.parameters.at(0));
-    double             ul_y     = boost::lexical_cast<double>(ctx.parameters.at(1));
-    double             lr_x     = boost::lexical_cast<double>(ctx.parameters.at(2));
-    double             lr_y     = boost::lexical_cast<double>(ctx.parameters.at(3));
+    double             ul_x     = std::stod(ctx.parameters.at(0));
+    double             ul_y     = std::stod(ctx.parameters.at(1));
+    double             lr_x     = std::stod(ctx.parameters.at(2));
+    double             lr_y     = std::stod(ctx.parameters.at(3));
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) -> frame_transform {
@@ -1094,16 +1093,16 @@ std::wstring mixer_perspective_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 8 ? boost::lexical_cast<int>(ctx.parameters[8]) : 0;
+    int                duration = ctx.parameters.size() > 8 ? std::stoi(ctx.parameters[8]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 9 ? ctx.parameters[9] : L"linear";
-    double             ul_x     = boost::lexical_cast<double>(ctx.parameters.at(0));
-    double             ul_y     = boost::lexical_cast<double>(ctx.parameters.at(1));
-    double             ur_x     = boost::lexical_cast<double>(ctx.parameters.at(2));
-    double             ur_y     = boost::lexical_cast<double>(ctx.parameters.at(3));
-    double             lr_x     = boost::lexical_cast<double>(ctx.parameters.at(4));
-    double             lr_y     = boost::lexical_cast<double>(ctx.parameters.at(5));
-    double             ll_x     = boost::lexical_cast<double>(ctx.parameters.at(6));
-    double             ll_y     = boost::lexical_cast<double>(ctx.parameters.at(7));
+    double             ul_x     = std::stod(ctx.parameters.at(0));
+    double             ul_y     = std::stod(ctx.parameters.at(1));
+    double             ur_x     = std::stod(ctx.parameters.at(2));
+    double             ur_y     = std::stod(ctx.parameters.at(3));
+    double             lr_x     = std::stod(ctx.parameters.at(4));
+    double             lr_y     = std::stod(ctx.parameters.at(5));
+    double             ll_x     = std::stod(ctx.parameters.at(6));
+    double             ll_y     = std::stod(ctx.parameters.at(7));
 
     transforms.add(stage::transform_tuple_t(ctx.layer_index(),
                                             [=](frame_transform transform) -> frame_transform {
@@ -1139,7 +1138,7 @@ std::wstring mixer_mastervolume_command(command_context& ctx)
         return L"201 MIXER OK\r\n" + std::to_wstring(volume) + L"\r\n";
     }
 
-    float master_volume = boost::lexical_cast<float>(ctx.parameters.at(0));
+    float master_volume = std::stof(ctx.parameters.at(0));
     ctx.channel.channel->mixer().set_master_volume(master_volume);
 
     return L"202 MIXER OK\r\n";
@@ -1148,9 +1147,9 @@ std::wstring mixer_mastervolume_command(command_context& ctx)
 std::wstring mixer_grid_command(command_context& ctx)
 {
     transforms_applier transforms(ctx);
-    int                duration = ctx.parameters.size() > 1 ? boost::lexical_cast<int>(ctx.parameters[1]) : 0;
+    int                duration = ctx.parameters.size() > 1 ? std::stoi(ctx.parameters[1]) : 0;
     std::wstring       tween    = ctx.parameters.size() > 2 ? ctx.parameters[2] : L"linear";
-    int                n        = boost::lexical_cast<int>(ctx.parameters.at(0));
+    int                n        = std::stoi(ctx.parameters.at(0));
     double             delta    = 1.0 / static_cast<double>(n);
     for (int x = 0; x < n; ++x) {
         for (int y = 0; y < n; ++y) {
@@ -1386,7 +1385,7 @@ std::wstring restart_command(command_context& ctx)
 
 std::wstring lock_command(command_context& ctx)
 {
-    int  channel_index = boost::lexical_cast<int>(ctx.parameters.at(0)) - 1;
+    int  channel_index = std::stoi(ctx.parameters.at(0)) - 1;
     auto lock          = ctx.channels.at(channel_index).lock;
     auto command       = boost::to_upper_copy(ctx.parameters.at(1));
 

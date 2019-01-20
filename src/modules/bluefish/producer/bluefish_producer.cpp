@@ -649,7 +649,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto device_index = get_param(L"DEVICE", params, -1);
     if (device_index == -1)
-        device_index = boost::lexical_cast<int>(params.at(1));
+        device_index = std::stoi(params.at(1));
 
     auto stream_index = get_param(L"SDI-STREAM", params, -1);
     if (stream_index == -1)

@@ -192,7 +192,7 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
     }
 
     auto transition         = what["TRANSITION"].str();
-    transitionInfo.duration = boost::lexical_cast<int>(what["DURATION"].str());
+    transitionInfo.duration = std::stoi(what["DURATION"].str());
     auto direction          = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
     auto tween              = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
     transitionInfo.tweener  = tween;
