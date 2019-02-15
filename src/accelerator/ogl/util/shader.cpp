@@ -28,11 +28,14 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-struct shader::impl : boost::noncopyable
+struct shader::impl
 {
     GLuint                                 program_;
     std::unordered_map<std::string, GLint> uniform_locations_;
     std::unordered_map<std::string, GLint> attrib_locations_;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
   public:
     impl(const std::string& vertex_source_str, const std::string& fragment_source_str)

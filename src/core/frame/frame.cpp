@@ -39,7 +39,7 @@
 
 namespace caspar { namespace core {
 
-struct mutable_frame::impl : boost::noncopyable
+struct mutable_frame::impl
 {
     std::vector<array<std::uint8_t>> image_data_;
     array<std::int32_t>              audio_data_;
@@ -47,6 +47,9 @@ struct mutable_frame::impl : boost::noncopyable
     const void*                      tag_;
     frame_geometry                   geometry_ = frame_geometry::get_default();
     mutable_frame::commit_t          commit_;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
     impl(const void*                      tag,
          std::vector<array<std::uint8_t>> image_data,

@@ -27,10 +27,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/chrono/duration.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/core/noncopyable.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>

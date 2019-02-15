@@ -28,8 +28,6 @@
 #include <string>
 #include <tuple>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
 void register_sink();

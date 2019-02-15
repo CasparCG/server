@@ -107,7 +107,7 @@ struct frame
     GLsync fence = nullptr;
 };
 
-struct screen_consumer : boost::noncopyable
+struct screen_consumer
 {
     const configuration     config_;
     core::video_format_desc format_desc_;
@@ -137,6 +137,9 @@ struct screen_consumer : boost::noncopyable
 
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
+
+    screen_consumer(const screen_consumer&) = delete;
+    screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
     screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)

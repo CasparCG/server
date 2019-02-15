@@ -30,7 +30,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/video_format.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 
 #include <cstdint>
@@ -137,7 +136,7 @@ struct frame_producer_dependencies
 using producer_factory_t = std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
                                                                                const std::vector<std::wstring>&)>;
 
-class frame_producer_registry : boost::noncopyable
+class frame_producer_registry
 {
   public:
     frame_producer_registry();
@@ -150,6 +149,9 @@ class frame_producer_registry : boost::noncopyable
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
+
+    frame_producer_registry(const frame_producer_registry&) = delete;
+    frame_producer_registry& operator=(const frame_producer_registry&) = delete;
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);

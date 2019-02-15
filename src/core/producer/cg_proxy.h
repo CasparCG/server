@@ -29,8 +29,6 @@
 #include <set>
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
 
 class cg_proxy
@@ -61,7 +59,7 @@ using cg_producer_factory =
                                                   const std::wstring&                filename)>;
 using meta_info_extractor = std::function<std::string(const std::wstring& filename)>;
 
-class cg_producer_registry : boost::noncopyable
+class cg_producer_registry
 {
   public:
     cg_producer_registry();
@@ -90,6 +88,9 @@ class cg_producer_registry : boost::noncopyable
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
+
+    cg_producer_registry(const cg_producer_registry&) = delete;
+    cg_producer_registry& operator=(const cg_producer_registry&) = delete;
 };
 
 void init_cg_proxy_as_producer(core::module_dependencies dependencies);

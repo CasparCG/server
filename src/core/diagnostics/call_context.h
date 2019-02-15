@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <boost/core/noncopyable.hpp>
 #include <string>
 
 namespace caspar { namespace core { namespace diagnostics {
@@ -35,11 +34,15 @@ struct call_context
     std::wstring         to_string() const;
 };
 
-class scoped_call_context : boost::noncopyable
+class scoped_call_context
 {
-    call_context saved_ = call_context::for_thread();
+    call_context saved_;
+
+    scoped_call_context(const scoped_call_context&) = delete;
+    scoped_call_context& operator=(const scoped_call_context&) = delete;
 
   public:
+    scoped_call_context() { saved_ = call_context::for_thread(); }
     ~scoped_call_context() { call_context::for_thread() = saved_; }
 };
 
