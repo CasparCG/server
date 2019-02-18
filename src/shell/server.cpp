@@ -97,7 +97,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
     });
 }
 
-struct server::impl : boost::noncopyable
+struct server::impl
 {
     std::shared_ptr<boost::asio::io_service>           io_service_ = create_running_io_service();
     accelerator::accelerator                           accelerator_;
@@ -111,6 +111,9 @@ struct server::impl : boost::noncopyable
     spl::shared_ptr<core::frame_producer_registry>     producer_registry_;
     spl::shared_ptr<core::frame_consumer_registry>     consumer_registry_;
     std::function<void(bool)>                          shutdown_server_now_;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
         : accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))

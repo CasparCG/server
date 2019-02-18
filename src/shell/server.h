@@ -23,14 +23,12 @@
 
 #include <protocol/amcp/amcp_command_repository.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <functional>
 #include <memory>
 
 namespace caspar {
 
-class server final : public boost::noncopyable
+class server final
 {
   public:
     explicit server(std::function<void(bool)> shutdown_server_now);
@@ -40,6 +38,9 @@ class server final : public boost::noncopyable
   private:
     struct impl;
     std::shared_ptr<impl> impl_;
+
+    server(const server&) = delete;
+    server& operator=(const server&) = delete;
 };
 
 } // namespace caspar

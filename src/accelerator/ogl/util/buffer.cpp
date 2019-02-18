@@ -26,7 +26,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-struct buffer::impl : boost::noncopyable
+struct buffer::impl
 {
     GLuint     id_     = 0;
     GLsizei    size_   = 0;
@@ -34,6 +34,9 @@ struct buffer::impl : boost::noncopyable
     bool       write_  = false;
     GLenum     target_ = 0;
     GLbitfield flags_  = 0;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
   public:
     impl(int size, bool write)

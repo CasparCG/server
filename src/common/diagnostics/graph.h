@@ -27,8 +27,6 @@
 #include <string>
 #include <tuple>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace diagnostics {
 
 int                                    color(float r, float g, float b, float a = 1.0f);
@@ -41,7 +39,7 @@ enum class tag_severity
     SILENT,
 };
 
-class graph : boost::noncopyable
+class graph
 {
     friend void register_graph(const spl::shared_ptr<graph>& graph);
 
@@ -56,16 +54,23 @@ class graph : boost::noncopyable
   private:
     struct impl;
     std::shared_ptr<impl> impl_;
+
+    graph(const graph&) = delete;
+    graph& operator=(const graph&) = delete;
 };
 
 void register_graph(const spl::shared_ptr<graph>& graph);
 
 namespace spi {
 
-class graph_sink : boost::noncopyable
+class graph_sink
 {
+    graph_sink(const graph_sink&) = delete;
+    graph_sink& operator=(const graph_sink&) = delete;
+
   public:
-    virtual ~graph_sink() {}
+    graph_sink() = default;
+    virtual ~graph_sink(){};
     virtual void activate()                                              = 0;
     virtual void set_text(const std::wstring& value)                     = 0;
     virtual void set_value(const std::string& name, double value)        = 0;

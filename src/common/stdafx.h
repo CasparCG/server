@@ -57,7 +57,6 @@
 //#include <boost/log/utility/setup/common_attributes.hpp>
 #include <GL/glew.h>
 #include <boost/make_shared.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>

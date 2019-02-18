@@ -34,7 +34,6 @@
 #include <core/video_format.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <future>
@@ -51,12 +50,13 @@ std::wstring get_absolute(const std::wstring& base_folder, const std::wstring& f
     return (boost::filesystem::path(base_folder) / filename).wstring();
 }
 
-class flash_cg_proxy
-    : public core::cg_proxy
-    , boost::noncopyable
+class flash_cg_proxy : public core::cg_proxy
 {
     spl::shared_ptr<core::frame_producer> flash_producer_;
     std::wstring                          base_folder_;
+
+    flash_cg_proxy(const flash_cg_proxy&) = delete;
+    flash_cg_proxy& operator=(const flash_cg_proxy&) = delete;
 
   public:
     explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer,

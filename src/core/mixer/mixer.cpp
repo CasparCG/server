@@ -50,7 +50,7 @@
 
 namespace caspar { namespace core {
 
-struct mixer::impl : boost::noncopyable
+struct mixer::impl
 {
     monitor::state                       state_;
     int                                  channel_index_;
@@ -59,7 +59,9 @@ struct mixer::impl : boost::noncopyable
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
 
-  public:
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
+
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
         : channel_index_(channel_index)
         , graph_(std::move(graph))

@@ -125,7 +125,7 @@ EBlueVideoChannel get_bluesdk_videochannel_from_streamid(bluefish_hardware_outpu
     }
 }
 
-struct bluefish_consumer : boost::noncopyable
+struct bluefish_consumer
 {
     const int           channel_index_;
     const configuration config_;
@@ -168,7 +168,9 @@ struct bluefish_consumer : boost::noncopyable
     caspar::timer                       tick_timer_;
     caspar::timer                       sync_timer_;
 
-  public:
+    bluefish_consumer(const bluefish_consumer&) = delete;
+    bluefish_consumer& operator=(const bluefish_consumer&) = delete;
+
     bluefish_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
         : channel_index_(channel_index)
         , config_(config)

@@ -155,7 +155,7 @@ bool is_bluefish_format_interlaced(unsigned int vid_mode)
     return interlaced;
 }
 
-struct bluefish_producer : boost::noncopyable
+struct bluefish_producer
 {
     const int                    device_index_;
     const int                    stream_index_;
@@ -196,7 +196,9 @@ struct bluefish_producer : boost::noncopyable
     uint64_t                  capture_ts                = 0;
     int                       remainaing_audio_samples_ = 0;
 
-  public:
+    bluefish_producer(const bluefish_producer&) = delete;
+    bluefish_producer& operator=(const bluefish_producer&) = delete;
+
     bluefish_producer(const core::video_format_desc&              format_desc,
                       int                                         device_index,
                       int                                         stream_index,

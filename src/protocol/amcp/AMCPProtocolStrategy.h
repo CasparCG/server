@@ -28,16 +28,12 @@
 
 #include <common/memory.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <future>
 #include <string>
 
 namespace caspar { namespace protocol { namespace amcp {
 
-class AMCPProtocolStrategy
-    : public IO::IProtocolStrategy
-    , boost::noncopyable
+class AMCPProtocolStrategy : public IO::IProtocolStrategy
 {
   public:
     AMCPProtocolStrategy(const std::wstring& name, const spl::shared_ptr<class amcp_command_repository>& repo);
@@ -50,6 +46,9 @@ class AMCPProtocolStrategy
   private:
     struct impl;
     spl::unique_ptr<impl> impl_;
+
+    AMCPProtocolStrategy(const AMCPProtocolStrategy&) = delete;
+    AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&) = delete;
 };
 
 }}} // namespace caspar::protocol::amcp
