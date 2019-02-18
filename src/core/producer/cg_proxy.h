@@ -57,7 +57,6 @@ using cg_proxy_factory = std::function<spl::shared_ptr<cg_proxy>(const spl::shar
 using cg_producer_factory =
     std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
                                                   const std::wstring&                filename)>;
-using meta_info_extractor = std::function<std::string(const std::wstring& filename)>;
 
 class cg_producer_registry
 {
@@ -66,7 +65,6 @@ class cg_producer_registry
 
     void register_cg_producer(std::wstring           cg_producer_name,
                               std::set<std::wstring> file_extensions,
-                              meta_info_extractor    info_extractor,
                               cg_proxy_factory       proxy_factory,
                               cg_producer_factory    producer_factory,
                               bool                   reusable_producer_instance);
@@ -81,7 +79,6 @@ class cg_producer_registry
                                                   int                                   render_layer,
                                                   const std::wstring&                   filename) const;
 
-    std::string  read_meta_info(const std::wstring& filename) const;
     bool         is_cg_extension(const std::wstring& extension) const;
     std::wstring get_cg_producer_name(const std::wstring& filename) const;
 

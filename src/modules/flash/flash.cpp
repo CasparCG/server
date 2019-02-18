@@ -233,7 +233,6 @@ void init(core::module_dependencies dependencies)
     dependencies.cg_registry->register_cg_producer(
         L"flash",
         {L".ft", L".ct"},
-        [](const std::wstring& filename) { return read_template_meta_info(filename); },
         [](const spl::shared_ptr<core::frame_producer>& producer) {
             return spl::make_shared<flash_cg_proxy>(producer);
         },

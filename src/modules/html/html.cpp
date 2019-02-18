@@ -247,7 +247,6 @@ void init(core::module_dependencies dependencies)
     dependencies.cg_registry->register_cg_producer(
         L"html",
         {L".html"},
-        [](const std::wstring& filename) { return ""; },
         [](const spl::shared_ptr<core::frame_producer>& producer) { return spl::make_shared<html_cg_proxy>(producer); },
         [](const core::frame_producer_dependencies& dependencies, const std::wstring& filename) {
             return html::create_cg_producer(dependencies, {filename});
