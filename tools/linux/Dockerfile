@@ -35,11 +35,19 @@ FROM ${IMAGE_BASE} as build-casparcg
 	RUN ln -s /build/staging /staging && \
 		/source/shell/copy_deps.sh shell/casparcg /staging/lib
 
-FROM ubuntu:bionic
+FROM nvidia/opengl:1.0-glvnd-devel-ubuntu18.04
 	COPY --from=build-casparcg /staging /opt/casparcg
 
-	# This can be removed once bionic is more stable, as this image currently has an older version of libc than buildpack-deps:bionic
-	RUN apt-get update && apt-get dist-upgrade -y && rm -rf /var/lib/apt/lists/*
+	RUN set -ex; \
+		apt-get update; \
+		apt-get install -y --no-install-recommends \
+			libc++1 \
+			libnss3 \
+			fontconfig \
+		; \
+		rm -rf /var/lib/apt/lists/*
 
 	WORKDIR /opt/casparcg
-	ENTRYPOINT ["/opt/casparcg/run.sh"]
+
+	ADD tools/linux/run_docker.sh ./
+	CMD ["./run_docker.sh"]
