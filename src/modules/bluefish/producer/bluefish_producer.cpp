@@ -495,7 +495,7 @@ struct bluefish_producer : boost::noncopyable
     {
         try {
             if (reserved_frames_.front()->image_data()) {
-                if (sync_format_ == UPD_FMT_FIELD && !first_frame_) {
+                if (sync_format_ == UPD_FMT_FIELD && first_frame_) {
                     blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
                                               static_cast<unsigned long>(reserved_frames_.front()->image_size()),
                                               BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_FRAME),
