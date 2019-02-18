@@ -1318,10 +1318,6 @@ struct param_visitor : public boost::static_visitor<void>
 
 std::wstring info_channel_command(command_context& ctx)
 {
-    std::wstringstream replyString;
-    // This is needed for backwards compatibility with old clients
-    replyString << L"201 INFO OK\r\n";
-
     pt::wptree info;
     pt::wptree channel_info;
 
@@ -1338,6 +1334,10 @@ std::wstring info_channel_command(command_context& ctx)
     }
 
     info.add_child(L"channel", channel_info);
+
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO OK\r\n";
 
     pt::xml_writer_settings<std::wstring> w(' ', 3);
     pt::xml_parser::write_xml(replyString, info, w);
@@ -1358,6 +1358,42 @@ std::wstring info_command(command_context& ctx)
     replyString << L"\r\n";
     return replyString.str();
 }
+
+
+std::wstring info_config_command(command_context& ctx)
+{
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO CONFIG OK\r\n";
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, caspar::env::properties(), w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
+std::wstring info_paths_command(command_context& ctx)
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"paths.media-path",		caspar::env::media_folder());
+	info.add(L"paths.log-path",			caspar::env::log_folder());
+	info.add(L"paths.data-path",			caspar::env::data_folder());
+	info.add(L"paths.template-path",		caspar::env::template_folder());
+	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
+
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO PATHS OK\r\n";
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, info, w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
 
 std::wstring diag_command(command_context& ctx)
 {
@@ -1494,6 +1530,8 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
     repo.register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     repo.register_command(L"Query Commands", L"INFO", info_command, 0);
+    repo.register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
+    repo.register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
 }
 
 }}} // namespace caspar::protocol::amcp

@@ -44,7 +44,6 @@ std::wstring                 media;
 std::wstring                 log;
 std::wstring                 ftemplate;
 std::wstring                 data;
-std::wstring                 font;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -111,7 +110,6 @@ void configure(const std::wstring& filename)
         ftemplate =
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
         data = clean_path(paths.get(L"data-path", initial + L"/data/"));
-        font = clean_path(paths.get(L"font-path", initial + L"/font/"));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;
@@ -121,7 +119,6 @@ void configure(const std::wstring& filename)
     log       = ensure_trailing_slash(resolve_or_create(log));
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
     data      = ensure_trailing_slash(resolve_or_create(data));
-    font      = ensure_trailing_slash(resolve_or_create(font));
 
     ensure_writable(log);
     ensure_writable(ftemplate);
@@ -156,12 +153,6 @@ const std::wstring& data_folder()
 {
     check_is_configured();
     return data;
-}
-
-const std::wstring& font_folder()
-{
-    check_is_configured();
-    return font;
 }
 
 #define QUOTE(str) #str
