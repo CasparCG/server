@@ -193,6 +193,7 @@ endif ()
 
 include(CMakeModules/PrecompiledHeader.cmake)
 
+add_subdirectory(tools)
 add_subdirectory(accelerator)
 add_subdirectory(common)
 add_subdirectory(core)
