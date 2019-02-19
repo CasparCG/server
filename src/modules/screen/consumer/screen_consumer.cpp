@@ -41,8 +41,6 @@
 #include <core/frame/geometry.h>
 #include <core/video_format.h>
 
-#include "./screen_shader.h"
-
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -63,7 +61,16 @@
 #include "../util/x11_util.h"
 #endif
 
+#include <accelerator/ogl/util/shader.h>
+#include "consumer_screen_fragment.h"
+#include "consumer_screen_vertex.h"
+
 namespace caspar { namespace screen {
+
+std::unique_ptr<accelerator::ogl::shader> get_shader()
+{
+    return std::make_unique<accelerator::ogl::shader>(std::string(vertex_shader), std::string(fragment_shader));
+}
 
 enum class stretch
 {

@@ -32,6 +32,7 @@ else ()
 	CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generated/version.h")
 	INCLUDE_DIRECTORIES ("${CMAKE_BINARY_DIR}/generated")
 
+	ADD_SUBDIRECTORY (tools)
 	ADD_SUBDIRECTORY (accelerator)
 	ADD_SUBDIRECTORY (common)
 	ADD_SUBDIRECTORY (core)

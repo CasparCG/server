@@ -20,7 +20,6 @@
  */
 #include "image_kernel.h"
 
-#include "blending_glsl.h"
 #include "image_shader.h"
 
 #include "../util/device.h"
