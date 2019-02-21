@@ -82,6 +82,13 @@ struct configuration
         aspect_invalid,
     };
 
+    enum class colour_spaces
+    {
+        RGB               = 0,
+        datavideo_full    = 1,
+        datavideo_limited = 2
+    };
+
     std::wstring    name          = L"Screen consumer";
     int             screen_index  = 0;
     int             screen_x      = 0;
@@ -97,6 +104,7 @@ struct configuration
     bool            interactive   = true;
     bool            borderless    = false;
     bool            always_on_top = false;
+    colour_spaces   colour_space  = colour_spaces::RGB;
 };
 
 struct frame
@@ -256,6 +264,7 @@ struct screen_consumer
                 shader_ = get_shader();
                 shader_->use();
                 shader_->set("background", 0);
+                shader_->set("window_width", screen_width_);
 
                 for (int n = 0; n < 2; ++n) {
                     screen::frame frame;
@@ -266,8 +275,18 @@ struct screen_consumer
                         reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex,
+                                           GL_TEXTURE_MIN_FILTER,
+                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
+                                               ? GL_NEAREST
+                                               : GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex,
+                                           GL_TEXTURE_MAG_FILTER,
+                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
+                                               ? GL_NEAREST
+                                               : GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
@@ -284,11 +303,18 @@ struct screen_consumer
                 calculate_aspect();
 
                 window_.setVerticalSyncEnabled(config_.vsync);
-
                 if (config_.vsync) {
                     CASPAR_LOG(info) << print() << " Enabled vsync.";
                 }
 
+                shader_->set("colour_space", config_.colour_space);
+                if (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                    config_.colour_space == configuration::colour_spaces::datavideo_limited) {
+                    CASPAR_LOG(info) << print() << " Enabled colours conversion for DataVideo TC-100/TC-200 "
+                                     << (config_.colour_space == configuration::colour_spaces::datavideo_full
+                                             ? "(Full Range)."
+                                             : "(Limited Range).");
+                }
                 while (is_running_) {
                     tick();
                 }
@@ -399,6 +425,8 @@ struct screen_consumer
 
             GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
             GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
+
+            shader_->set("window_width", screen_width_);
 
             if (config_.sbs_key) {
                 auto coords_size = static_cast<GLsizei>(draw_coords_.size());
@@ -587,6 +615,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
+    if (config.sbs_key && config.key_only) {
+        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
+        config.key_only = false;
+    }
+
     return spl::make_shared<screen_consumer_proxy>(config);
 }
 
@@ -608,6 +641,32 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.interactive   = ptree.get(L"interactive", config.interactive);
     config.borderless    = ptree.get(L"borderless", config.borderless);
     config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
+
+    auto colour_space_value = ptree.get(L"colour-space", L"RGB");
+    config.colour_space     = configuration::colour_spaces::RGB;
+    if (colour_space_value == L"datavideo-full")
+        config.colour_space = configuration::colour_spaces::datavideo_full;
+    else if (colour_space_value == L"datavideo-limited")
+        config.colour_space = configuration::colour_spaces::datavideo_limited;
+
+    if (config.sbs_key && config.key_only) {
+        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
+        config.key_only = false;
+    }
+
+    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
+         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
+        config.sbs_key) {
+        CASPAR_LOG(warning) << L" Side-by-side fill and key not supported for DataVideo TC100/TC200. Ignored.";
+        config.sbs_key = false;
+    }
+
+    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
+         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
+        config.key_only) {
+        CASPAR_LOG(warning) << L" Key only not supported for DataVideo TC100/TC200. Ignored.";
+        config.key_only = false;
+    }
 
     auto stretch_str = ptree.get(L"stretch", L"fill");
     if (stretch_str == L"none") {
