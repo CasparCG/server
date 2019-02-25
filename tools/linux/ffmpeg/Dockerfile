@@ -2,7 +2,7 @@ ARG IMAGE_BASE
 
 FROM ${IMAGE_BASE} as BUILD
     ARG PROC_COUNT=8
-	ENV FFMPEG_COMMIT acdea9e7c56b74b05c56b4733acc855b959ba073
+	ENV FFMPEG_COMMIT a899b3b3c5f55e6c527f8aa81dbe15edb9fab63f
 
 	RUN apt-get install -yq --no-install-recommends \
 		autoconf \

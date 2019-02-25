@@ -3,4 +3,4 @@
 export IMAGE_BASE=casparcg/base:1.3.0
 export IMAGE_CEF=casparcg/cef:3.3239.1723-4
 export IMAGE_BOOST=casparcg/boost:1.66-3
-export IMAGE_FFMPEG=casparcg/ffmpeg:master-acdea9e-2
+export IMAGE_FFMPEG=casparcg/ffmpeg:master-a899b3b-1
