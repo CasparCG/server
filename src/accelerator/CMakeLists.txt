@@ -2,33 +2,33 @@ cmake_minimum_required (VERSION 2.6)
 project (accelerator)
 
 set(SOURCES
-		ogl/image/image_kernel.cpp
-		ogl/image/image_mixer.cpp
-		ogl/image/image_shader.cpp
+	ogl/image/image_kernel.cpp
+	ogl/image/image_mixer.cpp
+	ogl/image/image_shader.cpp
 
-		ogl/util/buffer.cpp
-		ogl/util/device.cpp
-		ogl/util/shader.cpp
-		ogl/util/texture.cpp
+	ogl/util/buffer.cpp
+	ogl/util/device.cpp
+	ogl/util/shader.cpp
+	ogl/util/texture.cpp
 
-		accelerator.cpp
-		StdAfx.cpp
+	accelerator.cpp
+	StdAfx.cpp
 )
 set(HEADERS
-		ogl/image/image_kernel.h
-		ogl/image/image_mixer.h
-        ogl/image/image_shader.h
+	ogl/image/image_kernel.h
+	ogl/image/image_mixer.h
+	ogl/image/image_shader.h
 
-		ogl/util/buffer.h
-		ogl/util/device.h
-		ogl/util/shader.h
-        ogl/util/texture.h
+	ogl/util/buffer.h
+	ogl/util/device.h
+	ogl/util/shader.h
+	ogl/util/texture.h
 
-		ogl_image_vertex.h
-		ogl_image_fragment.h
+	ogl_image_vertex.h
+	ogl_image_fragment.h
 
-		accelerator.h
-		StdAfx.h
+	accelerator.h
+	StdAfx.h
 )
 
 bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")

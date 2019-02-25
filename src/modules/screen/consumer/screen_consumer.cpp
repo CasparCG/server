@@ -60,9 +60,9 @@
 #include "../util/x11_util.h"
 #endif
 
-#include <accelerator/ogl/util/shader.h>
 #include "consumer_screen_fragment.h"
 #include "consumer_screen_vertex.h"
+#include <accelerator/ogl/util/shader.h>
 
 namespace caspar { namespace screen {
 
