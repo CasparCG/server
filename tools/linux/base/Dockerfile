@@ -2,6 +2,7 @@ FROM buildpack-deps:bionic
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
 	cmake \
+    clang \
 	lsb-release \
 	libglew-dev \
 	libfreeimage-dev \
