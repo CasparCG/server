@@ -25,14 +25,14 @@
 #include "except.h"
 #include "log.h"
 #include "os/filesystem.h"
-#include "string.h"
+#include <cstring>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -44,21 +44,12 @@ std::wstring                 media;
 std::wstring                 log;
 std::wstring                 ftemplate;
 std::wstring                 data;
-std::wstring                 font;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
 {
     if (pt.empty())
         CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
-}
-
-std::wstring clean_path(std::wstring path)
-{
-    boost::replace_all(path, L"\\\\", L"/");
-    boost::replace_all(path, L"\\", L"/");
-
-    return path;
 }
 
 std::wstring ensure_trailing_slash(std::wstring folder)
@@ -75,16 +66,14 @@ std::wstring resolve_or_create(const std::wstring& folder)
 
     if (found_path)
         return *found_path;
-    else {
-        boost::system::error_code ec;
-        boost::filesystem::create_directories(folder, ec);
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(folder, ec);
 
-        if (ec)
-            CASPAR_THROW_EXCEPTION(user_error()
-                                   << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+    if (ec != nullptr)
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 
-        return folder;
-    }
+    return folder;
 }
 
 void ensure_writable(const std::wstring& folder)
@@ -121,7 +110,6 @@ void configure(const std::wstring& filename)
         ftemplate =
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
         data = clean_path(paths.get(L"data-path", initial + L"/data/"));
-        font = clean_path(paths.get(L"font-path", initial + L"/font/"));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;
@@ -131,7 +119,6 @@ void configure(const std::wstring& filename)
     log       = ensure_trailing_slash(resolve_or_create(log));
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
     data      = ensure_trailing_slash(resolve_or_create(data));
-    font      = ensure_trailing_slash(resolve_or_create(font));
 
     ensure_writable(log);
     ensure_writable(ftemplate);
@@ -166,12 +153,6 @@ const std::wstring& data_folder()
 {
     check_is_configured();
     return data;
-}
-
-const std::wstring& font_folder()
-{
-    check_is_configured();
-    return font;
 }
 
 #define QUOTE(str) #str

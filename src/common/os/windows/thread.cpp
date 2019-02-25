@@ -32,6 +32,6 @@ inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
     }
 }
 
-void set_thread_name(std::wstring name) { SetThreadName(GetCurrentThreadId(), u8(name).c_str()); }
+void set_thread_name(const std::wstring& name) { SetThreadName(GetCurrentThreadId(), u8(name).c_str()); }
 
 } // namespace caspar

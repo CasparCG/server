@@ -27,6 +27,7 @@
 #include "../util/shader.h"
 #include "../util/texture.h"
 
+#include <common/assert.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -36,7 +37,6 @@
 #include <core/video_format.h>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
 #include <GL/glew.h>
@@ -68,8 +68,8 @@ bool get_line_intersection(double  p0_x,
 
     if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
         // Collision detected
-        result_x = p0_x + (t * s1_x);
-        result_y = p0_y + (t * s1_y);
+        result_x = p0_x + t * s1_x;
+        result_y = p0_y + t * s1_y;
 
         return true;
     }
@@ -117,7 +117,7 @@ struct image_kernel::impl
     GLuint                  vao_;
     GLuint                  vbo_;
 
-    impl(const spl::shared_ptr<device>& ogl)
+    explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
     {
@@ -280,6 +280,7 @@ struct image_kernel::impl
         shader_->set("keyer", params.keyer);
 
         // Setup image-adjustements
+        shader_->set("invert", params.transform.invert);
 
         if (params.transform.levels.min_input > epsilon || params.transform.levels.max_input < 1.0 - epsilon ||
             params.transform.levels.min_output > epsilon || params.transform.levels.max_output < 1.0 - epsilon ||
@@ -316,8 +317,8 @@ struct image_kernel::impl
 
         bool scissor = m_p[0] > std::numeric_limits<double>::epsilon() ||
                        m_p[1] > std::numeric_limits<double>::epsilon() ||
-                       m_s[0] < (1.0 - std::numeric_limits<double>::epsilon()) ||
-                       m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
+                       m_s[0] < 1.0 - std::numeric_limits<double>::epsilon() ||
+                       m_s[1] < 1.0 - std::numeric_limits<double>::epsilon();
 
         if (scissor) {
             double w = static_cast<double>(params.background->width());
@@ -386,7 +387,7 @@ struct image_kernel::impl
                     coords[0], coords[1], coords[2], coords[0], coords[2], coords[3]};
 
                 GL(glBufferData(GL_ARRAY_BUFFER,
-                                static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
+                                static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
                                 coords_triangles.data(),
                                 GL_STATIC_DRAW));
 

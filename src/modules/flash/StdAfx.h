@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #ifdef __cplusplus
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN

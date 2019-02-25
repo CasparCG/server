@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #ifdef __cplusplus
 #if defined _DEBUG && defined _MSC_VER
 #include <crtdbg.h>

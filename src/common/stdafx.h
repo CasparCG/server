@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #include <algorithm>
 #include <atomic>
 //#include <boost/algorithm/string.hpp>
@@ -59,7 +57,6 @@
 //#include <boost/log/utility/setup/common_attributes.hpp>
 #include <GL/glew.h>
 #include <boost/make_shared.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -75,6 +72,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -92,7 +90,6 @@
 #include <stdexcept>
 #include <string>
 #include <tbb/concurrent_queue.h>
-#include <time.h>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>

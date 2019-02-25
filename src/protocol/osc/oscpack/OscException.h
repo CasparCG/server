@@ -54,7 +54,7 @@ class Exception : public std::exception
         return *this;
     }
     virtual ~Exception() throw() {}
-    virtual const char* what() const throw() { return what_; }
+    const char* what() const throw() override { return what_; }
 };
 
 } // namespace osc

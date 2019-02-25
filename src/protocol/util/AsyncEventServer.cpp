@@ -31,7 +31,6 @@
 #include <string>
 
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_queue.h>
@@ -43,12 +42,12 @@ namespace caspar { namespace IO {
 
 class connection;
 
-typedef std::set<spl::shared_ptr<connection>> connection_set;
+using connection_set = std::set<spl::shared_ptr<connection>>;
 
 class connection : public spl::enable_shared_from_this<connection>
 {
-    typedef tbb::concurrent_hash_map<std::wstring, std::shared_ptr<void>> lifecycle_map_type;
-    typedef tbb::concurrent_queue<std::string>                            send_queue;
+    using lifecycle_map_type = tbb::concurrent_hash_map<std::wstring, std::shared_ptr<void>>;
+    using send_queue         = tbb::concurrent_queue<std::string>;
 
     const spl::shared_ptr<tcp::socket>       socket_;
     std::shared_ptr<boost::asio::io_service> service_;
@@ -94,8 +93,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
             if (conn)
                 return conn->ipv4_address();
-            else
-                return L"[destroyed-connection]";
+            return L"[destroyed-connection]";
         }
 
         void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override
@@ -112,8 +110,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
             if (conn)
                 return conn->remove_lifecycle_bound_object(key);
-            else
-                return std::shared_ptr<void>();
+            return std::shared_ptr<void>();
         }
     };
 
@@ -207,14 +204,13 @@ class connection : public spl::enable_shared_from_this<connection>
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
         , service_(service)
-        , listen_port_(socket_->is_open() ? boost::lexical_cast<std::wstring>(socket_->local_endpoint().port())
-                                          : L"no-port")
+        , listen_port_(socket_->is_open() ? std::to_wstring(socket_->local_endpoint().port()) : L"no-port")
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
         , is_writing_(false)
     {
         CASPAR_LOG(info) << print() << L" Accepted connection from " << ipv4_address() << L" ("
-                         << (connection_set_->size() + 1) << L" connections).";
+                         << connection_set_->size() + 1 << L" connections).";
     }
 
     void handle_read(const boost::system::error_code& error,
@@ -346,7 +342,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
     std::wstring print() const
     {
-        return L"async_event_server[:" + boost::lexical_cast<std::wstring>(acceptor_.local_endpoint().port()) + L"]";
+        return L"async_event_server[:" + std::to_wstring(acceptor_.local_endpoint().port()) + L"]";
     }
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)

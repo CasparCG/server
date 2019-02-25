@@ -73,7 +73,7 @@ struct command_context
     }
 };
 
-typedef std::function<std::wstring(command_context& args)> amcp_command_func;
+using amcp_command_func = std::function<std::wstring(command_context& args)>;
 
 class AMCPCommand
 {
@@ -97,7 +97,7 @@ class AMCPCommand
     {
     }
 
-    typedef std::shared_ptr<AMCPCommand> ptr_type;
+    using ptr_type = std::shared_ptr<AMCPCommand>;
 
     bool Execute()
     {

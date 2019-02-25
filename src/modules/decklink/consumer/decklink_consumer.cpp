@@ -142,19 +142,19 @@ class decklink_frame : public IDeckLinkVideoFrame
 
   public:
     decklink_frame(std::shared_ptr<void> data, const core::video_format_desc& format_desc, int nb_samples)
-        : data_(data)
-        , format_desc_(format_desc)
+        : format_desc_(format_desc)
+        , data_(data)
         , nb_samples_(nb_samples)
     {
     }
 
     // IUnknown
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
 
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return ++ref_count_; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return ++ref_count_; }
 
-    virtual ULONG STDMETHODCALLTYPE Release()
+    ULONG STDMETHODCALLTYPE Release() override
     {
         if (--ref_count_ == 0) {
             delete this;
@@ -167,23 +167,24 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IDecklinkVideoFrame
 
-    virtual long STDMETHODCALLTYPE GetWidth() { return static_cast<long>(format_desc_.width); }
-    virtual long STDMETHODCALLTYPE GetHeight() { return static_cast<long>(format_desc_.height); }
-    virtual long STDMETHODCALLTYPE GetRowBytes() { return static_cast<long>(format_desc_.width * 4); }
-    virtual BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() { return bmdFormat8BitBGRA; }
-    virtual BMDFrameFlags STDMETHODCALLTYPE GetFlags() { return bmdFrameFlagDefault; }
+    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
+    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
+    BMDFrameFlags STDMETHODCALLTYPE GetFlags() override { return bmdFrameFlagDefault; }
 
-    virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
+    HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
     {
         *buffer = data_.get();
         return S_OK;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)
+    HRESULT STDMETHODCALLTYPE GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode) override
     {
         return S_FALSE;
     }
-    virtual HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) { return S_FALSE; }
+
+    HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) override { return S_FALSE; }
 
     int nb_samples() const { return nb_samples_; }
 };
@@ -232,14 +233,14 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() { return S_OK; }
+    HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override { return S_OK; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
-                                                              BMDOutputFrameCompletionResult result)
+    HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
+                                                      BMDOutputFrameCompletionResult result) override
     {
         ++scheduled_frames_completed_;
 
@@ -398,18 +399,18 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
     }
 
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOINTERFACE; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() { return 1; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped()
+    HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override
     {
         CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
         return S_OK;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
-                                                              BMDOutputFrameCompletionResult result)
+    HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
+                                                      BMDOutputFrameCompletionResult result) override
     {
 #ifdef WIN32
         thread_local auto priority_set = false;
@@ -448,7 +449,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             {
                 UINT32 buffered;
                 output_->GetBufferedVideoFrameCount(&buffered);
-                graph_->set_value("buffered-video", static_cast<double>(buffered) / (config_.buffer_depth()));
+                graph_->set_value("buffered-video", static_cast<double>(buffered) / config_.buffer_depth());
 
                 if (config_.embedded_audio) {
                     output_->GetBufferedAudioSampleFrameCount(&buffered);
@@ -604,13 +605,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::wstring print() const
     {
         if (config_.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-                   boost::lexical_cast<std::wstring>(config_.device_index) + L"&&" +
-                   boost::lexical_cast<std::wstring>(config_.key_device_index()) + L"|" + format_desc_.name + L"]";
-        } else {
-            return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-                   boost::lexical_cast<std::wstring>(config_.device_index) + L"|" + format_desc_.name + L"]";
+            return model_name_ + L" [" + std::to_wstring(channel_index_) + L"-" +
+                   std::to_wstring(config_.device_index) + L"&&" + std::to_wstring(config_.key_device_index()) + L"|" +
+                   format_desc_.name + L"]";
         }
+        return model_name_ + L" [" + std::to_wstring(channel_index_) + L"-" + std::to_wstring(config_.device_index) +
+               L"|" + format_desc_.name + L"]";
     }
 };
 
@@ -622,9 +622,9 @@ struct decklink_consumer_proxy : public core::frame_consumer
     executor                           executor_;
 
   public:
-    decklink_consumer_proxy(const configuration& config)
+    explicit decklink_consumer_proxy(const configuration& config)
         : config_(config)
-        , executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
+        , executor_(L"decklink_consumer[" + std::to_wstring(config.device_index) + L"]")
     {
         executor_.begin_invoke([=] { com_initialize(); });
     }

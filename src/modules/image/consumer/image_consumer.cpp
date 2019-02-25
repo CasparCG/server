@@ -45,6 +45,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "../util/image_view.h"
@@ -54,17 +55,17 @@ namespace caspar { namespace image {
 
 struct image_consumer : public core::frame_consumer
 {
-    std::wstring         filename_;
+    std::wstring filename_;
 
   public:
     // frame_consumer
 
-    image_consumer(const std::wstring& filename)
-        : filename_(filename)
+    explicit image_consumer(std::wstring filename)
+        : filename_(std::move(filename))
     {
     }
 
-    void initialize(const core::video_format_desc&, int) override {}
+    void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override {}
 
     std::future<bool> send(core::const_frame frame) override
     {
@@ -112,10 +113,10 @@ struct image_consumer : public core::frame_consumer
     int index() const override { return 100; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
-    if (params.size() < 1 || !boost::iequals(params.at(0), L"IMAGE"))
+    if (params.empty() || !boost::iequals(params.at(0), L"IMAGE"))
         return core::frame_consumer::empty();
 
     std::wstring filename;

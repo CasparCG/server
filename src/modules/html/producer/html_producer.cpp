@@ -61,6 +61,7 @@
 #pragma warning(pop)
 
 #include <queue>
+#include <utility>
 
 #include "../html.h"
 
@@ -97,14 +98,14 @@ class html_client
     executor executor_;
 
   public:
-    html_client(spl::shared_ptr<core::frame_factory> frame_factory,
-                spl::shared_ptr<diagnostics::graph>  graph,
-                const core::video_format_desc&       format_desc,
-                const std::wstring&                  url)
-        : url_(url)
+    html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
+                const spl::shared_ptr<diagnostics::graph>& graph,
+                core::video_format_desc                    format_desc,
+                std::wstring                               url)
+        : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
-        , format_desc_(format_desc)
+        , format_desc_(std::move(format_desc))
         , executor_(L"html_producer")
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -176,13 +177,13 @@ class html_client
 
     CefRefPtr<CefBrowserHost> get_browser_host() const
     {
-        if (browser_)
+        if (browser_ != nullptr)
             return browser_->GetHost();
         return nullptr;
     }
 
   private:
-    bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
+    bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
@@ -195,7 +196,7 @@ class html_client
                  const RectList&       dirtyRects,
                  const void*           buffer,
                  int                   width,
-                 int                   height)
+                 int                   height) override
     {
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
         paint_timer_.restart();
@@ -209,8 +210,8 @@ class html_client
         pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
 
         auto frame = frame_factory_->create_frame(this, pixel_desc);
-        auto src = (char*)buffer;
-        auto dst = (char*)frame.image_data(0).begin();
+        auto src   = (char*)buffer;
+        auto dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
         std::memcpy(dst, src, width * height * 4);
 
         {
@@ -228,7 +229,7 @@ class html_client
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-        browser_ = browser;
+        browser_ = std::move(browser);
     }
 
     void OnBeforeClose(CefRefPtr<CefBrowser> browser) override
@@ -278,7 +279,8 @@ class html_client
             // TODO
 
             return true;
-        } else if (name == LOG_MESSAGE_NAME) {
+        }
+        if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
             auto msg      = args->GetString(1).ToWString();
@@ -291,7 +293,7 @@ class html_client
 
     void invoke_requested_animation_frames()
     {
-        if (browser_)
+        if (browser_ != nullptr)
             browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -358,7 +360,11 @@ class html_client
             do_execute_javascript(javascript);
     }
 
-    std::wstring print() const { return L"html[" + url_ + L"]" + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_width) + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_height) + L" " + boost::lexical_cast<std::wstring>(format_desc_.fps); }
+    std::wstring print() const
+    {
+        return L"html[" + url_ + L"]" + L" " + std::to_wstring(format_desc_.square_width) + L" " +
+               std::to_wstring(format_desc_.square_height) + L" " + std::to_wstring(format_desc_.fps);
+    }
 
     IMPLEMENT_REFCOUNTING(html_client);
 };
@@ -399,9 +405,9 @@ class html_producer : public core::frame_producer
         state_["file/path"] = u8(url_);
     }
 
-    ~html_producer()
+    ~html_producer() override
     {
-        if (client_)
+        if (client_ != nullptr)
             client_->close();
     }
 
@@ -411,23 +417,25 @@ class html_producer : public core::frame_producer
 
     core::draw_frame receive_impl(int nb_samples) override
     {
-        if (client_) {
+        if (client_ != nullptr) {
             return client_->receive();
         }
 
         return core::draw_frame::empty();
     }
 
+    core::draw_frame first_frame() override { return receive_impl(0); }
+
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
-        if (!client_)
-            return make_ready_future(std::wstring(L""));
+        if (client_ == nullptr)
+            return make_ready_future(std::wstring());
 
         auto javascript = params.at(0);
 
         client_->execute_javascript(javascript);
 
-        return make_ready_future(std::wstring(L""));
+        return make_ready_future(std::wstring());
     }
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
@@ -467,14 +475,13 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
     auto format_desc = dependencies.format_desc;
     if (width && height) {
-        format_desc.width = *width;
-        format_desc.square_width = *width;
-        format_desc.height = *height;
+        format_desc.width         = *width;
+        format_desc.square_width  = *width;
+        format_desc.height        = *height;
         format_desc.square_height = *height;
     }
 
-    return core::create_destroy_proxy(
-        spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
+    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

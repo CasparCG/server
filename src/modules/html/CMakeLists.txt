@@ -22,7 +22,6 @@ include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${CEF_INCLUDE_PATH})
-include_directories(${CEF_PATH})
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)

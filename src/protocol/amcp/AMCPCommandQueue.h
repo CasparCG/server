@@ -37,7 +37,7 @@ class AMCPCommandQueue
     AMCPCommandQueue& operator=(const AMCPCommandQueue&);
 
   public:
-    typedef spl::shared_ptr<AMCPCommandQueue> ptr_type;
+    using ptr_type = spl::shared_ptr<AMCPCommandQueue>;
 
     AMCPCommandQueue(const std::wstring& name);
     ~AMCPCommandQueue();

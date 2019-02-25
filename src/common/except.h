@@ -35,49 +35,49 @@
 
 namespace caspar {
 
-typedef boost::error_info<struct tag_arg_name_info, std::string>                     arg_name_info_t;
-typedef boost::error_info<struct tag_arg_value_info, std::string>                    arg_value_info_t;
-typedef boost::error_info<struct tag_msg_info, std::string>                          msg_info_t;
-typedef boost::error_info<struct tag_error_info, std::string>                        error_info_t;
-typedef boost::error_info<struct tag_source_info, std::string>                       source_info_t;
-typedef boost::error_info<struct tag_file_name_info, std::string>                    file_name_info_t;
-typedef boost::error_info<struct tag_stacktrace_info, boost::stacktrace::stacktrace> stacktrace_info_t;
+using arg_name_info_t   = boost::error_info<struct tag_arg_name_info, std::string>;
+using arg_value_info_t  = boost::error_info<struct tag_arg_value_info, std::string>;
+using msg_info_t        = boost::error_info<struct tag_msg_info, std::string>;
+using error_info_t      = boost::error_info<struct tag_error_info, std::string>;
+using source_info_t     = boost::error_info<struct tag_source_info, std::string>;
+using file_name_info_t  = boost::error_info<struct tag_file_name_info, std::string>;
+using stacktrace_info_t = boost::error_info<struct tag_stacktrace_info, boost::stacktrace::stacktrace>;
 
 template <typename T>
-inline arg_name_info_t arg_name_info(const T& str)
+arg_name_info_t arg_name_info(const T& str)
 {
     return arg_name_info_t(u8(str));
 }
 template <typename T>
-inline arg_value_info_t arg_value_info(const T& str)
+arg_value_info_t arg_value_info(const T& str)
 {
     return arg_value_info_t(u8(str));
 }
 template <typename T>
-inline msg_info_t msg_info(const T& str)
+msg_info_t msg_info(const T& str)
 {
     return msg_info_t(u8(str));
 }
 template <typename T>
-inline error_info_t error_info(const T& str)
+error_info_t error_info(const T& str)
 {
     return error_info_t(u8(str));
 }
 template <typename T>
-inline source_info_t source_info(const T& str)
+source_info_t source_info(const T& str)
 {
     return source_info_t(u8(str));
 }
 template <typename T>
-inline file_name_info_t file_name_info(const T& str)
+file_name_info_t file_name_info(const T& str)
 {
     return file_name_info_t(u8(str));
 }
 
 inline stacktrace_info_t stacktrace_info() { return stacktrace_info_t(boost::stacktrace::stacktrace()); }
 
-typedef boost::error_info<struct tag_line_info, size_t>                     line_info;
-typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nested_exception;
+using line_info        = boost::error_info<struct tag_line_info, size_t>;
+using nested_exception = boost::error_info<struct tag_nested_exception_, std::exception_ptr>;
 
 struct caspar_exception
     : virtual boost::exception

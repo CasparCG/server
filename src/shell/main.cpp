@@ -49,7 +49,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -103,7 +102,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     std::wstringstream                                      str;
     boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
     boost::property_tree::write_xml(str, env::properties(), w);
-    CASPAR_LOG(info) << boost::filesystem::canonical(config_file_name)
+    CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
                      << L":\n-----------------------------------------\n"
                      << str.str() << L"-----------------------------------------";
 
@@ -126,20 +125,34 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     std::thread([&]() mutable {
         std::wstring wcmd;
         while (true) {
+#ifdef WIN32
             if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
                 std::wcin.clear();
                 continue;
             }
-            if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
-                boost::iequals(wcmd, L"BYE")) {
-                CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-                should_wait_for_keypress = true;
-                shutdown(false); // false to not restart
-                break;
+#else
+            // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
+            std::string cmd1;
+            if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
+                std::cin.clear();
+                continue;
             }
+            wcmd = u16(cmd1);
+#endif
 
-            wcmd += L"\r\n";
-            amcp->parse(wcmd);
+            // If the cmd is empty, no point trying to parse it
+            if (!wcmd.empty()) {
+                if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
+                    boost::iequals(wcmd, L"BYE")) {
+                    CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
+                    should_wait_for_keypress = true;
+                    shutdown(false); // false to not restart
+                    break;
+                }
+
+                wcmd += L"\r\n";
+                amcp->parse(wcmd);
+            }
         }
     })
         .detach();

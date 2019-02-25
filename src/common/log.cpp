@@ -23,6 +23,9 @@
 #include "except.h"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <boost/locale.hpp>
 #include <boost/log/attributes/attribute_value.hpp>
 #include <boost/log/attributes/function.hpp>
@@ -56,25 +59,25 @@ std::string current_exception_diagnostic_information()
 {
     {
         auto e = boost::current_exception_cast<const char*>();
-        if (e) {
+        if (e != nullptr) {
             return std::string("[char *] = ") + *e + "\n";
         }
     }
     {
         auto e = boost::current_exception_cast<const wchar_t*>();
-        if (e) {
+        if (e != nullptr) {
             return std::string("[char *] = ") + u8(*e) + "\n";
         }
     }
     {
         auto e = boost::current_exception_cast<std::string>();
-        if (e) {
+        if (e != nullptr) {
             return std::string("[char *] = ") + *e + "\n";
         }
     }
     {
         auto e = boost::current_exception_cast<std::wstring>();
-        if (e) {
+        if (e != nullptr) {
             return std::string("[char *] = ") + u8(*e) + "\n";
         }
     }
@@ -104,7 +107,10 @@ class column_writer
     std::atomic<int> column_width_;
 
   public:
-    column_writer(int initial_width = 0) { column_width_ = initial_width; }
+    column_writer(int initial_width = 0)
+        : column_width_(initial_width)
+    {
+    }
 
     template <typename Stream, typename Val>
     void write(Stream& out, const Val& value)
@@ -159,7 +165,7 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 
 void add_file_sink(const std::wstring& file)
 {
-    typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> file_sink_type;
+    using file_sink_type = boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>;
 
     try {
         if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path())) {
@@ -167,7 +173,7 @@ void add_file_sink(const std::wstring& file)
         }
 
         auto file_sink = boost::make_shared<file_sink_type>(
-            boost::log::keywords::file_name           = (file + L"_%Y-%m-%d.log"),
+            boost::log::keywords::file_name           = file + L"_%Y-%m-%d.log",
             boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
             boost::log::keywords::auto_flush          = true,
             boost::log::keywords::open_mode           = std::ios::app);
@@ -189,7 +195,7 @@ void add_cout_sink()
                                                       return boost::posix_time::microsec_clock::local_time();
                                                   }));
 
-    typedef sinks::asynchronous_sink<sinks::wtext_ostream_backend> stream_sink_type;
+    using stream_sink_type = sinks::asynchronous_sink<sinks::wtext_ostream_backend>;
 
     auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
     stream_backend->add_stream(boost::shared_ptr<std::wostream>(&std::wcout, boost::null_deleter()));

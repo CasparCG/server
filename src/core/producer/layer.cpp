@@ -31,9 +31,6 @@
 
 #include <common/timer.h>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/optional.hpp>
-
 namespace caspar { namespace core {
 
 struct layer::impl
@@ -43,20 +40,20 @@ struct layer::impl
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
 
-    boost::optional<int32_t> auto_play_delta_;
-    bool                     paused_ = false;
+    bool auto_play_ = false;
+    bool paused_    = false;
 
   public:
     void pause() { paused_ = true; }
 
     void resume() { paused_ = false; }
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+    void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play)
     {
-        background_      = std::move(producer);
-        auto_play_delta_ = auto_play_delta;
+        background_ = std::move(producer);
+        auto_play_  = auto_play;
 
-        if (auto_play_delta_ && foreground_ == frame_producer::empty()) {
+        if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
         } else if (preview) {
             foreground_ = std::move(background_);
@@ -77,7 +74,7 @@ struct layer::impl
             foreground_ = std::move(background_);
             background_ = frame_producer::empty();
 
-            auto_play_delta_.reset();
+            auto_play_ = false;
         }
 
         paused_ = false;
@@ -86,7 +83,7 @@ struct layer::impl
     void stop()
     {
         foreground_ = frame_producer::empty();
-        auto_play_delta_.reset();
+        auto_play_  = false;
     }
 
     draw_frame receive(const video_format_desc& format_desc, int nb_samples)
@@ -96,12 +93,16 @@ struct layer::impl
                 foreground_ = foreground_->following_producer();
             }
 
-            if (auto_play_delta_) {
-                auto time        = static_cast<std::int64_t>(foreground_->frame_number());
-                auto duration    = static_cast<std::int64_t>(foreground_->nb_frames());
-                auto frames_left = duration - time - static_cast<std::int64_t>(*auto_play_delta_);
-                if (frames_left < 1) {
-                    play();
+            int64_t frames_left = 0;
+            if (auto_play_) {
+                auto auto_play_delta = background_->auto_play_delta();
+                if (auto_play_delta) {
+                    auto time     = static_cast<std::int64_t>(foreground_->frame_number());
+                    auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                    frames_left   = duration - time - *auto_play_delta;
+                    if (frames_left < 1) {
+                        play();
+                    }
                 }
             }
 
@@ -110,18 +111,34 @@ struct layer::impl
                 frame = foreground_->last_frame();
             }
 
-            state_ = {};
-            state_["foreground"] = foreground_->state();
+            state_                           = {};
+            state_["foreground"]             = foreground_->state();
             state_["foreground"]["producer"] = foreground_->name();
-            state_["foreground"]["paused"] = paused_;
+            state_["foreground"]["paused"]   = paused_;
 
-            state_["background"] = background_->state();
+            if (frames_left > 0) {
+                state_["foreground"]["frames_left"] = frames_left;
+            }
+
+            state_["background"]             = background_->state();
             state_["background"]["producer"] = background_->name();
 
             return frame;
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             stop();
+            return draw_frame{};
+        }
+    }
+
+    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples)
+    {
+        try {
+            return background_->first_frame();
+
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            background_ = frame_producer::empty();
             return draw_frame{};
         }
     }
@@ -141,11 +158,9 @@ layer& layer::operator=(layer&& other)
     return *this;
 }
 void layer::swap(layer& other) { impl_.swap(other.impl_); }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer,
-                 bool                            preview,
-                 const boost::optional<int32_t>& auto_play_delta)
+void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play)
 {
-    return impl_->load(std::move(frame_producer), preview, auto_play_delta);
+    return impl_->load(std::move(frame_producer), preview, auto_play);
 }
 void       layer::play() { impl_->play(); }
 void       layer::pause() { impl_->pause(); }
@@ -155,7 +170,12 @@ draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
 {
     return impl_->receive(format_desc, nb_samples);
 }
+draw_frame layer::receive_background(const video_format_desc& format_desc, int nb_samples)
+{
+    return impl_->receive_background(format_desc, nb_samples);
+}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-core::monitor::state           layer::state() const { return impl_->state_; }
+bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }
+core::monitor::state            layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

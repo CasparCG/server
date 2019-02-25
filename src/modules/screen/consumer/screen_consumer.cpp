@@ -49,7 +49,9 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -80,6 +82,13 @@ struct configuration
         aspect_invalid,
     };
 
+    enum class colour_spaces
+    {
+        RGB               = 0,
+        datavideo_full    = 1,
+        datavideo_limited = 2
+    };
+
     std::wstring    name          = L"Screen consumer";
     int             screen_index  = 0;
     int             screen_x      = 0;
@@ -89,11 +98,13 @@ struct configuration
     screen::stretch stretch       = screen::stretch::fill;
     bool            windowed      = true;
     bool            key_only      = false;
+    bool            sbs_key       = false;
     aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
     bool            vsync         = false;
     bool            interactive   = true;
     bool            borderless    = false;
     bool            always_on_top = false;
+    colour_spaces   colour_space  = colour_spaces::RGB;
 };
 
 struct frame
@@ -101,10 +112,10 @@ struct frame
     GLuint pbo   = 0;
     GLuint tex   = 0;
     char*  ptr   = nullptr;
-    GLsync fence = 0;
+    GLsync fence = nullptr;
 };
 
-struct screen_consumer : boost::noncopyable
+struct screen_consumer
 {
     const configuration     config_;
     core::video_format_desc format_desc_;
@@ -135,6 +146,9 @@ struct screen_consumer : boost::noncopyable
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
+    screen_consumer(const screen_consumer&) = delete;
+    screen_consumer& operator=(const screen_consumer&) = delete;
+
   public:
     screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
         : config_(config)
@@ -146,9 +160,9 @@ struct screen_consumer : boost::noncopyable
             // Use default values which are 4:3.
         } else {
             if (config_.aspect == configuration::aspect_ratio::aspect_16_9) {
-                square_width_ = (format_desc.height * 16) / 9;
+                square_width_ = format_desc.height * 16 / 9;
             } else if (config_.aspect == configuration::aspect_ratio::aspect_4_3) {
-                square_width_ = (format_desc.height * 4) / 3;
+                square_width_ = format_desc.height * 4 / 3;
             }
         }
 
@@ -163,7 +177,7 @@ struct screen_consumer : boost::noncopyable
 #if defined(_MSC_VER)
         DISPLAY_DEVICE              d_device = {sizeof(d_device), 0};
         std::vector<DISPLAY_DEVICE> displayDevices;
-        for (int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n) {
+        for (int n = 0; EnumDisplayDevices(nullptr, n, &d_device, NULL); ++n) {
             displayDevices.push_back(d_device);
         }
 
@@ -209,10 +223,11 @@ struct screen_consumer : boost::noncopyable
         thread_ = std::thread([this] {
             try {
                 const auto window_style = config_.borderless ? sf::Style::None
-                                                             : (config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                                 : sf::Style::Fullscreen);
+                                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                                : sf::Style::Fullscreen;
                 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-                sf::VideoMode mode(screen_width_, screen_height_, desktop.bitsPerPixel);
+                sf::VideoMode mode(
+                    config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
                 window_.create(mode,
                                u8(print()),
                                window_style,
@@ -234,8 +249,8 @@ struct screen_consumer : boost::noncopyable
                     CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
                 }
 
-                if (!GLEW_VERSION_4_5 && !glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
-                                                          "GL_ARB_direct_state_access GL_ARB_texture_barrier")) {
+                if (!GLEW_VERSION_4_5 && (glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
+                                                          "GL_ARB_direct_state_access GL_ARB_texture_barrier") == 0u)) {
                     CASPAR_THROW_EXCEPTION(not_supported() << msg_info(
                                                "Your graphics card does not meet the minimum hardware requirements "
                                                "since it does not support OpenGL 4.5 or higher."));
@@ -249,7 +264,7 @@ struct screen_consumer : boost::noncopyable
                 shader_ = get_shader();
                 shader_->use();
                 shader_->set("background", 0);
-                shader_->set("key_only", config_.key_only);
+                shader_->set("window_width", screen_width_);
 
                 for (int n = 0; n < 2; ++n) {
                     screen::frame frame;
@@ -260,8 +275,18 @@ struct screen_consumer : boost::noncopyable
                         reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex,
+                                           GL_TEXTURE_MIN_FILTER,
+                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
+                                               ? GL_NEAREST
+                                               : GL_LINEAR));
+                    GL(glTextureParameteri(frame.tex,
+                                           GL_TEXTURE_MAG_FILTER,
+                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
+                                               ? GL_NEAREST
+                                               : GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
                     GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
@@ -272,16 +297,24 @@ struct screen_consumer : boost::noncopyable
 
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-                GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+                GL(glViewport(
+                    0, 0, config_.sbs_key ? format_desc_.width * 2 : format_desc_.width, format_desc_.height));
 
                 calculate_aspect();
 
                 window_.setVerticalSyncEnabled(config_.vsync);
-
                 if (config_.vsync) {
                     CASPAR_LOG(info) << print() << " Enabled vsync.";
                 }
 
+                shader_->set("colour_space", config_.colour_space);
+                if (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                    config_.colour_space == configuration::colour_spaces::datavideo_limited) {
+                    CASPAR_LOG(info) << print() << " Enabled colours conversion for DataVideo TC-100/TC-200 "
+                                     << (config_.colour_space == configuration::colour_spaces::datavideo_full
+                                             ? "(Full Range)."
+                                             : "(Limited Range).");
+                }
                 while (is_running_) {
                     tick();
                 }
@@ -346,11 +379,11 @@ struct screen_consumer : boost::noncopyable
         {
             auto& frame = frames_.front();
 
-            while (frame.fence) {
+            while (frame.fence != nullptr) {
                 auto wait = glClientWaitSync(frame.fence, 0, 0);
                 if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
                     glDeleteSync(frame.fence);
-                    frame.fence = 0;
+                    frame.fence = nullptr;
                 }
                 if (!poll()) {
                     // TODO (fix)
@@ -378,7 +411,7 @@ struct screen_consumer : boost::noncopyable
             GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
 
             GL(glBufferData(GL_ARRAY_BUFFER,
-                            static_cast<GLsizei>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
+                            static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
                             draw_coords_.data(),
                             GL_STATIC_DRAW));
 
@@ -393,7 +426,22 @@ struct screen_consumer : boost::noncopyable
             GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
             GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
-            GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
+            shader_->set("window_width", screen_width_);
+
+            if (config_.sbs_key) {
+                auto coords_size = static_cast<GLsizei>(draw_coords_.size());
+
+                // First half fill
+                shader_->set("key_only", false);
+                GL(glDrawArrays(GL_TRIANGLES, 0, coords_size / 2));
+
+                // Second half key
+                shader_->set("key_only", true);
+                GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
+            } else {
+                shader_->set("key_only", config_.key_only);
+                GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
+            }
 
             GL(glDisableVertexAttribArray(vtx_loc));
             GL(glDisableVertexAttribArray(tex_loc));
@@ -409,7 +457,7 @@ struct screen_consumer : boost::noncopyable
         tick_timer_.restart();
     }
 
-    std::future<bool> send(core::const_frame frame)
+    std::future<bool> send(const core::const_frame& frame)
     {
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -419,7 +467,7 @@ struct screen_consumer : boost::noncopyable
 
     std::wstring channel_and_format() const
     {
-        return L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+        return L"[" + std::to_wstring(channel_index_) + L"|" + format_desc_.name + L"]";
     }
 
     std::wstring print() const { return config_.name + L" " + channel_and_format(); }
@@ -442,21 +490,44 @@ struct screen_consumer : boost::noncopyable
             target_ratio = uniform_to_fill();
         }
 
-        draw_coords_ = {
-            //    vertex    texture
-            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-            {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
-            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+        if (config_.sbs_key) {
+            draw_coords_ = {
+                // First half fill
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {0, target_ratio.second, 1.0, 0.0},                   // upper right
+                {0, -target_ratio.second, 1.0, 1.0},                  // lower right
 
-            {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-            {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
-            {-target_ratio.first, -target_ratio.second, 0.0, 1.0} // lower left
-        };
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0},  // upper left
+                {0, -target_ratio.second, 1.0, 1.0},                   // lower right
+                {-target_ratio.first, -target_ratio.second, 0.0, 1.0}, // lower left
+
+                // Second half key
+                {0, target_ratio.second, 0.0, 0.0},                   // upper left
+                {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+
+                {0, target_ratio.second, 0.0, 0.0},                   // upper left
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+                {0, -target_ratio.second, 0.0, 1.0}                   // lower left
+            };
+        } else {
+            draw_coords_ = {
+                //    vertex    texture
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
+                {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
+                {-target_ratio.first, -target_ratio.second, 0.0, 1.0} // lower left
+            };
+        }
     }
 
     std::pair<float, float> none()
     {
-        float width  = static_cast<float>(square_width_) / static_cast<float>(screen_width_);
+        float width =
+            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
         float height = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
 
         return std::make_pair(width, height);
@@ -464,7 +535,8 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform()
     {
-        float aspect = static_cast<float>(square_width_) / static_cast<float>(square_height_);
+        float aspect = static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) /
+                       static_cast<float>(square_height_);
         float width  = std::min(1.0f, static_cast<float>(screen_height_) * aspect / static_cast<float>(screen_width_));
         float height = static_cast<float>(screen_width_ * width) / static_cast<float>(screen_height_ * aspect);
 
@@ -475,7 +547,8 @@ struct screen_consumer : boost::noncopyable
 
     std::pair<float, float> uniform_to_fill()
     {
-        float wr    = static_cast<float>(square_width_) / static_cast<float>(screen_width_);
+        float wr =
+            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
         float hr    = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
         float r_inv = 1.0f / std::min(wr, hr);
 
@@ -492,8 +565,8 @@ struct screen_consumer_proxy : public core::frame_consumer
     std::unique_ptr<screen_consumer> consumer_;
 
   public:
-    screen_consumer_proxy(const configuration& config)
-        : config_(config)
+    explicit screen_consumer_proxy(configuration config)
+        : config_(std::move(config))
     {
     }
 
@@ -502,7 +575,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
         consumer_.reset();
-        consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
+        consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_index);
     }
 
     std::future<bool> send(core::const_frame frame) override { return consumer_->send(frame); }
@@ -516,10 +589,10 @@ struct screen_consumer_proxy : public core::frame_consumer
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
-    if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN")) {
+    if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
     }
 
@@ -534,6 +607,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     config.windowed    = !contains_param(L"FULLSCREEN", params);
     config.key_only    = contains_param(L"KEY_ONLY", params);
+    config.sbs_key     = contains_param(L"SBS_KEY", params);
     config.interactive = !contains_param(L"NON_INTERACTIVE", params);
     config.borderless  = contains_param(L"BORDERLESS", params);
 
@@ -541,12 +615,17 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
+    if (config.sbs_key && config.key_only) {
+        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
+        config.key_only = false;
+    }
+
     return spl::make_shared<screen_consumer_proxy>(config);
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config;
     config.name          = ptree.get(L"name", config.name);
@@ -557,10 +636,37 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.screen_height = ptree.get(L"height", config.screen_height);
     config.windowed      = ptree.get(L"windowed", config.windowed);
     config.key_only      = ptree.get(L"key-only", config.key_only);
+    config.sbs_key       = ptree.get(L"sbs-key", config.sbs_key);
     config.vsync         = ptree.get(L"vsync", config.vsync);
     config.interactive   = ptree.get(L"interactive", config.interactive);
     config.borderless    = ptree.get(L"borderless", config.borderless);
     config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
+
+    auto colour_space_value = ptree.get(L"colour-space", L"RGB");
+    config.colour_space     = configuration::colour_spaces::RGB;
+    if (colour_space_value == L"datavideo-full")
+        config.colour_space = configuration::colour_spaces::datavideo_full;
+    else if (colour_space_value == L"datavideo-limited")
+        config.colour_space = configuration::colour_spaces::datavideo_limited;
+
+    if (config.sbs_key && config.key_only) {
+        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
+        config.key_only = false;
+    }
+
+    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
+         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
+        config.sbs_key) {
+        CASPAR_LOG(warning) << L" Side-by-side fill and key not supported for DataVideo TC100/TC200. Ignored.";
+        config.sbs_key = false;
+    }
+
+    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
+         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
+        config.key_only) {
+        CASPAR_LOG(warning) << L" Key only not supported for DataVideo TC100/TC200. Ignored.";
+        config.key_only = false;
+    }
 
     auto stretch_str = ptree.get(L"stretch", L"fill");
     if (stretch_str == L"none") {

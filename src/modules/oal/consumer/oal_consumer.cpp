@@ -29,7 +29,6 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
-#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -37,9 +36,6 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -60,6 +56,7 @@ extern "C" {
 #pragma warning(pop)
 #endif
 
+#include <memory>
 #include <vector>
 
 #include <AL/al.h>
@@ -77,12 +74,12 @@ class device
     {
         device_ = alcOpenDevice(nullptr);
 
-        if (!device_)
+        if (device_ == nullptr)
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
         context_ = alcCreateContext(device_, nullptr);
 
-        if (!context_)
+        if (context_ == nullptr)
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
 
         if (alcMakeContextCurrent(context_) == ALC_FALSE)
@@ -93,10 +90,10 @@ class device
     {
         alcMakeContextCurrent(nullptr);
 
-        if (context_)
+        if (context_ != nullptr)
             alcDestroyContext(context_);
 
-        if (device_)
+        if (device_ != nullptr)
             alcCloseDevice(device_);
     }
 
@@ -108,7 +105,7 @@ void init_device()
     static std::unique_ptr<device> instance;
     static std::once_flag          f;
 
-    std::call_once(f, [] { instance.reset(new device()); });
+    std::call_once(f, [] { instance = std::make_unique<device>(); });
 }
 
 struct oal_consumer : public core::frame_consumer
@@ -139,18 +136,18 @@ struct oal_consumer : public core::frame_consumer
         diagnostics::register_graph(graph_);
     }
 
-    ~oal_consumer()
+    ~oal_consumer() override
     {
         executor_.invoke([=] {
-            if (source_) {
+            if (source_ != 0u) {
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
             }
 
             for (auto& buffer : buffers_) {
-                if (buffer)
+                if (buffer != 0u)
                     alDeleteBuffers(1, &buffer);
-            };
+            }
         });
     }
 
@@ -188,13 +185,13 @@ struct oal_consumer : public core::frame_consumer
             std::memset(dst->extended_data[0], 0, dst->linesize[0]);
 
             if (!started_) {
-                for (auto n = 0; n < static_cast<int64_t>(buffers_.size()); ++n) {
-                    alBufferData(buffers_[n],
+                for (ALuint& buffer : buffers_) {
+                    alBufferData(buffer,
                                  AL_FORMAT_STEREO16,
                                  dst->extended_data[0],
                                  static_cast<ALsizei>(dst->linesize[0]),
                                  dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffers_[n]);
+                    alSourceQueueBuffers(source_, 1, &buffer);
                 }
 
                 alSourcePlay(source_);
@@ -241,7 +238,7 @@ struct oal_consumer : public core::frame_consumer
             alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
 
             auto in_duration  = swr_get_delay(swr_.get(), 48000);
-            auto out_duration = static_cast<int64_t>(processed * duration_);
+            auto out_duration = static_cast<int64_t>(processed) * duration_;
             auto delta        = static_cast<int>(out_duration - in_duration);
 
             ALenum state;
@@ -250,7 +247,7 @@ struct oal_consumer : public core::frame_consumer
                 while (delta > duration_) {
                     ALuint buffer = 0;
                     alSourceUnqueueBuffers(source_, 1, &buffer);
-                    if (!buffer) {
+                    if (buffer == 0u) {
                         break;
                     }
                     alBufferData(buffer,
@@ -278,12 +275,12 @@ struct oal_consumer : public core::frame_consumer
 
                 ALuint buffer = 0;
                 alSourceUnqueueBuffers(source_, 1, &buffer);
-                if (!buffer) {
+                if (buffer == 0u) {
                     // TODO error
                     break;
                 }
 
-                if (swr_convert_frame(swr_.get(), dst.get(), nullptr)) {
+                if (swr_convert_frame(swr_.get(), dst.get(), nullptr) != 0) {
                     // TODO FF error
                     CASPAR_THROW_EXCEPTION(invalid_argument());
                 }
@@ -305,7 +302,7 @@ struct oal_consumer : public core::frame_consumer
 
     std::wstring print() const override
     {
-        return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+        return L"oal[" + std::to_wstring(channel_index_) + L"|" + format_desc_.name + L"]";
     }
 
     std::wstring name() const override { return L"system-audio"; }
@@ -315,18 +312,18 @@ struct oal_consumer : public core::frame_consumer
     int index() const override { return 500; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
-    if (params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
+    if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
         return core::frame_consumer::empty();
 
     return spl::make_shared<oal_consumer>();
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     return spl::make_shared<oal_consumer>();
 }

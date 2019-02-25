@@ -34,7 +34,6 @@
 #include <SFML/Graphics.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
@@ -58,10 +57,10 @@ sf::Color get_sfml_color(int color)
 {
     auto c = caspar::diagnostics::color(color);
 
-    return {static_cast<sf::Uint8>((color >> 24) & 255),
-            static_cast<sf::Uint8>((color >> 16) & 255),
-            static_cast<sf::Uint8>((color >> 8) & 255),
-            static_cast<sf::Uint8>((color >> 0) & 255)};
+    return {static_cast<sf::Uint8>(color >> 24 & 255),
+            static_cast<sf::Uint8>(color >> 16 & 255),
+            static_cast<sf::Uint8>(color >> 8 & 255),
+            static_cast<sf::Uint8>(color >> 0 & 255)};
 }
 
 sf::Font& get_default_font()
@@ -82,7 +81,8 @@ struct drawable
 {
     virtual ~drawable() {}
     virtual void render(sf::RenderTarget& target, sf::RenderStates states) = 0;
-    virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override
+
+    void draw(sf::RenderTarget& target, sf::RenderStates states) const override
     {
         states.transform *= getTransform();
         const_cast<drawable*>(this)->render(target, states);
@@ -177,6 +177,8 @@ class context : public drawable
                     scroll_position_ += e.mouseWheel.delta * 15;
                     calculate_view_ = true;
                     break;
+                default:
+                    break;
             }
         }
 
@@ -210,7 +212,7 @@ class context : public drawable
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
-    void render(sf::RenderTarget& target, sf::RenderStates states)
+    void render(sf::RenderTarget& target, sf::RenderStates states) override
     {
         int n = 0;
 
@@ -247,7 +249,7 @@ class context : public drawable
 
 class line : public drawable
 {
-    size_t                                                   res_;
+    size_t                                                   res_{1024};
     boost::circular_buffer<sf::Vertex>                       line_data_{res_};
     boost::circular_buffer<boost::optional<sf::VertexArray>> line_tags_{res_};
 
@@ -255,15 +257,14 @@ class line : public drawable
     std::atomic<bool>  tick_tag_;
     std::atomic<int>   color_;
 
-    double x_delta_ = 1.0 / (res_ - 1);
+    double x_delta_ = 1.0 / (static_cast<double>(res_) - 1.0);
 
   public:
     line()
-        : res_(1024)
+        : tick_data_(-1.0f)
+        , tick_tag_(false)
+        , color_(0xFFFFFFFF)
     {
-        tick_data_ = -1.0f;
-        color_     = 0xFFFFFFFF;
-        tick_tag_  = false;
     }
 
     line(const line& other)
@@ -285,7 +286,7 @@ class line : public drawable
 
     int get_color() { return color_; }
 
-    void render(sf::RenderTarget& target, sf::RenderStates states)
+    void render(sf::RenderTarget& target, sf::RenderStates states) override
     {
         /*states.transform.translate(x_pos_, 0.f);
 
@@ -331,7 +332,7 @@ class line : public drawable
                 // Connect the gap between the arrays
                 sf::VertexArray connecting_line(sf::LinesStrip);
                 connecting_line.append(*(array_one.first + array_one.second - 1));
-                connecting_line.append(*(array_two.first));
+                connecting_line.append(*array_two.first);
                 target.draw(connecting_line, states);
             }
         } else {
@@ -416,10 +417,10 @@ struct graph
         target.draw(text, states);
 
         if (context_.video_channel != -1) {
-            auto ctx_str = boost::lexical_cast<std::string>(context_.video_channel);
+            auto ctx_str = std::to_string(context_.video_channel);
 
             if (context_.layer != -1)
-                ctx_str += "-" + boost::lexical_cast<std::string>(context_.layer);
+                ctx_str += "-" + std::to_string(context_.layer);
 
             sf::Text context_text(ctx_str, get_default_font(), text_size);
             context_text.setStyle(sf::Text::Italic);

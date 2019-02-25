@@ -38,8 +38,8 @@ class executor final
     executor(const executor&);
     executor& operator=(const executor&);
 
-    typedef std::function<void()>                 task_t;
-    typedef tbb::concurrent_bounded_queue<task_t> queue_t;
+    using task_t  = std::function<void()>;
+    using queue_t = tbb::concurrent_bounded_queue<task_t>;
 
     std::wstring      name_;
     std::atomic<bool> is_running_{true};
@@ -66,7 +66,7 @@ class executor final
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
         }
 
-        typedef decltype(func()) result_type;
+        using result_type = decltype(func());
 
         auto task = std::make_shared<std::packaged_task<result_type()>>(std::forward<Func>(func));
 

@@ -17,7 +17,7 @@ class mutable_frame final
     friend class const_frame;
 
   public:
-    typedef std::function<boost::any(std::vector<array<const std::uint8_t>>)> commit_t;
+    using commit_t = std::function<boost::any(std::vector<array<const std::uint8_t>>)>;
 
     explicit mutable_frame(const void*                      tag,
                            std::vector<array<std::uint8_t>> image_data,

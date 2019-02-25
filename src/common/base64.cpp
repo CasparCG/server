@@ -39,17 +39,12 @@ namespace caspar {
 std::string to_base64(const char* data, size_t length)
 {
     using namespace boost::archive::iterators;
-
     // From http://www.webbiscuit.co.uk/2012/04/02/base64-encoder-and-boost/
 
-    typedef insert_linebreaks< // insert line breaks every 76 characters
-        base64_from_binary<    // convert binary values to base64 characters
-            transform_width<   // retrieve 6 bit integers from a sequence of 8 bit bytes
-                const unsigned char*,
-                6,
-                8>>,
-        76>
-                      base64_iterator; // compose all the above operations in to a new iterator
+    using base64_iterator = insert_linebreaks<            // insert line breaks every 76 characters
+        base64_from_binary<                               // convert binary values to base64 characters
+            transform_width<const unsigned char*, 6, 8>>, // retrieve 6 bit integers from a sequence of 8 bit bytes
+        76>;                                              // compose all the above operations in to a new iterator
     std::vector<char> bytes;
     bytes.resize(length);
     std::memcpy(bytes.data(), data, length);
@@ -69,10 +64,12 @@ std::string to_base64(const char* data, size_t length)
 
 std::vector<unsigned char> from_base64(const std::string& data)
 {
+    using namespace boost::archive::iterators;
+
     // The boost base64 iterator will over-iterate the string if not a multiple
     // of 4, so we have to short circuit before.
-    auto length =
-        std::count_if(data.begin(), data.end(), [](char c) { return !std::isspace(static_cast<unsigned char>(c)); });
+    auto length = std::count_if(
+        data.begin(), data.end(), [](char c) { return std::isspace(static_cast<unsigned char>(c)) == 0; });
 
     if (length % 4 != 0)
         CASPAR_THROW_EXCEPTION(user_error() << msg_info("The length of a base64 sequence must be a multiple of 4"));
@@ -99,30 +96,17 @@ std::vector<unsigned char> from_base64(const std::string& data)
                                         boost::make_iterator_range(zero_padding.cbegin(), zero_padding.cend()));
 
         // From https://svn.boost.org/trac/boost/ticket/5624
-        typedef boost::archive::iterators::transform_width<
-            boost::archive::iterators::binary_from_base64<
-                boost::archive::iterators::remove_whitespace<decltype(concatenated.begin())>>,
-            8,
-            6>
-            base64_iterator;
-
+        using base64_iterator =
+            transform_width<binary_from_base64<remove_whitespace<decltype(concatenated.begin())>>, 8, 6>;
         std::vector<unsigned char> result(base64_iterator(concatenated.begin()), base64_iterator(concatenated.end()));
 
         result.resize(result.size() - padding);
-
-        return std::move(result);
-    } else {
-        // From https://svn.boost.org/trac/boost/ticket/5624
-        typedef boost::archive::iterators::transform_width<
-            boost::archive::iterators::binary_from_base64<
-                boost::archive::iterators::remove_whitespace<std::string::const_iterator>>,
-            8,
-            6>
-                                   base64_iterator;
-        std::vector<unsigned char> result(base64_iterator(data.begin()), base64_iterator(data.end()));
-
         return std::move(result);
     }
+    // From https://svn.boost.org/trac/boost/ticket/5624
+    using base64_iterator = transform_width<binary_from_base64<remove_whitespace<std::string::const_iterator>>, 8, 6>;
+    std::vector<unsigned char> result(base64_iterator(data.begin()), base64_iterator(data.end()));
+    return std::move(result);
 }
 
 } // namespace caspar

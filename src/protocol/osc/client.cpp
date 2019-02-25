@@ -73,35 +73,40 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
 
-    std::mutex                                 mutex_;
-    std::condition_variable                    cond_;
-    boost::optional<core::monitor::state>      bundle_opt_;
-    std::atomic<bool>                          abort_request_{false};
-    std::thread                                thread_;
+    std::mutex              mutex_;
+    std::condition_variable cond_;
+    core::monitor::state    bundle_;
+    uint64_t                bundle_time_ = 0;
+
+    uint64_t time_ = 0;
+
+    std::atomic<bool> abort_request_{false};
+    std::thread       thread_;
 
   public:
     impl(std::shared_ptr<boost::asio::io_service> service)
         : service_(std::move(service))
         , socket_(*service_, udp::v4())
-        // TODO (fix) Split into smaller packets.
         , buffer_(1000000)
     {
         thread_ = std::thread([=] {
             try {
                 while (!abort_request_) {
-                    core::monitor::state  bundle;
+                    core::monitor::state       bundle;
+                    uint64_t                   bundle_time;
                     std::vector<udp::endpoint> endpoints;
 
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return bundle_opt_ || abort_request_; });
+                        cond_.wait(lock, [&] { return bundle_time_ > 0 || abort_request_; });
 
                         if (abort_request_) {
                             return;
                         }
 
-                        bundle = std::move(*bundle_opt_);
-                        bundle_opt_.reset();
+                        bundle       = std::move(bundle_);
+                        bundle_time  = bundle_time_;
+                        bundle_time_ = 0;
 
                         for (auto& p : reference_counts_by_endpoint_) {
                             endpoints.push_back(p.first);
@@ -112,27 +117,34 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         continue;
                     }
 
-                    ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()),
-                                                  static_cast<unsigned long>(buffer_.size()));
+                    auto it = std::begin(bundle);
 
-                    o << ::osc::BeginBundle();
+                    while (it != std::end(bundle)) {
+                        ::osc::OutboundPacketStream o(reinterpret_cast<char*>(buffer_.data()),
+                                                      static_cast<unsigned long>(buffer_.size()));
 
-                    for (auto& p : bundle) {
-                        o << ::osc::BeginMessage(p.first.c_str());
+                        o << ::osc::BeginBundle(bundle_time);
 
-                        param_visitor<decltype(o)> param_visitor(o);
-                        for (const auto& element : p.second) {
-                            boost::apply_visitor(param_visitor, element);
+                        // TODO (fix): < 2048 is a hack. Properly calculate if messages will fit.
+                        while (it != std::end(bundle) && o.Size() < 2048) {
+                            o << ::osc::BeginMessage(it->first.c_str());
+
+                            param_visitor<decltype(o)> param_visitor(o);
+                            for (const auto& element : it->second) {
+                                boost::apply_visitor(param_visitor, element);
+                            }
+
+                            o << ::osc::EndMessage;
+
+                            ++it;
                         }
 
-                        o << ::osc::EndMessage;
-                    }
+                        o << ::osc::EndBundle;
 
-                    o << ::osc::EndBundle;
-
-                    boost::system::error_code ec;
-                    for (const auto& endpoint : endpoints) {
-                        socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
+                        boost::system::error_code ec;
+                        for (const auto& endpoint : endpoints) {
+                            socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
+                        }
                     }
                 }
             } catch (...) {
@@ -175,11 +187,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
-    void send(core::monitor::state state)
+    void send(const core::monitor::state& state)
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            bundle_opt_ = state;
+
+            // TODO: time_++ is a hack. Use proper channel time.
+            bundle_time_ = time_++;
+            bundle_      = state;
         }
         cond_.notify_all();
     }

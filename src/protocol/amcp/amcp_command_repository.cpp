@@ -25,7 +25,6 @@
 
 #include <common/env.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <map>
@@ -90,8 +89,8 @@ struct amcp_command_repository::impl
     void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
     {
         int index = 0;
-        for (const auto& channel : video_channels) {
-            std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
+        for (const auto& channel : channels) {
+            std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
         }

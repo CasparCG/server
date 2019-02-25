@@ -110,6 +110,7 @@ class destroy_consumer_proxy : public frame_consumer
             }
 
             pointer_guard.reset();
+            counter--;
         })
             .detach();
     }
@@ -119,10 +120,10 @@ class destroy_consumer_proxy : public frame_consumer
     {
         return consumer_->initialize(format_desc, channel_index);
     }
-    std::wstring          print() const override { return consumer_->print(); }
-    std::wstring          name() const override { return consumer_->name(); }
-    bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   index() const override { return consumer_->index(); }
+    std::wstring         print() const override { return consumer_->print(); }
+    std::wstring         name() const override { return consumer_->name(); }
+    bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
+    int                  index() const override { return consumer_->index(); }
     core::monitor::state state() const override { return consumer_->state(); }
 };
 
@@ -150,10 +151,10 @@ class print_consumer_proxy : public frame_consumer
         consumer_->initialize(format_desc, channel_index);
         CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
     }
-    std::wstring          print() const override { return consumer_->print(); }
-    std::wstring          name() const override { return consumer_->name(); }
-    bool                  has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
-    int                   index() const override { return consumer_->index(); }
+    std::wstring         print() const override { return consumer_->print(); }
+    std::wstring         name() const override { return consumer_->name(); }
+    bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
+    int                  index() const override { return consumer_->index(); }
     core::monitor::state state() const override { return consumer_->state(); }
 };
 
@@ -166,17 +167,17 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
 
     auto  consumer           = frame_consumer::empty();
     auto& consumer_factories = impl_->consumer_factories;
-    std::any_of(consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
-        try {
-            consumer = factory(params, channels);
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-        }
-        return consumer != frame_consumer::empty();
-    });
-
-    if (consumer == frame_consumer::empty())
+    if (!std::any_of(
+            consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
+                try {
+                    consumer = factory(params, channels);
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+                return consumer != frame_consumer::empty();
+            })) {
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
+    }
 
     return spl::make_shared<destroy_consumer_proxy>(spl::make_shared<print_consumer_proxy>(std::move(consumer)));
 }

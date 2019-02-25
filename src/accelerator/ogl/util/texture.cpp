@@ -32,13 +32,16 @@ static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};
 
-struct texture::impl : boost::noncopyable
+struct texture::impl
 {
     GLuint  id_     = 0;
     GLsizei width_  = 0;
     GLsizei height_ = 0;
     GLsizei stride_ = 0;
     GLsizei size_   = 0;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
   public:
     impl(int width, int height, int stride)

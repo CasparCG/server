@@ -63,7 +63,7 @@
 
 namespace caspar {
 
-typedef std::function<double(double, double, double, double)> tweener_t;
+using tweener_t = std::function<double(double, double, double, double)>;
 
 static const double PI   = std::atan(1.0) * 4.0;
 static const double H_PI = std::atan(1.0) * 2.0;
@@ -72,20 +72,23 @@ double ease_none(double t, double b, double c, double d, const std::vector<doubl
 
 double ease_in_quad(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * (t /= d) * t + b;
+    t /= d;
+    return c * t * t + b;
 }
 
 double ease_out_quad(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return -c * (t /= d) * (t - 2) + b;
+    t /= d;
+    return -c * t * (t - 2) + b;
 }
 
 double ease_in_out_quad(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return c / 2 * t * t + b;
 
-    return -c / 2 * ((--t) * (t - 2) - 1) + b;
+    return -c / 2 * ((t - 1) * (t - 3) - 1) + b;
 }
 
 double ease_out_in_quad(double t, double b, double c, double d, const std::vector<double>& params)
@@ -93,50 +96,58 @@ double ease_out_in_quad(double t, double b, double c, double d, const std::vecto
     if (t < d / 2)
         return ease_out_quad(t * 2, b, c / 2, d, params);
 
-    return ease_in_quad((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_quad(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_cubic(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * (t /= d) * t * t + b;
+    t /= d;
+    return c * t * t * t + b;
 }
 
 double ease_out_cubic(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * ((t = t / d - 1) * t * t + 1) + b;
+    t = t / d - 1;
+    return c * (t * t * t + 1) + b;
 }
 
 double ease_in_out_cubic(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return c / 2 * t * t * t + b;
 
-    return c / 2 * ((t -= 2) * t * t + 2) + b;
+    t -= 2;
+    return c / 2 * (t * t * t + 2) + b;
 }
 
 double ease_out_in_cubic(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t < d / 2)
         return ease_out_cubic(t * 2, b, c / 2, d, params);
-    return ease_in_cubic((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_cubic(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_quart(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * (t /= d) * t * t * t + b;
+    t /= d;
+    return c * t * t * t * t + b;
 }
 
 double ease_out_quart(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return -c * ((t = t / d - 1) * t * t * t - 1) + b;
+    t = t / d - 1;
+    return -c * (t * t * t * t - 1) + b;
 }
 
 double ease_in_out_quart(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return c / 2 * t * t * t * t + b;
 
-    return -c / 2 * ((t -= 2) * t * t * t - 2) + b;
+    t -= 2;
+    return -c / 2 * (t * t * t * t - 2) + b;
 }
 
 double ease_out_in_quart(double t, double b, double c, double d, const std::vector<double>& params)
@@ -144,25 +155,29 @@ double ease_out_in_quart(double t, double b, double c, double d, const std::vect
     if (t < d / 2)
         return ease_out_quart(t * 2, b, c / 2, d, params);
 
-    return ease_in_quart((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_quart(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_quint(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * (t /= d) * t * t * t * t + b;
+    t /= d;
+    return c * t * t * t * t * t + b;
 }
 
 double ease_out_quint(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
+    t = t / d - 1;
+    return c * (t * t * t * t * t + 1) + b;
 }
 
 double ease_in_out_quint(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return c / 2 * t * t * t * t * t + b;
 
-    return c / 2 * ((t -= 2) * t * t * t * t + 2) + b;
+    t -= 2;
+    return c / 2 * (t * t * t * t * t + 2) + b;
 }
 
 double ease_out_in_quint(double t, double b, double c, double d, const std::vector<double>& params)
@@ -170,7 +185,7 @@ double ease_out_in_quint(double t, double b, double c, double d, const std::vect
     if (t < d / 2)
         return ease_out_quint(t * 2, b, c / 2, d, params);
 
-    return ease_in_quint((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_quint(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_sine(double t, double b, double c, double d, const std::vector<double>& params)
@@ -193,17 +208,17 @@ double ease_out_in_sine(double t, double b, double c, double d, const std::vecto
     if (t < d / 2)
         return ease_out_sine(t * 2, b, c / 2, d, params);
 
-    return ease_in_sine((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_sine(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_expo(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return (t == 0) ? b : c * std::pow(2, 10 * (t / d - 1)) + b - c * 0.001;
+    return t == 0 ? b : c * std::pow(2, 10 * (t / d - 1)) + b - c * 0.001;
 }
 
 double ease_out_expo(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return (t == d) ? b + c : c * 1.001 * (-std::pow(2, -10 * t / d) + 1) + b;
+    return t == d ? b + c : c * 1.001 * (-std::pow(2, -10 * t / d) + 1) + b;
 }
 
 double ease_in_out_expo(double t, double b, double c, double d, const std::vector<double>& params)
@@ -212,10 +227,11 @@ double ease_in_out_expo(double t, double b, double c, double d, const std::vecto
         return b;
     if (t == d)
         return b + c;
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return c / 2 * std::pow(2, 10 * (t - 1)) + b - c * 0.0005;
 
-    return c / 2 * 1.0005 * (-std::pow(2, -10 * --t) + 2) + b;
+    return c / 2 * 1.0005 * (-std::pow(2, -10 * (t - 1)) + 2) + b;
 }
 
 double ease_out_in_expo(double t, double b, double c, double d, const std::vector<double>& params)
@@ -223,44 +239,49 @@ double ease_out_in_expo(double t, double b, double c, double d, const std::vecto
     if (t < d / 2)
         return ease_out_expo(t * 2, b, c / 2, d, params);
 
-    return ease_in_expo((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_expo(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_circ(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return -c * (std::sqrt(1 - (t /= d) * t) - 1) + b;
+    t /= d;
+    return -c * (std::sqrt(1 - t * t) - 1) + b;
 }
 
 double ease_out_circ(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    return c * std::sqrt(1 - (t = t / d - 1) * t) + b;
+    t = t / d - 1;
+    return c * std::sqrt(1 - t * t) + b;
 }
 
 double ease_in_out_circ(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d / 2) < 1)
+    t /= d / 2;
+    if (t < 1)
         return -c / 2 * (std::sqrt(1 - t * t) - 1) + b;
 
-    return c / 2 * (std::sqrt(1 - (t -= 2) * t) + 1) + b;
+    t -= 2;
+    return c / 2 * (std::sqrt(1 - t * t) + 1) + b;
 }
 
 double ease_out_in_circ(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t < d / 2)
         return ease_out_circ(t * 2, b, c / 2, d, params);
-    return ease_in_circ((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_circ(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_elastic(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t == 0)
         return b;
-    if ((t /= d) == 1)
+    t /= d;
+    if (t == 1)
         return b + c;
     // var p:Number = !Boolean(p_params) || isNaN(p_params.period) ? d*.3 : p_params.period;
     // var s:Number;
     // var a:Number = !Boolean(p_params) || isNaN(p_params.amplitude) ? 0 : p_params.amplitude;
-    double p = params.size() > 0 ? params[0] : d * 0.3;
+    double p = !params.empty() ? params[0] : d * 0.3;
     double s;
     double a = params.size() > 1 ? params[1] : 0.0;
     if (a == 0.0 || a < std::abs(c)) {
@@ -269,19 +290,21 @@ double ease_in_elastic(double t, double b, double c, double d, const std::vector
     } else
         s = p / (2 * PI) * std::asin(c / a);
 
-    return -(a * std::pow(2, 10 * (t -= 1)) * std::sin((t * d - s) * (2 * PI) / p)) + b;
+    t--;
+    return -(a * std::pow(2, 10 * t) * std::sin((t * d - s) * (2 * PI) / p)) + b;
 }
 
 double ease_out_elastic(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t == 0)
         return b;
-    if ((t /= d) == 1)
+    t /= d;
+    if (t == 1)
         return b + c;
     // var p:Number = !Boolean(p_params) || isNaN(p_params.period) ? d*.3 : p_params.period;
     // var s:Number;
     // var a:Number = !Boolean(p_params) || isNaN(p_params.amplitude) ? 0 : p_params.amplitude;
-    double p = params.size() > 0 ? params[0] : d * 0.3;
+    double p = !params.empty() ? params[0] : d * 0.3;
     double s;
     double a = params.size() > 1 ? params[1] : 0.0;
     if (a == 0.0 || a < std::abs(c)) {
@@ -290,19 +313,20 @@ double ease_out_elastic(double t, double b, double c, double d, const std::vecto
     } else
         s = p / (2 * PI) * std::asin(c / a);
 
-    return (a * std::pow(2, -10 * t) * std::sin((t * d - s) * (2 * PI) / p) + c + b);
+    return a * std::pow(2, -10 * t) * std::sin((t * d - s) * (2 * PI) / p) + c + b;
 }
 
 double ease_in_out_elastic(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t == 0)
         return b;
-    if ((t /= d / 2) == 2)
+    t /= d / 2;
+    if (t == 2)
         return b + c;
     // var p:Number = !Boolean(p_params) || isNaN(p_params.period) ? d*(.3*1.5) : p_params.period;
     // var s:Number;
     // var a:Number = !Boolean(p_params) || isNaN(p_params.amplitude) ? 0 : p_params.amplitude;
-    double p = params.size() > 0 ? params[0] : d * 0.3 * 1.5;
+    double p = !params.empty() ? params[0] : d * 0.3 * 1.5;
     double s;
     double a = params.size() > 1 ? params[1] : 0.0;
     if (a == 0.0 || a < std::abs(c)) {
@@ -311,59 +335,69 @@ double ease_in_out_elastic(double t, double b, double c, double d, const std::ve
     } else
         s = p / (2 * PI) * std::asin(c / a);
 
-    if (t < 1)
-        return -.5 * (a * std::pow(2, 10 * (t -= 1)) * std::sin((t * d - s) * (2 * PI) / p)) + b;
-
-    return a * std::pow(2, -10 * (t -= 1)) * std::sin((t * d - s) * (2 * PI) / p) * .5 + c + b;
+    if (t-- < 1) {
+        return -.5 * (a * std::pow(2, 10 * t) * std::sin((t * d - s) * (2 * PI) / p)) + b;
+    }
+    return a * std::pow(2, -10 * t) * std::sin((t * d - s) * (2 * PI) / p) * .5 + c + b;
 }
 
 double ease_out_in_elastic(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t < d / 2)
         return ease_out_elastic(t * 2, b, c / 2, d, params);
-    return ease_in_elastic((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_elastic(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_in_back(double t, double b, double c, double d, const std::vector<double>& params)
 {
     // var s:Number = !Boolean(p_params) || isNaN(p_params.overshoot) ? 1.70158 : p_params.overshoot;
-    double s = params.size() > 0 ? params[0] : 1.70158;
-    return c * (t /= d) * t * ((s + 1) * t - s) + b;
+    double s = !params.empty() ? params[0] : 1.70158;
+    t /= d;
+    return c * t * t * ((s + 1) * t - s) + b;
 }
 
 double ease_out_back(double t, double b, double c, double d, const std::vector<double>& params)
 {
     // var s:Number = !Boolean(p_params) || isNaN(p_params.overshoot) ? 1.70158 : p_params.overshoot;
-    double s = params.size() > 0 ? params[0] : 1.70158;
-    return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
+    double s = !params.empty() ? params[0] : 1.70158;
+    t        = t / d - 1;
+    return c * (t * t * ((s + 1) * t + s) + 1) + b;
 }
 
 double ease_in_out_back(double t, double b, double c, double d, const std::vector<double>& params)
 {
     // var s:Number = !Boolean(p_params) || isNaN(p_params.overshoot) ? 1.70158 : p_params.overshoot;
-    double s = params.size() > 0 ? params[0] : 1.70158;
-    if ((t /= d / 2) < 1)
-        return c / 2 * (t * t * (((s *= (1.525)) + 1) * t - s)) + b;
-    return c / 2 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2) + b;
+    double s = !params.empty() ? params[0] : 1.70158;
+    t /= d / 2;
+    s *= 1.525;
+    if (t < 1)
+        return c / 2 * (t * t * ((s + 1) * t - s)) + b;
+    t -= 2;
+    return c / 2 * (t * t * ((s + 1) * t + s) + 2) + b;
 }
 
 double ease_out_int_back(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t < d / 2)
         return ease_out_back(t * 2, b, c / 2, d, params);
-    return ease_in_back((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_back(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
 double ease_out_bounce(double t, double b, double c, double d, const std::vector<double>& params)
 {
-    if ((t /= d) < (1 / 2.75))
+    t /= d;
+    if (t < 1 / 2.75)
         return c * (7.5625 * t * t) + b;
-    else if (t < (2 / 2.75))
-        return c * (7.5625 * (t -= (1.5 / 2.75)) * t + .75) + b;
-    else if (t < (2.5 / 2.75))
-        return c * (7.5625 * (t -= (2.25 / 2.75)) * t + .9375) + b;
-    else
-        return c * (7.5625 * (t -= (2.625 / 2.75)) * t + .984375) + b;
+    if (t < 2 / 2.75) {
+        t -= 1.5 / 2.75;
+        return c * (7.5625 * t * t + .75) + b;
+    }
+    if (t < 2.5 / 2.75) {
+        t -= 2.25 / 2.75;
+        return c * (7.5625 * t * t + .9375) + b;
+    }
+    t -= 2.625 / 2.75;
+    return c * (7.5625 * t * t + .984375) + b;
 }
 
 double ease_in_bounce(double t, double b, double c, double d, const std::vector<double>& params)
@@ -375,18 +409,17 @@ double ease_in_out_bounce(double t, double b, double c, double d, const std::vec
 {
     if (t < d / 2)
         return ease_in_bounce(t * 2, 0, c, d, params) * .5 + b;
-    else
-        return ease_out_bounce(t * 2 - d, 0, c, d, params) * .5 + c * .5 + b;
+    return ease_out_bounce(t * 2 - d, 0, c, d, params) * .5 + c * .5 + b;
 }
 
 double ease_out_in_bounce(double t, double b, double c, double d, const std::vector<double>& params)
 {
     if (t < d / 2)
         return ease_out_bounce(t * 2, b, c / 2, d, params);
-    return ease_in_bounce((t * 2) - d, b + c / 2, c / 2, d, params);
+    return ease_in_bounce(t * 2 - d, b + c / 2, c / 2, d, params);
 }
 
-typedef std::function<double(double, double, double, double, const std::vector<double>&)> tween_t;
+using tween_t = std::function<double(double, double, double, double, const std::vector<double>&)>;
 
 const std::unordered_map<std::wstring, tween_t>& get_tweens()
 {

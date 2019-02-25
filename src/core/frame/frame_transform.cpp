@@ -23,6 +23,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/range/algorithm/equal.hpp>
 
+#include <cmath>
+
 namespace caspar { namespace core {
 
 // image_transform
@@ -97,6 +99,7 @@ image_transform& image_transform::operator*=(const image_transform& other)
     chroma.spill_suppress_saturation =
         std::min(other.chroma.spill_suppress_saturation, chroma.spill_suppress_saturation);
     is_key |= other.is_key;
+    invert |= other.invert;
     is_mix |= other.is_mix;
     blend_mode = std::max(blend_mode, other.blend_mode);
     layer_depth += other.layer_depth;
@@ -184,8 +187,9 @@ image_transform image_transform::tween(double                 time,
         do_tween(time, source.chroma.spill_suppress_saturation, dest.chroma.spill_suppress_saturation, duration, tween);
     result.chroma.enable    = dest.chroma.enable;
     result.chroma.show_mask = dest.chroma.show_mask;
-    result.is_key           = source.is_key | dest.is_key;
-    result.is_mix           = source.is_mix | dest.is_mix;
+    result.is_key           = source.is_key || dest.is_key;
+    result.invert           = source.invert || dest.invert;
+    result.is_mix           = source.is_mix || dest.is_mix;
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;
 
@@ -216,10 +220,11 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
            boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
            boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
            boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
-           lhs.is_key == rhs.is_key && lhs.is_mix == rhs.is_mix && lhs.blend_mode == rhs.blend_mode &&
-           lhs.layer_depth == rhs.layer_depth && lhs.chroma.enable == rhs.chroma.enable &&
-           lhs.chroma.show_mask == rhs.chroma.show_mask && eq(lhs.chroma.target_hue, rhs.chroma.target_hue) &&
-           eq(lhs.chroma.hue_width, rhs.chroma.hue_width) && eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
+           lhs.is_key == rhs.is_key && lhs.invert == rhs.invert && lhs.is_mix == rhs.is_mix &&
+           lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
+           lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
+           eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
+           eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
            eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) && eq(lhs.chroma.softness, rhs.chroma.softness) &&
            eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
            eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
@@ -320,9 +325,11 @@ boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
 {
     if (boost::iequals(str, L"none")) {
         return chroma::legacy_type::none;
-    } else if (boost::iequals(str, L"green")) {
+    }
+    if (boost::iequals(str, L"green")) {
         return chroma::legacy_type::green;
-    } else if (boost::iequals(str, L"blue")) {
+    }
+    if (boost::iequals(str, L"blue")) {
         return chroma::legacy_type::blue;
     } else {
         return boost::none;

@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#pragma once
-
 #include <algorithm>
 #include <atomic>
 #include <boost/algorithm/string/predicate.hpp>

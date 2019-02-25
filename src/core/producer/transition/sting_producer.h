@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright (c) 2018 Norsk rikskringkasting AS
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
@@ -31,34 +31,17 @@
 
 namespace caspar { namespace core {
 
-enum class transition_type
+struct sting_info
 {
-    cut,
-    mix,
-    push,
-    slide,
-    wipe,
-    count
+    std::wstring mask_filename    = L"";
+    std::wstring overlay_filename = L"";
+    uint32_t     trigger_point    = 0;
 };
 
-enum class transition_direction
-{
-    from_left,
-    from_right,
-    count
-};
+bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo);
 
-struct transition_info
-{
-    int                  duration  = 0;
-    transition_direction direction = transition_direction::from_left;
-    transition_type      type      = transition_type::cut;
-    caspar::tweener      tweener{L"linear"};
-};
-
-bool try_match_transition(const std::wstring& message, transition_info& transitionInfo);
-
-spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
-                                                           const transition_info&                 info);
+spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,
+                                                      const spl::shared_ptr<frame_producer>& destination,
+                                                      sting_info&                            info);
 
 }} // namespace caspar::core

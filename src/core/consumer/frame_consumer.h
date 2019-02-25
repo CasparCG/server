@@ -26,7 +26,6 @@
 
 #include <common/memory.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
@@ -62,14 +61,14 @@ class frame_consumer
     virtual int          index() const = 0;
 };
 
-typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
-                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
-    consumer_factory_t;
-typedef std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
-                                                      std::vector<spl::shared_ptr<video_channel>> channels)>
-    preconfigured_consumer_factory_t;
+using consumer_factory_t =
+    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
+                                                  std::vector<spl::shared_ptr<video_channel>> channels)>;
+using preconfigured_consumer_factory_t =
+    std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
+                                                  std::vector<spl::shared_ptr<video_channel>> channels)>;
 
-class frame_consumer_registry : boost::noncopyable
+class frame_consumer_registry
 {
   public:
     frame_consumer_registry();
@@ -85,6 +84,8 @@ class frame_consumer_registry : boost::noncopyable
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
+    frame_consumer_registry(const frame_consumer_registry&) = delete;
+    frame_consumer_registry& operator=(const frame_consumer_registry&) = delete;
 };
 
 void destroy_consumers_synchronously();

@@ -66,7 +66,7 @@ void WriteCommand::Setup(const std::vector<std::wstring>& parameters)
             dataStream << L"</templateData>";
             xmlData_ = dataStream.str();
         }
-    } catch (std::exception) {
+    } catch (std::exception&) {
     }
 }
 
@@ -88,7 +88,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 {
     // HAWRYS:	V\5\3\1\1\namn.tga\1
     //			Display still
-    if ((parameters.size() > 5) && parameters[1] == L"5" && parameters[2] == L"3") {
+    if (parameters.size() > 5 && parameters[1] == L"5" && parameters[2] == L"3") {
         filename_ = parameters[5];
         filename_ = filename_.substr(0, filename_.find_last_of(L'.'));
         filename_.append(L".ft");
@@ -98,7 +98,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 
     // NEPTUNE:	V\5\13\1\X\Template\0\TabField1\TabField2...
     //			Add Template to layer X in the active templatehost
-    if ((parameters.size() > 5) && parameters[1] == L"5" && parameters[2] == L"13") {
+    if (parameters.size() > 5 && parameters[1] == L"5" && parameters[2] == L"13") {
         layer_    = boost::lexical_cast<int>(parameters[4]);
         filename_ = parameters[5];
         if (filename_.find(L"PK/") == std::wstring::npos && filename_.find(L"PK\\") == std::wstring::npos)
@@ -121,7 +121,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
     }
 
     // VIDEO MODE V\5\14\MODE
-    if ((parameters.size() > 3) && parameters[1] == L"5" && parameters[2] == L"14") {
+    if (parameters.size() > 3 && parameters[1] == L"5" && parameters[2] == L"14") {
         std::wstring value = parameters[3];
         boost::to_upper(value);
 
@@ -156,7 +156,7 @@ void KeydataCommand::Execute()
 
     // TODO: Need to be checked for validity
     else if (state_ == 1)
-        proxy->stop(layer_, 0);
+        proxy->stop(layer_);
     else if (state_ == 2)
         pCIIStrategy_->GetChannel()->stage().clear();
     else if (state_ == 3)
@@ -171,7 +171,7 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters)
         titleName_.resize(4);
         for (int i = 0; i < 4; ++i) {
             if (parameters[1][i + 3] < 176) {
-                titleName_ = L"";
+                titleName_.clear();
                 break;
             }
             titleName_[i] = parameters[1][i + 3] - 144;

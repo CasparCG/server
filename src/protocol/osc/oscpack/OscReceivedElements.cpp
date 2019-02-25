@@ -48,7 +48,7 @@ static inline const char* FindStr4End(const char* p)
 
     p += 3;
 
-    while (*p)
+    while (*p != 0)
         p += 4;
 
     return p + 1;
@@ -59,7 +59,7 @@ static inline const char* FindStr4End(const char* p)
 static inline const char* FindStr4End(const char* p, const char* end)
 {
     if (p >= end)
-        return 0;
+        return nullptr;
 
     if (p[0] == '\0') // special case for SuperCollider integer address pattern
         return p + 4;
@@ -67,22 +67,20 @@ static inline const char* FindStr4End(const char* p, const char* end)
     p += 3;
     end -= 1;
 
-    while (p < end && *p)
+    while (p < end && (*p != 0))
         p += 4;
 
-    if (*p)
-        return 0;
-    else
-        return p + 1;
+    if (*p != 0)
+        return nullptr;
+    return p + 1;
 }
 
 static inline unsigned long RoundUp4(unsigned long x)
 {
     unsigned long remainder = x & 0x3UL;
-    if (remainder)
+    if (remainder != 0u)
         return x + (4 - remainder);
-    else
-        return x;
+    return x;
 }
 
 static inline int32 ToInt32(const char* p)
@@ -175,11 +173,11 @@ uint64 ToUInt64(const char* p)
 
 //------------------------------------------------------------------------------
 
-bool ReceivedPacket::IsBundle() const { return (Size() > 0 && Contents()[0] == '#'); }
+bool ReceivedPacket::IsBundle() const { return Size() > 0 && Contents()[0] == '#'; }
 
 //------------------------------------------------------------------------------
 
-bool ReceivedBundleElement::IsBundle() const { return (Size() > 0 && Contents()[0] == '#'); }
+bool ReceivedBundleElement::IsBundle() const { return Size() > 0 && Contents()[0] == '#'; }
 
 int32 ReceivedBundleElement::Size() const { return ToUInt32(size_); }
 
@@ -189,32 +187,29 @@ bool ReceivedMessageArgument::AsBool() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == TRUE_TYPE_TAG)
+    if (*typeTag_ == TRUE_TYPE_TAG)
         return true;
-    else if (*typeTag_ == FALSE_TYPE_TAG)
+    if (*typeTag_ == FALSE_TYPE_TAG)
         return false;
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 bool ReceivedMessageArgument::AsBoolUnchecked() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == TRUE_TYPE_TAG)
+    if (*typeTag_ == TRUE_TYPE_TAG)
         return true;
-    else
-        return false;
+    return false;
 }
 
 int32 ReceivedMessageArgument::AsInt32() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == INT32_TYPE_TAG)
+    if (*typeTag_ == INT32_TYPE_TAG)
         return AsInt32Unchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 int32 ReceivedMessageArgument::AsInt32Unchecked() const
@@ -241,10 +236,9 @@ float ReceivedMessageArgument::AsFloat() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == FLOAT_TYPE_TAG)
+    if (*typeTag_ == FLOAT_TYPE_TAG)
         return AsFloatUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 float ReceivedMessageArgument::AsFloatUnchecked() const
@@ -271,10 +265,9 @@ char ReceivedMessageArgument::AsChar() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == CHAR_TYPE_TAG)
+    if (*typeTag_ == CHAR_TYPE_TAG)
         return AsCharUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 char ReceivedMessageArgument::AsCharUnchecked() const { return (char)ToInt32(argument_); }
@@ -283,10 +276,9 @@ uint32 ReceivedMessageArgument::AsRgbaColor() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == RGBA_COLOR_TYPE_TAG)
+    if (*typeTag_ == RGBA_COLOR_TYPE_TAG)
         return AsRgbaColorUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 uint32 ReceivedMessageArgument::AsRgbaColorUnchecked() const { return ToUInt32(argument_); }
@@ -295,10 +287,9 @@ uint32 ReceivedMessageArgument::AsMidiMessage() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == MIDI_MESSAGE_TYPE_TAG)
+    if (*typeTag_ == MIDI_MESSAGE_TYPE_TAG)
         return AsMidiMessageUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 uint32 ReceivedMessageArgument::AsMidiMessageUnchecked() const { return ToUInt32(argument_); }
@@ -307,10 +298,9 @@ int64 ReceivedMessageArgument::AsInt64() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == INT64_TYPE_TAG)
+    if (*typeTag_ == INT64_TYPE_TAG)
         return AsInt64Unchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 int64 ReceivedMessageArgument::AsInt64Unchecked() const { return ToInt64(argument_); }
@@ -319,10 +309,9 @@ uint64 ReceivedMessageArgument::AsTimeTag() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == TIME_TAG_TYPE_TAG)
+    if (*typeTag_ == TIME_TAG_TYPE_TAG)
         return AsTimeTagUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 uint64 ReceivedMessageArgument::AsTimeTagUnchecked() const { return ToUInt64(argument_); }
@@ -331,10 +320,9 @@ double ReceivedMessageArgument::AsDouble() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == DOUBLE_TYPE_TAG)
+    if (*typeTag_ == DOUBLE_TYPE_TAG)
         return AsDoubleUnchecked();
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 double ReceivedMessageArgument::AsDoubleUnchecked() const
@@ -365,27 +353,25 @@ const char* ReceivedMessageArgument::AsString() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == STRING_TYPE_TAG)
+    if (*typeTag_ == STRING_TYPE_TAG)
         return argument_;
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 const char* ReceivedMessageArgument::AsSymbol() const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == SYMBOL_TYPE_TAG)
+    if (*typeTag_ == SYMBOL_TYPE_TAG)
         return argument_;
-    else
-        throw WrongArgumentTypeException();
+    throw WrongArgumentTypeException();
 }
 
 void ReceivedMessageArgument::AsBlob(const void*& data, unsigned long& size) const
 {
     if (!typeTag_)
         throw MissingArgumentException();
-    else if (*typeTag_ == BLOB_TYPE_TAG)
+    if (*typeTag_ == BLOB_TYPE_TAG)
         AsBlobUnchecked(data, size);
     else
         throw WrongArgumentTypeException();
@@ -475,7 +461,7 @@ ReceivedMessage::ReceivedMessage(const ReceivedBundleElement& bundleElement)
     Init(bundleElement.Contents(), bundleElement.Size());
 }
 
-bool ReceivedMessage::AddressPatternIsUInt32() const { return (addressPattern_[0] == '\0'); }
+bool ReceivedMessage::AddressPatternIsUInt32() const { return addressPattern_[0] == '\0'; }
 
 uint32 ReceivedMessage::AddressPatternAsUInt32() const { return ToUInt32(addressPattern_); }
 
@@ -490,16 +476,16 @@ void ReceivedMessage::Init(const char* message, unsigned long size)
     const char* end = message + size;
 
     typeTagsBegin_ = FindStr4End(addressPattern_, end);
-    if (typeTagsBegin_ == 0) {
+    if (typeTagsBegin_ == nullptr) {
         // address pattern was not terminated before end
         throw MalformedMessageException("unterminated address pattern");
     }
 
     if (typeTagsBegin_ == end) {
         // message consists of only the address pattern - no arguments or type tags.
-        typeTagsBegin_ = 0;
-        typeTagsEnd_   = 0;
-        arguments_     = 0;
+        typeTagsBegin_ = nullptr;
+        typeTagsEnd_   = nullptr;
+        arguments_     = nullptr;
 
     } else {
         if (*typeTagsBegin_ != ',')
@@ -507,15 +493,15 @@ void ReceivedMessage::Init(const char* message, unsigned long size)
 
         if (*(typeTagsBegin_ + 1) == '\0') {
             // zero length type tags
-            typeTagsBegin_ = 0;
-            typeTagsEnd_   = 0;
-            arguments_     = 0;
+            typeTagsBegin_ = nullptr;
+            typeTagsEnd_   = nullptr;
+            arguments_     = nullptr;
 
         } else {
             // check that all arguments are present and well formed
 
             arguments_ = FindStr4End(typeTagsBegin_, end);
-            if (arguments_ == 0) {
+            if (arguments_ == nullptr) {
                 throw MalformedMessageException("type tags were not terminated before end of message");
             }
 
@@ -564,7 +550,7 @@ void ReceivedMessage::Init(const char* message, unsigned long size)
                         if (argument == end)
                             throw MalformedMessageException("arguments exceed message size");
                         argument = FindStr4End(argument, end);
-                        if (argument == 0)
+                        if (argument == nullptr)
                             throw MalformedMessageException("unterminated string argument");
                         break;
 

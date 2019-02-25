@@ -32,68 +32,6 @@
 
 namespace caspar { namespace flash {
 
-std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong buf_size = 5000000)
-{
-    if (buf_size > 300 * 1000000)
-        CASPAR_THROW_EXCEPTION(file_read_error());
-
-    std::vector<char> out_data(buf_size, 0);
-
-    auto ret = uncompress(reinterpret_cast<Bytef*>(out_data.data()),
-                          &buf_size,
-                          reinterpret_cast<const Bytef*>(in_data.data()),
-                          static_cast<uLong>(in_data.size()));
-
-    if (ret == Z_BUF_ERROR)
-        return decompress_one_file(in_data, buf_size * 2);
-
-    if (ret != Z_OK)
-        CASPAR_THROW_EXCEPTION(file_read_error());
-
-    out_data.resize(buf_size);
-
-    return out_data;
-}
-
-std::string read_template_meta_info(const std::wstring& filename)
-{
-    auto file = std::fstream(filename, std::ios::in | std::ios::binary);
-
-    if (!file)
-        CASPAR_THROW_EXCEPTION(file_read_error());
-
-    char head[4] = {};
-    file.read(head, 3);
-
-    std::vector<char> data;
-
-    file.seekg(0, std::ios::end);
-    data.reserve(static_cast<size_t>(file.tellg()));
-    file.seekg(0, std::ios::beg);
-
-    if (strcmp(head, "CWS") == 0) {
-        file.seekg(8, std::ios::beg);
-        std::copy((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>(), std::back_inserter(data));
-        data = decompress_one_file(data);
-    } else {
-        file.seekg(0, std::ios::end);
-        data.reserve(static_cast<size_t>(file.tellg()));
-        file.seekg(0, std::ios::beg);
-
-        std::copy((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>(), std::back_inserter(data));
-    }
-
-    std::string beg_str = "<template version";
-    std::string end_str = "</template>";
-    auto        beg_it  = std::find_end(data.begin(), data.end(), beg_str.begin(), beg_str.end());
-    auto        end_it  = std::find_end(beg_it, data.end(), end_str.begin(), end_str.end());
-
-    if (beg_it == data.end() || end_it == data.end())
-        CASPAR_THROW_EXCEPTION(file_read_error());
-
-    return std::string(beg_it, end_it + end_str.size());
-}
-
 swf_t::header_t::header_t(const std::wstring& filename)
     : valid(false)
 {
@@ -111,8 +49,7 @@ swf_t::header_t::header_t(const std::wstring& filename)
     _byteswap_ulong(this->file_length);
 
     std::vector<char> file_data;
-    std::copy(
-        (std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
+    std::copy(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
 
     std::array<char, 32> uncompressed_data;
     uLongf               file_size = 32;
@@ -133,13 +70,12 @@ swf_t::header_t::header_t(const std::wstring& filename)
     unsigned long dims[4]  = {};
     unsigned long neg_root = 1 << (size - 1); // numbers are signed, i.e. leftmost bit denotes -
 
-    unsigned int  bi_offset = (size % 8) ? (8 - (size % 8)) : 0; // offset of bit numbers depending on specified size
-    unsigned int  by_offset = (size + bi_offset) / 8;            // offest of bytes
-    unsigned int  ioffset;                                       // floating byte offset during iteration
-    unsigned long ibuf = (unsigned long)(nbits % 8); // actual result - starts with last 3 bits of first byte
+    unsigned int  bi_offset = size % 8 ? 8 - size % 8 : 0; // offset of bit numbers depending on specified size
+    unsigned int  by_offset = (size + bi_offset) / 8;      // offest of bytes
+    unsigned long ibuf      = (unsigned long)(nbits % 8);  // actual result - starts with last 3 bits of first byte
 
     for (auto i = 0; i < 4; ++i) {
-        ioffset = by_offset * i;
+        unsigned int ioffset = by_offset * i;
 
         for (unsigned int j = 0; j < by_offset; ++j) {
             ibuf <<= 8;
@@ -148,11 +84,11 @@ swf_t::header_t::header_t(const std::wstring& filename)
 
         dims[i] = (ibuf >> (3 + bi_offset + (i * bi_offset))) / 20; // coordinates in twips, so divide by 20 for pixels
 
-        if (dims[i] >= neg_root)                                // if the leftmost bit is 1 number is negative
-            dims[i] = (-1) * (neg_root - (dims[i] - neg_root)); // convert to negative number
+        if (dims[i] >= neg_root)                              // if the leftmost bit is 1 number is negative
+            dims[i] = -1 * (neg_root - (dims[i] - neg_root)); // convert to negative number
 
-        int expn = 3 + bi_offset + (i * bi_offset); // bit divider for ...
-        ibuf     = ibuf % (1 << (expn - 1));        // ... buffered number
+        int expn = 3 + bi_offset + i * bi_offset; // bit divider for ...
+        ibuf     = ibuf % (1 << (expn - 1));      // ... buffered number
     }
 
     this->frame_width  = dims[1] - dims[0]; // max - mix
@@ -172,8 +108,7 @@ swf_t::swf_t(const std::wstring& filename)
     this->data.resize(this->header.file_length - 8);
 
     std::vector<char> file_data;
-    std::copy(
-        (std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
+    std::copy(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
 
     uLongf file_size = this->header.file_length;
     auto   ret       = uncompress(reinterpret_cast<Bytef*>(this->data.data()),

@@ -57,10 +57,10 @@ std::vector<std::wstring> device_list()
         int         numCards = 0;
         blue.enumerate(numCards);
 
-        for (int n = 1; n < (numCards + 1); n++) {
+        for (int n = 1; n < numCards + 1; n++) {
             blue.attach(n);
-            devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) +
-                              L"] " + get_sdi_inputs(blue) + L"i" + get_sdi_outputs(blue) + L"o");
+            devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + std::to_wstring(n) + L"] " +
+                              get_sdi_inputs(blue) + L"i" + get_sdi_outputs(blue) + L"o");
             blue.detach();
         }
     } catch (...) {

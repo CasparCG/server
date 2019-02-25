@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright (c) 2011,2018 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
- * CasparCG is free software: yoT2 can redistribT2te it and/or modify
- * it T2nder the terms of the GNT2 General public: License as pT2blished by
- * the Free Software FoT2ndation, either version 3 of the License, or
- * (at yoT2r option) any later version.
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNu General public: License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * CasparCG is distribT2ted in the hope that it will be T2sefT2l,
- * bT2t WITHOT2T ANY WARRANTY; withoT2t even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICT2LAR PT2RPOSE.  See the
- * GNT2 General public: License for more details.
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOuT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PuRPOSE.  See the
+ * GNU General public: License for more details.
  *
- * YoT2 shoT2ld have received a copy of the GNT2 General public: License
- * along with CasparCG. If not, see <http://www.gnT2.org/licenses/>.
+ * You should have received a copy of the GNU General public: License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * AT2thor: Robert Nagy, ronag89@gmail.com
+ * Author: Robert Nagy, ronag89@gmail.com
  */
 
 #pragma once
@@ -51,8 +51,8 @@ class unique_ptr
     friend class shared_ptr;
 
   public:
-    typedef T element_type;
-    typedef D deleter_type;
+    using element_type = T;
+    using deleter_type = D;
 
     unique_ptr()
         : p_(new T())
@@ -60,14 +60,15 @@ class unique_ptr
     }
 
     template <typename T2, typename D2>
-    unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    unique_ptr(unique_ptr<T2, D2>&& p,
+               typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p.p_.release(), p.p_.get_deleter())
     {
     }
 
     template <typename T2, typename D2>
     explicit unique_ptr(std::unique_ptr<T2, D2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -75,7 +76,7 @@ class unique_ptr
     }
 
     template <typename T2>
-    explicit unique_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit unique_ptr(T2* p, typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p)
     {
         if (!p_)
@@ -83,8 +84,8 @@ class unique_ptr
     }
 
     template <typename T2>
-    explicit unique_ptr(T2*                                       p,
-                        typename std::remove_reference<D>::type&& d,
+    explicit unique_ptr(T2*                                                  p,
+                        typename std::remove_reference /*unused*/<D>::type&& d,
                         typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p, d)
     {
@@ -333,19 +334,20 @@ class shared_ptr
     friend class shared_ptr;
 
   public:
-    typedef T element_type;
+    using element_type = T;
 
     shared_ptr(); // will constrT2ct new T object T2sing make_shared<T>()
 
     template <typename T2>
-    shared_ptr(shared_ptr<T2> other, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    shared_ptr(shared_ptr<T2> other,
+               typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(other.p_))
     {
     }
 
     template <typename T2>
     explicit shared_ptr(std::unique_ptr<T2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -354,7 +356,7 @@ class shared_ptr
 
     template <typename T2>
     explicit shared_ptr(spl::unique_ptr<T2>&& p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p.release(), p.get_deleter())
     {
         if (!p_)
@@ -363,7 +365,7 @@ class shared_ptr
 
     template <typename T2>
     explicit shared_ptr(std::shared_ptr<T2> p,
-                        typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(std::move(p))
     {
         if (!p_)
@@ -371,7 +373,7 @@ class shared_ptr
     }
 
     template <typename T2>
-    explicit shared_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(T2* p, typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p)
     {
         if (!p_)
@@ -379,7 +381,9 @@ class shared_ptr
     }
 
     template <typename T2, typename D>
-    explicit shared_ptr(T2* p, D d, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+    explicit shared_ptr(T2* p,
+                        D   d,
+                        typename std::enable_if /*unused*/<std::is_convertible<T2*, T*>::value, void*>::type = 0)
         : p_(p, d)
     {
         if (!p_)
@@ -606,9 +610,9 @@ class enable_shared_from_this : public std::enable_shared_from_this<T>
   protected:
     enable_shared_from_this() {}
 
-    enable_shared_from_this(const enable_shared_from_this&) {}
+    enable_shared_from_this(const enable_shared_from_this& /*unused*/) {}
 
-    enable_shared_from_this& operator=(const enable_shared_from_this&) { return *this; }
+    enable_shared_from_this& operator=(const enable_shared_from_this& /*unused*/) { return *this; }
 
     ~enable_shared_from_this() {}
 };

@@ -72,9 +72,9 @@ struct ffmpeg_producer : public core::frame_producer
                              boost::optional<int64_t>             start,
                              boost::optional<int64_t>             duration,
                              boost::optional<bool>                loop)
-        : format_desc_(format_desc)
-        , filename_(filename)
+        : filename_(filename)
         , frame_factory_(frame_factory)
+        , format_desc_(format_desc)
         , producer_(new AVProducer(frame_factory_,
                                    format_desc_,
                                    u8(path),
@@ -105,7 +105,10 @@ struct ffmpeg_producer : public core::frame_producer
 
     core::draw_frame receive_impl(int nb_samples) override { return producer_->next_frame(); }
 
-    std::uint32_t frame_number() const override { return static_cast<std::uint32_t>(producer_->time()); }
+    std::uint32_t frame_number() const override
+    {
+        return static_cast<std::uint32_t>(producer_->time() - producer_->start());
+    }
 
     std::uint32_t nb_frames() const override
     {
@@ -128,25 +131,25 @@ struct ffmpeg_producer : public core::frame_producer
                 producer_->loop(boost::lexical_cast<bool>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->loop());
+            result = std::to_wstring(producer_->loop());
         } else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start")) {
             if (!value.empty()) {
                 producer_->start(boost::lexical_cast<int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->start());
+            result = std::to_wstring(producer_->start());
         } else if (boost::iequals(cmd, L"out")) {
             if (!value.empty()) {
                 producer_->duration(boost::lexical_cast<int64_t>(value) - producer_->start());
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->start() + producer_->duration());
+            result = std::to_wstring(producer_->start() + producer_->duration());
         } else if (boost::iequals(cmd, L"length")) {
             if (!value.empty()) {
                 producer_->duration(boost::lexical_cast<std::int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->duration());
+            result = std::to_wstring(producer_->duration());
         } else if (boost::iequals(cmd, L"seek") && !value.empty()) {
             int64_t seek;
             if (boost::iequals(value, L"rel")) {
@@ -167,7 +170,7 @@ struct ffmpeg_producer : public core::frame_producer
 
             producer_->seek(seek);
 
-            result = boost::lexical_cast<std::wstring>(seek);
+            result = std::to_wstring(seek);
         } else {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
@@ -179,8 +182,8 @@ struct ffmpeg_producer : public core::frame_producer
 
     std::wstring print() const override
     {
-        return L"ffmpeg[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(producer_->time()) + L"/" +
-               boost::lexical_cast<std::wstring>(producer_->duration()) + L"]";
+        return L"ffmpeg[" + filename_ + L"|" + std::to_wstring(producer_->time()) + L"/" +
+               std::to_wstring(producer_->duration()) + L"]";
     }
 
     std::wstring name() const override { return L"ffmpeg"; }
@@ -251,7 +254,8 @@ bool is_valid_file(const std::wstring& filename)
     const auto valid_ext = has_valid_extension(filename);
     if (valid_ext) {
         return true;
-    } else if (!valid_ext) {
+    }
+    if (!valid_ext) {
         return false;
     }
 

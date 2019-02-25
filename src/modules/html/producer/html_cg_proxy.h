@@ -30,7 +30,7 @@ namespace caspar { namespace html {
 class html_cg_proxy : public core::cg_proxy
 {
   public:
-    html_cg_proxy(spl::shared_ptr<core::frame_producer> producer);
+    explicit html_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer);
     ~html_cg_proxy();
 
     void         add(int                 layer,
@@ -40,7 +40,7 @@ class html_cg_proxy : public core::cg_proxy
                      const std::wstring& data) override;
     void         remove(int layer) override;
     void         play(int layer) override;
-    void         stop(int layer, unsigned int mix_out_duration) override;
+    void         stop(int layer) override;
     void         next(int layer) override;
     void         update(int layer, const std::wstring& data) override;
     std::wstring invoke(int layer, const std::wstring& label) override;

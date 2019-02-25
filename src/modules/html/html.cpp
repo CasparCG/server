@@ -31,13 +31,13 @@
 #include <core/producer/cg_proxy.h>
 
 #include <boost/asio.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 
 #include <map>
+#include <memory>
+#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 4458)
@@ -56,7 +56,7 @@ void caspar_log(const CefRefPtr<CefBrowser>&        browser,
                 boost::log::trivial::severity_level level,
                 const std::string&                  message)
 {
-    if (browser) {
+    if (browser != nullptr) {
         auto msg = CefProcessMessage::Create(LOG_MESSAGE_NAME);
         msg->GetArgumentList()->SetInt(0, level);
         msg->GetArgumentList()->SetString(1, message);
@@ -69,7 +69,7 @@ class remove_handler : public CefV8Handler
     CefRefPtr<CefBrowser> browser_;
 
   public:
-    remove_handler(CefRefPtr<CefBrowser> browser)
+    explicit remove_handler(const CefRefPtr<CefBrowser>& browser)
         : browser_(browser)
     {
     }
@@ -112,7 +112,7 @@ class renderer_application
     {
         caspar_log(browser,
                    boost::log::trivial::trace,
-                   "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " created");
+                   "context for frame " + std::to_string(frame->GetIdentifier()) + " created");
         contexts_.push_back(context);
 
         auto window = context->GetGlobal();
@@ -157,7 +157,9 @@ class renderer_application
         }
     }
 
-    void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context)
+    void OnContextReleased(CefRefPtr<CefBrowser>   browser,
+                           CefRefPtr<CefFrame>     frame,
+                           CefRefPtr<CefV8Context> context) override
     {
         auto removed =
             boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c) { return c->IsSame(context); });
@@ -165,12 +167,11 @@ class renderer_application
         if (removed != contexts_.end()) {
             caspar_log(browser,
                        boost::log::trivial::trace,
-                       "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) + " released");
+                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released");
         } else {
             caspar_log(browser,
                        boost::log::trivial::warning,
-                       "context for frame " + boost::lexical_cast<std::string>(frame->GetIdentifier()) +
-                           " released, but not found");
+                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released, but not found");
         }
     }
 
@@ -206,9 +207,8 @@ class renderer_application
             }
 
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
     IMPLEMENT_REFCOUNTING(renderer_application);
@@ -230,7 +230,7 @@ void init(core::module_dependencies dependencies)
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
-    g_cef_executor.reset(new executor(L"cef"));
+    g_cef_executor = std::make_unique<executor>(L"cef");
     g_cef_executor->invoke([&] {
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -247,19 +247,18 @@ void init(core::module_dependencies dependencies)
     dependencies.cg_registry->register_cg_producer(
         L"html",
         {L".html"},
-        [](const std::wstring& filename) { return ""; },
         [](const spl::shared_ptr<core::frame_producer>& producer) { return spl::make_shared<html_cg_proxy>(producer); },
         [](const core::frame_producer_dependencies& dependencies, const std::wstring& filename) {
             return html::create_cg_producer(dependencies, {filename});
         },
         false);
 
-    auto cef_version_major = boost::lexical_cast<std::wstring>(cef_version_info(0));
-    auto cef_revision      = boost::lexical_cast<std::wstring>(cef_version_info(1));
-    auto chrome_major      = boost::lexical_cast<std::wstring>(cef_version_info(2));
-    auto chrome_minor      = boost::lexical_cast<std::wstring>(cef_version_info(3));
-    auto chrome_build      = boost::lexical_cast<std::wstring>(cef_version_info(4));
-    auto chrome_patch      = boost::lexical_cast<std::wstring>(cef_version_info(5));
+    auto cef_version_major = std::to_wstring(cef_version_info(0));
+    auto cef_revision      = std::to_wstring(cef_version_info(1));
+    auto chrome_major      = std::to_wstring(cef_version_info(2));
+    auto chrome_minor      = std::to_wstring(cef_version_info(3));
+    auto chrome_build      = std::to_wstring(cef_version_info(4));
+    auto chrome_patch      = std::to_wstring(cef_version_info(5));
 }
 
 void uninit()
@@ -276,8 +275,8 @@ class cef_task : public CefTask
     std::function<void()> function_;
 
   public:
-    cef_task(const std::function<void()>& function)
-        : function_(function)
+    explicit cef_task(std::function<void()> function)
+        : function_(std::move(function))
     {
     }
 
@@ -314,9 +313,8 @@ std::future<void> begin_invoke(const std::function<void()>& func)
 
     if (CefPostTask(TID_UI, task.get())) {
         return task->future();
-    } else {
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
     }
+    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
 }
 
 }} // namespace caspar::html

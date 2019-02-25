@@ -36,8 +36,8 @@ namespace osc {
 
 #if defined(__BORLANDC__) || defined(_MSC_VER)
 
-typedef __int64          int64;
-typedef unsigned __int64 uint64;
+using int64  = __int64;
+using uint64 = unsigned __int64;
 
 #elif defined(__x86_64__) || defined(_M_X64)
 
@@ -58,8 +58,8 @@ typedef unsigned int uint32;
 
 #else
 
-typedef signed long   int32;
-typedef unsigned long uint32;
+using int32  = long;
+using uint32 = unsigned long;
 
 #endif
 
