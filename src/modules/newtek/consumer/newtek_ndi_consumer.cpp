@@ -182,10 +182,7 @@ spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std:
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
-    std::wstring name;
-    if (contains_param(L"NAME", params)) {
-        name = get_param(L"NAME", params);
-    }
+    std::wstring name = get_param(L"NAME", params, L"");
     bool allow_fields = contains_param(L"ALLOW_FIELDS", params);
     return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
 }

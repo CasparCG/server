@@ -77,8 +77,6 @@ struct newtek_ndi_producer : public core::frame_producer
     NDIlib_v3*                           ndi_lib_;
     NDIlib_framesync_instance_t          ndi_framesync_;
     NDIlib_recv_instance_t               ndi_recv_instance_;
-    NDIlib_video_frame_v2_t              ndi_video_frame_;
-    NDIlib_audio_frame_v2_t              ndi_audio_frame_;
     spl::shared_ptr<diagnostics::graph>  graph_;
     timer                                tick_timer_;
     timer                                frame_timer_;
@@ -101,8 +99,8 @@ struct newtek_ndi_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , name_(name)
         , low_bandwidth_(low_bandwidth)
-        , executor_(print())
         , instance_no_(instances_++)
+        , executor_(print())
         , cadence_counter_(0)
         , frame_no_(0)
     {
@@ -188,21 +186,16 @@ struct newtek_ndi_producer : public core::frame_producer
                         break;
                     default: // should never happen because library handles the conversion for us
                         av_frame->format = AV_PIX_FMT_BGRA;
-                        // cannot log here:
-                        /*CASPAR_LOG(warning)
-                            << print() << L" NDI frame format not supported (" << video_frame.FourCC << L").";*/
                         break;
                 }
                 av_frame->width  = video_frame.xres;
                 av_frame->height = video_frame.yres;
-                av_frame->interlaced_frame =
-                    video_frame.frame_format_type == NDIlib_frame_format_type_interleaved ? 1 : 0;
-                av_frame->top_field_first = av_frame->interlaced_frame;
                 NDIlib_audio_frame_interleaved_32s_t audio_frame_32s;
                 audio_frame_32s.p_data = new int32_t[audio_frame.no_samples * audio_frame.no_channels];
                 if (audio_frame.p_data != nullptr) {
                     audio_frame_32s.reference_level = 0;
                     ndi_lib_->NDIlib_util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
+                    ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
                     a_frame->channels    = audio_frame_32s.no_channels;
                     a_frame->sample_rate = audio_frame_32s.sample_rate;
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
@@ -210,6 +203,8 @@ struct newtek_ndi_producer : public core::frame_producer
                 }
                 auto mframe =
                     ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
+                ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
+                delete[] audio_frame_32s.p_data;
                 auto dframe = core::draw_frame(std::move(mframe));
                 {
                     std::lock_guard<std::mutex> lock(frames_mutex_);
@@ -217,12 +212,8 @@ struct newtek_ndi_producer : public core::frame_producer
                     while (frames_.size() > 2) { // should never happen because frame sync takes care of it
                         frames_.pop();
                         graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-                        CASPAR_LOG(info) << print() << "Frame dropped";
                     }
                 }
-                ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
-                ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
-                delete[] audio_frame_32s.p_data;
             }
 
             graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -250,6 +241,7 @@ struct newtek_ndi_producer : public core::frame_producer
         if (found_source != sources.end()) {
             NDI_recv_create_desc.source_to_connect_to = found_source->second;
         } else {
+            CASPAR_LOG(info) << print() << " Source currently not available.";
             NDI_recv_create_desc.source_to_connect_to.p_ndi_name = src_name.c_str();
         }
         NDI_recv_create_desc.p_ndi_recv_name = src_name.c_str();
@@ -272,7 +264,7 @@ int                                   newtek_ndi_producer::instances_ = 0;
 spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_producer_dependencies& dependencies,
                                                           const std::vector<std::wstring>&         params)
 {
-    const bool ndi_prefix  = boost::iequals(params.at(0), "NDI");
+    const bool ndi_prefix  = boost::iequals(params.at(0), "[NDI]");
     auto       name_or_url = ndi_prefix ? params.at(1) : params.at(0);
     const bool ndi_url     = boost::algorithm::istarts_with(name_or_url, L"ndi:");
     if (!ndi_prefix && !ndi_url)
