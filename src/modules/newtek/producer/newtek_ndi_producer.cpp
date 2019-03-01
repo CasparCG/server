@@ -67,10 +67,10 @@ namespace caspar { namespace newtek {
 
 struct newtek_ndi_producer : public core::frame_producer
 {
-    static int         instances_;
-    const int          instance_no_;
-    const std::wstring name_;
-    const bool         low_bandwidth_;
+    static std::atomic<int> instances_;
+    const int               instance_no_;
+    const std::wstring      name_;
+    const bool              low_bandwidth_;
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
@@ -260,7 +260,8 @@ struct newtek_ndi_producer : public core::frame_producer
 
 }; // namespace newtek
 
-int                                   newtek_ndi_producer::instances_ = 0;
+std::atomic<int> newtek_ndi_producer::instances_(0);
+
 spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_producer_dependencies& dependencies,
                                                           const std::vector<std::wstring>&         params)
 {

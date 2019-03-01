@@ -44,10 +44,10 @@ namespace caspar { namespace newtek {
 
 struct newtek_ndi_consumer : public core::frame_consumer
 {
-    static int         instances_;
-    const int          instance_no_;
-    const std::wstring name_;
-    const bool         allow_fields_;
+    static std::atomic<int> instances_;
+    const int               instance_no_;
+    const std::wstring      name_;
+    const bool              allow_fields_;
 
     core::video_format_desc              format_desc_;
     int                                  channel_index_;
@@ -175,15 +175,15 @@ struct newtek_ndi_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 };
 
-int newtek_ndi_consumer::instances_ = 0;
+std::atomic<int> newtek_ndi_consumer::instances_(0);
 
 spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&                  params,
                                                           std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
-    std::wstring name = get_param(L"NAME", params, L"");
-    bool allow_fields = contains_param(L"ALLOW_FIELDS", params);
+    std::wstring name         = get_param(L"NAME", params, L"");
+    bool         allow_fields = contains_param(L"ALLOW_FIELDS", params);
     return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
 }
 
