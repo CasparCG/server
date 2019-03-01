@@ -89,7 +89,7 @@ struct amcp_command_repository::impl
     void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
     {
         int index = 0;
-        for (const auto& channel : channels) {
+        for (const auto& channel : video_channels) {
             std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
