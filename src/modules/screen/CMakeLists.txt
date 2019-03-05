@@ -9,8 +9,8 @@ set(SOURCES
 set(HEADERS
 	consumer/screen_consumer.h
 
-    consumer_screen_vertex.h
-    consumer_screen_fragment.h
+	consumer_screen_vertex.h
+	consumer_screen_fragment.h
 
 	screen.h
 )

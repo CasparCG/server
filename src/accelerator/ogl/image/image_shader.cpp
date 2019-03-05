@@ -23,8 +23,8 @@
 #include "../util/device.h"
 #include "../util/shader.h"
 
-#include "ogl_image_vertex.h"
 #include "ogl_image_fragment.h"
+#include "ogl_image_vertex.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
