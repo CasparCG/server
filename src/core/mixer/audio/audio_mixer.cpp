@@ -36,6 +36,7 @@
 #include <stack>
 #include <vector>
 
+
 namespace caspar { namespace core {
 
 using namespace boost::container;
@@ -100,9 +101,14 @@ struct audio_mixer::impl
 
         for (auto& item : items) {
             auto ptr  = item.samples.data();
-            auto size = std::min(item.samples.size(), result.size());
+            auto size = result.size();
             for (auto n = 0; n < size; ++n) {
-                mixed[n] = static_cast<double>(ptr[n]) * item.transform.volume + mixed[n];
+		if (n<item.samples.size()){
+                    mixed[n] = static_cast<double>(ptr[n]) * item.transform.volume + mixed[n];
+		}else{
+		    auto offset = (item.samples.size()) - (channels-(n%channels));
+                    mixed[n] = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
+		}
             }
         }
 
