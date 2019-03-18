@@ -312,28 +312,12 @@ class html_client
         return false;
     }
 
-    core::draw_frame pop()
-    {
-        core::draw_frame frame;
-
-        if (!try_pop(frame)) {
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " No frame in buffer"));
-        }
-
-        return frame;
-    }
-
     void update()
     {
         invoke_requested_animation_frames();
 
-        auto num_frames = [&] {
-            std::lock_guard<std::mutex> lock(frames_mutex_);
-            return frames_.size();
-        }();
-
-        if (num_frames >= 1) {
-            auto                        frame = pop();
+        core::draw_frame frame;
+        if (try_pop(frame)) {
             std::lock_guard<std::mutex> lock(last_frame_mutex_);
             last_frame_ = frame;
         } else {
