@@ -83,8 +83,7 @@ struct newtek_ndi_producer : public core::frame_producer
 
     std::queue<core::draw_frame> frames_;
     mutable std::mutex           frames_mutex_;
-    core::draw_frame             last_frame_ = core::draw_frame::empty();
-    int                          frame_no_;
+    core::draw_frame             last_frame_;
     executor                     executor_;
 
     int cadence_counter_;
@@ -102,7 +101,6 @@ struct newtek_ndi_producer : public core::frame_producer
         , instance_no_(instances_++)
         , executor_(print())
         , cadence_counter_(0)
-        , frame_no_(0)
     {
         if (!ndi::load_library()) {
             ndi::not_installed();
@@ -113,7 +111,7 @@ struct newtek_ndi_producer : public core::frame_producer
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         diagnostics::register_graph(graph_);
-        executor_.set_capacity(1);
+        executor_.set_capacity(3);
         cadence_length_ = static_cast<int>(format_desc_.audio_cadence.size());
         initialize();
     }
@@ -136,21 +134,14 @@ struct newtek_ndi_producer : public core::frame_producer
     {
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
-        core::draw_frame frame;
-        if (0 == frame_no_++) {
-            executor_.invoke([this]() { prepare_next_frame(); });
-        }
         executor_.begin_invoke([this]() { prepare_next_frame(); });
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
             if (frames_.size() > 0) {
-                frame = frames_.front();
+                last_frame_ = frames_.front();
                 frames_.pop();
-                last_frame_ = frame;
-            } else {
-                frame = last_frame_;
             }
-            return frame;
+            return last_frame_;
         }
     }
     bool prepare_next_frame()
@@ -286,13 +277,8 @@ spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_prod
     }
     const bool low_bandwidth = contains_param(L"LOW_BANDWIDTH", params);
 
-    try {
-        auto producer = spl::make_shared<newtek_ndi_producer>(
-            dependencies.frame_factory, dependencies.format_desc, name_or_url, low_bandwidth);
-        return core::create_destroy_proxy(std::move(producer));
-    } catch (...) {
-        CASPAR_LOG_CURRENT_EXCEPTION();
-    }
-    return core::frame_producer::empty();
+    auto producer = spl::make_shared<newtek_ndi_producer>(
+        dependencies.frame_factory, dependencies.format_desc, name_or_url, low_bandwidth);
+    return core::create_destroy_proxy(std::move(producer));
 }
 }} // namespace caspar::newtek
