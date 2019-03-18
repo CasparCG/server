@@ -34,6 +34,7 @@
 
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
+#include <common/env.h>
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/param.h>
@@ -235,7 +236,8 @@ struct newtek_ndi_producer : public core::frame_producer
             CASPAR_LOG(info) << print() << " Source currently not available.";
             NDI_recv_create_desc.source_to_connect_to.p_ndi_name = src_name.c_str();
         }
-        NDI_recv_create_desc.p_ndi_recv_name = src_name.c_str();
+        std::string receiver_name = "CasparCG " + u8(env::version()) + " NDI Producer " + std::to_string(instance_no_);
+        NDI_recv_create_desc.p_ndi_recv_name = receiver_name.c_str();
         ndi_recv_instance_                   = ndi_lib_->NDIlib_recv_create_v3(&NDI_recv_create_desc);
         ndi_framesync_                       = ndi_lib_->NDIlib_framesync_create(ndi_recv_instance_);
         CASPAR_VERIFY(ndi_recv_instance_);
