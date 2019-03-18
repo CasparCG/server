@@ -329,8 +329,8 @@ std::wstring swap_command(command_context& ctx)
     bool swap_transforms = ctx.parameters.size() > 1 && boost::iequals(ctx.parameters.at(1), L"TRANSFORMS");
 
     if (ctx.layer_index(-1) != -1) {
-        std::vector<std::string> strs;
-        boost::split(strs, ctx.parameters[0], boost::is_any_of("-"));
+        std::vector<std::wstring> strs;
+        boost::split(strs, ctx.parameters[0], boost::is_any_of(L"-"));
 
         auto ch1 = ctx.channel.channel;
         auto ch2 = ctx.channels.at(boost::lexical_cast<int>(strs.at(0)) - 1);

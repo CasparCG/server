@@ -723,7 +723,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));
     }
-    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, L" "), boost::iequals(params.at(0), L"STREAM"));
+    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"));
 }
 
 spl::shared_ptr<core::frame_consumer>
