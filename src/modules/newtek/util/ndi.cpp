@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #endif
 
+#include <common/env.h>
 #include <common/except.h>
 
 #include <boost/filesystem.hpp>
@@ -55,32 +56,37 @@ NDIlib_v3* load_library()
 
     if (ndi_lib)
         return ndi_lib;
+
+    auto        dll_path    = boost::filesystem::path(env::initial_folder()) / NDILIB_LIBRARY_NAME;
     const char* runtime_dir = getenv(NDILIB_REDIST_FOLDER);
-
-    if (runtime_dir == NULL)
-        return nullptr;
-
-    auto dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
 
 #ifdef _WIN32
     auto module = LoadLibrary(dll_path.c_str());
 
-    if (!module)
-        return nullptr;
+    if (!module && runtime_dir) {
+        dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
+        module   = LoadLibrary(dll_path.c_str());
+    }
 
-    static std::shared_ptr<void> lib(module, FreeLibrary);
+    FARPROC NDIlib_v3_load = NULL;
+    if (module) {
+        CASPAR_LOG(info) << L"Loaded " << dll_path;
+        static std::shared_ptr<void> lib(module, FreeLibrary);
+        NDIlib_v3_load = GetProcAddress(module, "NDIlib_v3_load");
+    }
 
-    //    wchar_t actualFilename[256];
-    //    GetModuleFileNameW(module, actualFilename, sizeof(actualFilename));
-    CASPAR_LOG(info) << L"Loaded " << dll_path;
-
-    auto NDIlib_v3_load = GetProcAddress(module, "NDIlib_v3_load");
-    if (!NDIlib_v3_load)
-        return nullptr;
+    if (!NDIlib_v3_load) {
+        not_installed();
+    }
 
 #else
     // Try to load the library
     void* hNDILib = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+
+    if (!hNDILib && runtime_dir) {
+        dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
+        hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+    }
 
     // The main NDI entry point for dynamic loading if we got the library
     const NDIlib_v3* (*NDIlib_v3_load)(void) = NULL;
@@ -89,8 +95,10 @@ NDIlib_v3* load_library()
         static std::shared_ptr<void> lib(hNDILib, dlclose);
         *((void**)&NDIlib_v3_load) = dlsym(hNDILib, "NDIlib_v3_load");
     }
-    if (!NDIlib_v3_load)
-        return nullptr;
+
+    if (!NDIlib_v3_load) {
+        not_installed();
+    }
 
 #endif
 

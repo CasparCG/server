@@ -103,10 +103,7 @@ struct newtek_ndi_producer : public core::frame_producer
         , executor_(print())
         , cadence_counter_(0)
     {
-        if (!ndi::load_library()) {
-            ndi::not_installed();
-        }
-
+        ndi_lib_ = ndi::load_library();
         graph_->set_text(print());
         graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -187,12 +184,12 @@ struct newtek_ndi_producer : public core::frame_producer
                 if (audio_frame.p_data != nullptr) {
                     audio_frame_32s.reference_level = 0;
                     ndi_lib_->NDIlib_util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
-                    ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
                     a_frame->channels    = audio_frame_32s.no_channels;
                     a_frame->sample_rate = audio_frame_32s.sample_rate;
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
                 }
+                ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
                 auto mframe =
                     ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
                 ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
@@ -220,7 +217,6 @@ struct newtek_ndi_producer : public core::frame_producer
 
     void initialize()
     {
-        ndi_lib_     = ndi::load_library();
         auto sources = ndi::get_current_sources();
 
         NDIlib_recv_create_v3_t NDI_recv_create_desc;
