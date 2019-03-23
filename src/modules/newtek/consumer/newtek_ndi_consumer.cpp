@@ -71,10 +71,6 @@ struct newtek_ndi_consumer : public core::frame_consumer
         , channel_index_(0)
     {
         ndi_lib_ = ndi::load_library();
-        if (!ndi_lib_) {
-            ndi::not_installed();
-        }
-
         graph_->set_text(print());
         graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
