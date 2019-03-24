@@ -109,7 +109,7 @@ struct newtek_ndi_producer : public core::frame_producer
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         diagnostics::register_graph(graph_);
-        executor_.set_capacity(3);
+        executor_.set_capacity(2);
         cadence_length_ = static_cast<int>(format_desc_.audio_cadence.size());
         initialize();
     }
@@ -132,7 +132,9 @@ struct newtek_ndi_producer : public core::frame_producer
     {
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
-        executor_.begin_invoke([this]() { prepare_next_frame(); });
+        if (executor_.size() < 2) {
+            executor_.begin_invoke([this]() { prepare_next_frame(); });
+        }
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
             if (frames_.size() > 0) {
