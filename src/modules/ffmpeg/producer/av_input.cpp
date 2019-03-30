@@ -130,21 +130,20 @@ void Input::reset()
         FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
     }
 
-    std::lock_guard<std::mutex> format_lock(ic_mutex_);
-
     AVFormatContext* ic = nullptr;
     FF(avformat_open_input(&ic, filename_.c_str(), input_format, &options));
-    ic_ = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
+    auto ic2 = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
         CASPAR_LOG(warning) << "av_input[" + filename_ + "]"
                             << " Unused option " << p.first << "=" << p.second;
     }
 
-    ic_->interrupt_callback.callback = Input::interrupt_cb;
-    ic_->interrupt_callback.opaque   = this;
+    ic2->interrupt_callback.callback = Input::interrupt_cb;
+    ic2->interrupt_callback.opaque   = this;
 
-    FF(avformat_find_stream_info(ic_.get(), nullptr));
+    FF(avformat_find_stream_info(ic2.get(), nullptr));
+    ic_ = std::move(ic2);
 }
 
 bool Input::eof() const { return eof_; }
