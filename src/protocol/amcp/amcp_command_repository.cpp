@@ -75,8 +75,7 @@ struct amcp_command_repository::impl
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands;
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands;
 
-    impl(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
-         const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    impl(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
          const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
          std::function<void(bool)>                                   shutdown_server_now)
@@ -85,8 +84,12 @@ struct amcp_command_repository::impl
         , consumer_registry(consumer_registry)
         , shutdown_server_now(shutdown_server_now)
     {
+    }
+
+    void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
+    {
         int index = 0;
-        for (const auto& channel : channels) {
+        for (const auto& channel : video_channels) {
             std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
@@ -95,13 +98,17 @@ struct amcp_command_repository::impl
 };
 
 amcp_command_repository::amcp_command_repository(
-    const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
     const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
     const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
     const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
     std::function<void(bool)>                                   shutdown_server_now)
-    : impl_(new impl(channels, cg_registry, producer_registry, consumer_registry, shutdown_server_now))
+    : impl_(new impl(cg_registry, producer_registry, consumer_registry, shutdown_server_now))
 {
+}
+
+void amcp_command_repository::init(const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+{
+    impl_->init(channels);
 }
 
 AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring&      s,

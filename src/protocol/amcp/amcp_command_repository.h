@@ -35,11 +35,12 @@ namespace caspar { namespace protocol { namespace amcp {
 class amcp_command_repository
 {
   public:
-    amcp_command_repository(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
-                            const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    amcp_command_repository(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                             const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                             const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
                             std::function<void(bool)>                                   shutdown_server_now);
+
+    void init(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
     AMCPCommand::ptr_type
                           create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;

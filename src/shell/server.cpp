@@ -121,7 +121,10 @@ struct server::impl
     {
         caspar::core::diagnostics::osd::register_sink();
 
-        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_);
+        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+            cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+
+        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_);
 
         initialize_modules(dependencies);
         core::init_cg_proxy_as_producer(dependencies);
@@ -252,8 +255,7 @@ struct server::impl
 
     void setup_controllers(const boost::property_tree::wptree& pt)
     {
-        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
-            channels_, cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+        amcp_command_repo_->init(channels_);
         amcp::register_commands(*amcp_command_repo_);
 
         using boost::property_tree::wptree;
