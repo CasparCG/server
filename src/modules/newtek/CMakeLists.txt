@@ -2,13 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 project (newtek)
 
 set(SOURCES
-		consumer/newtek_ivga_consumer.cpp
-
 		consumer/newtek_ndi_consumer.cpp
 
 		producer/newtek_ndi_producer.cpp
-        
-		util/air_send.cpp
 
 		util/ndi.cpp
 
@@ -17,13 +13,9 @@ set(SOURCES
 		StdAfx.cpp
 )
 set(HEADERS
-		consumer/newtek_ivga_consumer.h
-
 		consumer/newtek_ndi_consumer.h
 
 		producer/newtek_ndi_producer.h
-        
-		util/air_send.h
 
 		util/ndi.h
 
@@ -45,6 +37,11 @@ set(HEADERS
 
 		StdAfx.h
 )
+
+if (MSVC)
+	list(APPEND SOURCES util/air_send.cpp consumer/newtek_ivga_consumer.cpp)
+	list(APPEND HEADERS util/air_send.h consumer/newtek_ivga_consumer.h)
+endif()
 
 add_library(newtek ${SOURCES} ${HEADERS})
 add_precompiled_header(newtek StdAfx.h FORCEINCLUDE)
