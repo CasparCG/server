@@ -83,6 +83,11 @@ NDIlib_v3* load_library()
     // Try to load the library
     void* hNDILib = dlopen(NDILIB_LIBRARY_NAME, RTLD_LOCAL | RTLD_LAZY);
 
+    if (!hNDILib && runtime_dir) {
+        dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
+        hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+    }
+
     // The main NDI entry point for dynamic loading if we got the library
     const NDIlib_v3* (*NDIlib_v3_load)(void) = NULL;
     if (hNDILib) {
