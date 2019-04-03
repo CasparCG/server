@@ -20,6 +20,7 @@
  */
 #include "image_kernel.h"
 
+#include "conversion_shader.h"
 #include "image_shader.h"
 
 #include "../util/device.h"
@@ -110,16 +111,21 @@ struct image_kernel::impl
 {
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
+    spl::shared_ptr<shader> conversion_;
     GLuint                  vao_;
     GLuint                  vbo_;
+    GLuint                  fbo_;
+    GLint                   default_fbo_;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
+        , conversion_(ogl_->dispatch_sync([&] { return get_conversion_shader(ogl); }))
     {
         ogl_->dispatch_sync([&] {
             GL(glGenVertexArrays(1, &vao_));
             GL(glGenBuffers(1, &vbo_));
+            GL(glGenFramebuffers(1, &fbo_));
         });
     }
 
@@ -128,6 +134,7 @@ struct image_kernel::impl
         ogl_->dispatch_sync([&] {
             GL(glDeleteVertexArrays(1, &vao_));
             GL(glDeleteBuffers(1, &vbo_));
+            GL(glDeleteFramebuffers(1, &fbo_));
         });
     }
 
@@ -234,11 +241,85 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
+        // Setup conversion shader
+
+        bool                     converted = false;
+        std::shared_ptr<texture> conversion_texture;
+
+        if (params.pix_desc.format == core::pixel_format::uyvy) {
+            converted = true;
+            GL(glGetIntegerv(GL_FRAMEBUFFER_BINDING, &default_fbo_));
+            int width  = params.pix_desc.planes.at(0).width;
+            int height = params.pix_desc.planes.at(0).height;
+
+            conversion_texture = ogl_->create_texture(width, height, 4);
+            conversion_texture->bind(static_cast<int>(texture_id::conversion));
+            conversion_->use();
+
+            conversion_->set("plane[0]", texture_id::plane0);
+            conversion_->set("plane[1]", texture_id::plane1);
+            conversion_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+            conversion_->set("pixel_format", params.pix_desc.format);
+            conversion_->set("texture_width", width);
+
+            GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+            GL(glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, conversion_texture->id(), 0));
+
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+                return;
+
+            GL(glViewport(0, 0, width, height));
+
+            GL(glGenVertexArrays(1, &vao_));
+            GL(glBindVertexArray(vao_));
+
+            static const GLfloat vertices[] = {
+                -1.0f,
+                -1.0f,
+                1.0f,
+                -1.0f,
+                -1.0f,
+                1.0f,
+                -1.0f,
+                1.0f,
+                1.0f,
+                -1.0f,
+                1.0f,
+                1.0f,
+            };
+
+            GL(glGenBuffers(1, &vbo_));
+            GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
+            GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
+
+            auto vtx_loc = conversion_->get_attrib_location("Position");
+            auto tex_loc = conversion_->get_attrib_location("TexCoordIn");
+
+            GL(glVertexAttribPointer(vtx_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0));
+            GL(glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0));
+
+            GL(glEnableVertexAttribArray(vtx_loc));
+            GL(glEnableVertexAttribArray(tex_loc));
+
+            GL(glDrawArrays(GL_TRIANGLES, 0, 6));
+            GL(glTextureBarrier());
+            GL(glDisableVertexAttribArray(vtx_loc));
+            GL(glDisableVertexAttribArray(tex_loc));
+
+            GL(glBindFramebuffer(GL_FRAMEBUFFER, default_fbo_));
+
+            params.pix_desc.format = core::pixel_format::bgra;
+        }
+
         // Setup shader
 
         shader_->use();
 
-        shader_->set("plane[0]", texture_id::plane0);
+        if (converted) {
+            shader_->set("plane[0]", texture_id::conversion);
+        } else {
+            shader_->set("plane[0]", texture_id::plane0);
+        }
         shader_->set("plane[1]", texture_id::plane1);
         shader_->set("plane[2]", texture_id::plane2);
         shader_->set("plane[3]", texture_id::plane3);
@@ -304,7 +385,6 @@ struct image_kernel::impl
         }
 
         // Setup drawing area
-
         GL(glViewport(0, 0, params.background->width(), params.background->height()));
         glDisable(GL_DEPTH_TEST);
 

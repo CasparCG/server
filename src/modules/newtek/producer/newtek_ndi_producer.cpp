@@ -175,8 +175,11 @@ struct newtek_ndi_producer : public core::frame_producer
                     case NDIlib_FourCC_type_RGBX:
                         av_frame->format = AV_PIX_FMT_RGBA;
                         break;
-                    default: // should never happen because library handles the conversion for us
-                        av_frame->format = AV_PIX_FMT_BGRA;
+                    case NDIlib_FourCC_type_UYVY:
+                        av_frame->format = AV_PIX_FMT_UYVY422;
+                        break;
+                    default:
+                        av_frame->format = AV_PIX_FMT_UYVY422;
                         break;
                 }
                 av_frame->width  = video_frame.xres;
@@ -224,8 +227,10 @@ struct newtek_ndi_producer : public core::frame_producer
         NDIlib_recv_create_v3_t NDI_recv_create_desc;
         NDI_recv_create_desc.allow_video_fields = false;
         NDI_recv_create_desc.bandwidth = low_bandwidth_ ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest;
-        NDI_recv_create_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
-        std::string src_name              = u8(name_);
+        NDI_recv_create_desc.color_format =
+            NDIlib_recv_color_format_UYVY_RGBA; // TODO: implement all required formats to change it to
+                                                // NDIlib_recv_color_format_fastest
+        std::string src_name = u8(name_);
 
         auto found_source = sources.find(src_name);
         if (found_source != sources.end()) {

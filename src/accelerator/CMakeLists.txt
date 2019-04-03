@@ -5,6 +5,7 @@ set(SOURCES
 	ogl/image/image_kernel.cpp
 	ogl/image/image_mixer.cpp
 	ogl/image/image_shader.cpp
+	ogl/image/conversion_shader.cpp
 
 	ogl/util/buffer.cpp
 	ogl/util/device.cpp
@@ -18,14 +19,17 @@ set(HEADERS
 	ogl/image/image_kernel.h
 	ogl/image/image_mixer.h
 	ogl/image/image_shader.h
+	ogl/image/conversion_shader.h
 
 	ogl/util/buffer.h
 	ogl/util/device.h
 	ogl/util/shader.h
 	ogl/util/texture.h
-
+    
 	ogl_image_vertex.h
 	ogl_image_fragment.h
+	ogl_conversion_vertex.h
+	ogl_conversion_fragment.h
 
 	accelerator.h
 	StdAfx.h
@@ -33,6 +37,8 @@ set(HEADERS
 
 bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+bin2c("ogl/image/conversion_shader.vert" "ogl_conversion_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
+bin2c("ogl/image/conversion_shader.frag" "ogl_conversion_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
 
 add_library(accelerator ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(accelerator StdAfx.h FORCEINCLUDE)

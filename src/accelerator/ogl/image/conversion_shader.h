@@ -28,18 +28,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class shader;
 class device;
 
-enum class texture_id
-{
-    plane0 = 0,
-    plane1,
-    plane2,
-    plane3,
-    local_key,
-    layer_key,
-    background,
-    conversion
-};
 
-std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl);
+std::shared_ptr<shader> get_conversion_shader(const spl::shared_ptr<device>& ogl);
 
 }}} // namespace caspar::accelerator::ogl

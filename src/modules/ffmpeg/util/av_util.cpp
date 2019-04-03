@@ -105,6 +105,8 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
             return core::pixel_format::ycbcra;
         case AV_PIX_FMT_YUVA444P:
             return core::pixel_format::ycbcra;
+        case AV_PIX_FMT_UYVY422:
+            return core::pixel_format::uyvy;
         default:
             return core::pixel_format::invalid;
     }
@@ -149,6 +151,10 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             if (desc.format == core::pixel_format::ycbcra)
                 desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));
 
+            return desc;
+        }
+        case core::pixel_format::uyvy: {
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 2, height, 2));
             return desc;
         }
         default:

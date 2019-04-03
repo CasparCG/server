@@ -37,6 +37,7 @@ enum class pixel_format
     luma,
     bgr,
     rgb,
+    uyvy,
     count,
     invalid,
 };
