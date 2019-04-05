@@ -821,7 +821,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     configuration config;
 
-    const auto device_index       = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
+    const auto device_index       = params.size() > 1 ? std::stoi(params.at(1)) : 1;
     const auto device_stream      = contains_param(L"SDI-STREAM", params);
     const auto embedded_audio     = contains_param(L"EMBEDDED_AUDIO", params);
     const auto keyer_option       = contains_param(L"KEYER", params);

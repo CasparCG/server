@@ -51,7 +51,6 @@
 
 #include "except.h"
 
-#include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 
 #include <algorithm>
@@ -484,9 +483,9 @@ tweener_t get_tweener(std::wstring name)
     if (boost::regex_match(name, what, expr)) {
         name = what["NAME"].str();
         if (what["V0"].matched)
-            params.push_back(boost::lexical_cast<double>(what["V0"].str()));
+            params.push_back(std::stod(what["V0"].str()));
         if (what["V1"].matched)
-            params.push_back(boost::lexical_cast<double>(what["V1"].str()));
+            params.push_back(std::stod(what["V1"].str()));
     }
 
     auto it = get_tweens().find(name);
