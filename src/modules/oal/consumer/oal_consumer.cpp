@@ -207,11 +207,6 @@ struct oal_consumer : public core::frame_consumer
             src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
             src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
 
-            if (av_frame_get_buffer(dst.get(), 0) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-
             if (!swr_) {
                 swr_.reset(swr_alloc(), [](SwrContext* ptr) { swr_free(&ptr); });
                 if (!swr_) {
