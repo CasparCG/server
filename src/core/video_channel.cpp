@@ -149,7 +149,7 @@ struct video_channel::impl final
                         frames.push_back(p.second.foreground);
                     }
 
-                    auto mixed_frame = mixer_(frames, format_desc, format_desc.audio_cadence[0]);
+                    auto mixed_frame = mixer_(frames, format_desc, nb_samples);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Consume
