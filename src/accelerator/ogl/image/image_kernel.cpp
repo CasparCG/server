@@ -114,8 +114,6 @@ struct image_kernel::impl
     spl::shared_ptr<shader> conversion_;
     GLuint                  vao_;
     GLuint                  vbo_;
-    GLuint                  fbo_;
-    GLint                   default_fbo_;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -125,7 +123,6 @@ struct image_kernel::impl
         ogl_->dispatch_sync([&] {
             GL(glGenVertexArrays(1, &vao_));
             GL(glGenBuffers(1, &vbo_));
-            GL(glGenFramebuffers(1, &fbo_));
         });
     }
 
@@ -134,7 +131,6 @@ struct image_kernel::impl
         ogl_->dispatch_sync([&] {
             GL(glDeleteVertexArrays(1, &vao_));
             GL(glDeleteBuffers(1, &vbo_));
-            GL(glDeleteFramebuffers(1, &fbo_));
         });
     }
 
@@ -242,18 +238,14 @@ struct image_kernel::impl
         }
 
         // Setup conversion shader
-
-        bool                     converted = false;
         std::shared_ptr<texture> conversion_texture;
 
         if (params.pix_desc.format == core::pixel_format::uyvy) {
-            converted = true;
-            GL(glGetIntegerv(GL_FRAMEBUFFER_BINDING, &default_fbo_));
             int width  = params.pix_desc.planes.at(0).width;
             int height = params.pix_desc.planes.at(0).height;
 
             conversion_texture = ogl_->create_texture(width, height, 4);
-            conversion_texture->bind(static_cast<int>(texture_id::conversion));
+            conversion_texture->attach();
             conversion_->use();
 
             conversion_->set("plane[0]", texture_id::plane0);
@@ -261,12 +253,6 @@ struct image_kernel::impl
             conversion_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
             conversion_->set("pixel_format", params.pix_desc.format);
             conversion_->set("texture_width", width);
-
-            GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
-            GL(glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, conversion_texture->id(), 0));
-
-            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-                return;
 
             GL(glViewport(0, 0, width, height));
 
@@ -306,20 +292,14 @@ struct image_kernel::impl
             GL(glDisableVertexAttribArray(vtx_loc));
             GL(glDisableVertexAttribArray(tex_loc));
 
-            GL(glBindFramebuffer(GL_FRAMEBUFFER, default_fbo_));
-
+            conversion_texture->bind(static_cast<int>(texture_id::plane0));
             params.pix_desc.format = core::pixel_format::bgra;
         }
 
         // Setup shader
 
         shader_->use();
-
-        if (converted) {
-            shader_->set("plane[0]", texture_id::conversion);
-        } else {
-            shader_->set("plane[0]", texture_id::plane0);
-        }
+        shader_->set("plane[0]", texture_id::plane0);
         shader_->set("plane[1]", texture_id::plane1);
         shader_->set("plane[2]", texture_id::plane2);
         shader_->set("plane[3]", texture_id::plane3);

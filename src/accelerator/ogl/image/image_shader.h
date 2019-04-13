@@ -36,8 +36,7 @@ enum class texture_id
     plane3,
     local_key,
     layer_key,
-    background,
-    conversion
+    background
 };
 
 std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl);
