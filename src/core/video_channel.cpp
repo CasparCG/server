@@ -115,7 +115,7 @@ struct video_channel::impl final
                         format_desc = format_desc_;
                     }
 
-                    frame_counter_ += 1
+                    frame_counter_ += 1;
 
                     auto nb_samples = format_desc.audio_cadence[frame_counter_ % format_desc.audio_cadence.size()];
 
