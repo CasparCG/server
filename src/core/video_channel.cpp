@@ -113,7 +113,6 @@ struct video_channel::impl final
                     {
                         std::lock_guard<std::mutex> lock(format_desc_mutex_);
                         format_desc = format_desc_;
-                        nb_samples = audio_cadence_.front();
                     }
 
                     frame_counter_ += 1
