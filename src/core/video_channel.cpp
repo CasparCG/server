@@ -68,7 +68,7 @@ struct video_channel::impl final
     caspar::core::mixer          mixer_;
     caspar::core::stage          stage_;
 
-    std::vector<int> audio_cadence_ = format_desc_.audio_cadence;
+    uint64_t frame_counter_ = 0;
 
     std::function<void(core::monitor::state)> tick_;
 
@@ -110,13 +110,15 @@ struct video_channel::impl final
             while (!abort_request_) {
                 try {
                     core::video_format_desc format_desc;
-                    int                     nb_samples;
                     {
                         std::lock_guard<std::mutex> lock(format_desc_mutex_);
                         format_desc = format_desc_;
-                        boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
                         nb_samples = audio_cadence_.front();
                     }
+
+                    frame_counter_ += 1
+
+                    auto nb_samples = format_desc.audio_cadence[frame_counter_ % format_desc.audio_cadence.size()];
 
                     caspar::timer frame_timer;
 
@@ -249,7 +251,6 @@ struct video_channel::impl final
     {
         std::lock_guard<std::mutex> lock(format_desc_mutex_);
         format_desc_   = format_desc;
-        audio_cadence_ = format_desc_.audio_cadence;
         stage_.clear();
     }
 
