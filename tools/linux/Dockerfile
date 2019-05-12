@@ -15,6 +15,10 @@ FROM ${IMAGE_BASE} as build-casparcg
 
     ARG PROC_COUNT=8
 
+	RUN wget http://download.qt.io/official_releases/qt/5.10/5.10.0/qt-opensource-linux-x64-5.10.0.run
+	COPY ./tools/linux/qt-installer.js /qt-installer.js
+	RUN chmod +x qt-opensource-linux-x64-5.10.0.run && ./qt-opensource-linux-x64-5.10.0.run --platform minimal --script /qt-installer.js
+
 	RUN mkdir /source && mkdir /build && mkdir /install
 
 	COPY ./src /source
@@ -23,6 +27,7 @@ FROM ${IMAGE_BASE} as build-casparcg
 
 	ENV BOOST_ROOT=/opt/boost
 	ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
+	ENV Qt5Quick_DIR=/opt/Qt/5.10.0/gcc_64/lib/cmake/
 
     ARG CC
     ARG CXX
