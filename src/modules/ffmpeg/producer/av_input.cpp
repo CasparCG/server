@@ -108,6 +108,12 @@ AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
 void Input::reset()
 {
+    std::unique_lock<std::mutex> lock(ic_mutex_);
+    internal_reset();
+}
+
+void Input::internal_reset()
+{
     AVDictionary* options = nullptr;
     CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
@@ -150,12 +156,12 @@ bool Input::eof() const { return eof_; }
 
 void Input::seek(int64_t ts, bool flush)
 {
-    std::lock_guard<std::mutex> lock(ic_mutex_);
+    std::unique_lock<std::mutex> lock(ic_mutex_);
 
     if (ts != ic_->start_time && ts != AV_NOPTS_VALUE) {
         FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
     } else {
-        reset();
+        internal_reset();
     }
 
     {
