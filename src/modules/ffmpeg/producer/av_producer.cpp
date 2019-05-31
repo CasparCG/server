@@ -879,22 +879,22 @@ struct AVProducer::Impl
     }
 
   private:
+
+    bool want_packet()
+    {
+        return std::any_of(decoders_.begin(), decoders_.end(), [](auto& p)
+        {
+            return p.second.input.size() < 2 && !p.second.eof;
+        });
+    }
+
     bool schedule()
     {
         auto result = false;
-        input_([&](std::shared_ptr<AVPacket>& packet) {
-            // TODO (refactor) std::min_element
-            std::pair<int, int> min{-1, std::numeric_limits<int>::max()};
-            for (auto& p : decoders_) {
-                const auto size = static_cast<int>(p.second.input.size());
-                if (size < min.second && !p.second.eof) {
-                    min = std::pair<int, int>(p.first, size);
-                }
-            }
 
-            if (min.second > 0) {
-                return false;
-            }
+        std::shared_ptr<AVPacket> packet;
+        while (want_packet() && input_.try_pop(packet)) {
+            result = true;
 
             if (!packet) {
                 for (auto& p : decoders_) {
@@ -902,22 +902,14 @@ struct AVProducer::Impl
                         p.second.input.push(nullptr);
                     }
                 }
-                result = true;
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = decoders_.find(packet->stream_index);
-                if (it == decoders_.end()) {
-                    return true;
+                if (it != decoders_.end()) {
+                    // TODO (fix): limit it->second.input.size()?
+                    it->second.input.push(std::move(packet));
                 }
-
-                // TODO (fix): limit it->second.input.size()?
-
-                result = true;
-
-                it->second.input.push(std::move(packet));
             }
-
-            return true;
-        });
+        }
 
         std::vector<int> eof;
 

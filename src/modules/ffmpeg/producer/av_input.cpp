@@ -35,37 +35,34 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
             while (true) {
-                {
-                    std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(lock,
-                               [&] { return (ic_ && (!eof_ && output_.size() < output_capacity_)) || abort_request_; });
-                }
-
-                if (abort_request_) {
-                    break;
-                }
-
-                std::lock_guard<std::mutex> format_lock(ic_mutex_);
-
                 auto packet = alloc_packet();
 
-                // TODO (perf) Non blocking av_read_frame when possible.
-                auto ret = av_read_frame(ic_.get(), packet.get());
-
                 {
-                    std::lock_guard<std::mutex> lock(mutex_);
+                    std::unique_lock<std::mutex> lock(ic_mutex_);
+                    ic_cond_.wait(lock, [&] { return ic_ || abort_request_; });
+
+                    if (abort_request_) {
+                        break;
+                    }
+
+                    // TODO (perf) Non blocking av_read_frame when possible.
+                    auto ret = av_read_frame(ic_.get(), packet.get());
 
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
-                        eof_   = true;
+                        eof_ = true;
                         packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
                     }
+                }
 
-                    output_.push(std::move(packet));
-                    graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
+                try {
+                    buffer_.push(std::move(packet));
+                    graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
+                } catch (tbb::user_abort&) {
+
                 }
             }
         } catch (...) {
@@ -83,7 +80,7 @@ Input::~Input()
 
 void Input::abort() {
     abort_request_ = true;
-    cond_.notify_all();
+    buffer_.abort();
 }
 
 int Input::interrupt_cb(void* ctx)
@@ -92,16 +89,11 @@ int Input::interrupt_cb(void* ctx)
     return input->abort_request_ ? 1 : 0;
 }
 
-void Input::operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn)
+bool Input::try_pop(std::shared_ptr<AVPacket>& packet)
 {
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        while (!abort_request_ && !output_.empty() && fn(output_.front())) {
-            output_.pop();
-        }
-        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
-    }
-    cond_.notify_all();
+    auto result = buffer_.try_pop(packet);
+    graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
+    return result;
 }
 
 AVFormatContext* Input::operator->() { return ic_.get(); }
@@ -151,7 +143,7 @@ void Input::internal_reset()
 
     FF(avformat_find_stream_info(ic2.get(), nullptr));
     ic_ = std::move(ic2);
-    cond_.notify_all();
+    ic_cond_.notify_all();
 }
 
 bool Input::eof() const { return eof_; }
@@ -167,13 +159,11 @@ void Input::seek(int64_t ts, bool flush)
     }
 
     if (flush) {
-        std::lock_guard<std::mutex> output_lock(mutex_);
-        while (!output_.empty()) {
-            output_.pop();
-        }
+        buffer_.abort();
+        std::shared_ptr<AVPacket> packet;
+        while (buffer_.try_pop(packet));
     }
     eof_ = false;
-    cond_.notify_all();
 
     graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 }
