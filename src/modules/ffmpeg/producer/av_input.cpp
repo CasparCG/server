@@ -165,10 +165,9 @@ void Input::seek(int64_t ts, bool flush)
         internal_reset();
     }
 
-    {
+    if (flush) {
         std::lock_guard<std::mutex> output_lock(mutex_);
-
-        while (flush && !output_.empty()) {
+        while (!output_.empty()) {
             output_.pop();
         }
     }
