@@ -67,7 +67,6 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     output_.push(std::move(packet));
                     graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
                 }
-                cond_.notify_all();
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
