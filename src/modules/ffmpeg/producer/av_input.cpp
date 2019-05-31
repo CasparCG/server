@@ -160,7 +160,7 @@ void Input::seek(int64_t ts, bool flush)
 {
     std::unique_lock<std::mutex> lock(ic_mutex_);
 
-    if (ts != ic_->start_time && ts != AV_NOPTS_VALUE) {
+    if (ic_ && ts != ic_->start_time && ts != AV_NOPTS_VALUE) {
         FF(avformat_seek_file(ic_.get(), -1, INT64_MIN, ts, ts, 0));
     } else {
         internal_reset();
