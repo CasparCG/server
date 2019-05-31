@@ -73,14 +73,10 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
 Input::~Input()
 {
-    graph_         = spl::shared_ptr<diagnostics::graph>();
-    abort();
-    thread_.join();
-}
-
-void Input::abort() {
+    graph_ = spl::shared_ptr<diagnostics::graph>();
     abort_request_ = true;
     buffer_.abort();
+    thread_.join();
 }
 
 int Input::interrupt_cb(void* ctx)

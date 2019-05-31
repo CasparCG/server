@@ -37,8 +37,6 @@ class Input
 
     void reset();
     bool eof() const;
-    void abort();
-
     void seek(int64_t ts, bool flush = true);
 
   private:
