@@ -151,6 +151,7 @@ void Input::internal_reset()
 
     FF(avformat_find_stream_info(ic2.get(), nullptr));
     ic_ = std::move(ic2);
+    cond_.notify_all();
 }
 
 bool Input::eof() const { return eof_; }
