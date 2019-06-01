@@ -59,12 +59,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     }
                 }
 
-                try {
-                    buffer_.push(std::move(packet));
-                    graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
-                } catch (tbb::user_abort&) {
-
-                }
+                buffer_.push(std::move(packet));
+                graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
@@ -76,7 +72,10 @@ Input::~Input()
 {
     graph_ = spl::shared_ptr<diagnostics::graph>();
     abort_request_ = true;
-    buffer_.abort();
+
+    std::shared_ptr<AVPacket> packet;
+    while (buffer_.try_pop(packet));
+
     thread_.join();
 }
 
@@ -156,7 +155,6 @@ void Input::seek(int64_t ts, bool flush)
     }
 
     if (flush) {
-        buffer_.abort();
         std::shared_ptr<AVPacket> packet;
         while (buffer_.try_pop(packet));
     }
