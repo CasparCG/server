@@ -338,7 +338,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (!found_filename && !url_prefix)
         return core::frame_producer::empty();
 
-    const auto url = found_filename ? L"file://" + *found_filename : params.at(1);
+    const auto url = found_filename ? QUrl::fromLocalFile(QString::fromStdWString(*found_filename)).toString().toStdWString() : params.at(1);
 
     if (!url_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") ||
                         boost::algorithm::ends_with(url, "_ALPHA")))
