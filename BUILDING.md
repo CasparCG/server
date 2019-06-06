@@ -19,17 +19,19 @@ Development using Visual Studio
 
 2. Install CMake (http://www.cmake.org/download/).
 
-3. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+3. Install Qt (https://www.qt.io/download-qt-installer).
 
-4. `cd casparcg-server-master`
+4. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 
-5. `mkdir build`
+5. `cd casparcg-server-master`
 
-6. `cd build`
+6. `mkdir build`
 
-7. `cmake -G "Visual Studio 15 2017" -A x64 ../src`
+7. `cd build`
 
-8. Open `CasparCG Server.sln`
+8. `cmake -G "Visual Studio 15 2017" -A x64 -D CMAKE_PREFIX_PATH=C:/Qt/5.12.3/msvc2017_64 ../src`
+
+9. Open `CasparCG Server.sln`
 
 Linux
 =====
