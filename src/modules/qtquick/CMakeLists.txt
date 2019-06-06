@@ -21,6 +21,7 @@ set_property(TARGET qtquick PROPERTY CXX_STANDARD 17)
 include_directories(..)
 include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
+include_directories(${TBB_INCLUDE_PATH})
 
 find_package(Qt5Quick 5.10 REQUIRED)
 target_link_libraries(qtquick Qt5::Core Qt5::Quick)
