@@ -223,7 +223,7 @@ struct Filter
                 filter_spec = "anull";
             }
 
-            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01,asetrate=r=%d,"
+            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01,aresample=%d,"
                                           "asetnsamples=n=1024:p=0") %
                             av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) %
                             format_desc.audio_sample_rate)
