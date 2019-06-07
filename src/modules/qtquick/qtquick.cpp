@@ -77,7 +77,6 @@ void init(core::module_dependencies dependencies)
     dependencies.cg_registry->register_cg_producer(
         L"qtquick",
         {L".qml"},
-        [](const std::wstring& filename) { return ""; },
         [](const spl::shared_ptr<core::frame_producer>& producer) {
             return spl::make_shared<qtquick_cg_proxy>(producer);
         },

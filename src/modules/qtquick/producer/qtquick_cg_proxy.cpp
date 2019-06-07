@@ -25,7 +25,7 @@ void qtquick_cg_proxy::remove(int layer) { producer_->call({L"_remove"}); }
 
 void qtquick_cg_proxy::play(int layer) { producer_->call({L"_play"}); }
 
-void qtquick_cg_proxy::stop(int layer, unsigned int mix_out_duration) { producer_->call({L"_stop"}); }
+void qtquick_cg_proxy::stop(int layer) { producer_->call({L"_stop"}); }
 
 void qtquick_cg_proxy::next(int layer) { producer_->call({L"_next"}); }
 
