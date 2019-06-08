@@ -234,7 +234,16 @@ void init(core::module_dependencies dependencies)
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
-        const bool  enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+        const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+
+#ifdef WIN32
+        if (enable_gpu) {
+            auto dev = dx11_device::get_device();
+            if (!dev)
+                CASPAR_LOG(warning) << L"Failed to create directX device";
+        }
+#endif
+
         CefSettings settings;
         settings.command_line_args_disabled   = false;
         settings.no_sandbox                   = true;
