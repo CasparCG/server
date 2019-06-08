@@ -299,7 +299,8 @@ std::wstring probe_stem(const std::wstring& stem)
     auto dir = boost::filesystem::path(*parent);
 
     for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
-        if (boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) &&
+        if ((boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) ||
+             boost::iequals(it->path().filename().wstring(), stem2.filename().wstring())) &&
             is_valid_file(it->path().wstring()))
             return it->path().wstring();
     }
@@ -314,7 +315,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     if (!boost::contains(path, L"://")) {
         path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
-        name += boost::filesystem::path(path).extension().wstring();
+        auto ext = boost::filesystem::path(path).extension().wstring();
+        if (!boost::iends_with(name, ext))
+            name += ext;
     } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
         return core::frame_producer::empty();
     }
