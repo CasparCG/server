@@ -52,7 +52,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
-                        eof_ = true;
+                        eof_   = true;
                         packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
@@ -70,11 +70,12 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
 Input::~Input()
 {
-    graph_ = spl::shared_ptr<diagnostics::graph>();
+    graph_         = spl::shared_ptr<diagnostics::graph>();
     abort_request_ = true;
 
     std::shared_ptr<AVPacket> packet;
-    while (buffer_.try_pop(packet));
+    while (buffer_.try_pop(packet))
+        ;
 
     thread_.join();
 }
@@ -156,7 +157,8 @@ void Input::seek(int64_t ts, bool flush)
 
     if (flush) {
         std::shared_ptr<AVPacket> packet;
-        while (buffer_.try_pop(packet));
+        while (buffer_.try_pop(packet))
+            ;
     }
     eof_ = false;
 

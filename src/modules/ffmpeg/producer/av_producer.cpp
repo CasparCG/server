@@ -875,13 +875,10 @@ struct AVProducer::Impl
     }
 
   private:
-
     bool want_packet()
     {
-        return std::any_of(decoders_.begin(), decoders_.end(), [](auto& p)
-        {
-            return p.second.input.size() < 2 && !p.second.eof;
-        });
+        return std::any_of(
+            decoders_.begin(), decoders_.end(), [](auto& p) { return p.second.input.size() < 2 && !p.second.eof; });
     }
 
     bool schedule()
