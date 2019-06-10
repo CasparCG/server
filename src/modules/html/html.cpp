@@ -47,6 +47,10 @@
 #pragma comment(lib, "libcef.lib")
 #pragma comment(lib, "libcef_dll_wrapper.lib")
 
+#ifdef WIN32
+#include "producer/dx11.h"
+#endif
+
 namespace caspar { namespace html {
 
 std::unique_ptr<executor> g_cef_executor;
