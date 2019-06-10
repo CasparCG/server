@@ -28,55 +28,7 @@
 #include <string>
 #include <vector>
 
-#ifdef WIN32
-
-#undef NOMINMAX
-#define NOMINMAX
-
-#include <d3d11_1.h>
-
-#endif
-
 namespace caspar { namespace html {
-
-#ifdef WIN32
-
-class dx11_device final
-{
-  public:
-    dx11_device();
-    ~dx11_device();
-
-    dx11_device(const dx11_device&) = delete;
-    dx11_device& operator=(const dx11_device&) = delete;
-
-    std::wstring adapter_name() const;
-
-    ID3D11Device* device() const;
-
-    std::shared_ptr<class dx11_context> immedidate_context();
-
-    std::shared_ptr<class dx11_texture2d> open_shared_texture(void* handle);
-
-    std::shared_ptr<class dx11_texture2d> create_texture(int width, int height, DXGI_FORMAT format);
-
-    void copy_texture(ID3D11Texture2D*                              dst,
-                      uint32_t                                      dst_x,
-                      uint32_t                                      dst_y,
-                      const std::shared_ptr<class dx11_texture2d>&  src,
-                      uint32_t                                      src_x,
-                      uint32_t                                      src_y,
-                      uint32_t                                      src_w,
-                      uint32_t                                      src_h);
-
-    static const std::shared_ptr<dx11_device>& get_device();
-
-  private:
-    struct impl;
-    std::unique_ptr<impl> impl_;
-};
-
-#endif
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params);
