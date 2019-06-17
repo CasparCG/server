@@ -26,9 +26,9 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/frame_transform.h>
 #include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/frame_transform.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
@@ -65,7 +65,9 @@
 #include "../html.h"
 
 #ifdef WIN32
-#include "dx11.h"
+#include <accelerator/d3d/d3d_device.h>
+#include <accelerator/d3d/d3d_device_context.h>
+#include <accelerator/d3d/d3d_texture2d.h>
 #endif
 
 #pragma comment(lib, "libcef.lib")
@@ -100,9 +102,9 @@ class html_client
     CefRefPtr<CefBrowser> browser_;
 
 #ifdef WIN32
-    std::shared_ptr<dx11_device> const dx11_device_;
-    std::shared_ptr<dx11_texture2d>    shared_buffer_;
-    std::shared_ptr<dx11_texture2d>    stage_surface_;
+    std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
+    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
+    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_stage_surface_;
 #endif
 
     executor executor_;
@@ -119,7 +121,7 @@ class html_client
         , format_desc_(std::move(format_desc))
         , shared_texture_enable_(shared_texture_enable)
 #ifdef WIN32
-        , dx11_device_(dx11_device::get_device())
+        , d3d_device_(accelerator::d3d::d3d_device::get_device())
 #endif
         , executor_(L"html_producer")
     {
@@ -259,48 +261,48 @@ class html_client
             if (type != PET_VIEW)
                 return;
 
-            if (shared_buffer_) {
-                if (shared_handle != shared_buffer_->share_handle())
-                    shared_buffer_.reset();
+            if (d3d_shared_buffer_) {
+                if (shared_handle != d3d_shared_buffer_->share_handle())
+                    d3d_shared_buffer_.reset();
             }
 
-            if (!shared_buffer_) {
-                shared_buffer_ = dx11_device_->open_shared_texture(shared_handle);
-                if (!shared_buffer_)
+            if (!d3d_shared_buffer_) {
+                d3d_shared_buffer_ = d3d_device_->open_shared_texture(shared_handle);
+                if (!d3d_shared_buffer_)
                     CASPAR_LOG(error) << print() << L" could not open shared texture!";
             }
 
-            if (shared_buffer_) {
-                auto format = shared_buffer_->format();
+            if (d3d_shared_buffer_) {
+                auto format = d3d_shared_buffer_->format();
                 // Oly support BGRA format
                 if (format == DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM) {
-                    uint32_t width  = shared_buffer_->width();
-                    uint32_t height = shared_buffer_->height();
+                    uint32_t width  = d3d_shared_buffer_->width();
+                    uint32_t height = d3d_shared_buffer_->height();
 
                     // Create a surface texture to copy and read data
-                    if (stage_surface_) {
-                        if (stage_surface_->width() != width || stage_surface_->height() != height)
-                            stage_surface_.reset();
+                    if (d3d_stage_surface_) {
+                        if (d3d_stage_surface_->width() != width || d3d_stage_surface_->height() != height)
+                            d3d_stage_surface_.reset();
                     }
 
-                    if (!stage_surface_) {
-                        stage_surface_ = dx11_device_->create_texture(width, height, format);
+                    if (!d3d_stage_surface_) {
+                        d3d_stage_surface_ = d3d_device_->create_texture(width, height, format);
                     }
 
-                    if (stage_surface_) {
+                    if (d3d_stage_surface_) {
                         // Copt shared texture to surface texture
-                        dx11_device_->copy_texture(stage_surface_->texture(), 0, 0, shared_buffer_, 0, 0, 0, 0);
+                        d3d_device_->copy_texture(d3d_stage_surface_->texture(), 0, 0, d3d_shared_buffer_, 0, 0, 0, 0);
 
                         auto rowBytes = width * 4;
 
                         // Mapping surface data to memory
                         D3D11_MAPPED_SUBRESOURCE map;
-                        if (SUCCEEDED(dx11_device_->immedidate_context()->context()->Map(
-                                stage_surface_->texture(), 0, D3D11_MAP_READ, 0, &map)) &&
+                        if (SUCCEEDED(d3d_device_->immedidate_context()->context()->Map(
+                                d3d_stage_surface_->texture(), 0, D3D11_MAP_READ, 0, &map)) &&
                             map.RowPitch == rowBytes) {
                             // Auto unmap when completed
                             std::shared_ptr<void> pin_map(
-                                nullptr, [device = dx11_device_, tex = stage_surface_](void*) {
+                                nullptr, [device = d3d_device_, tex = d3d_stage_surface_](void*) {
                                     device->immedidate_context()->context()->Unmap(tex->texture(), 0);
                                 });
 
@@ -503,7 +505,7 @@ class html_producer : public core::frame_producer
             bool       shared_texture_enable = false;
 
 #ifdef WIN32
-            shared_texture_enable = enable_gpu && dx11_device::get_device();
+            shared_texture_enable = enable_gpu && accelerator::d3d::d3d_device::get_device();
 #endif
 
             client_ = new html_client(frame_factory, graph_, format_desc, shared_texture_enable, url_);

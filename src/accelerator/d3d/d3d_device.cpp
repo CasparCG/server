@@ -1,49 +1,18 @@
-#include "dx11.h"
+#include "d3d_device.h"
+
+#include "d3d_device_context.h"
+#include "d3d_texture2d.h"
 
 #include <common/except.h>
 #include <common/log.h>
+#include <common/utf.h>
 
-#include <d3d11.h>
-#include <d3d11_1.h>
-
-namespace caspar { namespace html {
-template <class T>
-std::shared_ptr<T> to_com_ptr(T* obj)
+namespace caspar { namespace accelerator { namespace d3d {
+struct d3d_device::impl
 {
-    return std::shared_ptr<T>(obj, [](T* p) {
-        if (p)
-            p->Release();
-    });
-}
-
-dx11_context::dx11_context(ID3D11DeviceContext* ctx)
-    : ctx_(to_com_ptr(ctx))
-{
-}
-
-dx11_texture2d::dx11_texture2d(ID3D11Texture2D* tex)
-    : texture_(to_com_ptr(tex))
-{
-    share_handle_ = nullptr;
-
-    IDXGIResource* res = nullptr;
-    if (SUCCEEDED(texture_->QueryInterface(__uuidof(IDXGIResource), reinterpret_cast<void**>(&res)))) {
-        res->GetSharedHandle(&share_handle_);
-        res->Release();
-    }
-
-    D3D11_TEXTURE2D_DESC desc;
-    texture_->GetDesc(&desc);
-    width_  = desc.Width;
-    height_ = desc.Height;
-    format_ = desc.Format;
-}
-
-struct dx11_device::impl
-{
-    std::wstring                  adaptor_name_ = L"N/A";
-    std::shared_ptr<ID3D11Device> device_;
-    std::shared_ptr<dx11_context> ctx_;
+    std::wstring                        adaptor_name_ = L"N/A";
+    std::shared_ptr<ID3D11Device>       device_;
+    std::shared_ptr<d3d_device_context> ctx_;
 
     impl()
     {
@@ -92,8 +61,11 @@ struct dx11_device::impl
         }
 
         if (SUCCEEDED(hr)) {
-            device_ = to_com_ptr(pdev);
-            ctx_    = std::make_shared<dx11_context>(pctx);
+            device_ = std::shared_ptr<ID3D11Device>(pdev, [](ID3D11Device* p) {
+                if (p)
+                    p->Release();
+            });
+            ctx_    = std::make_shared<d3d_device_context>(pctx);
 
             {
                 IDXGIDevice* dxgi_dev = nullptr;
@@ -113,24 +85,24 @@ struct dx11_device::impl
                 }
             }
 
-            CASPAR_LOG(info) << L"D3d11: selected adapter: " << adaptor_name_;
+            CASPAR_LOG(info) << L"D3D11: Selected adapter: " << adaptor_name_;
 
-            CASPAR_LOG(info) << L"D3d11: selected feature level: " << selected_level;
+            CASPAR_LOG(info) << L"D3D11: Selected feature level: " << selected_level;
         } else
             CASPAR_THROW_EXCEPTION(bad_alloc() << msg_info(L"Failed to create d3d11 device"));
     }
 
-    std::shared_ptr<dx11_texture2d> open_shared_texture(void* handle)
+    std::shared_ptr<d3d_texture2d> open_shared_texture(void* handle)
     {
         ID3D11Texture2D* tex = nullptr;
         auto             hr  = device_->OpenSharedResource(handle, __uuidof(ID3D11Texture2D), (void**)(&tex));
         if (FAILED(hr))
             return nullptr;
 
-        return std::make_shared<dx11_texture2d>(tex);
+        return std::make_shared<d3d_texture2d>(tex);
     }
 
-    std::shared_ptr<dx11_texture2d> create_texture(int width, int height, DXGI_FORMAT format)
+    std::shared_ptr<d3d_texture2d> create_texture(int width, int height, DXGI_FORMAT format)
     {
         D3D11_TEXTURE2D_DESC td;
         memset(&td, 0, sizeof(td));
@@ -149,17 +121,17 @@ struct dx11_device::impl
         if (FAILED(hr))
             return nullptr;
 
-        return std::make_shared<dx11_texture2d>(tex);
+        return std::make_shared<d3d_texture2d>(tex);
     }
 
-    void copy_texture(ID3D11Texture2D*                       dst,
-                      uint32_t                               dst_x,
-                      uint32_t                               dst_y,
-                      const std::shared_ptr<dx11_texture2d>& src,
-                      uint32_t                               src_x,
-                      uint32_t                               src_y,
-                      uint32_t                               src_w,
-                      uint32_t                               src_h)
+    void copy_texture(ID3D11Texture2D*                      dst,
+                      uint32_t                              dst_x,
+                      uint32_t                              dst_y,
+                      const std::shared_ptr<d3d_texture2d>& src,
+                      uint32_t                              src_x,
+                      uint32_t                              src_y,
+                      uint32_t                              src_w,
+                      uint32_t                              src_h)
     {
         if (dst_x == 0 && dst_y == 0 && src_x == 0 && src_y == 0 && src_w == 0 && src_h == 0) {
             ctx_->context()->CopyResource(dst, src->texture());
@@ -186,46 +158,46 @@ struct dx11_device::impl
     }
 };
 
-dx11_device::dx11_device()
+d3d_device::d3d_device()
     : impl_(new impl())
 {
 }
 
-dx11_device::~dx11_device() {}
+d3d_device::~d3d_device() {}
 
-std::wstring dx11_device::adapter_name() const { return impl_->adaptor_name_; }
+std::wstring d3d_device::adapter_name() const { return impl_->adaptor_name_; }
 
-ID3D11Device* dx11_device::device() const { return impl_->device_.get(); }
+ID3D11Device* d3d_device::device() const { return impl_->device_.get(); }
 
-std::shared_ptr<dx11_context> dx11_device::immedidate_context() { return impl_->ctx_; }
+std::shared_ptr<d3d_device_context> d3d_device::immedidate_context() { return impl_->ctx_; }
 
-std::shared_ptr<dx11_texture2d> dx11_device::open_shared_texture(void* handle)
+std::shared_ptr<d3d_texture2d> d3d_device::open_shared_texture(void* handle)
 {
     return impl_->open_shared_texture(handle);
 }
 
-std::shared_ptr<dx11_texture2d> dx11_device::create_texture(int width, int height, DXGI_FORMAT format)
+std::shared_ptr<d3d_texture2d> d3d_device::create_texture(int width, int height, DXGI_FORMAT format)
 {
     return impl_->create_texture(width, height, format);
 }
 
-void dx11_device::copy_texture(ID3D11Texture2D*                       dst,
-                               uint32_t                               dst_x,
-                               uint32_t                               dst_y,
-                               const std::shared_ptr<dx11_texture2d>& src,
-                               uint32_t                               src_x,
-                               uint32_t                               src_y,
-                               uint32_t                               src_w,
-                               uint32_t                               src_h)
+void d3d_device::copy_texture(ID3D11Texture2D*                      dst,
+                              uint32_t                              dst_x,
+                              uint32_t                              dst_y,
+                              const std::shared_ptr<d3d_texture2d>& src,
+                              uint32_t                              src_x,
+                              uint32_t                              src_y,
+                              uint32_t                              src_w,
+                              uint32_t                              src_h)
 {
     impl_->copy_texture(dst, dst_x, dst_y, src, src_x, src_y, src_w, src_h);
 }
 
-const std::shared_ptr<dx11_device>& dx11_device::get_device()
+const std::shared_ptr<d3d_device>& d3d_device::get_device()
 {
-    static std::shared_ptr<dx11_device> device = []() -> std::shared_ptr<dx11_device> {
+    static std::shared_ptr<d3d_device> device = []() -> std::shared_ptr<d3d_device> {
         try {
-            return std::make_shared<dx11_device>();
+            return std::make_shared<d3d_device>();
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
         }
@@ -235,4 +207,4 @@ const std::shared_ptr<dx11_device>& dx11_device::get_device()
 
     return device;
 }
-}} // namespace caspar::html
+}}} // namespace caspar::accelerator::d3d
