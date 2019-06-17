@@ -7,24 +7,14 @@ set(SOURCES
 
 		html.cpp
 )
-if (MSVC)
-	set(OS_SPECIFIC_SOURCES
-        producer/dx11.cpp
-	)
-endif ()
 set(HEADERS
 		producer/html_cg_proxy.h
 		producer/html_producer.h
 
 		html.h
 )
-if (MSVC)
-	set(OS_SPECIFIC_HEADERS
-        producer/dx11.h
-	)
-endif ()
 
-add_library(html ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES} ${OS_SPECIFIC_HEADERS})
+add_library(html ${SOURCES} ${HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
@@ -41,6 +31,7 @@ if(MSVC)
 	target_link_libraries(html
 		common
 		core
+		accelerator
 
 		optimized release/libcef
 		optimized release/VS2015/libcef_dll_wrapper

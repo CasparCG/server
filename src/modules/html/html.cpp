@@ -48,7 +48,7 @@
 #pragma comment(lib, "libcef_dll_wrapper.lib")
 
 #ifdef WIN32
-#include "producer/dx11.h"
+#include <accelerator/d3d/d3d_device.h>
 #endif
 
 namespace caspar { namespace html {
@@ -242,7 +242,7 @@ void init(core::module_dependencies dependencies)
 
 #ifdef WIN32
         if (enable_gpu) {
-            auto dev = dx11_device::get_device();
+            auto dev = accelerator::d3d::d3d_device::get_device();
             if (!dev)
                 CASPAR_LOG(warning) << L"Failed to create directX device";
         }
