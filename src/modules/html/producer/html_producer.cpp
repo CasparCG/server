@@ -104,7 +104,8 @@ class html_client
 #ifdef WIN32
     std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
     std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
-    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_stage_surface_;
+
+    executor executor_d3d_;
 #endif
 
     executor executor_;
@@ -122,6 +123,7 @@ class html_client
         , shared_texture_enable_(shared_texture_enable)
 #ifdef WIN32
         , d3d_device_(accelerator::d3d::d3d_device::get_device())
+        , executor_d3d_(L"html_producer::d3d")
 #endif
         , executor_(L"html_producer")
     {
@@ -129,8 +131,13 @@ class html_client
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.1f, 0.1f));
+        graph_->set_color("overload", diagnostics::color(0.6f, 0.6f, 0.3f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
+
+#ifdef WIN32
+        executor_d3d_.set_capacity(10);
+#endif
 
         loaded_ = false;
         executor_.begin_invoke([&] {
@@ -279,63 +286,68 @@ class html_client
                     uint32_t width  = d3d_shared_buffer_->width();
                     uint32_t height = d3d_shared_buffer_->height();
 
-                    // Create a surface texture to copy and read data
-                    if (d3d_stage_surface_) {
-                        if (d3d_stage_surface_->width() != width || d3d_stage_surface_->height() != height)
-                            d3d_stage_surface_.reset();
-                    }
+                    auto d3d_stage_surface = d3d_device_->create_texture(width, height, format);
 
-                    if (!d3d_stage_surface_) {
-                        d3d_stage_surface_ = d3d_device_->create_texture(width, height, format);
-                    }
-
-                    if (d3d_stage_surface_) {
+                    if (d3d_stage_surface) {
                         // Copt shared texture to surface texture
-                        d3d_device_->copy_texture(d3d_stage_surface_->texture(), 0, 0, d3d_shared_buffer_, 0, 0, 0, 0);
+                        d3d_device_->copy_texture(d3d_stage_surface->texture(), 0, 0, d3d_shared_buffer_, 0, 0, 0, 0);
 
-                        auto rowBytes = width * 4;
+                        if (executor_d3d_.size() >= executor_d3d_.capacity())
+                            graph_->set_tag(diagnostics::tag_severity::WARNING, "overload");
+                        else {
+                            executor_d3d_.begin_invoke([surface = std::move(d3d_stage_surface), this] {
+                                try {
+                                    auto rowBytes = surface->width() * 4;
 
-                        // Mapping surface data to memory
-                        D3D11_MAPPED_SUBRESOURCE map;
-                        if (SUCCEEDED(d3d_device_->immedidate_context()->context()->Map(
-                                d3d_stage_surface_->texture(), 0, D3D11_MAP_READ, 0, &map)) &&
-                            map.RowPitch == rowBytes) {
-                            // Auto unmap when completed
-                            std::shared_ptr<void> pin_map(
-                                nullptr, [device = d3d_device_, tex = d3d_stage_surface_](void*) {
-                                    device->immedidate_context()->context()->Unmap(tex->texture(), 0);
-                                });
+                                    // Mapping surface data to memory
+                                    D3D11_MAPPED_SUBRESOURCE map;
+                                    if (SUCCEEDED(d3d_device_->immedidate_context()->context()->Map(
+                                            surface->texture(), 0, D3D11_MAP_READ, 0, &map)) &&
+                                        map.RowPitch == rowBytes) {
+                                        // Auto unmap when completed
+                                        std::shared_ptr<void> pin_map(
+                                            nullptr, [device = d3d_device_, tex = surface](void*) {
+                                                device->immedidate_context()->context()->Unmap(tex->texture(), 0);
+                                            });
 
-                            // Create a frame
-                            core::pixel_format_desc pixel_desc;
-                            pixel_desc.format = core::pixel_format::bgra;
-                            pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+                                        // Create a frame
+                                        core::pixel_format_desc pixel_desc;
+                                        pixel_desc.format = core::pixel_format::bgra;
+                                        pixel_desc.planes.push_back(
+                                            core::pixel_format_desc::plane(surface->width(), surface->height(), 4));
 
-                            auto frame = frame_factory_->create_frame(this, pixel_desc);
+                                        auto frame = frame_factory_->create_frame(this, pixel_desc);
 
-                            auto image_size = rowBytes * height;
+                                        auto image_size = rowBytes * surface->height();
 
-                            memcpy(frame.image_data(0).begin(), reinterpret_cast<uint8_t*>(map.pData), image_size);
+                                        memcpy(frame.image_data(0).begin(),
+                                               reinterpret_cast<uint8_t*>(map.pData),
+                                               image_size);
 
-                            core::draw_frame dframe(std::move(frame));
+                                        core::draw_frame dframe(std::move(frame));
 
-                            // Image need flip vertically
-                            // Top to bottom
-                            dframe.transform().image_transform.perspective.ul[1] = 1;
-                            dframe.transform().image_transform.perspective.ur[1] = 1;
-                            // Bottom to top
-                            dframe.transform().image_transform.perspective.ll[1] = 0;
-                            dframe.transform().image_transform.perspective.lr[1] = 0;
+                                        // Image need flip vertically
+                                        // Top to bottom
+                                        dframe.transform().image_transform.perspective.ul[1] = 1;
+                                        dframe.transform().image_transform.perspective.ur[1] = 1;
+                                        // Bottom to top
+                                        dframe.transform().image_transform.perspective.ll[1] = 0;
+                                        dframe.transform().image_transform.perspective.lr[1] = 0;
 
-                            {
-                                std::lock_guard<std::mutex> lock(frames_mutex_);
+                                        {
+                                            std::lock_guard<std::mutex> lock(frames_mutex_);
 
-                                frames_.push(dframe);
-                                while (frames_.size() > 8) {
-                                    frames_.pop();
-                                    graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                                            frames_.push(dframe);
+                                            while (frames_.size() > 8) {
+                                                frames_.pop();
+                                                graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                                            }
+                                        }
+                                    }
+                                } catch (...) {
+                                    CASPAR_LOG_CURRENT_EXCEPTION();
                                 }
-                            }
+                            });
                         }
                     }
                 }
