@@ -3,13 +3,24 @@
 #include "d3d_device_context.h"
 #include "d3d_texture2d.h"
 
+#include <common/assert.h>
 #include <common/except.h>
 #include <common/log.h>
 #include <common/utf.h>
 
+#include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_map.h>
+
+#include <mutex>
+
 namespace caspar { namespace accelerator { namespace d3d {
-struct d3d_device::impl
+struct d3d_device::impl : public std::enable_shared_from_this<impl>
 {
+    using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<d3d_texture2d>>;
+
+    mutable std::mutex                                     device_pools_mutex_;
+    tbb::concurrent_unordered_map<size_t, texture_queue_t> device_pools_;
+
     std::wstring                        adaptor_name_ = L"N/A";
     std::shared_ptr<ID3D11Device>       device_;
     std::shared_ptr<d3d_device_context> ctx_;
@@ -104,24 +115,38 @@ struct d3d_device::impl
 
     std::shared_ptr<d3d_texture2d> create_texture(int width, int height, DXGI_FORMAT format)
     {
-        D3D11_TEXTURE2D_DESC td;
-        memset(&td, 0, sizeof(td));
+        CASPAR_VERIFY(width > 0 && height > 0);
 
-        td.Width            = width;
-        td.Height           = height;
-        td.MipLevels        = 1;
-        td.ArraySize        = 1;
-        td.Format           = format;
-        td.SampleDesc.Count = 1;
-        td.CPUAccessFlags   = D3D11_CPU_ACCESS_READ;
-        td.Usage            = D3D11_USAGE_STAGING;
+        std::lock_guard<std::mutex> lock(device_pools_mutex_);
 
-        ID3D11Texture2D* tex = nullptr;
-        auto             hr  = device_->CreateTexture2D(&td, nullptr, &tex);
-        if (FAILED(hr))
-            return nullptr;
+        // TODO (perf) Shared pool.
+        auto pool = &device_pools_[(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
 
-        return std::make_shared<d3d_texture2d>(tex);
+        std::shared_ptr<d3d_texture2d> tex;
+        if (!pool->try_pop(tex)) {
+            D3D11_TEXTURE2D_DESC td;
+            memset(&td, 0, sizeof(td));
+
+            td.Width            = width;
+            td.Height           = height;
+            td.MipLevels        = 1;
+            td.ArraySize        = 1;
+            td.Format           = format;
+            td.SampleDesc.Count = 1;
+            td.CPUAccessFlags   = D3D11_CPU_ACCESS_READ;
+            td.Usage            = D3D11_USAGE_STAGING;
+
+            ID3D11Texture2D* tex_ptr = nullptr;
+            auto             hr      = device_->CreateTexture2D(&td, nullptr, &tex_ptr);
+            if (FAILED(hr))
+                CASPAR_THROW_EXCEPTION(bad_alloc() << msg_info("Failed to create d3d texture2d"));
+
+            tex = std::make_shared<d3d_texture2d>(tex_ptr);
+        }
+
+        auto ptr = tex.get();
+        return std::shared_ptr<d3d_texture2d>(
+            ptr, [tex = std::move(tex), pool, self = shared_from_this()](d3d_texture2d*) mutable { pool->push(tex); });
     }
 
     void copy_texture(ID3D11Texture2D*                      dst,
