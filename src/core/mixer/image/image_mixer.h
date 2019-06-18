@@ -48,6 +48,12 @@ class image_mixer
     virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
+
+#ifdef WIN32
+    class mutable_frame
+    import_d3d_texture(const void*                                             tag,
+                       const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture) override = 0;
+#endif
 };
 
 }} // namespace caspar::core

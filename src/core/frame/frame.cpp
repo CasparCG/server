@@ -126,7 +126,7 @@ struct const_frame::impl
         , desc_(std::move(other.impl_->desc_))
         , geometry_(std::move(other.impl_->geometry_))
     {
-        if (desc_.planes.size() != image_data_.size()) {
+        if (desc_.planes.size() != image_data_.size() && !other.impl_->commit_) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
         if (other.impl_->commit_) {

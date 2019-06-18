@@ -26,6 +26,10 @@
 #include <functional>
 #include <future>
 
+#ifdef WIN32
+#include <GL/glew.h>
+#endif
+
 namespace caspar { namespace accelerator { namespace ogl {
 
 class device final : public std::enable_shared_from_this<device>
@@ -44,7 +48,9 @@ class device final : public std::enable_shared_from_this<device>
     std::future<std::shared_ptr<class texture>>
                                       copy_async(const array<const uint8_t>& source, int width, int height, int stride);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
-
+#ifdef WIN32
+    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride);
+#endif
     template <typename Func>
     auto dispatch_async(Func&& func)
     {
