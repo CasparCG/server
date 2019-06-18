@@ -28,6 +28,7 @@
 
 #include <common/array.h>
 #include <common/future.h>
+#include <common/log.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
@@ -38,16 +39,7 @@
 #include <GL/glew.h>
 
 #ifdef WIN32
-#include <common/except.h>
-#include <common/gl/gl_check.h>
-#include <common/log.h>
-#include <common/scope_exit.h>
-
-#include "../../d3d/d3d_device.h"
-#include "../../d3d/d3d_device_context.h"
 #include "../../d3d/d3d_texture2d.h"
-
-#include <GL/wglew.h>
 #endif
 
 #include <boost/any.hpp>
@@ -243,34 +235,13 @@ struct image_mixer::impl
     std::vector<layer>                 layers_; // layer/stream/items
     std::vector<layer*>                layer_stack_;
 
-#ifdef WIN32
-    std::shared_ptr<d3d::d3d_device> const d3d_device_;
-    std::shared_ptr<void>                  interop_handle_;
-#endif
-
   public:
     impl(const spl::shared_ptr<device>& ogl, int channel_id)
         : ogl_(ogl)
         , renderer_(ogl)
         , transform_stack_(1)
-#ifdef WIN32
-        , d3d_device_(d3d::d3d_device::get_device())
-#endif
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
-#ifdef WIN32
-        if (d3d_device_) {
-            ogl_->dispatch_sync([&] {
-                interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
-                    if (p)
-                        wglDXCloseDeviceNV(p);
-                });
-            });
-
-            if (!interop_handle_)
-                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
-        }
-#endif
     }
 
     void push(const core::frame_transform& transform)
@@ -365,7 +336,7 @@ struct image_mixer::impl
     {
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)
-            ogl_->dispatch_sync([=] { d3d_texture->gen_gl_texture(interop_handle_); });
+            ogl_->dispatch_sync([=] { d3d_texture->gen_gl_texture(ogl_->d3d_interop()); });
 
         // copy directx texture to gl texture
         auto gl_texture = ogl_->dispatch_sync([=] {

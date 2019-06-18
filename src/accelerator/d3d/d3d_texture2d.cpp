@@ -33,7 +33,7 @@ d3d_texture2d::~d3d_texture2d()
         glDeleteTextures(1, &gl_texture_id_);
 }
 
-void d3d_texture2d::gen_gl_texture(std::shared_ptr<void> interop)
+void d3d_texture2d::gen_gl_texture(const std::shared_ptr<void>& interop)
 {
     if (gl_texture_id_ == 0) {
         GL(glGenTextures(1, &gl_texture_id_));

@@ -30,7 +30,7 @@ class d3d_texture2d
 
     uint32_t gl_texture_id() const { return gl_texture_id_; }
 
-    void gen_gl_texture(std::shared_ptr<void> interop);
+    void gen_gl_texture(const std::shared_ptr<void>& interop);
 
   private:
     HANDLE share_handle_;
