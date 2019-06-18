@@ -37,6 +37,19 @@
 
 #include <GL/glew.h>
 
+#ifdef WIN32
+#include <common/except.h>
+#include <common/gl/gl_check.h>
+#include <common/log.h>
+#include <common/scope_exit.h>
+
+#include "../../d3d/d3d_device.h"
+#include "../../d3d/d3d_device_context.h"
+#include "../../d3d/d3d_texture2d.h"
+
+#include <GL/wglew.h>
+#endif
+
 #include <boost/any.hpp>
 
 #include <algorithm>
@@ -230,13 +243,34 @@ struct image_mixer::impl
     std::vector<layer>                 layers_; // layer/stream/items
     std::vector<layer*>                layer_stack_;
 
+#ifdef WIN32
+    std::shared_ptr<d3d::d3d_device> const d3d_device_;
+    std::shared_ptr<void>                  interop_handle_;
+#endif
+
   public:
     impl(const spl::shared_ptr<device>& ogl, int channel_id)
         : ogl_(ogl)
         , renderer_(ogl)
         , transform_stack_(1)
+#ifdef WIN32
+        , d3d_device_(d3d::d3d_device::get_device())
+#endif
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
+#ifdef WIN32
+        if (d3d_device_) {
+            ogl_->dispatch_sync([&] {
+                interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
+                    if (p)
+                        wglDXCloseDeviceNV(p);
+                });
+            });
+
+            if (!interop_handle_)
+                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
+        }
+#endif
     }
 
     void push(const core::frame_transform& transform)
@@ -324,6 +358,41 @@ struct image_mixer::impl
                 return std::make_shared<decltype(textures)>(std::move(textures));
             });
     }
+
+#ifdef WIN32
+    core::mutable_frame import_d3d_texture(const void*                                tag,
+                                           const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture) override
+    {
+        // map directx texture with wgl texture
+        if (d3d_texture->gl_texture_id() == 0)
+            ogl_->dispatch_sync([=] { d3d_texture->gen_gl_texture(interop_handle_); });
+
+        // copy directx texture to gl texture
+        auto gl_texture = ogl_->dispatch_sync([=] {
+            return ogl_->copy_async(d3d_texture->gl_texture_id(), d3d_texture->width(), d3d_texture->height(), 4);
+        });
+
+        // make gl texture to draw
+        std::vector<future_texture> textures{make_ready_future(gl_texture.get())};
+
+        std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
+        core::pixel_format_desc          desc(core::pixel_format::bgra);
+        desc.planes.push_back(core::pixel_format_desc::plane(d3d_texture->width(), d3d_texture->height(), 4));
+        return core::mutable_frame(
+            tag,
+            std::vector<array<uint8_t>>{},
+            array<int32_t>{},
+            desc,
+            [weak_self, texs = std::move(textures)](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
+                auto self = weak_self.lock();
+                if (!self) {
+                    return boost::any{};
+                }
+
+                return std::make_shared<decltype(textures)>(std::move(texs));
+            });
+    }
+#endif
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id)
@@ -343,4 +412,11 @@ core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel
     return impl_->create_frame(tag, desc);
 }
 
+#ifdef WIN32
+core::mutable_frame image_mixer::import_d3d_texture(const void*                                tag,
+                                                    const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture)
+{
+    return impl_->import_d3d_texture(tag, d3d_texture);
+}
+#endif
 }}} // namespace caspar::accelerator::ogl
