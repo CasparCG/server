@@ -116,6 +116,10 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
     sanitize(reinterpret_cast<uint8_t*>(line));
 
+    if (strstr(line, "Assuming an incorrectly") != nullptr) {
+        return;
+    }
+
     try {
         if (level == AV_LOG_VERBOSE)
             CASPAR_LOG(trace) << L"[ffmpeg] " << line;

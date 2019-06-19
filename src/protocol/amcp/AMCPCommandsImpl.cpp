@@ -1354,7 +1354,6 @@ std::wstring info_command(command_context& ctx)
     return replyString.str();
 }
 
-
 std::wstring info_config_command(command_context& ctx)
 {
     std::wstringstream replyString;
@@ -1370,13 +1369,13 @@ std::wstring info_config_command(command_context& ctx)
 
 std::wstring info_paths_command(command_context& ctx)
 {
-	boost::property_tree::wptree info;
+    boost::property_tree::wptree info;
 
-	info.add(L"paths.media-path",		caspar::env::media_folder());
-	info.add(L"paths.log-path",			caspar::env::log_folder());
-	info.add(L"paths.data-path",			caspar::env::data_folder());
-	info.add(L"paths.template-path",		caspar::env::template_folder());
-	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
+    info.add(L"paths.media-path", caspar::env::media_folder());
+    info.add(L"paths.log-path", caspar::env::log_folder());
+    info.add(L"paths.data-path", caspar::env::data_folder());
+    info.add(L"paths.template-path", caspar::env::template_folder());
+    info.add(L"paths.initial-path", caspar::env::initial_folder() + L"/");
 
     std::wstringstream replyString;
     // This is needed for backwards compatibility with old clients
@@ -1388,7 +1387,6 @@ std::wstring info_paths_command(command_context& ctx)
     replyString << L"\r\n";
     return replyString.str();
 }
-
 
 std::wstring diag_command(command_context& ctx)
 {

@@ -12,6 +12,8 @@
 #include <string>
 #include <thread>
 
+#include <tbb/concurrent_queue.h>
+
 struct AVPacket;
 struct AVFormatContext;
 
@@ -25,7 +27,7 @@ class Input
 
     static int interrupt_cb(void* ctx);
 
-    void operator()(std::function<bool(std::shared_ptr<AVPacket>&)> fn);
+    bool try_pop(std::shared_ptr<AVPacket>& packet);
 
     AVFormatContext* operator->();
 
@@ -33,21 +35,19 @@ class Input
 
     void reset();
     bool eof() const;
-    void abort();
-
     void seek(int64_t ts, bool flush = true);
 
   private:
+    void internal_reset();
+
     std::string                         filename_;
     std::shared_ptr<diagnostics::graph> graph_;
 
     mutable std::mutex               ic_mutex_;
     std::shared_ptr<AVFormatContext> ic_;
+    std::condition_variable          ic_cond_;
 
-    mutable std::mutex                    mutex_;
-    std::condition_variable               cond_;
-    std::size_t                           output_capacity_ = 256;
-    std::queue<std::shared_ptr<AVPacket>> output_;
+    tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;
 
     std::atomic<bool> eof_{false};
 
