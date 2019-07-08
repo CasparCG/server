@@ -774,6 +774,11 @@ struct AVProducer::Impl
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
             if (buffer_eof_) {
                 frame_eof_ = true;
+                if (frame_time_ < input_duration_ && frame_duration_ != AV_NOPTS_VALUE) {
+                    frame_time_ += frame_duration_;
+                } else if (frame_time_ < input_duration_) {
+                    frame_time_ = input_duration_;
+                }
                 return core::draw_frame::still(frame_);
             }
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
@@ -822,10 +827,6 @@ struct AVProducer::Impl
         }
 
         auto frame_time = frame_time_;
-
-        if (frame_eof_ && frame_duration_ != AV_NOPTS_VALUE) {
-            frame_time += frame_duration_;
-        }
 
         return av_rescale_q(frame_time, TIME_BASE_Q, format_tb_);
     }
