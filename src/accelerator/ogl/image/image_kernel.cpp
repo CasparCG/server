@@ -20,7 +20,6 @@
  */
 #include "image_kernel.h"
 
-#include "conversion_shader.h"
 #include "image_shader.h"
 
 #include "../util/device.h"
@@ -111,14 +110,12 @@ struct image_kernel::impl
 {
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
-    spl::shared_ptr<shader> conversion_;
     GLuint                  vao_;
     GLuint                  vbo_;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
-        , conversion_(ogl_->dispatch_sync([&] { return get_conversion_shader(ogl); }))
     {
         ogl_->dispatch_sync([&] {
             GL(glGenVertexArrays(1, &vao_));
@@ -237,7 +234,9 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
-        // Setup conversion shader
+        // Setup conversion
+
+        shader_->use();
         std::shared_ptr<texture> conversion_texture;
 
         if (params.pix_desc.format == core::pixel_format::uyvy) {
@@ -246,13 +245,12 @@ struct image_kernel::impl
 
             conversion_texture = ogl_->create_texture(width, height, 4);
             conversion_texture->attach();
-            conversion_->use();
 
-            conversion_->set("plane[0]", texture_id::plane0);
-            conversion_->set("plane[1]", texture_id::plane1);
-            conversion_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-            conversion_->set("pixel_format", params.pix_desc.format);
-            conversion_->set("texture_width", width);
+            shader_->set("plane[0]", texture_id::plane0);
+            shader_->set("plane[1]", texture_id::plane1);
+            shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+            shader_->set("pixel_format", params.pix_desc.format);
+            shader_->set("texture_width", width);
 
             GL(glViewport(0, 0, width, height));
 
@@ -278,8 +276,8 @@ struct image_kernel::impl
             GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
             GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
 
-            auto vtx_loc = conversion_->get_attrib_location("Position");
-            auto tex_loc = conversion_->get_attrib_location("TexCoordIn");
+            auto vtx_loc = shader_->get_attrib_location("Position");
+            auto tex_loc = shader_->get_attrib_location("TexCoordIn");
 
             GL(glVertexAttribPointer(vtx_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0));
             GL(glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0));
@@ -298,7 +296,6 @@ struct image_kernel::impl
 
         // Setup shader
 
-        shader_->use();
         shader_->set("plane[0]", texture_id::plane0);
         shader_->set("plane[1]", texture_id::plane1);
         shader_->set("plane[2]", texture_id::plane2);
