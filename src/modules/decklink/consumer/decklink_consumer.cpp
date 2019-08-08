@@ -461,8 +461,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::shared_ptr<void>     image_data(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
             std::vector<std::int32_t> audio_data;
 
+            auto                           time = std::chrono::high_resolution_clock::now();
             std::vector<core::const_frame> frames{pop()};
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
+                time += std::chrono::microseconds(static_cast<int64_t>(1000000 / format_desc_.fps));
+                std::this_thread::sleep_until(time);
+
                 frames.push_back(pop());
 
                 if (abort_request_) {
