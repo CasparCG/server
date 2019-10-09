@@ -90,7 +90,7 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
 
             return *this;
         }
-        bool operator==(const TitleHolder& rhs) { return pframe_producer == rhs.pframe_producer; }
+        bool operator==(const TitleHolder& rhs) const { return pframe_producer == rhs.pframe_producer; }
 
         std::wstring                          titleName;
         spl::shared_ptr<core::frame_producer> pframe_producer;
