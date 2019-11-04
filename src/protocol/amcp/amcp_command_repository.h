@@ -40,6 +40,7 @@ class amcp_command_repository : boost::noncopyable
                             const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                             const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                             const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+                            const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
                             std::function<void(bool)>                                   shutdown_server_now);
 
     AMCPCommand::ptr_type

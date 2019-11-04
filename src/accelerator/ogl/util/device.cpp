@@ -38,6 +38,7 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -268,6 +269,109 @@ struct device::impl : public std::enable_shared_from_this<impl>
             return array<const uint8_t>(ptr, size, std::move(buf));
         });
     }
+
+    boost::property_tree::wptree info() const
+    {
+        boost::property_tree::wptree info;
+
+        boost::property_tree::wptree pooled_device_buffers;
+        size_t                       total_pooled_device_buffer_size  = 0;
+        size_t                       total_pooled_device_buffer_count = 0;
+
+        for (size_t i = 0; i < device_pools_.size(); ++i) {
+            auto& pools      = device_pools_.at(i);
+            bool  mipmapping = i > 3;
+            auto  stride     = mipmapping ? i - 3 : i + 1;
+
+            for (auto& pool : pools) {
+                auto width  = pool.first >> 16;
+                auto height = pool.first & 0x0000FFFF;
+                auto size   = width * height * stride;
+                auto count  = pool.second.size();
+
+                if (count == 0)
+                    continue;
+
+                boost::property_tree::wptree pool_info;
+
+                pool_info.add(L"stride", stride);
+                pool_info.add(L"mipmapping", mipmapping);
+                pool_info.add(L"width", width);
+                pool_info.add(L"height", height);
+                pool_info.add(L"size", size);
+                pool_info.add(L"count", count);
+
+                total_pooled_device_buffer_size += size * count;
+                total_pooled_device_buffer_count += count;
+
+                pooled_device_buffers.add_child(L"device_buffer_pool", pool_info);
+            }
+        }
+
+        info.add_child(L"gl.details.pooled_device_buffers", pooled_device_buffers);
+
+        boost::property_tree::wptree pooled_host_buffers;
+        size_t                       total_read_size   = 0;
+        size_t                       total_write_size  = 0;
+        size_t                       total_read_count  = 0;
+        size_t                       total_write_count = 0;
+
+        for (size_t i = 0; i < host_pools_.size(); ++i) {
+            auto& pools = host_pools_.at(i);
+            auto  is_write = i == 1;
+
+            for (auto& pool : pools) {
+                auto size  = pool.first;
+                auto count = pool.second.size();
+
+                if (count == 0)
+                    continue;
+
+                boost::property_tree::wptree pool_info;
+
+                pool_info.add(L"usage", is_write ? L"write_only" : L"read_only");
+                pool_info.add(L"size", size);
+                pool_info.add(L"count", count);
+
+                pooled_host_buffers.add_child(L"host_buffer_pool", pool_info);
+
+                (is_write ? total_write_count : total_read_count) += count;
+                (is_write ? total_write_size : total_read_size) += size * count;
+            }
+        }
+
+        info.add_child(L"gl.details.pooled_host_buffers", pooled_host_buffers);
+        info.add(L"gl.summary.pooled_device_buffers.total_count", total_pooled_device_buffer_count);
+        info.add(L"gl.summary.pooled_device_buffers.total_size", total_pooled_device_buffer_size);
+        //info.add_child(L"gl.summary.all_device_buffers", texture::info());
+        info.add(L"gl.summary.pooled_host_buffers.total_read_count", total_read_count);
+        info.add(L"gl.summary.pooled_host_buffers.total_write_count", total_write_count);
+        info.add(L"gl.summary.pooled_host_buffers.total_read_size", total_read_size);
+        info.add(L"gl.summary.pooled_host_buffers.total_write_size", total_write_size);
+        info.add_child(L"gl.summary.all_host_buffers", buffer::info());
+
+        return info;
+    }
+
+    std::future<void> gc()
+    {
+        return spawn_async([=](yield_context yield) {
+                CASPAR_LOG(info) << " ogl: Running GC.";
+
+                try {
+                    for (auto& pools : device_pools_) {
+                        for (auto& pool : pools)
+                            pool.second.clear();
+                    }
+                    for (auto& pools : host_pools_) {
+                        for (auto& pool : pools)
+                            pool.second.clear();
+                    }
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+            });
+    }
 };
 
 device::device()
@@ -291,4 +395,6 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 }
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
+boost::property_tree::wptree device::info() const { return impl_->info(); }
+std::future<void>            device::gc() { return impl_->gc(); }
 }}} // namespace caspar::accelerator::ogl

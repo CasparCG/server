@@ -22,9 +22,16 @@
 
 #include <common/gl/gl_check.h>
 
+#include <tbb/atomic.h>
+
 #include <GL/glew.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
+
+static tbb::atomic<int>         g_w_total_count;
+static tbb::atomic<std::size_t> g_w_total_size;
+static tbb::atomic<int>         g_r_total_count;
+static tbb::atomic<std::size_t> g_r_total_size;
 
 struct buffer::impl : boost::noncopyable
 {
@@ -45,12 +52,18 @@ struct buffer::impl : boost::noncopyable
         GL(glCreateBuffers(1, &id_));
         GL(glNamedBufferStorage(id_, size_, nullptr, flags_));
         data_ = GL2(glMapNamedBufferRange(id_, 0, size_, flags_));
+
+        (write ? g_w_total_count : g_r_total_count)++;
+        (write ? g_w_total_size : g_r_total_size) += size_;
     }
 
     ~impl()
     {
         GL(glUnmapNamedBuffer(id_));
         glDeleteBuffers(1, &id_);
+
+        (write_ ? g_w_total_size : g_r_total_size) -= size_;
+        (write_ ? g_w_total_count : g_r_total_count)--;
     }
 
     void bind() { GL(glBindBuffer(target_, id_)); }
@@ -78,5 +91,17 @@ int   buffer::size() const { return impl_->size_; }
 void  buffer::bind() { return impl_->bind(); }
 void  buffer::unbind() { return impl_->unbind(); }
 int   buffer::id() const { return impl_->id_; }
+
+boost::property_tree::wptree buffer::info()
+{
+    boost::property_tree::wptree info;
+
+    info.add(L"total_read_count", g_r_total_count);
+    info.add(L"total_write_count", g_w_total_count);
+    info.add(L"total_read_size", g_r_total_size);
+    info.add(L"total_write_size", g_w_total_size);
+
+    return info;
+}
 
 }}} // namespace caspar::accelerator::ogl
