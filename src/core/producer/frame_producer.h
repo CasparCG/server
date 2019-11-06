@@ -72,10 +72,10 @@ class frame_producer
         if (frame) {
             frame_number_ += 1;
             last_frame_ = frame;
-        }
 
-        if (!first_frame_) {
-            first_frame_ = frame;
+            if (!first_frame_) {
+                first_frame_ = frame;
+            }
         }
 
         return frame;

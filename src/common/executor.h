@@ -90,12 +90,11 @@ class executor final
     {
         if (is_current()) { // Avoids potential deadlock.
             func();
+            return
         }
 
         begin_invoke(std::forward<Func>(func)).wait();
     }
-
-    void yield() {}
 
     void set_capacity(queue_t::size_type capacity) { queue_.set_capacity(capacity); }
 
