@@ -1453,6 +1453,33 @@ std::wstring lock_command(command_context& ctx)
     CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Unknown LOCK command " + command));
 }
 
+std::wstring gl_info_command(command_context& ctx)
+{
+    auto device = ctx.ogl_device.lock();
+    if (!device)
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+    std::wstringstream result;
+    result << L"201 GL INFO OK\r\n";
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(result, device->info(), w);
+    result << L"\r\n";
+
+    return result.str();
+}
+
+std::wstring gl_gc_command(command_context& ctx)
+{
+    auto device = ctx.ogl_device.lock();
+    if (!device)
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+    device->gc().wait();
+
+    return L"202 GL GC OK\r\n";
+}
+
 void register_commands(amcp_command_repository& repo)
 {
     repo.register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
@@ -1525,6 +1552,8 @@ void register_commands(amcp_command_repository& repo)
     repo.register_command(L"Query Commands", L"INFO", info_command, 0);
     repo.register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
     repo.register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
+    repo.register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
+    repo.register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 }
 
 }}} // namespace caspar::protocol::amcp

@@ -594,11 +594,16 @@ struct AVProducer::Impl
         std::vector<int> audio_cadence = format_desc_.audio_cadence;
 
         input_.reset();
+        {
+            core::monitor::state streams;
+            for (auto n = 0UL; n < input_->nb_streams; ++n) {
+                auto st                             = input_->streams[n];
+                auto framerate                      = av_guess_frame_rate(nullptr, st, nullptr);
+                streams[std::to_string(n) + "/fps"] = {framerate.num, framerate.den};
+            }
 
-        for (auto n = 0UL; n < input_->nb_streams; ++n) {
-            auto st                                              = input_->streams[n];
-            auto framerate                                       = av_guess_frame_rate(nullptr, st, nullptr);
-            state_["file/streams/" + std::to_string(n) + "/fps"] = {framerate.num, framerate.den};
+            boost::lock_guard<boost::mutex> lock(state_mutex_);
+            state_["file/streams"] = streams;
         }
 
         if (input_duration_ == AV_NOPTS_VALUE) {

@@ -22,12 +22,15 @@
 #pragma once
 
 #include <memory>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
 class buffer final
 {
   public:
+    static boost::property_tree::wptree info();
+
     buffer(int size, bool write);
     buffer(const buffer&) = delete;
     buffer(buffer&& other);

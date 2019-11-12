@@ -114,15 +114,16 @@ struct server::impl
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
-        : accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
+        : accelerator_()
         , producer_registry_(spl::make_shared<core::frame_producer_registry>())
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
         , shutdown_server_now_(std::move(shutdown_server_now))
     {
         caspar::core::diagnostics::osd::register_sink();
 
+        auto ogl_device    = accelerator_.get_device();
         amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
-            cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+            cg_registry_, producer_registry_, consumer_registry_, ogl_device, shutdown_server_now_);
 
         module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_);
 

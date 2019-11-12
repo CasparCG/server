@@ -22,13 +22,14 @@
 #pragma once
 
 #include <common/array.h>
+#include <accelerator/accelerator.h>
 
 #include <functional>
 #include <future>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-class device final : public std::enable_shared_from_this<device>
+class device final : public std::enable_shared_from_this<device>, public accelerator_device
 {
   public:
     device();
@@ -64,6 +65,9 @@ class device final : public std::enable_shared_from_this<device>
     }
 
     std::wstring version() const;
+
+    boost::property_tree::wptree info() const;
+    std::future<void>            gc();
 
   private:
     void dispatch(std::function<void()> func);

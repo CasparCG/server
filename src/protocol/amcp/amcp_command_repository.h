@@ -38,6 +38,7 @@ class amcp_command_repository
     amcp_command_repository(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                             const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                             const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+                            const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
                             std::function<void(bool)>                                   shutdown_server_now);
 
     void init(const std::vector<spl::shared_ptr<core::video_channel>>& channels);

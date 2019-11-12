@@ -198,19 +198,28 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     std::wstring filename = env::media_folder() + params.at(0);
 
-    auto ext =
-        std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool {
-            auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
+    auto resolvedFilename = caspar::find_case_insensitive(filename);
+    if (resolvedFilename && boost::filesystem::is_regular_file(*resolvedFilename)) {
+        auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
+        if (std::find(supported_extensions().begin(), supported_extensions().end(), ext) == supported_extensions().end()) {
+            return core::frame_producer::empty();
+        }
+    } else {
+        auto ext = std::find_if(
+            supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool {
+                auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
-            return static_cast<bool>(file);
-        });
+                return static_cast<bool>(file);
+            });
 
-    if (ext == supported_extensions().end()) {
-        return core::frame_producer::empty();
+        if (ext == supported_extensions().end()) {
+            return core::frame_producer::empty();
+        }
+
+        filename = *caspar::find_case_insensitive(filename + *ext);
     }
 
-    return spl::make_shared<image_producer>(
-        dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), length);
+    return spl::make_shared<image_producer>(dependencies.frame_factory, filename, length);
 }
 
 }} // namespace caspar::image

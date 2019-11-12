@@ -313,8 +313,14 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto path = name;
 
     if (!boost::contains(path, L"://")) {
-        path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
-        name += boost::filesystem::path(path).extension().wstring();
+        auto mediaPath     = env::media_folder() + L"/" + path;
+        auto fullMediaPath = find_case_insensitive(mediaPath);
+        if (fullMediaPath && is_valid_file(*fullMediaPath)) {
+            path = *fullMediaPath;
+        } else {
+            path = boost::filesystem::path(probe_stem(mediaPath)).generic_wstring();
+            name += boost::filesystem::path(path).extension().wstring();
+        }
     } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
         return core::frame_producer::empty();
     }
