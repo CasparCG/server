@@ -66,7 +66,7 @@ std::wstring resolve_or_create(const std::wstring& folder)
     boost::system::error_code ec;
     boost::filesystem::create_directories(folder, ec);
 
-    if (ec != nullptr)
+    if (ec)
         CASPAR_THROW_EXCEPTION(user_error()
                                << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 

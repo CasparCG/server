@@ -39,7 +39,7 @@ int main(int argc, char** argv)
             printf("\n");
     }
     fclose(f);
-    printf("};\n");
+    printf("0x00\n};\n");
 
     for (int i = 0; i < count; i++)
         printf("}\n");

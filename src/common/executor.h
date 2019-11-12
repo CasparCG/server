@@ -90,7 +90,7 @@ class executor final
     {
         if (is_current()) { // Avoids potential deadlock.
             func();
-            return
+            return;
         }
 
         begin_invoke(std::forward<Func>(func)).wait();
