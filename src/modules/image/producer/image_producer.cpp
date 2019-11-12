@@ -201,7 +201,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto resolvedFilename = caspar::find_case_insensitive(filename);
     if (resolvedFilename && boost::filesystem::is_regular_file(*resolvedFilename)) {
         auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
-        if (std::find(supported_extensions().begin(), supported_extensions().end(), ext) == supported_extensions().end()) {
+        if (std::find(supported_extensions().begin(), supported_extensions().end(), ext) ==
+            supported_extensions().end()) {
             return core::frame_producer::empty();
         }
     } else {

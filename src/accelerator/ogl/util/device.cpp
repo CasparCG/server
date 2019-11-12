@@ -316,7 +316,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         size_t                       total_write_count = 0;
 
         for (size_t i = 0; i < host_pools_.size(); ++i) {
-            auto& pools = host_pools_.at(i);
+            auto& pools    = host_pools_.at(i);
             auto  is_write = i == 1;
 
             for (auto& pool : pools) {
@@ -342,7 +342,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         info.add_child(L"gl.details.pooled_host_buffers", pooled_host_buffers);
         info.add(L"gl.summary.pooled_device_buffers.total_count", total_pooled_device_buffer_count);
         info.add(L"gl.summary.pooled_device_buffers.total_size", total_pooled_device_buffer_size);
-        //info.add_child(L"gl.summary.all_device_buffers", texture::info());
+        // info.add_child(L"gl.summary.all_device_buffers", texture::info());
         info.add(L"gl.summary.pooled_host_buffers.total_read_count", total_read_count);
         info.add(L"gl.summary.pooled_host_buffers.total_write_count", total_write_count);
         info.add(L"gl.summary.pooled_host_buffers.total_read_size", total_read_size);
@@ -355,21 +355,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::future<void> gc()
     {
         return spawn_async([=](yield_context yield) {
-                CASPAR_LOG(info) << " ogl: Running GC.";
+            CASPAR_LOG(info) << " ogl: Running GC.";
 
-                try {
-                    for (auto& pools : device_pools_) {
-                        for (auto& pool : pools)
-                            pool.second.clear();
-                    }
-                    for (auto& pools : host_pools_) {
-                        for (auto& pool : pools)
-                            pool.second.clear();
-                    }
-                } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
+            try {
+                for (auto& pools : device_pools_) {
+                    for (auto& pool : pools)
+                        pool.second.clear();
                 }
-            });
+                for (auto& pools : host_pools_) {
+                    for (auto& pool : pools)
+                        pool.second.clear();
+                }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+        });
     }
 };
 

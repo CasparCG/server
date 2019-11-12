@@ -21,15 +21,17 @@
 
 #pragma once
 
-#include <common/array.h>
 #include <accelerator/accelerator.h>
+#include <common/array.h>
 
 #include <functional>
 #include <future>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-class device final : public std::enable_shared_from_this<device>, public accelerator_device
+class device final
+    : public std::enable_shared_from_this<device>
+    , public accelerator_device
 {
   public:
     device();

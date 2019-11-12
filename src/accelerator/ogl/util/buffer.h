@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <memory>
 #include <boost/property_tree/ptree.hpp>
+#include <memory>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
