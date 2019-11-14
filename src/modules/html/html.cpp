@@ -244,7 +244,7 @@ void init(core::module_dependencies dependencies)
         if (enable_gpu) {
             auto dev = accelerator::d3d::d3d_device::get_device();
             if (!dev)
-                CASPAR_LOG(warning) << L"Failed to create directX device";
+                CASPAR_LOG(warning) << L"Failed to create directX device for cef gpu acceleration";
         }
 #endif
 

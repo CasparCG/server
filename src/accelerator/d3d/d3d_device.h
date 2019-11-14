@@ -1,7 +1,5 @@
 #pragma once
 
-#include <d3d11_1.h>
-
 #include <memory>
 #include <string>
 
@@ -17,7 +15,7 @@ class d3d_device
 
     std::wstring adapter_name() const;
 
-    ID3D11Device* device() const;
+    void* device() const;
 
     std::shared_ptr<class d3d_device_context> immedidate_context();
 

@@ -74,8 +74,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::wstring version_;
 
 #ifdef WIN32
-    std::shared_ptr<d3d::d3d_device> const d3d_device_;
-    std::shared_ptr<void>                  interop_handle_;
+    std::shared_ptr<d3d::d3d_device> d3d_device_;
+    std::shared_ptr<void>            interop_handle_;
 #endif
 
     io_context                          service_;
@@ -84,9 +84,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     impl()
         : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
-#ifdef WIN32
-        , d3d_device_(d3d::d3d_device::get_device())
-#endif
         , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
@@ -96,6 +93,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         if (glewInit() != GLEW_OK) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
+
+#ifdef WIN32
+        if (wglewInit() != GLEW_OK) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+        }
+#endif
 
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
                    u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
@@ -115,6 +118,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         device_.setActive(false);
 
 #ifdef WIN32
+        d3d_device_ = d3d::d3d_device::get_device();
         if (d3d_device_) {
             interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
                 if (p)

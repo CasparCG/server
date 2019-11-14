@@ -331,7 +331,7 @@ struct image_mixer::impl
     }
 
 #ifdef WIN32
-    core::mutable_frame import_d3d_texture(const void*                                tag,
+    core::const_frame import_d3d_texture(const void*                                tag,
                                            const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture) override
     {
         // map directx texture with wgl texture
@@ -349,7 +349,7 @@ struct image_mixer::impl
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
         core::pixel_format_desc          desc(core::pixel_format::bgra);
         desc.planes.push_back(core::pixel_format_desc::plane(d3d_texture->width(), d3d_texture->height(), 4));
-        return core::mutable_frame(
+        auto frame = core::mutable_frame(
             tag,
             std::vector<array<uint8_t>>{},
             array<int32_t>{},
@@ -362,6 +362,7 @@ struct image_mixer::impl
 
                 return std::make_shared<decltype(textures)>(std::move(texs));
             });
+        return core::const_frame(std::move(frame));
     }
 #endif
 };
@@ -384,8 +385,8 @@ core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel
 }
 
 #ifdef WIN32
-core::mutable_frame image_mixer::import_d3d_texture(const void*                                tag,
-                                                    const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture)
+core::const_frame image_mixer::import_d3d_texture(const void*                                tag,
+                                                  const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture)
 {
     return impl_->import_d3d_texture(tag, d3d_texture);
 }

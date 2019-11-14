@@ -50,7 +50,7 @@ class image_mixer
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
 
 #ifdef WIN32
-    class mutable_frame
+    class const_frame
     import_d3d_texture(const void*                                             tag,
                        const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture) override = 0;
 #endif

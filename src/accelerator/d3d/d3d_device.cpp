@@ -11,6 +11,11 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 
+#include <d3d11_1.h>
+
+#include <GL/glew.h>
+#include <GL/wglew.h>
+
 #include <mutex>
 
 namespace caspar { namespace accelerator { namespace d3d {
@@ -123,7 +128,7 @@ d3d_device::~d3d_device() {}
 
 std::wstring d3d_device::adapter_name() const { return impl_->adaptor_name_; }
 
-ID3D11Device* d3d_device::device() const { return impl_->device_.get(); }
+void* d3d_device::device() const { return impl_->device_.get(); }
 
 std::shared_ptr<d3d_device_context> d3d_device::immedidate_context() { return impl_->ctx_; }
 
@@ -135,6 +140,11 @@ std::shared_ptr<d3d_texture2d> d3d_device::open_shared_texture(void* handle)
 const std::shared_ptr<d3d_device>& d3d_device::get_device()
 {
     static std::shared_ptr<d3d_device> device = []() -> std::shared_ptr<d3d_device> {
+        if (!WGLEW_NV_DX_interop2) {
+            // Device doesn't support the extension, so skip
+            return nullptr;
+        }
+
         try {
             return std::make_shared<d3d_device>();
         } catch (...) {

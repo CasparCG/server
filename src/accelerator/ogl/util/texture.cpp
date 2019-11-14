@@ -75,10 +75,10 @@ struct texture::impl
     void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[stride_], nullptr)); }
 
 #ifdef WIN32
-    void copy_from(int texute_id)
+    void copy_from(int texture_id)
     {
         GL(glCopyImageSubData(
-            texute_id, GL_TEXTURE_2D, 0, 0, 0, 0, id_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1));
+            texture_id, GL_TEXTURE_2D, 0, 0, 0, 0, id_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1));
     }
 #endif
 
