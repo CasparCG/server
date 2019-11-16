@@ -77,6 +77,7 @@ class html_client
 {
     std::wstring                        url_;
     spl::shared_ptr<diagnostics::graph> graph_;
+    core::monitor::state*               state_;
     caspar::timer                       tick_timer_;
     caspar::timer                       frame_timer_;
     caspar::timer                       paint_timer_;
@@ -99,12 +100,15 @@ class html_client
     html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
                 const spl::shared_ptr<diagnostics::graph>& graph,
                 core::video_format_desc                    format_desc,
-                std::wstring                               url)
+                std::wstring                               url,
+                core::monitor::state*                      state
+               )
         : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
         , executor_(L"html_producer")
+        , state_(state)
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -274,7 +278,10 @@ class html_client
         auto name = message->GetName().ToString();
 
         if (name == REMOVE_MESSAGE_NAME) {
-            // TODO
+            // TODO fully remove producer
+            this->close();
+            last_frame_ = core::draw_frame::empty();
+            (*state_)["file/path"] = u8(L"");
 
             return true;
         }
@@ -368,7 +375,7 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            client_ = new html_client(frame_factory, graph_, format_desc, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, url_, &state_);
 
             CefWindowInfo window_info;
             window_info.width                        = format_desc.square_width;
