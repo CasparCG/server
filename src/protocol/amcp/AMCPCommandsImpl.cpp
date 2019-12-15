@@ -401,6 +401,15 @@ std::wstring clear_command(command_context& ctx)
     return L"202 CLEAR OK\r\n";
 }
 
+std::wstring clear_all_command(command_context& ctx)
+{
+    for (size_t n = 0; n < ctx.channels.size(); ++n)
+        ctx.channels.at(n).channel->stage().clear();
+
+    return L"202 CLEAR ALL OK\r\n";
+}
+
+
 std::wstring call_command(command_context& ctx)
 {
     auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters).get();
@@ -1603,6 +1612,7 @@ void register_commands(amcp_command_repository& repo)
     repo.register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo.register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
+    repo.register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
     repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo.register_channel_command(L"Basic Commands", L"SET", set_command, 2);
     repo.register_command(L"Basic Commands", L"LOCK", lock_command, 2);
