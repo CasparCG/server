@@ -272,7 +272,6 @@ struct image_kernel::impl
                 1.0f,
             };
 
-            GL(glGenBuffers(1, &vbo_));
             GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
             GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
 
