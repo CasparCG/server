@@ -610,7 +610,7 @@ struct AVProducer::Impl
             input_duration_ = input_->duration;
         }
 
-        if (duration_ == AV_NOPTS_VALUE) {
+        if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
             duration_ = input_->duration;
         }
 
