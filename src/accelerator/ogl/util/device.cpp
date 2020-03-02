@@ -26,6 +26,7 @@
 
 #include <common/array.h>
 #include <common/assert.h>
+#include <common/env.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>
 #include <common/os/thread.h>
@@ -118,7 +119,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         device_.setActive(false);
 
 #ifdef WIN32
-        d3d_device_ = d3d::d3d_device::get_device();
+        if (env::properties().get(L"html.enable-gpu", false)) {
+            d3d_device_ = d3d::d3d_device::get_device();
+        }
         if (d3d_device_) {
             interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
                 if (p)
