@@ -524,7 +524,6 @@ struct AVProducer::Impl
 
     int64_t          frame_count_    = 0;
     bool             frame_flush_    = true;
-    bool             frame_eof_      = false;
     int64_t          frame_time_     = AV_NOPTS_VALUE;
     int64_t          frame_duration_ = AV_NOPTS_VALUE;
     core::draw_frame frame_;
@@ -763,7 +762,6 @@ struct AVProducer::Impl
                 frame_time_     = buffer_[0].pts;
                 frame_duration_ = buffer_[0].duration;
                 frame_flush_    = false;
-                frame_eof_      = false;
             }
         }
 
@@ -777,8 +775,12 @@ struct AVProducer::Impl
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-            if (buffer_eof_) {
-                frame_eof_ = true;
+            if (buffer_eof_ && !frame_flush_) {
+                if (frame_time_ < duration_ && frame_duration_ != AV_NOPTS_VALUE) {
+                    frame_time_ += frame_duration_;
+                } else if (frame_time_ < duration_) {
+                    frame_time_ = input_duration_;
+                }
                 return core::draw_frame::still(frame_);
             }
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
@@ -795,7 +797,6 @@ struct AVProducer::Impl
         frame_time_     = buffer_[0].pts;
         frame_duration_ = buffer_[0].duration;
         frame_flush_    = false;
-        frame_eof_      = false;
 
         buffer_.pop_front();
         buffer_cond_.notify_all();
@@ -826,13 +827,7 @@ struct AVProducer::Impl
             return 0;
         }
 
-        auto frame_time = frame_time_;
-
-        if (frame_eof_ && frame_duration_ != AV_NOPTS_VALUE) {
-            frame_time += frame_duration_;
-        }
-
-        return av_rescale_q(frame_time, TIME_BASE_Q, format_tb_);
+        return av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_);
     }
 
     void loop(bool loop)
