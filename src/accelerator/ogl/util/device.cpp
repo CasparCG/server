@@ -119,7 +119,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         device_.setActive(false);
 
 #ifdef WIN32
-        if (env::properties().get(L"html.enable-gpu", false)) {
+        if (env::properties().get(L"configuration.html.enable-gpu", false)) {
             d3d_device_ = d3d::d3d_device::get_device();
         }
         if (d3d_device_) {
