@@ -102,8 +102,9 @@ struct Filter
             boost::rational<int> bmdFramerate(
                 timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2), frameDuration / 1000);
             bool doFps = bmdFramerate != format_desc.framerate;
+            bool i2p   = (dm->GetFieldDominance() != bmdProgressiveFrame) && (1 == format_desc.field_count);
 
-            std::string deintStr = (doScale || doFps) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
+            std::string deintStr = (doScale || doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
             switch (dm->GetFieldDominance()) {
                 case bmdUpperFieldFirst:
                     filter_spec += deintStr + ":parity=tff:deint=all";
