@@ -55,7 +55,12 @@ class route_producer : public frame_producer
     route_producer(std::shared_ptr<route> route, int buffer)
         : route_(route)
         , connection_(route_->signal.connect([this](const core::draw_frame& frame) {
-            if (!buffer_.try_push(frame)) {
+            auto frame2 = frame;
+            if (!frame2) {
+                // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
+                frame2 = core::draw_frame::push(frame2);
+            }
+            if (!buffer_.try_push(frame2)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
             graph_->set_value("produce-time", produce_timer_.elapsed() * route_->format_desc.fps * 0.5);
