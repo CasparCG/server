@@ -442,6 +442,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         try {
             auto elapsed = tick_timer_.elapsed();
             int  fieldTimeMs = static_cast<int>(1000 / format_desc_.fps);
+            // Calculate a time point for when a simulated second field action should occur for interlaced standards.
+            // The tick_timer will run at frame (2x field) rate. If the tick_timer has been delayed because the machine
+            // is busy this calculation reduces the delay before the second field so that it lands at the expected time,
+            // giving the channel the full amount of time to process the following frame.
             std::chrono::high_resolution_clock::time_point f2TimePoint =
                 std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(
                     std::max<int>(0, std::min<int>(fieldTimeMs, fieldTimeMs + static_cast<int>(2.0 * fieldTimeMs - elapsed))));
