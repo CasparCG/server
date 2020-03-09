@@ -609,12 +609,16 @@ struct AVProducer::Impl
             input_duration_ = input_->duration;
         }
 
-        if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
-            duration_ = input_->duration;
-        }
-
         {
             const auto start = start_.load();
+            if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
+                if (start != AV_NOPTS_VALUE) {
+                    duration_ = input_->duration - start;
+                } else {
+                    duration_ = input_->duration;
+                }
+            }
+
             if (start != AV_NOPTS_VALUE) {
                 seek_internal(start);
             } else {
@@ -775,10 +779,16 @@ struct AVProducer::Impl
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
+            auto start    = start_.load();
+            auto duration = duration_.load();
+
+            start    = start != AV_NOPTS_VALUE ? start : 0;
+            auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
+
             if (buffer_eof_ && !frame_flush_) {
-                if (frame_time_ < duration_ && frame_duration_ != AV_NOPTS_VALUE) {
+                if (frame_time_ < end && frame_duration_ != AV_NOPTS_VALUE) {
                     frame_time_ += frame_duration_;
-                } else if (frame_time_ < duration_) {
+                } else if (frame_time_ < end) {
                     frame_time_ = input_duration_;
                 }
                 return core::draw_frame::still(frame_);
@@ -990,9 +1000,10 @@ struct AVProducer::Impl
 
     std::string print() const
     {
+        const int position = std::max(static_cast<int>(time() - start().value_or(0)), 0);
         std::ostringstream str;
         str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
-            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
+            << av_q2d({position * format_tb_.num, format_tb_.den}) << "/"
             << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
         return str.str();
     }

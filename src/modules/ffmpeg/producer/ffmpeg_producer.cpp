@@ -182,7 +182,8 @@ struct ffmpeg_producer : public core::frame_producer
 
     std::wstring print() const override
     {
-        return L"ffmpeg[" + filename_ + L"|" + std::to_wstring(producer_->time()) + L"/" +
+        const auto position = std::max(producer_->time() - producer_->start(), 0ll);
+        return L"ffmpeg[" + filename_ + L"|" + std::to_wstring(position) + L"/" +
                std::to_wstring(producer_->duration()) + L"]";
     }
 
