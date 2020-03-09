@@ -188,6 +188,7 @@ class renderer_application
 
         command_line->AppendSwitch("enable-begin-frame-scheduling");
         command_line->AppendSwitch("enable-media-stream");
+        command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
 
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
