@@ -653,12 +653,14 @@ struct AVProducer::Impl
                 auto start    = start_.load();
                 auto duration = duration_.load();
 
-                start     = start != AV_NOPTS_VALUE ? start : 0;
-                auto end  = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
-                auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+                start = start != AV_NOPTS_VALUE ? start : 0;
+                // duration is inclusive, end must be set one frame duration earlier
+                auto end      = duration != AV_NOPTS_VALUE ? start + duration - frame.duration : INT64_MAX;
+                auto next_pts = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+                // check whether the next frame will last beyond the end time
+                auto time = next_pts ? next_pts + frame.duration : 0;
 
-                buffer_eof_ = (video_filter_.eof && audio_filter_.eof) ||
-                              av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+                buffer_eof_ = (video_filter_.eof && audio_filter_.eof) || time > end;
 
                 if (buffer_eof_) {
                     if (loop_ && frame_count_ > 2) {
