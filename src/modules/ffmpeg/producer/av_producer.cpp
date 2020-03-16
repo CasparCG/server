@@ -105,7 +105,7 @@ struct Decoder
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"ffmpeg.producer.threads", 4), 0));
+        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"configuration.ffmpeg.producer.threads", 4), 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -209,7 +209,7 @@ struct Filter
                 filter_spec = "null";
             }
 
-            auto deint = u8(env::properties().get<std::wstring>(L"ffmpeg.producer.auto-deinterlace", L"interlaced"));
+            auto deint = u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.auto-deinterlace", L"interlaced"));
 
             if (deint != "none") {
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
@@ -461,6 +461,8 @@ struct Filter
         }
 
         FF(avfilter_graph_config(graph.get(), nullptr));
+        
+        CASPAR_LOG(debug) << avfilter_graph_dump(graph.get(), nullptr);
     }
 
     bool operator()(int nb_samples = -1)
