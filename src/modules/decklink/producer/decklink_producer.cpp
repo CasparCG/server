@@ -713,6 +713,8 @@ class decklink_producer_proxy : public core::frame_producer
 
     core::draw_frame first_frame() override { return receive_impl(0); }
 
+    core::draw_frame last_frame() override { return core::draw_frame::still(receive_impl(0)); }
+
     uint32_t nb_frames() const override { return length_; }
 
     std::wstring print() const override { return producer_->print(); }
