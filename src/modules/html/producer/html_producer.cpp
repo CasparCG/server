@@ -501,6 +501,15 @@ class html_producer : public core::frame_producer
 
     core::draw_frame first_frame() override { return receive_impl(0); }
 
+    core::draw_frame last_frame() override
+    {
+        if (client_ != nullptr) {
+            return client_->last_frame();
+        }
+
+        return core::draw_frame::empty();
+    }
+
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         if (client_ == nullptr)
