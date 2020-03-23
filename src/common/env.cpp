@@ -49,14 +49,6 @@ void check_is_configured()
         CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
 }
 
-std::wstring ensure_trailing_slash(std::wstring folder)
-{
-    if (folder.at(folder.length() - 1) != L'/')
-        folder.append(L"/");
-
-    return folder;
-}
-
 std::wstring resolve_or_create(const std::wstring& folder)
 {
     auto found_path = find_case_insensitive(folder);

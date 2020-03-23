@@ -24,6 +24,7 @@
 #include "../filesystem.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 namespace caspar {
 
@@ -35,5 +36,14 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
 }
 
 std::wstring clean_path(std::wstring path) { return path; }
+
+std::wstring ensure_trailing_slash(std::wstring folder)
+{
+    auto last_char = folder.at(folder.length() - 1);
+    if (last_char != L'/' && last_char != L'\\')
+        folder.append(L"/");
+
+    return folder;
+}
 
 } // namespace caspar
