@@ -173,9 +173,6 @@ void log_configuration_warnings()
     if (pt.empty())
         return;
 
-    if (pt.get_optional<std::wstring>(L"configuration.paths.thumbnails-path"))
-        CASPAR_LOG(warning)
-            << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
 }
 
 }} // namespace caspar::env
