@@ -266,14 +266,22 @@ struct server::impl
 
             if (name == L"tcp") {
                 auto port              = ptree_get<unsigned int>(xml_controller.second, L"port");
-                auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                    io_service_,
-                    create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
-                    static_cast<short>(port));
-                async_servers_.push_back(asyncbootstrapper);
 
-                if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
-                    primary_amcp_server_ = asyncbootstrapper;
+                try {
+                    auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+                        io_service_,
+                        create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
+                        static_cast<short>(port));
+                    async_servers_.push_back(asyncbootstrapper);
+
+                    if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
+                        primary_amcp_server_ = asyncbootstrapper;
+                } catch (...) {
+                    CASPAR_LOG(fatal) << L"Failed to setup " << protocol << L" controller on port "
+                                      << boost::lexical_cast<std::wstring>(port) << L". It is likely already in use";
+                    throw;
+                    //CASPAR_LOG_CURRENT_EXCEPTION();
+                }
             } else
                 CASPAR_LOG(warning) << "Invalid controller: " << name;
         }
