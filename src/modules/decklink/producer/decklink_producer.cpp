@@ -634,7 +634,7 @@ class decklink_producer : public IDeckLinkInputCallback
         return S_OK;
     }
 
-    core::draw_frame get_frame()
+    core::draw_frame get_frame(bool use_last_frame)
     {
         if (exception_ != nullptr) {
             std::rethrow_exception(exception_);
@@ -643,7 +643,7 @@ class decklink_producer : public IDeckLinkInputCallback
         core::draw_frame frame;
 
         if (!frame_buffer_.try_pop(frame)) {
-            if (freeze_on_lost_)
+            if (freeze_on_lost_ || use_last_frame)
                 frame = last_frame_;
             graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
         } else {
@@ -709,11 +709,11 @@ class decklink_producer_proxy : public core::frame_producer
 
     // frame_producer
 
-    core::draw_frame receive_impl(int nb_samples) override { return producer_->get_frame(); }
+    core::draw_frame receive_impl(int nb_samples) override { return producer_->get_frame(false); }
 
     core::draw_frame first_frame() override { return receive_impl(0); }
 
-    core::draw_frame last_frame() override { return core::draw_frame::still(receive_impl(0)); }
+    core::draw_frame last_frame() override { return core::draw_frame::still(producer_->get_frame(true)); }
 
     uint32_t nb_frames() const override { return length_; }
 
