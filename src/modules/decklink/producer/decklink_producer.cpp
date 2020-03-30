@@ -89,46 +89,43 @@ struct Filter
            const core::video_format_desc& format_desc,
            com_ptr<IDeckLinkDisplayMode>  dm)
     {
+        BMDTimeScale timeScale;
+        BMDTimeValue frameDuration;
+        dm->GetFrameRate(&frameDuration, &timeScale);
+
         if (type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
             }
 
-            {
-                std::string colorspace = ""; // TODO (fix) 6-625 or 6-525?
-                if (dm->GetFlags() & bmdDisplayModeColorspaceRec601) {
-                    colorspace = "bt601-6-625";
-                } else if (dm->GetFlags() & bmdDisplayModeColorspaceRec709) {
-                    colorspace = "bt709";
-                }
-                // TODO (fix) bmd doesn't have 2020 in flags?
-                // else if (dm->GetFlags() & bmdDisplayModeColorspaceRec2020) {
-                //}
-                if (!colorspace.empty()) {
-                    filter_spec =
-                        (boost::format("colorspace=iall=%s:all=%s,") % colorspace % colorspace).str() + filter_spec;
-                }
-            }
+            bool        doScale = dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width;
+            boost::rational<int> bmdFramerate(
+                timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2), frameDuration / 1000);
+            bool doFps = bmdFramerate != format_desc.framerate;
+            bool i2p   = (dm->GetFieldDominance() != bmdProgressiveFrame) && (1 == format_desc.field_count);
 
+            std::string deintStr = (doScale || doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
             switch (dm->GetFieldDominance()) {
                 case bmdUpperFieldFirst:
-                    filter_spec += ",bwdif=mode=send_field:parity=tff:deint=all";
+                    filter_spec += deintStr + ":parity=tff:deint=all";
                     break;
                 case bmdLowerFieldFirst:
-                    filter_spec += ",bwdif=mode=send_field:parity=bff:deint=all";
+                    filter_spec += deintStr + ":parity=bff:deint=all";
                     break;
                 case bmdUnknownFieldDominance:
-                    filter_spec += ",bwdif=mode=send_field:parity=auto:deint=interlaced";
+                    filter_spec += deintStr + ":parity=auto:deint=interlaced";
                     break;
             }
 
-            if (dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width) {
+            if (doScale) {
                 filter_spec += (boost::format(",scale=%dx%d") % format_desc.width % format_desc.height).str();
             }
 
-            filter_spec +=
-                (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() % format_desc.framerate.denominator())
-                    .str();
+            if (doFps) {
+                filter_spec += (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() %
+                                format_desc.framerate.denominator())
+                                   .str();
+            }
         } else {
             if (filter_spec.empty()) {
                 filter_spec = "anull";
@@ -196,10 +193,6 @@ struct Filter
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
-                BMDTimeScale timeScale;
-                BMDTimeValue frameDuration;
-                dm->GetFrameRate(&frameDuration, &timeScale);
-
                 auto args =
                     (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                      dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE % sar.numerator() %
@@ -240,7 +233,7 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            AVPixelFormat pix_fmts[] = {AV_PIX_FMT_BGRA, AV_PIX_FMT_NONE};
+            AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV422P, AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -283,6 +276,8 @@ struct Filter
         }
 
         FF(avfilter_graph_config(graph.get(), nullptr));
+
+        CASPAR_LOG(debug) << avfilter_graph_dump(graph.get(), nullptr);
     }
 };
 
@@ -409,8 +404,8 @@ class decklink_producer : public IDeckLinkInputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
                                                       IDeckLinkDisplayMode*            newDisplayMode,
