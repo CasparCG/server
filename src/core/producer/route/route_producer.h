@@ -28,6 +28,13 @@
 
 namespace caspar { namespace core {
 
+class route_cross_channel
+{
+  public:
+    virtual ~route_cross_channel() {}
+    virtual void set_cross_channel(bool cross) = 0;
+};
+
 spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_producer_dependencies& dependencies,
                                                             const std::vector<std::wstring>&         params);
 

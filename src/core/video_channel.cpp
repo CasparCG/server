@@ -78,6 +78,19 @@ struct video_channel::impl final
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
+    std::function<void(int, core::draw_frame)> routesCb = [&](int layer, core::draw_frame frame) {
+        std::lock_guard<std::mutex> lock(routes_mutex_);
+        for (auto& r : routes_) {
+            auto route = r.second.lock();
+            if (!route)
+                continue;
+
+            // if this layer is a source for this route, push the frame to the route producer
+            if (layer == r.first.index)
+                route->signal(frame);
+        }
+    };
+
   public:
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
@@ -139,7 +152,7 @@ struct video_channel::impl final
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto          stage_frames = stage_(format_desc, nb_samples, background_routes);
+                    auto          stage_frames = stage_(format_desc, nb_samples, background_routes, routesCb);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Mix
@@ -159,35 +172,6 @@ struct video_channel::impl final
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
-
-                    {
-                        std::lock_guard<std::mutex> lock(routes_mutex_);
-
-                        for (auto& r : routes_) {
-                            auto route = r.second.lock();
-                            if (!route) {
-                                continue;
-                            }
-
-                            if (r.first.index == -1) {
-                                route->signal(core::draw_frame(std::move(frames)));
-                                continue;
-                            }
-
-                            auto it = stage_frames.find(r.first.index);
-                            if (it == stage_frames.end()) {
-                                // Layer doesnt exist, so send empty frame to avoid freezing on last
-                                route->signal(draw_frame{});
-                            } else {
-                                if (r.first.mode == route_mode::background ||
-                                    (r.first.mode == route_mode::next && it->second.has_background)) {
-                                    route->signal(draw_frame::pop(it->second.background));
-                                } else {
-                                    route->signal(draw_frame::pop(it->second.foreground));
-                                }
-                            }
-                        }
-                    }
 
                     monitor::state state = {};
                     state["stage"]       = stage_.state();

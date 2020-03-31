@@ -37,7 +37,7 @@
 
 namespace caspar { namespace core {
 
-class route_producer : public frame_producer
+class route_producer : public frame_producer, public route_cross_channel
 {
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -50,6 +50,15 @@ class route_producer : public frame_producer
     boost::signals2::scoped_connection connection_;
 
     core::draw_frame frame_;
+
+    // set the buffer depth to 2 for cross-channel routes, 1 otherwise
+    void set_cross_channel(bool cross) {
+        if (cross) {
+            buffer_.set_capacity(2);
+        } else {
+            buffer_.set_capacity(1);
+        }
+    }
 
   public:
     route_producer(std::shared_ptr<route> route, int buffer)
@@ -67,7 +76,7 @@ class route_producer : public frame_producer
             produce_timer_.restart();
         }))
     {
-        buffer_.set_capacity(buffer > 0 ? buffer : route->format_desc.field_count);
+        buffer_.set_capacity(buffer > 0 ? buffer : 1);
 
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
