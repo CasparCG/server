@@ -31,6 +31,7 @@ if(MSVC)
 	target_link_libraries(html
 		common
 		core
+		accelerator
 
 		optimized release/libcef
 		optimized release/VS2015/libcef_dll_wrapper

@@ -26,6 +26,7 @@
 
 #include <common/array.h>
 #include <common/assert.h>
+#include <common/env.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>
 #include <common/os/thread.h>
@@ -33,6 +34,11 @@
 #include <GL/glew.h>
 
 #include <SFML/Window/Context.hpp>
+
+#ifdef WIN32
+#include "../../d3d/d3d_device.h"
+#include <GL/wglew.h>
+#endif
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
@@ -68,6 +74,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version_;
 
+#ifdef WIN32
+    std::shared_ptr<d3d::d3d_device> d3d_device_;
+    std::shared_ptr<void>            interop_handle_;
+#endif
+
     io_context                          service_;
     decltype(make_work_guard(service_)) work_;
     std::thread                         thread_;
@@ -83,6 +94,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         if (glewInit() != GLEW_OK) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
+
+#ifdef WIN32
+        if (wglewInit() != GLEW_OK) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+        }
+#endif
 
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
                    u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
@@ -100,6 +117,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
         device_.setActive(false);
+
+#ifdef WIN32
+        if (env::properties().get(L"configuration.html.enable-gpu", false)) {
+            d3d_device_ = d3d::d3d_device::get_device();
+        }
+        if (d3d_device_) {
+            interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
+                if (p)
+                    wglDXCloseDeviceNV(p);
+            });
+
+            if (!interop_handle_)
+                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
+        }
+#endif
 
         thread_ = std::thread([&] {
             device_.setActive(true);
@@ -269,6 +301,37 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
+#ifdef WIN32
+    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride)
+    {
+        return spawn_async([=](yield_context yield) {
+            auto tex = create_texture(width, height, stride, false);
+
+            tex->copy_from(source);
+
+            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+            GL(glFlush());
+
+            deadline_timer timer(service_);
+            for (auto n = 0; true; ++n) {
+                // TODO (perf) Smarter non-polling solution?
+                timer.expires_from_now(boost::posix_time::milliseconds(2));
+                timer.async_wait(yield);
+
+                auto wait = glClientWaitSync(fence, 0, 1);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    break;
+                }
+            }
+
+            glDeleteSync(fence);
+
+            return tex;
+        });
+    }
+#endif
+
     boost::property_tree::wptree info() const
     {
         boost::property_tree::wptree info;
@@ -392,6 +455,13 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
+#ifdef WIN32
+std::shared_ptr<void>                 device::d3d_interop() const { return impl_->interop_handle_; }
+std::future<std::shared_ptr<texture>> device::copy_async(GLuint source, int width, int height, int stride)
+{
+    return impl_->copy_async(source, width, height, stride);
+}
+#endif
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }
