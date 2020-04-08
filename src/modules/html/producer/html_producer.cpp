@@ -375,7 +375,7 @@ class html_client
             this->close();
             last_frame_ = core::draw_frame::empty();
             std::lock_guard<std::mutex> lock(state_mutex_);
-            state_["file/path"] = u8(L"");
+            state_ = {};
 
             return true;
         }
