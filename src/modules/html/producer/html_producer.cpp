@@ -133,8 +133,11 @@ class html_client
         graph_->set_color("overload", diagnostics::color(0.6f, 0.6f, 0.3f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        state_["file/path"] = u8(url_);
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            state_["file/path"] = u8(url_);
+        }
 
         loaded_ = false;
         executor_.begin_invoke([&] {
@@ -373,9 +376,16 @@ class html_client
         if (name == REMOVE_MESSAGE_NAME) {
             // TODO fully remove producer
             this->close();
-            last_frame_ = core::draw_frame::empty();
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            state_ = {};
+
+            {
+                std::lock_guard<std::mutex> lock(frames_mutex_);
+                frames_.push(core::draw_frame::empty());
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(state_mutex_);
+                state_ = {};
+            }
 
             return true;
         }
@@ -536,7 +546,14 @@ class html_producer : public core::frame_producer
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
 
-    core::monitor::state state() const override { return client_->state(); }
+    core::monitor::state state() const override {
+        if (client_ != nullptr) {
+            return client_->state();
+        }
+
+        static const core::monitor::state empty;
+        return empty;
+    }
 };
 
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,
