@@ -9,14 +9,12 @@ set(SOURCES
 		StdAfx.cpp
 )
 set(HEADERS
-		consumer/bluefish_consumer.h
-         producer/bluefish_producer.h
-        interop/BlueVelvetC.h
-        interop/BlueVelvetCUtils.h
+	    consumer/bluefish_consumer.h
+        producer/bluefish_producer.h
         util/blue_velvet.h
-		util/memory.h
+	    util/memory.h
         bluefish.h
-		StdAfx.h
+	StdAfx.h
 )
 
 add_library(bluefish ${SOURCES} ${HEADERS})

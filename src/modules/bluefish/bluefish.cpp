@@ -52,7 +52,7 @@ std::vector<std::wstring> device_list()
     try {
         bvc_wrapper blue;
         int         numCards = 0;
-        blue.enumerate(numCards);
+        blue.enumerate(&numCards);
 
         for (int n = 1; n < numCards + 1; n++) {
             blue.attach(n);
@@ -71,7 +71,7 @@ void init(core::module_dependencies dependencies)
     try {
         bvc_wrapper blue;
         int         num_cards = 0;
-        blue.enumerate(num_cards);
+        blue.enumerate(&num_cards);
     } catch (...) {
     }
 

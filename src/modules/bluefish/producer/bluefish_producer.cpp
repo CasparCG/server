@@ -80,15 +80,23 @@ unsigned int get_bluesdk_input_videochannel_from_streamid(int stream_id)
     /*This function would return the corresponding EBlueVideoChannel from them stream_id argument */
     switch (stream_id) {
         case 1:
-            return BLUE_VIDEO_INPUT_CHANNEL_A;
+            return BLUE_VIDEO_INPUT_CHANNEL_1;
         case 2:
-            return BLUE_VIDEO_INPUT_CHANNEL_B;
+            return BLUE_VIDEO_INPUT_CHANNEL_2;
         case 3:
-            return BLUE_VIDEO_INPUT_CHANNEL_C;
+            return BLUE_VIDEO_INPUT_CHANNEL_3;
         case 4:
-            return BLUE_VIDEO_INPUT_CHANNEL_D;
+            return BLUE_VIDEO_INPUT_CHANNEL_4;
+        case 5:
+            return BLUE_VIDEO_INPUT_CHANNEL_5;
+        case 6:
+            return BLUE_VIDEO_INPUT_CHANNEL_6;
+        case 7:
+            return BLUE_VIDEO_INPUT_CHANNEL_7;
+        case 8:
+            return BLUE_VIDEO_INPUT_CHANNEL_8;
         default:
-            return BLUE_VIDEO_INPUT_CHANNEL_A;
+            return BLUE_VIDEO_INPUT_CHANNEL_1;
     }
 }
 
@@ -115,7 +123,6 @@ unsigned int extract_pcm_data_from_hanc(bvc_wrapper&               blue,
                                                 MONO_CHANNEL_15 | MONO_CHANNEL_16 | MONO_CHANNEL_17 | MONO_CHANNEL_18;
 
     blue.decode_hanc_frame(card_type, src_hanc_buffer, decode_struct);
-
     return decode_struct->no_audio_samples;
 }
 
@@ -133,8 +140,8 @@ bool is_video_format_interlaced(const core::video_format format)
 bool is_bluefish_format_interlaced(unsigned int vid_mode)
 {
     bool interlaced = false;
-    if (vid_mode == VID_FMT_PAL || vid_mode == VID_FMT_NTSC || vid_mode == VID_FMT_1080I_5000 ||
-        vid_mode == VID_FMT_1080I_5994 || vid_mode == VID_FMT_1080I_6000)
+    if (vid_mode == VID_FMT_EXT_PAL || vid_mode == VID_FMT_EXT_NTSC || vid_mode == VID_FMT_EXT_1080I_5000 ||
+        vid_mode == VID_FMT_EXT_1080I_5994 || vid_mode == VID_FMT_EXT_1080I_6000)
         interlaced = true;
 
     return interlaced;
@@ -142,9 +149,9 @@ bool is_bluefish_format_interlaced(unsigned int vid_mode)
 
 struct bluefish_producer
 {
-    const int                    device_index_;
-    const int                    stream_index_;
-    spl::shared_ptr<bvc_wrapper> blue_;
+    const int                           device_index_;
+    const int                           stream_index_;
+    spl::shared_ptr<bvc_wrapper>        blue_;
 
     core::monitor::state                state_;
     mutable std::mutex                  state_mutex_;
@@ -163,7 +170,8 @@ struct bluefish_producer
     core::video_format_desc channel_format_desc_;
     unsigned int            mode_;
 
-    spl::shared_ptr<core::frame_factory> frame_factory_;
+    spl::shared_ptr<core::frame_factory>    frame_factory_;
+    std::vector<uint8_t>                    conversion_buffer_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
     std::exception_ptr                              exception_;
@@ -180,6 +188,7 @@ struct bluefish_producer
     int                       frames_captured           = 0;
     uint64_t                  capture_ts                = 0;
     int                       remainaing_audio_samples_ = 0;
+    int                       uhd_mode_                 = 0;                    // 0 -> Do Not Allow BVC-ML, 1 -> Auto ( ie. Native buffers will do default mode, or BVC will do SQ.),  2 -> Force 2SI, 3 -> Force SQ
 
     bluefish_producer(const bluefish_producer&) = delete;
     bluefish_producer& operator=(const bluefish_producer&) = delete;
@@ -187,6 +196,7 @@ struct bluefish_producer
     bluefish_producer(const core::video_format_desc&              format_desc,
                       int                                         device_index,
                       int                                         stream_index,
+                      int                                         uhd_mode,
                       const spl::shared_ptr<core::frame_factory>& frame_factory)
         : device_index_(device_index)
         , stream_index_(stream_index)
@@ -196,10 +206,10 @@ struct bluefish_producer
         , frame_factory_(frame_factory)
         , memory_format_on_card_(MEM_FMT_RGB)
         , sync_format_(UPD_FMT_FRAME)
+        , uhd_mode_(uhd_mode)
     {
-        mode_ = static_cast<unsigned int>(VID_FMT_INVALID);
+        mode_ = static_cast<unsigned int>(VID_FMT_EXT_INVALID);
         frame_buffer_.set_capacity(2);
-        unsigned int invalid_video_mode_flag = VID_FMT_INVALID;
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -216,32 +226,42 @@ struct bluefish_producer
 
         // Configure input connector and routing
         unsigned int bf_channel = get_bluesdk_input_videochannel_from_streamid(stream_index);
-        if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_INPUT_CHANNEL, bf_channel)))
+        if (blue_->set_card_property32(DEFAULT_VIDEO_INPUT_CHANNEL, bf_channel))
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input channel."));
 
-        if (BLUE_FAIL(configure_input_routing(bf_channel, true))) // to do: tofix pass rgba vs use actual dual link!!
+        if (configure_input_routing(bf_channel, true, uhd_mode_)) // to do: tofix pass rgba vs use actual dual link!!
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input routing."));
 
-        // Select input memory format
-        if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_MEMORY_FORMAT, memory_format_on_card_)))
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input memory format."));
+        // Look for a valid input video mode
+        blue_->get_card_property32(VIDEO_MODE_EXT_INPUT, &mode_);
+        if (mode_ != VID_FMT_EXT_INVALID) {
+            if (uhd_mode_ == 1 || uhd_mode_ == 2 || uhd_mode_ == 3) {
+                blue_->set_multilink(device_index_, bf_channel);
+            }
 
-        // Select image orientation
-        if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUTFRAMESTORE_IMAGE_ORIENTATION, ImageOrientation_Normal)))
-            CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";
-
-        // Select data range
-        if (BLUE_FAIL(blue_->set_card_property32(
-                EPOCH_VIDEO_INPUT_RGB_DATA_RANGE,
-                CGR_RANGE))) // todo: confirm if we want to pass CGR or SMPTe range to caspar!!!!
-            CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";
-
-        blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, mode_);
-        blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalid_video_mode_flag);
-        if (mode_ < invalid_video_mode_flag) {
+            blue_->get_card_property32(VIDEO_MODE_EXT_INPUT, &mode_);
             format_desc_ = get_format_desc(
-                *blue_, static_cast<EVideoMode>(mode_), static_cast<EMemoryFormat>(memory_format_on_card_));
+                *blue_, static_cast<EVideoModeExt>(mode_), static_cast<EMemoryFormat>(memory_format_on_card_));
             audio_cadence_ = format_desc_.audio_cadence;
+
+            if (format_desc_.size == 0) {
+                CASPAR_LOG(warning) << print()
+                                    << TEXT("Problem getting the size of video buffer from SDK, calculating instead.");
+                format_desc_.size = format_desc_.width * format_desc_.height * 3;
+            }
+
+            // Select input memory format
+            if (blue_->set_card_property32(VIDEO_INPUT_MEMORY_FORMAT, memory_format_on_card_))
+                CASPAR_THROW_EXCEPTION(caspar_exception()
+                                       << msg_info(print() + L" Failed to set input memory format."));
+
+            // Select image orientation
+            if (blue_->set_card_property32(VIDEO_INPUTFRAMESTORE_IMAGE_ORIENTATION, ImageOrientation_Normal))
+                CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";
+
+            // Select data range   - // todo: confirm if we want to pass CGR or SMPTE range to caspar!!!!
+            if (blue_->set_card_property32(EPOCH_VIDEO_INPUT_RGB_DATA_RANGE, CGR_RANGE))
+                CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";
 
             // If we have an interlaced input AND and interlaced project then we need to handle the incoming frames
             // differently and sync on fields, instead of frame barriers
@@ -249,9 +269,9 @@ struct bluefish_producer
                 sync_format_ = UPD_FMT_FIELD;
 
             // Select Update Mode for input
-            if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_UPDATE_TYPE,
-                                                     UPD_FMT_FRAME))) /// HERE: this *might need to be sync format, but
-                                                                      /// currently we will leave as Frame UPD
+            // HERE: this *might need to be sync format, but
+            // currently we will leave as Frame UPD
+            if (blue_->set_card_property32(VIDEO_INPUT_UPDATE_TYPE, UPD_FMT_FRAME))
                 CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set input update type."));
 
             // Generate dma buffers
@@ -260,58 +280,63 @@ struct bluefish_producer
                 return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);
             });
 
+            // Allocate a single UHD buffer for converison Buffer if we need it! .
+            if (uhd_mode_ == 2) {
+                conversion_buffer_.resize(static_cast<int>(format_desc_.size));
+            }
+
             // Set Video Engine
-            if (BLUE_FAIL(blue_->set_card_property32(VIDEO_INPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE)))
+            if (blue_->set_card_property32(VIDEO_INPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE))
                 CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");
 
             capture_thread_ = std::make_shared<std::thread>([this] { capture_thread_actual(); });
         }
     }
 
-    int configure_input_routing(const unsigned int bf_channel, bool dual_link)
+    int configure_input_routing(const unsigned int bf_channel, bool dual_link, int uhd_mode)
     {
         unsigned int routing_value   = 0;
         unsigned int routing_value_b = 0;
 
         /*This function would return the corresponding EBlueVideoChannel from the device output channel*/
         switch (bf_channel) {
-            case BLUE_VIDEO_INPUT_CHANNEL_A:
+            case BLUE_VIDEO_INPUT_CHANNEL_1:
                 if (dual_link) {
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_A, EPOCH_DEST_INPUT_MEM_INTERFACE_CHA, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        EPOCH_SRC_SDI_INPUT_1, EPOCH_DEST_INPUT_MEM_INTERFACE_CH1, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
                     routing_value_b = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_B, EPOCH_DEST_INPUT_MEM_INTERFACE_CHA, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
+                        EPOCH_SRC_SDI_INPUT_2, EPOCH_DEST_INPUT_MEM_INTERFACE_CH1, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
                 } else
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_A, EPOCH_DEST_INPUT_MEM_INTERFACE_CHA, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                        EPOCH_SRC_SDI_INPUT_1, EPOCH_DEST_INPUT_MEM_INTERFACE_CH1, BLUE_CONNECTOR_PROP_SINGLE_LINK);
                 break;
-            case BLUE_VIDEO_INPUT_CHANNEL_B:
+            case BLUE_VIDEO_INPUT_CHANNEL_2:
                 if (dual_link) {
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_B, EPOCH_DEST_INPUT_MEM_INTERFACE_CHB, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        EPOCH_SRC_SDI_INPUT_2, EPOCH_DEST_INPUT_MEM_INTERFACE_CH2, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
                     routing_value_b = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_C, EPOCH_DEST_INPUT_MEM_INTERFACE_CHB, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
+                        EPOCH_SRC_SDI_INPUT_3, EPOCH_DEST_INPUT_MEM_INTERFACE_CH2, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
                 } else
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_B, EPOCH_DEST_INPUT_MEM_INTERFACE_CHB, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                        EPOCH_SRC_SDI_INPUT_2, EPOCH_DEST_INPUT_MEM_INTERFACE_CH2, BLUE_CONNECTOR_PROP_SINGLE_LINK);
                 break;
-            case BLUE_VIDEO_INPUT_CHANNEL_C:
+            case BLUE_VIDEO_INPUT_CHANNEL_3:
                 if (dual_link) {
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_C, EPOCH_DEST_INPUT_MEM_INTERFACE_CHC, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        EPOCH_SRC_SDI_INPUT_3, EPOCH_DEST_INPUT_MEM_INTERFACE_CH3, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
                     routing_value_b = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_D, EPOCH_DEST_INPUT_MEM_INTERFACE_CHC, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
+                        EPOCH_SRC_SDI_INPUT_4, EPOCH_DEST_INPUT_MEM_INTERFACE_CH3, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
                 } else
                     routing_value = EPOCH_SET_ROUTING(
-                        EPOCH_SRC_SDI_INPUT_C, EPOCH_DEST_INPUT_MEM_INTERFACE_CHC, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                        EPOCH_SRC_SDI_INPUT_3, EPOCH_DEST_INPUT_MEM_INTERFACE_CH3, BLUE_CONNECTOR_PROP_SINGLE_LINK);
                 break;
-            case BLUE_VIDEO_INPUT_CHANNEL_D:
+            case BLUE_VIDEO_INPUT_CHANNEL_4:
                 routing_value = EPOCH_SET_ROUTING(
-                    EPOCH_SRC_SDI_INPUT_D, EPOCH_DEST_INPUT_MEM_INTERFACE_CHD, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                    EPOCH_SRC_SDI_INPUT_4, EPOCH_DEST_INPUT_MEM_INTERFACE_CH4, BLUE_CONNECTOR_PROP_SINGLE_LINK);
                 break;
             default:
                 routing_value = EPOCH_SET_ROUTING(
-                    EPOCH_SRC_SDI_INPUT_A, EPOCH_DEST_INPUT_MEM_INTERFACE_CHA, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                    EPOCH_SRC_SDI_INPUT_1, EPOCH_DEST_INPUT_MEM_INTERFACE_CH1, BLUE_CONNECTOR_PROP_SINGLE_LINK);
                 break;
         }
 
@@ -319,7 +344,39 @@ struct bluefish_producer
             blue_->set_card_property32(MR2_ROUTING, routing_value);
             return blue_->set_card_property32(MR2_ROUTING, routing_value_b);
         }
-        return blue_->set_card_property32(MR2_ROUTING, routing_value);
+
+        if (((uhd_mode == 1) || (uhd_mode == 2) || (uhd_mode == 3)) &&
+            ((bf_channel == BLUE_VIDEO_INPUT_CHANNEL_1) || (bf_channel == BLUE_VIDEO_INPUT_CHANNEL_5))) {
+            // Configure the input routing for the first 4 input channels
+            if (bf_channel == BLUE_VIDEO_INPUT_CHANNEL_1) {
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_1, EPOCH_DEST_INPUT_MEM_INTERFACE_CH1, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_2, EPOCH_DEST_INPUT_MEM_INTERFACE_CH2, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_3, EPOCH_DEST_INPUT_MEM_INTERFACE_CH3, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_4, EPOCH_DEST_INPUT_MEM_INTERFACE_CH4, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+            } else {
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_5, EPOCH_DEST_INPUT_MEM_INTERFACE_CH5, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_6, EPOCH_DEST_INPUT_MEM_INTERFACE_CH6, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_7, EPOCH_DEST_INPUT_MEM_INTERFACE_CH7, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+                routing_value = EPOCH_SET_ROUTING(
+                    EPOCH_SRC_SDI_INPUT_8, EPOCH_DEST_INPUT_MEM_INTERFACE_CH8, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+                return blue_->set_card_property32(MR2_ROUTING, routing_value);
+            }
+        } else
+            return blue_->set_card_property32(MR2_ROUTING, routing_value);
     }
 
     void schedule_capture()
@@ -332,7 +389,7 @@ struct bluefish_producer
         }
     }
 
-    void get_capture_time() { blue_->get_card_property64(BTC_TIMER, capture_ts); }
+    void get_capture_time() { blue_->get_card_property64(BTC_TIMER, &capture_ts); }
 
     HRESULT process_data()
     {
@@ -345,11 +402,11 @@ struct bluefish_producer
         unsigned int is_1001        = 0;
         unsigned int is_progressive = 0;
         unsigned int image_size     = 0;
-        blue_->get_frame_info_for_video_mode(mode_, width, height, rate, is_1001, is_progressive);
-        blue_->get_bytes_per_frame(static_cast<EVideoMode>(mode_),
+        blue_->get_frame_info_for_video_mode(mode_, &width, &height, &rate, &is_1001, &is_progressive);
+        blue_->get_bytes_per_frame(static_cast<EVideoModeExt>(mode_),
                                    static_cast<EMemoryFormat>(memory_format_on_card_),
                                    static_cast<EUpdateMethod>(sync_format_),
-                                   image_size);
+                                   &image_size);
         double fps = rate;
         if (is_1001 != 0u)
             fps = static_cast<double>(rate) * 1000 / 1001;
@@ -410,7 +467,7 @@ struct bluefish_producer
                     auto  hanc_buffer = reinterpret_cast<uint8_t*>(reserved_frames_.front()->hanc_data());
                     if (hanc_buffer) {
                         int card_type = CRD_INVALID;
-                        blue_->query_card_type(card_type, device_index_);
+                        blue_->query_card_type(&card_type, device_index_);
                         auto no_extracted_pcm_samples =
                             extract_pcm_data_from_hanc(*blue_,
                                                        &hanc_decode_struct_,
@@ -449,6 +506,12 @@ struct bluefish_producer
                     }
                 }
 
+                if (uhd_mode_ == 2 && conversion_buffer_.size() <= (width * height * 3)) {
+                    // Do additional processing required to handle a 2SI input
+                    memcpy(&conversion_buffer_[0], reserved_frames_.front()->image_data(), (width * height * 3));
+                    blue_->convert_2si_to_sq(width, height, &conversion_buffer_[0], reserved_frames_.front()->image_data());
+                }
+
                 // pass to caspar
                 auto frame = core::draw_frame(make_frame(this, *frame_factory_, src_video, src_audio));
                 if (!frame_buffer_.try_push(frame)) {
@@ -470,34 +533,38 @@ struct bluefish_producer
         return S_OK;
     }
 
-    void grab_frame_from_bluefishcard()
+    bool grab_frame_from_bluefishcard()
     {
         try {
             if (reserved_frames_.front()->image_data()) {
                 if (sync_format_ == UPD_FMT_FIELD && first_frame_) {
                     blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
                                               static_cast<unsigned long>(reserved_frames_.front()->image_size()),
-                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_FRAME),
+                                              BlueImage_HANC_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_FRAME),
                                               0);
                 } else if (sync_format_ == UPD_FMT_FRAME) {
                     blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
                                               static_cast<unsigned long>(reserved_frames_.front()->image_size()),
-                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_IMAGE),
+                                              BlueImage_HANC_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_IMAGE),
                                               0);
                 }
-            } else
+            } else {
                 CASPAR_LOG(warning) << print() << TEXT(" NO image data in reserved frames list.");
+                return false;
+            }
             if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_)) {
                 if (reserved_frames_.front()->hanc_data()) {
                     blue_->system_buffer_read(const_cast<uint8_t*>(reserved_frames_.front()->hanc_data()),
                                               static_cast<unsigned long>(reserved_frames_.front()->hanc_size()),
-                                              BlueImage_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_HANC),
+                                              BlueImage_HANC_DMABuffer(dma_ready_captured_frame_id_, BLUE_DATA_HANC),
                                               0);
+                    //    CASPAR_LOG(warning) << print() << TEXT(" Hanc DMA Buf ID: ") << dma_ready_captured_frame_id_;
                 }
             }
         } catch (...) {
             exception_ = std::current_exception();
         }
+        return true;
     }
 
     void capture_thread_actual()
@@ -505,18 +572,16 @@ struct bluefish_producer
         ULONG        current_field_count        = 0;
         ULONG        last_field_count           = 0;
         ULONG        start_field_count          = 0;
-        unsigned int invalid_video_mode_flag    = VID_FMT_INVALID;
-        unsigned int current_input_video_signal = VID_FMT_INVALID;
-        blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalid_video_mode_flag);
+        unsigned int current_input_video_signal = VID_FMT_EXT_INVALID;
 
         last_field_count  = current_field_count;
         start_field_count = current_field_count;
 
-        blue_->wait_video_input_sync(UPD_FMT_FRAME, current_field_count);
+        blue_->wait_video_input_sync(UPD_FMT_FRAME, &current_field_count);
         while (process_capture_) {
             // tell the card to capture another frame at the next interrupt
             schedule_capture();
-            blue_->wait_video_input_sync((EUpdateMethod)sync_format_, current_field_count);
+            blue_->wait_video_input_sync((EUpdateMethod)sync_format_, &current_field_count);
             get_capture_time();
 
             if (last_field_count + 3 < current_field_count)
@@ -525,14 +590,14 @@ struct bluefish_producer
                                     << last_field_count;
 
             last_field_count = current_field_count;
-            blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, current_input_video_signal);
-            if (current_input_video_signal < invalid_video_mode_flag &&
+            blue_->get_card_property32(VIDEO_MODE_EXT_INPUT, &current_input_video_signal);
+            if (current_input_video_signal != VID_FMT_EXT_INVALID &&
                 dma_ready_captured_frame_id_ != std::numeric_limits<ULONG>::max()) {
                 // DoneID is now what ScheduleID was at the last iteration when we called
                 // render_buffer_capture(ScheduleID) we just checked if the video signal for the buffer “DoneID” was
                 // valid while it was capturing so we can DMA the buffer DMA the frame from the card to our buffer
-                grab_frame_from_bluefishcard();
-                process_data();
+                if (grab_frame_from_bluefishcard())
+                    process_data();
                 processing_benchmark_timer_.restart();
             }
             if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && !first_frame_))
@@ -597,6 +662,7 @@ class bluefish_producer_proxy : public core::frame_producer
                                      const spl::shared_ptr<core::frame_factory>& frame_factory,
                                      int                                         device_index,
                                      int                                         stream_index,
+                                     int                                         uhd_mode,
                                      uint32_t                                    length)
         : length_(length)
         , executor_(L"bluefish_producer[" + std::to_wstring(device_index) + L"]")
@@ -604,7 +670,7 @@ class bluefish_producer_proxy : public core::frame_producer
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {
             core::diagnostics::call_context::for_thread() = ctx;
-            producer_.reset(new bluefish_producer(format_desc, device_index, stream_index, frame_factory));
+            producer_.reset(new bluefish_producer(format_desc, device_index, stream_index, uhd_mode, frame_factory));
         });
     }
 
@@ -642,11 +708,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (stream_index == -1)
         stream_index = 1;
 
+    auto uhd_mode = get_param(L"UHD-MODE", params, -1);
+    if (uhd_mode == -1)
+        uhd_mode = 0;
+
     auto length         = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
 
     auto producer = spl::make_shared<bluefish_producer_proxy>(
-        dependencies.format_desc, dependencies.frame_factory, device_index, stream_index, length);
+        dependencies.format_desc, dependencies.frame_factory, device_index, stream_index, uhd_mode, length);
 
     return create_destroy_proxy(producer);
 }
