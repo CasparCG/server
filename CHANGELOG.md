@@ -19,7 +19,6 @@ CasparCG 2.3.0
 * FFmpeg: RTMP stream playback
 * FFmpeg: SEEK and LENGTH parameters causing issues with AUTONEXT
 * FFmpeg: Ensure packets/frames after the decided end of the clip are not displayed
-* FFmpeg: Incorrect seek for audio when not 48khz
 * HTML: unlikely but possible exception when handling frames
 * HTML: set autoplay-policy
 * HTML: animations being ticked too much
@@ -29,6 +28,7 @@ CasparCG 2.3.0
 ##### Features
 * Audio: Fix audio crackling
 * Audio: Fix memory leak
+* Bluefish: Various improvmements including supporting more channels and UHD.
 * NDI: Native NDI consumer
 * Screen: Add side by side key output
 * Screen: Add support for Datavideo TC-100/TC-200
