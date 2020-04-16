@@ -28,10 +28,14 @@
 
 namespace caspar { namespace core {
 
-class route_cross_channel
+class route_control
 {
   public:
-    virtual ~route_cross_channel() {}
+    virtual ~route_control() {}
+
+    virtual int  get_source_channel() const    = 0;
+    virtual int  get_source_layer() const      = 0;
+
     virtual void set_cross_channel(bool cross) = 0;
 };
 

@@ -37,7 +37,7 @@
 
 namespace caspar { namespace core {
 
-class route_producer : public frame_producer, public route_cross_channel
+class route_producer : public frame_producer, public route_control
 {
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -50,6 +50,11 @@ class route_producer : public frame_producer, public route_cross_channel
     boost::signals2::scoped_connection connection_;
 
     core::draw_frame frame_;
+    int              source_channel_;
+    int              source_layer_;
+
+    int get_source_channel() const { return source_channel_; }
+    int get_source_layer() const { return source_layer_; }
 
     // set the buffer depth to 2 for cross-channel routes, 1 otherwise
     void set_cross_channel(bool cross) {
@@ -61,8 +66,10 @@ class route_producer : public frame_producer, public route_cross_channel
     }
 
   public:
-    route_producer(std::shared_ptr<route> route, int buffer)
+    route_producer(std::shared_ptr<route> route, int buffer, int source_channel, int source_layer)
         : route_(route)
+        , source_channel_(source_channel)
+        , source_layer_(source_layer)
         , connection_(route_->signal.connect([this](const core::draw_frame& frame) {
             auto frame2 = frame;
             if (!frame2) {
@@ -145,7 +152,7 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
 
     auto buffer = get_param(L"BUFFER", params, 0);
 
-    return spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer);
+    return spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer, channel, layer);
 }
 
 }} // namespace caspar::core
