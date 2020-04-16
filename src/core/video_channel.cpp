@@ -78,16 +78,24 @@ struct video_channel::impl final
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
-    std::function<void(int, core::draw_frame)> routesCb = [&](int layer, core::draw_frame frame) {
+    std::function<void(int, const layer_frame&)> routesCb = [&](int layer, const layer_frame& layer_frame) {
         std::lock_guard<std::mutex> lock(routes_mutex_);
         for (auto& r : routes_) {
-            auto route = r.second.lock();
-            if (!route)
-                continue;
+            // if this layer is the source for this route, push the frame to the route producers
+            if (layer == r.first.index) {
+                auto route = r.second.lock();
+                if (!route)
+                    continue;
 
-            // if this layer is a source for this route, push the frame to the route producer
-            if (layer == r.first.index)
-                route->signal(frame);
+                if (r.first.index == -1) {
+                    route->signal(layer_frame.foreground);
+                } else if (r.first.mode == route_mode::background ||
+                    (r.first.mode == route_mode::next && layer_frame.has_background)) {
+                    route->signal(draw_frame::pop(layer_frame.background));
+                } else {
+                    route->signal(draw_frame::pop(layer_frame.foreground));
+                }
+            }
         }
     };
 
@@ -157,13 +165,7 @@ struct video_channel::impl final
 
                     // Mix
                     caspar::timer mix_timer;
-
-                    std::vector<core::draw_frame> frames;
-                    for (auto& p : stage_frames) {
-                        frames.push_back(p.second.foreground);
-                    }
-
-                    auto mixed_frame = mixer_(frames, format_desc, nb_samples);
+                    auto mixed_frame = mixer_(stage_frames, format_desc, nb_samples);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Consume

@@ -86,13 +86,14 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
     }
 
-    std::map<int, layer_frame> operator()(const video_format_desc&                   format_desc,
-                                          int                                        nb_samples,
-                                          std::vector<int>&                          fetch_background,
-                                          std::function<void(int, core::draw_frame)> routesCb)
+    std::vector<draw_frame> operator()(const video_format_desc&                     format_desc,
+                                       int                                          nb_samples,
+                                       std::vector<int>&                            fetch_background,
+                                       std::function<void(int, const layer_frame&)> routesCb)
     {
         return executor_.invoke([=] {
             std::map<int, layer_frame> frames;
+            std::vector<draw_frame>    stage_frames;
 
             try {
                 for (auto& t : tweens_)
@@ -103,22 +104,14 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     auto producer = std::move(p.second.foreground());
                     if (0 == producer->name().compare(L"route")) {
-                        std::wstring         routeSrc(producer->print());
-                        boost::wsmatch       what;
-                        static boost::wregex expr(L"route\\[(?<CHANNEL>\\d+)(\\/(?<LAYER>\\d+))?\\]",
-                                                  boost::regex::icase);
-                        if (boost::regex_match(routeSrc, what, expr)) {
-                            auto srcChan  = std::stoi(what["CHANNEL"].str());
-                            auto srcLayer = what["LAYER"].matched ? std::stoi(what["LAYER"].str()) : -1;
+                        try {
+                            auto rc = spl::dynamic_pointer_cast<core::route_control>(producer);
+                            auto srcChan  = rc->get_source_channel();
+                            auto srcLayer = rc->get_source_layer();
                             routed_layers.emplace(p.first, std::make_pair(srcChan, srcLayer));
-
-                            // set route producer to have increased buffer size if route is cross-channel
-                            try {
-                                auto rcc = spl::dynamic_pointer_cast<core::route_cross_channel>(producer);
-                                rcc->set_cross_channel(channel_index_ != srcChan);
-                            } catch (std::bad_cast) {
-                                CASPAR_LOG(error) << "Failed to cast route producer";
-                            }
+                            rc->set_cross_channel(channel_index_ != srcChan);
+                        } catch (std::bad_cast) {
+                            CASPAR_LOG(error) << "Failed to cast route producer";
                         }
                     }
                 }
@@ -143,15 +136,17 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     frames[p->first] = res;
 
                     // push received foreground frame to any configured route producer
-                    routesCb(p->first, draw_frame::pop(res.foreground));
+                    routesCb(p->first, res);
                 }
 
-                // push frames to support any channel routes that have been set
-                std::vector<core::draw_frame> stage_frames;
                 for (auto& p : frames) {
                     stage_frames.push_back(p.second.foreground);
                 }
-                routesCb(-1, stage_frames);
+
+                // push stage_frames to support any channel routes that have been set
+                layer_frame chan_lf = {};
+                chan_lf.foreground  = draw_frame(stage_frames);
+                routesCb(-1, chan_lf);
 
                 monitor::state state;
                 for (auto& p : layers_) {
@@ -163,7 +158,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
 
-            return frames;
+            return stage_frames;
         });
     }
 
@@ -380,10 +375,10 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::map<int, layer_frame> stage::operator()(const video_format_desc&                   format_desc,
-                                             int                                        nb_samples,
-                                             std::vector<int>&                          fetch_background,
-                                             std::function<void(int, core::draw_frame)> routesCb)
+std::vector<draw_frame> stage::operator()(const video_format_desc&                     format_desc,
+                                          int                                          nb_samples,
+                                          std::vector<int>&                            fetch_background,
+                                          std::function<void(int, const layer_frame&)> routesCb)
 {
     return (*impl_)(format_desc, nb_samples, fetch_background, routesCb);
 }
