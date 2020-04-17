@@ -48,6 +48,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     const int               instance_no_;
     const std::wstring      name_;
     const bool              allow_fields_;
+    const NDIlib_FourCC_type_e video_format_;
 
     core::video_format_desc              format_desc_;
     int                                  channel_index_;
@@ -63,11 +64,12 @@ struct newtek_ndi_consumer : public core::frame_consumer
     std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
 
   public:
-    newtek_ndi_consumer(std::wstring name, bool allow_fields)
+    newtek_ndi_consumer(std::wstring name, bool allow_fields, NDIlib_FourCC_type_e video_format)
         : name_(!name.empty() ? name : default_ndi_name())
         , instance_no_(instances_++)
         , frame_no_(0)
         , allow_fields_(allow_fields)
+        , video_format_(video_format)
         , channel_index_(0)
     {
         ndi_lib_ = ndi::load_library();
@@ -99,15 +101,22 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_video_frame_.yres                 = format_desc.height;
         ndi_video_frame_.frame_rate_N         = format_desc.framerate.numerator();
         ndi_video_frame_.frame_rate_D         = format_desc.framerate.denominator();
-        ndi_video_frame_.FourCC               = NDIlib_FourCC_type_BGRA;
-        ndi_video_frame_.line_stride_in_bytes = format_desc.width * 4;
+        ndi_video_frame_.FourCC               = video_format_;
+        if (ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVA || ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVY) {
+            ndi_video_frame_.line_stride_in_bytes = format_desc.width * 2;
+        } else {
+            ndi_video_frame_.line_stride_in_bytes = format_desc.width * 4;
+        }
         ndi_video_frame_.frame_format_type    = NDIlib_frame_format_type_progressive;
 
         if (format_desc.field_count == 2 && allow_fields_) {
             ndi_video_frame_.yres /= 2;
             ndi_video_frame_.frame_rate_N /= 2;
             ndi_video_frame_.picture_aspect_ratio = format_desc.width * 1.0f / format_desc.height;
-            field_data_.reset(new uint8_t[ndi_video_frame_.line_stride_in_bytes * ndi_video_frame_.yres],
+        }
+
+        if ((format_desc.field_count == 2 && allow_fields_) || ndi_video_frame_.FourCC != NDIlib_FourCC_type_BGRA) {
+            field_data_.reset(new uint8_t[ndi_video_frame_.line_stride_in_bytes * ndi_video_frame_.yres + (ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVA ? ndi_video_frame_.xres * ndi_video_frame_.yres : 0)],
                               std::default_delete<uint8_t[]>());
             ndi_video_frame_.p_data = field_data_.get();
         }
@@ -132,17 +141,47 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
         ndi_audio_frame_.p_data     = const_cast<int*>(audio_data.data());
         ndi_lib_->NDIlib_util_send_send_audio_interleaved_32s(*ndi_send_instance_, &ndi_audio_frame_);
-        if (format_desc_.field_count == 2 && allow_fields_) {
-            ndi_video_frame_.frame_format_type =
-                (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
-            for (auto y = 0; y < ndi_video_frame_.yres; ++y) {
-                std::memcpy(reinterpret_cast<char*>(ndi_video_frame_.p_data) + y * format_desc_.width * 4,
-                            frame.image_data(0).data() + (y * 2 + frame_no_ % 2) * format_desc_.width * 4,
-                            format_desc_.width * 4);
+
+        if (ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVA || ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVY) {
+            for (int y = 0; y < ndi_video_frame_.yres; y++) {
+                uint8_t *p_uyvy = (uint8_t*)ndi_video_frame_.p_data + y * ndi_video_frame_.line_stride_in_bytes;
+                uint8_t *p_alpha = (uint8_t*)ndi_video_frame_.p_data + ndi_video_frame_.line_stride_in_bytes * ndi_video_frame_.yres + y * ndi_video_frame_.xres;
+                uint32_t offset = y;
+                if (format_desc_.field_count == 2 && allow_fields_) {
+                    offset = offset * 2 + frame_no_ % 2;
+                }
+                uint8_t *s = (uint8_t*)frame.image_data(0).data() + offset * 4 * ndi_video_frame_.xres;
+                for (int x = 0; x < ndi_video_frame_.xres/2; x++) {
+                    p_uyvy[x*4+0] = (uint8_t)(128 - 0.16874 * s[x*8+2] - 0.33126 * s[x*8+1] + 0.50000 * s[x*8+0]); //Cb0
+                    p_uyvy[x*4+1] = (uint8_t)(      0.299   * s[x*8+2] + 0.587   * s[x*8+1] + 0.114   * s[x*8+0]); //Y0
+                    p_uyvy[x*4+2] = (uint8_t)(128 + 0.50000 * s[x*8+2] - 0.41869 * s[x*8+1] - 0.08131 * s[x*8+0]); //Cr0
+                    p_uyvy[x*4+3] = (uint8_t)(      0.299   * s[x*8+6] + 0.587   * s[x*8+5] + 0.114   * s[x*8+4]); //Y1
+                    if (ndi_video_frame_.FourCC == NDIlib_FourCC_type_UYVA) {
+                        p_alpha[x*2] = s[x*8+3]; // A0
+                        p_alpha[x*2+1] = s[x*8+7]; //A1
+                    }
+                }
+            }
+            if (format_desc_.field_count == 2 && allow_fields_) {
+                ndi_video_frame_.frame_format_type =
+                    (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
             }
         } else {
-            ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
+            if (format_desc_.field_count == 2 && allow_fields_) {
+                ndi_video_frame_.frame_format_type =
+                    (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
+                for (auto y = 0; y < ndi_video_frame_.yres; ++y) {
+                    std::memcpy(reinterpret_cast<char*>(ndi_video_frame_.p_data) + y * format_desc_.width * 4,
+                                frame.image_data(0).data() + (y * 2 + frame_no_ % 2) * format_desc_.width * 4,
+                                format_desc_.width * 4);
+                }
+            } else {
+                ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
+            }
         }
+
+
+
         ndi_lib_->NDIlib_send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
         frame_no_++;
         graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -173,6 +212,20 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
 
+NDIlib_FourCC_type_e parse_video_format(std::wstring format)
+{
+    if (format.length() != 4) {
+        return NDIlib_FourCC_type_BGRA;
+    }
+    format = boost::to_upper_copy(format);
+    if (format == L"UYVA") {
+        return NDIlib_FourCC_type_UYVA;
+    } else if (format == L"UYVY") {
+        return NDIlib_FourCC_type_UYVY;
+    }
+    return NDIlib_FourCC_type_BGRA;
+};
+
 spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&                  params,
                                                           std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
@@ -180,7 +233,8 @@ spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std:
         return core::frame_consumer::empty();
     std::wstring name         = get_param(L"NAME", params, L"");
     bool         allow_fields = contains_param(L"ALLOW_FIELDS", params);
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    std::wstring video_format       = get_param(L"PIXEL_FORMAT", params, L"BGRA");
+    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields, parse_video_format(video_format));
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -189,7 +243,8 @@ create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    std::wstring video_format = ptree.get(L"pixel-format", L"BGRA");
+    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields, parse_video_format(video_format));
 }
 
 }} // namespace caspar::newtek
