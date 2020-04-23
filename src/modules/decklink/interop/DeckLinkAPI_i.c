@@ -27,7 +27,6 @@ extern "C"{
 
 
 #include <rpc.h>
-#include <rpcndr.h>
 
 #ifdef _MIDL_USE_GUIDDEF_
 

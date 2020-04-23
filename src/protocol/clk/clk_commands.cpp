@@ -21,7 +21,6 @@
 
 #include "../StdAfx.h"
 
-#include <future>
 #include <sstream>
 #include <stdexcept>
 
@@ -123,7 +122,7 @@ get_xml(const std::wstring& command_name, bool has_clock_id, bool has_time, cons
 
     if (has_parameters) {
         for (; it != end; ++it) {
-            stream << L"<parameter>" << (*it) << L"</parameter>";
+            stream << L"<parameter>" << *it << L"</parameter>";
         }
 
         stream << L"</command>";

@@ -25,8 +25,6 @@
 #include <string>
 #include <vector>
 
-#include <common/enum_class.h>
-
 #include <boost/rational.hpp>
 
 namespace caspar { namespace core {
@@ -72,7 +70,7 @@ enum class video_format
 
 struct video_format_desc final
 {
-    video_format format;
+    video_format format{video_format::invalid};
 
     int                  width;
     int                  height;
@@ -90,16 +88,16 @@ struct video_format_desc final
     int              audio_sample_rate;
     std::vector<int> audio_cadence; // rotating optimal number of samples per frame
 
-    video_format_desc(video_format            format,
-                      int                     field_count,
-                      int                     width,
-                      int                     height,
-                      int                     square_width,
-                      int                     square_height,
-                      int                     time_scale,
-                      int                     duration,
-                      const std::wstring&     name,
-                      const std::vector<int>& audio_cadence);
+    video_format_desc(video_format     format,
+                      int              field_count,
+                      int              width,
+                      int              height,
+                      int              square_width,
+                      int              square_height,
+                      int              time_scale,
+                      int              duration,
+                      std::wstring     name,
+                      std::vector<int> audio_cadence);
 
     video_format_desc(video_format format = video_format::invalid);
     video_format_desc(const std::wstring& name);

@@ -28,12 +28,7 @@
 #include "amcp_shared.h"
 
 #include <algorithm>
-#include <cctype>
-#include <future>
-#include <stdio.h>
-#include <string.h>
 
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
@@ -71,8 +66,8 @@ struct AMCPProtocolStrategy::impl
         commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"General Queue for " + name));
 
         for (int i = 0; i < repo_->channels().size(); ++i) {
-            commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(
-                L"Channel " + boost::lexical_cast<std::wstring>(i + 1) + L" for " + name));
+            commandQueues_.push_back(
+                spl::make_shared<AMCPCommandQueue>(L"Channel " + std::to_wstring(i + 1) + L" for " + name));
         }
     }
 
@@ -151,9 +146,9 @@ struct AMCPProtocolStrategy::impl
                     answer << L"500 FAILED\r\n";
                     break;
                 default:
-                    CASPAR_THROW_EXCEPTION(programming_error() << msg_info(
-                                               L"Unhandled error_state enum constant " +
-                                               boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
+                    CASPAR_THROW_EXCEPTION(programming_error()
+                                           << msg_info(L"Unhandled error_state enum constant " +
+                                                       std::to_wstring(static_cast<int>(result.error))));
             }
             client->send(answer.str());
         }
@@ -290,7 +285,7 @@ struct AMCPProtocolStrategy::impl
                         break;
                     default:
                         break;
-                };
+                }
                 getSpecialCode = false;
                 continue;
             }

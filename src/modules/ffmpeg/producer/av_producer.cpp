@@ -7,7 +7,6 @@
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
@@ -23,7 +22,6 @@
 #include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
-#include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
 
@@ -53,7 +51,6 @@ extern "C" {
 #include <algorithm>
 #include <atomic>
 #include <deque>
-#include <exception>
 #include <iomanip>
 #include <memory>
 #include <queue>
@@ -88,7 +85,7 @@ struct Decoder
 
     Decoder() = default;
 
-    Decoder(AVStream* stream)
+    explicit Decoder(AVStream* stream)
         : st(stream)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
@@ -108,7 +105,7 @@ struct Decoder
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"ffmpeg.producer.threads", 4), 0));
+        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"configuration.ffmpeg.producer.threads", 4), 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
@@ -169,7 +166,7 @@ struct Decoder
                 if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
                     const auto ticks =
                         av_stream_get_parser(st) ? av_stream_get_parser(st)->repeat_pict + 1 : ctx->ticks_per_frame;
-                    duration_pts = (static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks) /
+                    duration_pts = static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks /
                                    ctx->framerate.num / ctx->ticks_per_frame;
                     duration_pts = av_rescale_q(duration_pts, {1, AV_TIME_BASE}, st->time_base);
                 } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -212,7 +209,7 @@ struct Filter
                 filter_spec = "null";
             }
 
-            auto deint = u8(env::properties().get<std::wstring>(L"ffmpeg.producer.auto-deinterlace", L"interlaced"));
+            auto deint = u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.auto-deinterlace", L"interlaced"));
 
             if (deint != "none") {
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
@@ -226,7 +223,7 @@ struct Filter
                 filter_spec = "anull";
             }
 
-            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01,asetrate=r=%d,"
+            filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01:osr=%d,"
                                           "asetnsamples=n=1024:p=0") %
                             av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) %
                             format_desc.audio_sample_rate)
@@ -464,6 +461,8 @@ struct Filter
         }
 
         FF(avfilter_graph_config(graph.get(), nullptr));
+        
+        CASPAR_LOG(debug) << avfilter_graph_dump(graph.get(), nullptr);
     }
 
     bool operator()(int nb_samples = -1)
@@ -484,22 +483,22 @@ struct Filter
 
         if (ret == AVERROR(EAGAIN)) {
             return false;
-        } else if (ret == AVERROR_EOF) {
+        }
+        if (ret == AVERROR_EOF) {
             eof   = true;
             frame = nullptr;
             return true;
-        } else {
-            FF_RET(ret, "av_buffersink_get_frame");
-            frame = av_frame;
-            return true;
         }
+        FF_RET(ret, "av_buffersink_get_frame");
+        frame = std::move(av_frame);
+        return true;
     }
 };
 
 struct AVProducer::Impl
 {
-    core::monitor::state state_;
-    mutable boost::mutex state_mutex_;
+    caspar::core::monitor::state state_;
+    mutable boost::mutex         state_mutex_;
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -525,10 +524,9 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
-    int64_t          frame_count_ = 0;
-    bool             frame_flush_ = true;
-    bool             frame_eof_ = false;
-    int64_t          frame_time_ = AV_NOPTS_VALUE;
+    int64_t          frame_count_    = 0;
+    bool             frame_flush_    = true;
+    int64_t          frame_time_     = AV_NOPTS_VALUE;
     int64_t          frame_duration_ = AV_NOPTS_VALUE;
     core::draw_frame frame_;
 
@@ -555,14 +553,14 @@ struct AVProducer::Impl
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale})
-        , path_(path)
         , name_(name)
+        , path_(path)
         , input_(path, graph_)
         , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
-        , vfilter_(vfilter)
         , afilter_(afilter)
+        , vfilter_(vfilter)
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -597,23 +595,32 @@ struct AVProducer::Impl
         std::vector<int> audio_cadence = format_desc_.audio_cadence;
 
         input_.reset();
+        {
+            core::monitor::state streams;
+            for (auto n = 0UL; n < input_->nb_streams; ++n) {
+                auto st                             = input_->streams[n];
+                auto framerate                      = av_guess_frame_rate(nullptr, st, nullptr);
+                streams[std::to_string(n) + "/fps"] = {framerate.num, framerate.den};
+            }
 
-        for (auto n = 0UL; n < input_->nb_streams; ++n) {
-            auto st        = input_->streams[n];
-            auto framerate = av_guess_frame_rate(nullptr, st, nullptr);
-            state_["file/streams/" + boost::lexical_cast<std::string>(n) + "/fps"] = {framerate.num, framerate.den};
+            boost::lock_guard<boost::mutex> lock(state_mutex_);
+            state_["file/streams"] = streams;
         }
 
         if (input_duration_ == AV_NOPTS_VALUE) {
             input_duration_ = input_->duration;
         }
 
-        if (duration_ == AV_NOPTS_VALUE) {
-            duration_ = input_->duration;
-        }
-
         {
             const auto start = start_.load();
+            if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
+                if (start != AV_NOPTS_VALUE) {
+                    duration_ = input_->duration - start;
+                } else {
+                    duration_ = input_->duration;
+                }
+            }
+
             if (start != AV_NOPTS_VALUE) {
                 seek_internal(start);
             } else {
@@ -648,12 +655,14 @@ struct AVProducer::Impl
                 auto start    = start_.load();
                 auto duration = duration_.load();
 
-                start     = start != AV_NOPTS_VALUE ? start : 0;
-                auto end  = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
-                auto time = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+                start = start != AV_NOPTS_VALUE ? start : 0;
+                // duration is inclusive, end must be set one frame duration earlier
+                auto end      = duration != AV_NOPTS_VALUE ? start + duration - frame.duration : INT64_MAX;
+                auto next_pts = frame.pts != AV_NOPTS_VALUE ? frame.pts + frame.duration : 0;
+                // check whether the next frame will last beyond the end time
+                auto time = next_pts ? next_pts + frame.duration : 0;
 
-                buffer_eof_ = (video_filter_.eof && audio_filter_.eof) ||
-                              av_rescale_q(time, TIME_BASE_Q, format_tb_) >= av_rescale_q(end, TIME_BASE_Q, format_tb_);
+                buffer_eof_ = (video_filter_.eof && audio_filter_.eof) || time > end;
 
                 if (buffer_eof_) {
                     if (loop_ && frame_count_ > 2) {
@@ -744,9 +753,9 @@ struct AVProducer::Impl
     {
         graph_->set_text(u16(print()));
         boost::lock_guard<boost::mutex> lock(state_mutex_);
-        state_["file/clip"] = { start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps };
-        state_["file/time"] = { time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps };
-        state_["loop"] = loop_;
+        state_["file/clip"] = {start().value_or(0) / format_desc_.fps, duration().value_or(0) / format_desc_.fps};
+        state_["file/time"] = {time() / format_desc_.fps, file_duration().value_or(0) / format_desc_.fps};
+        state_["loop"]      = loop_;
     }
 
     core::draw_frame prev_frame()
@@ -757,11 +766,10 @@ struct AVProducer::Impl
             boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
             if (!buffer_.empty()) {
-                frame_ = buffer_[0].frame;
-                frame_time_ = buffer_[0].pts;
+                frame_          = buffer_[0].frame;
+                frame_time_     = buffer_[0].pts;
                 frame_duration_ = buffer_[0].duration;
-                frame_flush_ = false;
-                frame_eof_ = false;
+                frame_flush_    = false;
             }
         }
 
@@ -775,8 +783,18 @@ struct AVProducer::Impl
         boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
         if (buffer_.empty() || (frame_flush_ && buffer_.size() < 4)) {
-            if (buffer_eof_) {
-                frame_eof_ = true;
+            auto start    = start_.load();
+            auto duration = duration_.load();
+
+            start    = start != AV_NOPTS_VALUE ? start : 0;
+            auto end = duration != AV_NOPTS_VALUE ? start + duration : INT64_MAX;
+
+            if (buffer_eof_ && !frame_flush_) {
+                if (frame_time_ < end && frame_duration_ != AV_NOPTS_VALUE) {
+                    frame_time_ += frame_duration_;
+                } else if (frame_time_ < end) {
+                    frame_time_ = input_duration_;
+                }
                 return core::draw_frame::still(frame_);
             }
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
@@ -789,11 +807,10 @@ struct AVProducer::Impl
             latency_ = -1;
         }
 
-        frame_ = buffer_[0].frame;
-        frame_time_ = buffer_[0].pts;
+        frame_          = buffer_[0].frame;
+        frame_time_     = buffer_[0].pts;
         frame_duration_ = buffer_[0].duration;
-        frame_flush_ = false;
-        frame_eof_ = false;
+        frame_flush_    = false;
 
         buffer_.pop_front();
         buffer_cond_.notify_all();
@@ -824,13 +841,7 @@ struct AVProducer::Impl
             return 0;
         }
 
-        auto frame_time = frame_time_;
-
-        if (frame_eof_ && frame_duration_ != AV_NOPTS_VALUE) {
-            frame_time += frame_duration_;
-        }
-
-        return av_rescale_q(frame_time, TIME_BASE_Q, format_tb_);
+        return av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_);
     }
 
     void loop(bool loop)
@@ -878,13 +889,10 @@ struct AVProducer::Impl
     }
 
   private:
-
     bool want_packet()
     {
-        return std::any_of(decoders_.begin(), decoders_.end(), [](auto& p)
-        {
-            return p.second.input.size() < 2 && !p.second.eof;
-        });
+        return std::any_of(
+            decoders_.begin(), decoders_.end(), [](auto& p) { return p.second.input.size() < 2 && !p.second.eof; });
     }
 
     bool schedule()
@@ -996,9 +1004,10 @@ struct AVProducer::Impl
 
     std::string print() const
     {
+        const int position = std::max(static_cast<int>(time() - start().value_or(0)), 0);
         std::ostringstream str;
         str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
-            << av_q2d({static_cast<int>(time()) * format_tb_.num, format_tb_.den}) << "/"
+            << av_q2d({position * format_tb_.num, format_tb_.den}) << "/"
             << av_q2d({static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den}) << "]";
         return str.str();
     }

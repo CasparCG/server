@@ -24,8 +24,8 @@ extern "C" {
 namespace caspar { namespace ffmpeg {
 
 Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
-    : graph_(graph)
-    , filename_(filename)
+    : filename_(filename)
+    , graph_(graph)
 {
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -52,7 +52,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
-                        eof_ = true;
+                        eof_   = true;
                         packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
@@ -70,11 +70,12 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
 Input::~Input()
 {
-    graph_ = spl::shared_ptr<diagnostics::graph>();
+    graph_         = spl::shared_ptr<diagnostics::graph>();
     abort_request_ = true;
 
     std::shared_ptr<AVPacket> packet;
-    while (buffer_.try_pop(packet));
+    while (buffer_.try_pop(packet))
+        ;
 
     thread_.join();
 }
@@ -115,6 +116,8 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "http_multiple", "0", 0));   // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
+    } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
+        FF(av_dict_set(&options, "rtmp_live", "live", 0)); // HTTP referer header
     } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
         input_format = av_find_input_format(u8(url_parts.first).c_str());
         filename_    = u8(url_parts.second);
@@ -156,7 +159,8 @@ void Input::seek(int64_t ts, bool flush)
 
     if (flush) {
         std::shared_ptr<AVPacket> packet;
-        while (buffer_.try_pop(packet));
+        while (buffer_.try_pop(packet))
+            ;
     }
     eof_ = false;
 

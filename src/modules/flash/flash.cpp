@@ -29,16 +29,15 @@
 #include <common/env.h>
 #include <common/os/windows/windows.h>
 
-#include <core/frame/frame_factory.h>
 #include <core/producer/cg_proxy.h>
 #include <core/video_format.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <future>
 #include <string>
+#include <utility>
 
 namespace caspar { namespace flash {
 
@@ -50,18 +49,19 @@ std::wstring get_absolute(const std::wstring& base_folder, const std::wstring& f
     return (boost::filesystem::path(base_folder) / filename).wstring();
 }
 
-class flash_cg_proxy
-    : public core::cg_proxy
-    , boost::noncopyable
+class flash_cg_proxy : public core::cg_proxy
 {
     spl::shared_ptr<core::frame_producer> flash_producer_;
     std::wstring                          base_folder_;
+
+    flash_cg_proxy(const flash_cg_proxy&) = delete;
+    flash_cg_proxy& operator=(const flash_cg_proxy&) = delete;
 
   public:
     explicit flash_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer,
                             std::wstring                                 base_folder = env::template_folder())
         : flash_producer_(producer)
-        , base_folder_(base_folder)
+        , base_folder_(std::move(base_folder))
     {
     }
 
@@ -75,7 +75,7 @@ class flash_cg_proxy
     {
         auto filename = template_name;
 
-        if (filename.size() > 0 && filename[0] == L'/')
+        if (!filename.empty() && filename[0] == L'/')
             filename = filename.substr(1, filename.size() - 1);
 
         filename = (boost::filesystem::path(base_folder_) / filename).wstring();
@@ -127,7 +127,7 @@ class flash_cg_proxy
         flash_producer_->call(std::move(params));
     }
 
-    void stop(int layer, unsigned int) override
+    void stop(int layer) override
     {
         verify_flash_player();
 
@@ -232,7 +232,6 @@ void init(core::module_dependencies dependencies)
     dependencies.cg_registry->register_cg_producer(
         L"flash",
         {L".ft", L".ct"},
-        [](const std::wstring& filename) { return read_template_meta_info(filename); },
         [](const spl::shared_ptr<core::frame_producer>& producer) {
             return spl::make_shared<flash_cg_proxy>(producer);
         },
@@ -257,7 +256,7 @@ std::wstring version()
 
         dwType = REG_SZ;
         dwSize = sizeof(ver_str);
-        RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Version"), nullptr, &dwType, reinterpret_cast<PBYTE>(&ver_str), &dwSize);
 
         version = ver_str;
 

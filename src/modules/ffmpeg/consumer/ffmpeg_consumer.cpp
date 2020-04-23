@@ -38,7 +38,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
-#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
@@ -61,7 +60,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/timecode.h>
 #include <libswscale/swscale.h>
 }
 #ifdef _MSC_VER
@@ -358,11 +356,10 @@ struct Stream
         return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
     }
 
-    void send(core::const_frame                              in_frame,
+    void send(core::const_frame&                             in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
-        int                       ret;
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
 
@@ -403,7 +400,7 @@ struct Stream
                         // TODO
                     }
 
-                    frame = frame2;
+                    frame = std::move(frame2);
                 }
 
                 frame->pts = pts;
@@ -421,15 +418,16 @@ struct Stream
         }
 
         while (true) {
-            pkt = alloc_packet();
-            ret = avcodec_receive_packet(enc.get(), pkt.get());
+            pkt     = alloc_packet();
+            int ret = avcodec_receive_packet(enc.get(), pkt.get());
 
             if (ret == AVERROR(EAGAIN)) {
                 frame = alloc_frame();
                 ret   = av_buffersink_get_frame(sink, frame.get());
                 if (ret == AVERROR(EAGAIN)) {
                     return;
-                } else if (ret == AVERROR_EOF) {
+                }
+                if (ret == AVERROR_EOF) {
                     FF(avcodec_send_frame(enc.get(), nullptr));
                 } else {
                     FF_RET(ret, "av_buffersink_get_frame");
@@ -468,14 +466,14 @@ struct ffmpeg_consumer : public core::frame_consumer
 
   public:
     ffmpeg_consumer(std::string path, std::string args, bool realtime)
-        : path_(std::move(path))
-        , args_(std::move(args))
-        , channel_index_([&] {
+        : channel_index_([&] {
             boost::crc_16_type result;
             result.process_bytes(path.data(), path.length());
             return result.checksum();
         }())
         , realtime_(realtime)
+        , path_(std::move(path))
+        , args_(std::move(args))
     {
         state_["file/path"] = u8(path_);
 
@@ -652,7 +650,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     core::const_frame frame;
                     frame_buffer_.pop(frame);
                     graph_->set_value("input",
-                                      (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
+                                      static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
                     caspar::timer frame_timer;
                     tbb::parallel_invoke(
@@ -694,7 +692,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
-        graph_->set_value("input", (static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity()));
+        graph_->set_value("input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
         return make_ready_future(true);
     }
@@ -720,12 +718,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
 
-    auto                     path = u8(params.size() > 1 ? params.at(1) : L"");
+    auto                     path = u8(params.at(1));
     std::vector<std::string> args;
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));
     }
-    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, L" "), boost::iequals(params.at(0), L"STREAM"));
+    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"));
 }
 
 spl::shared_ptr<core::frame_consumer>

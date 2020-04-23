@@ -29,8 +29,6 @@
 #include <set>
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
 
 class cg_proxy
@@ -44,31 +42,29 @@ class cg_proxy
                              const std::wstring& template_name,
                              bool                play_on_load,
                              const std::wstring& start_from_label = L"",
-                             const std::wstring& data             = L"")            = 0;
-    virtual void         remove(int layer)                              = 0;
-    virtual void         play(int layer)                                = 0;
-    virtual void         stop(int layer, unsigned int mix_out_duration) = 0;
-    virtual void         next(int layer)                                = 0;
-    virtual void         update(int layer, const std::wstring& data)    = 0;
-    virtual std::wstring invoke(int layer, const std::wstring& label)   = 0;
+                             const std::wstring& data             = L"")          = 0;
+    virtual void         remove(int layer)                            = 0;
+    virtual void         play(int layer)                              = 0;
+    virtual void         stop(int layer)                              = 0;
+    virtual void         next(int layer)                              = 0;
+    virtual void         update(int layer, const std::wstring& data)  = 0;
+    virtual std::wstring invoke(int layer, const std::wstring& label) = 0;
 
     static const spl::shared_ptr<cg_proxy>& empty();
 };
 
-typedef std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)> cg_proxy_factory;
-typedef std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
-                                                      const std::wstring&                filename)>
-                                                                 cg_producer_factory;
-typedef std::function<std::string(const std::wstring& filename)> meta_info_extractor;
+using cg_proxy_factory = std::function<spl::shared_ptr<cg_proxy>(const spl::shared_ptr<frame_producer>& producer)>;
+using cg_producer_factory =
+    std::function<spl::shared_ptr<frame_producer>(const frame_producer_dependencies& dependencies,
+                                                  const std::wstring&                filename)>;
 
-class cg_producer_registry : boost::noncopyable
+class cg_producer_registry
 {
   public:
     cg_producer_registry();
 
     void register_cg_producer(std::wstring           cg_producer_name,
                               std::set<std::wstring> file_extensions,
-                              meta_info_extractor    info_extractor,
                               cg_proxy_factory       proxy_factory,
                               cg_producer_factory    producer_factory,
                               bool                   reusable_producer_instance);
@@ -83,13 +79,15 @@ class cg_producer_registry : boost::noncopyable
                                                   int                                   render_layer,
                                                   const std::wstring&                   filename) const;
 
-    std::string  read_meta_info(const std::wstring& filename) const;
     bool         is_cg_extension(const std::wstring& extension) const;
     std::wstring get_cg_producer_name(const std::wstring& filename) const;
 
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
+
+    cg_producer_registry(const cg_producer_registry&) = delete;
+    cg_producer_registry& operator=(const cg_producer_registry&) = delete;
 };
 
 void init_cg_proxy_as_producer(core::module_dependencies dependencies);

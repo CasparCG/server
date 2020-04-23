@@ -31,9 +31,6 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/timer.hpp>
 
 #include <future>
 #include <map>
@@ -167,17 +164,17 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
 
     auto  consumer           = frame_consumer::empty();
     auto& consumer_factories = impl_->consumer_factories;
-    std::any_of(consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
-        try {
-            consumer = factory(params, channels);
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-        }
-        return consumer != frame_consumer::empty();
-    });
-
-    if (consumer == frame_consumer::empty())
+    if (!std::any_of(
+            consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
+                try {
+                    consumer = factory(params, channels);
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+                return consumer != frame_consumer::empty();
+            })) {
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
+    }
 
     return spl::make_shared<destroy_consumer_proxy>(spl::make_shared<print_consumer_proxy>(std::move(consumer)));
 }

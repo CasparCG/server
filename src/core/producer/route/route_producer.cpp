@@ -22,7 +22,6 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/param.h>
-#include <common/scope_exit.h>
 #include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
@@ -56,7 +55,12 @@ class route_producer : public frame_producer
     route_producer(std::shared_ptr<route> route, int buffer)
         : route_(route)
         , connection_(route_->signal.connect([this](const core::draw_frame& frame) {
-            if (!buffer_.try_push(frame)) {
+            auto frame2 = frame;
+            if (!frame2) {
+                // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
+                frame2 = core::draw_frame::push(frame2);
+            }
+            if (!buffer_.try_push(frame2)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
             graph_->set_value("produce-time", produce_timer_.elapsed() * route_->format_desc.fps * 0.5);
@@ -112,20 +116,27 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
         return core::frame_producer::empty();
     }
 
-    auto channel = boost::lexical_cast<int>(what["CHANNEL"].str());
-    auto layer   = what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : -1;
+    auto channel = std::stoi(what["CHANNEL"].str());
+    auto layer   = what["LAYER"].matched ? std::stoi(what["LAYER"].str()) : -1;
+
+    auto mode = core::route_mode::foreground;
+    if (layer >= 0) {
+        if (contains_param(L"BACKGROUND", params))
+            mode = core::route_mode::background;
+        else if (contains_param(L"NEXT", params))
+            mode = core::route_mode::next;
+    }
 
     auto channel_it = boost::find_if(dependencies.channels,
                                      [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel; });
 
     if (channel_it == dependencies.channels.end()) {
-        CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel)));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + std::to_wstring(channel)));
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);
 
-    return spl::make_shared<route_producer>((*channel_it)->route(layer), buffer);
+    return spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer);
 }
 
 }} // namespace caspar::core

@@ -2,8 +2,6 @@
 
 #include <common/diagnostics/graph.h>
 
-#include <boost/optional.hpp>
-
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>

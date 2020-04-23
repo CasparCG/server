@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright 2013 Sveriges Television AB http://casparcg.com/
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -16,17 +16,22 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Julian Waller, git@julusian.co.uk
+ * Author: Krzysztof Zegzula, zegzulakrzysztof@gmail.com
  */
-
 #pragma once
 
-#include <common/memory.h>
+#include "../interop/Processing.NDI.Lib.h"
+#include "protocol/amcp/AMCPCommand.h"
+#include <string>
 
-#include <accelerator/ogl/util/shader.h>
+namespace caspar { namespace newtek { namespace ndi {
 
-namespace caspar { namespace screen {
+const std::wstring&                    dll_name();
+NDIlib_v3*                             load_library();
+std::map<std::string, NDIlib_source_t> get_current_sources();
+void                                   not_initialized();
+void                                   not_installed();
 
-std::unique_ptr<accelerator::ogl::shader> get_shader();
+std::wstring list_command(protocol::amcp::command_context& ctx);
 
-}} // namespace caspar::screen
+}}} // namespace caspar::newtek::ndi

@@ -29,30 +29,18 @@
 #include "image/image_mixer.h"
 
 #include <common/diagnostics/graph.h>
-#include <common/env.h>
-#include <common/except.h>
-#include <common/executor.h>
-#include <common/future.h>
-#include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
-#include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/lexical_cast.hpp>
-
-#include <tbb/concurrent_queue.h>
-
-#include <atomic>
-#include <mutex>
 #include <unordered_map>
 #include <vector>
 
 namespace caspar { namespace core {
 
-struct mixer::impl : boost::noncopyable
+struct mixer::impl
 {
     monitor::state                       state_;
     int                                  channel_index_;
@@ -61,7 +49,9 @@ struct mixer::impl : boost::noncopyable
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
 
-  public:
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
+
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
         : channel_index_(channel_index)
         , graph_(std::move(graph))
@@ -69,12 +59,12 @@ struct mixer::impl : boost::noncopyable
     {
     }
 
-    const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
+    const_frame operator()(std::vector<draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
     {
         for (auto& frame : frames) {
-            frame.second.accept(audio_mixer_);
-            frame.second.transform().image_transform.layer_depth = 1;
-            frame.second.accept(*image_mixer_);
+            frame.accept(audio_mixer_);
+            frame.transform().image_transform.layer_depth = 1;
+            frame.accept(*image_mixer_);
         }
 
         auto image = (*image_mixer_)(format_desc);
@@ -112,7 +102,7 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 }
 void        mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float       mixer::get_master_volume() { return impl_->get_master_volume(); }
-const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
+const_frame mixer::operator()(std::vector<draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
 {
     return (*impl_)(std::move(frames), format_desc, nb_samples);
 }

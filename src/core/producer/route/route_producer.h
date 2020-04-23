@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "../../video_format.h"
-
 #include <core/producer/frame_producer.h>
 
 #include <string>

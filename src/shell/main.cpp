@@ -41,15 +41,11 @@
 
 #include <common/env.h>
 #include <common/except.h>
-#include <common/gl/gl_check.h>
 #include <common/log.h>
 
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -57,7 +53,6 @@
 
 #include <atomic>
 #include <future>
-#include <set>
 
 #include <clocale>
 #include <csignal>
@@ -141,16 +136,19 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
             wcmd = u16(cmd1);
 #endif
 
-            if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
-                boost::iequals(wcmd, L"BYE")) {
-                CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-                should_wait_for_keypress = true;
-                shutdown(false); // false to not restart
-                break;
-            }
+            // If the cmd is empty, no point trying to parse it
+            if (!wcmd.empty()) {
+                if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
+                    boost::iequals(wcmd, L"BYE")) {
+                    CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
+                    should_wait_for_keypress = true;
+                    shutdown(false); // false to not restart
+                    break;
+                }
 
-            wcmd += L"\r\n";
-            amcp->parse(wcmd);
+                wcmd += L"\r\n";
+                amcp->parse(wcmd);
+            }
         }
     })
         .detach();

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export IMAGE_BASE=casparcg/base:1.3.1
+export IMAGE_CEF=casparcg/cef:3.3578.1870-1
+export IMAGE_BOOST=casparcg/boost:1.66-4
+export IMAGE_FFMPEG=casparcg/ffmpeg:4.2.2

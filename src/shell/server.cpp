@@ -18,8 +18,9 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-#include "server.h"
 #include "included_modules.h"
+
+#include "server.h"
 
 #include <accelerator/accelerator.h>
 
@@ -33,11 +34,9 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/mixer/mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/stage.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 
@@ -54,12 +53,12 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
 #include <future>
 #include <thread>
+#include <utility>
 
 namespace caspar {
 
@@ -96,7 +95,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
     });
 }
 
-struct server::impl : boost::noncopyable
+struct server::impl
 {
     std::shared_ptr<boost::asio::io_service>           io_service_ = create_running_io_service();
     accelerator::accelerator                           accelerator_;
@@ -111,15 +110,22 @@ struct server::impl : boost::noncopyable
     spl::shared_ptr<core::frame_consumer_registry>     consumer_registry_;
     std::function<void(bool)>                          shutdown_server_now_;
 
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
+
     explicit impl(std::function<void(bool)> shutdown_server_now)
-        : accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
+        : accelerator_()
         , producer_registry_(spl::make_shared<core::frame_producer_registry>())
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
-        , shutdown_server_now_(shutdown_server_now)
+        , shutdown_server_now_(std::move(shutdown_server_now))
     {
         caspar::core::diagnostics::osd::register_sink();
 
-        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_);
+        auto ogl_device    = accelerator_.get_device();
+        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+            cg_registry_, producer_registry_, consumer_registry_, ogl_device, shutdown_server_now_);
+
+        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_);
 
         initialize_modules(dependencies);
         core::init_cg_proxy_as_producer(dependencies);
@@ -250,8 +256,7 @@ struct server::impl : boost::noncopyable
 
     void setup_controllers(const boost::property_tree::wptree& pt)
     {
-        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
-            channels_, cg_registry_, producer_registry_, consumer_registry_, shutdown_server_now_);
+        amcp_command_repo_->init(channels_);
         amcp::register_commands(*amcp_command_repo_);
 
         using boost::property_tree::wptree;
@@ -261,14 +266,22 @@ struct server::impl : boost::noncopyable
 
             if (name == L"tcp") {
                 auto port              = ptree_get<unsigned int>(xml_controller.second, L"port");
-                auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                    io_service_,
-                    create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
-                    static_cast<short>(port));
-                async_servers_.push_back(asyncbootstrapper);
 
-                if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
-                    primary_amcp_server_ = asyncbootstrapper;
+                try {
+                    auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+                        io_service_,
+                        create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
+                        static_cast<short>(port));
+                    async_servers_.push_back(asyncbootstrapper);
+
+                    if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
+                        primary_amcp_server_ = asyncbootstrapper;
+                } catch (...) {
+                    CASPAR_LOG(fatal) << L"Failed to setup " << protocol << L" controller on port "
+                                      << boost::lexical_cast<std::wstring>(port) << L". It is likely already in use";
+                    throw;
+                    //CASPAR_LOG_CURRENT_EXCEPTION();
+                }
             } else
                 CASPAR_LOG(warning) << "Invalid controller: " << name;
         }
@@ -283,10 +296,10 @@ struct server::impl : boost::noncopyable
             return wrap_legacy_protocol("\r\n",
                                         spl::make_shared<amcp::AMCPProtocolStrategy>(
                                             port_description, spl::make_shared_ptr(amcp_command_repo_)));
-        else if (boost::iequals(name, L"CII"))
+        if (boost::iequals(name, L"CII"))
             return wrap_legacy_protocol(
                 "\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
-        else if (boost::iequals(name, L"CLOCK"))
+        if (boost::iequals(name, L"CLOCK"))
             return spl::make_shared<to_unicode_adapter_factory>(
                 "ISO-8859-1",
                 spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
@@ -296,7 +309,7 @@ struct server::impl : boost::noncopyable
 };
 
 server::server(std::function<void(bool)> shutdown_server_now)
-    : impl_(new impl(shutdown_server_now))
+    : impl_(new impl(std::move(shutdown_server_now)))
 {
 }
 void                                                     server::start() { impl_->start(); }

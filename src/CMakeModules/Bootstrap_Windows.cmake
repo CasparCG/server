@@ -85,9 +85,9 @@ add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
 add_definitions( -DBOOST_COROUTINES_NO_DEPRECATION_WARNING )
 
 # FFMPEG
-set(FFMPEG_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/include")
-set(FFMPEG_BIN_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/bin/x64")
-link_directories("${NUGET_PACKAGES_FOLDER}/FFmpeg.Nightly.20180711.0.0/build/native/lib/x64")
+set(FFMPEG_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.4.2.2/build/native/include")
+set(FFMPEG_BIN_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.4.2.2/build/native/bin/x64")
+link_directories("${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.4.2.2/build/native/lib/x64")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-58.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-58.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-7.dll")
@@ -154,10 +154,10 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 
 # CEF
 if (ENABLE_HTML)
-	set(CEF_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF")
-	set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
-	set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3239.1723/CEF")
-	link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3239.1723/CEF/x64")
+	set(CEF_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3578.1870/CEF")
+	set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3578.1870/CEF")
+	set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/cef.redist.x64.3.3578.1870/CEF")
+	link_directories("${NUGET_PACKAGES_FOLDER}/cef.sdk.3.3578.1870/CEF/x64")
 
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/swiftshader")
@@ -169,6 +169,7 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/natives_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_47.dll")
@@ -193,6 +194,7 @@ endif ()
 
 include(CMakeModules/PrecompiledHeader.cmake)
 
+add_subdirectory(tools)
 add_subdirectory(accelerator)
 add_subdirectory(common)
 add_subdirectory(core)

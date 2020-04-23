@@ -24,9 +24,7 @@
 #include "CLKProtocolStrategy.h"
 #include "clk_commands.h"
 
-#include <algorithm>
 #include <boost/algorithm/string/case_conv.hpp>
-#include <locale>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -57,7 +55,7 @@ class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
     {
     }
 
-    void parse(const std::basic_string<wchar_t>& data)
+    void parse(const std::basic_string<wchar_t>& data) override
     {
         for (int index = 0; index < data.length(); ++index) {
             wchar_t currentByte = data[index];

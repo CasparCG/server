@@ -2,13 +2,11 @@
 
 #include <common/memory.h>
 
-#include <boost/noncopyable.hpp>
-
 #include "protocol_strategy.h"
 
 namespace caspar { namespace IO {
 
-class lock_container : public boost::noncopyable
+class lock_container
 {
   public:
     lock_container(const std::wstring& lifecycle_key);
@@ -22,5 +20,8 @@ class lock_container : public boost::noncopyable
   private:
     struct impl;
     spl::unique_ptr<impl> impl_;
+
+    lock_container(const lock_container&) = delete;
+    lock_container& operator=(const lock_container&) = delete;
 };
 }} // namespace caspar::IO

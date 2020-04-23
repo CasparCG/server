@@ -26,8 +26,8 @@
 
 #include <common/array.h>
 #include <common/assert.h>
+#include <common/env.h>
 #include <common/except.h>
-#include <common/future.h>
 #include <common/gl/gl_check.h>
 #include <common/os/thread.h>
 
@@ -35,9 +35,15 @@
 
 #include <SFML/Window/Context.hpp>
 
+#ifdef WIN32
+#include "../../d3d/d3d_device.h"
+#include <GL/wglew.h>
+#endif
+
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -52,15 +58,15 @@ using namespace boost::asio;
 
 struct device::impl : public std::enable_shared_from_this<impl>
 {
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<texture>> texture_queue_t;
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>  buffer_queue_t;
+    using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
+    using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     sf::Context device_;
 
     std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>  host_pools_;
 
-    typedef tbb::concurrent_bounded_queue<std::shared_ptr<buffer>> sync_queue_t;
+    using sync_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     sync_queue_t sync_queue_;
 
@@ -68,13 +74,18 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version_;
 
+#ifdef WIN32
+    std::shared_ptr<d3d::d3d_device> d3d_device_;
+    std::shared_ptr<void>            interop_handle_;
+#endif
+
     io_context                          service_;
     decltype(make_work_guard(service_)) work_;
     std::thread                         thread_;
 
     impl()
-        : work_(make_work_guard(service_))
-        , device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -83,6 +94,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         if (glewInit() != GLEW_OK) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
         }
+
+#ifdef WIN32
+        if (wglewInit() != GLEW_OK) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+        }
+#endif
 
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
                    u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
@@ -100,6 +117,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
         device_.setActive(false);
+
+#ifdef WIN32
+        if (env::properties().get(L"configuration.html.enable-gpu", false)) {
+            d3d_device_ = d3d::d3d_device::get_device();
+        }
+        if (d3d_device_) {
+            interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
+                if (p)
+                    wglDXCloseDeviceNV(p);
+            });
+
+            if (!interop_handle_)
+                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
+        }
+#endif
 
         thread_ = std::thread([&] {
             device_.setActive(true);
@@ -130,8 +162,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template <typename Func>
     auto spawn_async(Func&& func)
     {
-        typedef decltype(func(std::declval<yield_context>()))  result_type;
-        typedef std::packaged_task<result_type(yield_context)> task_type;
+        using result_type = decltype(func(std::declval<yield_context>()));
+        using task_type   = std::packaged_task<result_type(yield_context)>;
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
@@ -142,8 +174,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     template <typename Func>
     auto dispatch_async(Func&& func)
     {
-        typedef decltype(func())                  result_type;
-        typedef std::packaged_task<result_type()> task_type;
+        using result_type = decltype(func());
+        using task_type   = std::packaged_task<result_type()>;
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
@@ -165,7 +197,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
-        auto pool = &device_pools_[stride - 1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+        auto pool = &device_pools_[stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
@@ -213,7 +245,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         return dispatch_async([=] {
             std::shared_ptr<buffer> buf;
 
-            auto tmp = source.template storage<std::shared_ptr<buffer>>();
+            auto tmp = source.storage<std::shared_ptr<buffer>>();
             if (tmp) {
                 buf = *tmp;
             } else {
@@ -268,6 +300,140 @@ struct device::impl : public std::enable_shared_from_this<impl>
             return array<const uint8_t>(ptr, size, std::move(buf));
         });
     }
+
+#ifdef WIN32
+    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride)
+    {
+        return spawn_async([=](yield_context yield) {
+            auto tex = create_texture(width, height, stride, false);
+
+            tex->copy_from(source);
+
+            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+            GL(glFlush());
+
+            deadline_timer timer(service_);
+            for (auto n = 0; true; ++n) {
+                // TODO (perf) Smarter non-polling solution?
+                timer.expires_from_now(boost::posix_time::milliseconds(2));
+                timer.async_wait(yield);
+
+                auto wait = glClientWaitSync(fence, 0, 1);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    break;
+                }
+            }
+
+            glDeleteSync(fence);
+
+            return tex;
+        });
+    }
+#endif
+
+    boost::property_tree::wptree info() const
+    {
+        boost::property_tree::wptree info;
+
+        boost::property_tree::wptree pooled_device_buffers;
+        size_t                       total_pooled_device_buffer_size  = 0;
+        size_t                       total_pooled_device_buffer_count = 0;
+
+        for (size_t i = 0; i < device_pools_.size(); ++i) {
+            auto& pools      = device_pools_.at(i);
+            bool  mipmapping = i > 3;
+            auto  stride     = mipmapping ? i - 3 : i + 1;
+
+            for (auto& pool : pools) {
+                auto width  = pool.first >> 16;
+                auto height = pool.first & 0x0000FFFF;
+                auto size   = width * height * stride;
+                auto count  = pool.second.size();
+
+                if (count == 0)
+                    continue;
+
+                boost::property_tree::wptree pool_info;
+
+                pool_info.add(L"stride", stride);
+                pool_info.add(L"mipmapping", mipmapping);
+                pool_info.add(L"width", width);
+                pool_info.add(L"height", height);
+                pool_info.add(L"size", size);
+                pool_info.add(L"count", count);
+
+                total_pooled_device_buffer_size += size * count;
+                total_pooled_device_buffer_count += count;
+
+                pooled_device_buffers.add_child(L"device_buffer_pool", pool_info);
+            }
+        }
+
+        info.add_child(L"gl.details.pooled_device_buffers", pooled_device_buffers);
+
+        boost::property_tree::wptree pooled_host_buffers;
+        size_t                       total_read_size   = 0;
+        size_t                       total_write_size  = 0;
+        size_t                       total_read_count  = 0;
+        size_t                       total_write_count = 0;
+
+        for (size_t i = 0; i < host_pools_.size(); ++i) {
+            auto& pools    = host_pools_.at(i);
+            auto  is_write = i == 1;
+
+            for (auto& pool : pools) {
+                auto size  = pool.first;
+                auto count = pool.second.size();
+
+                if (count == 0)
+                    continue;
+
+                boost::property_tree::wptree pool_info;
+
+                pool_info.add(L"usage", is_write ? L"write_only" : L"read_only");
+                pool_info.add(L"size", size);
+                pool_info.add(L"count", count);
+
+                pooled_host_buffers.add_child(L"host_buffer_pool", pool_info);
+
+                (is_write ? total_write_count : total_read_count) += count;
+                (is_write ? total_write_size : total_read_size) += size * count;
+            }
+        }
+
+        info.add_child(L"gl.details.pooled_host_buffers", pooled_host_buffers);
+        info.add(L"gl.summary.pooled_device_buffers.total_count", total_pooled_device_buffer_count);
+        info.add(L"gl.summary.pooled_device_buffers.total_size", total_pooled_device_buffer_size);
+        // info.add_child(L"gl.summary.all_device_buffers", texture::info());
+        info.add(L"gl.summary.pooled_host_buffers.total_read_count", total_read_count);
+        info.add(L"gl.summary.pooled_host_buffers.total_write_count", total_write_count);
+        info.add(L"gl.summary.pooled_host_buffers.total_read_size", total_read_size);
+        info.add(L"gl.summary.pooled_host_buffers.total_write_size", total_write_size);
+        info.add_child(L"gl.summary.all_host_buffers", buffer::info());
+
+        return info;
+    }
+
+    std::future<void> gc()
+    {
+        return spawn_async([=](yield_context yield) {
+            CASPAR_LOG(info) << " ogl: Running GC.";
+
+            try {
+                for (auto& pools : device_pools_) {
+                    for (auto& pool : pools)
+                        pool.second.clear();
+                }
+                for (auto& pools : host_pools_) {
+                    for (auto& pool : pools)
+                        pool.second.clear();
+                }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+        });
+    }
 };
 
 device::device()
@@ -289,6 +455,15 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
+#ifdef WIN32
+std::shared_ptr<void>                 device::d3d_interop() const { return impl_->interop_handle_; }
+std::future<std::shared_ptr<texture>> device::copy_async(GLuint source, int width, int height, int stride)
+{
+    return impl_->copy_async(source, width, height, stride);
+}
+#endif
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
+boost::property_tree::wptree device::info() const { return impl_->info(); }
+std::future<void>            device::gc() { return impl_->gc(); }
 }}} // namespace caspar::accelerator::ogl

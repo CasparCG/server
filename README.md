@@ -47,7 +47,7 @@ Getting Started
 
 4.
    1. Windows: start `casparcg_auto_restart.bat`, or `casparcg.exe` and `scanner.exe` separately.
-   1. Linux: start the `run.sh` program.
+   1. Linux: start the `run.sh` program or use tools/linux/start_docker.sh to run within docker (documentation is at the top of the file).
 
 5. Connect to the Server from a client software, such as the "CasparCG Client"
    which is available as a separate download.

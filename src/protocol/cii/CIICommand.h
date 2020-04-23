@@ -34,6 +34,6 @@ class ICIICommand
 
     virtual void Execute() = 0;
 };
-typedef std::shared_ptr<ICIICommand> CIICommandPtr;
+using CIICommandPtr = std::shared_ptr<ICIICommand>;
 
 }}} // namespace caspar::protocol::cii

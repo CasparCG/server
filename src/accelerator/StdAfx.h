@@ -1,5 +1,3 @@
-#pragma once
-
 #include <GL/glew.h>
 #include <SFML/Window/Context.hpp>
 #include <algorithm>
@@ -11,8 +9,6 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/spawn.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>

@@ -21,14 +21,21 @@
 
 #pragma once
 
+#include <accelerator/accelerator.h>
 #include <common/array.h>
 
 #include <functional>
 #include <future>
 
+#ifdef WIN32
+#include <GL/glew.h>
+#endif
+
 namespace caspar { namespace accelerator { namespace ogl {
 
-class device final : public std::enable_shared_from_this<device>
+class device final
+    : public std::enable_shared_from_this<device>
+    , public accelerator_device
 {
   public:
     device();
@@ -44,12 +51,15 @@ class device final : public std::enable_shared_from_this<device>
     std::future<std::shared_ptr<class texture>>
                                       copy_async(const array<const uint8_t>& source, int width, int height, int stride);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
-
+#ifdef WIN32
+    std::shared_ptr<void>                 d3d_interop() const;
+    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride);
+#endif
     template <typename Func>
     auto dispatch_async(Func&& func)
     {
-        typedef decltype(func())                  result_type;
-        typedef std::packaged_task<result_type()> task_type;
+        using result_type = decltype(func());
+        using task_type   = std::packaged_task<result_type()>;
 
         auto task   = std::make_shared<task_type>(std::forward<Func>(func));
         auto future = task->get_future();
@@ -64,6 +74,9 @@ class device final : public std::enable_shared_from_this<device>
     }
 
     std::wstring version() const;
+
+    boost::property_tree::wptree info() const;
+    std::future<void>            gc();
 
   private:
     void dispatch(std::function<void()> func);

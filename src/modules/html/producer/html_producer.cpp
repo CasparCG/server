@@ -26,6 +26,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/frame_transform.h>
 #include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
@@ -46,7 +47,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
-#include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
@@ -57,12 +57,18 @@
 #include <include/cef_app.h>
 #include <include/cef_client.h>
 #include <include/cef_render_handler.h>
-#include <include/cef_task.h>
 #pragma warning(pop)
 
 #include <queue>
+#include <utility>
 
 #include "../html.h"
+
+#ifdef WIN32
+#include <accelerator/d3d/d3d_device.h>
+#include <accelerator/d3d/d3d_device_context.h>
+#include <accelerator/d3d/d3d_texture2d.h>
+#endif
 
 #pragma comment(lib, "libcef.lib")
 #pragma comment(lib, "libcef_dll_wrapper.lib")
@@ -84,6 +90,7 @@ class html_client
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
+    bool                                 shared_texture_enable_;
     tbb::concurrent_queue<std::wstring>  javascript_before_load_;
     std::atomic<bool>                    loaded_;
     std::queue<core::draw_frame>         frames_;
@@ -94,23 +101,34 @@ class html_client
 
     CefRefPtr<CefBrowser> browser_;
 
+#ifdef WIN32
+    std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
+    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
+#endif
+
     executor executor_;
 
   public:
-    html_client(spl::shared_ptr<core::frame_factory> frame_factory,
-                spl::shared_ptr<diagnostics::graph>  graph,
-                const core::video_format_desc&       format_desc,
-                const std::wstring&                  url)
-        : url_(url)
+    html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
+                const spl::shared_ptr<diagnostics::graph>& graph,
+                core::video_format_desc                    format_desc,
+                bool                                       shared_texture_enable,
+                std::wstring                               url)
+        : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
-        , format_desc_(format_desc)
+        , format_desc_(std::move(format_desc))
+        , shared_texture_enable_(shared_texture_enable)
+#ifdef WIN32
+        , d3d_device_(accelerator::d3d::d3d_device::get_device())
+#endif
         , executor_(L"html_producer")
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.1f, 0.1f));
+        graph_->set_color("overload", diagnostics::color(0.6f, 0.6f, 0.3f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
@@ -176,18 +194,17 @@ class html_client
 
     CefRefPtr<CefBrowserHost> get_browser_host() const
     {
-        if (browser_)
+        if (browser_ != nullptr)
             return browser_->GetHost();
         return nullptr;
     }
 
   private:
-    bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
+    void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
-        return true;
     }
 
     void OnPaint(CefRefPtr<CefBrowser> browser,
@@ -195,8 +212,11 @@ class html_client
                  const RectList&       dirtyRects,
                  const void*           buffer,
                  int                   width,
-                 int                   height)
+                 int                   height) override
     {
+        if (shared_texture_enable_)
+            return;
+
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
         paint_timer_.restart();
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
@@ -210,7 +230,7 @@ class html_client
 
         auto frame = frame_factory_->create_frame(this, pixel_desc);
         auto src   = (char*)buffer;
-        auto dst   = (char*)frame.image_data(0).begin();
+        auto dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
         std::memcpy(dst, src, width * height * 4);
 
         {
@@ -224,11 +244,67 @@ class html_client
         }
     }
 
+#ifdef WIN32
+    void OnAcceleratedPaint(CefRefPtr<CefBrowser> browser,
+                            PaintElementType      type,
+                            const RectList&       dirtyRects,
+                            void*                 shared_handle) override
+    {
+        try {
+            if (!shared_texture_enable_)
+                return;
+
+            graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
+            paint_timer_.restart();
+            CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
+
+            if (type != PET_VIEW)
+                return;
+
+            if (d3d_shared_buffer_) {
+                if (shared_handle != d3d_shared_buffer_->share_handle())
+                    d3d_shared_buffer_.reset();
+            }
+
+            if (!d3d_shared_buffer_) {
+                d3d_shared_buffer_ = d3d_device_->open_shared_texture(shared_handle);
+                if (!d3d_shared_buffer_)
+                    CASPAR_LOG(error) << print() << L" could not open shared texture!";
+            }
+
+            if (d3d_shared_buffer_ && d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
+                auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_);
+                core::draw_frame dframe(std::move(frame));
+
+                // Image need flip vertically
+                // Top to bottom
+                dframe.transform().image_transform.perspective.ul[1] = 1;
+                dframe.transform().image_transform.perspective.ur[1] = 1;
+                // Bottom to top
+                dframe.transform().image_transform.perspective.ll[1] = 0;
+                dframe.transform().image_transform.perspective.lr[1] = 0;
+
+                {
+                    std::lock_guard<std::mutex> lock(frames_mutex_);
+
+                    frames_.push(dframe);
+                    while (frames_.size() > 8) {
+                        frames_.pop();
+                        graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                    }
+                }
+            }
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
+    }
+#endif
+
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-        browser_ = browser;
+        browser_ = std::move(browser);
     }
 
     void OnBeforeClose(CefRefPtr<CefBrowser> browser) override
@@ -246,11 +322,21 @@ class html_client
     }
 
     bool OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                          cef_log_severity_t    level,
                           const CefString&      message,
                           const CefString&      source,
                           int                   line) override
     {
-        CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+        if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
+            CASPAR_LOG(debug) << print() << L" Log: " << message.ToWString();
+        else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
+            CASPAR_LOG(warning) << print() << L" Log: " << message.ToWString();
+        else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
+            CASPAR_LOG(error) << print() << L" Log: " << message.ToWString();
+        else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
+            CASPAR_LOG(fatal) << print() << L" Log: " << message.ToWString();
+        else
+            CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
         return true;
     }
 
@@ -278,7 +364,8 @@ class html_client
             // TODO
 
             return true;
-        } else if (name == LOG_MESSAGE_NAME) {
+        }
+        if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
             auto msg      = args->GetString(1).ToWString();
@@ -291,7 +378,7 @@ class html_client
 
     void invoke_requested_animation_frames()
     {
-        if (browser_)
+        if (browser_ != nullptr)
             browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -312,28 +399,12 @@ class html_client
         return false;
     }
 
-    core::draw_frame pop()
-    {
-        core::draw_frame frame;
-
-        if (!try_pop(frame)) {
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " No frame in buffer"));
-        }
-
-        return frame;
-    }
-
     void update()
     {
         invoke_requested_animation_frames();
 
-        auto num_frames = [&] {
-            std::lock_guard<std::mutex> lock(frames_mutex_);
-            return frames_.size();
-        }();
-
-        if (num_frames >= 1) {
-            auto                        frame = pop();
+        core::draw_frame frame;
+        if (try_pop(frame)) {
             std::lock_guard<std::mutex> lock(last_frame_mutex_);
             last_frame_ = frame;
         } else {
@@ -360,9 +431,8 @@ class html_client
 
     std::wstring print() const
     {
-        return L"html[" + url_ + L"]" + L" " + boost::lexical_cast<std::wstring>(format_desc_.square_width) + L" " +
-               boost::lexical_cast<std::wstring>(format_desc_.square_height) + L" " +
-               boost::lexical_cast<std::wstring>(format_desc_.fps);
+        return L"html[" + url_ + L"]" + L" " + std::to_wstring(format_desc_.square_width) + L" " +
+               std::to_wstring(format_desc_.square_height) + L" " + std::to_wstring(format_desc_.fps);
     }
 
     IMPLEMENT_REFCOUNTING(html_client);
@@ -385,14 +455,20 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            client_ = new html_client(frame_factory, graph_, format_desc, url_);
+            const bool enable_gpu            = env::properties().get(L"configuration.html.enable-gpu", false);
+            bool       shared_texture_enable = false;
+
+#ifdef WIN32
+            shared_texture_enable = enable_gpu && accelerator::d3d::d3d_device::get_device();
+#endif
+
+            client_ = new html_client(frame_factory, graph_, format_desc, shared_texture_enable, url_);
 
             CefWindowInfo window_info;
             window_info.width                        = format_desc.square_width;
             window_info.height                       = format_desc.square_height;
             window_info.windowless_rendering_enabled = true;
-
-            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+            window_info.shared_texture_enabled       = shared_texture_enable;
 
             CefBrowserSettings browser_settings;
             browser_settings.web_security = cef_state_t::STATE_DISABLED;
@@ -404,9 +480,9 @@ class html_producer : public core::frame_producer
         state_["file/path"] = u8(url_);
     }
 
-    ~html_producer()
+    ~html_producer() override
     {
-        if (client_)
+        if (client_ != nullptr)
             client_->close();
     }
 
@@ -416,8 +492,19 @@ class html_producer : public core::frame_producer
 
     core::draw_frame receive_impl(int nb_samples) override
     {
-        if (client_) {
+        if (client_ != nullptr) {
             return client_->receive();
+        }
+
+        return core::draw_frame::empty();
+    }
+
+    core::draw_frame first_frame() override { return receive_impl(0); }
+
+    core::draw_frame last_frame() override
+    {
+        if (client_ != nullptr) {
+            return client_->last_frame();
         }
 
         return core::draw_frame::empty();
@@ -425,14 +512,14 @@ class html_producer : public core::frame_producer
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
-        if (!client_)
-            return make_ready_future(std::wstring(L""));
+        if (client_ == nullptr)
+            return make_ready_future(std::wstring());
 
         auto javascript = params.at(0);
 
         client_->execute_javascript(javascript);
 
-        return make_ready_future(std::wstring(L""));
+        return make_ready_future(std::wstring());
     }
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
@@ -462,11 +549,11 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
         boost::smatch what;
         if (boost::regex_search(u8_url, what, boost::regex("width=([0-9]+)"))) {
-            width = boost::lexical_cast<int>(what[1].str());
+            width = std::stoi(what[1].str());
         }
 
         if (boost::regex_search(u8_url, what, boost::regex("height=([0-9]+)"))) {
-            height = boost::lexical_cast<int>(what[1].str());
+            height = std::stoi(what[1].str());
         }
     }
 

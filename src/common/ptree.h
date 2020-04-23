@@ -23,11 +23,8 @@
 
 #include "except.h"
 
-#include "memory.h"
-
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
@@ -84,7 +81,7 @@ class scope_aware_ptree_child_range
 {
     const Ptree& child_;
 
-    typedef std::pair<const typename Ptree::key_type, Ptree> type;
+    using type = std::pair<const typename Ptree::key_type, Ptree>;
 
   public:
     class scoped_const_iterator
@@ -93,7 +90,7 @@ class scope_aware_ptree_child_range
         typename Ptree::const_iterator wrapped_;
 
       public:
-        scoped_const_iterator(typename Ptree::const_iterator it)
+        explicit scoped_const_iterator(typename Ptree::const_iterator it)
             : wrapped_(std::move(it))
         {
         }
@@ -105,8 +102,8 @@ class scope_aware_ptree_child_range
         const type& dereference() const { return *wrapped_; }
     };
 
-    typedef scoped_const_iterator iterator;
-    typedef scoped_const_iterator const_iterator;
+    using iterator       = scoped_const_iterator;
+    using const_iterator = scoped_const_iterator;
 
     scope_aware_ptree_child_range(const Ptree& parent, const typename Ptree::key_type& path)
         : child_(ptree_get_child(parent, path))
@@ -123,14 +120,14 @@ struct iterate_children_tag
 {
     Key val;
 
-    iterate_children_tag(Key val_)
+    explicit iterate_children_tag(Key val_)
         : val(std::move(val_))
     {
     }
 };
 
-typedef iterate_children_tag<std::wstring> witerate_children;
-typedef iterate_children_tag<std::string>  iterate_children;
+using witerate_children = iterate_children_tag<std::wstring>;
+using iterate_children  = iterate_children_tag<std::string>;
 
 template <typename Ptree>
 scope_aware_ptree_child_range<Ptree> operator|(const Ptree& ptree, iterate_children_tag<typename Ptree::key_type> path)
@@ -143,7 +140,7 @@ struct basic_scoped_element_translator
 {
     mutable std::map<typename Ptree::key_type, int> by_name;
 
-    typedef const std::pair<const typename Ptree::key_type, Ptree>& result_type;
+    using result_type = const std::pair<const typename Ptree::key_type, Ptree>&;
 
     result_type operator()(result_type pair) const { return pair; }
 };
@@ -152,8 +149,8 @@ template <typename Ptree>
 struct element_context_iteration_tag
 {
 };
-static element_context_iteration_tag<typename boost::property_tree::wptree> welement_context_iteration;
-static element_context_iteration_tag<typename boost::property_tree::ptree>  element_context_iteration;
+static element_context_iteration_tag<boost::property_tree::wptree> welement_context_iteration;
+static element_context_iteration_tag<boost::property_tree::ptree>  element_context_iteration;
 
 template <typename Range, typename Ptree>
 auto operator|(const Range& rng, element_context_iteration_tag<Ptree> tag)

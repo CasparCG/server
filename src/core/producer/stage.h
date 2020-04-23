@@ -28,7 +28,7 @@
 #include <common/memory.h>
 #include <common/tweener.h>
 
-#include <boost/optional.hpp>
+#include <core/frame/draw_frame.h>
 
 #include <functional>
 #include <future>
@@ -40,18 +40,26 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 
+struct layer_frame
+{
+    draw_frame foreground;
+    draw_frame background;
+    bool       has_background;
+};
+
 class stage final
 {
     stage(const stage&);
     stage& operator=(const stage&);
 
   public:
-    typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
-    typedef std::tuple<int, transform_func_t, unsigned int, tweener>      transform_tuple_t;
+    using transform_func_t  = std::function<struct frame_transform(struct frame_transform)>;
+    using transform_tuple_t = std::tuple<int, transform_func_t, unsigned int, tweener>;
 
     explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
 
-    std::map<int, draw_frame> operator()(const video_format_desc& format_desc, int nb_samples);
+    std::map<int, layer_frame>
+    operator()(const video_format_desc& format_desc, int nb_samples, std::vector<int>& fetch_background);
 
     std::future<void> apply_transforms(const std::vector<transform_tuple_t>& transforms);
     std::future<void>
@@ -59,20 +67,18 @@ class stage final
     std::future<void>            clear_transforms(int index);
     std::future<void>            clear_transforms();
     std::future<frame_transform> get_current_transform(int index);
-    std::future<void>            load(int                                    index,
-                                      const spl::shared_ptr<frame_producer>& producer,
-                                      bool                                   preview         = false,
-                                      const boost::optional<int32_t>&        auto_play_delta = boost::optional<int32_t>());
-    std::future<void>            pause(int index);
-    std::future<void>            resume(int index);
-    std::future<void>            play(int index);
-    std::future<void>            stop(int index);
-    std::future<std::wstring>    call(int index, const std::vector<std::wstring>& params);
-    std::future<void>            clear(int index);
-    std::future<void>            clear();
-    std::future<void>            swap_layers(stage& other, bool swap_transforms);
-    std::future<void>            swap_layer(int index, int other_index, bool swap_transforms);
-    std::future<void>            swap_layer(int index, int other_index, stage& other, bool swap_transforms);
+    std::future<void>
+                              load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false);
+    std::future<void>         pause(int index);
+    std::future<void>         resume(int index);
+    std::future<void>         play(int index);
+    std::future<void>         stop(int index);
+    std::future<std::wstring> call(int index, const std::vector<std::wstring>& params);
+    std::future<void>         clear(int index);
+    std::future<void>         clear();
+    std::future<void>         swap_layers(stage& other, bool swap_transforms);
+    std::future<void>         swap_layer(int index, int other_index, bool swap_transforms);
+    std::future<void>         swap_layer(int index, int other_index, stage& other, bool swap_transforms);
 
     core::monitor::state state() const;
 

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <boost/property_tree/ptree.hpp>
 #include <memory>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -28,6 +29,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 class buffer final
 {
   public:
+    static boost::property_tree::wptree info();
+
     buffer(int size, bool write);
     buffer(const buffer&) = delete;
     buffer(buffer&& other);

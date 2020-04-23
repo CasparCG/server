@@ -26,12 +26,7 @@
 #include "../fwd.h"
 #include "../monitor/monitor.h"
 
-#include <common/forward.h>
 #include <common/memory.h>
-
-#include <boost/optional.hpp>
-
-#include <string>
 
 namespace caspar { namespace core {
 
@@ -48,20 +43,20 @@ class layer final
 
     void swap(layer& other);
 
-    void load(spl::shared_ptr<frame_producer> producer,
-              bool                            preview,
-              const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
+    void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play = false);
     void play();
     void pause();
     void resume();
     void stop();
 
     draw_frame receive(const video_format_desc& format_desc, int nb_samples);
+    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples);
 
     core::monitor::state state() const;
 
     spl::shared_ptr<frame_producer> foreground() const;
     spl::shared_ptr<frame_producer> background() const;
+    bool                            has_background() const;
 
   private:
     struct impl;

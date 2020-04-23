@@ -44,7 +44,7 @@ namespace caspar {
 template <typename E>
 const std::vector<E>& enum_constants()
 {
-    typedef typename std::underlying_type<E>::type integer;
+    using integer = typename std::underlying_type<E>::type;
 
     static auto res = [] {
         std::vector<E> result;

@@ -48,14 +48,15 @@ class bgra_pixel
         , a_(a)
     {
     }
-    inline const uint8_t& b() const { return b_; }
-    inline uint8_t&       b() { return b_; }
-    inline const uint8_t& g() const { return g_; }
-    inline uint8_t&       g() { return g_; }
-    inline const uint8_t& r() const { return r_; }
-    inline uint8_t&       r() { return r_; }
-    inline const uint8_t& a() const { return a_; }
-    inline uint8_t&       a() { return a_; }
+
+    const uint8_t& b() const { return b_; }
+    uint8_t&       b() { return b_; }
+    const uint8_t& g() const { return g_; }
+    uint8_t&       g() { return g_; }
+    const uint8_t& r() const { return r_; }
+    uint8_t&       r() { return r_; }
+    const uint8_t& a() const { return a_; }
+    uint8_t&       a() { return a_; }
 };
 
 template <class PackedPixel>
@@ -72,11 +73,11 @@ template <class PackedPixel>
 class image_view
 {
   public:
-    typedef PackedPixel pixel_type;
+    using pixel_type = PackedPixel;
 
     image_view(void* raw_start, int width, int height)
         : begin_(static_cast<PackedPixel*>(raw_start))
-        , end_(begin_ + (width * height))
+        , end_(begin_ + width * height)
         , width_(width)
         , height_(height)
     {
@@ -91,7 +92,7 @@ class image_view
     const PackedPixel* end() const { return end_; }
 
     template <class PackedPixelIter>
-    inline PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y)
+    PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y)
     {
         auto         pixel_distance = delta_x + width_ * delta_y;
         PackedPixel* to_address     = &(*to);
@@ -99,12 +100,11 @@ class image_view
 
         if (result < begin_ || result >= end_)
             return nullptr;
-        else
-            return result;
+        return result;
     }
 
     template <class PackedPixelIter>
-    inline const PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y) const
+    const PackedPixel* relative(PackedPixelIter to, int delta_x, int delta_y) const
     {
         auto               pixel_distance = delta_x + width_ * delta_y;
         const PackedPixel* to_address     = &(*to);
@@ -112,8 +112,7 @@ class image_view
 
         if (result < begin_ || result >= end_)
             return nullptr;
-        else
-            return result;
+        return result;
     }
 
     int width() const { return width_; }
@@ -149,7 +148,7 @@ class is_within_view
     {
     }
 
-    inline bool operator()(const PackedPixel& pixel) const
+    bool operator()(const PackedPixel& pixel) const
     {
         if (no_check_)
             return true;
@@ -197,7 +196,7 @@ class image_sub_view
     PackedPixel* raw_end_   = root_view_.relative(raw_begin_, width_ - 1, height_ - 1) + 1;
 
   public:
-    typedef PackedPixel pixel_type;
+    using pixel_type = PackedPixel;
 
     image_sub_view(image_view<PackedPixel>& root_view, int x, int y, int width, int height)
         : root_view_(root_view)

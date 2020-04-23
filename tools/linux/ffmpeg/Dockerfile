@@ -1,5 +1,8 @@
-FROM casparcg/base:1.2.0 as BUILD
-	ENV FFMPEG_COMMIT acdea9e7c56b74b05c56b4733acc855b959ba073
+ARG IMAGE_BASE
+
+FROM ${IMAGE_BASE} as BUILD
+    ARG PROC_COUNT=8
+	ENV FFMPEG_COMMIT n4.2.2
 
 	RUN apt-get install -yq --no-install-recommends \
 		autoconf \
@@ -83,7 +86,7 @@ FROM casparcg/base:1.2.0 as BUILD
 			--disable-debug \
 			--prefix=/opt/ffmpeg \
 			&& \
-		make -j8 && \
+		make -j $PROC_COUNT && \
 		make install
 
 FROM scratch

@@ -23,7 +23,6 @@
 
 #include "utf.h"
 
-#include <boost/exception/diagnostic_information.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/severity_logger.hpp>
@@ -37,7 +36,7 @@
 namespace caspar { namespace log {
 
 template <typename T>
-inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
+void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
     std::locale loc;
     std::replace_if(
@@ -48,8 +47,7 @@ inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::
 }
 
 template <typename T>
-inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str,
-                                                      T                                                            with)
+std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
 {
     replace_nonprintable(str, with);
     return str;
@@ -57,7 +55,7 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 
 std::string current_exception_diagnostic_information();
 
-typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
+using caspar_logger = boost::log::sources::wseverity_logger<boost::log::trivial::severity_level>;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, caspar_logger)
 #define CASPAR_LOG(lvl) BOOST_LOG_SEV(::caspar::log::logger::get(), boost::log::trivial::severity_level::lvl)

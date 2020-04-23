@@ -3,16 +3,20 @@ project (screen)
 
 set(SOURCES
 	consumer/screen_consumer.cpp
-	consumer/screen_shader.cpp
 
 	screen.cpp
 )
 set(HEADERS
 	consumer/screen_consumer.h
-	consumer/screen_shader.h
+
+	consumer_screen_vertex.h
+	consumer_screen_fragment.h
 
 	screen.h
 )
+
+bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
+bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
 
 if (MSVC)
 else ()
@@ -29,6 +33,7 @@ configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_D
 
 include_directories(..)
 include_directories(../..)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${GLEW_INCLUDE_PATH})

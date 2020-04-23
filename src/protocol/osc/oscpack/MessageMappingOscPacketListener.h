@@ -30,8 +30,8 @@
 #ifndef INCLUDED_MESSAGEMAPPINGOSCPACKETLISTENER_H
 #define INCLUDED_MESSAGEMAPPINGOSCPACKETLISTENER_H
 
+#include <cstring>
 #include <map>
-#include <string.h>
 
 #include "OscPacketListener.h"
 
@@ -41,7 +41,7 @@ template <class T>
 class MessageMappingOscPacketListener : public OscPacketListener
 {
   public:
-    typedef void (T::*function_type)(const osc::ReceivedMessage&, const IpEndpointName&);
+    using function_type = void (T::*)(const osc::ReceivedMessage&, const IpEndpointName&);
 
   protected:
     void RegisterMessageFunction(const char* addressPattern, function_type f)
@@ -49,7 +49,7 @@ class MessageMappingOscPacketListener : public OscPacketListener
         functions_.insert(std::make_pair(addressPattern, f));
     }
 
-    virtual void ProcessMessage(const osc::ReceivedMessage& m, const IpEndpointName& remoteEndpoint)
+    void ProcessMessage(const osc::ReceivedMessage& m, const IpEndpointName& remoteEndpoint) override
     {
         typename function_map_type::iterator i = functions_.find(m.AddressPattern());
         if (i != functions_.end())
@@ -62,8 +62,8 @@ class MessageMappingOscPacketListener : public OscPacketListener
         bool operator()(const char* lhs, const char* rhs) const { return strcmp(lhs, rhs) < 0; }
     };
 
-    typedef std::map<const char*, function_type, cstr_compare> function_map_type;
-    function_map_type                                          functions_;
+    using function_map_type = std::map<const char*, function_type, cstr_compare>;
+    function_map_type functions_;
 };
 
 } // namespace osc

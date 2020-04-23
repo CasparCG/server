@@ -23,17 +23,16 @@
 
 #include <common/memory.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <core/consumer/frame_consumer.h>
-#include <core/video_format.h>
 
 #include <string>
 #include <vector>
 
 namespace caspar { namespace image {
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels);
+spl::shared_ptr<core::frame_consumer>
+create_consumer(const std::vector<std::wstring>&                         params,
+                const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
 }} // namespace caspar::image

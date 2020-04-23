@@ -22,17 +22,12 @@
 #include "image.h"
 
 #define WIN32_LEAN_AND_MEAN
-#if defined(_MSC_VER)
-#include <windows.h>
-#endif
 #include <FreeImage.h>
 
 #include "consumer/image_consumer.h"
 #include "producer/image_producer.h"
-#include "util/image_loader.h"
 
 #include <core/consumer/frame_consumer.h>
-#include <core/frame/draw_frame.h>
 #include <core/producer/frame_producer.h>
 
 #include <common/utf.h>

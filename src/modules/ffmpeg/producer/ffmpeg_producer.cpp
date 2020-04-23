@@ -72,9 +72,9 @@ struct ffmpeg_producer : public core::frame_producer
                              boost::optional<int64_t>             start,
                              boost::optional<int64_t>             duration,
                              boost::optional<bool>                loop)
-        : format_desc_(format_desc)
-        , filename_(filename)
+        : filename_(filename)
         , frame_factory_(frame_factory)
+        , format_desc_(format_desc)
         , producer_(new AVProducer(frame_factory_,
                                    format_desc_,
                                    u8(path),
@@ -131,25 +131,25 @@ struct ffmpeg_producer : public core::frame_producer
                 producer_->loop(boost::lexical_cast<bool>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->loop());
+            result = std::to_wstring(producer_->loop());
         } else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start")) {
             if (!value.empty()) {
                 producer_->start(boost::lexical_cast<int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->start());
+            result = std::to_wstring(producer_->start());
         } else if (boost::iequals(cmd, L"out")) {
             if (!value.empty()) {
                 producer_->duration(boost::lexical_cast<int64_t>(value) - producer_->start());
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->start() + producer_->duration());
+            result = std::to_wstring(producer_->start() + producer_->duration());
         } else if (boost::iequals(cmd, L"length")) {
             if (!value.empty()) {
                 producer_->duration(boost::lexical_cast<std::int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(producer_->duration());
+            result = std::to_wstring(producer_->duration());
         } else if (boost::iequals(cmd, L"seek") && !value.empty()) {
             int64_t seek;
             if (boost::iequals(value, L"rel")) {
@@ -170,7 +170,7 @@ struct ffmpeg_producer : public core::frame_producer
 
             producer_->seek(seek);
 
-            result = boost::lexical_cast<std::wstring>(seek);
+            result = std::to_wstring(seek);
         } else {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
@@ -182,8 +182,9 @@ struct ffmpeg_producer : public core::frame_producer
 
     std::wstring print() const override
     {
-        return L"ffmpeg[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(producer_->time()) + L"/" +
-               boost::lexical_cast<std::wstring>(producer_->duration()) + L"]";
+        const int64_t position = std::max(producer_->time() - producer_->start(), INT64_C(0));
+        return L"ffmpeg[" + filename_ + L"|" + std::to_wstring(position) + L"/" +
+               std::to_wstring(producer_->duration()) + L"]";
     }
 
     std::wstring name() const override { return L"ffmpeg"; }
@@ -236,12 +237,26 @@ boost::tribool has_valid_extension(const std::wstring& filename)
     }
     return boost::tribool(boost::indeterminate);
 }
+
+bool has_invalid_protocol(const std::wstring& filename)
+{
+    static const auto invalid_protocols = {L"ndi:"};
+
+    auto protocol = boost::to_lower_copy(boost::filesystem::path(filename).root_name().wstring());
+
+    if (std::find(invalid_protocols.begin(), invalid_protocols.end(), protocol) != invalid_protocols.end()) {
+        return true;
+    }
+    return false;
+}
+
 bool is_valid_file(const std::wstring& filename)
 {
     const auto valid_ext = has_valid_extension(filename);
     if (valid_ext) {
         return true;
-    } else if (!valid_ext) {
+    }
+    if (!valid_ext) {
         return false;
     }
 
@@ -299,9 +314,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto path = name;
 
     if (!boost::contains(path, L"://")) {
-        path = boost::filesystem::path(probe_stem(env::media_folder() + L"/" + path)).generic_wstring();
-        name += boost::filesystem::path(path).extension().wstring();
-    } else if (!has_valid_extension(path)) {
+        auto mediaPath     = env::media_folder() + L"/" + path;
+        auto fullMediaPath = find_case_insensitive(mediaPath);
+        if (fullMediaPath && is_valid_file(*fullMediaPath)) {
+            path = *fullMediaPath;
+        } else {
+            path = boost::filesystem::path(probe_stem(mediaPath)).generic_wstring();
+            name += boost::filesystem::path(path).extension().wstring();
+        }
+    } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
         return core::frame_producer::empty();
     }
 

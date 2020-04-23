@@ -25,7 +25,6 @@
 
 #include <common/env.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <map>
@@ -69,6 +68,7 @@ struct amcp_command_repository::impl
     spl::shared_ptr<core::cg_producer_registry>          cg_registry;
     spl::shared_ptr<const core::frame_producer_registry> producer_registry;
     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
+    std::weak_ptr<accelerator::accelerator_device>       ogl_device;
     std::function<void(bool)>                            shutdown_server_now;
     std::string proxy_host = u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1"));
     std::string proxy_port = u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000"));
@@ -76,19 +76,24 @@ struct amcp_command_repository::impl
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands;
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands;
 
-    impl(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
-         const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    impl(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
          const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+         const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
          std::function<void(bool)>                                   shutdown_server_now)
         : cg_registry(cg_registry)
         , producer_registry(producer_registry)
         , consumer_registry(consumer_registry)
+        , ogl_device(ogl_device)
         , shutdown_server_now(shutdown_server_now)
     {
+    }
+
+    void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
+    {
         int index = 0;
-        for (const auto& channel : channels) {
-            std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
+        for (const auto& channel : video_channels) {
+            std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
             this->channels.push_back(channel_context(channel, lifecycle_key));
             ++index;
         }
@@ -96,13 +101,18 @@ struct amcp_command_repository::impl
 };
 
 amcp_command_repository::amcp_command_repository(
-    const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
     const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
     const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
     const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+    const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
     std::function<void(bool)>                                   shutdown_server_now)
-    : impl_(new impl(channels, cg_registry, producer_registry, consumer_registry, shutdown_server_now))
+    : impl_(new impl(cg_registry, producer_registry, consumer_registry, ogl_device, shutdown_server_now))
 {
+}
+
+void amcp_command_repository::init(const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+{
+    impl_->init(channels);
 }
 
 AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring&      s,
@@ -121,7 +131,8 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
                         self.consumer_registry,
                         self.shutdown_server_now,
                         self.proxy_host,
-                        self.proxy_port);
+                        self.proxy_port,
+                        self.ogl_device);
 
     auto command = find_command(self.commands, s, ctx, tokens);
 
@@ -153,7 +164,8 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(const std:
                         self.consumer_registry,
                         self.shutdown_server_now,
                         self.proxy_host,
-                        self.proxy_port);
+                        self.proxy_port,
+                        self.ogl_device);
 
     auto command = find_command(self.channel_commands, s, ctx, tokens);
 

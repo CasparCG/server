@@ -27,8 +27,6 @@
 
 namespace caspar { namespace flash {
 
-std::string read_template_meta_info(const std::wstring& filename);
-
 struct swf_t
 {
     struct header_t

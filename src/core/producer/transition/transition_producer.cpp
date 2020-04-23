@@ -67,12 +67,16 @@ class transition_producer : public frame_producer
         return dst && current_frame_ >= info_.duration ? dst : src;
     }
 
+    core::draw_frame first_frame() override { return dst_producer_->first_frame(); }
+
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
         return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
+
+    boost::optional<int64_t> auto_play_delta() const override { return info_.duration; }
 
     void update_state()
     {
@@ -176,6 +180,44 @@ spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr
                                                            const transition_info&                 info)
 {
     return spl::make_shared<transition_producer>(destination, info);
+}
+
+bool try_match_transition(const std::wstring& message, transition_info& transitionInfo)
+{
+    static const boost::wregex expr(
+        LR"(.*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\s*(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
+    boost::wsmatch what;
+    if (!boost::regex_match(message, what, expr)) {
+        return false;
+    }
+
+    auto transition         = what["TRANSITION"].str();
+    transitionInfo.duration = std::stoi(what["DURATION"].str());
+    auto direction          = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
+    auto tween              = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
+    transitionInfo.tweener  = tween;
+
+    if (transition == L"CUT")
+        transitionInfo.type = transition_type::cut;
+    else if (transition == L"MIX")
+        transitionInfo.type = transition_type::mix;
+    else if (transition == L"PUSH")
+        transitionInfo.type = transition_type::push;
+    else if (transition == L"SLIDE")
+        transitionInfo.type = transition_type::slide;
+    else if (transition == L"WIPE")
+        transitionInfo.type = transition_type::wipe;
+
+    if (direction == L"FROMLEFT")
+        transitionInfo.direction = transition_direction::from_left;
+    else if (direction == L"FROMRIGHT")
+        transitionInfo.direction = transition_direction::from_right;
+    else if (direction == L"LEFT")
+        transitionInfo.direction = transition_direction::from_right;
+    else if (direction == L"RIGHT")
+        transitionInfo.direction = transition_direction::from_left;
+
+    return true;
 }
 
 }} // namespace caspar::core

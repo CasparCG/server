@@ -25,13 +25,11 @@
 #include <string>
 #include <vector>
 
-#include <common/memory.h>
-
 #include <boost/function.hpp>
 
 namespace caspar { namespace protocol { namespace CLK {
 
-typedef boost::function<void(const std::vector<std::wstring>&)> clk_command_handler;
+using clk_command_handler = boost::function<void(const std::vector<std::wstring>&)>;
 
 /**
  * CLK command processor composed by multiple command handlers.

@@ -25,23 +25,14 @@
 
 #include <common/array.h>
 #include <common/except.h>
-#include <common/future.h>
-#include <common/memshfl.h>
-#include <common/timer.h>
-
-#include <core/frame/frame_visitor.h>
-#include <core/frame/geometry.h>
-#include <core/frame/pixel_format.h>
 
 #include <cstdint>
 #include <functional>
 #include <vector>
 
-#include <boost/lexical_cast.hpp>
-
 namespace caspar { namespace core {
 
-struct mutable_frame::impl : boost::noncopyable
+struct mutable_frame::impl
 {
     std::vector<array<std::uint8_t>> image_data_;
     array<std::int32_t>              audio_data_;
@@ -50,15 +41,18 @@ struct mutable_frame::impl : boost::noncopyable
     frame_geometry                   geometry_ = frame_geometry::get_default();
     mutable_frame::commit_t          commit_;
 
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
+
     impl(const void*                      tag,
          std::vector<array<std::uint8_t>> image_data,
          array<std::int32_t>              audio_data,
          const core::pixel_format_desc&   desc,
          commit_t                         commit)
-        : tag_(tag)
-        , image_data_(std::move(image_data))
+        : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
+        , tag_(tag)
         , commit_(std::move(commit))
     {
     }
@@ -132,7 +126,7 @@ struct const_frame::impl
         , desc_(std::move(other.impl_->desc_))
         , geometry_(std::move(other.impl_->geometry_))
     {
-        if (desc_.planes.size() != image_data_.size()) {
+        if (desc_.planes.size() != image_data_.size() && !other.impl_->commit_) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
         if (other.impl_->commit_) {

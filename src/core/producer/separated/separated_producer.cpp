@@ -30,7 +30,6 @@
 #include <core/producer/frame_producer.h>
 
 #include <future>
-#include <mutex>
 
 namespace caspar { namespace core {
 
@@ -56,6 +55,10 @@ class separated_producer : public frame_producer
     draw_frame last_frame() override
     {
         return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
+    }
+    draw_frame first_frame() override
+    {
+        return draw_frame::mask(fill_producer_->first_frame(), key_producer_->first_frame());
     }
 
     draw_frame receive_impl(int nb_samples) override

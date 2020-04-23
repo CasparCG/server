@@ -20,6 +20,7 @@ set(SOURCES
 		producer/color/color_producer.cpp
 		producer/separated/separated_producer.cpp
 		producer/transition/transition_producer.cpp
+		producer/transition/sting_producer.cpp
 		producer/route/route_producer.cpp
 
 		producer/cg_proxy.cpp
@@ -58,6 +59,7 @@ set(HEADERS
 		producer/color/color_producer.h
 		producer/separated/separated_producer.h
 		producer/transition/transition_producer.h
+		producer/transition/sting_producer.h
 		producer/route/route_producer.h
 
 		producer/cg_proxy.h

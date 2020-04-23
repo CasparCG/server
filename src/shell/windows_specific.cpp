@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 #include "platform_specific.h"
-#include "resource.h"
 
 #include <common/env.h>
 #include <common/log.h>
@@ -79,8 +78,8 @@ void setup_prerequisites()
 
 void change_icon(const HICON hNewIcon)
 {
-    auto hMod = ::LoadLibrary(L"Kernel32.dll");
-    typedef DWORD(__stdcall * SCI)(HICON);
+    auto hMod              = ::LoadLibrary(L"Kernel32.dll");
+    using SCI              = DWORD(__stdcall*)(HICON);
     auto pfnSetConsoleIcon = reinterpret_cast<SCI>(::GetProcAddress(hMod, "SetConsoleIcon"));
     pfnSetConsoleIcon(hNewIcon);
     ::FreeLibrary(hMod);
@@ -93,15 +92,15 @@ void setup_console_window()
     DWORD dwPreviousMode = 0;
 
     if (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &dwPreviousMode)) {
-        dwPreviousMode &= (~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS; // disable quick edit mode
-        dwPreviousMode &= ENABLE_PROCESSED_INPUT | ~ENABLE_MOUSE_INPUT;      // allow mouse wheel scrolling
+        dwPreviousMode &= ~ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS; // disable quick edit mode
+        dwPreviousMode &= ENABLE_PROCESSED_INPUT | ~ENABLE_MOUSE_INPUT;    // allow mouse wheel scrolling
         SetConsoleMode(hIn, dwPreviousMode);
     }
 
     // Disable close button in console to avoid shutdown without cleanup.
     EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_GRAYED);
     DrawMenuBar(GetConsoleWindow());
-    SetConsoleCtrlHandler(NULL, true);
+    SetConsoleCtrlHandler(nullptr, true);
 
     if (hOut != INVALID_HANDLE_VALUE) {
         // Configure console size and position.
@@ -116,7 +115,7 @@ void setup_console_window()
         SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
     }
 
-    change_icon(::LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(101)));
+    change_icon(::LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(101)));
 
     // Set console title.
     std::wstringstream str;
@@ -144,9 +143,8 @@ void wait_for_keypress()
 std::shared_ptr<void> setup_debugging_environment()
 {
 #ifdef _DEBUG
-    HANDLE hLogFile;
-    hLogFile =
-        CreateFile(L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE hLogFile = CreateFile(
+        L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     std::shared_ptr<void> crt_log(nullptr, [](HANDLE h) { ::CloseHandle(h); });
 
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);

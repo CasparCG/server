@@ -22,7 +22,6 @@
 #pragma once
 
 #include "../../fwd.h"
-#include "../../video_format.h"
 
 #include <common/memory.h>
 #include <common/tweener.h>
@@ -55,6 +54,8 @@ struct transition_info
     transition_type      type      = transition_type::cut;
     caspar::tweener      tweener{L"linear"};
 };
+
+bool try_match_transition(const std::wstring& message, transition_info& transitionInfo);
 
 spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
                                                            const transition_info&                 info);

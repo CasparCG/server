@@ -25,7 +25,6 @@
 #include "except.h"
 #include "log.h"
 #include "os/filesystem.h"
-#include "string.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -34,8 +33,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <fstream>
-#include <functional>
-#include <iostream>
 
 namespace caspar { namespace env {
 
@@ -44,7 +41,6 @@ std::wstring                 media;
 std::wstring                 log;
 std::wstring                 ftemplate;
 std::wstring                 data;
-std::wstring                 font;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -53,30 +49,20 @@ void check_is_configured()
         CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
 }
 
-std::wstring ensure_trailing_slash(std::wstring folder)
-{
-    if (folder.at(folder.length() - 1) != L'/')
-        folder.append(L"/");
-
-    return folder;
-}
-
 std::wstring resolve_or_create(const std::wstring& folder)
 {
     auto found_path = find_case_insensitive(folder);
 
     if (found_path)
         return *found_path;
-    else {
-        boost::system::error_code ec;
-        boost::filesystem::create_directories(folder, ec);
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(folder, ec);
 
-        if (ec)
-            CASPAR_THROW_EXCEPTION(user_error()
-                                   << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+    if (ec)
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 
-        return folder;
-    }
+    return folder;
 }
 
 void ensure_writable(const std::wstring& folder)
@@ -113,7 +99,6 @@ void configure(const std::wstring& filename)
         ftemplate =
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
         data = clean_path(paths.get(L"data-path", initial + L"/data/"));
-        font = clean_path(paths.get(L"font-path", initial + L"/font/"));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
         throw;
@@ -123,7 +108,6 @@ void configure(const std::wstring& filename)
     log       = ensure_trailing_slash(resolve_or_create(log));
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
     data      = ensure_trailing_slash(resolve_or_create(data));
-    font      = ensure_trailing_slash(resolve_or_create(font));
 
     ensure_writable(log);
     ensure_writable(ftemplate);
@@ -160,12 +144,6 @@ const std::wstring& data_folder()
     return data;
 }
 
-const std::wstring& font_folder()
-{
-    check_is_configured();
-    return font;
-}
-
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
@@ -187,9 +165,6 @@ void log_configuration_warnings()
     if (pt.empty())
         return;
 
-    if (pt.get_optional<std::wstring>(L"configuration.paths.thumbnails-path"))
-        CASPAR_LOG(warning)
-            << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
 }
 
 }} // namespace caspar::env

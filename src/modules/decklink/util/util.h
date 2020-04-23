@@ -27,8 +27,6 @@
 
 #include "../decklink_api.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <string>
 
 namespace caspar { namespace decklink {
@@ -172,8 +170,9 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
 static std::wstring get_mode_name(const com_ptr<IDeckLinkDisplayMode>& mode)
 {
     String mode_name;
-    mode->GetName(&mode_name);
-    return u16(mode_name);
+    if (SUCCEEDED(mode->GetName(&mode_name)))
+        return to_string(mode_name);
+    return L"Unknown";
 }
 
 template <typename T, typename F>
@@ -189,8 +188,8 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode f
     }
 
     if (!m)
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info("Device could not find requested video-format: " +
-                                                        boost::lexical_cast<std::string>(format)));
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Device could not find requested video-format: " + std::to_string(format)));
 
     com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
@@ -219,13 +218,12 @@ template <typename T>
 static std::wstring version(T iterator)
 {
     auto info = iface_cast<IDeckLinkAPIInformation>(iterator);
-    if (!info)
-        return L"Unknown";
-
-    String ver;
-    info->GetString(BMDDeckLinkAPIVersion, &ver);
-
-    return u16(ver);
+    if (info) {
+        String ver;
+        if (SUCCEEDED(info->GetString(BMDDeckLinkAPIVersion, &ver)))
+            return to_string(ver);
+    }
+    return L"Not found";
 }
 
 static com_ptr<IDeckLink> get_device(size_t device_index)
@@ -243,8 +241,7 @@ static com_ptr<IDeckLink> get_device(size_t device_index)
 
     if (n != device_index || !decklink)
         CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info("Decklink device " + boost::lexical_cast<std::string>(device_index) +
-                                           " not found."));
+                               << msg_info("Decklink device " + std::to_string(device_index) + " not found."));
 
     return decklink;
 }
@@ -253,8 +250,9 @@ template <typename T>
 static std::wstring get_model_name(const T& device)
 {
     String pModelName;
-    device->GetModelName(&pModelName);
-    return u16(pModelName);
+    if (SUCCEEDED(device->GetModelName(&pModelName)))
+        return to_string(pModelName);
+    return L"Unknown";
 }
 
 class reference_signal_detector

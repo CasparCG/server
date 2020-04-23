@@ -49,9 +49,9 @@ CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core:
                                          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
     : executor_(L"CIIProtocolStrategy")
     , pChannel_(channels.at(0))
-    , channels_(channels)
     , cg_registry_(cg_registry)
     , producer_registry_(producer_registry)
+    , channels_(channels)
 {
 }
 
@@ -73,7 +73,7 @@ void CIIProtocolStrategy::ProcessMessage(const std::wstring& message, IO::Client
     int                       tokenCount = TokenizeMessage(message, &tokens);
 
     CIICommandPtr pCommand = Create(tokens[0]);
-    if ((pCommand != 0) && (tokenCount - 1) >= pCommand->GetMinimumParameters()) {
+    if (pCommand != nullptr && tokenCount - 1 >= pCommand->GetMinimumParameters()) {
         pCommand->Setup(tokens);
         executor_.begin_invoke([=] { pCommand->Execute(); });
     } else {
@@ -245,7 +245,7 @@ void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring&               
 
     TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
     if (it != titles_.end()) {
-        titles_.remove((*it));
+        titles_.remove(*it);
     }
 
     titles_.push_front(TitleHolder(titleName, pFP));

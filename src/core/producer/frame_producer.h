@@ -30,7 +30,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/video_format.h>
 
-#include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -47,13 +47,14 @@ class frame_producer
     frame_producer& operator=(const frame_producer&);
 
     uint32_t         frame_number_ = 0;
-    core::draw_frame frame_;
+    core::draw_frame last_frame_;
+    core::draw_frame first_frame_;
 
   public:
     static const spl::shared_ptr<frame_producer>& empty();
 
     frame_producer(core::draw_frame frame)
-        : frame_(std::move(frame))
+        : last_frame_(std::move(frame))
     {
     }
     frame_producer() {}
@@ -61,17 +62,27 @@ class frame_producer
 
     draw_frame receive(int nb_samples)
     {
+        if (frame_number_ == 0 && first_frame_) {
+            frame_number_ += 1;
+            return first_frame_;
+        }
+
         auto frame = receive_impl(nb_samples);
 
         if (frame) {
             frame_number_ += 1;
-            frame_ = frame;
+            last_frame_ = frame;
+
+            if (!first_frame_) {
+                first_frame_ = frame;
+            }
         }
 
         return frame;
     }
 
-    virtual draw_frame                receive_impl(int nb_samples) { return core::draw_frame{}; };
+    virtual draw_frame receive_impl(int nb_samples) { return core::draw_frame{}; }
+
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params)
     {
         CASPAR_THROW_EXCEPTION(not_implemented());
@@ -88,13 +99,21 @@ class frame_producer
     virtual uint32_t     nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
     virtual draw_frame   last_frame()
     {
-        if (!frame_) {
-            frame_ = receive_impl(0);
+        if (!last_frame_) {
+            last_frame_ = receive_impl(0);
         }
-        return core::draw_frame::still(frame_);
+        return core::draw_frame::still(last_frame_);
+    }
+    virtual draw_frame first_frame()
+    {
+        if (!first_frame_) {
+            first_frame_ = receive_impl(0);
+        }
+        return core::draw_frame::still(first_frame_);
     }
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
     virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
+    virtual boost::optional<int64_t>        auto_play_delta() const { return boost::none; }
 };
 
 class frame_producer_registry;
@@ -107,18 +126,17 @@ struct frame_producer_dependencies
     spl::shared_ptr<const frame_producer_registry> producer_registry;
     spl::shared_ptr<const cg_producer_registry>    cg_registry;
 
-    frame_producer_dependencies(const spl::shared_ptr<core::frame_factory>&          frame_factory,
-                                const std::vector<spl::shared_ptr<video_channel>>&   channels,
-                                const video_format_desc&                             format_desc,
-                                const spl::shared_ptr<const frame_producer_registry> producer_registry,
-                                const spl::shared_ptr<const cg_producer_registry>    cg_registry);
+    frame_producer_dependencies(const spl::shared_ptr<core::frame_factory>&           frame_factory,
+                                const std::vector<spl::shared_ptr<video_channel>>&    channels,
+                                const video_format_desc&                              format_desc,
+                                const spl::shared_ptr<const frame_producer_registry>& producer_registry,
+                                const spl::shared_ptr<const cg_producer_registry>&    cg_registry);
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
-                                                            const std::vector<std::wstring>&)>
-    producer_factory_t;
+using producer_factory_t = std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
+                                                                               const std::vector<std::wstring>&)>;
 
-class frame_producer_registry : boost::noncopyable
+class frame_producer_registry
 {
   public:
     frame_producer_registry();
@@ -131,6 +149,9 @@ class frame_producer_registry : boost::noncopyable
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
+
+    frame_producer_registry(const frame_producer_registry&) = delete;
+    frame_producer_registry& operator=(const frame_producer_registry&) = delete;
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);

@@ -32,13 +32,16 @@ static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};
 
-struct texture::impl : boost::noncopyable
+struct texture::impl
 {
     GLuint  id_     = 0;
     GLsizei width_  = 0;
     GLsizei height_ = 0;
     GLsizei stride_ = 0;
     GLsizei size_   = 0;
+
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
 
   public:
     impl(int width, int height, int stride)
@@ -70,6 +73,14 @@ struct texture::impl : boost::noncopyable
     void attach() { GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0)); }
 
     void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[stride_], nullptr)); }
+
+#ifdef WIN32
+    void copy_from(int texture_id)
+    {
+        GL(glCopyImageSubData(
+            texture_id, GL_TEXTURE_2D, 0, 0, 0, 0, id_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1));
+    }
+#endif
 
     void copy_from(buffer& src)
     {
@@ -112,6 +123,9 @@ void texture::bind(int index) { impl_->bind(index); }
 void texture::unbind() { impl_->unbind(); }
 void texture::attach() { impl_->attach(); }
 void texture::clear() { impl_->clear(); }
+#ifdef WIN32
+void texture::copy_from(int source) { impl_->copy_from(source); }
+#endif
 void texture::copy_from(buffer& source) { impl_->copy_from(source); }
 void texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
 int  texture::width() const { return impl_->width_; }

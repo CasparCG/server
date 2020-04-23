@@ -23,7 +23,6 @@
 #pragma once
 
 #include <boost/asio/ip/udp.hpp>
-#include <boost/noncopyable.hpp>
 
 #include <common/memory.h>
 #include <core/monitor/monitor.h>

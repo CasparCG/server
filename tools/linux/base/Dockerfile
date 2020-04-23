@@ -2,6 +2,7 @@ FROM buildpack-deps:bionic
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
 	cmake \
+    clang \
 	lsb-release \
 	libglew-dev \
 	libfreeimage-dev \
@@ -51,4 +52,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libx265-dev \
 	libxss1 \
 	libgtk2.0-0 \
-	libssl1.0.0
+	libssl1.0.0 \
+    libatspi2.0-dev \
+    libatk-bridge2.0-dev
+

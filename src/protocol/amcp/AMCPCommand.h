@@ -23,6 +23,7 @@
 
 #include "../util/ClientInfo.h"
 #include "amcp_shared.h"
+#include <accelerator/accelerator.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
@@ -44,6 +45,7 @@ struct command_context
     std::vector<std::wstring>                            parameters;
     std::string                                          proxy_host;
     std::string                                          proxy_port;
+    std::weak_ptr<accelerator::accelerator_device>       ogl_device;
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
@@ -57,7 +59,8 @@ struct command_context
                     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
                     std::function<void(bool)>                            shutdown_server_now,
                     std::string                                          proxy_host,
-                    std::string                                          proxy_port)
+                    std::string                                          proxy_port,
+                    std::weak_ptr<accelerator::accelerator_device>       ogl_device)
         : client(std::move(client))
         , channel(channel)
         , channel_index(channel_index)
@@ -69,11 +72,12 @@ struct command_context
         , shutdown_server_now(shutdown_server_now)
         , proxy_host(std::move(proxy_host))
         , proxy_port(std::move(proxy_port))
+        , ogl_device(std::move(ogl_device))
     {
     }
 };
 
-typedef std::function<std::wstring(command_context& args)> amcp_command_func;
+using amcp_command_func = std::function<std::wstring(command_context& args)>;
 
 class AMCPCommand
 {
@@ -97,7 +101,7 @@ class AMCPCommand
     {
     }
 
-    typedef std::shared_ptr<AMCPCommand> ptr_type;
+    using ptr_type = std::shared_ptr<AMCPCommand>;
 
     bool Execute()
     {

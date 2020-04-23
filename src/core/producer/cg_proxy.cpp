@@ -24,24 +24,20 @@
 #include "cg_proxy.h"
 
 #include "../diagnostics/call_context.h"
-#include "../frame/draw_frame.h"
 #include "../module_dependencies.h"
 #include "../video_channel.h"
 #include "frame_producer.h"
 #include "stage.h"
 
 #include <common/env.h>
-#include <common/future.h>
 #include <common/os/filesystem.h>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 
 #include "common/param.h"
 #include <future>
 #include <map>
-#include <sstream>
 
 namespace caspar { namespace core {
 
@@ -52,7 +48,7 @@ const spl::shared_ptr<cg_proxy>& cg_proxy::empty()
         void         add(int, const std::wstring&, bool, const std::wstring&, const std::wstring&) override {}
         void         remove(int) override {}
         void         play(int) override {}
-        void         stop(int, unsigned int) override {}
+        void         stop(int) override {}
         void         next(int) override {}
         void         update(int, const std::wstring&) override {}
         std::wstring invoke(int, const std::wstring&) override { return L""; }
@@ -68,7 +64,6 @@ struct cg_producer_registry::impl
     struct record
     {
         std::wstring        name;
-        meta_info_extractor info_extractor;
         cg_proxy_factory    proxy_factory;
         cg_producer_factory producer_factory;
         bool                reusable_producer_instance;
@@ -80,7 +75,6 @@ struct cg_producer_registry::impl
   public:
     void register_cg_producer(std::wstring           cg_producer_name,
                               std::set<std::wstring> file_extensions,
-                              meta_info_extractor    info_extractor,
                               cg_proxy_factory       proxy_factory,
                               cg_producer_factory    producer_factory,
                               bool                   reusable_producer_instance)
@@ -88,7 +82,6 @@ struct cg_producer_registry::impl
         std::lock_guard<std::mutex> lock(mutex_);
 
         record rec{std::move(cg_producer_name),
-                   std::move(info_extractor),
                    std::move(proxy_factory),
                    std::move(producer_factory),
                    reusable_producer_instance};
@@ -162,25 +155,6 @@ struct cg_producer_registry::impl
         return found->proxy_factory(producer);
     }
 
-    std::string read_meta_info(const std::wstring& filename) const
-    {
-        using namespace boost::filesystem;
-
-        auto basepath = path(env::template_folder()) / path(filename);
-
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        for (auto& rec : records_by_extension_) {
-            auto p     = path(basepath.wstring() + rec.first);
-            auto found = find_case_insensitive(p.wstring());
-
-            if (found)
-                return rec.second.info_extractor(*found);
-        }
-
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No meta info extractor for " + filename));
-    }
-
     bool is_cg_extension(const std::wstring& extension) const
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -241,14 +215,12 @@ cg_producer_registry::cg_producer_registry()
 
 void cg_producer_registry::register_cg_producer(std::wstring           cg_producer_name,
                                                 std::set<std::wstring> file_extensions,
-                                                meta_info_extractor    info_extractor,
                                                 cg_proxy_factory       proxy_factory,
                                                 cg_producer_factory    producer_factory,
                                                 bool                   reusable_producer_instance)
 {
     impl_->register_cg_producer(std::move(cg_producer_name),
                                 std::move(file_extensions),
-                                std::move(info_extractor),
                                 std::move(proxy_factory),
                                 std::move(producer_factory),
                                 reusable_producer_instance);
@@ -277,11 +249,6 @@ spl::shared_ptr<cg_proxy> cg_producer_registry::get_or_create_proxy(const spl::s
                                                                     const std::wstring& filename) const
 {
     return impl_->get_or_create_proxy(video_channel, dependencies, render_layer, filename);
-}
-
-std::string cg_producer_registry::read_meta_info(const std::wstring& filename) const
-{
-    return impl_->read_meta_info(filename);
 }
 
 bool cg_producer_registry::is_cg_extension(const std::wstring& extension) const

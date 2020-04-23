@@ -24,11 +24,9 @@
 
 #include "client.h"
 
-#include "oscpack/OscHostEndianness.h"
 #include "oscpack/OscOutboundPacketStream.h"
 
 #include <common/endian.h>
-#include <common/except.h>
 #include <common/utf.h>
 
 #include <core/monitor/monitor.h>
@@ -73,15 +71,15 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
 
-    std::mutex                            mutex_;
-    std::condition_variable               cond_;
-    core::monitor::state                  bundle_;
-    uint64_t                              bundle_time_ = 0;
+    std::mutex              mutex_;
+    std::condition_variable cond_;
+    core::monitor::state    bundle_;
+    uint64_t                bundle_time_ = 0;
 
-    uint64_t                              time_ = 0;
+    uint64_t time_ = 0;
 
-    std::atomic<bool>                     abort_request_{false};
-    std::thread                           thread_;
+    std::atomic<bool> abort_request_{false};
+    std::thread       thread_;
 
   public:
     impl(std::shared_ptr<boost::asio::io_service> service)
@@ -104,8 +102,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                             return;
                         }
 
-                        bundle = std::move(bundle_);
-                        bundle_time = bundle_time_;
+                        bundle       = std::move(bundle_);
+                        bundle_time  = bundle_time_;
                         bundle_time_ = 0;
 
                         for (auto& p : reference_counts_by_endpoint_) {
@@ -187,14 +185,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
-    void send(core::monitor::state state)
+    void send(const core::monitor::state& state)
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
             // TODO: time_++ is a hack. Use proper channel time.
             bundle_time_ = time_++;
-            bundle_ = state;
+            bundle_      = state;
         }
         cond_.notify_all();
     }

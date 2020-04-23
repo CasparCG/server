@@ -31,7 +31,8 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
         res.status_code    = 503;
         res.status_message = "Connection refused";
         return res;
-    } else if (error) {
+    }
+    if (error) {
         CASPAR_THROW_EXCEPTION(io_error() << msg_info(error.message()));
     }
 

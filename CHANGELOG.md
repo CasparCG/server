@@ -1,4 +1,54 @@
-CasparCG 2.2.0 Beta
+CasparCG 2.3.0
+==========================================
+
+### Producers
+##### Features
+* Decklink: Detect and update input format when no format is specified in AMCP
+* Decklink: Improve performance (gpu colour conversion & less heavy deinterlacing when possible)
+* Decklink: `LOAD DECKLINK` will display live frames instead of black
+* FFmpeg: Update to 4.2.2
+* HTML: Better performance for gpu-enabled mode
+* NDI: Native NDI producer
+* Route: Allow routing first frame of background producer
+* Transition: Add sting transitions
+* Add frames_left field to osc/info for progress towards autonext
+##### Fixes
+* Colour: parsing too much of amcp string as list of colours
+* FFmpeg: Always resample clips to 48khz
+* FFmpeg: Ensure frame time reaches the end of the clip
+* FFmpeg: RTMP stream playback
+* FFmpeg: SEEK and LENGTH parameters causing issues with AUTONEXT
+* FFmpeg: Ensure packets/frames after the decided end of the clip are not displayed
+* HTML: unlikely but possible exception when handling frames
+* HTML: set autoplay-policy
+* HTML: animations being ticked too much
+* Route: Sending empty frame into a route would cause the destination to reuse the last frame
+
+### Consumers
+##### Features
+* Audio: Fix audio crackling
+* Audio: Fix memory leak
+* Bluefish: Various improvmements including supporting more channels and UHD.
+* NDI: Native NDI consumer
+* Screen: Add side by side key output
+* Screen: Add support for Datavideo TC-100/TC-200
+##### Fixes
+* Decklink: Tick channel at roughly consistent rate when running interlaced output
+
+### General
+##### Features
+* Add mixer colour invert property
+* Restore `INFO CONFIG` and `INFO PATHS` commands
+* Linux: Update docker images to support running in docker (not recommended for production use)
+##### Fixes
+* NTSC audio cadence
+* Ignore empty lines in console input
+* Fix building with clang on linux
+* Fix building with vs2019
+* Better error when startup fails due to AMCP port being in use
+* Backslash is a valid trailing slash for windows
+
+CasparCG 2.2.0
 ==========================================
 
 General
@@ -90,7 +140,7 @@ FFMPEG
 
 Bluefish
 --------
- * Bluefish Consumer removed (moved to 3.0.0).
+ * Misc cleanup and fixes.
 
 OAL
 ------------

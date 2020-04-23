@@ -27,9 +27,9 @@
 
 #include <core/frame/frame_visitor.h>
 #include <core/monitor/monitor.h>
+#include <core/video_format.h>
 
 #include <cstdint>
-#include <vector>
 
 FORWARD2(caspar, diagnostics, class graph);
 
@@ -48,9 +48,9 @@ class audio_mixer final : public frame_visitor
     float                get_master_volume();
     core::monitor::state state() const;
 
-    virtual void push(const struct frame_transform& transform);
-    virtual void visit(const class const_frame& frame);
-    virtual void pop();
+    void push(const struct frame_transform& transform) override;
+    void visit(const class const_frame& frame) override;
+    void pop() override;
 
   private:
     struct impl;

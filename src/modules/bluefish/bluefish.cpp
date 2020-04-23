@@ -29,12 +29,9 @@
 
 #include "util/blue_velvet.h"
 
-#include <common/log.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
-
-#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace bluefish {
 
@@ -55,12 +52,12 @@ std::vector<std::wstring> device_list()
     try {
         bvc_wrapper blue;
         int         numCards = 0;
-        blue.enumerate(numCards);
+        blue.enumerate(&numCards);
 
-        for (int n = 1; n < (numCards + 1); n++) {
+        for (int n = 1; n < numCards + 1; n++) {
             blue.attach(n);
-            devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) +
-                              L"] " + get_sdi_inputs(blue) + L"i" + get_sdi_outputs(blue) + L"o");
+            devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + std::to_wstring(n) + L"] " +
+                              get_sdi_inputs(blue) + L"i" + get_sdi_outputs(blue) + L"o");
             blue.detach();
         }
     } catch (...) {
@@ -74,7 +71,7 @@ void init(core::module_dependencies dependencies)
     try {
         bvc_wrapper blue;
         int         num_cards = 0;
-        blue.enumerate(num_cards);
+        blue.enumerate(&num_cards);
     } catch (...) {
     }
 

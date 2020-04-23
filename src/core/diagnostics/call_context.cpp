@@ -23,8 +23,6 @@
 
 #include "call_context.h"
 
-#include <boost/lexical_cast.hpp>
-
 namespace caspar { namespace core { namespace diagnostics {
 
 thread_local call_context context;
@@ -35,11 +33,9 @@ std::wstring call_context::to_string() const
 {
     if (video_channel == -1)
         return L"[]";
-    else if (layer == -1)
-        return L"[ch=" + boost::lexical_cast<std::wstring>(video_channel) + L"]";
-    else
-        return L"[ch=" + boost::lexical_cast<std::wstring>(video_channel) + L"; layer=" +
-               boost::lexical_cast<std::wstring>(layer) + L"]";
+    if (layer == -1)
+        return L"[ch=" + std::to_wstring(video_channel) + L"]";
+    return L"[ch=" + std::to_wstring(video_channel) + L"; layer=" + std::to_wstring(layer) + L"]";
 }
 
 }}} // namespace caspar::core::diagnostics

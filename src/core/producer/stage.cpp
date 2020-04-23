@@ -26,18 +26,14 @@
 #include "layer.h"
 
 #include "../frame/draw_frame.h"
-#include "../frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
 #include <common/future.h>
-#include <common/timer.h>
 
 #include <core/frame/frame_transform.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
 
 #include <functional>
 #include <future>
@@ -54,7 +50,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
 
-    executor executor_{L"stage " + boost::lexical_cast<std::wstring>(channel_index_)};
+    executor executor_{L"stage " + std::to_wstring(channel_index_)};
 
   public:
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
@@ -63,19 +59,28 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
     }
 
-    std::map<int, draw_frame> operator()(const video_format_desc& format_desc, int nb_samples)
+    std::map<int, layer_frame>
+    operator()(const video_format_desc& format_desc, int nb_samples, std::vector<int>& fetch_background)
     {
         return executor_.invoke([=] {
-            std::map<int, draw_frame> frames;
+            std::map<int, layer_frame> frames;
 
             try {
                 for (auto& t : tweens_)
                     t.second.tick(1);
 
                 for (auto& p : layers_) {
-                    auto& layer     = p.second;
-                    auto& tween     = tweens_[p.first];
-                    frames[p.first] = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
+                    auto& layer = p.second;
+                    auto& tween = tweens_[p.first];
+
+                    layer_frame res    = {};
+                    res.foreground     = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
+                    res.has_background = layer.has_background();
+                    if (std::find(fetch_background.begin(), fetch_background.end(), p.first) !=
+                        fetch_background.end()) {
+                        res.background = layer.receive_background(format_desc, nb_samples);
+                    }
+                    frames[p.first] = res;
                 }
 
                 monitor::state state;
@@ -142,12 +147,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { return tweens_[index].fetch(); });
     }
 
-    std::future<void> load(int                                    index,
-                           const spl::shared_ptr<frame_producer>& producer,
-                           bool                                   preview,
-                           const boost::optional<int32_t>&        auto_play_delta)
+    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
     {
-        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play_delta); });
+        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
 
     std::future<void> pause(int index)
@@ -217,22 +219,20 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
         if (other_impl.get() == this)
             return swap_layer(index, other_index, swap_transforms);
-        else {
-            auto func = [=] {
-                auto& my_layer    = get_layer(index);
-                auto& other_layer = other_impl->get_layer(other_index);
+        auto func = [=] {
+            auto& my_layer    = get_layer(index);
+            auto& other_layer = other_impl->get_layer(other_index);
 
-                std::swap(my_layer, other_layer);
+            std::swap(my_layer, other_layer);
 
-                if (swap_transforms) {
-                    auto& my_tween    = tweens_[index];
-                    auto& other_tween = other_impl->tweens_[other_index];
-                    std::swap(my_tween, other_tween);
-                }
-            };
+            if (swap_transforms) {
+                auto& my_tween    = tweens_[index];
+                auto& other_tween = other_impl->tweens_[other_index];
+                std::swap(my_tween, other_tween);
+            }
+        };
 
-            return invoke_both(other, func);
-        }
+        return invoke_both(other, func);
     }
 
     std::future<void> invoke_both(stage& other, std::function<void()> func)
@@ -286,12 +286,9 @@ std::future<void> stage::apply_transform(int                                    
 std::future<void>            stage::clear_transforms(int index) { return impl_->clear_transforms(index); }
 std::future<void>            stage::clear_transforms() { return impl_->clear_transforms(); }
 std::future<frame_transform> stage::get_current_transform(int index) { return impl_->get_current_transform(index); }
-std::future<void>            stage::load(int                                    index,
-                              const spl::shared_ptr<frame_producer>& producer,
-                              bool                                   preview,
-                              const boost::optional<int32_t>&        auto_play_delta)
+std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
 {
-    return impl_->load(index, producer, preview, auto_play_delta);
+    return impl_->load(index, producer, preview, auto_play);
 }
 std::future<void> stage::pause(int index) { return impl_->pause(index); }
 std::future<void> stage::resume(int index) { return impl_->resume(index); }
@@ -313,9 +310,10 @@ std::future<void> stage::swap_layer(int index, int other_index, stage& other, bo
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc, int nb_samples)
+std::map<int, layer_frame>                   stage::
+                                             operator()(const video_format_desc& format_desc, int nb_samples, std::vector<int>& fetch_background)
 {
-    return (*impl_)(format_desc, nb_samples);
+    return (*impl_)(format_desc, nb_samples, fetch_background);
 }
 core::monitor::state stage::state() const { return impl_->state_; }
 }} // namespace caspar::core
