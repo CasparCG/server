@@ -403,8 +403,7 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            const AVPixelFormat pix_fmts[] = {
-                                            /*AV_PIX_FMT_RGB24,
+            const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGB24,
                                               AV_PIX_FMT_BGR24,
                                               AV_PIX_FMT_BGRA,
                                               AV_PIX_FMT_ARGB,
@@ -416,7 +415,7 @@ struct Filter
                                               AV_PIX_FMT_YUV410P,
                                               AV_PIX_FMT_YUVA444P,
                                               AV_PIX_FMT_YUVA422P,
-                                              AV_PIX_FMT_YUVA420P,*/
+                                              AV_PIX_FMT_YUVA420P,
                                               AV_PIX_FMT_UYVY422,
                                               AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));

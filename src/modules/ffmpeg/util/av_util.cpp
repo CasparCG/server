@@ -41,17 +41,21 @@ core::mutable_frame make_frame(void*                    tag,
                                std::shared_ptr<AVFrame> video,
                                std::shared_ptr<AVFrame> audio)
 {
+    std::vector<int> data_map;
+
     const auto pix_desc =
-        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height)
+        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
               : core::pixel_format_desc(core::pixel_format::invalid);
 
     auto frame = frame_factory.create_frame(tag, pix_desc);
 
     if (video) {
         for (int n = 0; n < static_cast<int>(pix_desc.planes.size()); ++n) {
+            auto frame_plan_index = data_map.empty() ? n : data_map.at(n);
+
             tbb::parallel_for(0, pix_desc.planes[n].height, [&](int y) {
                 std::memcpy(frame.image_data(n).begin() + y * pix_desc.planes[n].linesize,
-                            video->data[n] + y * video->linesize[n],
+                            video->data[frame_plan_index] + y * video->linesize[frame_plan_index],
                             pix_desc.planes[n].linesize);
             });
         }
@@ -112,7 +116,7 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
     }
 }
 
-core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height)
+core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height, std::vector<int>& data_map)
 {
     // Get linesizes
     AVPicture dummy_pict;
@@ -155,6 +159,12 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
         }
         case core::pixel_format::uyvy: {
             desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 2, height, 2));
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 4, height, 4));
+
+            data_map.clear();
+            data_map.push_back(0);
+            data_map.push_back(0);
+
             return desc;
         }
         default:
