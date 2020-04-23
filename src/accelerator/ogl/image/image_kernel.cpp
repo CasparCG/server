@@ -248,6 +248,7 @@ struct image_kernel::impl
         shader_->set("has_local_key", static_cast<bool>(params.local_key));
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);
+        shader_->set("texture_width", params.pix_desc.planes.front().width);
         shader_->set("opacity", params.transform.is_key ? 1.0 : params.transform.opacity);
 
         if (params.transform.chroma.enable) {

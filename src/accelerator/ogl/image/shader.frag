@@ -14,6 +14,7 @@ uniform bool		has_layer_key;
 uniform int			blend_mode;
 uniform int			keyer;
 uniform int			pixel_format;
+uniform int			texture_width;
 
 uniform bool        invert;
 uniform float		opacity;
@@ -509,6 +510,17 @@ vec4 get_rgba_color()
         return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).bgr, 1.0);
     case 9:		//rgb,
         return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb, 1.0);
+	case 10:	// uyvy
+		{
+			float y = get_sample(plane[0], TexCoord.st / TexCoord.q).g;
+			
+			float posx = mod(floor(TexCoord.s / TexCoord.q * texture_width), 2.0);
+			float xstep = 1.0 / texture_width;
+			float cb = get_sample(plane[0], TexCoord.st / TexCoord.q + vec2((0 - posx) * xstep, 0.0)).r;
+			float cr = get_sample(plane[0], TexCoord.st / TexCoord.q + vec2((1 - posx) * xstep, 0.0)).r;
+			
+			return ycbcra_to_rgba(y, cb, cr, 1.0);
+		}
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
