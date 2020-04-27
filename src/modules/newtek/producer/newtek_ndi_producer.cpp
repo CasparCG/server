@@ -38,6 +38,7 @@
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/param.h>
+#include <common/scope_exit.h>
 #include <common/timer.h>
 #include <common/utf.h>
 
@@ -157,6 +158,15 @@ struct newtek_ndi_producer : public core::frame_producer
                                                      format_desc_.audio_sample_rate,
                                                      format_desc_.audio_channels,
                                                      format_desc_.audio_cadence[++cadence_counter_ %= cadence_length_]);
+
+            CASPAR_SCOPE_EXIT
+            {
+                if (video_frame.p_data != nullptr)
+                    ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
+                if (audio_frame.p_data != nullptr)
+                    ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
+            };
+
             if (video_frame.p_data != nullptr) {
                 std::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* frame) { av_frame_free(&frame); });
                 std::shared_ptr<AVFrame> a_frame(av_frame_alloc(), [](AVFrame* frame) { av_frame_free(&frame); });
@@ -191,10 +201,8 @@ struct newtek_ndi_producer : public core::frame_producer
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
                 }
-                ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
                 auto mframe =
                     ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
-                ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
                 delete[] audio_frame_32s.p_data;
                 auto dframe = core::draw_frame(std::move(mframe));
                 {
