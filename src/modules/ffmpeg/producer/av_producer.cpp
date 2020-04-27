@@ -223,9 +223,18 @@ struct Filter
                 filter_spec = "anull";
             }
 
+            // Find first audio stream to get a time_base for the first_pts calculation
+            AVRational tb = {1, format_desc.audio_sample_rate};
+            for (auto n = 0U; n < input->nb_streams; ++n) {
+                const auto st = input->streams[n];
+                if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && st->codecpar->channels > 0) {
+                    tb = {1, st->codecpar->sample_rate};
+                    break;
+                }
+            }
             filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01:osr=%d,"
                                           "asetnsamples=n=1024:p=0") %
-                            av_rescale_q(start_time, TIME_BASE_Q, {1, format_desc.audio_sample_rate}) %
+                            av_rescale_q(start_time, TIME_BASE_Q, tb) %
                             format_desc.audio_sample_rate)
                                .str();
         }
@@ -857,7 +866,6 @@ struct AVProducer::Impl
     void start(int64_t start)
     {
         CASPAR_SCOPE_EXIT { update_state(); };
-
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
     }
 
