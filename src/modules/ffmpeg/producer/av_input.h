@@ -34,6 +34,7 @@ class Input
     AVFormatContext* const operator->() const;
 
     void reset();
+    void abort();
     bool eof() const;
     void seek(int64_t ts, bool flush = true);
 
