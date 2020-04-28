@@ -4,63 +4,9 @@ FROM ${IMAGE_BASE} as BUILD
     ARG PROC_COUNT=8
 	ENV FFMPEG_COMMIT n4.2.2
 
-	RUN apt-get install -yq --no-install-recommends \
-		autoconf \
-		automake \
-		cmake \
-		curl \
-		bzip2 \
-		libexpat1-dev \
-		g++ \
-		gcc \
-		git \
-		gperf \
-		libtool \
-		make \
-		nasm \
-		perl \
-		pkg-config \
-		python \
-		yasm \
-		zlib1g-dev \
-		libjpeg-dev \
-		libsndfile1-dev \
-		libglu1-mesa-dev \
-		libharfbuzz0b \
-		libpangoft2-1.0-0 \
-		libcairo2 \
-		libv4l-0 \
-		libraw1394-11 \
-		libavc1394-0 \
-		libiec61883-0 \
-		libxtst6 \
-		libnss3 \
-		libnspr4 \
-		libgconf-2-4 \
-		libasound2 \
-		libfreeimage-dev \
-		libglew-dev \
-		libopenal-dev \
-		libopus-dev \
-		libgsm1-dev \
-		libmodplug-dev \
-		libvpx-dev \
-		libass-dev \
-		libbluray-dev \
-		libfribidi-dev \
-		libgmp-dev \
-		libgnutls28-dev \
-		libmp3lame-dev \
-		libopencore-amrnb-dev \
-		libopencore-amrwb-dev \
-		librtmp-dev \
-		libtheora-dev \
-		libx264-dev \
-		libx265-dev \
-		libxvidcore-dev
 	RUN wget https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT}.tar.gz && \
 		tar zxf ${FFMPEG_COMMIT}.tar.gz
-	WORKDIR FFmpeg-${FFMPEG_COMMIT}
+	WORKDIR /FFmpeg-${FFMPEG_COMMIT}
 	RUN ./configure \
 			--enable-version3 \
 			--enable-gpl \

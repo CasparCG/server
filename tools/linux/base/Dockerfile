@@ -1,8 +1,25 @@
 FROM buildpack-deps:bionic
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
+    autoconf \
+    automake \
 	cmake \
+    curl \
+    bzip2 \
     clang \
+    g++ \
+    gcc \
+    git \
+    gperf \
+    libtool \
+    make \
+    nasm \
+    perl \
+    pkg-config \
+    python \
+    yasm \
+    zlib1g-dev \
+    libexpat1-dev \
 	lsb-release \
 	libglew-dev \
 	libfreeimage-dev \

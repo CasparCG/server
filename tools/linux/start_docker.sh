@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CMD="docker run -it"
+CMD="docker run --rm -it"
 
 # bind AMCP Ports
 CMD="$CMD -p 5250:5250"
