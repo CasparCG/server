@@ -21,7 +21,6 @@ FROM ${IMAGE_BASE} as BUILD
 		perl \
 		pkg-config \
 		python \
-		libssl-dev \
 		yasm \
 		zlib1g-dev \
 		libjpeg-dev \
@@ -58,15 +57,13 @@ FROM ${IMAGE_BASE} as BUILD
 		libtheora-dev \
 		libx264-dev \
 		libx265-dev \
-		libxvidcore-dev \
-		libfdk-aac-dev
+		libxvidcore-dev
 	RUN wget https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT}.tar.gz && \
 		tar zxf ${FFMPEG_COMMIT}.tar.gz
 	WORKDIR FFmpeg-${FFMPEG_COMMIT}
 	RUN ./configure \
 			--enable-version3 \
 			--enable-gpl \
-			--enable-nonfree \
 			--enable-small \
 			--enable-libmp3lame \
 			--enable-libx264 \
@@ -75,14 +72,13 @@ FROM ${IMAGE_BASE} as BUILD
 			--enable-libtheora \
 			--enable-libvorbis \
 			--enable-libopus \
-			--enable-libfdk-aac \
 			--enable-libass \
 			--enable-libwebp \
 			--enable-librtmp \
 			--enable-postproc \
 			--enable-avresample \
 			--enable-libfreetype \
-			--enable-openssl \
+			--enable-gnutls \
 			--disable-debug \
 			--prefix=/opt/ffmpeg \
 			&& \
