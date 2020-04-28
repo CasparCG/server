@@ -247,10 +247,16 @@ struct image_kernel::impl
             conversion_texture->attach();
 
             shader_->set("plane[0]", texture_id::plane0);
-            shader_->set("plane[1]", texture_id::plane1);
             shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
             shader_->set("pixel_format", params.pix_desc.format);
-            shader_->set("texture_width", width);
+            shader_->set("opacity", 1.0);
+            shader_->set("chroma", false);
+            shader_->set("levels", false);
+            shader_->set("invert", false);
+            shader_->set("csb", false);
+            shader_->set("has_local_key", false);
+            shader_->set("has_layer_key", false);
+            shader_->set("blend_mode", core::blend_mode::normal);
 
             GL(glViewport(0, 0, width, height));
 
