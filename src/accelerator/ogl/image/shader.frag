@@ -14,7 +14,6 @@ uniform bool		has_layer_key;
 uniform int			blend_mode;
 uniform int			keyer;
 uniform int			pixel_format;
-uniform int 		texture_width;
 
 uniform bool        invert;
 uniform float		opacity;
@@ -513,18 +512,9 @@ vec4 get_rgba_color()
     case 10:	//uyvy,
         {
             float y = get_sample(plane[0], TexCoord.st).g;
-            float cb;
-            float cr;
-            if(mod(TexCoord.s*texture_width, 2.0) < 1.0)
-            {
-                cb = get_sample(plane[0], TexCoord.st).r;
-	            cr = textureOffset(plane[0], TexCoord.st, ivec2(1, 0)).r;
-            }
-            else
-            {
-	            cb = textureOffset(plane[0], TexCoord.st, ivec2(-1, 0)).r;
-	            cr = get_sample(plane[0], TexCoord.st).r;
-            }
+            int offset = int(floor(mod(gl_FragCoord.s, 2.0)));
+            float cb = textureOffset(plane[0], TexCoord.st, ivec2(-offset, 0)).r;
+	        float cr = textureOffset(plane[0], TexCoord.st, ivec2(1 - offset, 0)).r;
             return ycbcra_to_rgba(y, cb, cr, 1.0);
         }
     }
