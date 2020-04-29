@@ -69,5 +69,15 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libxss1 \
 	libgtk2.0-0 \
     libatspi2.0-dev \
-    libatk-bridge2.0-dev
+    libatk-bridge2.0-dev \
+    libopenjp2-7-dev \
+    libopenmpt-dev \
+    libshine-dev \
+    libsnappy-dev \
+    libsoxr-dev \
+    libspeex-dev \
+    libtwolame-dev \
+    libvo-amrwbenc-dev \
+    libwavpack-dev \
+    libsdl2-dev
 
