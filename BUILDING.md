@@ -55,7 +55,7 @@ _Note: if you ran docker with sudo, CasparCG server will not be able to run with
 Development
 -----------
 
-1. Install dependencies `apt-get install git cmake build-essential g++ libglew-dev libfreeimage-dev libtbb-dev libsndfile1-dev libopenal-dev libjpeg-dev libfreetype6-dev libglfw3-dev libxcursor-dev libxinerama-dev libxi-dev libsfml-dev libvpx-dev libwebp-dev liblzma-dev libmp3lame-dev libopus-dev libtheora-dev libx264-dev libx265-dev libbz2-dev libcrypto++-dev librtmp-dev libgmp-dev libxcb-shm0-dev libass-dev libgconf2-dev`
+1. Install dependencies `apt-get install git cmake build-essential g++ libglew-dev libfreeimage-dev libtbb-dev libsndfile1-dev libopenal-dev libjpeg-dev libfreetype6-dev libxcursor-dev libxinerama-dev libxi-dev libsfml-dev libvpx-dev libwebp-dev liblzma-dev libmp3lame-dev libopus-dev libtheora-dev libx264-dev libx265-dev libbz2-dev libcrypto++-dev librtmp-dev libgmp-dev libxcb-shm0-dev libass-dev libgconf2-dev`
 2. Install Docker by following installation instructions from [Docker Docs][1]
 3. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 4. `cd casparcg-server-master`

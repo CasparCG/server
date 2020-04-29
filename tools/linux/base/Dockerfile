@@ -25,7 +25,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libfreeimage-dev \
 	libtbb-dev \
 	libopenal-dev \
-	libglfw3-dev \
 	libxcursor-dev \
 	libxinerama-dev \
 	libxi-dev \
