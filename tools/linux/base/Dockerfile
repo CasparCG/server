@@ -1,25 +1,25 @@
 FROM buildpack-deps:bionic
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
-    autoconf \
-    automake \
+	autoconf \
+	automake \
 	cmake \
-    curl \
-    bzip2 \
-    clang \
-    g++ \
-    gcc \
-    git \
-    gperf \
-    libtool \
-    make \
-    nasm \
-    perl \
-    pkg-config \
-    python \
-    yasm \
-    zlib1g-dev \
-    libexpat1-dev \
+	curl \
+	bzip2 \
+	clang \
+	g++ \
+	gcc \
+	git \
+	gperf \
+	libtool \
+	make \
+	nasm \
+	perl \
+	pkg-config \
+	python \
+	yasm \
+	zlib1g-dev \
+	libexpat1-dev \
 	lsb-release \
 	libglew-dev \
 	libfreeimage-dev \
@@ -64,16 +64,16 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libx265-dev \
 	libxss1 \
 	libgtk2.0-0 \
-    libatspi2.0-dev \
-    libatk-bridge2.0-dev \
-    libopenjp2-7-dev \
-    libopenmpt-dev \
-    libshine-dev \
-    libsnappy-dev \
-    libsoxr-dev \
-    libspeex-dev \
-    libtwolame-dev \
-    libvo-amrwbenc-dev \
-    libwavpack-dev \
-    libsdl2-dev
+	libatspi2.0-dev \
+	libatk-bridge2.0-dev \
+	libopenjp2-7-dev \
+	libopenmpt-dev \
+	libshine-dev \
+	libsnappy-dev \
+	libsoxr-dev \
+	libspeex-dev \
+	libtwolame-dev \
+	libvo-amrwbenc-dev \
+	libwavpack-dev \
+	libsdl2-dev
 
