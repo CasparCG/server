@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libglew-dev \
 	libfreeimage-dev \
 	libtbb-dev \
-	libsndfile1-dev \
 	libopenal-dev \
 	libglfw3-dev \
 	libxcursor-dev \
@@ -33,8 +32,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libnih-dbus-dev \
 	libsfml-dev \
 	libxrandr-dev \
-	libjpeg-dev \
-	libsndfile1-dev \
 	libudev-dev \
 	libglu1-mesa-dev \
 	libharfbuzz0b \
