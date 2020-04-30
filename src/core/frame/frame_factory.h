@@ -41,8 +41,9 @@ class frame_factory
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
 #ifdef WIN32
-    virtual class const_frame import_d3d_texture(const void* video_stream_tag,
-                                                 const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture) = 0;
+    virtual class const_frame
+    import_d3d_texture(const void*                                             video_stream_tag,
+                       const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture) = 0;
 #endif
 };
 

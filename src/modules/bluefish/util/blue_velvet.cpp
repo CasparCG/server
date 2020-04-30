@@ -55,10 +55,10 @@ BLUE_U32 bvc_wrapper::set_multilink(const int iDeviceID, const int memChannel)
 
     blue_multi_link_info_struct attach_info = {};
     attach_info.InputControl                = 1;
-    attach_info.Link1_Device = iDeviceID;
-    attach_info.Link2_Device = iDeviceID;
-    attach_info.Link3_Device = iDeviceID;
-    attach_info.Link4_Device = iDeviceID;
+    attach_info.Link1_Device                = iDeviceID;
+    attach_info.Link2_Device                = iDeviceID;
+    attach_info.Link3_Device                = iDeviceID;
+    attach_info.Link4_Device                = iDeviceID;
 
     if (memChannel == BLUE_VIDEO_INPUT_CHANNEL_1) {
         attach_info.Link1_MemChannel = BLUE_VIDEO_INPUT_CHANNEL_1;
@@ -128,11 +128,11 @@ BLUE_U32 bvc_wrapper::system_buffer_read(unsigned char* pPixels,
 #if 1
     return bfcSystemBufferReadAsync(bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
 #else
-    BFC_SYNC_INFO bsi = bfcSyncInfoCreate(bvc_.get());
-    BLUE_U32 retVal = 0;
+    BFC_SYNC_INFO bsi    = bfcSyncInfoCreate(bvc_.get());
+    BLUE_U32      retVal = 0;
     retVal               = bfcDmaReadFromCardAsync(bvc_.get(), pPixels, ulSize, bsi, ulBufferID, ulOffset);
-    int wrv = bfcSyncInfoWait(bvc_.get(), bsi, 20);
-    int x = wrv + 0;
+    int wrv              = bfcSyncInfoWait(bvc_.get(), bsi, 20);
+    int x                = wrv + 0;
     x++;
     bfcSyncInfoDelete(bvc_.get(), bsi);
     return retVal;

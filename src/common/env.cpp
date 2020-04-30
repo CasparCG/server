@@ -164,7 +164,6 @@ void log_configuration_warnings()
 {
     if (pt.empty())
         return;
-
 }
 
 }} // namespace caspar::env

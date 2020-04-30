@@ -75,21 +75,21 @@ enum class bluefish_hardware_output_channel
 
 enum class uhd_output_option
 {
-    disable_BVC_MultiLink   = 0,
-    auto_uhd                = 1,
-    force_2si               = 2,
-    force_square_division   = 3,
+    disable_BVC_MultiLink = 0,
+    auto_uhd              = 1,
+    force_2si             = 2,
+    force_square_division = 3,
 };
 
 struct configuration
 {
-    unsigned int                            device_index         = 1;
-    bluefish_hardware_output_channel        device_stream        = bluefish_hardware_output_channel::channel_1;
-    bool                                    embedded_audio       = true;
-    hardware_downstream_keyer_mode          hardware_keyer_value = hardware_downstream_keyer_mode::disable;
-    hardware_downstream_keyer_audio_source  keyer_audio_source =
+    unsigned int                           device_index         = 1;
+    bluefish_hardware_output_channel       device_stream        = bluefish_hardware_output_channel::channel_1;
+    bool                                   embedded_audio       = true;
+    hardware_downstream_keyer_mode         hardware_keyer_value = hardware_downstream_keyer_mode::disable;
+    hardware_downstream_keyer_audio_source keyer_audio_source =
         hardware_downstream_keyer_audio_source::VideoOutputChannel;
-    unsigned int                            watchdog_timeout = 2;
+    unsigned int      watchdog_timeout = 2;
     uhd_output_option uhd_mode         = uhd_output_option::disable_BVC_MultiLink;
 };
 
@@ -549,7 +549,7 @@ struct bluefish_consumer
     void setup_hardware_downstream_keyer(hardware_downstream_keyer_mode         keyer,
                                          hardware_downstream_keyer_audio_source audio_source)
     {
-        unsigned int keyer_control_value  = 0;
+        unsigned int keyer_control_value = 0;
         if (keyer == hardware_downstream_keyer_mode::disable || keyer == hardware_downstream_keyer_mode::external) {
             keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLED(keyer_control_value);
             keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLE_OVER_BLACK(keyer_control_value);
@@ -750,13 +750,12 @@ struct bluefish_consumer
                 void* dest = buf->image_data();
                 if (frame.image_data(0).size()) {
                     if (config_.uhd_mode == uhd_output_option::force_2si) {
-                        // Do the Square Division top 2si conversion here.                      
-                        blue_->convert_sq_to_2si((int)frame.width(), (int)frame.height(), (void*)frame.image_data(0).begin(), dest);
-                    }
-                    else
+                        // Do the Square Division top 2si conversion here.
+                        blue_->convert_sq_to_2si(
+                            (int)frame.width(), (int)frame.height(), (void*)frame.image_data(0).begin(), dest);
+                    } else
                         std::memcpy(dest, frame.image_data(0).begin(), frame.image_data(0).size());
-                }
-                else
+                } else
                     std::memset(dest, 0, buf->image_size());
 
                 // encode and copy hanc data
@@ -965,7 +964,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 
     auto uhd_mode   = ptree.get(L"uhd-mode", 0);
     config.uhd_mode = uhd_output_option::disable_BVC_MultiLink;
-    if(uhd_mode == 1)
+    if (uhd_mode == 1)
         config.uhd_mode = uhd_output_option::auto_uhd;
     else if (uhd_mode == 2)
         config.uhd_mode = uhd_output_option::force_2si;

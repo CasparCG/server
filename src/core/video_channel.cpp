@@ -90,7 +90,7 @@ struct video_channel::impl final
                 if (r.first.index == -1) {
                     route->signal(layer_frame.foreground);
                 } else if (r.first.mode == route_mode::background ||
-                    (r.first.mode == route_mode::next && layer_frame.has_background)) {
+                           (r.first.mode == route_mode::next && layer_frame.has_background)) {
                     route->signal(draw_frame::pop(layer_frame.background));
                 } else {
                     route->signal(draw_frame::pop(layer_frame.foreground));
@@ -165,7 +165,7 @@ struct video_channel::impl final
 
                     // Mix
                     caspar::timer mix_timer;
-                    auto mixed_frame = mixer_(stage_frames, format_desc, nb_samples);
+                    auto          mixed_frame = mixer_(stage_frames, format_desc, nb_samples);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Consume

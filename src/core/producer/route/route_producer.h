@@ -33,8 +33,8 @@ class route_control
   public:
     virtual ~route_control() {}
 
-    virtual int  get_source_channel() const    = 0;
-    virtual int  get_source_layer() const      = 0;
+    virtual int get_source_channel() const = 0;
+    virtual int get_source_layer() const   = 0;
 
     virtual void set_cross_channel(bool cross) = 0;
 };

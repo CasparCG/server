@@ -149,9 +149,9 @@ bool is_bluefish_format_interlaced(unsigned int vid_mode)
 
 struct bluefish_producer
 {
-    const int                           device_index_;
-    const int                           stream_index_;
-    spl::shared_ptr<bvc_wrapper>        blue_;
+    const int                    device_index_;
+    const int                    stream_index_;
+    spl::shared_ptr<bvc_wrapper> blue_;
 
     core::monitor::state                state_;
     mutable std::mutex                  state_mutex_;
@@ -170,8 +170,8 @@ struct bluefish_producer
     core::video_format_desc channel_format_desc_;
     unsigned int            mode_;
 
-    spl::shared_ptr<core::frame_factory>    frame_factory_;
-    std::vector<uint8_t>                    conversion_buffer_;
+    spl::shared_ptr<core::frame_factory> frame_factory_;
+    std::vector<uint8_t>                 conversion_buffer_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
     std::exception_ptr                              exception_;
@@ -188,7 +188,8 @@ struct bluefish_producer
     int                       frames_captured           = 0;
     uint64_t                  capture_ts                = 0;
     int                       remainaing_audio_samples_ = 0;
-    int                       uhd_mode_                 = 0;                    // 0 -> Do Not Allow BVC-ML, 1 -> Auto ( ie. Native buffers will do default mode, or BVC will do SQ.),  2 -> Force 2SI, 3 -> Force SQ
+    int uhd_mode_ = 0; // 0 -> Do Not Allow BVC-ML, 1 -> Auto ( ie. Native buffers will do default mode, or BVC will do
+                       // SQ.),  2 -> Force 2SI, 3 -> Force SQ
 
     bluefish_producer(const bluefish_producer&) = delete;
     bluefish_producer& operator=(const bluefish_producer&) = delete;
@@ -509,7 +510,8 @@ struct bluefish_producer
                 if (uhd_mode_ == 2 && conversion_buffer_.size() <= (width * height * 3)) {
                     // Do additional processing required to handle a 2SI input
                     memcpy(&conversion_buffer_[0], reserved_frames_.front()->image_data(), (width * height * 3));
-                    blue_->convert_2si_to_sq(width, height, &conversion_buffer_[0], reserved_frames_.front()->image_data());
+                    blue_->convert_2si_to_sq(
+                        width, height, &conversion_buffer_[0], reserved_frames_.front()->image_data());
                 }
 
                 // pass to caspar

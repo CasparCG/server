@@ -98,13 +98,14 @@ struct Filter
                 filter_spec = "null";
             }
 
-            bool        doScale = dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width;
+            bool                 doScale = dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width;
             boost::rational<int> bmdFramerate(
                 timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2), frameDuration / 1000);
             bool doFps = bmdFramerate != format_desc.framerate;
             bool i2p   = (dm->GetFieldDominance() != bmdProgressiveFrame) && (1 == format_desc.field_count);
 
-            std::string deintStr = (doScale || doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
+            std::string deintStr =
+                (doScale || doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
             switch (dm->GetFieldDominance()) {
                 case bmdUpperFieldFirst:
                     filter_spec += deintStr + ":parity=tff:deint=all";
@@ -404,8 +405,8 @@ class decklink_producer : public IDeckLinkInputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
                                                       IDeckLinkDisplayMode*            newDisplayMode,

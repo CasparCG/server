@@ -265,7 +265,7 @@ struct server::impl
             auto protocol = ptree_get<std::wstring>(xml_controller.second, L"protocol");
 
             if (name == L"tcp") {
-                auto port              = ptree_get<unsigned int>(xml_controller.second, L"port");
+                auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
 
                 try {
                     auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
@@ -280,7 +280,7 @@ struct server::impl
                     CASPAR_LOG(fatal) << L"Failed to setup " << protocol << L" controller on port "
                                       << boost::lexical_cast<std::wstring>(port) << L". It is likely already in use";
                     throw;
-                    //CASPAR_LOG_CURRENT_EXCEPTION();
+                    // CASPAR_LOG_CURRENT_EXCEPTION();
                 }
             } else
                 CASPAR_LOG(warning) << "Invalid controller: " << name;

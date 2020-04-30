@@ -546,7 +546,8 @@ class html_producer : public core::frame_producer
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
 
-    core::monitor::state state() const override {
+    core::monitor::state state() const override
+    {
         if (client_ != nullptr) {
             return client_->state();
         }

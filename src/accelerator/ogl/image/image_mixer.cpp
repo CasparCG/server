@@ -332,7 +332,7 @@ struct image_mixer::impl
 
 #ifdef WIN32
     core::const_frame import_d3d_texture(const void*                                tag,
-                                           const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture) override
+                                         const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture) override
     {
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)

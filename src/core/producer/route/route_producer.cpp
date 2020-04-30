@@ -37,7 +37,9 @@
 
 namespace caspar { namespace core {
 
-class route_producer : public frame_producer, public route_control
+class route_producer
+    : public frame_producer
+    , public route_control
 {
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -57,7 +59,8 @@ class route_producer : public frame_producer, public route_control
     int get_source_layer() const { return source_layer_; }
 
     // set the buffer depth to 2 for cross-channel routes, 1 otherwise
-    void set_cross_channel(bool cross) {
+    void set_cross_channel(bool cross)
+    {
         if (cross) {
             buffer_.set_capacity(2);
         } else {

@@ -209,7 +209,8 @@ struct Filter
                 filter_spec = "null";
             }
 
-            auto deint = u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.auto-deinterlace", L"interlaced"));
+            auto deint = u8(
+                env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.auto-deinterlace", L"interlaced"));
 
             if (deint != "none") {
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
@@ -234,8 +235,7 @@ struct Filter
             }
             filter_spec += (boost::format(",aresample=async=1000:first_pts=%d:min_comp=0.01:osr=%d,"
                                           "asetnsamples=n=1024:p=0") %
-                            av_rescale_q(start_time, TIME_BASE_Q, tb) %
-                            format_desc.audio_sample_rate)
+                            av_rescale_q(start_time, TIME_BASE_Q, tb) % format_desc.audio_sample_rate)
                                .str();
         }
 
@@ -471,7 +471,7 @@ struct Filter
         }
 
         FF(avfilter_graph_config(graph.get(), nullptr));
-        
+
         CASPAR_LOG(debug) << avfilter_graph_dump(graph.get(), nullptr);
     }
 
@@ -1014,7 +1014,7 @@ struct AVProducer::Impl
 
     std::string print() const
     {
-        const int position = std::max(static_cast<int>(time() - start().value_or(0)), 0);
+        const int          position = std::max(static_cast<int>(time() - start().value_or(0)), 0);
         std::ostringstream str;
         str << std::fixed << std::setprecision(4) << "ffmpeg[" << name_ << "|"
             << av_q2d({position * format_tb_.num, format_tb_.den}) << "/"

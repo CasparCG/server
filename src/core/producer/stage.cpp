@@ -105,7 +105,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto producer = std::move(p.second.foreground());
                     if (0 == producer->name().compare(L"route")) {
                         try {
-                            auto rc = spl::dynamic_pointer_cast<core::route_control>(producer);
+                            auto rc       = spl::dynamic_pointer_cast<core::route_control>(producer);
                             auto srcChan  = rc->get_source_channel();
                             auto srcLayer = rc->get_source_layer();
                             routed_layers.emplace(p.first, std::make_pair(srcChan, srcLayer));
