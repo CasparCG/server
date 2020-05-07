@@ -56,6 +56,7 @@ class frame_geometry
     const std::vector<coord>& data() const;
 
     static const frame_geometry& get_default();
+    static const frame_geometry& get_default_vflip();
 
   private:
     struct impl;

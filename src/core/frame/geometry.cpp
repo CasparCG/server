@@ -74,5 +74,18 @@ const frame_geometry& frame_geometry::get_default()
 
     return g;
 }
+const frame_geometry& frame_geometry::get_default_vflip()
+{
+    static std::vector<frame_geometry::coord> data = {
+        //    vertex    texture
+        {0.0, 0.0, 0.0, 1.0}, // upper left
+        {1.0, 0.0, 1.0, 1.0}, // upper right
+        {1.0, 1.0, 1.0, 0.0}, // lower right
+        {0.0, 1.0, 0.0, 0.0}  // lower left
+    };
+    static const frame_geometry g(frame_geometry::geometry_type::quad, data);
+
+    return g;
+}
 
 }} // namespace caspar::core

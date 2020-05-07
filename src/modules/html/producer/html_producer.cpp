@@ -286,16 +286,8 @@ class html_client
             }
 
             if (d3d_shared_buffer_ && d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
-                auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_);
+                auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, true);
                 core::draw_frame dframe(std::move(frame));
-
-                // Image need flip vertically
-                // Top to bottom
-                dframe.transform().image_transform.perspective.ul[1] = 1;
-                dframe.transform().image_transform.perspective.ur[1] = 1;
-                // Bottom to top
-                dframe.transform().image_transform.perspective.ll[1] = 0;
-                dframe.transform().image_transform.perspective.lr[1] = 0;
 
                 {
                     std::lock_guard<std::mutex> lock(frames_mutex_);

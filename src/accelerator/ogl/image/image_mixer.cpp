@@ -331,8 +331,8 @@ struct image_mixer::impl
     }
 
 #ifdef WIN32
-    core::const_frame import_d3d_texture(const void*                                tag,
-                                         const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture) override
+    core::const_frame
+    import_d3d_texture(const void* tag, const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture, bool vflip) override
     {
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)
@@ -362,6 +362,11 @@ struct image_mixer::impl
 
                 return std::make_shared<decltype(textures)>(std::move(texs));
             });
+
+        if (vflip) {
+            frame.geometry() = core::frame_geometry::get_default_vflip();
+        }
+
         return core::const_frame(std::move(frame));
     }
 #endif
@@ -385,10 +390,10 @@ core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel
 }
 
 #ifdef WIN32
-core::const_frame image_mixer::import_d3d_texture(const void*                                tag,
-                                                  const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture)
+core::const_frame
+image_mixer::import_d3d_texture(const void* tag, const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture, bool vflip)
 {
-    return impl_->import_d3d_texture(tag, d3d_texture);
+    return impl_->import_d3d_texture(tag, d3d_texture, vflip);
 }
 #endif
 }}} // namespace caspar::accelerator::ogl

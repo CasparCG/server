@@ -155,12 +155,13 @@ struct image_kernel::impl
         auto f_p = params.transform.fill_translation;
         auto f_s = params.transform.fill_scale;
 
-        bool is_default_geometry = boost::equal(coords, core::frame_geometry::get_default().data());
-        auto aspect              = params.aspect_ratio;
-        auto angle               = params.transform.angle;
-        auto anchor              = params.transform.anchor;
-        auto crop                = params.transform.crop;
-        auto pers                = params.transform.perspective;
+        bool is_default_geometry = boost::equal(coords, core::frame_geometry::get_default().data()) ||
+                                   boost::equal(coords, core::frame_geometry::get_default_vflip().data());
+        auto aspect = params.aspect_ratio;
+        auto angle  = params.transform.angle;
+        auto anchor = params.transform.anchor;
+        auto crop   = params.transform.crop;
+        auto pers   = params.transform.perspective;
         pers.ur[0] -= 1.0;
         pers.lr[0] -= 1.0;
         pers.lr[1] -= 1.0;
