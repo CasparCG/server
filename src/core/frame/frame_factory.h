@@ -42,7 +42,8 @@ class frame_factory
 
 #ifdef WIN32
     virtual class const_frame import_d3d_texture(const void* video_stream_tag,
-                                                 const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture) = 0;
+                                                 const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture,
+                                                 bool vflip = false) = 0;
 #endif
 };
 

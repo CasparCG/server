@@ -84,6 +84,8 @@ class html_client
 {
     std::wstring                        url_;
     spl::shared_ptr<diagnostics::graph> graph_;
+    core::monitor::state                state_;
+    mutable std::mutex                  state_mutex_;
     caspar::timer                       tick_timer_;
     caspar::timer                       frame_timer_;
     caspar::timer                       paint_timer_;
@@ -131,6 +133,11 @@ class html_client
         graph_->set_color("overload", diagnostics::color(0.6f, 0.6f, 0.3f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            state_["file/path"] = u8(url_);
+        }
 
         loaded_ = false;
         executor_.begin_invoke([&] {
@@ -197,6 +204,12 @@ class html_client
         if (browser_ != nullptr)
             return browser_->GetHost();
         return nullptr;
+    }
+
+    core::monitor::state state() const
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        return state_;
     }
 
   private:
@@ -273,16 +286,8 @@ class html_client
             }
 
             if (d3d_shared_buffer_ && d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
-                auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_);
+                auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, true);
                 core::draw_frame dframe(std::move(frame));
-
-                // Image need flip vertically
-                // Top to bottom
-                dframe.transform().image_transform.perspective.ul[1] = 1;
-                dframe.transform().image_transform.perspective.ur[1] = 1;
-                // Bottom to top
-                dframe.transform().image_transform.perspective.ll[1] = 0;
-                dframe.transform().image_transform.perspective.lr[1] = 0;
 
                 {
                     std::lock_guard<std::mutex> lock(frames_mutex_);
@@ -361,7 +366,18 @@ class html_client
         auto name = message->GetName().ToString();
 
         if (name == REMOVE_MESSAGE_NAME) {
-            // TODO
+            // TODO fully remove producer
+            this->close();
+
+            {
+                std::lock_guard<std::mutex> lock(frames_mutex_);
+                frames_.push(core::draw_frame::empty());
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(state_mutex_);
+                state_ = {};
+            }
 
             return true;
         }
@@ -441,7 +457,6 @@ class html_client
 class html_producer : public core::frame_producer
 {
     core::video_format_desc             format_desc_;
-    core::monitor::state                state_;
     const std::wstring                  url_;
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -477,7 +492,6 @@ class html_producer : public core::frame_producer
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
         });
-        state_["file/path"] = u8(url_);
     }
 
     ~html_producer() override
@@ -524,7 +538,15 @@ class html_producer : public core::frame_producer
 
     std::wstring print() const override { return L"html[" + url_ + L"]"; }
 
-    core::monitor::state state() const override { return state_; }
+    core::monitor::state state() const override
+    {
+        if (client_ != nullptr) {
+            return client_->state();
+        }
+
+        static const core::monitor::state empty;
+        return empty;
+    }
 };
 
 spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_producer_dependencies& dependencies,

@@ -23,8 +23,8 @@
 
 #include "../filesystem.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/filesystem.hpp>
 
 namespace caspar {
 

@@ -1,4 +1,4 @@
-CasparCG 2.3.0
+CasparCG 2.3.0 Beta 1
 ==========================================
 
 ### Producers
@@ -8,8 +8,10 @@ CasparCG 2.3.0
 * Decklink: `LOAD DECKLINK` will display live frames instead of black
 * FFmpeg: Update to 4.2.2
 * HTML: Better performance for gpu-enabled mode
+* HTML: `window.remove()` has been partially reimplemented
 * NDI: Native NDI producer
 * Route: Allow routing first frame of background producer
+* Route: zero delay routes when within a channel, with 1 frame when cross-channel
 * Transition: Add sting transitions
 * Add frames_left field to osc/info for progress towards autonext
 ##### Fixes
@@ -20,6 +22,7 @@ CasparCG 2.3.0
 * FFmpeg: SEEK and LENGTH parameters causing issues with AUTONEXT
 * FFmpeg: Ensure packets/frames after the decided end of the clip are not displayed
 * FFmpeg: Incorrect seek for audio when not 48khz
+* FFmpeg: Some cases where it would not be destroyed if playing a bad stream
 * HTML: unlikely but possible exception when handling frames
 * HTML: set autoplay-policy
 * HTML: animations being ticked too much
@@ -29,11 +32,13 @@ CasparCG 2.3.0
 ##### Features
 * Audio: Fix audio crackling
 * Audio: Fix memory leak
+* Bluefish: Various improvmements including supporting more channels and UHD.
 * NDI: Native NDI consumer
 * Screen: Add side by side key output
 * Screen: Add support for Datavideo TC-100/TC-200
 ##### Fixes
 * Decklink: Tick channel at roughly consistent rate when running interlaced output
+* Possible crash when adding/removing consumers
 
 ### General
 ##### Features

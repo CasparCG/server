@@ -78,6 +78,27 @@ struct video_channel::impl final
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
+    std::function<void(int, const layer_frame&)> routesCb = [&](int layer, const layer_frame& layer_frame) {
+        std::lock_guard<std::mutex> lock(routes_mutex_);
+        for (auto& r : routes_) {
+            // if this layer is the source for this route, push the frame to the route producers
+            if (layer == r.first.index) {
+                auto route = r.second.lock();
+                if (!route)
+                    continue;
+
+                if (r.first.index == -1) {
+                    route->signal(layer_frame.foreground);
+                } else if (r.first.mode == route_mode::background ||
+                           (r.first.mode == route_mode::next && layer_frame.has_background)) {
+                    route->signal(draw_frame::pop(layer_frame.background));
+                } else {
+                    route->signal(draw_frame::pop(layer_frame.foreground));
+                }
+            }
+        }
+    };
+
   public:
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
@@ -139,18 +160,12 @@ struct video_channel::impl final
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto          stage_frames = stage_(format_desc, nb_samples, background_routes);
+                    auto          stage_frames = stage_(format_desc, nb_samples, background_routes, routesCb);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Mix
                     caspar::timer mix_timer;
-
-                    std::vector<core::draw_frame> frames;
-                    for (auto& p : stage_frames) {
-                        frames.push_back(p.second.foreground);
-                    }
-
-                    auto mixed_frame = mixer_(frames, format_desc, nb_samples);
+                    auto          mixed_frame = mixer_(stage_frames, format_desc, nb_samples);
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
 
                     // Consume
@@ -159,35 +174,6 @@ struct video_channel::impl final
                     graph_->set_value("consume-time", consume_timer.elapsed() * format_desc.fps * 0.5);
 
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
-
-                    {
-                        std::lock_guard<std::mutex> lock(routes_mutex_);
-
-                        for (auto& r : routes_) {
-                            auto route = r.second.lock();
-                            if (!route) {
-                                continue;
-                            }
-
-                            if (r.first.index == -1) {
-                                route->signal(core::draw_frame(std::move(frames)));
-                                continue;
-                            }
-
-                            auto it = stage_frames.find(r.first.index);
-                            if (it == stage_frames.end()) {
-                                // Layer doesnt exist, so send empty frame to avoid freezing on last
-                                route->signal(draw_frame{});
-                            } else {
-                                if (r.first.mode == route_mode::background ||
-                                    (r.first.mode == route_mode::next && it->second.has_background)) {
-                                    route->signal(draw_frame::pop(it->second.background));
-                                } else {
-                                    route->signal(draw_frame::pop(it->second.foreground));
-                                }
-                            }
-                        }
-                    }
 
                     monitor::state state = {};
                     state["stage"]       = stage_.state();

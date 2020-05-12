@@ -49,8 +49,6 @@ target_link_libraries(casparcg
 
 if (MSVC)
 	target_link_libraries(casparcg
-		#jpeg.lib
-		#sndfile.lib
 		Winmm.lib
 		Ws2_32.lib
 		optimized tbb.lib
@@ -74,7 +72,7 @@ if (MSVC)
 		avdevice.lib
 		swscale.lib
 		swresample.lib
-		
+
 		d3d9.lib
 		d3d11.lib
 		dxgi.lib
@@ -89,9 +87,6 @@ else ()
 		${GLEW_LIBRARIES}
 		${OPENGL_gl_LIBRARY}
 		${X11_LIBRARIES}
-		${JPEG_LIBRARIES}
-		${SNDFILE_LIBRARIES}
-		${FREETYPE_LIBRARIES}
 		${FFMPEG_LIBRARIES}
 		dl
 		icui18n
