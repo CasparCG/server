@@ -380,23 +380,26 @@ struct bluefish_consumer
                 blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
             }
 
-            // Setting up the watchdog properties
-            unsigned int watchdog_timer_gpo_port = 1; // GPO port to use: 0 = none, 1 = port A, 2 = port B
-            blue_prop =
-                EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_enable_gpo_on_active, watchdog_timer_gpo_port);
-            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+            // We dont want to enable the watchdog if we are doing a UHD MultiLink output.
+            if (mode_ < VID_FMT_EXT_2160P_2398) {
+                // Setting up the watchdog properties 
+                unsigned int watchdog_timer_gpo_port = 1; // GPO port to use: 0 = none, 1 = port A, 2 = port B
+                blue_prop =
+                    EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_enable_gpo_on_active, watchdog_timer_gpo_port);
+                blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
 
-            if (interrupts_to_wait_ == 1) // using too low a value can cause instability on the watchdog so always make
-                                          // sure we use a value of 2 or more...
-                interrupts_to_wait_++;
+                if (interrupts_to_wait_ == 1) // using too low a value can cause instability on the watchdog so always make
+                                              // sure we use a value of 2 or more...
+                    interrupts_to_wait_++;
 
-            blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, interrupts_to_wait_);
-            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+                blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, interrupts_to_wait_);
+                blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
 
-            // start the thread if required.
-            if (hardware_watchdog_thread_ == nullptr) {
-                end_hardware_watchdog_thread_ = false;
-                hardware_watchdog_thread_     = std::make_shared<std::thread>([this] { watchdog_thread_actual(); });
+                // start the thread if required.
+                if (hardware_watchdog_thread_ == nullptr) {
+                    end_hardware_watchdog_thread_ = false;
+                    hardware_watchdog_thread_     = std::make_shared<std::thread>([this] { watchdog_thread_actual(); });
+                }
             }
         }
     }
@@ -491,6 +494,12 @@ struct bluefish_consumer
                         if (blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genlock_source))
                             CASPAR_THROW_EXCEPTION(caspar_exception()
                                                    << msg_info("Failed to set GenLock to Aux Input."));
+                    } else if (blue_video_output_channel == BLUE_VIDEO_OUTPUT_CHANNEL_B) {
+                        ULONG routing_value = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHB,
+                                                                EPOCH_DEST_SDI_OUTPUT_B,
+                                                                BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        if (blue_->set_card_property32(MR2_ROUTING, routing_value))
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to MR 2 routing."));
                     }
                 }
             } else // dual Link IS enabled, ie. 4224 Fill and Key
