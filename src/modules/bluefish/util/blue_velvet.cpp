@@ -443,6 +443,7 @@ bool is_kronos_card(bvc_wrapper& blue)
     switch (card_type) {
         case CRD_BLUE_KRONOS_ELEKTRON:
         case CRD_BLUE_KRONOS_OPTIKOS:
+        case CRD_BLUE_KRONOS_K8:
             return true;
         default:
             return false;
@@ -516,6 +517,9 @@ std::wstring get_card_desc(bvc_wrapper blue, int device_id)
             break;
         case CRD_BLUE_KRONOS_OPTIKOS:
             card_desc = L"Bluefish Kronos Optikos";
+            break;
+        case CRD_BLUE_KRONOS_K8:
+            card_desc = L"Bluefish Kronos K8";
             break;
         default:
             card_desc = L"Unknown";
