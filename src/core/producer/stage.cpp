@@ -50,12 +50,16 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     monitor::state                      state_;
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
+    std::set<int>                       routeSources;
 
     executor executor_{L"stage " + std::to_wstring(channel_index_)};
 
   private:
-    void orderSourceLayers(std::vector<int>& layerVec, const std::map<int, std::pair<int, int>>& routed_layers, int l)
+    void orderSourceLayers(std::vector<int>& layerVec, const std::map<int, std::pair<int, int>>& routed_layers, int l, int depth)
     {
+        if (0 == depth)
+            routeSources.clear();
+
         if (std::find(layerVec.begin(), layerVec.end(), l) != layerVec.end()) {
             return;
         }
@@ -72,7 +76,11 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             return;
         }
 
-        orderSourceLayers(layerVec, routed_layers, routeSrc.second);
+        // check for circular route setup - skip recursion if found
+        routeSources.emplace(routeSrc.second);
+        if (routeSources.find(l) == routeSources.end()) {
+            orderSourceLayers(layerVec, routed_layers, routeSrc.second, ++depth);
+        }
 
         if (std::find(layerVec.begin(), layerVec.end(), l) == layerVec.end()) {
             layerVec.push_back(l);
@@ -119,7 +127,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 // sort layer order so that sources get pulled before routes
                 std::vector<int> layerVec;
                 for (auto& p : layers_)
-                    orderSourceLayers(layerVec, routed_layers, p.first);
+                    orderSourceLayers(layerVec, routed_layers, p.first, 0);
 
                 for (auto& l : layerVec) {
                     auto  p     = layers_.find(l);
