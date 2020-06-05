@@ -235,8 +235,11 @@ struct video_channel::impl final
     void video_format_desc(const core::video_format_desc& format_desc)
     {
         stage_.clear();
-        std::lock_guard<std::mutex> lock(format_desc_mutex_);
-        format_desc_ = format_desc;
+        {
+            std::lock_guard<std::mutex> lock(format_desc_mutex_);
+            format_desc_ = format_desc;
+        }
+        graph_->set_text(print());
     }
 
     std::wstring print() const
