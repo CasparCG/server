@@ -168,7 +168,8 @@ struct bluefish_consumer
     const configuration config_;
 
     spl::shared_ptr<bvc_wrapper> blue_ = create_blue(config_.device_index);
-
+    spl::shared_ptr<bvc_wrapper> watchdog_bvc_ = create_blue(config_.device_index);
+    
     std::mutex         exception_mutex_;
     std::exception_ptr exception_;
 
@@ -238,8 +239,7 @@ struct bluefish_consumer
         // Specify the video channel
         setup_hardware_output_channel(); // ie stream id
 
-        model_name_ = get_card_desc(*blue_.get(), (int)config_.device_index);
-        configure_watchdog();
+        model_name_ = get_card_desc(*blue_.get(), (int)config_.device_index); 
 
         // disable the video output while we do all the config.
         disable_video_output();
@@ -317,7 +317,8 @@ struct bluefish_consumer
             SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
 #endif
         }
-
+            
+        configure_watchdog();
         enable_video_output();
     }
 
@@ -331,6 +332,7 @@ struct bluefish_consumer
                 disable_watchdog();
 
             disable_video_output();
+            watchdog_bvc_->detach();
             blue_->detach();
 
             if (dma_present_thread_)
@@ -345,20 +347,21 @@ struct bluefish_consumer
 
     void watchdog_thread_actual()
     {
-        bvc_wrapper watchdog_bvc;
-        watchdog_bvc.attach(config_.device_index);
+        watchdog_bvc_->attach(config_.device_index);
         EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(config_.device_stream);
-        watchdog_bvc.set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel);
+        watchdog_bvc_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel);
+
         unsigned long fc = 0;
         unsigned int  blue_prop =
             EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_keepalive, config_.watchdog_timeout);
 
         while (!end_hardware_watchdog_thread_) {
-            watchdog_bvc.wait_video_output_sync(UPD_FMT_FIELD, &fc);
-            blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
+            watchdog_bvc_->wait_video_output_sync(UPD_FMT_FIELD, &fc);
+            watchdog_bvc_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
         }
+
         disable_watchdog();
-        watchdog_bvc.detach();
+        watchdog_bvc_->detach();
     }
 
     void configure_watchdog()
@@ -379,8 +382,8 @@ struct bluefish_consumer
                 blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, (unsigned int)0);
                 blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
             }
-
-            // Setting up the watchdog properties
+           
+            // Setting up the watchdog properties 
             unsigned int watchdog_timer_gpo_port = 1; // GPO port to use: 0 = none, 1 = port A, 2 = port B
             blue_prop =
                 EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_enable_gpo_on_active, watchdog_timer_gpo_port);
@@ -406,7 +409,7 @@ struct bluefish_consumer
         end_hardware_watchdog_thread_ = true;
         unsigned int stop_value       = 0;
         unsigned int blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, stop_value);
-        blue_->get_card_property32(EPOCH_APP_WATCHDOG_TIMER, &blue_prop);
+        watchdog_bvc_->get_card_property32(EPOCH_APP_WATCHDOG_TIMER, &blue_prop);
     }
 
     void setup_hardware_output_channel()
@@ -491,6 +494,12 @@ struct bluefish_consumer
                         if (blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genlock_source))
                             CASPAR_THROW_EXCEPTION(caspar_exception()
                                                    << msg_info("Failed to set GenLock to Aux Input."));
+                    } else if (blue_video_output_channel == BLUE_VIDEO_OUTPUT_CHANNEL_B) {
+                        ULONG routing_value = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHB,
+                                                                EPOCH_DEST_SDI_OUTPUT_B,
+                                                                BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        if (blue_->set_card_property32(MR2_ROUTING, routing_value))
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to MR 2 routing."));
                     }
                 }
             } else // dual Link IS enabled, ie. 4224 Fill and Key
