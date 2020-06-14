@@ -111,6 +111,10 @@ void Input::reset()
 
 void Input::internal_reset()
 {
+    if (abort_request_) {
+        return;
+    }
+
     AVDictionary* options = nullptr;
     CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
