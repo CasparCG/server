@@ -8,7 +8,10 @@ struct ffmpeg_error_t : virtual caspar_exception
 {
 };
 
-}} // namespace caspar::ffmpeg
+using ffmpeg_errn_info = boost::error_info<struct tag_ffmpeg_errn_info, int>;
+
+}
+} // namespace caspar::ffmpeg
 
 #define THROW_ON_ERROR_STR_(call) #call
 #define THROW_ON_ERROR_STR(call) THROW_ON_ERROR_STR_(call)
@@ -17,10 +20,15 @@ struct ffmpeg_error_t : virtual caspar_exception
     if (ret < 0) {                                                                                                     \
         CASPAR_THROW_EXCEPTION(caspar::ffmpeg::ffmpeg_error_t()                                                        \
                                << boost::errinfo_api_function(func)                                                    \
-                               << boost::errinfo_errno(AVUNERROR(static_cast<int>(ret))));                             \
+                               << caspar::ffmpeg::ffmpeg_errn_info(ret)                                                \
+                               << boost::errinfo_errno(AVUNERROR(ret)));                                               \
     }
 
-#define FF(call) FF_RET(call, THROW_ON_ERROR_STR(call))
+#define FF(call)                                                                                                       \
+    [&] {                                                                                                              \
+        auto ret = call;                                                                                               \
+        FF_RET(ret, THROW_ON_ERROR_STR(call));                                                                         \
+    }()
 
 #define FFMEM(call)                                                                                                    \
     [&] {                                                                                                              \
