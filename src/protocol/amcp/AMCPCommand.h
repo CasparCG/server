@@ -82,12 +82,11 @@ using amcp_command_func = std::function<std::wstring(command_context& args)>;
 class AMCPCommand
 {
   private:
-    command_context   ctx_;
-    amcp_command_func command_;
-    int               min_num_params_;
-    std::wstring      name_;
-    std::wstring      replyString_;
-    std::wstring      request_id_;
+    command_context         ctx_;
+    const amcp_command_func command_;
+    const int               min_num_params_;
+    const std::wstring      name_;
+    std::wstring            request_id_;
 
   public:
     AMCPCommand(const command_context&   ctx,
@@ -103,36 +102,30 @@ class AMCPCommand
 
     using ptr_type = std::shared_ptr<AMCPCommand>;
 
-    bool Execute()
+    const std::wstring Execute()
     {
-        SetReplyString(command_(ctx_));
-        return true;
+        return command_(ctx_);
     }
 
     int minimum_parameters() const { return min_num_params_; }
 
-    void SendReply()
+    void SendReply(std::wstring replyString)
     {
-        if (replyString_.empty())
+        if (replyString.empty())
             return;
 
-        ctx_.client->send(std::move(replyString_));
+        if (!request_id_.empty())
+            replyString = L"RES " + request_id_ + L" " + replyString;
+
+        ctx_.client->send(std::move(replyString));
     }
 
-    std::vector<std::wstring>& parameters() { return ctx_.parameters; }
+    const std::vector<std::wstring>& parameters() const { return ctx_.parameters; }
 
-    IO::ClientInfoPtr client() { return ctx_.client; }
+    IO::ClientInfoPtr client() const { return ctx_.client; }
 
-    std::wstring print() const { return name_; }
+    const std::wstring& print() const { return name_; }
 
     void set_request_id(std::wstring request_id) { request_id_ = std::move(request_id); }
-
-    void SetReplyString(const std::wstring& str)
-    {
-        if (request_id_.empty())
-            replyString_ = str;
-        else
-            replyString_ = L"RES " + request_id_ + L" " + str;
-    }
 };
 }}} // namespace caspar::protocol::amcp

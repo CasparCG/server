@@ -33,7 +33,7 @@ namespace caspar { namespace protocol { namespace amcp {
 
 AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_command_func, int>>& commands,
                                    const std::wstring&                                              str,
-                                   const command_context&                                           ctx,
+                                   command_context&                                                 ctx,
                                    std::list<std::wstring>&                                         tokens)
 {
     std::wstring subcommand;
@@ -56,8 +56,10 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
     auto s       = str;
     auto command = commands.find(s);
 
-    if (command != commands.end())
+    if (command != commands.end()) {
+        ctx.parameters = std::move(std::vector<std::wstring>(tokens.begin(), tokens.end()));
         return std::make_shared<AMCPCommand>(ctx, command->second.first, command->second.second, s);
+    }
 
     return nullptr;
 }
