@@ -239,10 +239,6 @@ struct AMCPProtocolStrategy::impl
             if (!result.command)
                 result.error = error_state::command_error;
             else {
-                std::vector<std::wstring> parameters(tokens.begin(), tokens.end());
-
-                result.command->parameters() = std::move(parameters);
-
                 if (result.command->parameters().size() < result.command->minimum_parameters())
                     result.error = error_state::parameters_error;
             }
