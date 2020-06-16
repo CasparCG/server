@@ -245,20 +245,12 @@ struct server::impl
                     const int          id      = attrs.get(L"id", -1);
 
                     try {
-                        std::list<std::wstring> tokens{};
+                        std::list<std::wstring> tokens{L"PLAY",
+                                                       (boost::wformat(L"%i-%i") % channel->index() % id).str()};
                         IO::tokenize(command, tokens);
-                        auto cmd = amcp_command_repo_->create_channel_command(
-                            L"PLAY", console_client, channel->index() - 1, id, tokens);
-
-                        const std::vector<std::wstring> parameters(tokens.begin(), tokens.end());
-                        cmd->parameters() = std::move(parameters);
-
-                        if (cmd->parameters().size() < cmd->minimum_parameters()) {
-                            CASPAR_LOG(error) << "Not enough parameters in command: " << command;
-                        } else {
-                            cmd->Execute();
-                            cmd->SendReply();
-                            // console_client->send(std::move(res), false);
+                        auto cmd = amcp_command_repo_->parse_command(console_client, tokens, L"");
+                        if (cmd) {
+                            cmd->SendReply(cmd->Execute());
                         }
                     } catch (const user_error&) {
                         CASPAR_LOG(error) << "Failed to parse command: " << command;

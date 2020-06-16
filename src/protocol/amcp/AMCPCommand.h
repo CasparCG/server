@@ -86,17 +86,19 @@ class AMCPCommand
     const amcp_command_func command_;
     const int               min_num_params_;
     const std::wstring      name_;
-    std::wstring            request_id_;
+    const std::wstring      request_id_;
 
   public:
-    AMCPCommand(const command_context&   ctx,
+    AMCPCommand(const command_context&     ctx,
                 const amcp_command_func& command,
                 int                      min_num_params,
-                const std::wstring&      name)
+                const std::wstring&      name,
+                const std::wstring& request_id)
         : ctx_(ctx)
         , command_(command)
         , min_num_params_(min_num_params)
         , name_(name)
+        , request_id_(request_id)
     {
     }
 
@@ -122,10 +124,10 @@ class AMCPCommand
 
     const std::vector<std::wstring>& parameters() const { return ctx_.parameters; }
 
+    int channel_index() const { return ctx_.channel_index; }
+
     IO::ClientInfoPtr client() const { return ctx_.client; }
 
     const std::wstring& print() const { return name_; }
-
-    void set_request_id(std::wstring request_id) { request_id_ = std::move(request_id); }
 };
 }}} // namespace caspar::protocol::amcp
