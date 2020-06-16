@@ -55,36 +55,41 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     executor executor_{L"stage " + std::to_wstring(channel_index_)};
 
   private:
-    void orderSourceLayers(std::vector<int>& layerVec, const std::map<int, std::pair<int, int>>& routed_layers, int l, int depth)
+    bool orderSourceLayers(std::vector<int>& layerVec, const std::map<int, std::pair<int, int>>& routed_layers, int l, int depth)
     {
+        bool result = true;
         if (0 == depth)
             routeSources.clear();
 
         if (std::find(layerVec.begin(), layerVec.end(), l) != layerVec.end()) {
-            return;
+            return result;
         }
 
         auto routeIt = routed_layers.find(l);
         if (routed_layers.end() == routeIt) {
             layerVec.push_back(l);
-            return;
+            return result;
         }
 
         std::pair<int, int> routeSrc(routeIt->second);
         if (channel_index_ != routeSrc.first) {
             layerVec.push_back(l);
-            return;
+            return result;
         }
 
         // check for circular route setup - skip recursion if found
         routeSources.emplace(routeSrc.second);
         if (routeSources.find(l) == routeSources.end()) {
-            orderSourceLayers(layerVec, routed_layers, routeSrc.second, ++depth);
+            result = orderSourceLayers(layerVec, routed_layers, routeSrc.second, ++depth);
+        } else {
+            result = false;
         }
 
         if (std::find(layerVec.begin(), layerVec.end(), l) == layerVec.end()) {
             layerVec.push_back(l);
         }
+
+        return result;
     }
 
   public:
@@ -126,8 +131,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 // sort layer order so that sources get pulled before routes
                 std::vector<int> layerVec;
+                bool             routeOK = true;
                 for (auto& p : layers_)
-                    orderSourceLayers(layerVec, routed_layers, p.first, 0);
+                    routeOK &= orderSourceLayers(layerVec, routed_layers, p.first, 0);
 
                 for (auto& l : layerVec) {
                     auto  p     = layers_.find(l);
@@ -135,7 +141,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto& tween = tweens_[p->first];
 
                     layer_frame res    = {};
-                    res.foreground     = draw_frame::push(layer.receive(format_desc, nb_samples), tween.fetch());
+                    res.foreground     = draw_frame::push(routeOK ? layer.receive(format_desc, nb_samples) : draw_frame(), tween.fetch());
                     res.has_background = layer.has_background();
                     if (std::find(fetch_background.begin(), fetch_background.end(), p->first) !=
                         fetch_background.end()) {
