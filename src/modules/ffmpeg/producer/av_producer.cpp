@@ -104,8 +104,16 @@ struct Decoder
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
-        // TODO (fix): Remove limit.
-        FF(av_opt_set_int(ctx.get(), "threads", env::properties().get(L"configuration.ffmpeg.producer.threads", 4), 0));
+        int numThreads = 1;
+        if (codec->capabilities & AV_CODEC_CAP_AUTO_THREADS) {
+            numThreads = 0;
+        } else if (codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
+            numThreads = std::min<int>(8, std::thread::hardware_concurrency() / 2);
+        } else if (codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
+            numThreads = std::thread::hardware_concurrency() / 2;
+        }
+        numThreads = env::properties().get(L"configuration.ffmpeg.producer.threads", numThreads);
+        FF(av_opt_set_int(ctx.get(), "threads", numThreads, 0));
         // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
 
         ctx->pkt_timebase = stream->time_base;
