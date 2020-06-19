@@ -225,20 +225,29 @@ void copy_template_hosts()
 
 void init(core::module_dependencies dependencies)
 {
-    copy_template_hosts();
+    if (env::properties().get(L"configuration.flash.enabled", false)) {
+        CASPAR_LOG(warning) << "Flash is no longer a recommended way of creating dynamic templates. Adobe have "
+                               "declared flash end-of-life at the end of 2020, and we cannot guarantee it will "
+                               "continue to work in any version after that time.\n"
+                               "All support for flash templates will be removed in a future release of CasparCG";
 
-    dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer);
-    dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer);
-    dependencies.cg_registry->register_cg_producer(
-        L"flash",
-        {L".ft", L".ct"},
-        [](const spl::shared_ptr<core::frame_producer>& producer) {
-            return spl::make_shared<flash_cg_proxy>(producer);
-        },
-        [](const core::frame_producer_dependencies& dependencies, const std::wstring&) {
-            return flash::create_producer(dependencies, {});
-        },
-        true);
+        copy_template_hosts();
+
+        dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer);
+        dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer);
+        dependencies.cg_registry->register_cg_producer(
+            L"flash",
+            {L".ft", L".ct"},
+            [](const spl::shared_ptr<core::frame_producer>& producer) {
+                return spl::make_shared<flash_cg_proxy>(producer);
+            },
+            [](const core::frame_producer_dependencies& dependencies, const std::wstring&) {
+                return flash::create_producer(dependencies, {});
+            },
+            true);
+    } else {
+        CASPAR_LOG(info) << "Flash support is disabled";
+    }
 }
 
 std::wstring cg_version() { return L"Unknown"; }
