@@ -200,7 +200,7 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode f
                                << msg_info(L"Could not determine whether device supports requested video format: " +
                                            get_mode_name(mode)));
     else if (displayModeSupport == bmdDisplayModeNotSupported)
-        CASPAR_LOG(warning) << L"Device does not support video-format: " << get_mode_name(mode);
+        CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
     else if (displayModeSupport == bmdDisplayModeSupportedWithConversion)
         CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
 
