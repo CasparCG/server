@@ -49,6 +49,7 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
 
         if (subcmd != commands.end()) {
             tokens.pop_front();
+            ctx.parameters = std::move(std::vector<std::wstring>(tokens.begin(), tokens.end()));
             return std::make_shared<AMCPCommand>(
                 ctx, subcmd->second.first, subcmd->second.second, fullname, request_id);
         }
