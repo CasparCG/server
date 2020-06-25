@@ -366,7 +366,6 @@ class html_client
         auto name = message->GetName().ToString();
 
         if (name == REMOVE_MESSAGE_NAME) {
-            // TODO fully remove producer
             this->close();
 
             {
