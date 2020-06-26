@@ -1,3 +1,24 @@
+CasparCG 2.3.0 RC
+==========================================
+
+### Producers
+##### Features
+* Flash: Disable by default, requires enabling in the config file
+* FFmpeg: Remove fixed thread limit to better auto select a number
+##### Fixes
+* Decklink: Downgrade severity of video-format not supported
+* FFmpeg: Correctly handle error codes. Ignore exit errors during initialisation
+* Route: Detect circular routes and break the loop
+
+### Consumers
+##### Features
+* Bluefish: Various improvmements including support for Kronos K8
+
+### General
+##### Fixes
+* Diag not reflecting channel videoformat changes
+
+
 CasparCG 2.3.0 Beta 1
 ==========================================
 
