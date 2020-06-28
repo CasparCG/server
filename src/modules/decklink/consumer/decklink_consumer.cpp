@@ -602,10 +602,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
         }
 
-        if (!frame) {
-            return !abort_request_;
-        }
-
+        if (frame)
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
