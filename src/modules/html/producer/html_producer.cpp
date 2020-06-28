@@ -141,9 +141,6 @@ class html_client
 
         loaded_ = false;
         executor_.begin_invoke([&] {
-#ifdef WIN32
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif
             for (auto n = 0; n < 4; ++n) {
                 update();
             }
