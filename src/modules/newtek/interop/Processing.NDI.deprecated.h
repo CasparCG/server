@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at http://ndi.tv/
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2018 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -21,7 +21,7 @@
 // FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 // This describes a video frame
 PROCESSINGNDILIB_DEPRECATED
@@ -30,7 +30,7 @@ typedef struct NDIlib_video_frame_t
 	int xres, yres;
 
 	// What FourCC this is with. This can be two values
-	NDIlib_FourCC_type_e FourCC;
+	NDIlib_FourCC_video_type_e FourCC;
 
 	// What is the frame-rate of this frame.
 	// For instance NTSC is 30000,1001 = 30000/1001 = 29.97fps
@@ -53,7 +53,7 @@ typedef struct NDIlib_video_frame_t
 	int line_stride_in_bytes;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
-	NDIlib_video_frame_t(int xres_ = 0, int yres_ = 0, NDIlib_FourCC_type_e FourCC_ = NDIlib_FourCC_type_UYVY, int frame_rate_N_ = 30000, int frame_rate_D_ = 1001,
+	NDIlib_video_frame_t(int xres_ = 0, int yres_ = 0, NDIlib_FourCC_video_type_e FourCC_ = NDIlib_FourCC_type_UYVY, int frame_rate_N_ = 30000, int frame_rate_D_ = 1001,
 	                     float picture_aspect_ratio_ = 0.0f, NDIlib_frame_format_type_e frame_format_type_ = NDIlib_frame_format_type_progressive, 
 	                     int64_t timecode_ = NDIlib_send_timecode_synthesize, uint8_t* p_data_ = NULL, int line_stride_in_bytes_ = 0);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS

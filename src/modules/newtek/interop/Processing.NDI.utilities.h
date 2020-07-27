@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at http://ndi.tv/
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2018 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -21,7 +21,7 @@
 // FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 // Because many applications like submitting 16bit interleaved audio, these functions will convert in
 // and out of that format. It is important to note that the NDI SDK does define fully audio levels, something
@@ -118,32 +118,48 @@ typedef struct NDIlib_audio_frame_interleaved_32f_t
 
 } NDIlib_audio_frame_interleaved_32f_t;
 
-// This will add an audio frame in 16bpp
+// This will add an audio frame in interleaved 16bpp
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_16s(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_16s_t* p_audio_data);
 
-// This will add an audio frame in 32bpp
+// This will add an audio frame in interleaved 32bpp
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_32s(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32s_t* p_audio_data);
 
-// This will add an audio frame interleaved floating point
+// This will add an audio frame in interleaved floating point
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_32f(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32f_t* p_audio_data);
 
+// Convert to interleaved 16bpp
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_to_interleaved_16s_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst);
 
+// Convert from interleaved 16bpp
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_from_interleaved_16s_v2(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 
+// Convert to interleaved 32bpp
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_32s_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32s_t* p_dst);
 
+// Convert from interleaved 32bpp
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32s_v2(const NDIlib_audio_frame_interleaved_32s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 
+// Convert to interleaved floating point
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_to_interleaved_32f_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32f_t* p_dst);
 
+// Convert from interleaved floating point
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32f_v2(const NDIlib_audio_frame_interleaved_32f_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
+
+// This is a helper function that you may use to convert from 10bit packed UYVY into 16bit semi-planar. The FourCC on the source 
+// is ignored in this function since we do not define a V210 format in NDI. You must make sure that there is memory and a stride
+// allocated in p_dst.
+PROCESSINGNDILIB_API
+void NDIlib_util_V210_to_P216(const NDIlib_video_frame_v2_t* p_src_v210, NDIlib_video_frame_v2_t* p_dst_p216);
+
+// This converts from 16bit semi-planar to 10bit. You must make sure that there is memory and a stride allocated in p_dst.
+PROCESSINGNDILIB_API
+void NDIlib_util_P216_to_V210(const NDIlib_video_frame_v2_t* p_src_p216, NDIlib_video_frame_v2_t* p_dst_v210);

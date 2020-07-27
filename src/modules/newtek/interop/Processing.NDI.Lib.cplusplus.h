@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at http://ndi.tv/
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2018 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -21,17 +21,22 @@
 // FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 
 // C++ implementations of default constructors are here to avoid them needing to be inline with
 // all of the rest of the code.
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // All the structs used and reasonable defaults are here
 inline NDIlib_source_t::NDIlib_source_t(const char* p_ndi_name_, const char* p_url_address_)
 	: p_ndi_name(p_ndi_name_), p_url_address(p_url_address_) {}
 
-inline NDIlib_video_frame_v2_t::NDIlib_video_frame_v2_t(int xres_, int yres_, NDIlib_FourCC_type_e FourCC_, int frame_rate_N_, int frame_rate_D_,
+inline NDIlib_video_frame_v2_t::NDIlib_video_frame_v2_t(int xres_, int yres_, NDIlib_FourCC_video_type_e FourCC_, int frame_rate_N_, int frame_rate_D_,
                                                         float picture_aspect_ratio_, NDIlib_frame_format_type_e frame_format_type_,
                                                         int64_t timecode_, uint8_t* p_data_, int line_stride_in_bytes_, const char* p_metadata_, int64_t timestamp_)
 	: xres(xres_), yres(yres_), FourCC(FourCC_), frame_rate_N(frame_rate_N_), frame_rate_D(frame_rate_D_),
@@ -43,7 +48,14 @@ inline NDIlib_audio_frame_v2_t::NDIlib_audio_frame_v2_t(int sample_rate_, int no
 	: sample_rate(sample_rate_), no_channels(no_channels_), no_samples(no_samples_), timecode(timecode_),
 	  p_data(p_data_), channel_stride_in_bytes(channel_stride_in_bytes_), p_metadata(p_metadata_), timestamp(timestamp_) {}
 
-inline NDIlib_video_frame_t::NDIlib_video_frame_t(int xres_, int yres_, NDIlib_FourCC_type_e FourCC_, int frame_rate_N_, int frame_rate_D_,
+inline NDIlib_audio_frame_v3_t::NDIlib_audio_frame_v3_t(int sample_rate_, int no_channels_, int no_samples_, int64_t timecode_,
+                                                        NDIlib_FourCC_audio_type_e FourCC_, uint8_t* p_data_, int channel_stride_in_bytes_,
+                                                        const char* p_metadata_, int64_t timestamp_)
+	: sample_rate(sample_rate_), no_channels(no_channels_), no_samples(no_samples_), timecode(timecode_),
+	  FourCC(FourCC_), p_data(p_data_), channel_stride_in_bytes(channel_stride_in_bytes_),
+	  p_metadata(p_metadata_), timestamp(timestamp_) {}
+
+inline NDIlib_video_frame_t::NDIlib_video_frame_t(int xres_, int yres_, NDIlib_FourCC_video_type_e FourCC_, int frame_rate_N_, int frame_rate_D_,
                                                   float picture_aspect_ratio_, NDIlib_frame_format_type_e frame_format_type_,
                                                   int64_t timecode_, uint8_t* p_data_, int line_stride_in_bytes_)
 	: xres(xres_), yres(yres_), FourCC(FourCC_), frame_rate_N(frame_rate_N_), frame_rate_D(frame_rate_D_),
@@ -97,3 +109,7 @@ inline NDIlib_audio_frame_interleaved_32s_t::NDIlib_audio_frame_interleaved_32s_
 
 inline NDIlib_audio_frame_interleaved_32f_t::NDIlib_audio_frame_interleaved_32f_t(int sample_rate_, int no_channels_, int no_samples_, int64_t timecode_, float* p_data_)
 	: sample_rate(sample_rate_), no_channels(no_channels_), no_samples(no_samples_), timecode(timecode_), p_data(p_data_) {}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
