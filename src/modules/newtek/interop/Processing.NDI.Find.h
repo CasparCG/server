@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at http://ndi.tv/
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2018 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -21,7 +21,7 @@
 // FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-//***********************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 // Structures and type definitions required by NDI finding
 // The reference to an instance of the finder
@@ -29,7 +29,7 @@ typedef void* NDIlib_find_instance_t;
 
 // The creation structure that is used when you are creating a finder
 typedef struct NDIlib_find_create_t
-{	// Do we want to incluide the list of NDI sources that are running
+{	// Do we want to include the list of NDI sources that are running
 	// on the local machine ?
 	// If TRUE then local sources will be visible, if FALSE then they
 	// will not.
@@ -40,7 +40,7 @@ typedef struct NDIlib_find_create_t
 
 	// The list of additional IP addresses that exist that we should query for 
 	// sources on. For instance, if you want to find the sources on a remote machine
-	// that is not on your local sub-net then you can put a comma seperated list of 
+	// that is not on your local sub-net then you can put a comma separated list of 
 	// those IP addresses here and those sources will be available locally even though
 	// they are not mDNS discoverable. An example might be "12.0.0.8,13.0.12.8".
 	// When none is specified the registry is used.

@@ -210,21 +210,9 @@ boost::tribool has_valid_extension(const std::wstring& filename)
                                       L".ct",
                                       L".html",
                                       L".htm"};
-    static const auto valid_exts   = {L".m2t",
-                                    L".mov",
-                                    L".mp4",
-                                    L".dv",
-                                    L".flv",
-                                    L".mpg",
-                                    L".dnxhd",
-                                    L".h264",
-                                    L".prores",
-                                    L".mkv",
-                                    L".mxf",
-                                    L".ts",
-                                    L".mp3",
-                                    L".wav",
-                                    L".wma"};
+    static const auto valid_exts   = {L".m2t",  L".m2ts",   L".mov",  L".mp4", L".dv",  L".flv", L".mpg",  L".dnxhd",
+                                    L".h264", L".prores", L".mkv",  L".mxf", L".ts",  L".mp3", L".wav",  L".wma",
+                                    L".nut",  L".flac",   L".opus", L".ogg", L".ogv", L".oga", L".webm", L".webp"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 

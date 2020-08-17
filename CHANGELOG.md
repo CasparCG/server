@@ -1,3 +1,14 @@
+CasparCG 2.3.0 Stable
+==========================================
+
+### Producers
+##### Features
+* FFmpeg: Add more common file extensions to the supported list
+* NDI: Require minimum of NDI v4.0
+##### Fixes
+* HTML: Minimise performance impact on other producers
+
+
 CasparCG 2.3.0 RC
 ==========================================
 
