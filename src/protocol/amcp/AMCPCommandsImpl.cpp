@@ -267,18 +267,23 @@ std::wstring load_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
 
-    try {
-        auto pFP =
-            ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
-        auto pFP2 = create_transition_producer(pFP, transition_info{});
+    if (ctx.parameters.empty()) {
+        // Must be a promoting load
+        ctx.channel.channel->stage().preview(ctx.layer_index());
+    } else {
+        try {
+            auto pFP  = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx),
+                                                              ctx.parameters);
+            auto pFP2 = create_transition_producer(pFP, transition_info{});
 
-        ctx.channel.channel->stage().load(ctx.layer_index(), pFP2, true);
-    } catch (file_not_found&) {
-        if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-            ctx.channel.channel->stage().load(
-                ctx.layer_index(), core::create_color_producer(ctx.channel.channel->frame_factory(), 0), true);
+            ctx.channel.channel->stage().load(ctx.layer_index(), pFP2, true);
+        } catch (file_not_found&) {
+            if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
+                ctx.channel.channel->stage().load(
+                    ctx.layer_index(), core::create_color_producer(ctx.channel.channel->frame_factory(), 0), true);
+            }
+            throw;
         }
-        throw;
     }
 
     return L"202 LOAD OK\r\n";
@@ -1520,7 +1525,7 @@ std::wstring gl_gc_command(command_context& ctx)
 void register_commands(amcp_command_repository& repo)
 {
     repo.register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
-    repo.register_channel_command(L"Basic Commands", L"LOAD", load_command, 1);
+    repo.register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
     repo.register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
     repo.register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
