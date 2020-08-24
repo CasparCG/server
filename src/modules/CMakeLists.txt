@@ -13,6 +13,7 @@ endif ()
 if (MSVC)
 	add_subdirectory(flash)
 	add_subdirectory(bluefish)
+	add_subdirectory(pipe)
 endif()
 
 add_subdirectory(image)
