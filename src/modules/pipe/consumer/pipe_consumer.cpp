@@ -25,22 +25,17 @@
 #include <common/array.h>
 #include <common/diagnostics/graph.h>
 #include <common/future.h>
-#include <common/gl/gl_check.h>
 #include <common/log.h>
-#include <common/memory.h>
-#include <common/memshfl.h>
 #include <common/param.h>
 #include <common/timer.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
-#include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -65,46 +60,15 @@
 
 namespace caspar { namespace pipe {
 
-enum class stretch
-{
-    none,
-    uniform,
-    fill,
-    uniform_to_fill
-};
-
 struct configuration
 {
-    enum class aspect_ratio
-    {
-        aspect_4_3 = 0,
-        aspect_16_9,
-        aspect_invalid,
-    };
-
-    enum class colour_spaces
-    {
-        RGB               = 0,
-        datavideo_full    = 1,
-        datavideo_limited = 2
-    };
-
-    std::wstring    name          = L"Pipe consumer";
-    int             screen_index  = 0;
-    int             screen_x      = 0;
-    int             screen_y      = 0;
-    int             screen_width  = 0;
-    int             screen_height = 0;
-    pipe::stretch stretch       = pipe::stretch::fill;
-    bool            windowed      = true;
-    bool            key_only      = false;
-    bool            sbs_key       = false;
-    aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
-    bool            vsync         = false;
-    bool            interactive   = true;
-    bool            borderless    = false;
-    bool            always_on_top = false;
-    colour_spaces   colour_space  = colour_spaces::RGB;
+    std::wstring    name            = L"Pipe consumer";
+    std::wstring    video_pipe_name = L"\\\\.\\pipe\\CasparCGVideo";
+    std::wstring    audio_pipe_name = L"\\\\.\\pipe\\CasparCGAudio";
+    bool            include_video   = true;
+    bool            include_audio   = false;
+    int             buffer_size     = 3;
+    int             pipe_index      = 0;
 };
 
 struct pipe_consumer
@@ -112,18 +76,6 @@ struct pipe_consumer
     const configuration     config_;
     core::video_format_desc format_desc_;
     int                     channel_index_;
-
-    //std::vector<frame> frames_;
-
-    int screen_width_  = format_desc_.width;
-    int screen_height_ = format_desc_.height;
-    int square_width_  = format_desc_.square_width;
-    int square_height_ = format_desc_.square_height;
-    int screen_x_      = 0;
-    int screen_y_      = 0;
-
-    std::vector<core::frame_geometry::coord> draw_coords_;
-
 
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
@@ -144,21 +96,18 @@ struct pipe_consumer
         , channel_index_(channel_index)
     {
 
-        frame_buffer_.set_capacity(180); //TODO: Update to default of 3s and make configurable
+        frame_buffer_.set_capacity((int)(config_.buffer_size*format_desc_.fps));
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
-        // CASPAR_LOG(warning) << print() << L" Screen-index is not supported on linux";
-
-        
 
         thread_ = std::thread([this] {
             // Create pipe (if requested)
             CASPAR_LOG(info) << print() << L" Creating pipe...";
-            HANDLE pipe_h = CreateNamedPipeA("\\\\.\\pipe\\caspartest",
+            HANDLE pipe_h = CreateNamedPipeW(config_.video_pipe_name.c_str(),
                                              PIPE_ACCESS_DUPLEX,
                                              PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
                                              1,
@@ -167,10 +116,10 @@ struct pipe_consumer
                                              0,
                                              NULL);
             if (pipe_h == INVALID_HANDLE_VALUE) {
-                CASPAR_LOG(error) << print() << L" Failed to create named pipe"; //TODO: include pipe name and GetLastError
-                if (!CloseHandle(pipe_h)) {
-                    CASPAR_LOG(error) << print() << L" Failed to close named pipe";
-                }
+                CASPAR_LOG(error) << print() << L" Failed to create named pipe "
+                                  << config_.video_pipe_name; // TODO: includeGetLastError
+                // close handle
+                closePipe(pipe_h);
                 is_running_ = false;
                 return;
             }
@@ -178,10 +127,10 @@ struct pipe_consumer
             // Connect pipe
             CASPAR_LOG(info) << print() << L" Pipe created. Connecting to pipe...";
             if (!ConnectNamedPipe(pipe_h, NULL)) {
-                CASPAR_LOG(error) << print() << L" Failed to connect to named pipe"; // TODO: include pipe name and GetLastError
-                if (!CloseHandle(pipe_h)) {
-                    CASPAR_LOG(error) << print() << L" Failed to close named pipe";
-                }
+                CASPAR_LOG(error) << print() << L" Failed to connect to named pipe "
+                                  << config_.video_pipe_name; // TODO: includeGetLastError
+                // close handle
+                closePipe(pipe_h);
                 is_running_ = false;
                 return;
             }
@@ -215,24 +164,13 @@ struct pipe_consumer
                         break;
                     }
 
-                    // TODO: send frame data
-                    //       The frame format is separated into lines, not a continuous buffer.
-                    //       To save on memcpy, we should send each line separately rather than the whole frame
-                    //       Need to check performance of that though!
-                    /*for (int n = 0; n < planes.size(); ++n) {
-                        for (int y = 0; y < av_frame->height; ++y) {
-                            std::memcpy(av_frame->data[n] + y * av_frame->linesize[n],
-                                        frame.image_data(n).data() + y * planes[n].linesize,
-                                        planes[n].linesize);
-
-                        }
-                    }*/
+                    // send frame data
                     bool writeSuccess =
                         WriteFile(pipe_h, in_frame.image_data(0).data(), numBytesToWrite, &numBytesWritten, NULL);
-                    if (!writeSuccess ||
-                        numBytesToWrite != numBytesWritten) {
-                        CASPAR_LOG(warning) << print() << L" Frame dropped (failed to write frame to pipe)"; // TODO: Add frame number counter and GetLastError
-                        // TODO: DO I need to set something up with the graph to log this dropped frame?
+                    if (!writeSuccess || numBytesToWrite != numBytesWritten) {
+                        CASPAR_LOG(warning) << print() << L" Frame dropped (failed to write frame to pipe)"; // TODO: Add GetLastError
+                        is_running_ = false;
+                        break;
                     }
 
                     graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -245,9 +183,7 @@ struct pipe_consumer
                 is_running_ = false;
             }
             // close handle
-            if (!CloseHandle(pipe_h)) {
-                CASPAR_LOG(error) << print() << L" Failed to close named pipe";
-            }
+            closePipe(pipe_h);
         });
     }
 
@@ -265,6 +201,15 @@ struct pipe_consumer
             }
         }
         thread_.join();
+    }
+
+    bool closePipe(HANDLE handle)
+    {
+        if (!CloseHandle(handle)) {
+            CASPAR_LOG(error) << print() << L" Failed to close named pipe";
+            return false;
+        }
+        return true;
     }
 
     std::future<bool> send(const core::const_frame& frame)
@@ -313,7 +258,7 @@ struct pipe_consumer_proxy : public core::frame_consumer
 
     bool has_synchronization_clock() const override { return false; }
 
-    int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; } // TODO: WHat is this?
+    int index() const override { return 1100 + config_.pipe_index; }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
@@ -325,26 +270,40 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     configuration config;
 
-    if (params.size() > 1) {
-        try {
-            config.screen_index = std::stoi(params.at(1));
-        } catch (...) {
-        }
-    }
-
-    config.windowed    = !contains_param(L"FULLSCREEN", params); //TODO: Update config
-    config.key_only    = contains_param(L"KEY_ONLY", params);
-    config.sbs_key     = contains_param(L"SBS_KEY", params);
-    config.interactive = !contains_param(L"NON_INTERACTIVE", params);
-    config.borderless  = contains_param(L"BORDERLESS", params);
-
     if (contains_param(L"NAME", params)) {
         config.name = get_param(L"NAME", params);
     }
 
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
+    if (params.size() > 1) {
+        try {
+            config.pipe_index = std::stoi(params.at(1));
+        } catch (...) {
+            CASPAR_LOG(warning) << config.name << L": Pipe invalid pipe index specified, using 0.";
+        }
+    }
+
+    // Default: include video only
+    config.include_video = !contains_param(L"EXCLUDE_VIDEO", params); 
+    config.include_audio = contains_param(L"INCLUDE_AUDIO", params);
+
+    if (contains_param(L"VIDEO_PIPE_NAME", params)) {
+        config.video_pipe_name = get_param(L"VIDEO_PIPE_NAME", params);
+    } else if (config.include_video) {
+        CASPAR_LOG(info) << config.name << L": using default video pipe name: " << config.video_pipe_name;
+    }
+    if (contains_param(L"AUDIO_PIPE_NAME", params)) {
+        config.audio_pipe_name = get_param(L"AUDIO_PIPE_NAME", params);
+    } else if (config.include_audio) {
+        CASPAR_LOG(info) << config.name << L": using default audio pipe name: " << config.audio_pipe_name;
+    }
+
+    if (contains_param(L"BUFFER_SIZE", params)) {
+        try{
+            config.buffer_size = std::stoi(get_param(L"BUFFER_SIZE", params));
+        }
+        catch (...) {
+            CASPAR_LOG(warning) << config.name << L": param BUFFER_SIZE ignored.";
+        }
     }
 
     return spl::make_shared<pipe_consumer_proxy>(config);
@@ -355,61 +314,13 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config;
-    config.name          = ptree.get(L"name", config.name);
-    config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
-    config.screen_x      = ptree.get(L"x", config.screen_x);
-    config.screen_y      = ptree.get(L"y", config.screen_y);
-    config.screen_width  = ptree.get(L"width", config.screen_width);
-    config.screen_height = ptree.get(L"height", config.screen_height);
-    config.windowed      = ptree.get(L"windowed", config.windowed);
-    config.key_only      = ptree.get(L"key-only", config.key_only);
-    config.sbs_key       = ptree.get(L"sbs-key", config.sbs_key);
-    config.vsync         = ptree.get(L"vsync", config.vsync);
-    config.interactive   = ptree.get(L"interactive", config.interactive);
-    config.borderless    = ptree.get(L"borderless", config.borderless);
-    config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
-
-    auto colour_space_value = ptree.get(L"colour-space", L"RGB");
-    config.colour_space     = configuration::colour_spaces::RGB;
-    if (colour_space_value == L"datavideo-full")
-        config.colour_space = configuration::colour_spaces::datavideo_full;
-    else if (colour_space_value == L"datavideo-limited")
-        config.colour_space = configuration::colour_spaces::datavideo_limited;
-
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.sbs_key) {
-        CASPAR_LOG(warning) << L" Side-by-side fill and key not supported for DataVideo TC100/TC200. Ignored.";
-        config.sbs_key = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.key_only) {
-        CASPAR_LOG(warning) << L" Key only not supported for DataVideo TC100/TC200. Ignored.";
-        config.key_only = false;
-    }
-
-    auto stretch_str = ptree.get(L"stretch", L"fill");
-    if (stretch_str == L"none") {
-        config.stretch = pipe::stretch::none;
-    } else if (stretch_str == L"uniform") {
-        config.stretch = pipe::stretch::uniform;
-    } else if (stretch_str == L"uniform_to_fill") {
-        config.stretch = pipe::stretch::uniform_to_fill;
-    }
-
-    auto aspect_str = ptree.get(L"aspect-ratio", L"default");
-    if (aspect_str == L"16:9") {
-        config.aspect = configuration::aspect_ratio::aspect_16_9;
-    } else if (aspect_str == L"4:3") {
-        config.aspect = configuration::aspect_ratio::aspect_4_3;
-    }
+    config.name            = ptree.get(L"name", config.name);
+    config.pipe_index      = ptree.get(L"index", config.pipe_index + 1) - 1;
+    config.video_pipe_name = ptree.get(L"video-pipe-name", config.video_pipe_name);
+    config.audio_pipe_name = ptree.get(L"audio-pipe-name", config.audio_pipe_name);
+    config.include_video   = ptree.get(L"include-video", config.include_video);
+    config.include_audio   = ptree.get(L"include-audio", config.include_audio);
+    config.buffer_size     = ptree.get(L"buffer-size", config.buffer_size);
 
     return spl::make_shared<pipe_consumer_proxy>(config);
 }
