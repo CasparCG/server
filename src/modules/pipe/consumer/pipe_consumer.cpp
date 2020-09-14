@@ -548,7 +548,8 @@ struct pipe_consumer
         // check there is audio data to send
         if (in_frame.audio_data().size() == 0) {
             CASPAR_LOG(warning) << print(avType) << L" No audio data in frame. Skipping writing.";
-            return true;
+            // Fail only if using single pipe since audio/video byte synchronisation will be out.
+            return !config_.single_pipe;
         }
 
         // send frame data
