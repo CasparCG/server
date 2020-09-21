@@ -123,7 +123,7 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
-        FF(av_dict_set(&options, "rtmp_live", "live", 0)); // HTTP referer header
+        FF(av_dict_set(&options, "rtmp_live", "live", 0));
     } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
         input_format = av_find_input_format(u8(url_parts.first).c_str());
         filename_    = u8(url_parts.second);
