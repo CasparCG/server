@@ -119,8 +119,7 @@ void Input::internal_reset()
     AVInputFormat* input_format = nullptr;
     auto           url_parts    = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
-        FF(av_dict_set(&options, "http_persistent", "0", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
-        FF(av_dict_set(&options, "http_multiple", "0", 0));   // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+        FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
