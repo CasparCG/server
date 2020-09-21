@@ -8,6 +8,9 @@
 #include <common/param.h>
 #include <common/scope_exit.h>
 
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include <set>
 
 #ifdef _MSC_VER
@@ -122,6 +125,14 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));       // HTTP reconnect
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
+
+        // TODO (fix): Find a better solution? Make it an option?
+        const auto ext = boost::to_lower_copy(boost::filesystem::path(filename_).extension().wstring());
+        if (ext == L".mxf" || ext == L".ts") {
+            CASPAR_LOG(warning) << "av_input[" + filename_ + "] Disabled HTTP seeking for mxf and ts files";
+            // Seeking does not work well over HTTP.
+            FF(av_dict_set(&options, "seekable", "0", 0));
+        }
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
         FF(av_dict_set(&options, "rtmp_live", "live", 0));
     } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
