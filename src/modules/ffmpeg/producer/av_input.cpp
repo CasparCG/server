@@ -26,9 +26,10 @@ extern "C" {
 
 namespace caspar { namespace ffmpeg {
 
-Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph)
+Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph, boost::optional<bool> seekable)
     : filename_(filename)
     , graph_(graph)
+    , seekable_(seekable)
 {
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -127,19 +128,16 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "reconnect_streamed", "1", 0));
         FF(av_dict_set(&options, "reconnect_delay_max", "120", 0));
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
-
-        // TODO (fix): Find a better solution? Make it an option?
-        const auto ext = boost::to_lower_copy(boost::filesystem::path(filename_).extension().wstring());
-        if (ext == L".mxf" || ext == L".ts") {
-            CASPAR_LOG(warning) << "av_input[" + filename_ + "] Disabled HTTP seeking for mxf and ts files";
-            // Seeking does not work well over HTTP.
-            FF(av_dict_set(&options, "seekable", "0", 0));
-        }
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
         FF(av_dict_set(&options, "rtmp_live", "live", 0));
     } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
         input_format = av_find_input_format(u8(url_parts.first).c_str());
         filename_    = u8(url_parts.second);
+    }
+
+    if (seekable_) {
+        CASPAR_LOG(debug) << "av_input[" + filename_ + "] Disabled seeking";
+        FF(av_dict_set(&options, "seekable", *seekable_ ? "1" : "0", 0));
     }
 
     if (input_format == nullptr) {

@@ -22,7 +22,8 @@ class AVProducer
                boost::optional<std::string>         afilter,
                boost::optional<int64_t>             start,
                boost::optional<int64_t>             duration,
-               boost::optional<bool>                loop);
+               boost::optional<bool>                loop,
+               int                                  seekable);
 
     core::draw_frame prev_frame();
     core::draw_frame next_frame();
