@@ -542,6 +542,7 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
+    int              seekable_       = 2;
     int64_t          frame_count_    = 0;
     bool             frame_flush_    = true;
     int64_t          frame_time_     = AV_NOPTS_VALUE;
@@ -567,18 +568,20 @@ struct AVProducer::Impl
          std::string                          afilter,
          boost::optional<int64_t>             start,
          boost::optional<int64_t>             duration,
-         bool                                 loop)
+         bool                                 loop,
+         int                                  seekable)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale})
         , name_(name)
         , path_(path)
-        , input_(path, graph_)
+        , input_(path, graph_, seekable >= 0 && seekable < 2 ? boost::optional<bool>(false) : boost::optional<bool>())
         , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
         , afilter_(afilter)
         , vfilter_(vfilter)
+        , seekable_(seekable)
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -589,6 +592,8 @@ struct AVProducer::Impl
         state_["file/path"] = u8(path_);
         state_["loop"]      = loop;
         update_state();
+
+        CASPAR_LOG(debug) << print() << " seekable: " << seekable_;
 
         thread_ = boost::thread([=] {
             try {
@@ -829,7 +834,7 @@ struct AVProducer::Impl
         }
 
         if (latency_ != -1) {
-            CASPAR_LOG(debug) << " latency: " << latency_;
+            CASPAR_LOG(debug) << print() << " latency: " << latency_;
             latency_ = -1;
         }
 
@@ -991,7 +996,9 @@ struct AVProducer::Impl
         time = time + (input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
 
         // TODO (fix) Dont seek if time is close future.
-        input_.seek(time);
+        if (seekable_) {
+            input_.seek(time);
+        }
         frame_flush_ = true;
         frame_count_ = 0;
         buffer_eof_  = false;
@@ -1046,7 +1053,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        boost::optional<std::string>         afilter,
                        boost::optional<int64_t>             start,
                        boost::optional<int64_t>             duration,
-                       boost::optional<bool>                loop)
+                       boost::optional<bool>                loop,
+                       int                                  seekable)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
                      std::move(name),
@@ -1055,7 +1063,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                      std::move(afilter.get_value_or("")),
                      std::move(start),
                      std::move(duration),
-                     std::move(loop.get_value_or(false))))
+                     std::move(loop.get_value_or(false)),
+                     seekable))
 {
 }
 

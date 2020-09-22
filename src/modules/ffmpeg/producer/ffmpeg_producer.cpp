@@ -71,7 +71,8 @@ struct ffmpeg_producer : public core::frame_producer
                              std::wstring                         afilter,
                              boost::optional<int64_t>             start,
                              boost::optional<int64_t>             duration,
-                             boost::optional<bool>                loop)
+                             boost::optional<bool>                loop,
+                             int                                  seekable)
         : filename_(filename)
         , frame_factory_(frame_factory)
         , format_desc_(format_desc)
@@ -83,7 +84,8 @@ struct ffmpeg_producer : public core::frame_producer
                                    u8(afilter),
                                    start,
                                    duration,
-                                   loop))
+                                   loop,
+                                   seekable))
     {
     }
 
@@ -318,6 +320,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         return core::frame_producer::empty();
     }
 
+    auto seekable = get_param(L"SEEKABLE", params, static_cast<int>(-1));
+
     auto loop = contains_param(L"LOOP", params);
 
     auto in = get_param(L"SEEK", params, static_cast<uint32_t>(0)); // compatibility
@@ -347,13 +351,23 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         duration = out - in;
     }
 
+    auto ext = boost::to_lower_copy(boost::filesystem::path(path).extension().wstring());
+    if (seekable == -1) {
+      if (start && *start && ext == L".mxf") {
+          // mxf does a lot of unecessary seeking for FooterPartition.
+          seekable = 1;
+      } else {
+          seekable = 2;
+      }
+    }
+
     // TODO (fix) use raw input?
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
     try {
         auto producer = spl::make_shared<ffmpeg_producer>(
-            dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop);
+            dependencies.frame_factory, dependencies.format_desc, name, path, vfilter, afilter, start, duration, loop, seekable);
         return core::create_destroy_proxy(std::move(producer));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
