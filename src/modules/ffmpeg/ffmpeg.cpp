@@ -152,6 +152,10 @@ void init(core::module_dependencies dependencies)
     avcodec_register_all();
     avdevice_register_all();
 
+    // mpegts demuxer does not seek acture with binary search.
+    const auto ts_demuxer = av_find_input_format("mpegts");
+    ts_demuxer->flags = AVFMT_SHOW_IDS | AVFMT_TS_DISCONT | AVFMT_NOBINSEARCH | AVFMT_GENERIC_INDEX;
+
     dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer);
     dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_consumer);
 
