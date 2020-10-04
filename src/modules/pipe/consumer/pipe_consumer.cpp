@@ -92,8 +92,8 @@ struct pipe_consumer
     std::atomic<bool> ready_for_frames_{false};
     std::atomic<bool> audio_thread_loop_running_{false};
     std::atomic<bool> video_thread_loop_running_{false};
-    std::atomic<int>  tail_av_sync{0};
-    std::atomic<int>  head_av_sync{0};
+    std::atomic<int>  tail_av_sync_{0};
+    std::atomic<int>  head_av_sync_{0};
     std::thread       thread_video_;
     std::thread       thread_audio_;
 
@@ -128,7 +128,7 @@ struct pipe_consumer
         if (!config_.use_audio_pipe && !config_.use_video_pipe) {
             std::wstringstream str;
             if (config_.from_config) {
-                str << config.name
+                str << print()
                     << L": No pipe name specified. You must specify one or both of video-pipe-name and "
                        L"audio-pipe-name "
                        L"parameters and include a pipe name (e.g. "
@@ -140,6 +140,19 @@ struct pipe_consumer
                        L"parameters followed by the pipe name (e.g. VIDEO_PIPE \\\\\\\\.\\\\pipe\\\\CasparCGVideo)"
                     << std::endl;
             }
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
+        }
+
+        // If single pipe was specified and the video format has an audio cadence longer than one,
+        // throw an error because byte synchronisation between CasparCG and external reader cannot be maintained.
+        if (config_.single_pipe && format_desc_.audio_cadence.size() > 1) {
+            std::wstringstream str;
+            str << print()
+                << L": The selected video format has an uneven audio cadence. This is incompatible with the single "
+                   L"pipe option of the pipe consumer as byte synchronisation between the consumer and the external "
+                   L"program cannot be guaranteed."
+                << std::endl;
+            
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
         }
         
@@ -231,7 +244,7 @@ struct pipe_consumer
                     // are synchronised.
                     if (config_.realtime) {
                         ready_for_frames_ = false;
-                        head_av_sync      = 0;
+                        head_av_sync_      = 0;
 
                         // empty the queue
                         // We don't use clear() here because it is thread unsafe.
@@ -322,7 +335,7 @@ struct pipe_consumer
                     // are synchronised.
                     if (config_.realtime) {
                         ready_for_frames_ = false;
-                        head_av_sync      = 0;
+                        head_av_sync_      = 0;
 
                         // empty the queue
                         // We don't use clear() here because it is thread unsafe.
@@ -494,10 +507,10 @@ struct pipe_consumer
         DWORD numBytesWritten = 0;
         DWORD numBytesToWrite = format_desc_.width * format_desc_.height * 4; // assumes RGBA
 
-        if (head_av_sync < 0) {
+        if (head_av_sync_ < 0) {
             // Log the dropped frame
             graph_video_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            head_av_sync += 1;
+            head_av_sync_ += 1;
             return true;
         }
 
@@ -523,7 +536,7 @@ struct pipe_consumer
                               << std::to_wstring(lastError);
 
             // Update the av_sync for the head of the queue
-            head_av_sync += 1;
+            head_av_sync_ += 1;
 
             // Log the dropped frame
             graph_video_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -538,10 +551,10 @@ struct pipe_consumer
         DWORD numBytesToWrite = 0;
 
         // if we need to drop an audio frame to resynchronise, then we will
-        if (head_av_sync > 0) {
+        if (head_av_sync_ > 0) {
             // Log the dropped frame
             graph_audio_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            head_av_sync -= 1;
+            head_av_sync_ -= 1;
             return true;
         }
 
@@ -561,7 +574,7 @@ struct pipe_consumer
                               << std::to_wstring(lastError);
 
             // update the av_sync for the head of the queue
-            head_av_sync -= 1;
+            head_av_sync_ -= 1;
 
             // Log the dropped frame
             graph_audio_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -589,7 +602,7 @@ struct pipe_consumer
         // silently drop frames until the pipe is connected
         if (ready_for_frames_) {
             if (config_.use_video_pipe) {
-                if (tail_av_sync >= 0) {
+                if (tail_av_sync_ >= 0) {
                     vPushResult = frame_buffer_video_.try_push(frame);
                     // update the diagnostic graph
                     graph_video_->set_value("input",
@@ -606,12 +619,12 @@ struct pipe_consumer
                     // Note that this will force an audio frame drop for the same frame
                     // as the missed video frame
                     if (config_.use_audio_pipe) {
-                        tail_av_sync += 1;
+                        tail_av_sync_ += 1;
                     }
                 }
             }
             if (config_.use_audio_pipe) {
-                if (tail_av_sync <= 0) {
+                if (tail_av_sync_ <= 0) {
                     aPushResult = frame_buffer_audio_.try_push(frame);
                     // update the diagnostic graph
                     graph_audio_->set_value("input",
@@ -628,28 +641,28 @@ struct pipe_consumer
                     // Note that this will for a video frame drop for the subsequent frame
                     // and so audio/video will be out of sync for at least 1 frame (with 1 frame also lost)
                     if (config_.use_video_pipe) {
-                        tail_av_sync -= 1;
+                        tail_av_sync_ -= 1;
                     }
                 }
             }
             // If only one dropped a frame, warn in the log that the A/V sync will be out
             if (config_.use_audio_pipe && config_.use_video_pipe && (vPushResult^aPushResult)) {
                 if (!vPushResult) {
-                    if (tail_av_sync != 0) {
+                    if (tail_av_sync_ != 0) {
                         CASPAR_LOG(warning)
                             << print()
                             << L" A video frame was dropped but an audio frame was not. The audio-video "
                                L"sync is out by "
-                            << tail_av_sync.load() << L" frames";
+                            << tail_av_sync_.load() << L" frames";
                     }
                 }
                 else if (!aPushResult) {
-                    if (tail_av_sync != 0) {
+                    if (tail_av_sync_ != 0) {
                         CASPAR_LOG(warning)
                             << print()
                             << L" An audio frame was dropped but a video frame was not. The audio-video "
                                L"sync is out by "
-                            << tail_av_sync.load() << L" frames";
+                            << tail_av_sync_.load() << L" frames";
                     }
                 }
             }
