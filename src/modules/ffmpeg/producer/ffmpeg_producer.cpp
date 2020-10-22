@@ -353,7 +353,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(path).extension().wstring());
     if (seekable == -1) {
-      if (start && *start && ext == L".mxf") {
+      if ((!start || !*start) && ext == L".mxf") {
           // mxf does a lot of unecessary seeking for FooterPartition.
           seekable = 1;
       } else {
