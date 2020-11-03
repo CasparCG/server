@@ -21,6 +21,7 @@ class AVProducer
                boost::optional<std::string>         vfilter,
                boost::optional<std::string>         afilter,
                boost::optional<int64_t>             start,
+               boost::optional<int64_t>             seek,
                boost::optional<int64_t>             duration,
                boost::optional<bool>                loop,
                int                                  seekable);
