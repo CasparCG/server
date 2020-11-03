@@ -641,6 +641,7 @@ struct AVProducer::Impl
          std::string                          vfilter,
          std::string                          afilter,
          boost::optional<int64_t>             start,
+         boost::optional<int64_t>             seek,
          boost::optional<int64_t>             duration,
          bool                                 loop,
          int                                  seekable)
@@ -674,7 +675,7 @@ struct AVProducer::Impl
 
         thread_ = boost::thread([=] {
             try {
-                run();
+                run(seek);
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
             } catch (ffmpeg::ffmpeg_error_t& ex) {
@@ -709,7 +710,7 @@ struct AVProducer::Impl
         CASPAR_LOG(debug) << print() << " Joined";
     }
 
-    void run()
+    void run(boost::optional<int64_t> firstSeek)
     {
         std::vector<int> audio_cadence = format_desc_.audio_cadence;
 
@@ -731,7 +732,7 @@ struct AVProducer::Impl
         }
 
         {
-            const auto start = start_.load();
+            const auto start = firstSeek ? av_rescale_q(*firstSeek, format_tb_, TIME_BASE_Q) : start_.load();
             if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
                 if (start != AV_NOPTS_VALUE) {
                     duration_ = input_->duration - start;
@@ -1156,6 +1157,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        boost::optional<std::string>         vfilter,
                        boost::optional<std::string>         afilter,
                        boost::optional<int64_t>             start,
+                       boost::optional<int64_t>             seek,
                        boost::optional<int64_t>             duration,
                        boost::optional<bool>                loop,
                        int                                  seekable)
@@ -1166,6 +1168,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                      std::move(vfilter.get_value_or("")),
                      std::move(afilter.get_value_or("")),
                      std::move(start),
+                     std::move(seek),
                      std::move(duration),
                      std::move(loop.get_value_or(false)),
                      seekable))
