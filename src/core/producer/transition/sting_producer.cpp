@@ -72,7 +72,7 @@ class sting_producer : public frame_producer
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        auto duration = auto_play_delta();
+        auto duration = target_duration();
         return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
     }
 
@@ -86,9 +86,23 @@ class sting_producer : public frame_producer
         return boost::none;
     }
 
+    boost::optional<uint32_t> target_duration() const
+    {
+        auto autoplay = auto_play_delta();
+        if (!autoplay) {
+            return boost::none;
+        }
+
+        auto autoplay2 = static_cast<uint32_t>(*autoplay);
+        if (info_.audio_fade_duration < UINT32_MAX) {
+            return std::max(autoplay2, info_.audio_fade_duration + info_.audio_fade_start);
+        }
+        return autoplay2;
+    }
+
     draw_frame receive_impl(int nb_samples) override
     {
-        auto duration = auto_play_delta();
+        auto duration = target_duration();
 
         CASPAR_SCOPE_EXIT
         {
@@ -182,12 +196,30 @@ class sting_producer : public frame_producer
         return dst_producer_->call(params);
     }
 
+    double get_audio_delta() const
+    {
+        if (current_frame_ < info_.audio_fade_start) {
+            return 0;
+        }
+
+        auto total_duration = target_duration();
+        if (!total_duration) {
+            return 0;
+        }
+
+        uint32_t frame_number = current_frame_ - info_.audio_fade_start;
+        uint32_t duration     = std::min(*total_duration - info_.audio_fade_start, info_.audio_fade_duration);
+        if (frame_number > duration) {
+            return 1.0;
+        }
+
+        return audio_tweener_(frame_number, 0.0, 1.0, static_cast<double>(duration));
+    }
+
     draw_frame
     compose(draw_frame dst_frame, draw_frame src_frame, draw_frame mask_frame, draw_frame overlay_frame) const
     {
-        const auto   duration = auto_play_delta();
-        const double delta    = duration ? audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(*duration)) : 0;
-
+        const double delta    = get_audio_delta();
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
 
@@ -252,10 +284,26 @@ bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingI
         stingInfo.mask_filename = val;
 
         if (protocol::amcp::get_arg_value(args, L"trigger_point", val)) {
-            stingInfo.trigger_point = boost::lexical_cast<int>(val);
+            int val2 = boost::lexical_cast<int>(val);
+            if (val2 > 0) {
+                stingInfo.trigger_point = val2;
+            }
         }
         if (protocol::amcp::get_arg_value(args, L"overlay", val)) {
             stingInfo.overlay_filename = val;
+        }
+
+        if (protocol::amcp::get_arg_value(args, L"audio_fade_start", val)) {
+            int val2 = boost::lexical_cast<int>(val);
+            if (val2 > 0) {
+                stingInfo.audio_fade_start = val2;
+            }
+        }
+        if (protocol::amcp::get_arg_value(args, L"audio_fade_duration", val)) {
+            int val2 = boost::lexical_cast<int>(val);
+            if (val2 > 0) {
+                stingInfo.audio_fade_duration = val2;
+            }
         }
 
     } else {
