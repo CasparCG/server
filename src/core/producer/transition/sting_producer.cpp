@@ -30,6 +30,7 @@
 
 #include <common/param.h>
 #include <common/scope_exit.h>
+#include <protocol/amcp/amcp_args.h>
 
 #include <future>
 
@@ -238,14 +239,35 @@ bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingI
         return false;
     }
 
-    stingInfo.mask_filename = params.at(start_ind + 1);
+    auto params_token = params.at(start_ind + 1);
+    if (protocol::amcp::is_args_token(params_token)) {
+        auto args = protocol::amcp::tokenize_args(params_token);
 
-    if (params.size() > start_ind + 2) {
-        stingInfo.trigger_point = std::stoi(params.at(start_ind + 2));
-    }
+        std::wstring val;
+        if (!protocol::amcp::get_arg_value(args, L"MASK", val)) {
+            // TODO - throw error?
+            // No mask filename
+            return false;
+        }
+        stingInfo.mask_filename = val;
 
-    if (params.size() > start_ind + 3) {
-        stingInfo.overlay_filename = params.at(start_ind + 3);
+        if (protocol::amcp::get_arg_value(args, L"trigger_point", val)) {
+            stingInfo.trigger_point = boost::lexical_cast<int>(val);
+        }
+        if (protocol::amcp::get_arg_value(args, L"overlay", val)) {
+            stingInfo.overlay_filename = val;
+        }
+
+    } else {
+        stingInfo.mask_filename = params.at(start_ind + 1);
+
+        if (params.size() > start_ind + 2) {
+            stingInfo.trigger_point = boost::lexical_cast<int>(params.at(start_ind + 2));
+        }
+
+        if (params.size() > start_ind + 3) {
+            stingInfo.overlay_filename = params.at(start_ind + 3);
+        }
     }
 
     return true;
