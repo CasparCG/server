@@ -580,12 +580,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));
 
-    CASPAR_LOG(info) << L"Loading template host: " + url_from_path(filename);
-    return create_destroy_proxy(spl::make_shared<flash_producer>(dependencies.frame_factory,
-                                                                 dependencies.format_desc,
-                                                                 url_from_path(filename),
-                                                                 template_host.width,
-                                                                 template_host.height));
+    const url = url_from_path(filename);
+    return create_destroy_proxy(spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, url, template_host.width, template_host.height));
 }
 
 spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies,
@@ -598,12 +594,9 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
     swf_t::header_t header(filename);
 
-    CASPAR_LOG(info) << L"Loading flash media: " + url_from_path(filename);
-    auto producer = spl::make_shared<flash_producer>(dependencies.frame_factory,
-                                                     dependencies.format_desc,
-                                                     url_from_path(filename),
-                                                     header.frame_width,
-                                                     header.frame_height);
+    const url = url_from_path(filename);
+    auto producer = spl::make_shared<flash_producer>(
+            dependencies.frame_factory, dependencies.format_desc, url, header.frame_width, header.frame_height);
 
     producer->call({L"start_rendering"}).get();
 
