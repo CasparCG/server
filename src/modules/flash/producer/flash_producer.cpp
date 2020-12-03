@@ -164,9 +164,8 @@ std::wstring url_from_path(std::wstring in)
     PWSTR        out_buf = (PWSTR)malloc(out_length + 4);
     CASPAR_SCOPE_EXIT { free(out_buf); };
     HRESULT      ret     = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
-    std::wstring out;
     if (SUCCEEDED(ret)) {
-        return out_buf;
+        return std::wstring(out_buf);
     } else {
         return in;
     }
@@ -579,7 +578,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));
 
-    const url = url_from_path(filename);
+    const auto url = url_from_path(filename);
     return create_destroy_proxy(spl::make_shared<flash_producer>(
         dependencies.frame_factory, dependencies.format_desc, url, template_host.width, template_host.height));
 }
@@ -594,9 +593,9 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
     swf_t::header_t header(filename);
 
-    const url = url_from_path(filename);
+    const auto url = url_from_path(filename);
     auto producer = spl::make_shared<flash_producer>(
-            dependencies.frame_factory, dependencies.format_desc, url, header.frame_width, header.frame_height);
+        dependencies.frame_factory, dependencies.format_desc, url, header.frame_width, header.frame_height);
 
     producer->call({L"start_rendering"}).get();
 
