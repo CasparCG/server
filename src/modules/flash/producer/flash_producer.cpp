@@ -49,6 +49,7 @@
 #include <common/env.h>
 #include <common/executor.h>
 #include <common/future.h>
+#include <common/scope_exit.h>
 #include <common/prec_timer.h>
 #include <common/timer.h>
 
@@ -161,14 +162,12 @@ std::wstring url_from_path(std::wstring in)
 {
     DWORD        out_length = INTERNET_MAX_URL_LENGTH * 2;
     PWSTR        out_buf = (PWSTR)malloc(out_length + 4);
+    CASPAR_SCOPE_EXIT { free(out_buf); };
     HRESULT      ret     = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
     std::wstring out;
     if (SUCCEEDED(ret)) {
-        out = out_buf;
-        free(out_buf);
-        return out;
+        return out_buf;
     } else {
-        free(out_buf);
         return in;
     }
 }
