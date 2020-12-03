@@ -159,8 +159,8 @@ std::mutex& get_global_init_destruct_mutex()
 
 std::wstring url_from_path(std::wstring in)
 {
-    DWORD        out_length = INTERNET_MAX_URL_LENGTH * 2 + 4;
-    PWSTR        out_buf = (PWSTR)malloc(out_length);
+    DWORD        out_length = INTERNET_MAX_URL_LENGTH * 2;
+    PWSTR        out_buf = (PWSTR)malloc(out_length + 4);
     HRESULT      ret     = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
     std::wstring out;
     if (SUCCEEDED(ret)) {
