@@ -21,6 +21,10 @@
 
 #include "../stdafx.h"
 
+#include "WinInet.h"
+#include "shlwapi.h"
+#include "winerror.h"
+
 #if defined(_MSC_VER)
 #pragma warning (disable : 4146)
 #pragma warning (disable : 4244)
@@ -47,6 +51,7 @@
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
 #include <common/utility/timer.h>
+#include <common/scope_exit.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -157,6 +162,21 @@ boost::mutex& get_global_init_destruct_mutex()
 
 	return m;
 }
+
+std::wstring url_from_path(std::wstring in)
+{
+	DWORD        out_length = INTERNET_MAX_URL_LENGTH * 2;
+	PWSTR        out_buf = (PWSTR)malloc(out_length + 4);
+	CASPAR_SCOPE_EXIT{ free(out_buf); };
+	HRESULT      ret = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
+	if (SUCCEEDED(ret)) {
+		return std::wstring(out_buf);
+	}
+	else {
+		return in;
+	}
+}
+
 
 class flash_renderer
 {	
@@ -613,29 +633,31 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	auto filename = env::template_folder() + L"\\" + template_host.filename;
+	auto filename = env::template_folder() + template_host.filename;
 	
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
+	const auto url = url_from_path(filename);
 	return create_producer_destroy_proxy(
 		   create_producer_print_proxy(
-			make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height)));
+			make_safe<flash_producer>(frame_factory, url, template_host.width, template_host.height)));
 }
 
 safe_ptr<core::frame_producer> create_swf_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
 		const core::parameters& params) 
 {
-	auto filename = env::media_folder() + L"\\" + params.at_original(0) + L".swf";
+	auto filename = env::media_folder() + params.at_original(0) + L".swf";
 	
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 
 	swf_t::header_t header(filename);
 
+	const auto url = url_from_path(filename);
 	auto producer = make_safe<flash_producer>(
-			frame_factory, filename, header.frame_width, header.frame_height);
+			frame_factory, url, header.frame_width, header.frame_height);
 
 	producer->call(L"start_rendering").get();
 
@@ -645,13 +667,13 @@ safe_ptr<core::frame_producer> create_swf_producer(
 std::wstring find_template(const std::wstring& template_name)
 {
 	if(boost::filesystem::exists(template_name + L".ft")) 
-		return template_name + L".ft";
+		return url_from_path(template_name + L".ft");
 	
 	if(boost::filesystem::exists(template_name + L".ct"))
-		return template_name + L".ct";
+		return url_from_path(template_name + L".ct");
 	
 	if(boost::filesystem::exists(template_name + L".swf"))
-		return template_name + L".swf";
+		return url_from_path(template_name + L".swf");
 
 	return L"";
 }
