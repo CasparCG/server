@@ -1,3 +1,12 @@
+CasparCG 2.3.1 Stable
+==========================================
+
+### Producers
+##### Fixes
+* Flash: Use proper file urls when loading templates, to allow it to work after Flash Player EOL
+* FFmpeg: Various HTTP playback improvements
+
+
 CasparCG 2.3.0 Stable
 ==========================================
 
