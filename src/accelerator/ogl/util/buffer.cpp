@@ -22,16 +22,14 @@
 
 #include <common/gl/gl_check.h>
 
-#include <tbb/atomic.h>
-
 #include <GL/glew.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static tbb::atomic<int>         g_w_total_count;
-static tbb::atomic<std::size_t> g_w_total_size;
-static tbb::atomic<int>         g_r_total_count;
-static tbb::atomic<std::size_t> g_r_total_size;
+static std::atomic<int>         g_w_total_count;
+static std::atomic<std::size_t> g_w_total_size;
+static std::atomic<int>         g_r_total_count;
+static std::atomic<std::size_t> g_r_total_size;
 
 struct buffer::impl
 {
