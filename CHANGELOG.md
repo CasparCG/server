@@ -1,3 +1,12 @@
+CasparCG 2.3.2 Beta
+==========================================
+
+### Producers
+##### Fixes
+* Packages: Update TBB library to v2021.1.1 - fixes CPU and memory growth when deleting threads
+* FFmpeg: Fix possible deadlock leading to producer not being cleaned up correctly
+
+
 CasparCG 2.3.1 Stable
 ==========================================
 

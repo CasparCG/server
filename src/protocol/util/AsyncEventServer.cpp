@@ -34,7 +34,6 @@
 
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_queue.h>
-#include <tbb/mutex.h>
 
 using boost::asio::ip::tcp;
 
@@ -278,7 +277,6 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     protocol_strategy_factory<char>::ptr     protocol_factory_;
     spl::shared_ptr<connection_set>          connection_set_;
     std::vector<lifecycle_factory_t>         lifecycle_factories_;
-    tbb::mutex                               mutex_;
 
     implementation(std::shared_ptr<boost::asio::io_service>    service,
                    const protocol_strategy_factory<char>::ptr& protocol,

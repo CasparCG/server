@@ -105,6 +105,10 @@ void Input::abort()
 {
     abort_request_ = true;
     ic_cond_.notify_all();
+
+    std::shared_ptr<AVPacket> packet;
+    while (buffer_.try_pop(packet))
+        ;
 }
 
 void Input::reset()
