@@ -72,7 +72,7 @@ struct ffmpeg_producer : public core::frame_producer
                              boost::optional<int64_t>             start,
                              boost::optional<int64_t>             duration,
                              boost::optional<bool>                loop,
-                             int                                  seekable)
+                             boost::optional<bool>                seekable)
         : filename_(filename)
         , frame_factory_(frame_factory)
         , format_desc_(format_desc)
@@ -320,7 +320,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         return core::frame_producer::empty();
     }
 
-    auto seekable = get_param(L"SEEKABLE", params, static_cast<int>(-1));
+    auto seekable_opt = get_param(L"SEEKABLE", params, static_cast<int>(-1));
 
     auto loop = contains_param(L"LOOP", params);
 
@@ -351,14 +351,16 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         duration = out - in;
     }
 
+    boost::optional<bool> seekable;
+
     auto ext = boost::to_lower_copy(boost::filesystem::path(path).extension().wstring());
-    if (seekable == -1) {
+    if (seekable_opt == -1) {
       if ((!start || !*start) && ext == L".mxf") {
           // mxf does a lot of unecessary seeking for FooterPartition.
-          seekable = 1;
-      } else {
-          seekable = 2;
+          seekable = false;
       }
+    } else {
+        seekable = seekable_opt > 0;
     }
 
     // TODO (fix) use raw input?

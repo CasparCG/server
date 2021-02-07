@@ -542,7 +542,8 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
-    int              seekable_       = 2;
+    boost::optional<bool> seekable_;
+
     int64_t          frame_count_    = 0;
     bool             frame_flush_    = true;
     int64_t          frame_time_     = AV_NOPTS_VALUE;
@@ -569,19 +570,18 @@ struct AVProducer::Impl
          boost::optional<int64_t>             start,
          boost::optional<int64_t>             duration,
          bool                                 loop,
-         int                                  seekable)
+         boost::optional<bool>                seekable)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale})
         , name_(name)
         , path_(path)
-        , input_(path, graph_, seekable >= 0 && seekable < 2 ? boost::optional<bool>(false) : boost::optional<bool>())
+        , input_(path, graph_, seekable)
         , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
         , afilter_(afilter)
         , vfilter_(vfilter)
-        , seekable_(seekable)
     {
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -592,8 +592,6 @@ struct AVProducer::Impl
         state_["file/path"] = u8(path_);
         state_["loop"]      = loop;
         update_state();
-
-        CASPAR_LOG(debug) << print() << " seekable: " << seekable_;
 
         thread_ = boost::thread([=] {
             try {
@@ -1054,7 +1052,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        boost::optional<int64_t>             start,
                        boost::optional<int64_t>             duration,
                        boost::optional<bool>                loop,
-                       int                                  seekable)
+                       boost::optional<bool>                seekable)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
                      std::move(name),
