@@ -196,12 +196,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 boost::tribool has_valid_extension(const std::wstring& filename)
 {
-    static const auto invalid_exts = {L".png",
-                                      L".tga",
-                                      L".bmp",
-                                      L".jpg",
-                                      L".jpeg",
-                                      L".gif",
+    static const auto invalid_exts = {L".tga",
                                       L".tiff",
                                       L".tif",
                                       L".jp2",
