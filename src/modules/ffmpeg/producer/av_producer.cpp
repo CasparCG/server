@@ -994,9 +994,10 @@ struct AVProducer::Impl
         time = time + (input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
 
         // TODO (fix) Dont seek if time is close future.
-        if (seekable_) {
+        if (!seekable_ || *seekable_) {
             input_.seek(time);
         }
+
         frame_flush_ = true;
         frame_count_ = 0;
         buffer_eof_  = false;
