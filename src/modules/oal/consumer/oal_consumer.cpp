@@ -62,15 +62,41 @@ extern "C" {
 
 namespace caspar { namespace oal {
 
+struct configuration
+{
+    std::wstring audio_device_name;
+};
+
 class device
 {
-    ALCdevice*  device_  = nullptr;
-    ALCcontext* context_ = nullptr;
+    ALCdevice*          device_  = nullptr;
+    ALCcontext*         context_ = nullptr;
+    const configuration config;
 
   public:
-    device()
+    device(const configuration& config)
+        : config(config)
     {
-        device_ = alcOpenDevice(nullptr);
+        ALboolean enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
+        ALCchar*  deviceName  = nullptr;
+
+        if (enumeration == AL_FALSE) {
+            // enumeration not supported
+            CASPAR_LOG(info) << L"OpenAL Device enumeration is NOT supported.";
+        } else {
+            char* s;
+
+            if (alcIsExtensionPresent(NULL, "ALC_enumerate_all_EXT") == AL_FALSE)
+                s = (char*)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+            else
+                s = (char*)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+
+            CASPAR_LOG(info) << L"OpenAL Device enumeration IS supported.";
+
+            deviceName = iterateDevices(s);
+        }
+
+        device_ = alcOpenDevice(deviceName);
 
         if (device_ == nullptr)
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
@@ -96,18 +122,59 @@ class device
     }
 
     ALCdevice* get() { return device_; }
+
+  private:
+    ALCchar* iterateDevices(const char* list)
+    {
+        ALCchar* result = nullptr;
+        ALCchar* ptr;
+
+        // generate ascii string for comparison purposes vs what openAL provides
+        std::string short_device_name(config.audio_device_name.begin(), config.audio_device_name.end());
+
+        ptr = (ALCchar*)list;
+
+        CASPAR_LOG(info) << L"------- OpenAL Device List -----";
+
+        if (!list) {
+            CASPAR_LOG(info) << L"No device names found";
+        } else {
+            while (strlen(ptr) > 0) {
+                CASPAR_LOG(info) << ptr;
+
+                if (strcmpi(&short_device_name[0], ptr) == 0) {
+                    result = ptr;
+                }
+
+                ptr += strlen(ptr) + 1;
+            }
+        }
+
+        CASPAR_LOG(info) << L"------ OpenAL Devices List done -----";
+
+        if (result != nullptr) {
+            CASPAR_LOG(info) << L"--------- Found desired audio output device --------";
+        } else if (strlen(&short_device_name[0]) > 0) {
+            CASPAR_LOG(info) << L"--------- Desired audio output device NOT FOUND! -------- ";
+        } else {
+            CASPAR_LOG(info) << L"--------- Audio device not specified ----------";
+        }
+
+        return result;
+    }
 };
 
-void init_device()
+void init_device(configuration config)
 {
     static std::unique_ptr<device> instance;
     static std::once_flag          f;
 
-    std::call_once(f, [] { instance = std::make_unique<device>(); });
+    std::call_once(f, [&] { instance = std::make_unique<device>(config); });
 }
 
 struct oal_consumer : public core::frame_consumer
 {
+    const configuration                 config_;
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       perf_timer_;
     int                                 channel_index_ = -1;
@@ -124,9 +191,10 @@ struct oal_consumer : public core::frame_consumer
     executor executor_{L"oal_consumer"};
 
   public:
-    oal_consumer()
+    oal_consumer(const configuration& config)
+        : config_(config)
     {
-        init_device();
+        init_device(config);
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -311,14 +379,24 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
         return core::frame_consumer::empty();
 
-    return spl::make_shared<oal_consumer>();
+    configuration config;
+
+    if (contains_param(L"AUDIO_DEVICE_NAME", params)) {
+        config.audio_device_name = get_param(L"AUDIO_DEVICE_NAME", params);
+    };
+
+    return spl::make_shared<oal_consumer>(config);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
-    return spl::make_shared<oal_consumer>();
+    configuration config;
+
+    config.audio_device_name = ptree.get<std::wstring>(L"device-name", L"");
+
+    return spl::make_shared<oal_consumer>(config);
 }
 
 }} // namespace caspar::oal
