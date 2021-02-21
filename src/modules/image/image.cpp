@@ -26,6 +26,7 @@
 
 #include "consumer/image_consumer.h"
 #include "producer/image_producer.h"
+#include "producer/image_scroll_producer.h"
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
@@ -43,6 +44,7 @@ void init(core::module_dependencies dependencies)
 {
     FreeImage_Initialise();
     dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer);
+    dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer);
     dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer);
 }
 
