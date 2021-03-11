@@ -1,4 +1,4 @@
-CasparCG 2.3.2 Beta
+CasparCG 2.3.2 Stable
 ==========================================
 
 ### Producers
