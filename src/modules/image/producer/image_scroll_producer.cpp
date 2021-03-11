@@ -51,6 +51,7 @@
 #include <common/os/filesystem.h>
 #include <common/future.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -385,7 +386,7 @@ struct image_scroll_producer : public core::frame_producer
     {
         speed_ = speed_tweener(speed, speed, 0, tweener(L"linear"));
     }
-    
+
     core::draw_frame receive_impl(int nb_samples) override
     {
         frame_ = render_frame(true, true);
@@ -421,6 +422,10 @@ struct image_scroll_producer : public core::frame_producer
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
+    if (boost::contains(params.at(0), L"://")) {
+        return core::frame_producer::empty();
+    }
+
     std::wstring filename = env::media_folder() + params.at(0);
 
     auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool {
