@@ -136,6 +136,10 @@ class ieq
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
+    if (boost::contains(params.at(0), L"://")) {
+        return core::frame_producer::empty();
+    }
+
     auto length = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 
     // if (boost::iequals(params.at(0), L"[IMG_SEQUENCE]"))
