@@ -29,6 +29,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -126,32 +127,38 @@ class device
   private:
     ALCchar* iterateDevices(const char* list)
     {
-        ALCchar* result = nullptr;
-        ALCchar* ptr;
+        ALCchar* result = nullptr;        
 
         // generate ascii string for comparison purposes vs what openAL provides
-        std::string short_device_name(config.audio_device_name.begin(), config.audio_device_name.end());
-
-        ptr = (ALCchar*)list;
+        std::string short_device_name = u8(config.audio_device_name);
 
         CASPAR_LOG(info) << L"------- OpenAL Device List -----";
 
         if (!list) {
             CASPAR_LOG(info) << L"No device names found";
         } else {
+            // iterate through all device names
+            // -> buffer contains multiple null-terminated device name strings
+            ALCchar* ptr = (ALCchar*)list;
+
             while (strlen(ptr) > 0) {
+                // log each device name, so we can see what options are available
                 CASPAR_LOG(info) << ptr;
 
+                // store matching device name address if found
+                // -> device name will be empty string if not provided
                 if (strcmpi(&short_device_name[0], ptr) == 0) {
                     result = ptr;
                 }
 
+                // point to next device name start (or null if no more device names)
                 ptr += strlen(ptr) + 1;
             }
         }
 
         CASPAR_LOG(info) << L"------ OpenAL Devices List done -----";
 
+        // log whether the device was found or not
         if (result != nullptr) {
             CASPAR_LOG(info) << L"--------- Found desired audio output device --------";
         } else if (strlen(&short_device_name[0]) > 0) {
