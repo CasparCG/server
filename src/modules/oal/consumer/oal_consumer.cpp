@@ -37,6 +37,8 @@
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string/erase.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -131,6 +133,7 @@ class device
 
         // generate ascii string for comparison purposes vs what openAL provides
         std::string short_device_name = u8(config.audio_device_name);
+        boost::algorithm::erase_all(short_device_name, " ");
 
         CASPAR_LOG(info) << L"------- OpenAL Device List -----";
 
@@ -147,7 +150,10 @@ class device
 
                 // store matching device name address if found
                 // -> device name will be empty string if not provided
-                if (strcmpi(&short_device_name[0], ptr) == 0) {
+                std::string tmpStr = ptr;
+                boost::algorithm::erase_all(tmpStr, " ");
+
+                if (boost::iequals(short_device_name, tmpStr)) {
                     result = ptr;
                 }
 
@@ -161,7 +167,7 @@ class device
         // log whether the device was found or not
         if (result != nullptr) {
             CASPAR_LOG(info) << L"--------- Found desired audio output device --------";
-        } else if (strlen(&short_device_name[0]) > 0) {
+        } else if (short_device_name.length() > 0) {
             CASPAR_LOG(info) << L"--------- Desired audio output device NOT FOUND! -------- ";
         } else {
             CASPAR_LOG(info) << L"--------- Audio device not specified ----------";
