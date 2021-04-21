@@ -392,13 +392,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
         return core::frame_consumer::empty();
 
-    configuration config;
-
-    if (contains_param(L"AUDIO_DEVICE_NAME", params)) {
-        config.audio_device_name = get_param(L"AUDIO_DEVICE_NAME", params);
-    };
-
-    return spl::make_shared<oal_consumer>(config);
+    return spl::make_shared<oal_consumer>();
 }
 
 spl::shared_ptr<core::frame_consumer>
