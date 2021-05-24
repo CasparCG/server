@@ -207,7 +207,7 @@ class context : public drawable
             executor_.begin_invoke([this] { tick(); });
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(40));
     }
 
     void render(sf::RenderTarget& target, sf::RenderStates states) override
