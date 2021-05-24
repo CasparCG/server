@@ -274,63 +274,6 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     return av_frame;
 }
 
-int graph_execute(struct AVFilterContext* ctx, avfilter_action_func* func, void* arg, int* ret, int count)
-{
-    if (count == 0) {
-        return 0;
-    }
-
-    tbb::parallel_for(0, count, [&](int n) {
-        int r = func(ctx, arg, n, count);
-        if (ret) {
-            ret[n] = r;
-        }
-    });
-
-    return 0;
-}
-
-int codec_execute(AVCodecContext* c,
-                  int (*func)(AVCodecContext* c2, void* arg),
-                  void* arg2,
-                  int*  ret,
-                  int   count,
-                  int   size)
-{
-    tbb::parallel_for(0, count, 1, [&](int i) {
-        int r = func(c, (char*)arg2 + i * size);
-        if (ret) {
-            ret[i] = r;
-        }
-    });
-
-    return 0;
-}
-
-int codec_execute2(AVCodecContext* c,
-                   int (*func)(AVCodecContext* c2, void* arg, int jobnr, int threadnr),
-                   void* arg2,
-                   int*  ret,
-                   int   count)
-{
-    std::array<std::vector<int>, 128> jobs;
-
-    for (int jobnr = 0; jobnr < count; ++jobnr) {
-        jobs[jobnr * c->thread_count / count].push_back(jobnr);
-    }
-
-    tbb::parallel_for<int>(0, c->thread_count, [&](int threadnr) {
-        for (auto jobnr : jobs[threadnr]) {
-            int r = func(c, arg2, jobnr, threadnr);
-            if (ret) {
-                ret[jobnr] = r;
-            }
-        }
-    });
-
-    return 0;
-}
-
 AVDictionary* to_dict(std::map<std::string, std::string>&& map)
 {
     AVDictionary* dict = nullptr;

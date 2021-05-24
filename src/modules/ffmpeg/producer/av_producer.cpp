@@ -323,9 +323,6 @@ struct Filter
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
 
-        graph->nb_threads = 16;
-        graph->execute    = graph_execute;
-
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
 
         // inputs
@@ -542,7 +539,7 @@ struct AVProducer::Impl
     mutable boost::mutex      buffer_mutex_;
     boost::condition_variable buffer_cond_;
     std::atomic<bool>         buffer_eof_{false};
-    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
+    int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 4;
 
     std::vector<std::unique_ptr<caspar::executor>> thread_pool_;
 

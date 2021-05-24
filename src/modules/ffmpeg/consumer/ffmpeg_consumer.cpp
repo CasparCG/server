@@ -152,9 +152,6 @@ struct Stream
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
 
-        graph->nb_threads = 16;
-        graph->execute    = graph_execute;
-
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
