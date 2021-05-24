@@ -20,6 +20,7 @@
 #include <common/os/thread.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
+#include <common/executor.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -44,9 +45,6 @@ extern "C" {
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-#include <tbb/parallel_for_each.h>
-#include <tbb/parallel_invoke.h>
 
 #include <algorithm>
 #include <atomic>
@@ -104,17 +102,8 @@ struct Decoder
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
-        int numThreads = 1;
-        if (codec->capabilities & AV_CODEC_CAP_AUTO_THREADS) {
-            numThreads = 0;
-        } else if (codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
-            numThreads = std::min<int>(8, std::thread::hardware_concurrency() / 2);
-        } else if (codec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
-            numThreads = std::thread::hardware_concurrency() / 2;
-        }
-        numThreads = env::properties().get(L"configuration.ffmpeg.producer.threads", numThreads);
-        FF(av_opt_set_int(ctx.get(), "threads", numThreads, 0));
-        // FF(av_opt_set_int(ctx.get(), "enable_er", 1, 0));
+        int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
+        FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
 
         ctx->pkt_timebase = stream->time_base;
 
@@ -555,6 +544,8 @@ struct AVProducer::Impl
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 2;
 
+    std::vector<std::unique_ptr<caspar::executor>> thread_pool_;
+
     int latency_ = 0;
 
     boost::thread     thread_;
@@ -586,6 +577,7 @@ struct AVProducer::Impl
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
         graph_->set_color("frame-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+        graph_->set_color("decode-time", diagnostics::color(0.0f, 1.0f, 1.0f));
         graph_->set_color("buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 
         state_["file/name"] = u8(name_);
@@ -619,6 +611,7 @@ struct AVProducer::Impl
         input_.abort();
         buffer_cond_.notify_all();
         thread_.join();
+        thread_pool_.clear();
     }
 
     void run()
@@ -659,13 +652,13 @@ struct AVProducer::Impl
             }
         }
 
-        timer frame_timer;
-
         set_thread_name(L"[ffmpeg::av_producer]");
 
         boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
 
         Frame frame;
+        timer frame_timer;
+        timer decode_timer;
 
         int warning_debounce = 0;
 
@@ -707,12 +700,36 @@ struct AVProducer::Impl
                 }
             }
 
-            std::atomic<int> progress{schedule()};
+            bool progress = false;
+            {
+                progress |= schedule();
 
-            tbb::parallel_invoke(
-                [&] { tbb::parallel_for_each(decoders_, [&](auto& p) { progress.fetch_or(p.second()); }); },
-                [&] { progress.fetch_or(video_filter_()); },
-                [&] { progress.fetch_or(audio_filter_(audio_cadence[0])); });
+                std::vector<std::future<bool>> futures;
+
+                // TODO (refactor): Use some form of proper thread pool. Maybe global?
+                while (thread_pool_.size() < decoders_.size() + 2) {
+                    thread_pool_.push_back(std::make_unique<caspar::executor>(L"av_producer"));
+                }
+
+                auto n = 0;
+                for (auto& decoder : decoders_) {
+                    if (!decoder.second.frame) {
+                        futures.push_back(thread_pool_[n++]->begin_invoke([&]() { return decoder.second();  }));
+                    }
+                }
+
+                if (!video_filter_.frame) {
+                    futures.push_back(thread_pool_[n++]->begin_invoke([&]() { return video_filter_(); }));
+                }
+
+                if (!audio_filter_.frame) {
+                    futures.push_back(thread_pool_[n++]->begin_invoke([&]() { return audio_filter_(audio_cadence[0]);  }));
+                }
+
+                for (auto& future : futures) {
+                    progress |= future.get();
+                }
+            }
 
             if ((!video_filter_.frame && !video_filter_.eof) || (!audio_filter_.frame && !audio_filter_.eof)) {
                 if (!progress) {
@@ -726,8 +743,8 @@ struct AVProducer::Impl
                         }
                     }
 
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 10 : 1));
-                    frame_timer.restart();
+                    // TODO (perf): Avoid live loop.
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 20 : 5));
                 }
                 continue;
             }
@@ -762,8 +779,7 @@ struct AVProducer::Impl
 
             frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
 
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-            frame_timer.restart();
+            graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);
 
             {
                 boost::unique_lock<boost::mutex> buffer_lock(buffer_mutex_);
@@ -772,6 +788,11 @@ struct AVProducer::Impl
                     buffer_.push_back(frame);
                 }
             }
+
+            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+
+            frame_timer.restart();
+            decode_timer.restart();
 
             frame_count_ += 1;
             graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
