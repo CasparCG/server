@@ -52,6 +52,7 @@
 
 #include <atomic>
 #include <future>
+#include <thread>
 
 #include <clocale>
 #include <csignal>
