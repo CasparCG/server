@@ -43,6 +43,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <tuple>
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
