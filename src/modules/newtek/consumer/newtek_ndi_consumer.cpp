@@ -25,6 +25,7 @@
 #include "newtek_ndi_consumer.h"
 
 #include <boost/thread/exceptions.hpp>
+#include <chrono>
 #include <condition_variable>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -41,6 +42,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
+#include <ratio>
+#include <thread>
 
 #include "../util/ndi.h"
 
@@ -110,7 +113,9 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
         auto tmp_name                   = u8(name_);
         NDI_send_create_desc.p_ndi_name = tmp_name.c_str();
-        NDI_send_create_desc.clock_video = true;
+        //NDI defaults to clocking on video, however it's very jittery.
+        NDI_send_create_desc.clock_video = false;
+        NDI_send_create_desc.clock_audio = false;
 
         ndi_send_instance_ = {new NDIlib_send_instance_t(ndi_lib_->NDIlib_send_create(&NDI_send_create_desc)),
                               [this](auto p) { this->ndi_lib_->NDIlib_send_destroy(*p); }};
@@ -141,10 +146,29 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
         send_thread =  boost::thread([=]()
         {
-            ready_for_frame_ = true;
-            buffer_cond_.notify_all();
-            //TODO: increase thread priority to further dejitter the output
+            set_thread_realtime_priority();
+            set_thread_name(L"NDI-SEND: " + name_);
+            CASPAR_LOG(info) << L"Starting ndi-send thread for ndi output: " << name_;
             try {
+                auto buffer_size  = buffer_.size();
+                //Buffer a few frames to keep NDI going when caspar is slow on a few frames
+                //This can be removed when CasparCG doesn't periodally slows down on frames
+                while (!send_thread.interruption_requested()) {
+                    {
+                        std::unique_lock<std::mutex> lock(buffer_mutex_);
+                        worker_cond_.wait(lock, [&] { return buffer_.size() > buffer_size; });
+                        graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
+                        buffer_size = buffer_.size();
+                        if (buffer_.size() >= 8) {
+                            break;
+                        }
+                    }
+                }
+
+                //Use steady clock to generate a near perfect NDI tick time.
+                auto frametimeUs = static_cast<int>(1000000 / format_desc_.fps);
+                auto time_point = std::chrono::steady_clock::now();
+                time_point += std::chrono::microseconds(frametimeUs);
                 while (!send_thread.interruption_requested())
                 {
                     core::const_frame frame;
@@ -154,8 +178,6 @@ struct newtek_ndi_consumer : public core::frame_consumer
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
                         frame = std::move(buffer_.front());
                         buffer_.pop();
-                        ready_for_frame_ = true;
-                        buffer_cond_.notify_all();
                     }
                     graph_->set_value("ndi-tick", ndi_timer_.elapsed() * format_desc_.fps * 0.5);
                     ndi_timer_.restart();
@@ -179,6 +201,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     ndi_lib_->NDIlib_send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
                     frame_no_++;
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+                    std::this_thread::sleep_until(time_point);
+                    time_point += std::chrono::microseconds(frametimeUs);
                 }
             } catch (boost::thread_interrupted) {
                 //NOTHING
@@ -191,13 +215,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
-	    {
+	        {
             	std::unique_lock<std::mutex> lock(buffer_mutex_);
-            	buffer_cond_.wait(lock, [&] { return ready_for_frame_; });
             	buffer_.push(std::move(frame));
-	    	ready_for_frame_ = false;
-	    }
-	    worker_cond_.notify_all();
+	        }
+	        worker_cond_.notify_all();
             return true;
         });
     }
@@ -220,7 +242,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     int index() const override { return 900; }
 
-    bool has_synchronization_clock() const override { return true; }
+    bool has_synchronization_clock() const override { return false; }
 };
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
