@@ -51,7 +51,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     core::video_format_desc              format_desc_;
     int                                  channel_index_;
-    NDIlib_v3*                           ndi_lib_;
+    NDIlib_v5*                           ndi_lib_;
     NDIlib_video_frame_v2_t              ndi_video_frame_;
     NDIlib_audio_frame_interleaved_32s_t ndi_audio_frame_;
     std::shared_ptr<uint8_t>             field_data_;
