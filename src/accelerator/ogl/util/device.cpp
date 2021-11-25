@@ -51,6 +51,7 @@
 #include <array>
 #include <future>
 #include <thread>
+#include <chrono>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -273,9 +274,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             //The whole loop could be eliminated by choosing a timeout close to infinity
             //since the loop is unbounded that would also work.
-            auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 20000000);
+            //NVidia busy waits on glClientWaitSync, so do a usleep for 100 usec every 100usec to relieve the CPU
+            auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 100000);
             while (wait != GL_CONDITION_SATISFIED && wait != GL_ALREADY_SIGNALED) {
-                wait = glClientWaitSync(fence, 0, 20000000);
+                std::this_thread::sleep_for(chrono::microseconds(100));
+                wait = glClientWaitSync(fence, 0, 100000);
             }
 
             glDeleteSync(fence);
