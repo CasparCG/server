@@ -529,14 +529,17 @@ void main()
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)
         color.rgb = ContrastSaturationBrightness(color, brt, sat, con);
-    if(has_local_key)
-        color *= texture(local_key, TexCoord2.st).r;
-    if(has_layer_key)
-        color *= texture(layer_key, TexCoord2.st).r;
+    float local_key = texture(local_key, TexCoord2.st).r;
+    if (has_local_key)
+        color *= local_key;
+    float layer_key = texture(layer_key, TexCoord2.st).r;
+    if (has_layer_key)
+        color *= layer_key;
     color *= opacity;
     if (invert)
         color = 1.0 - color;
+    vec4 blended_color = blend(color);
     if (blend_mode >= 0)
-        color = blend(color);
+        color.bgra = blended_color.bgra;
     fragColor = color.bgra;
 }
