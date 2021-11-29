@@ -116,6 +116,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+        GL(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 
         device_.setActive(false);
 

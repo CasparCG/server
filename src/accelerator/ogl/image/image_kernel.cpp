@@ -19,7 +19,7 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 #include "image_kernel.h"
-
+#include "core/mixer/image/blend_modes.h"
 #include "image_shader.h"
 
 #include "../util/device.h"
@@ -110,12 +110,14 @@ struct image_kernel::impl
 {
     spl::shared_ptr<device> ogl_;
     spl::shared_ptr<shader> shader_;
+    spl::shared_ptr<shader> shader_fast_;
     GLuint                  vao_;
     GLuint                  vbo_;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
+        , shader_fast_(ogl_->dispatch_sync([&] { return get_fast_image_shader(ogl); }))
     {
         ogl_->dispatch_sync([&] {
             GL(glGenVertexArrays(1, &vao_));
@@ -235,34 +237,61 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
+        bool fast = false;
         // Setup shader
 
-        shader_->use();
+        bool levels = (params.transform.levels.min_input > epsilon || params.transform.levels.max_input < 1.0 - epsilon ||
+            params.transform.levels.min_output > epsilon || params.transform.levels.max_output < 1.0 - epsilon ||
+            std::abs(params.transform.levels.gamma - 1.0) > epsilon);
 
-        shader_->set("plane[0]", texture_id::plane0);
-        shader_->set("plane[1]", texture_id::plane1);
-        shader_->set("plane[2]", texture_id::plane2);
-        shader_->set("plane[3]", texture_id::plane3);
-        shader_->set("local_key", texture_id::local_key);
-        shader_->set("layer_key", texture_id::layer_key);
-        shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-        shader_->set("has_local_key", static_cast<bool>(params.local_key));
-        shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
-        shader_->set("pixel_format", params.pix_desc.format);
-        shader_->set("opacity", params.transform.is_key ? 1.0 : params.transform.opacity);
+        bool csb = (std::abs(params.transform.brightness - 1.0) > epsilon ||
+            std::abs(params.transform.saturation - 1.0) > epsilon ||
+            std::abs(params.transform.contrast - 1.0) > epsilon);
+
+        auto shader = shader_;
+        if (params.blend_mode <= core::blend_mode::normal &&
+            !params.local_key &&
+            !params.layer_key &&
+            !params.transform.is_key &&
+            !params.transform.chroma.enable &&
+            !levels &&
+            !csb &&
+            !params.transform.invert) {
+            shader = shader_fast_;
+            fast = true;
+            GL(glEnable(GL_BLEND));
+            if (params.keyer == ogl::keyer::additive) {
+                GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
+            } else {
+                GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+            }
+        }
+        shader->use();
+
+        shader->set("plane[0]", texture_id::plane0);
+        shader->set("plane[1]", texture_id::plane1);
+        shader->set("plane[2]", texture_id::plane2);
+        shader->set("plane[3]", texture_id::plane3);
+        shader->set("local_key", texture_id::local_key);
+        shader->set("layer_key", texture_id::layer_key);
+        shader->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+        shader->set("has_local_key", static_cast<bool>(params.local_key));
+        shader->set("has_layer_key", static_cast<bool>(params.layer_key));
+        shader->set("pixel_format", params.pix_desc.format);
+        shader->set("opacity", params.transform.is_key ? 1.0 : params.transform.opacity);
 
         if (params.transform.chroma.enable) {
-            shader_->set("chroma", true);
-            shader_->set("chroma_show_mask", params.transform.chroma.show_mask);
-            shader_->set("chroma_target_hue", params.transform.chroma.target_hue / 360.0);
-            shader_->set("chroma_hue_width", params.transform.chroma.hue_width);
-            shader_->set("chroma_min_saturation", params.transform.chroma.min_saturation);
-            shader_->set("chroma_min_brightness", params.transform.chroma.min_brightness);
-            shader_->set("chroma_softness", 1.0 + params.transform.chroma.softness);
-            shader_->set("chroma_spill_suppress", params.transform.chroma.spill_suppress / 360.0);
-            shader_->set("chroma_spill_suppress_saturation", params.transform.chroma.spill_suppress_saturation);
+            shader->set("chroma", true);
+            shader->set("chroma_show_mask", params.transform.chroma.show_mask);
+            shader->set("chroma_target_hue", params.transform.chroma.target_hue / 360.0);
+            shader->set("chroma_hue_width", params.transform.chroma.hue_width);
+            shader->set("chroma_min_saturation", params.transform.chroma.min_saturation);
+            shader->set("chroma_min_brightness", params.transform.chroma.min_brightness);
+            shader->set("chroma_softness", 1.0 + params.transform.chroma.softness);
+            shader->set("chroma_spill_suppress", params.transform.chroma.spill_suppress / 360.0);
+            shader->set("chroma_spill_suppress_saturation", params.transform.chroma.spill_suppress_saturation);
         } else {
-            shader_->set("chroma", false);
+            shader->set("chroma", false);
         }
 
         // Setup blend_func
@@ -272,36 +301,32 @@ struct image_kernel::impl
         }
 
         params.background->bind(static_cast<int>(texture_id::background));
-        shader_->set("background", texture_id::background);
-        shader_->set("blend_mode", params.blend_mode);
-        shader_->set("keyer", params.keyer);
+        shader->set("background", texture_id::background);
+        shader->set("blend_mode", params.blend_mode);
+        shader->set("keyer", params.keyer);
 
         // Setup image-adjustements
-        shader_->set("invert", params.transform.invert);
+        shader->set("invert", params.transform.invert);
 
-        if (params.transform.levels.min_input > epsilon || params.transform.levels.max_input < 1.0 - epsilon ||
-            params.transform.levels.min_output > epsilon || params.transform.levels.max_output < 1.0 - epsilon ||
-            std::abs(params.transform.levels.gamma - 1.0) > epsilon) {
-            shader_->set("levels", true);
-            shader_->set("min_input", params.transform.levels.min_input);
-            shader_->set("max_input", params.transform.levels.max_input);
-            shader_->set("min_output", params.transform.levels.min_output);
-            shader_->set("max_output", params.transform.levels.max_output);
-            shader_->set("gamma", params.transform.levels.gamma);
+        if (levels) {
+            shader->set("levels", true);
+            shader->set("min_input", params.transform.levels.min_input);
+            shader->set("max_input", params.transform.levels.max_input);
+            shader->set("min_output", params.transform.levels.min_output);
+            shader->set("max_output", params.transform.levels.max_output);
+            shader->set("gamma", params.transform.levels.gamma);
         } else {
-            shader_->set("levels", false);
+            shader->set("levels", false);
         }
 
-        if (std::abs(params.transform.brightness - 1.0) > epsilon ||
-            std::abs(params.transform.saturation - 1.0) > epsilon ||
-            std::abs(params.transform.contrast - 1.0) > epsilon) {
-            shader_->set("csb", true);
+        if (csb) {
+            shader->set("csb", true);
 
-            shader_->set("brt", params.transform.brightness);
-            shader_->set("sat", params.transform.saturation);
-            shader_->set("con", params.transform.contrast);
+            shader->set("brt", params.transform.brightness);
+            shader->set("sat", params.transform.saturation);
+            shader->set("con", params.transform.contrast);
         } else {
-            shader_->set("csb", false);
+            shader->set("csb", false);
         }
 
         // Setup drawing area
@@ -400,7 +425,9 @@ struct image_kernel::impl
                 GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
 
                 GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(coords_triangles.size())));
-                GL(glTextureBarrier());
+                if (!fast) {
+                    GL(glTextureBarrier());
+                }
 
                 GL(glDisableVertexAttribArray(vtx_loc));
                 GL(glDisableVertexAttribArray(tex_loc));

@@ -25,6 +25,7 @@
 #include <GL/glew.h>
 
 #include <unordered_map>
+#include <vector>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -41,13 +42,42 @@ struct shader::impl
     impl(const std::string& vertex_source_str, const std::string& fragment_source_str)
         : program_(0)
     {
-        GLint success;
-
         const char* vertex_source = vertex_source_str.c_str();
 
         auto vertex_shader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
-
         GL(glShaderSourceARB(vertex_shader, 1, &vertex_source, NULL));
+
+        const char* fragment_source = fragment_source_str.c_str();
+
+        auto fragment_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+        GL(glShaderSourceARB(fragment_shader, 1, &fragment_source, NULL));
+
+        createProgram(vertex_shader, fragment_shader);
+    }
+
+    impl(const std::string& vertex_source_str, const std::vector<std::string>& fragment_source_strs)
+    {
+        const char* vertex_source = vertex_source_str.c_str();
+
+        auto vertex_shader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+        GL(glShaderSourceARB(vertex_shader, 1, &vertex_source, NULL));
+
+        std::vector<const char *> fragment_sources;
+
+        for (auto const &fragment_source_str: fragment_source_strs)
+        {
+            fragment_sources.push_back(fragment_source_str.c_str());
+        }
+
+        auto fragment_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+        GL(glShaderSourceARB(fragment_shader, fragment_sources.size(), &fragment_sources[0], NULL));
+
+        createProgram(vertex_shader, fragment_shader);
+    }
+
+    void createProgram(GLuint vertex_shader, GLuint fragment_shader)
+    {
+        GLint success;
         GL(glCompileShaderARB(vertex_shader));
 
         GL(glGetObjectParameterivARB(vertex_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
@@ -59,19 +89,13 @@ struct shader::impl
             str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
         }
+        GL(glCompileShaderARB(fragment_shader));
 
-        const char* fragment_source = fragment_source_str.c_str();
-
-        auto fragmemt_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
-
-        GL(glShaderSourceARB(fragmemt_shader, 1, &fragment_source, NULL));
-        GL(glCompileShaderARB(fragmemt_shader));
-
-        GL(glGetObjectParameterivARB(fragmemt_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
+        GL(glGetObjectParameterivARB(fragment_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
         if (success == GL_FALSE) {
             char info[2048];
-            GL(glGetInfoLogARB(fragmemt_shader, sizeof(info), 0, info));
-            GL(glDeleteObjectARB(fragmemt_shader));
+            GL(glGetInfoLogARB(fragment_shader, sizeof(info), 0, info));
+            GL(glDeleteObjectARB(fragment_shader));
             std::stringstream str;
             str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
@@ -80,12 +104,12 @@ struct shader::impl
         program_ = glCreateProgramObjectARB();
 
         GL(glAttachObjectARB(program_, vertex_shader));
-        GL(glAttachObjectARB(program_, fragmemt_shader));
+        GL(glAttachObjectARB(program_, fragment_shader));
 
         GL(glLinkProgramARB(program_));
 
         GL(glDeleteObjectARB(vertex_shader));
-        GL(glDeleteObjectARB(fragmemt_shader));
+        GL(glDeleteObjectARB(fragment_shader));
 
         GL(glGetObjectParameterivARB(program_, GL_OBJECT_LINK_STATUS_ARB, &success));
         if (success == GL_FALSE) {
@@ -133,11 +157,15 @@ struct shader::impl
         GL(glUniform1f(get_uniform_location(name.c_str()), static_cast<float>(value)));
     }
 
-    void use() { GL(glUseProgramObjectARB(program_)); }
+    void use() { return; } //GL(glUseProgramObjectARB(program_)); }
 };
 
 shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str)
     : impl_(new impl(vertex_source_str, fragment_source_str))
+{
+}
+shader::shader(const std::string& vertex_source_str, const std::vector<std::string>& fragment_source_strs)
+    : impl_(new impl(vertex_source_str, fragment_source_strs))
 {
 }
 shader::~shader() {}

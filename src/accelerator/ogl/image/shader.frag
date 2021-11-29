@@ -1,4 +1,3 @@
-#version 450
 in vec4 TexCoord;
 in vec4 TexCoord2;
 out vec4 fragColor;
@@ -523,10 +522,9 @@ vec4 get_rgba_color()
 void main()
 {
     vec4 color = get_rgba_color();
-
+#ifndef FRAGMENT_FAST
     if (color.a < 0.01)
         discard;
-
     if (chroma)
         color = chroma_key(color);
     if(levels)
@@ -539,11 +537,13 @@ void main()
     float layer_key = texture(layer_key, TexCoord2.st).r;
     if (has_layer_key)
         color *= layer_key;
+#endif
     color *= opacity;
+#ifndef FRAGMENT_FAST
     if (invert)
         color = 1.0 - color;
-    vec4 blended_color = blend(color);
     if (blend_mode >= 0)
-        color.bgra = blended_color.bgra;
+        color = blend(color);
+#endif
     fragColor = color.bgra;
 }
