@@ -120,8 +120,24 @@ struct image_kernel::impl
         , shader_fast_(ogl_->dispatch_sync([&] { return get_fast_image_shader(ogl); }))
     {
         ogl_->dispatch_sync([&] {
-            GL(glGenVertexArrays(1, &vao_));
-            GL(glGenBuffers(1, &vbo_));
+            GL(glCreateVertexArrays(1, &vao_));
+            GL(glCreateBuffers(1, &vbo_));
+            GL(glNamedBufferStorage(vbo_, 1024 *1024 * 4, NULL, GL_DYNAMIC_STORAGE_BIT));
+
+            auto vtx_loc = shader_->get_attrib_location("Position");
+            auto tex_loc = shader_->get_attrib_location("TexCoordIn");
+
+            GL(glEnableVertexArrayAttrib(vao_, vtx_loc));
+            GL(glEnableVertexArrayAttrib(vao_, tex_loc));
+
+            GL(glVertexArrayAttribFormat(vao_, vtx_loc, 2, GL_DOUBLE, GL_FALSE, 0));
+            GL(glVertexArrayAttribFormat(vao_, tex_loc, 4, GL_DOUBLE, GL_FALSE, (2 * sizeof(GLdouble))));
+
+            GL(glVertexArrayAttribBinding(vao_, vtx_loc, 0));
+            GL(glVertexArrayAttribBinding(vao_, tex_loc, 0));
+
+            auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
+            GL(glVertexArrayVertexBuffer(vao_, 0, vbo_, 0, stride));
         });
     }
 
@@ -402,38 +418,19 @@ struct image_kernel::impl
         // Draw
         switch (params.geometry.type()) {
             case core::frame_geometry::geometry_type::quad: {
-                GL(glBindVertexArray(vao_));
-                GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
 
                 std::vector<core::frame_geometry::coord> coords_triangles{
                     coords[0], coords[1], coords[2], coords[0], coords[2], coords[3]};
 
-                GL(glBufferData(GL_ARRAY_BUFFER,
-                                static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * coords_triangles.size(),
-                                coords_triangles.data(),
-                                GL_STATIC_DRAW));
-
                 auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
-
-                auto vtx_loc = shader_->get_attrib_location("Position");
-                auto tex_loc = shader_->get_attrib_location("TexCoordIn");
-
-                GL(glEnableVertexAttribArray(vtx_loc));
-                GL(glEnableVertexAttribArray(tex_loc));
-
-                GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
-                GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
+                GL(glNamedBufferSubData(vbo_, 0, stride * coords_triangles.size(), coords_triangles.data()));
+                GL(glBindVertexArray( vao_ ));
 
                 GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(coords_triangles.size())));
                 if (!fast) {
                     GL(glTextureBarrier());
                 }
-
-                GL(glDisableVertexAttribArray(vtx_loc));
-                GL(glDisableVertexAttribArray(tex_loc));
-
                 GL(glBindVertexArray(0));
-                GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
 
                 break;
             }

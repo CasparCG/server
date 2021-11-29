@@ -60,12 +60,9 @@ struct texture::impl
 
     ~impl() { glDeleteTextures(1, &id_); }
 
-    void bind() { GL(glBindTexture(GL_TEXTURE_2D, id_)); }
-
     void bind(int index)
     {
-        GL(glActiveTexture(GL_TEXTURE0 + index));
-        bind();
+        GL(glBindTextureUnit(index, id_));
     }
 
     void unbind() { GL(glBindTexture(GL_TEXTURE_2D, 0)); }

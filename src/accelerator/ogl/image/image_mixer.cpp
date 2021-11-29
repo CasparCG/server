@@ -92,7 +92,6 @@ class image_renderer
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
         ogl_->dispatch_async([=]() {
-            //GL(glFrameTerminatorGREMEDY());
             GL(glClear(GL_COLOR_BUFFER_BIT));
         }).wait();
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
