@@ -93,6 +93,11 @@ class image_renderer
         }
         ogl_->dispatch_async([=]() {
             GL(glClear(GL_COLOR_BUFFER_BIT));
+#ifdef _DEBUG
+            if (glFrameTerminatorGREMEDY != nullptr) {
+                GL(glFrameTerminatorGREMEDY());
+            }
+#endif
         }).wait();
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
