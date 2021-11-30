@@ -467,7 +467,7 @@ vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)
 
 vec4 get_sample(sampler2D sampler, vec2 coords)
 {
-    return texture2D(sampler, coords);
+    return texture(sampler, coords);
 }
 
 vec4 get_rgba_color()
