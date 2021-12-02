@@ -1,6 +1,7 @@
 #include "av_util.h"
 
 #include "av_assert.h"
+#include "core/frame/pixel_format.h"
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -114,6 +115,8 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
             return core::pixel_format::ycbcra;
         case AV_PIX_FMT_UYVY422:
             return core::pixel_format::uyvy;
+        case AV_PIX_FMT_NV12:
+            return core::pixel_format::nv12;
         default:
             return core::pixel_format::invalid;
     }
@@ -168,6 +171,12 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             data_map.push_back(0);
             data_map.push_back(0);
 
+            return desc;
+        }
+        case core::pixel_format::nv12: {
+            //YUV 4:2:0, Y in first plane, UV interleaved in second plane
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1] /2, height/2, 2));
             return desc;
         }
         default:
