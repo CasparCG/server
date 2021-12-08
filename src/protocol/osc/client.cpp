@@ -23,7 +23,7 @@
 
 #include "oscpack/OscOutboundPacketStream.h"
 
-#include <common/endian.h>
+#include <common/caspar_endian.h>
 #include <common/utf.h>
 
 #include <core/monitor/monitor.h>

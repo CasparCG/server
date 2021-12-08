@@ -27,7 +27,7 @@
 #include "route/route_producer.h"
 #include "separated/separated_producer.h"
 
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/except.h>
 #include <common/executor.h>
 #include <common/future.h>

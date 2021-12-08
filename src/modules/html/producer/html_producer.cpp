@@ -32,7 +32,7 @@
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/executor.h>

@@ -35,7 +35,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <common/endian.h>
+#include <common/caspar_endian.h>
 
 #if defined(__WIN32__) || defined(WIN32)
 #include <malloc.h> // for alloca

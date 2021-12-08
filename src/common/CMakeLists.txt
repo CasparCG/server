@@ -39,9 +39,9 @@ set(HEADERS
 		os/thread.h
 
 		array.h
-		assert.h
+		caspar_assert.h
 		base64.h
-		endian.h
+		caspar_endian.h
 		enum_class.h
 		env.h
 		executor.h

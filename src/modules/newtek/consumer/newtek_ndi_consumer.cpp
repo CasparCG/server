@@ -26,7 +26,7 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/future.h>
 #include <common/param.h>

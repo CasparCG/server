@@ -26,7 +26,7 @@
 #include "../util/shader.h"
 #include "../util/texture.h"
 
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/gl/gl_check.h>
 
 #include <core/frame/frame_transform.h>
