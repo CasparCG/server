@@ -21,6 +21,7 @@ parsed_cli_intercept = []
 foreach intercept : modules_cli_intercept
     parsed_cli_intercept += '    if(@0@(argc, argv))'.format(intercept)
     parsed_cli_intercept += '        return true;'
+    parsed_cli_intercept += ''
 endforeach
 
 sep = '\n'
@@ -36,7 +37,11 @@ included_modules_conf.set('modules_cli_intercept', cli_intercept)
 included_modules_conf.set('modules_init', mods_init)
 included_modules_conf.set('modules_uninit', mods_uninit)
 
-included_modules_h = configure_file(input: 'included_modules_h.tmpl', output: 'included_modules.h', configuration: included_modules_conf)
+included_modules_h = configure_file(
+    input: 'included_modules_h.tmpl',
+    output: 'included_modules.h',
+    configuration: included_modules_conf
+)
 
 server = executable(
     'casparcg',
@@ -51,3 +56,15 @@ server = executable(
     install_rpath: '$ORIGIN/../lib'
 )
 
+staging_args = ['./copy_staging.sh', '@BUILD_ROOT@', '@SOURCE_ROOT@', '@INPUT@']
+if have_cef
+    staging_args += cef_path
+endif
+
+staging = custom_target(
+    'staging',
+    input: server,
+    output: 'fake',
+    command: staging_args,
+    build_always: true,
+)
