@@ -1,0 +1,27 @@
+/*
+ * Generated file.
+ */
+
+#pragma once
+
+#include <common/log.h>
+
+#include <core/module_dependencies.h>
+@modules_include@
+
+namespace caspar {
+
+static bool intercept_command_line_args(int argc, char** argv) {
+@modules_cli_intercept@
+	return false;
+}
+
+static void initialize_modules(const core::module_dependencies& dependencies) {
+@modules_init@
+}
+
+static void uninitialize_modules()
+{
+@modules_uninit@
+}
+}

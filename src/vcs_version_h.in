@@ -1,0 +1,1 @@
+#define CASPAR_HASH "@VCS_TAG@"
