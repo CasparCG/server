@@ -28,7 +28,7 @@ set(SOURCES
 		producer/layer.cpp
 		producer/stage.cpp
 
-		StdAfx.cpp
+		pch/StdAfx.cpp
 		video_channel.cpp
 		video_format.cpp
 )
@@ -69,13 +69,13 @@ set(HEADERS
 
 		fwd.h
 		module_dependencies.h
-		StdAfx.h
+		pch/StdAfx.h
 		video_channel.h
 		video_format.h
 )
 
 add_library(core ${SOURCES} ${HEADERS})
-add_precompiled_header(core StdAfx.h FORCEINCLUDE)
+add_precompiled_header(core pch/StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

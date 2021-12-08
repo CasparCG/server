@@ -19,9 +19,6 @@
  * Author: Krzysztof Zegzula, zegzulakrzysztof@gmail.com
  * based on work of Robert Nagy, ronag89@gmail.com
  */
-
-#include "../StdAfx.h"
-
 #include "newtek_ndi_consumer.h"
 
 #include <core/consumer/frame_consumer.h>

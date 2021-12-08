@@ -18,9 +18,6 @@
  *
  * Author: Nicklas P Andersson
  */
-
-#include "../StdAfx.h"
-
 #include "AMCPCommandQueue.h"
 
 #include <boost/lexical_cast.hpp>

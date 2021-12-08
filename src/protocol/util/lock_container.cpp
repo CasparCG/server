@@ -1,5 +1,3 @@
-#include "../StdAfx.h"
-
 #include "lock_container.h"
 #include <tbb/spin_rw_mutex.h>
 

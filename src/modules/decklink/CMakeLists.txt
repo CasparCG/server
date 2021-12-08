@@ -7,7 +7,7 @@ set(SOURCES
 		producer/decklink_producer.cpp
 
 		decklink.cpp
-		StdAfx.cpp
+		pch/StdAfx.cpp
 )
 set(HEADERS
 		consumer/decklink_consumer.h
@@ -18,7 +18,7 @@ set(HEADERS
 
 		decklink.h
 		decklink_api.h
-		StdAfx.h
+		pch/StdAfx.h
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
@@ -52,7 +52,7 @@ else()
 endif ()
 
 add_library(decklink ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-add_precompiled_header(decklink StdAfx.h FORCEINCLUDE)
+add_precompiled_header(decklink pch/StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

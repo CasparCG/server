@@ -79,11 +79,10 @@ extern "C" {
 
 #include <functional>
 
-#include "../common/except.h"
-#include "../common/log.h"
-#include "../common/memory.h"
-#include "../common/timer.h"
-#include "../common/utf.h"
+#include "common/except.h"
+#include "common/log.h"
+#include "common/memory.h"
+#include "common/utf.h"
 #endif
 
 #if defined(_MSC_VER)

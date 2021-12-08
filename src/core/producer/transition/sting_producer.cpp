@@ -18,9 +18,6 @@
  *
  * Author: Julian Waller, julian@superfly.tv
  */
-
-#include "../../StdAfx.h"
-
 #include "sting_producer.h"
 
 #include "../../frame/draw_frame.h"

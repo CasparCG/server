@@ -25,7 +25,7 @@
 #include "texture.h"
 
 #include <common/array.h>
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>

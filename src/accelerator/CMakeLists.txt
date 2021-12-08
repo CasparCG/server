@@ -12,7 +12,7 @@ set(SOURCES
 	ogl/util/texture.cpp
 
 	accelerator.cpp
-	StdAfx.cpp
+	pch/StdAfx.cpp
 )
 if (MSVC)
 	set(WIN32_SPECIFIC_SOURCES
@@ -35,7 +35,7 @@ set(HEADERS
 	ogl_image_fragment.h
 
 	accelerator.h
-	StdAfx.h
+	pch/StdAfx.h
 )
 if (MSVC)
 	set(WIN32_SPECIFIC_HEADERS
@@ -49,7 +49,7 @@ bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "v
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
 
 add_library(accelerator ${SOURCES} ${HEADERS} ${WIN32_SPECIFIC_SOURCES} ${WIN32_SPECIFIC_HEADERS})
-add_precompiled_header(accelerator StdAfx.h FORCEINCLUDE)
+add_precompiled_header(accelerator pch/StdAfx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "../StdAfx.h"
-
 #include "osd_graph.h"
 
 #pragma warning(disable : 4244)

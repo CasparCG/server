@@ -18,9 +18,6 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-
-#include "../StdAfx.h"
-
 #include "call_context.h"
 
 namespace caspar { namespace core { namespace diagnostics {

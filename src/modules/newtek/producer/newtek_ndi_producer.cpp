@@ -19,9 +19,6 @@
  * Author: Krzysztof Zegzula, zegzulakrzysztof@gmail.com
  * based on work of Robert Nagy, ronag89@gmail.com and Jerzy Jaśkiewicz, jurek@tvp.pl
  */
-
-#include "../StdAfx.h"
-
 #include "newtek_ndi_producer.h"
 
 #include <core/frame/draw_frame.h>

@@ -27,7 +27,7 @@ set(SOURCES
 		util/http_request.cpp
 		util/tokenize.cpp
 
-		StdAfx.cpp
+		pch/StdAfx.cpp
 )
 set(HEADERS
 		amcp/AMCPCommand.h
@@ -65,11 +65,11 @@ set(HEADERS
 		util/http_request.h
 		util/tokenize.h
 
-		StdAfx.h
+		pch/StdAfx.h
 )
 
 add_library(protocol ${SOURCES} ${HEADERS})
-add_precompiled_header(protocol StdAfx.h FORCEINCLUDE)
+add_precompiled_header(protocol pch/StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

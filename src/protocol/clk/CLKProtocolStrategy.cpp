@@ -18,9 +18,6 @@
  *
  * Author: Nicklas P Andersson
  */
-
-#include "../StdAfx.h"
-
 #include "CLKProtocolStrategy.h"
 #include "clk_commands.h"
 

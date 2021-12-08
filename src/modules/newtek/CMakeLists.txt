@@ -10,7 +10,7 @@ set(SOURCES
 
 		newtek.cpp
 
-		StdAfx.cpp
+		pch/StdAfx.cpp
 )
 set(HEADERS
 		consumer/newtek_ndi_consumer.h
@@ -35,7 +35,7 @@ set(HEADERS
 		interop/Processing.NDI.structs.h
 		interop/Processing.NDI.utilities.h
 
-		StdAfx.h
+		pch/StdAfx.h
 )
 
 if (MSVC)
@@ -44,7 +44,7 @@ if (MSVC)
 endif()
 
 add_library(newtek ${SOURCES} ${HEADERS})
-add_precompiled_header(newtek StdAfx.h FORCEINCLUDE)
+add_precompiled_header(newtek pch/StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

@@ -9,7 +9,7 @@ set(SOURCES
 	consumer/ffmpeg_consumer.cpp
 
 	ffmpeg.cpp
-	StdAfx.cpp
+	pch/StdAfx.cpp
 )
 set(HEADERS
 	util/av_assert.h
@@ -20,11 +20,11 @@ set(HEADERS
 	consumer/ffmpeg_consumer.h
 
 	ffmpeg.h
-	StdAfx.h
+	pch/StdAfx.h
 )
 
 add_library(ffmpeg ${SOURCES} ${HEADERS})
-add_precompiled_header(ffmpeg StdAfx.h FORCEINCLUDE)
+add_precompiled_header(ffmpeg pch/StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

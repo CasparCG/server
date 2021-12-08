@@ -18,9 +18,6 @@
  *
  * Author: Nicklas P Andersson
  */
-
-#include "../StdAfx.h"
-
 #include "CIICommandsImpl.h"
 #include "CIIProtocolStrategy.h"
 #include <algorithm>

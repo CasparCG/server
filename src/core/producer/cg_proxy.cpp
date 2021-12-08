@@ -18,9 +18,6 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-
-#include "../StdAfx.h"
-
 #include "cg_proxy.h"
 
 #include "../diagnostics/call_context.h"

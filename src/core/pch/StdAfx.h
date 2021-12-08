@@ -39,7 +39,7 @@
 #include <boost/timer.hpp>
 #include <boost/variant.hpp>
 #include <common/array.h>
-#include <common/assert.h>
+#include <common/caspar_assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/enum_class.h>
 #include <common/env.h>
@@ -52,7 +52,6 @@
 #include <common/memshfl.h>
 #include <common/os/filesystem.h>
 #include <common/prec_timer.h>
-#include <common/timer.h>
 #include <common/tweener.h>
 #include <cstddef>
 #include <cstdint>

@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "../../StdAfx.h"
-
 #include "separated_producer.h"
 
 #include <common/scope_exit.h>

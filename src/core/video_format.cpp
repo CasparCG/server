@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "StdAfx.h"
-
 #include "video_format.h"
 
 #include <common/log.h>

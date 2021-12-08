@@ -18,9 +18,6 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-
-#include "../StdAfx.h"
-
 #include "amcp_command_repository.h"
 
 #include <common/env.h>

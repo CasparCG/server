@@ -18,9 +18,6 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-
-#include "../StdAfx.h"
-
 #include "strategy_adapters.h"
 
 #include <boost/algorithm/string/replace.hpp>

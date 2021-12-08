@@ -18,9 +18,6 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-
-#include "../StdAfx.h"
-
 #include "decklink_producer.h"
 
 #include "../util/util.h"
