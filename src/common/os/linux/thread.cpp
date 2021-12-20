@@ -13,8 +13,8 @@ void set_thread_realtime_priority() {
     struct sched_param param;
     if (pthread_getschedparam(handle, &policy, &param) != 0)
         return;
-    param.sched_priority = 49;
-    pthread_setschedparam(handle, SCHED_RR, &param);
+    param.sched_priority = 2;
+    pthread_setschedparam(handle, SCHED_FIFO, &param);
 }
 
 
