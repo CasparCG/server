@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2014 Blackmagic Design
+** Copyright (c) 2016 Blackmagic Design
 **  
 ** Permission is hereby granted, free of charge, to any person or organization 
 ** obtaining a copy of the software and accompanying documentation (the 
@@ -38,36 +38,26 @@
 ** -LICENSE-END-
 */
 
-#ifndef BMD_DECKLINKAPICONFIGURATION_v10_2_H
-#define BMD_DECKLINKAPICONFIGURATION_v10_2_H
+#ifndef BMD_DECKLINKAPI_v10_6_H
+#define BMD_DECKLINKAPI_v10_6_H
 
-#include "DeckLinkAPIConfiguration.h"
+#include "DeckLinkAPI.h"
 
-// Interface ID Declarations
+// Type Declarations
 
-BMD_CONST REFIID IID_IDeckLinkConfiguration_v10_2                = /* C679A35B-610C-4D09-B748-1D0478100FC0 */ {0xC6,0x79,0xA3,0x5B,0x61,0x0C,0x4D,0x09,0xB7,0x48,0x1D,0x04,0x78,0x10,0x0F,0xC0};
+/* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
 
-// Forward Declarations
+typedef uint32_t BMDDeckLinkAttributeID_c10_6;
+enum _BMDDeckLinkAttributeID_v10_6 {
 
-class IDeckLinkConfiguration_v10_2;
+    /* Flags */
 
-/* Interface IDeckLinkConfiguration_v10_2 - DeckLink Configuration interface */
-
-class BMD_PUBLIC IDeckLinkConfiguration_v10_2 : public IUnknown
-{
-public:
-    virtual HRESULT SetFlag (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ bool value) = 0;
-    virtual HRESULT GetFlag (/* in */ BMDDeckLinkConfigurationID cfgID, /* out */ bool *value) = 0;
-    virtual HRESULT SetInt (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ int64_t value) = 0;
-    virtual HRESULT GetInt (/* in */ BMDDeckLinkConfigurationID cfgID, /* out */ int64_t *value) = 0;
-    virtual HRESULT SetFloat (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ double value) = 0;
-    virtual HRESULT GetFloat (/* in */ BMDDeckLinkConfigurationID cfgID, /* out */ double *value) = 0;
-    virtual HRESULT SetString (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ const char *value) = 0;
-    virtual HRESULT GetString (/* in */ BMDDeckLinkConfigurationID cfgID, /* out */ const char **value) = 0;
-    virtual HRESULT WriteConfigurationToPreferences (void) = 0;
-
-protected:
-    virtual ~IDeckLinkConfiguration_v10_2 () {} // call Release method to drop reference count
+    BMDDeckLinkSupportsDesktopDisplay_v10_6                      = /* 'extd' */ 0x65787464,
 };
 
-#endif /* defined(BMD_DECKLINKAPICONFIGURATION_v10_2_H) */
+typedef uint32_t BMDIdleVideoOutputOperation_v10_6;
+enum _BMDIdleVideoOutputOperation_v10_6 {
+    bmdIdleVideoOutputDesktop_v10_6                              = /* 'desk' */ 0x6465736B
+};
+
+#endif /* defined(BMD_DECKLINKAPI_v10_6_H) */

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2014 Blackmagic Design
+** Copyright (c) 2017 Blackmagic Design
 **  
 ** Permission is hereby granted, free of charge, to any person or organization 
 ** obtaining a copy of the software and accompanying documentation (the 
@@ -38,22 +38,32 @@
 ** -LICENSE-END-
 */
 
-#ifndef BMD_DECKLINKAPICONFIGURATION_v10_2_H
-#define BMD_DECKLINKAPICONFIGURATION_v10_2_H
+#ifndef BMD_DECKLINKAPICONFIGURATION_v10_11_H
+#define BMD_DECKLINKAPICONFIGURATION_v10_11_H
 
 #include "DeckLinkAPIConfiguration.h"
 
 // Interface ID Declarations
 
-BMD_CONST REFIID IID_IDeckLinkConfiguration_v10_2                = /* C679A35B-610C-4D09-B748-1D0478100FC0 */ {0xC6,0x79,0xA3,0x5B,0x61,0x0C,0x4D,0x09,0xB7,0x48,0x1D,0x04,0x78,0x10,0x0F,0xC0};
+BMD_CONST REFIID IID_IDeckLinkConfiguration_v10_11                       = /* EF90380B-4AE5-4346-9077-E288E149F129 */ {0xEF,0x90,0x38,0x0B,0x4A,0xE5,0x43,0x46,0x90,0x77,0xE2,0x88,0xE1,0x49,0xF1,0x29};
+
+/* Enum BMDDeckLinkConfigurationID_v10_11 - DeckLink Configuration ID */
+
+typedef uint32_t BMDDeckLinkConfigurationID_v10_11;
+enum _BMDDeckLinkConfigurationID_v10_11 {
+
+    /* Video Input/Output Integers */
+
+    bmdDeckLinkConfigDuplexMode_v10_11                              = /* 'dupx' */ 0x64757078,
+};
 
 // Forward Declarations
 
-class IDeckLinkConfiguration_v10_2;
+class IDeckLinkConfiguration_v10_11;
 
-/* Interface IDeckLinkConfiguration_v10_2 - DeckLink Configuration interface */
+/* Interface IDeckLinkConfiguration_v10_11 - DeckLink Configuration interface */
 
-class BMD_PUBLIC IDeckLinkConfiguration_v10_2 : public IUnknown
+class BMD_PUBLIC IDeckLinkConfiguration_v10_11 : public IUnknown
 {
 public:
     virtual HRESULT SetFlag (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ bool value) = 0;
@@ -67,7 +77,8 @@ public:
     virtual HRESULT WriteConfigurationToPreferences (void) = 0;
 
 protected:
-    virtual ~IDeckLinkConfiguration_v10_2 () {} // call Release method to drop reference count
+    virtual ~IDeckLinkConfiguration_v10_11 () {} // call Release method to drop reference count
 };
 
-#endif /* defined(BMD_DECKLINKAPICONFIGURATION_v10_2_H) */
+
+#endif /* defined(BMD_DECKLINKAPICONFIGURATION_v10_11_H) */

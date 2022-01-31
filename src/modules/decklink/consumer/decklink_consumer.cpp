@@ -51,9 +51,9 @@
 #include <atomic>
 #include <condition_variable>
 #include <future>
-#include <thread>
 #include <mutex>
 #include <queue>
+#include <thread>
 
 namespace caspar { namespace decklink {
 
@@ -67,6 +67,14 @@ struct configuration
         default_keyer = external_keyer
     };
 
+    enum class duplex_t
+    {
+        none,
+        half_duplex,
+        full_duplex,
+        default_duplex = none
+    };
+
     enum class latency_t
     {
         low_latency,
@@ -78,6 +86,7 @@ struct configuration
     int       key_device_idx    = 0;
     bool      embedded_audio    = false;
     keyer_t   keyer             = keyer_t::default_keyer;
+    duplex_t  duplex            = duplex_t::default_duplex;
     latency_t latency           = latency_t::default_latency;
     bool      key_only          = false;
     int       base_buffer_depth = 3;
@@ -105,10 +114,44 @@ void set_latency(const com_iface_ptr<Configuration>& config,
     }
 }
 
-void set_keyer(const com_iface_ptr<IDeckLinkAttributes>& attributes,
-               const com_iface_ptr<IDeckLinkKeyer>&      decklink_keyer,
-               configuration::keyer_t                    keyer,
-               const std::wstring&                       print)
+void set_duplex(const com_iface_ptr<IDeckLinkProfileManager>& profile_manager,
+                const com_iface_ptr<IDeckLinkConfiguration>&  config,
+                configuration::duplex_t                       duplex,
+                const std::wstring&                           print)
+{
+    if (duplex != configuration::duplex_t::default_duplex) {
+        return;
+    }
+
+    IDeckLinkProfileIterator* iterator;
+    if (FAILED(profile_manager->GetProfiles(&iterator))) {
+        CASPAR_LOG(error) << print << L" Failed to set duplex mode (no profiles found).";
+        return;
+    }
+
+    IDeckLinkProfile* profile;
+    while (SUCCEEDED(iterator->Next(&profile))) {
+        auto profile_wrapped = wrap_raw<com_ptr>(profile);
+        auto attributes      = iface_cast<IDeckLinkProfileAttributes>(profile_wrapped);
+
+        LONGLONG value;
+        if (FAILED(attributes->GetInt(BMDDeckLinkDuplex, &value))) {
+            CASPAR_LOG(error) << print << L" Failed to get duplex mode.";
+            return;
+        }
+        if ((value == bmdDuplexFull && duplex == configuration::duplex_t::full_duplex) ||
+            (value == bmdDuplexHalf && duplex == configuration::duplex_t::half_duplex)) {
+            profile->SetActive();
+            return;
+        }
+    }
+    CASPAR_LOG(error) << print << L" Failed to set duplex mode (profile not found).";
+}
+
+void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
+               const com_iface_ptr<IDeckLinkKeyer>&             decklink_keyer,
+               configuration::keyer_t                           keyer,
+               const std::wstring&                              print)
 {
     if (keyer == configuration::keyer_t::internal_keyer) {
         BOOL value = true;
@@ -167,11 +210,11 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IDecklinkVideoFrame
 
-    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
-    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
+    long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
     BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
-    BMDFrameFlags STDMETHODCALLTYPE GetFlags() override { return bmdFrameFlagDefault; }
+    BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
 
     HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
     {
@@ -191,13 +234,14 @@ class decklink_frame : public IDeckLinkVideoFrame
 
 struct key_video_context : public IDeckLinkVideoOutputCallback
 {
-    const configuration                   config_;
-    com_ptr<IDeckLink>                    decklink_      = get_device(config_.key_device_index());
-    com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_    = iface_cast<IDeckLinkAttributes>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    std::atomic<int64_t>                  scheduled_frames_completed_;
+    const configuration                       config_;
+    com_ptr<IDeckLink>                        decklink_        = get_device(config_.key_device_index());
+    com_iface_ptr<IDeckLinkOutput>            output_          = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_           = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileManager>    profile_manager_ = iface_cast<IDeckLinkProfileManager>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_      = iface_cast<IDeckLinkProfileAttributes>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_   = iface_cast<IDeckLinkConfiguration>(decklink_);
+    std::atomic<int64_t>                      scheduled_frames_completed_;
 
     key_video_context(const configuration& config, const std::wstring& print)
         : config_(config)
@@ -206,6 +250,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
 
         set_latency(configuration_, config.latency, print);
         set_keyer(attributes_, keyer_, config.keyer, print);
+        set_duplex(profile_manager_, configuration_, config.duplex, print);
 
         if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
             CASPAR_THROW_EXCEPTION(caspar_exception()
@@ -234,8 +279,8 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override { return S_OK; }
 
@@ -255,11 +300,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     const int           channel_index_;
     const configuration config_;
 
-    com_ptr<IDeckLink>                    decklink_      = get_device(config_.device_index);
-    com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_    = iface_cast<IDeckLinkAttributes>(decklink_);
+    com_ptr<IDeckLink>                        decklink_      = get_device(config_.device_index);
+    com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     std::mutex         exception_mutex_;
     std::exception_ptr exception_;
@@ -285,9 +330,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::atomic<int64_t>                scheduled_frames_completed_{0};
     std::unique_ptr<key_video_context>  key_context_;
 
-    com_ptr<IDeckLinkDisplayMode> mode_ =
-        get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
-    int field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame ? 2 : 1;
+    com_ptr<IDeckLinkDisplayMode> mode_        = get_display_mode(output_,
+                                                           format_desc_.format,
+                                                           bmdFormat8BitBGRA,
+                                                           bmdSupportedVideoModeDefault,
+                                                           bmdNoVideoOutputConversion);
+    int                           field_count_ = mode_->GetFieldDominance() != bmdProgressiveFrame ? 2 : 1;
 
     std::atomic<bool> abort_request_{false};
 
@@ -421,8 +469,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override
     {
@@ -603,8 +651,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
         }
 
-        if (frame)
-        {
+        if (frame) {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             buffer_.push(std::move(frame));
@@ -697,6 +744,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.keyer = configuration::keyer_t::default_keyer;
     }
 
+    if (contains_param(L"FULL_DUPLEX", params)) {
+        config.duplex = configuration::duplex_t::full_duplex;
+    } else if (contains_param(L"HALF_DUPLEX", params)) {
+        config.duplex = configuration::duplex_t::half_duplex;
+    }
+
     if (contains_param(L"LOW_LATENCY", params)) {
         config.latency = configuration::latency_t::low_latency;
     }
@@ -720,6 +773,13 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (keyer == L"external_separate_device") {
         config.keyer = configuration::keyer_t::external_separate_device_keyer;
+    }
+
+    auto duplex = ptree.get(L"duplex", L"default");
+    if (duplex == L"full_duplex") {
+        config.duplex = configuration::duplex_t::full_duplex;
+    } else if (duplex == L"half_duplex") {
+        config.duplex = configuration::duplex_t::half_duplex;
     }
 
     auto latency = ptree.get(L"latency", L"default");

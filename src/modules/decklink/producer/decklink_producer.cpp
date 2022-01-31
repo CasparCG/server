@@ -287,9 +287,9 @@ class decklink_producer : public IDeckLinkInputCallback
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
-    com_ptr<IDeckLink>                 decklink_   = get_device(device_index_);
-    com_iface_ptr<IDeckLinkInput>      input_      = iface_cast<IDeckLinkInput>(decklink_);
-    com_iface_ptr<IDeckLinkAttributes> attributes_ = iface_cast<IDeckLinkAttributes>(decklink_);
+    com_ptr<IDeckLink>                        decklink_   = get_device(device_index_);
+    com_iface_ptr<IDeckLinkInput>             input_      = iface_cast<IDeckLinkInput>(decklink_);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_ = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     const std::wstring model_name_ = get_model_name(decklink_);
 
@@ -339,7 +339,7 @@ class decklink_producer : public IDeckLinkInputCallback
             input_format = core::video_format_desc(format);
         }
 
-        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdSupportedVideoModeDefault, bmdNoVideoInputConversion);
         video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
         audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
@@ -402,8 +402,8 @@ class decklink_producer : public IDeckLinkInputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
                                                       IDeckLinkDisplayMode*            newDisplayMode,
@@ -413,7 +413,7 @@ class decklink_producer : public IDeckLinkInputCallback
             auto newMode = newDisplayMode->GetDisplayMode();
             auto fmt     = get_caspar_video_format(newMode);
 
-            auto new_fmt = core::video_format_desc(fmt);
+            auto new_fmt       = core::video_format_desc(fmt);
 
             CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to "
                              << new_fmt.name;
@@ -422,7 +422,9 @@ class decklink_producer : public IDeckLinkInputCallback
 
             // reinitializing filters because not all filters can handle on-the-fly format changes
             input_format = new_fmt;
-            mode_        = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+
+            mode_ = get_display_mode(
+                input_, newMode, bmdFormat8BitYUV, bmdSupportedVideoModeDefault, bmdNoVideoInputConversion);
 
             graph_->set_text(print());
 

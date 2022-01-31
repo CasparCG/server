@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2012 Blackmagic Design
+** Copyright (c) 2017 Blackmagic Design
 **  
 ** Permission is hereby granted, free of charge, to any person or organization 
 ** obtaining a copy of the software and accompanying documentation (the 
@@ -38,27 +38,22 @@
 ** -LICENSE-END-
 */
 
-#ifndef BMD_DECKLINKAPI_v9_2_H
-#define BMD_DECKLINKAPI_v9_2_H
+#ifndef BMD_DECKLINKAPIVIDEOINPUT_v10_11_H
+#define BMD_DECKLINKAPIVIDEOINPUT_v10_11_H
 
 #include "DeckLinkAPI.h"
 #include "DeckLinkAPI_v10_11.h"
 #include "DeckLinkAPIVideoInput_v11_5_1.h"
 
+// Type Declarations
+BMD_CONST REFIID IID_IDeckLinkInput_v10_11                               = /* AF22762B-DFAC-4846-AA79-FA8883560995 */ {0xAF,0x22,0x76,0x2B,0xDF,0xAC,0x48,0x46,0xAA,0x79,0xFA,0x88,0x83,0x56,0x09,0x95};
 
-// Interface ID Declarations
+/* Interface IDeckLinkInput_v10_11 - DeckLink input interface. */
 
-#define IID_IDeckLinkInput_v9_2                          /* 6D40EF78-28B9-4E21-990D-95BB7750A04F */ (REFIID){0x6D,0x40,0xEF,0x78,0x28,0xB9,0x4E,0x21,0x99,0x0D,0x95,0xBB,0x77,0x50,0xA0,0x4F}
-
-
-#if defined(__cplusplus)
-
-/* Interface IDeckLinkInput - Created by QueryInterface from IDeckLink. */
-
-class BMD_PUBLIC IDeckLinkInput_v9_2 : public IUnknown
+class IDeckLinkInput_v10_11 : public IUnknown
 {
 public:
-	virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoInputFlags flags, /* out */ BMDDisplayModeSupport_v10_11 *result, /* out */ IDeckLinkDisplayMode **resultDisplayMode) = 0;
+    virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoInputFlags flags, /* out */ BMDDisplayModeSupport_v10_11 *result, /* out */ IDeckLinkDisplayMode **resultDisplayMode) = 0;
     virtual HRESULT GetDisplayModeIterator (/* out */ IDeckLinkDisplayModeIterator **iterator) = 0;
 
     virtual HRESULT SetScreenPreviewCallback (/* in */ IDeckLinkScreenPreviewCallback *previewCallback) = 0;
@@ -68,6 +63,7 @@ public:
     virtual HRESULT EnableVideoInput (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoInputFlags flags) = 0;
     virtual HRESULT DisableVideoInput (void) = 0;
     virtual HRESULT GetAvailableVideoFrameCount (/* out */ uint32_t *availableFrameCount) = 0;
+    virtual HRESULT SetVideoInputFrameMemoryAllocator (/* in */ IDeckLinkMemoryAllocator *theAllocator) = 0;
 
     /* Audio Input */
 
@@ -88,9 +84,7 @@ public:
     virtual HRESULT GetHardwareReferenceClock (/* in */ BMDTimeScale desiredTimeScale, /* out */ BMDTimeValue *hardwareTime, /* out */ BMDTimeValue *timeInFrame, /* out */ BMDTimeValue *ticksPerFrame) = 0;
 
 protected:
-    virtual ~IDeckLinkInput_v9_2 () {}; // call Release method to drop reference count
+    virtual ~IDeckLinkInput_v10_11 () {} // call Release method to drop reference count
 };
 
-
-#endif      // defined(__cplusplus)
-#endif	// BMD_DECKLINKAPI_v9_2_H
+#endif /* defined(BMD_DECKLINKAPIVIDEOINPUT_v10_11_H) */

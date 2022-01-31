@@ -175,8 +175,9 @@ static std::wstring get_mode_name(const com_ptr<IDeckLinkDisplayMode>& mode)
     return L"Unknown";
 }
 
-template <typename T, typename F>
-com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag)
+template <typename T, typename C>
+com_ptr<IDeckLinkDisplayMode>
+get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, BMDSupportedVideoModeFlags flag, C conversion)
 {
     IDeckLinkDisplayMode*         m = nullptr;
     IDeckLinkDisplayModeIterator* iter;
@@ -193,25 +194,19 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode f
 
     com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
-    BMDDisplayModeSupport displayModeSupport;
-
-    if (FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)))
-        CASPAR_THROW_EXCEPTION(caspar_exception()
-                               << msg_info(L"Could not determine whether device supports requested video format: " +
-                                           get_mode_name(mode)));
-    else if (displayModeSupport == bmdDisplayModeNotSupported)
+    if (FAILED(device->DoesSupportVideoMode(
+        bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, conversion, flag, nullptr, nullptr))) {
         CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
-    else if (displayModeSupport == bmdDisplayModeSupportedWithConversion)
-        CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
+    }
 
     return mode;
 }
 
-template <typename T, typename F>
+template <typename T, typename C>
 static com_ptr<IDeckLinkDisplayMode>
-get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
+get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, BMDSupportedVideoModeFlags flag, C conversion)
 {
-    return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
+    return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag, conversion);
 }
 
 template <typename T>
