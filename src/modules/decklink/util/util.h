@@ -194,8 +194,10 @@ get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt,
 
     com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
-    if (FAILED(device->DoesSupportVideoMode(
-        bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, conversion, flag, nullptr, nullptr))) {
+    BOOL result;
+    auto supportsMode = device->DoesSupportVideoMode(
+        bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, conversion, flag, nullptr, &result);
+    if (FAILED(supportsMode) || !result) {
         CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
     }
 
