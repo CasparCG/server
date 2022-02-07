@@ -119,10 +119,6 @@ void set_duplex(const com_iface_ptr<IDeckLinkProfileManager>& profile_manager,
                 configuration::duplex_t                       duplex,
                 const std::wstring&                           print)
 {
-    if (duplex != configuration::duplex_t::default_duplex) {
-        return;
-    }
-
     IDeckLinkProfileIterator* iterator;
     if (FAILED(profile_manager->GetProfiles(&iterator))) {
         CASPAR_LOG(error) << print << L" Failed to set duplex mode (no profiles found).";
@@ -141,7 +137,11 @@ void set_duplex(const com_iface_ptr<IDeckLinkProfileManager>& profile_manager,
         }
         if ((value == bmdDuplexFull && duplex == configuration::duplex_t::full_duplex) ||
             (value == bmdDuplexHalf && duplex == configuration::duplex_t::half_duplex)) {
-            profile->SetActive();
+            if (FAILED(profile->SetActive())) {
+                CASPAR_LOG(error) << print << L" Failed to set duplex profile active.";
+                return;
+            }
+            CASPAR_LOG(info) << print << L" Duplex mode is set.";
             return;
         }
     }
@@ -235,12 +235,11 @@ class decklink_frame : public IDeckLinkVideoFrame
 struct key_video_context : public IDeckLinkVideoOutputCallback
 {
     const configuration                       config_;
-    com_ptr<IDeckLink>                        decklink_        = get_device(config_.key_device_index());
-    com_iface_ptr<IDeckLinkOutput>            output_          = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>             keyer_           = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkProfileManager>    profile_manager_ = iface_cast<IDeckLinkProfileManager>(decklink_, true);
-    com_iface_ptr<IDeckLinkProfileAttributes> attributes_      = iface_cast<IDeckLinkProfileAttributes>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration>     configuration_   = iface_cast<IDeckLinkConfiguration>(decklink_);
+    com_ptr<IDeckLink>                        decklink_      = get_device(config_.key_device_index());
+    com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
     std::atomic<int64_t>                      scheduled_frames_completed_;
 
     key_video_context(const configuration& config, const std::wstring& print)
@@ -250,7 +249,6 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
 
         set_latency(configuration_, config.latency, print);
         set_keyer(attributes_, keyer_, config.keyer, print);
-        set_duplex(profile_manager_, configuration_, config.duplex, print);
 
         if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
             CASPAR_THROW_EXCEPTION(caspar_exception()
@@ -300,11 +298,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     const int           channel_index_;
     const configuration config_;
 
-    com_ptr<IDeckLink>                        decklink_      = get_device(config_.device_index);
-    com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
+    com_ptr<IDeckLink>                        decklink_        = get_device(config_.device_index);
+    com_iface_ptr<IDeckLinkOutput>            output_          = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_   = iface_cast<IDeckLinkConfiguration>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_           = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileManager>    profile_manager_ = iface_cast<IDeckLinkProfileManager>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_      = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     std::mutex         exception_mutex_;
     std::exception_ptr exception_;
@@ -362,6 +361,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         , config_(config)
         , format_desc_(format_desc)
     {
+        if (config.duplex != configuration::duplex_t::default_duplex) {
+            set_duplex(profile_manager_, configuration_, config.duplex, print());
+        }
+
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
             key_context_.reset(new key_video_context(config, print()));
         }
@@ -776,9 +779,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     }
 
     auto duplex = ptree.get(L"duplex", L"default");
-    if (duplex == L"full_duplex") {
+    if (duplex == L"full") {
         config.duplex = configuration::duplex_t::full_duplex;
-    } else if (duplex == L"half_duplex") {
+    } else if (duplex == L"half") {
         config.duplex = configuration::duplex_t::half_duplex;
     }
 

@@ -422,7 +422,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
             // reinitializing filters because not all filters can handle on-the-fly format changes
             input_format = new_fmt;
-
+            
             mode_ = get_display_mode(
                 input_, newMode, bmdFormat8BitYUV, bmdSupportedVideoModeDefault, bmdNoVideoInputConversion);
 
