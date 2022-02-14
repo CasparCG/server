@@ -6,9 +6,9 @@
 
 
  /* File created by MIDL compiler version 8.01.0622 */
-/* at Tue Jan 19 04:14:07 2038
+/* at Mon Feb 22 17:14:07 2022
  */
-/* Compiler settings for D:\Peter\Downloads\include\DeckLinkAPI.idl:
+/* Compiler settings for ..\..\..\modules\decklink\interop\DeckLinkAPI.idl:
     Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.01.0622 
     protocol : all , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
