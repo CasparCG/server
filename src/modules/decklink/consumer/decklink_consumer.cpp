@@ -119,8 +119,8 @@ void set_duplex(const com_iface_ptr<IDeckLinkAttributes>&    attributes,
                 configuration::duplex_t                      duplex,
                 const std::wstring&                          print)
 {
-    BOOL* supportsDuplexModeConfiguration = false;
-    if (FAILED(attributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, supportsDuplexModeConfiguration))) {
+    BOOL supportsDuplexModeConfiguration;
+    if (FAILED(attributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, &supportsDuplexModeConfiguration))) {
         CASPAR_LOG(error) << print
                           << L" Failed to set duplex mode, unable to check if card supports duplex mode setting.";
     };
