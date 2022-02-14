@@ -51,9 +51,9 @@
 #include <atomic>
 #include <condition_variable>
 #include <future>
-#include <thread>
 #include <mutex>
 #include <queue>
+#include <thread>
 
 namespace caspar { namespace decklink {
 
@@ -67,6 +67,14 @@ struct configuration
         default_keyer = external_keyer
     };
 
+    enum class duplex_t
+    {
+        none,
+        half_duplex,
+        full_duplex,
+        default_duplex = none
+    };
+
     enum class latency_t
     {
         low_latency,
@@ -78,6 +86,7 @@ struct configuration
     int       key_device_idx    = 0;
     bool      embedded_audio    = false;
     keyer_t   keyer             = keyer_t::default_keyer;
+    duplex_t  duplex            = duplex_t::default_duplex;
     latency_t latency           = latency_t::default_latency;
     bool      key_only          = false;
     int       base_buffer_depth = 3;
@@ -103,6 +112,35 @@ void set_latency(const com_iface_ptr<Configuration>& config,
         config->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
         CASPAR_LOG(info) << print << L" Disabled low-latency mode.";
     }
+}
+
+void set_duplex(const com_iface_ptr<IDeckLinkAttributes>&    attributes,
+                const com_iface_ptr<IDeckLinkConfiguration>& config,
+                configuration::duplex_t                      duplex,
+                const std::wstring&                          print)
+{
+    BOOL* supportsDuplexModeConfiguration = false;
+    if (FAILED(attributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, supportsDuplexModeConfiguration))) {
+        CASPAR_LOG(error) << print
+                          << L" Failed to set duplex mode, unable to check if card supports duplex mode setting.";
+    };
+
+    if (!supportsDuplexModeConfiguration) {
+        CASPAR_LOG(warning) << print << L" This device does not support setting the duplex mode.";
+        return;
+    }
+
+    std::map<configuration::duplex_t, BMDDuplexMode> config_map{
+        {configuration::duplex_t::full_duplex, bmdDuplexModeFull},
+        {configuration::duplex_t::half_duplex, bmdDuplexModeHalf},
+    };
+    auto duplex_mode = config_map[duplex];
+
+    if (FAILED(config->SetInt(bmdDeckLinkConfigDuplexMode, duplex_mode))) {
+        CASPAR_LOG(error) << print << L" Unable to set duplex mode.";
+        return;
+    }
+    CASPAR_LOG(info) << print << L" Duplex mode set.";
 }
 
 void set_keyer(const com_iface_ptr<IDeckLinkAttributes>& attributes,
@@ -167,11 +205,11 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IDecklinkVideoFrame
 
-    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
-    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
+    long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
     BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
-    BMDFrameFlags STDMETHODCALLTYPE GetFlags() override { return bmdFrameFlagDefault; }
+    BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
 
     HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
     {
@@ -234,8 +272,8 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override { return S_OK; }
 
@@ -314,6 +352,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         , config_(config)
         , format_desc_(format_desc)
     {
+        if (config.duplex != configuration::duplex_t::default_duplex) {
+            set_duplex(attributes_, configuration_, config.duplex, print());
+        }
+
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
             key_context_.reset(new key_video_context(config, print()));
         }
@@ -421,8 +463,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override
     {
@@ -603,8 +645,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
         }
 
-        if (frame)
-        {
+        if (frame) {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             buffer_.push(std::move(frame));
@@ -697,6 +738,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.keyer = configuration::keyer_t::default_keyer;
     }
 
+    if (contains_param(L"FULL_DUPLEX", params)) {
+        config.duplex = configuration::duplex_t::full_duplex;
+    } else if (contains_param(L"HALF_DUPLEX", params)) {
+        config.duplex = configuration::duplex_t::half_duplex;
+    }
+
     if (contains_param(L"LOW_LATENCY", params)) {
         config.latency = configuration::latency_t::low_latency;
     }
@@ -720,6 +767,13 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (keyer == L"external_separate_device") {
         config.keyer = configuration::keyer_t::external_separate_device_keyer;
+    }
+
+    auto duplex = ptree.get(L"duplex", L"default");
+    if (duplex == L"full") {
+        config.duplex = configuration::duplex_t::full_duplex;
+    } else if (duplex == L"half") {
+        config.duplex = configuration::duplex_t::half_duplex;
     }
 
     auto latency = ptree.get(L"latency", L"default");
