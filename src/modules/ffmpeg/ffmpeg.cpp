@@ -114,10 +114,7 @@ void init(core::module_dependencies dependencies)
 {
     av_log_set_callback(log_for_thread);
 
-    avfilter_register_all();
-    av_register_all();
     avformat_network_init();
-    avcodec_register_all();
     avdevice_register_all();
 
     // mpegts demuxer does not seek acture with binary search.
