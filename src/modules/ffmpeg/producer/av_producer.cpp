@@ -37,6 +37,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/error.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>

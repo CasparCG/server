@@ -9,6 +9,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/frame.h>
 #include <libavutil/pixfmt.h>
 }
