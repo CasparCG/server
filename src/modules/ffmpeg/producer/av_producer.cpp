@@ -116,8 +116,6 @@ class Decoder
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
 
-        FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
-
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
 
