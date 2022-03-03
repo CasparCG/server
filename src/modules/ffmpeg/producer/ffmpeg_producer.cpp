@@ -331,10 +331,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto filter_str = get_param(L"FILTER", params, L"");
 
-    boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
-    boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
-    boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-
     boost::optional<std::int64_t> start;
     boost::optional<std::int64_t> duration;
 
@@ -348,7 +344,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     // TODO (fix) use raw input?
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
-    auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
+    auto afilter = boost::to_lower_copy(get_param(L"AF", params, filter_str));
 
     try {
         auto producer = spl::make_shared<ffmpeg_producer>(
