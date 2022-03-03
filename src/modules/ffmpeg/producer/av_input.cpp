@@ -131,6 +131,8 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "reconnect", "1", 0));
         FF(av_dict_set(&options, "reconnect_streamed", "1", 0));
         FF(av_dict_set(&options, "reconnect_delay_max", "120", 0));
+        FF(av_dict_set(&options, "short_seek_size", "1M", 0));
+        FF(av_dict_set(&options, "user_agent", "caspar/2.2", 0));
         FF(av_dict_set(&options, "referer", filename_.c_str(), 0)); // HTTP referer header
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
         FF(av_dict_set(&options, "rtmp_live", "live", 0));
