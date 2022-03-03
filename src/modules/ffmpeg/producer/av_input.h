@@ -10,10 +10,10 @@
 #include <mutex>
 #include <queue>
 #include <string>
-#include <thread>
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/thread.hpp>
 #include <boost/optional.hpp>
 
 struct AVPacket;
@@ -57,7 +57,7 @@ class Input
     std::atomic<bool> eof_{false};
 
     std::atomic<bool> abort_request_{false};
-    std::thread       thread_;
+    boost::thread     thread_;
 };
 
 }} // namespace caspar::ffmpeg
