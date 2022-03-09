@@ -64,13 +64,13 @@ ADD_DEFINITIONS (-DSFML_STATIC)
 ADD_DEFINITIONS (-DUNICODE)
 ADD_DEFINITIONS (-D_UNICODE)
 ADD_DEFINITIONS (-DGLEW_NO_GLU)
-ADD_DEFINITIONS (-D__NO_INLINE__) # Needed for precompiled headers to work
+# ADD_DEFINITIONS (-D__NO_INLINE__) # Needed for precompiled headers to work
 ADD_DEFINITIONS (-DBOOST_NO_SWPRINTF) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 ADD_DEFINITIONS (-DTBB_USE_CAPTURED_EXCEPTION=1)
-ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
+# ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
 
-ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
-ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
+# ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
+# ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
 ADD_COMPILE_OPTIONS (-msse3)
 ADD_COMPILE_OPTIONS (-mssse3)
 ADD_COMPILE_OPTIONS (-msse4.1)
@@ -98,7 +98,7 @@ SET (CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL 
 SET (CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
 SET (CASPARCG_RUNTIME_DEPENDENCIES "" CACHE INTERNAL "")
 
-INCLUDE (PrecompiledHeader)
+# INCLUDE (PrecompiledHeader)
 
 FUNCTION (casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"

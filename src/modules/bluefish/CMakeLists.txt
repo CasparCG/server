@@ -18,7 +18,7 @@ set(HEADERS
 )
 
 add_library(bluefish ${SOURCES} ${HEADERS})
-add_precompiled_header(bluefish StdAfx.h FORCEINCLUDE)
+#add_precompiled_header(bluefish StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

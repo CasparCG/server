@@ -1,9 +1,11 @@
 #include <libavutil/pixfmt.h>
 
+#include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 
+#include <map>
 #include <memory>
 #include <vector>
 
