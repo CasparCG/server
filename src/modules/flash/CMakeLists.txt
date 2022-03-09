@@ -27,7 +27,7 @@ set(HEADERS
 )
 
 add_library(flash ${SOURCES} ${HEADERS})
-add_precompiled_header(flash StdAfx.h FORCEINCLUDE)
+#add_precompiled_header(flash StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

@@ -52,7 +52,7 @@ else()
 endif ()
 
 add_library(decklink ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-add_precompiled_header(decklink StdAfx.h FORCEINCLUDE)
+#add_precompiled_header(decklink StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

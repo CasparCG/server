@@ -1,5 +1,6 @@
 #include <memory>
 
+#include <core/video_format.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
