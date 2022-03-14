@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
-
 #include "stage.h"
 
 #include "layer.h"
@@ -230,7 +228,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
-    
+
 	std::future<void> preview(int index)
     {
         return executor_.begin_invoke([=] { get_layer(index).preview(); });

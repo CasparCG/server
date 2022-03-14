@@ -19,8 +19,6 @@
  * Author: Helge Norberg, helge.norberg@svt.se
  */
 
-#include "../StdAfx.h"
-
 #include <sstream>
 #include <stdexcept>
 

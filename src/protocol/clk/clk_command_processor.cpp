@@ -19,8 +19,6 @@
  * Author: Helge Norberg, helge.norberg@svt.se
  */
 
-#include "../StdAfx.h"
-
 #include "clk_command_processor.h"
 
 namespace caspar { namespace protocol { namespace CLK {

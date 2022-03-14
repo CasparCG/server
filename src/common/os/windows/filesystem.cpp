@@ -19,8 +19,6 @@
  * Author: Helge Norberg, helge.norberg@svt.se
  */
 
-#include "../../stdafx.h"
-
 #include "../filesystem.h"
 
 #include <boost/algorithm/string/trim.hpp>

@@ -29,6 +29,7 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
+#include <vector>
 
 namespace caspar { namespace newtek {
 

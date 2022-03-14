@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../../StdAfx.h"
-
 #include "audio_mixer.h"
 
 #include <core/frame/frame.h>

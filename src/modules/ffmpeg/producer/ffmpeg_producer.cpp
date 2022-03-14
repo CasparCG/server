@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
-
 #include "ffmpeg_producer.h"
 
 #include "av_producer.h"

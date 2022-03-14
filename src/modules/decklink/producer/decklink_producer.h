@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <common/memory.h>
+
 #include <core/fwd.h>
 
 #include <string>

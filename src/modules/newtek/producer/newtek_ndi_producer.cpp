@@ -20,8 +20,6 @@
  * based on work of Robert Nagy, ronag89@gmail.com and Jerzy Jaśkiewicz, jurek@tvp.pl
  */
 
-#include "../StdAfx.h"
-
 #include "newtek_ndi_producer.h"
 
 #include <core/frame/draw_frame.h>
@@ -47,6 +45,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 #include <boost/thread.hpp>
+
+#include <queue>
 
 #include <tbb/parallel_for.h>
 

@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include "../interop/Processing.NDI.Lib.h"
 #include "protocol/amcp/AMCPCommand.h"
 #include <string>
