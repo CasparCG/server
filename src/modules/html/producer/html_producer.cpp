@@ -183,12 +183,13 @@ class html_client
                        CefRefPtr<CefFrame>     frame,
                        const CefString&        target_url,
                        const CefString&        target_frame_name,
-                       WindowOpenDisposition   target_disposition,
+                       cef_window_open_disposition_t target_disposition,
                        bool                    user_gesture,
                        const CefPopupFeatures& popupFeatures,
                        CefWindowInfo&          windowInfo,
                        CefRefPtr<CefClient>&   client,
                        CefBrowserSettings&     settings,
+                       CefRefPtr<CefDictionaryValue>& dict,
                        bool*                   no_javascript_access) override
     {
         // This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon
@@ -357,6 +358,7 @@ class html_client
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefRefPtr<CefFrame>          frame,
                                   CefProcessId                 source_process,
                                   CefRefPtr<CefProcessMessage> message) override
     {
@@ -391,9 +393,6 @@ class html_client
 
     void invoke_requested_animation_frames()
     {
-        if (browser_ != nullptr)
-            browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
-
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
     }
@@ -477,17 +476,16 @@ class html_producer : public core::frame_producer
             client_ = new html_client(frame_factory, graph_, format_desc, shared_texture_enable, url_);
 
             CefWindowInfo window_info;
-            window_info.width                        = format_desc.square_width;
-            window_info.height                       = format_desc.square_height;
+            window_info.bounds.width = format_desc.square_width;
+            window_info.bounds.height = format_desc.square_height;
             window_info.windowless_rendering_enabled = true;
-            window_info.shared_texture_enabled       = shared_texture_enable;
+            window_info.shared_texture_enabled = shared_texture_enable;
 
             CefBrowserSettings browser_settings;
-            browser_settings.web_security = cef_state_t::STATE_DISABLED;
             browser_settings.webgl        = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
             double fps                    = format_desc.fps;
             browser_settings.windowless_frame_rate = int(ceil(fps));
-            CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
+            CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);
         });
     }
 
