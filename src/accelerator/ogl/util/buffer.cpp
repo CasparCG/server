@@ -21,6 +21,7 @@
 #include "buffer.h"
 
 #include <common/gl/gl_check.h>
+#include <atomic>
 
 #include <GL/glew.h>
 
