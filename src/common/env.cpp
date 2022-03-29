@@ -87,7 +87,7 @@ void configure(const std::wstring& filename)
     try {
         initial = clean_path(boost::filesystem::initial_path().wstring());
 
-        boost::filesystem::wifstream file(initial + L"/" + filename);
+        boost::filesystem::wifstream file(filename);
         boost::property_tree::read_xml(file,
                                        pt,
                                        boost::property_tree::xml_parser::trim_whitespace |
