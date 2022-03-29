@@ -51,9 +51,9 @@
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/stacktrace.hpp>
+#include <boost/asio.hpp>
 
 #include <atomic>
-#include <future>
 #include <thread>
 
 #include <clocale>
@@ -89,9 +89,10 @@ void print_info()
 
 auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
 {
-    auto promise  = std::make_shared<std::promise<bool>>();
-    auto future   = promise->get_future();
-    auto shutdown = [promise = std::move(promise)](bool restart) { promise->set_value(restart); };
+    boost::asio::io_context io;
+
+    auto restart  = false;
+    auto shutdown = [&](bool restart_) { restart = restart_; io.stop(); };
 
     print_info();
 
@@ -157,11 +158,16 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
             }
         }
     }).detach();
-    future.wait();
+
+    // Signal handlers needs to be installed after Cef has been initialized.
+    boost::asio::signal_set signals(io, SIGINT, SIGTERM);
+    signals.async_wait([&](auto, auto){ io.stop(); });
+
+    io.run();
 
     caspar_server.reset();
 
-    return future.get();
+    return restart;
 }
 
 void signal_handler(int signum)
