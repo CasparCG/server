@@ -12,10 +12,8 @@ set(SOURCES
 		casparcg.config
 		main.cpp
 		server.cpp
-		linux_specific.cpp
 )
 set(HEADERS
-		platform_specific.h
 		server.h
 )
 
