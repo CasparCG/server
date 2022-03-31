@@ -40,8 +40,6 @@
 #include <core/video_channel.h>
 #include <core/video_format.h>
 
-#include <modules/image/consumer/image_consumer.h>
-
 #include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/amcp/amcp_command_repository.h>

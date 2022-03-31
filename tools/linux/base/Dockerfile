@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libexpat1-dev \
 	lsb-release \
 	libglew-dev \
-	libfreeimage-dev \
 	libtbb-dev \
 	libopenal-dev \
 	libxcursor-dev \

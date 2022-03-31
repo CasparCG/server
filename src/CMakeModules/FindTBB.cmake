@@ -150,47 +150,6 @@ if (TBB_BUILD_PREFIX AND ENV_TBB_ROOT)
     ${ENV_TBB_BUILD_DIR}/${TBB_BUILD_PREFIX}_debug)
 endif ()
 
-
-# For Windows, let's assume that the user might be using the precompiled
-# TBB packages from the main website. These use a rather awkward directory
-# structure (at least for automatically finding the right files) depending
-# on platform and compiler, but we'll do our best to accommodate it.
-# Not adding the same effort for the precompiled linux builds, though. Those
-# have different versions for CC compiler versions and linux kernels which
-# will never adequately match the user's setup, so there is no feasible way
-# to detect the "best" version to use. The user will have to manually
-# select the right files. (Chances are the distributions are shipping their
-# custom version of tbb, anyway, so the problem is probably nonexistent.)
-if (WIN32 AND MSVC)
-  set(COMPILER_PREFIX "vc7.1")
-  if (MSVC_VERSION EQUAL 1400)
-    set(COMPILER_PREFIX "vc8")
-  elseif(MSVC_VERSION EQUAL 1500)
-    set(COMPILER_PREFIX "vc9")
-  elseif(MSVC_VERSION EQUAL 1600)
-    set(COMPILER_PREFIX "vc10")
-  elseif(MSVC_VERSION EQUAL 1700)
-    set(COMPILER_PREFIX "vc11")
-  elseif(MSVC_VERSION EQUAL 1800)
-    set(COMPILER_PREFIX "vc12")
-  elseif(MSVC_VERSION EQUAL 1900)
-    set(COMPILER_PREFIX "vc14")
-  endif ()
-
-  # for each prefix path, add ia32/64\${COMPILER_PREFIX}\lib to the lib search path
-  foreach (dir IN LISTS TBB_PREFIX_PATH)
-    if (CMAKE_CL_64)
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/ia64/${COMPILER_PREFIX}/lib)
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/lib/ia64/${COMPILER_PREFIX})
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/intel64/${COMPILER_PREFIX}/lib)
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/lib/intel64/${COMPILER_PREFIX})
-    else ()
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/ia32/${COMPILER_PREFIX}/lib)
-      list(APPEND TBB_LIB_SEARCH_PATH ${dir}/lib/ia32/${COMPILER_PREFIX})
-    endif ()
-  endforeach ()
-endif ()
-
 # For OS X binary distribution, choose libc++ based libraries for Mavericks (10.9)
 # and above and AppleClang
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND

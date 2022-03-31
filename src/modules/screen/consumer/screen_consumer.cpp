@@ -51,14 +51,7 @@
 #include <utility>
 #include <vector>
 
-#if defined(_MSC_VER)
-#include <windows.h>
-
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#else
 #include "../util/x11_util.h"
-#endif
 
 #include "consumer_screen_fragment.h"
 #include "consumer_screen_vertex.h"

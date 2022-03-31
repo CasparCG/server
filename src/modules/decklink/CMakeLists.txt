@@ -18,35 +18,28 @@ set(HEADERS
 		decklink.h
 		decklink_api.h
 )
-if (MSVC)
-	set(OS_SPECIFIC_SOURCES
-			interop/DeckLinkAPI_i.c
-			interop/DeckLinkAPI.h
-			interop/DeckLinkAPIVersion.h
-	)
-else()
-	set(OS_SPECIFIC_SOURCES
-			linux_interop/DeckLinkAPIConfiguration.h
-			linux_interop/DeckLinkAPIDeckControl.h
-			linux_interop/DeckLinkAPIDispatch.cpp
-			linux_interop/DeckLinkAPIModes.h
-			linux_interop/DeckLinkAPI_v10_2.h
-			linux_interop/DeckLinkAPI_v7_3.h
-			linux_interop/DeckLinkAPI_v7_9.h
-			linux_interop/DeckLinkAPI_v8_1.h
-			linux_interop/DeckLinkAPI_v9_9.h
-			linux_interop/LinuxCOM.h
-			linux_interop/DeckLinkAPIConfiguration_v10_2.h
-			linux_interop/DeckLinkAPIDiscovery.h
-			linux_interop/DeckLinkAPI.h
-			linux_interop/DeckLinkAPITypes.h
-			linux_interop/DeckLinkAPI_v7_1.h
-			linux_interop/DeckLinkAPI_v7_6.h
-			linux_interop/DeckLinkAPI_v8_0.h
-			linux_interop/DeckLinkAPI_v9_2.h
-			linux_interop/DeckLinkAPIVersion.h
-	)
-endif ()
+
+set(OS_SPECIFIC_SOURCES
+		linux_interop/DeckLinkAPIConfiguration.h
+		linux_interop/DeckLinkAPIDeckControl.h
+		linux_interop/DeckLinkAPIDispatch.cpp
+		linux_interop/DeckLinkAPIModes.h
+		linux_interop/DeckLinkAPI_v10_2.h
+		linux_interop/DeckLinkAPI_v7_3.h
+		linux_interop/DeckLinkAPI_v7_9.h
+		linux_interop/DeckLinkAPI_v8_1.h
+		linux_interop/DeckLinkAPI_v9_9.h
+		linux_interop/LinuxCOM.h
+		linux_interop/DeckLinkAPIConfiguration_v10_2.h
+		linux_interop/DeckLinkAPIDiscovery.h
+		linux_interop/DeckLinkAPI.h
+		linux_interop/DeckLinkAPITypes.h
+		linux_interop/DeckLinkAPI_v7_1.h
+		linux_interop/DeckLinkAPI_v7_6.h
+		linux_interop/DeckLinkAPI_v8_0.h
+		linux_interop/DeckLinkAPI_v9_2.h
+		linux_interop/DeckLinkAPIVersion.h
+)
 
 add_library(decklink ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
@@ -64,21 +57,13 @@ source_group(sources\\interop interop/*)
 source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 
-if (MSVC)
-	target_link_libraries(decklink
-			common
-			core
-			ffmpeg
-	)
-else()
-	target_link_libraries(decklink
-			common
-			core
-			ffmpeg
+target_link_libraries(decklink
+common
+core
+ffmpeg
 
-			dl
-	)
-endif ()
+dl
+)
 
 casparcg_add_include_statement("modules/decklink/decklink.h")
 casparcg_add_init_statement("decklink::init" "decklink")

@@ -34,11 +34,6 @@ set(HEADERS
 		interop/Processing.NDI.utilities.h
 )
 
-if (MSVC)
-	list(APPEND SOURCES util/air_send.cpp consumer/newtek_ivga_consumer.cpp)
-	list(APPEND HEADERS util/air_send.h consumer/newtek_ivga_consumer.h)
-endif()
-
 add_library(newtek ${SOURCES} ${HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 

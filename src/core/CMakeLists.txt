@@ -95,12 +95,6 @@ source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 
-if (MSVC)
-	target_link_libraries(core
-			common
-	)
-else()
-	target_link_libraries(core
-			common
-	)
-endif()
+target_link_libraries(core
+common
+)

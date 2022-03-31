@@ -13,22 +13,13 @@ set(SOURCES
 		tweener.cpp
 		utf.cpp
 )
-if (MSVC)
-	set(OS_SPECIFIC_SOURCES
-			compiler/vs/disable_silly_warnings.h
 
-			os/windows/filesystem.cpp
-			os/windows/prec_timer.cpp
-			os/windows/thread.cpp
-			os/windows/windows.h
-	)
-else ()
-	set(OS_SPECIFIC_SOURCES
-			os/linux/filesystem.cpp
-			os/linux/prec_timer.cpp
-			os/linux/thread.cpp
-	)
-endif ()
+set(OS_SPECIFIC_SOURCES
+		os/linux/filesystem.cpp
+		os/linux/prec_timer.cpp
+		os/linux/thread.cpp
+)
+
 set(HEADERS
 		diagnostics/graph.h
 
@@ -72,5 +63,4 @@ source_group(sources ./*)
 source_group(sources\\gl gl/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\compiler\\vs compiler/vs/*)
-source_group(sources\\os\\windows os/windows/*)
 source_group(sources\\os os/*)

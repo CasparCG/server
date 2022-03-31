@@ -47,10 +47,6 @@
 #pragma comment(lib, "libcef.lib")
 #pragma comment(lib, "libcef_dll_wrapper.lib")
 
-#ifdef WIN32
-#include <accelerator/d3d/d3d_device.h>
-#endif
-
 namespace caspar { namespace html {
 
 std::unique_ptr<executor> g_cef_executor;
@@ -175,12 +171,7 @@ class renderer_application
 
 bool intercept_command_line(int argc, char** argv)
 {
-#ifdef _WIN32
-    CefMainArgs main_args;
-#else
     CefMainArgs main_args(argc, argv);
-#endif
-
     return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0;
 }
 
@@ -191,25 +182,12 @@ void init(core::module_dependencies dependencies)
     CefMainArgs main_args;
     g_cef_executor = std::make_unique<executor>(L"cef");
     g_cef_executor->invoke([&] {
-#ifdef WIN32
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif
-        const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
-
-#ifdef WIN32
-        if (enable_gpu) {
-            auto dev = accelerator::d3d::d3d_device::get_device();
-            if (!dev)
-                CASPAR_LOG(warning) << L"Failed to create directX device for cef gpu acceleration";
-        }
-#endif
-
         CefSettings settings;
         settings.command_line_args_disabled   = false;
         settings.no_sandbox                   = true;
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
-        CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
+        CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(false)), nullptr);
     });
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(

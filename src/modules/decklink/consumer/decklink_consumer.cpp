@@ -431,13 +431,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
                                                       BMDOutputFrameCompletionResult result) override
     {
-#ifdef WIN32
-        thread_local auto priority_set = false;
-        if (!priority_set) {
-            priority_set = true;
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-        }
-#endif
         try {
             auto elapsed     = tick_timer_.elapsed();
             int  fieldTimeMs = static_cast<int>(1000 / format_desc_.fps);
@@ -642,9 +635,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
     ~decklink_consumer_proxy()
     {
         executor_.invoke([=] {
-#ifdef WIN32
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
             consumer_.reset();
             com_uninitialize();
         });

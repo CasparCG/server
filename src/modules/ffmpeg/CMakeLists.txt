@@ -34,18 +34,11 @@ source_group(sources\\consumer ./consumer/.*)
 source_group(sources\\producer ./producer/.*)
 source_group(sources\\util ./util/.*)
 
-if (MSVC)
-	target_link_libraries(ffmpeg
-		common
-		core
-	)
-else()
-	target_link_libraries(ffmpeg
-			common
-			core
-			${FFMPEG_LIBRARIES}
-	)
-endif()
+target_link_libraries(ffmpeg
+common
+core
+${FFMPEG_LIBRARIES}
+)
 
 casparcg_add_include_statement("modules/ffmpeg/ffmpeg.h")
 casparcg_add_init_statement("ffmpeg::init" "ffmpeg")
