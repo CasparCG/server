@@ -73,7 +73,6 @@ set(HEADERS
 )
 
 add_library(core ${SOURCES} ${HEADERS})
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})

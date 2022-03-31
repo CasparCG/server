@@ -22,7 +22,6 @@
 #include <tbb/tbbmalloc_proxy.h>
 
 #include "included_modules.h"
-#include "platform_specific.h"
 #include "server.h"
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>

@@ -35,7 +35,6 @@ set(HEADERS
 )
 
 add_library(newtek ${SOURCES} ${HEADERS})
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
 include_directories(../..)
