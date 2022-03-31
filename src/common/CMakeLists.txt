@@ -10,7 +10,6 @@ set(SOURCES
 		env.cpp
 		filesystem.cpp
 		log.cpp
-		stdafx.cpp
 		tweener.cpp
 		utf.cpp
 )
@@ -56,14 +55,12 @@ set(HEADERS
 		prec_timer.h
 		ptree.h
 		scope_exit.h
-		stdafx.h
 		timer.h
 		tweener.h
 		utf.h
 )
 
 add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-#add_precompiled_header(common stdafx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

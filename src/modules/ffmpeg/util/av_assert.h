@@ -2,6 +2,8 @@
 
 #include <common/except.h>
 
+#include <libavutil/error.h>
+
 namespace caspar { namespace ffmpeg {
 
 struct ffmpeg_error_t : virtual caspar_exception

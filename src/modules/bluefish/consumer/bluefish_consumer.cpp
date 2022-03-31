@@ -20,8 +20,6 @@
  *         James Wise, james.wise@bluefish444.com
  */
 
-#include "../StdAfx.h"
-
 #include "../util/blue_velvet.h"
 #include "../util/memory.h"
 #include "bluefish_consumer.h"
@@ -169,7 +167,7 @@ struct bluefish_consumer
 
     spl::shared_ptr<bvc_wrapper> blue_ = create_blue(config_.device_index);
     spl::shared_ptr<bvc_wrapper> watchdog_bvc_ = create_blue(config_.device_index);
-    
+
     std::mutex         exception_mutex_;
     std::exception_ptr exception_;
 
@@ -239,7 +237,7 @@ struct bluefish_consumer
         // Specify the video channel
         setup_hardware_output_channel(); // ie stream id
 
-        model_name_ = get_card_desc(*blue_.get(), (int)config_.device_index); 
+        model_name_ = get_card_desc(*blue_.get(), (int)config_.device_index);
 
         // disable the video output while we do all the config.
         disable_video_output();
@@ -317,7 +315,7 @@ struct bluefish_consumer
             SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
 #endif
         }
-            
+
         configure_watchdog();
         enable_video_output();
     }
@@ -382,8 +380,8 @@ struct bluefish_consumer
                 blue_prop = EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_timer_start_stop, (unsigned int)0);
                 blue_->set_card_property32(EPOCH_APP_WATCHDOG_TIMER, blue_prop);
             }
-           
-            // Setting up the watchdog properties 
+
+            // Setting up the watchdog properties
             unsigned int watchdog_timer_gpo_port = 1; // GPO port to use: 0 = none, 1 = port A, 2 = port B
             blue_prop =
                 EPOCH_WATCHDOG_TIMER_SET_MACRO(enum_blue_app_watchdog_enable_gpo_on_active, watchdog_timer_gpo_port);

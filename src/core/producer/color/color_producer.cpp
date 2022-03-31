@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../../StdAfx.h"
-
 #include "color_producer.h"
 
 #include <core/frame/draw_frame.h>

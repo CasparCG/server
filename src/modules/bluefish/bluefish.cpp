@@ -20,8 +20,6 @@
  *         James Wise,  james.wise@bluefish444.com
  */
 
-#include "StdAfx.h"
-
 #include "bluefish.h"
 
 #include "consumer/bluefish_consumer.h"

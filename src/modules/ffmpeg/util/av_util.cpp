@@ -10,7 +10,9 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavutil/frame.h>
+#include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
+#include <libavutil/channel_layout.h>
 }
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -121,48 +123,55 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
 
 core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height, std::vector<int>& data_map)
 {
-    // Get linesizes
-    AVPicture dummy_pict;
-    avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
+    int linesize[4] = {};
+    ptrdiff_t linesize1[4] = {};
+    size_t sizes[4] = {};
+
+    FF_RET(av_image_fill_linesizes(linesize, pix_fmt, width), "av_image_fill_linesizes");
+
+    for (int i = 0; i < 4; i++) {
+        linesize1[i] = linesize[i];
+    }
+
+    FF_RET(av_image_fill_plane_sizes(sizes, pix_fmt, height, linesize1), "av_image_fill_plane_sizes");
 
     core::pixel_format_desc desc = get_pixel_format(pix_fmt);
 
     switch (desc.format) {
         case core::pixel_format::gray:
         case core::pixel_format::luma: {
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0], height, 1));
             return desc;
         }
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 3, height, 3));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0] / 3, height, 3));
             return desc;
         }
         case core::pixel_format::bgra:
         case core::pixel_format::argb:
         case core::pixel_format::rgba:
         case core::pixel_format::abgr: {
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 4, height, 4));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0] / 4, height, 4));
             return desc;
         }
         case core::pixel_format::ycbcr:
         case core::pixel_format::ycbcra: {
             // Find chroma height
-            auto size2 = static_cast<int>(dummy_pict.data[2] - dummy_pict.data[1]);
-            auto h2    = size2 / dummy_pict.linesize[1];
+            auto h2 = sizes[1] / linesize[1];
 
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0], height, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[1], h2, 1));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[2], h2, 1));
 
             if (desc.format == core::pixel_format::ycbcra)
-                desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));
+                desc.planes.push_back(core::pixel_format_desc::plane(linesize[3], height, 1));
 
             return desc;
         }
         case core::pixel_format::uyvy: {
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 2, height, 2));
-            desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0] / 4, height, 4));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0] / 2, height, 2));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesize[0] / 4, height, 4));
 
             data_map.clear();
             data_map.push_back(0);

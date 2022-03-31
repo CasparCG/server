@@ -59,6 +59,21 @@
 
 namespace caspar {
 
+std::atomic<bool> sig_exit;
+
+void signal_handler(int signum)
+{
+
+    if (signum == SIGHUP || signum == SIGINT || signum == SIGTERM) {
+        // std::wcout << L"Exit on signal: " << signum << std::endl;
+        sig_exit = true;
+    } else {
+        ::signal(signum, SIG_DFL);
+        boost::stacktrace::safe_dump_to("./backtrace.dump");
+        ::raise(SIGABRT);
+    }
+}
+
 void setup_global_locale()
 {
     boost::locale::generator gen;
@@ -153,18 +168,20 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     })
         .detach();
 
-    future.wait();
+    // *after* initializing CEF
+    ::signal(SIGHUP, signal_handler);
+    ::signal(SIGINT, signal_handler);
+    ::signal(SIGTERM, signal_handler);
+
+    while(future.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
+        if (sig_exit) {
+            shutdown(false);
+        }
+    }
 
     caspar_server.reset();
 
     return future.get();
-}
-
-void signal_handler(int signum)
-{
-    ::signal(signum, SIG_DFL);
-    boost::stacktrace::safe_dump_to("./backtrace.dump");
-    ::raise(SIGABRT);
 }
 
 void terminate_handler()

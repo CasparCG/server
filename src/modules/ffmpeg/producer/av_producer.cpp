@@ -41,6 +41,7 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
+#include <libavutil/channel_layout.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -114,8 +115,6 @@ public:
         }
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
-
-        FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));

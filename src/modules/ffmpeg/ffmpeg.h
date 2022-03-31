@@ -21,6 +21,9 @@
 
 #pragma once
 
+#include <memory>
+#include <core/module_dependencies.h>
+
 namespace caspar { namespace ffmpeg {
 
 void                  init(core::module_dependencies dependencies);

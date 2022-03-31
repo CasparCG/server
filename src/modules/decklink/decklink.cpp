@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "StdAfx.h"
-
 #include "decklink.h"
 #include "util/util.h"
 

@@ -22,6 +22,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 namespace caspar { namespace protocol { namespace cii {
 

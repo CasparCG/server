@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
-
 #include "mixer.h"
 
 #include "../frame/frame.h"
@@ -37,6 +35,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 namespace caspar { namespace core {
 

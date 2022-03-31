@@ -22,6 +22,7 @@
 
 #include "except.h"
 
+#include <boost/bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -48,6 +49,8 @@ namespace logging  = boost::log;
 namespace src      = boost::log::sources;
 namespace sinks    = boost::log::sinks;
 namespace keywords = boost::log::keywords;
+
+using namespace boost::placeholders;
 
 namespace caspar { namespace log {
 

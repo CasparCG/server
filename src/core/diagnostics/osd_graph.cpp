@@ -19,14 +19,13 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
-
 #include "osd_graph.h"
 
 #pragma warning(disable : 4244)
 
 #include "call_context.h"
 
+#include <common/diagnostics/graph.h>
 #include <common/executor.h>
 #include <common/timer.h>
 

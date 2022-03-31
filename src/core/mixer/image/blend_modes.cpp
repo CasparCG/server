@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../../StdAfx.h"
-
 #include "blend_modes.h"
 
 #include <boost/algorithm/string.hpp>

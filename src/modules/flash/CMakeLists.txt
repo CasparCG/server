@@ -10,8 +10,6 @@ set(SOURCES
 		util/swf.cpp
 
 		flash.cpp
-		StdAfx.c
-		StdAfx.cpp
 )
 set(HEADERS
 		interop/axflash.h
@@ -23,11 +21,9 @@ set(HEADERS
 		util/swf.h
 
 		flash.h
-		StdAfx.h
 )
 
 add_library(flash ${SOURCES} ${HEADERS})
-#add_precompiled_header(flash StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

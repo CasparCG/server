@@ -19,9 +19,9 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
-
 #include "AsyncEventServer.h"
+
+#include <common/except.h>
 
 #include <algorithm>
 #include <array>
