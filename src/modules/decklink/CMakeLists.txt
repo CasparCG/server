@@ -7,6 +7,8 @@ set(SOURCES
 		producer/decklink_producer.cpp
 
 		decklink.cpp
+
+		interop/DeckLinkAPIDispatch.cpp
 )
 set(HEADERS
 		consumer/decklink_consumer.h
@@ -17,31 +19,28 @@ set(HEADERS
 
 		decklink.h
 		decklink_api.h
+		
+		interop/DeckLinkAPIConfiguration.h
+		interop/DeckLinkAPIDeckControl.h
+		interop/DeckLinkAPIModes.h
+		interop/DeckLinkAPI_v10_2.h
+		interop/DeckLinkAPI_v7_3.h
+		interop/DeckLinkAPI_v7_9.h
+		interop/DeckLinkAPI_v8_1.h
+		interop/DeckLinkAPI_v9_9.h
+		interop/LinuxCOM.h
+		interop/DeckLinkAPIConfiguration_v10_2.h
+		interop/DeckLinkAPIDiscovery.h
+		interop/DeckLinkAPI.h
+		interop/DeckLinkAPITypes.h
+		interop/DeckLinkAPI_v7_1.h
+		interop/DeckLinkAPI_v7_6.h
+		interop/DeckLinkAPI_v8_0.h
+		interop/DeckLinkAPI_v9_2.h
+		interop/DeckLinkAPIVersion.h
 )
 
-set(OS_SPECIFIC_SOURCES
-		linux_interop/DeckLinkAPIConfiguration.h
-		linux_interop/DeckLinkAPIDeckControl.h
-		linux_interop/DeckLinkAPIDispatch.cpp
-		linux_interop/DeckLinkAPIModes.h
-		linux_interop/DeckLinkAPI_v10_2.h
-		linux_interop/DeckLinkAPI_v7_3.h
-		linux_interop/DeckLinkAPI_v7_9.h
-		linux_interop/DeckLinkAPI_v8_1.h
-		linux_interop/DeckLinkAPI_v9_9.h
-		linux_interop/LinuxCOM.h
-		linux_interop/DeckLinkAPIConfiguration_v10_2.h
-		linux_interop/DeckLinkAPIDiscovery.h
-		linux_interop/DeckLinkAPI.h
-		linux_interop/DeckLinkAPITypes.h
-		linux_interop/DeckLinkAPI_v7_1.h
-		linux_interop/DeckLinkAPI_v7_6.h
-		linux_interop/DeckLinkAPI_v8_0.h
-		linux_interop/DeckLinkAPI_v9_2.h
-		linux_interop/DeckLinkAPIVersion.h
-)
-
-add_library(decklink ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+add_library(decklink ${SOURCES} ${HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

@@ -61,7 +61,6 @@ struct configuration
     {
         internal_keyer,
         external_keyer,
-        external_separate_device_keyer,
         default_keyer = external_keyer
     };
 
@@ -187,67 +186,6 @@ class decklink_frame : public IDeckLinkVideoFrame
     int nb_samples() const { return nb_samples_; }
 };
 
-struct key_video_context : public IDeckLinkVideoOutputCallback
-{
-    const configuration                   config_;
-    com_ptr<IDeckLink>                    decklink_      = get_device(config_.key_device_index());
-    com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_    = iface_cast<IDeckLinkAttributes>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    std::atomic<int64_t>                  scheduled_frames_completed_;
-
-    key_video_context(const configuration& config, const std::wstring& print)
-        : config_(config)
-    {
-        scheduled_frames_completed_ = 0;
-
-        set_latency(configuration_, config.latency, print);
-        set_keyer(attributes_, keyer_, config.keyer, print);
-
-        if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
-            CASPAR_THROW_EXCEPTION(caspar_exception()
-                                   << msg_info(print + L" Failed to set key playback completion callback.")
-                                   << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
-    }
-
-    template <typename Print>
-    void enable_video(BMDDisplayMode display_mode, const Print& print)
-    {
-        if (FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault)))
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable key video output."));
-
-        if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
-            CASPAR_THROW_EXCEPTION(caspar_exception()
-                                   << msg_info(print() + L" Failed to set key playback completion callback.")
-                                   << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
-    }
-
-    virtual ~key_video_context()
-    {
-        if (output_) {
-            output_->StopScheduledPlayback(0, nullptr, 0);
-            output_->DisableVideoOutput();
-        }
-    }
-
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
-
-    HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override { return S_OK; }
-
-    HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame*           completed_frame,
-                                                      BMDOutputFrameCompletionResult result) override
-    {
-        ++scheduled_frames_completed_;
-
-        // Let the fill callback keep the pace, so no scheduling here.
-
-        return S_OK;
-    }
-};
-
 struct decklink_consumer : public IDeckLinkVideoOutputCallback
 {
     const int           channel_index_;
@@ -281,7 +219,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     caspar::timer                       tick_timer_;
     reference_signal_detector           reference_signal_detector_{output_};
     std::atomic<int64_t>                scheduled_frames_completed_{0};
-    std::unique_ptr<key_video_context>  key_context_;
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
@@ -312,10 +249,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         , config_(config)
         , format_desc_(format_desc)
     {
-        if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            key_context_.reset(new key_video_context(config, print()));
-        }
-
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -325,10 +258,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
             graph_->set_color("tick-time-f2", diagnostics::color(0.9f, 0.6f, 0.0f));
-        }
-
-        if (key_context_) {
-            graph_->set_color("key-offset", diagnostics::color(1.0f, 0.0f, 0.0f));
         }
 
         graph_->set_text(print());
@@ -401,20 +330,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                                    << msg_info(print() + L" Failed to set fill playback completion callback.")
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
         }
-
-        if (key_context_) {
-            key_context_->enable_video(display_mode, [this]() { return print(); });
-        }
     }
 
     void start_playback()
     {
         if (FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule fill playback."));
-        }
-
-        if (key_context_ && FAILED(key_context_->output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) {
-            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule key playback."));
         }
     }
 
@@ -451,13 +372,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
             auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
             ++scheduled_frames_completed_;
-
-            if (key_context_) {
-                graph_->set_value(
-                    "key-offset",
-                    static_cast<double>(scheduled_frames_completed_ - key_context_->scheduled_frames_completed_) * 0.1 +
-                        0.5);
-            }
 
             if (result == bmdOutputFrameDisplayedLate) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
@@ -552,30 +466,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
     void schedule_next_video(std::shared_ptr<void> fill, int nb_samples)
     {
-        std::shared_ptr<void> key;
-
-        if (key_context_ || config_.key_only) {
-            key = std::shared_ptr<void>(scalable_aligned_malloc(format_desc_.size, 64), scalable_aligned_free);
-
-            aligned_memshfl(key.get(), fill.get(), format_desc_.size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-
-            if (config_.key_only) {
-                fill = key;
-            }
-        }
-
-        if (key_context_) {
-            auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(key, format_desc_, nb_samples));
-            if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame),
-                                                                 video_scheduled_,
-                                                                 format_desc_.duration * field_count_,
-                                                                 format_desc_.time_scale))) {
-                CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
-            }
-        }
-
-        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(fill, format_desc_, nb_samples));
-        if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame),
+        auto frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(fill, format_desc_, nb_samples));
+        if (FAILED(output_->ScheduleVideoFrame(get_raw(frame),
                                                video_scheduled_,
                                                format_desc_.duration * field_count_,
                                                format_desc_.time_scale))) {
@@ -607,11 +499,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
     std::wstring print() const
     {
-        if (config_.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            return model_name_ + L" [" + std::to_wstring(channel_index_) + L"-" +
-                   std::to_wstring(config_.device_index) + L"&&" + std::to_wstring(config_.key_device_index()) + L"|" +
-                   format_desc_.name + L"]";
-        }
         return model_name_ + L" [" + std::to_wstring(channel_index_) + L"-" + std::to_wstring(config_.device_index) +
                L"|" + format_desc_.name + L"]";
     }
@@ -679,8 +566,6 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (contains_param(L"EXTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::external_keyer;
-    } else if (contains_param(L"EXTERNAL_SEPARATE_DEVICE_KEY", params)) {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
     } else {
         config.keyer = configuration::keyer_t::default_keyer;
     }
@@ -706,8 +591,6 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.keyer = configuration::keyer_t::external_keyer;
     } else if (keyer == L"internal") {
         config.keyer = configuration::keyer_t::internal_keyer;
-    } else if (keyer == L"external_separate_device") {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
     }
 
     auto latency = ptree.get(L"latency", L"default");

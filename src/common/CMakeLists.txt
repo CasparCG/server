@@ -12,9 +12,7 @@ set(SOURCES
 		log.cpp
 		tweener.cpp
 		utf.cpp
-)
 
-set(OS_SPECIFIC_SOURCES
 		os/linux/filesystem.cpp
 		os/linux/prec_timer.cpp
 		os/linux/thread.cpp
@@ -51,7 +49,7 @@ set(HEADERS
 		utf.h
 )
 
-add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+add_library(common ${SOURCES} ${HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)

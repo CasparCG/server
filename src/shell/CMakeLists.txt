@@ -8,21 +8,18 @@ join_list("${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}" "\n" CAS
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${CMAKE_BINARY_DIR}/generated/included_modules.h")
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
-set(OS_SPECIFIC_SOURCES
-	linux_specific.cpp
-)
-
 set(SOURCES
 		casparcg.config
 		main.cpp
 		server.cpp
+		linux_specific.cpp
 )
 set(HEADERS
 		platform_specific.h
 		server.h
 )
 
-add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+add_executable(casparcg ${SOURCES} ${HEADERS})
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})

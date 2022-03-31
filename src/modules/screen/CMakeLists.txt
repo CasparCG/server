@@ -5,6 +5,7 @@ set(SOURCES
 	consumer/screen_consumer.cpp
 
 	screen.cpp
+	util/x11_util.cpp
 )
 set(HEADERS
 	consumer/screen_consumer.h
@@ -13,15 +14,13 @@ set(HEADERS
 	consumer_screen_fragment.h
 
 	screen.h
+	util/x11_util.h
 )
 
 bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
 bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
 
-set(OS_SPECIFIC_HEADERS util/x11_util.h)
-set(OS_SPECIFIC_SOURCES util/x11_util.cpp)
-
-add_library(screen ${SOURCES} ${OS_SPECIFIC_SOURCES} ${HEADERS} ${OS_SPECIFIC_HEADERS})
+add_library(screen ${SOURCES} ${HEADERS})
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
