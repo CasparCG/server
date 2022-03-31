@@ -63,9 +63,10 @@ void caspar_log(const CefRefPtr<CefBrowser>&        browser,
         auto msg = CefProcessMessage::Create(LOG_MESSAGE_NAME);
         msg->GetArgumentList()->SetInt(0, level);
         msg->GetArgumentList()->SetString(1, message);
+
         CefRefPtr<CefFrame> mainFrame = browser->GetMainFrame();
         if (mainFrame) {
-            mainFrame->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(REMOVE_MESSAGE_NAME));
+            mainFrame->SendProcessMessage(PID_BROWSER, msg);
         }
     }
 }
