@@ -310,10 +310,6 @@ struct bluefish_consumer
         // start the thread if required.
         if (dma_present_thread_ == nullptr) {
             dma_present_thread_ = std::make_shared<std::thread>([this] { dma_present_thread_actual(); });
-#if defined(_WIN32)
-            HANDLE handle = (HANDLE)dma_present_thread_->native_handle();
-            SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
-#endif
         }
 
         configure_watchdog();

@@ -24,12 +24,8 @@
 #include <memory>
 #include <mutex>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <dlfcn.h>
 #include <stdlib.h>
-#endif
 
 #include <common/env.h>
 #include <common/except.h>
@@ -58,26 +54,6 @@ NDIlib_v3* load_library()
     auto        dll_path    = boost::filesystem::path(env::initial_folder()) / NDILIB_LIBRARY_NAME;
     const char* runtime_dir = getenv(NDILIB_REDIST_FOLDER);
 
-#ifdef _WIN32
-    auto module = LoadLibrary(dll_path.c_str());
-
-    if (!module && runtime_dir) {
-        dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
-        module   = LoadLibrary(dll_path.c_str());
-    }
-
-    FARPROC NDIlib_v3_load = NULL;
-    if (module) {
-        CASPAR_LOG(info) << L"Loaded " << dll_path;
-        static std::shared_ptr<void> lib(module, FreeLibrary);
-        NDIlib_v3_load = GetProcAddress(module, "NDIlib_v3_load");
-    }
-
-    if (!NDIlib_v3_load) {
-        not_installed();
-    }
-
-#else
     // Try to load the library
     void* hNDILib = dlopen(NDILIB_LIBRARY_NAME, RTLD_LOCAL | RTLD_LAZY);
 
@@ -97,8 +73,6 @@ NDIlib_v3* load_library()
     if (!NDIlib_v3_load) {
         not_installed();
     }
-
-#endif
 
     ndi_lib = (NDIlib_v3*)(NDIlib_v3_load());
 

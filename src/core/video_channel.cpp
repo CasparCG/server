@@ -121,9 +121,6 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
         thread_ = std::thread([=] {
-#ifdef WIN32
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
             set_thread_name(L"channel-" + std::to_wstring(index_));
 
             while (!abort_request_) {

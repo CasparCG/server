@@ -105,8 +105,8 @@ T* get_raw(const CComPtr<T>& ptr)
 
 #else
 
-#include "linux_interop/DeckLinkAPI.h"
-#include "linux_interop/DeckLinkAPIConfiguration_v10_2.h"
+#include "interop/DeckLinkAPI.h"
+#include "interop/DeckLinkAPIConfiguration_v10_2.h"
 #include <memory>
 #include <typeinfo>
 

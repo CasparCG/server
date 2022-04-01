@@ -15,7 +15,6 @@ set(HEADERS
 )
 
 add_library(html ${SOURCES} ${HEADERS})
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
 include_directories(../..)
@@ -27,26 +26,13 @@ set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
 
-if(MSVC)
-	target_link_libraries(html
-		common
-		core
-		accelerator
+target_link_libraries(html
+	common
+	core
 
-		optimized release/libcef
-		optimized release/VS2015/libcef_dll_wrapper
-		debug debug/libcef
-		debug debug/VS2015/libcef_dll_wrapper
-	)
-else()
-	target_link_libraries(html
-		common
-		core
-
-		${CEF_BIN_PATH}/libcef.so
-		${CEF_BIN_PATH}/libcef_dll_wrapper.a
-	)
-endif()
+	${CEF_BIN_PATH}/libcef.so
+	${CEF_BIN_PATH}/libcef_dll_wrapper.a
+)
 
 casparcg_add_include_statement("modules/html/html.h")
 casparcg_add_init_statement("html::init" "html")

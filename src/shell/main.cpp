@@ -19,20 +19,9 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-// tbbmalloc_proxy:
-// Replace the standard memory allocation routines in Microsoft* C/C++ RTL
-// (malloc/free, global new/delete, etc.) with the TBB memory allocator.
-
-#if defined _DEBUG && defined _MSC_VER
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#include <stdlib.h>
-#else
 #include <tbb/tbbmalloc_proxy.h>
-#endif
 
 #include "included_modules.h"
-#include "platform_specific.h"
 #include "server.h"
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -56,6 +45,11 @@
 
 #include <clocale>
 #include <csignal>
+
+#include <exception>
+#include <iostream>
+
+#include <X11/Xlib.h>
 
 namespace caspar {
 
@@ -136,12 +130,6 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     std::thread([&]() mutable {
         std::wstring wcmd;
         while (true) {
-#ifdef WIN32
-            if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
-                std::wcin.clear();
-                continue;
-            }
-#else
             // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
             std::string cmd1;
             if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
@@ -149,8 +137,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
                 continue;
             }
             wcmd = u16(cmd1);
-#endif
-
+            
             // If the cmd is empty, no point trying to parse it
             if (!wcmd.empty()) {
                 if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
@@ -218,17 +205,13 @@ int main(int argc, char** argv)
     }
 
     int return_code = 0;
-    setup_prerequisites();
+
+    XInitThreads();
+    std::set_terminate([] { CASPAR_LOG_CURRENT_EXCEPTION(); });
 
     setup_global_locale();
 
     std::wcout << L"Type \"q\" to close application." << std::endl;
-
-    // Set debug mode.
-    auto debugging_environment = setup_debugging_environment();
-
-    // Increase process priority.
-    increase_process_priority();
 
     std::wstring             config_file_name(L"casparcg.config");
 
@@ -248,9 +231,6 @@ int main(int argc, char** argv)
             }
         }
 
-        if (env::properties().get(L"configuration.debugging.remote", false))
-            wait_for_remote_debugging();
-
         // Start logging to file.
         log::add_file_sink(env::log_folder() + L"caspar");
         std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
@@ -260,9 +240,6 @@ int main(int argc, char** argv)
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();
 
-        // Setup console window.
-        setup_console_window();
-
         std::atomic<bool> should_wait_for_keypress;
         should_wait_for_keypress = false;
         auto should_restart      = run(config_file_name, should_wait_for_keypress);
@@ -270,16 +247,12 @@ int main(int argc, char** argv)
 
         CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
-        if (should_wait_for_keypress)
-            wait_for_keypress();
     } catch (boost::property_tree::file_parser_error& e) {
         CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message()
                           << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
     } catch (user_error&) {
         CASPAR_LOG_CURRENT_EXCEPTION();
         CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
         CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the GitHub project page "

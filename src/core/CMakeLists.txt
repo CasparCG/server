@@ -73,7 +73,6 @@ set(HEADERS
 )
 
 add_library(core ${SOURCES} ${HEADERS})
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
@@ -95,12 +94,6 @@ source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 
-if (MSVC)
-	target_link_libraries(core
-			common
-	)
-else()
-	target_link_libraries(core
-			common
-	)
-endif()
+target_link_libraries(core
+common
+)
