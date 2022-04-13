@@ -31,7 +31,8 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libsfml-dev \
 	libxrandr-dev \
 	libudev-dev \
-	libglu1-mesa-dev \
+	libgl1-mesa-dev \
+	libegl1-mesa-dev \
 	libharfbuzz0b \
 	libpangoft2-1.0-0 \
 	libcairo2 \

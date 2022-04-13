@@ -31,9 +31,8 @@
 #include <common/gl/gl_check.h>
 #include <common/os/thread.h>
 
+#include <EGL/egl.h>
 #include <GL/glew.h>
-
-#include <SFML/Window/Context.hpp>
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
@@ -56,7 +55,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
     using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
     using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
-    sf::Context device_;
+    EGLDisplay eglDisplay_;
+    EGLSurface eglSurface_;
+    EGLContext eglContext_;
 
     std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>  host_pools_;
@@ -74,12 +75,40 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::thread                         thread_;
 
     impl()
-        : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        : eglDisplay_(EGL_NO_DISPLAY), eglSurface_(EGL_NO_SURFACE), eglContext_(EGL_NO_CONTEXT)
         , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
-        device_.setActive(true);
+        eglDisplay_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+        EGLint major, minor;
+        eglInitialize(eglDisplay_, &major, &minor);
+
+        const EGLint configAttribs[] = {
+          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+          EGL_BLUE_SIZE, 8,
+          EGL_GREEN_SIZE, 8,
+          EGL_RED_SIZE, 8,
+          EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+          EGL_NONE
+        };
+
+        const EGLint pbufferAttribs[] = {
+            EGL_WIDTH, 1,
+            EGL_HEIGHT, 1,
+            EGL_NONE,
+        };
+
+        EGLint numConfigs;
+        EGLConfig eglConfig;
+        eglChooseConfig(eglDisplay_, configAttribs, &eglConfig, 1, &numConfigs);
+        eglSurface_ = eglCreatePbufferSurface(eglDisplay_, eglConfig, pbufferAttribs);
+
+        eglBindAPI(EGL_OPENGL_API);
+        EGLContext eglContext_ = eglCreateContext(eglDisplay_, eglConfig, EGL_NO_CONTEXT, NULL);
+
+        eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
 
         if (glewInit() != GLEW_OK) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
@@ -100,13 +129,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
-        device_.setActive(false);
+        eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
         thread_ = std::thread([&] {
-            device_.setActive(true);
+            eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
             set_thread_name(L"OpenGL Device");
             service_.run();
-            device_.setActive(false);
+            eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         });
     }
 
@@ -115,7 +144,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         work_.reset();
         thread_.join();
 
-        device_.setActive(true);
+        eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
 
         for (auto& pool : host_pools_)
             pool.clear();
@@ -126,6 +155,18 @@ struct device::impl : public std::enable_shared_from_this<impl>
         sync_queue_.clear();
 
         GL(glDeleteFramebuffers(1, &fbo_));
+
+        eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+        if (eglContext_ != EGL_NO_CONTEXT) {
+            eglDestroyContext(eglDisplay_, eglContext_);
+        }
+
+        if (eglSurface_ != EGL_NO_SURFACE) {
+            eglDestroySurface(eglDisplay_, eglSurface_);
+        }
+
+        eglTerminate(eglDisplay_);
     }
 
     template <typename Func>
