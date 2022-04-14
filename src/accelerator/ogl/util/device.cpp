@@ -102,16 +102,33 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         EGLint numConfigs;
         EGLConfig eglConfig;
-        eglChooseConfig(eglDisplay_, configAttribs, &eglConfig, 1, &numConfigs);
+        if (!eglChooseConfig(eglDisplay_, configAttribs, &eglConfig, 1, &numConfigs)) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglChooseConfig"));
+        }
+
         eglSurface_ = eglCreatePbufferSurface(eglDisplay_, eglConfig, pbufferAttribs);
+        if (eglSurface_ == EGL_NO_SURFACE) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglCreatePbufferSurface"));
+        }
 
-        eglBindAPI(EGL_OPENGL_API);
-        EGLContext eglContext_ = eglCreateContext(eglDisplay_, eglConfig, EGL_NO_CONTEXT, NULL);
+        if (!eglBindAPI(EGL_OPENGL_API)) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglBindAPI"));
+        }
 
-        eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
+        eglContext_ = eglCreateContext(eglDisplay_, eglConfig, EGL_NO_CONTEXT, NULL);
+        if (eglContext_ == EGL_NO_CONTEXT) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglCreateContext"));
+        }
 
-        if (glewInit() != GLEW_OK) {
-            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+        if (!eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_)) {
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglMakeCurrent"));
+        }
+
+        auto err = glewInit();
+        if (err != GLEW_OK) {
+            std::stringstream str;
+            str << "Failed to initialize GLEW:" << std::endl << glewGetErrorString(err) << std::endl;
+            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info(str.str()));
         }
 
         version_ = u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " +
