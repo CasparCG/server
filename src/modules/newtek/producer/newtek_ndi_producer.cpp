@@ -76,7 +76,7 @@ struct newtek_ndi_producer : public core::frame_producer
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
-    NDIlib_v3*                           ndi_lib_;
+    NDIlib_v5*                           ndi_lib_;
     NDIlib_framesync_instance_t          ndi_framesync_;
     NDIlib_recv_instance_t               ndi_recv_instance_;
     spl::shared_ptr<diagnostics::graph>  graph_;
@@ -118,8 +118,8 @@ struct newtek_ndi_producer : public core::frame_producer
     ~newtek_ndi_producer()
     {
         executor_.stop();
-        ndi_lib_->NDIlib_framesync_destroy(ndi_framesync_);
-        ndi_lib_->NDIlib_recv_destroy(ndi_recv_instance_);
+        ndi_lib_->framesync_destroy(ndi_framesync_);
+        ndi_lib_->recv_destroy(ndi_recv_instance_);
     }
 
     std::wstring print() const override
@@ -151,9 +151,9 @@ struct newtek_ndi_producer : public core::frame_producer
             frame_timer_.restart();
             NDIlib_video_frame_v2_t video_frame;
             NDIlib_audio_frame_v2_t audio_frame;
-            ndi_lib_->NDIlib_framesync_capture_video(
+            ndi_lib_->framesync_capture_video(
                 ndi_framesync_, &video_frame, NDIlib_frame_format_type_progressive);
-            ndi_lib_->NDIlib_framesync_capture_audio(ndi_framesync_,
+            ndi_lib_->framesync_capture_audio(ndi_framesync_,
                                                      &audio_frame,
                                                      format_desc_.audio_sample_rate,
                                                      format_desc_.audio_channels,
@@ -162,9 +162,9 @@ struct newtek_ndi_producer : public core::frame_producer
             CASPAR_SCOPE_EXIT
             {
                 if (video_frame.p_data != nullptr)
-                    ndi_lib_->NDIlib_framesync_free_video(ndi_framesync_, &video_frame);
+                    ndi_lib_->framesync_free_video(ndi_framesync_, &video_frame);
                 if (audio_frame.p_data != nullptr)
-                    ndi_lib_->NDIlib_framesync_free_audio(ndi_framesync_, &audio_frame);
+                    ndi_lib_->framesync_free_audio(ndi_framesync_, &audio_frame);
             };
 
             if (video_frame.p_data != nullptr) {
@@ -198,7 +198,7 @@ struct newtek_ndi_producer : public core::frame_producer
                 audio_frame_32s.p_data = new int32_t[audio_frame.no_samples * audio_frame.no_channels];
                 if (audio_frame.p_data != nullptr) {
                     audio_frame_32s.reference_level = 0;
-                    ndi_lib_->NDIlib_util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
+                    ndi_lib_->util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
                     a_frame->channels    = audio_frame_32s.no_channels;
                     a_frame->sample_rate = audio_frame_32s.sample_rate;
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
@@ -247,8 +247,8 @@ struct newtek_ndi_producer : public core::frame_producer
         }
         std::string receiver_name = "CasparCG " + u8(env::version()) + " NDI Producer " + std::to_string(instance_no_);
         NDI_recv_create_desc.p_ndi_recv_name = receiver_name.c_str();
-        ndi_recv_instance_                   = ndi_lib_->NDIlib_recv_create_v3(&NDI_recv_create_desc);
-        ndi_framesync_                       = ndi_lib_->NDIlib_framesync_create(ndi_recv_instance_);
+        ndi_recv_instance_                   = ndi_lib_->recv_create_v3(&NDI_recv_create_desc);
+        ndi_framesync_                       = ndi_lib_->framesync_create(ndi_recv_instance_);
         CASPAR_VERIFY(ndi_recv_instance_);
     }
 

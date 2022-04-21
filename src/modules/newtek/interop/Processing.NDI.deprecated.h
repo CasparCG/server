@@ -1,27 +1,31 @@
 #pragma once
 
-// NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
-// for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
-// online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. The full NDI SDK may be downloaded at http://ndi.tv/
+// NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
+// the SDK documentation for the description of the full license terms, which are also provided in the file
+// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
+// downloaded at http://ndi.tv/
 //
-//*************************************************************************************************************************************
-// 
-// Copyright(c) 2014-2020, NewTek, inc.
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-// files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
-// merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+//***********************************************************************************************************
 //
-// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE 
-// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+// Copyright (C)2014-2021, NewTek, inc.
 //
-//*************************************************************************************************************************************
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+// associated documentation files(the "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+// following conditions :
+//
+// The above copyright notice and this permission notice shall be included in all copies or substantial
+// portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+// LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+// EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+// THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//***********************************************************************************************************
 
 // This describes a video frame
 PROCESSINGNDILIB_DEPRECATED
@@ -54,7 +58,7 @@ typedef struct NDIlib_video_frame_t
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_video_frame_t(int xres_ = 0, int yres_ = 0, NDIlib_FourCC_video_type_e FourCC_ = NDIlib_FourCC_type_UYVY, int frame_rate_N_ = 30000, int frame_rate_D_ = 1001,
-	                     float picture_aspect_ratio_ = 0.0f, NDIlib_frame_format_type_e frame_format_type_ = NDIlib_frame_format_type_progressive, 
+	                     float picture_aspect_ratio_ = 0.0f, NDIlib_frame_format_type_e frame_format_type_ = NDIlib_frame_format_type_progressive,
 	                     int64_t timecode_ = NDIlib_send_timecode_synthesize, uint8_t* p_data_ = NULL, int line_stride_in_bytes_ = 0);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
@@ -96,7 +100,7 @@ PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_find_instance_t NDIlib_find_create(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // DEPRECATED. This function is basically exactly the following and was confusing to use.
-//    if ((!timeout_in_ms) || (NDIlib_find_wait_for_sources(timeout_in_ms))) 
+//    if ((!timeout_in_ms) || (NDIlib_find_wait_for_sources(timeout_in_ms)))
 //        return NDIlib_find_get_current_sources(p_instance, p_no_sources);
 //    return NULL;
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
@@ -113,14 +117,13 @@ typedef struct NDIlib_recv_create_t
 
 	// The bandwidth setting that you wish to use for this video source. Bandwidth
 	// controlled by changing both the compression level and the resolution of the source.
-	// A good use for low bandwidth is working on WIFI connections. 
+	// A good use for low bandwidth is working on WIFI connections.
 	NDIlib_recv_bandwidth_e bandwidth;
 
-	// When this flag is FALSE, all video that you receive will be progressive. For sources
-	// that provide fields, this is de-interlaced on the receiving side (because we cannot change
-	// what the up-stream source was actually rendering. This is provided as a convenience to
-	// down-stream sources that do not wish to understand fielded video. There is almost no 
-	// performance impact of using this function.
+	// When this flag is FALSE, all video that you receive will be progressive. For sources that provide
+	// fields, this is de-interlaced on the receiving side (because we cannot change what the up-stream
+	// source was actually rendering. This is provided as a convenience to down-stream sources that do not
+	// wish to understand fielded video. There is almost no performance impact of using this function.
 	bool allow_video_fields;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -130,30 +133,30 @@ typedef struct NDIlib_recv_create_t
 
 } NDIlib_recv_create_t;
 
-// This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will continue to work, and be
-// supported for backwards compatibility. If the input parameter is NULL it will be created with default settings and an automatically
-// determined receiver name,
+// This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will
+// continue to work, and be supported for backwards compatibility. If the input parameter is NULL it will be
+// created with default settings and an automatically determined receiver name.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-NDIlib_recv_instance_t NDIlib_recv_create_v2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL) );
+NDIlib_recv_instance_t NDIlib_recv_create_v2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
-// For legacy reasons I called this the wrong thing. For backwards compatibility. If the input parameter is NULL it will be created with 
-// default settings and an automatically determined receiver name.
+// For legacy reasons I called this the wrong thing. For backwards compatibility. If the input parameter is
+// NULL it will be created with default settings and an automatically determined receiver name.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_recv_instance_t NDIlib_recv_create2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
-// This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will continue to work, and be
-// supported for backwards compatibility. This version sets bandwidth to highest and allow fields to true. If the input parameter is NULL it 
-// will be created with default settings and an automatically determined receiver name.
+// This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will
+// continue to work, and be supported for backwards compatibility. This version sets bandwidth to highest and
+// allow fields to true. If the input parameter is NULL it will be created with default settings and an
+// automatically determined receiver name.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_recv_instance_t NDIlib_recv_create(const NDIlib_recv_create_t* p_create_settings);
 
-// This will allow you to receive video, audio and metadata frames.
-// Any of the buffers can be NULL, in which case data of that type
-// will not be captured in this call. This call can be called simultaneously
-// on separate threads, so it is entirely possible to receive audio, video, metadata
-// all on separate threads. This function will return NDIlib_frame_type_none if no
-// data is received within the specified timeout and NDIlib_frame_type_error if the connection is lost.
-// Buffers captured with this must be freed with the appropriate free function below.
+// This will allow you to receive video, audio and metadata frames. Any of the buffers can be NULL, in which
+// case data of that type will not be captured in this call. This call can be called simultaneously on
+// separate threads, so it is entirely possible to receive audio, video, metadata all on separate threads.
+// This function will return NDIlib_frame_type_none if no data is received within the specified timeout and
+// NDIlib_frame_type_error if the connection is lost. Buffers captured with this must be freed with the
+// appropriate free function below.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_frame_type_e NDIlib_recv_capture(
 NDIlib_recv_instance_t p_instance,   // The library instance
@@ -174,14 +177,14 @@ void NDIlib_recv_free_audio(NDIlib_recv_instance_t p_instance, const NDIlib_audi
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_send_send_video(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data);
 
-// This will add a video frame and will return immediately, having scheduled the frame to be displayed. 
-// All processing and sending of the video will occur asynchronously. The memory accessed by NDIlib_video_frame_t 
-// cannot be freed or re-used by the caller until a synchronizing event has occurred. In general the API is better
-// able to take advantage of asynchronous processing than you might be able to by simple having a separate thread
-// to submit frames. 
+// This will add a video frame and will return immediately, having scheduled the frame to be displayed. All
+// processing and sending of the video will occur asynchronously. The memory accessed by NDIlib_video_frame_t
+// cannot be freed or re-used by the caller until a synchronizing event has occurred. In general the API is
+// better able to take advantage of asynchronous processing than you might be able to by simple having a
+// separate thread to submit frames.
 //
-// This call is particularly beneficial when processing BGRA video since it allows any color conversion, compression
-// and network sending to all be done on separate threads from your main rendering thread. 
+// This call is particularly beneficial when processing BGRA video since it allows any color conversion,
+// compression and network sending to all be done on separate threads from your main rendering thread.
 //
 // Synchronizing events are :
 // - a call to NDIlib_send_send_video
@@ -195,22 +198,22 @@ void NDIlib_send_send_video_async(NDIlib_send_instance_t p_instance, const NDIli
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_send_send_audio(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_t* p_audio_data);
 
-// Convert an planar floating point audio buffer into a interleaved short audio buffer. 
+// Convert an planar floating point audio buffer into a interleaved short audio buffer.
 // IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_util_audio_to_interleaved_16s(const NDIlib_audio_frame_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst);
 
-// Convert an interleaved short audio buffer audio buffer into a planar floating point one. 
+// Convert an interleaved short audio buffer audio buffer into a planar floating point one.
 // IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_util_audio_from_interleaved_16s(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_t* p_dst);
 
-// Convert an planar floating point audio buffer into a interleaved floating point audio buffer. 
+// Convert an planar floating point audio buffer into a interleaved floating point audio buffer.
 // IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_util_audio_to_interleaved_32f(const NDIlib_audio_frame_t* p_src, NDIlib_audio_frame_interleaved_32f_t* p_dst);
 
-// Convert an interleaved floating point audio buffer into a planar floating point one. 
+// Convert an interleaved floating point audio buffer into a planar floating point one.
 // IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_util_audio_from_interleaved_32f(const NDIlib_audio_frame_interleaved_32f_t* p_src, NDIlib_audio_frame_t* p_dst);

@@ -118,6 +118,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 
     // Use separate thread for the blocking console input, will be terminated
     // anyway when the main thread terminates.
+
     std::thread([&]() mutable {
         std::wstring wcmd;
         while (true) {
@@ -130,6 +131,10 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
             // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
             std::string cmd1;
             if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
+                if (std::cin.eof()) {
+                    std::cin.clear();
+                    break;
+                }
                 std::cin.clear();
                 continue;
             }
@@ -152,7 +157,6 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
         }
     })
         .detach();
-
     future.wait();
 
     caspar_server.reset();

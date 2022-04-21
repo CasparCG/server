@@ -49,6 +49,8 @@ namespace src      = boost::log::sources;
 namespace sinks    = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 
+using namespace boost::placeholders;
+
 namespace caspar { namespace log {
 
 std::string current_exception_diagnostic_information()

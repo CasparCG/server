@@ -199,7 +199,7 @@ public:
 
                         {
                             boost::unique_lock<boost::mutex> lock(output_mutex);
-                            //output_cond.wait(lock, [&]() { return output.size() < 8; });
+                            output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
                             output.push(std::move(av_frame));
                         }
                     }
@@ -627,7 +627,7 @@ struct AVProducer::Impl
     boost::condition_variable buffer_cond_;
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 4;
-  
+
     boost::optional<caspar::executor> video_executor_;
     boost::optional<caspar::executor> audio_executor_;
 
