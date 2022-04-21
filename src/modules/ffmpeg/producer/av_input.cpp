@@ -55,7 +55,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
                     if (ret == AVERROR_EXIT) {
                         break;
-                    } else if (ret === AVERROR(EAGAIN)) {
+                    } else if (ret == AVERROR(EAGAIN)) {
                         boost::this_thread::yield();
                     } else if (ret == AVERROR_EOF) {
                         eof_   = true;
