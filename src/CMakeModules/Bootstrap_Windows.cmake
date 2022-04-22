@@ -1,3 +1,5 @@
+cmake_minimum_required (VERSION 3.10)
+
 find_package(Git)
 
 set(CONFIG_VERSION_GIT_HASH "N/A")
