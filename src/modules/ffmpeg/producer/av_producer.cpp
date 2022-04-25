@@ -4,6 +4,7 @@
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
+#include "common/log.h"
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
@@ -14,6 +15,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <cassert>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/except.h>
@@ -41,6 +43,8 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
+#include <libavutil/hwcontext.h>
+#include <libavutil/buffer.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -72,6 +76,123 @@ struct Frame
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
+class HWDec {
+    enum AVHWDeviceType type;
+    AVBufferRef *hw_device_ctx = NULL;
+    std::string name;
+public:
+    HWDec()
+       : type(AV_HWDEVICE_TYPE_NONE)
+    {
+        //TODO:
+        //- allow user to configure to specific hwaccel
+        //- allow user to disable hwaccell
+        //- oterwise fallback to auto selection (below)
+        //- allow user to specify hw device
+        auto tmp_type = type;
+        bool tried_cuda = false;
+        bool tried_mfx = false;
+        while ((tmp_type = av_hwdevice_iterate_types(tmp_type)) != AV_HWDEVICE_TYPE_NONE)
+        {
+            if (tmp_type != AV_HWDEVICE_TYPE_NONE)
+            {
+                if (tmp_type == AV_HWDEVICE_TYPE_CUDA)
+                    tried_cuda = true;
+                if (tmp_type == AV_HWDEVICE_TYPE_QSV)
+                    tried_mfx = true;
+                AVBufferRef *tmp_device = NULL;
+                CASPAR_LOG(info) << L"Found HW Decoding device: " << av_hwdevice_get_type_name(tmp_type) << L" attempting to use it.";
+                if (av_hwdevice_ctx_create(&tmp_device, tmp_type, nullptr, nullptr, 0) != 0) {
+                    continue;
+                }
+                CASPAR_LOG(info) << L"Succefully opened: " << av_hwdevice_get_type_name(tmp_type);
+                if (hw_device_ctx) {
+                    av_buffer_unref(&hw_device_ctx);
+                }
+                hw_device_ctx = tmp_device;
+                type = tmp_type;
+                if (type == AV_HWDEVICE_TYPE_CUDA || type == AV_HWDEVICE_TYPE_QSV)
+                    break;
+                if (type == AV_HWDEVICE_TYPE_VAAPI && tried_mfx && tried_cuda)
+                    break;
+            }
+        }
+        if (type != AV_HWDEVICE_TYPE_NONE) {
+            CASPAR_LOG(info) << L"Settling on: " << av_hwdevice_get_type_name(tmp_type) << L" for hardware accel";
+            assert(hw_device_ctx != NULL);
+        }
+    }
+
+    const enum AVHWDeviceType getType() const { return type; }
+    const enum AVPixelFormat getPixFormat(AVCodec * ctx) const {
+        if (type == AV_HWDEVICE_TYPE_NONE)
+            return AV_PIX_FMT_NONE;
+
+        for (int i=0;; i++)
+        {
+            const AVCodecHWConfig *config = avcodec_get_hw_config(ctx, i);
+            if (!config)
+                return AV_PIX_FMT_NONE;
+
+            if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX  &&
+                config->device_type == type) {
+
+                return config->pix_fmt;
+            }
+        }
+    }
+    AVBufferRef *getContext() const { return av_buffer_ref(hw_device_ctx); }
+};
+
+std::weak_ptr<HWDec> g_hwdec;
+std::mutex            g_hwdec_mutex;
+enum AVPixelFormat    g_hwdec_format;
+
+std::shared_ptr<HWDec> get_hwdec()
+{
+    std::lock_guard<std::mutex> lock(g_hwdec_mutex);
+    auto                        existing_hwdec = g_hwdec.lock();
+
+    if (existing_hwdec) {
+        return existing_hwdec;
+    }
+
+    existing_hwdec.reset(new HWDec());
+
+    g_hwdec = existing_hwdec;
+
+    return existing_hwdec;
+}
+
+class HWPixFmtReturn {
+    AVPixelFormat format_;
+public:
+    HWPixFmtReturn(AVPixelFormat format) : format_(format) {}
+
+    enum AVPixelFormat getHWFormat(AVCodecContext *ctx,
+                                            const enum AVPixelFormat *pix_fmts)
+    {
+        const enum AVPixelFormat *p;
+
+        for (p = pix_fmts; *p != -1; p++) {
+            if (*p == format_)
+                return *p;
+        }
+        CASPAR_LOG(error) << "Failed to get HW surface format.";
+        return AV_PIX_FMT_NONE;
+    }
+};
+
+static enum AVPixelFormat get_hw_format(AVCodecContext *ctx,
+                                        const enum AVPixelFormat *pix_fmts)
+{
+    auto check = static_cast<HWPixFmtReturn *>(ctx->opaque);
+    auto fmt = check->getHWFormat(ctx, pix_fmts);
+    CASPAR_LOG(info) << "Returning fmt: " << fmt;
+    return fmt;
+}
+
+
 class Decoder
 {
     Decoder(const Decoder&) = delete;
@@ -93,18 +214,28 @@ class Decoder
 
     boost::thread thread;
 
+    spl::shared_ptr<HWDec> hwdec_;
+    bool using_hwdec = false;
+    enum AVPixelFormat hwdec_pix_fmt;
+    HWPixFmtReturn hw_fmt_check;
+
 public:
     std::shared_ptr<AVCodecContext> ctx;
 
     Decoder() = default;
 
     explicit Decoder(AVStream* stream)
-        : st(stream)
+        : st(stream),
+        hwdec_(get_hwdec()),
+        hw_fmt_check(AV_PIX_FMT_NONE)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!codec) {
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
         }
+
+        hwdec_pix_fmt = hwdec_->getPixFormat(codec);
+        using_hwdec = (hwdec_pix_fmt != AV_PIX_FMT_NONE);
 
         ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
                                               [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
@@ -114,6 +245,16 @@ public:
         }
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
+
+        if (using_hwdec) {
+            hw_fmt_check = HWPixFmtReturn(hwdec_pix_fmt);
+            assert(hwdec_->getContext() != null);
+            ctx->hw_device_ctx = hwdec_->getContext();
+            ctx->opaque = &hw_fmt_check;
+            //TODO: figure out how to get correct format for all hwaccells (NV12 tested to work with cuvid)
+            ctx->pix_fmt = AV_PIX_FMT_NV12;
+            ctx->get_format = get_hw_format;
+        }
 
         FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
@@ -169,6 +310,18 @@ public:
                         }
                     } else {
                         FF_RET(ret, "avcodec_receive_frame");
+
+                        //TODO: skip download if we run filters on GPU as well
+                        if (using_hwdec && av_frame->format == hwdec_pix_fmt)
+                        {
+                            auto tmp_frame = alloc_frame();
+                            //Must match previously declared format
+                            tmp_frame->format = AV_PIX_FMT_NV12;
+                            FF(av_hwframe_transfer_data(tmp_frame.get(), av_frame.get(), 0));
+                            FF(av_frame_copy_props(tmp_frame.get(), av_frame.get()));
+                            av_frame = tmp_frame;
+                            //TODO: figure out how to get the "proper" best_effort_timestamp (in my tests vdpau & vaapi return a counter)
+                        }
 
                         // NOTE This is a workaround for DVCPRO HD.
                         if (av_frame->width > 1024 && av_frame->interlaced_frame) {
@@ -292,7 +445,7 @@ struct Filter
             if (filter_spec.empty()) {
                 filter_spec = "null";
             }
-
+            //TODO: use hw deint/scale when available & download from frame surface here/or transfer to OpenGL directly (fastest)
             auto deint = u8(
                 env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.auto-deinterlace", L"interlaced"));
 
@@ -507,6 +660,7 @@ struct Filter
                                               AV_PIX_FMT_YUVA422P,
                                               AV_PIX_FMT_YUVA420P,
                                               AV_PIX_FMT_UYVY422,
+                                              AV_PIX_FMT_NV12,
                                               AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
