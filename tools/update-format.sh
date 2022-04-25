@@ -7,7 +7,7 @@ SOURCE_FILES=`find ./src/ \( -name \*.cpp -type f -or -name \*.h -type f \) -not
 BAD_FILES=0
 for SOURCE_FILE in $SOURCE_FILES
 do
-  export FORMATTING_ISSUE_COUNT=`clang-format-6.0 $CLANG_ARGS $SOURCE_FILE | grep offset | wc -l`
+  export FORMATTING_ISSUE_COUNT=`clang-format $CLANG_ARGS $SOURCE_FILE | grep offset | wc -l`
   if [ "$FORMATTING_ISSUE_COUNT" -gt "0" ]; then
     echo "Source file $SOURCE_FILE contains formatting issues."
     BAD_FILES=1

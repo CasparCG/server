@@ -171,7 +171,6 @@ class transition_producer : public frame_producer
                 dst_frame.transform().image_transform.clip_scale[0] = delta;
             } else {
                 dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
-
             }
         }
 

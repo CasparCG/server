@@ -55,8 +55,8 @@ class amcp_command_repository
                                                  std::list<std::wstring>& tokens) const;
 
     std::shared_ptr<AMCPCommand>
-                                        parse_command(IO::ClientInfoPtr client, std::list<std::wstring> tokens, const std::wstring& request_id) const;
-    bool                                check_channel_lock(IO::ClientInfoPtr client, int channel_index) const;
+         parse_command(IO::ClientInfoPtr client, std::list<std::wstring> tokens, const std::wstring& request_id) const;
+    bool check_channel_lock(IO::ClientInfoPtr client, int channel_index) const;
 
     const std::vector<channel_context>& channels() const;
 

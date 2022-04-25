@@ -308,7 +308,6 @@ struct server::impl
 
     void setup_controllers(const boost::property_tree::wptree& pt)
     {
-
         using boost::property_tree::wptree;
         for (auto& xml_controller : pt | witerate_children(L"configuration.controllers") | welement_context_iteration) {
             auto name     = xml_controller.first;

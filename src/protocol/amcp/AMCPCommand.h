@@ -89,11 +89,11 @@ class AMCPCommand
     const std::wstring      request_id_;
 
   public:
-    AMCPCommand(const command_context&     ctx,
+    AMCPCommand(const command_context&   ctx,
                 const amcp_command_func& command,
                 int                      min_num_params,
                 const std::wstring&      name,
-                const std::wstring& request_id)
+                const std::wstring&      request_id)
         : ctx_(ctx)
         , command_(command)
         , min_num_params_(min_num_params)
@@ -104,10 +104,7 @@ class AMCPCommand
 
     using ptr_type = std::shared_ptr<AMCPCommand>;
 
-    const std::wstring Execute()
-    {
-        return command_(ctx_);
-    }
+    const std::wstring Execute() { return command_(ctx_); }
 
     int minimum_parameters() const { return min_num_params_; }
 

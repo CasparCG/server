@@ -33,8 +33,8 @@
 #include <core/video_format.h>
 
 #include <common/assert.h>
-#include <common/executor.h>
 #include <common/diagnostics/graph.h>
+#include <common/executor.h>
 #include <common/future.h>
 #include <common/param.h>
 #include <common/timer.h>
@@ -95,7 +95,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         diagnostics::register_graph(graph_);
     }
 
-    ~newtek_ndi_consumer() {
+    ~newtek_ndi_consumer()
+    {
         if (send_thread.joinable()) {
             send_thread.interrupt();
             send_thread.join();
@@ -113,7 +114,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
         auto tmp_name                   = u8(name_);
         NDI_send_create_desc.p_ndi_name = tmp_name.c_str();
-        //NDI defaults to clocking on video, however it's very jittery.
+        // NDI defaults to clocking on video, however it's very jittery.
         NDI_send_create_desc.clock_video = false;
         NDI_send_create_desc.clock_audio = false;
 
@@ -144,15 +145,14 @@ struct newtek_ndi_consumer : public core::frame_consumer
         graph_->set_text(print());
         // CASPAR_VERIFY(ndi_send_instance_);
 
-        send_thread =  boost::thread([=]()
-        {
+        send_thread = boost::thread([=]() {
             set_thread_realtime_priority();
             set_thread_name(L"NDI-SEND: " + name_);
             CASPAR_LOG(info) << L"Starting ndi-send thread for ndi output: " << name_;
             try {
-                auto buffer_size  = buffer_.size();
-                //Buffer a few frames to keep NDI going when caspar is slow on a few frames
-                //This can be removed when CasparCG doesn't periodally slows down on frames
+                auto buffer_size = buffer_.size();
+                // Buffer a few frames to keep NDI going when caspar is slow on a few frames
+                // This can be removed when CasparCG doesn't periodally slows down on frames
                 while (!send_thread.interruption_requested()) {
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
@@ -165,12 +165,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     }
                 }
 
-                //Use steady clock to generate a near perfect NDI tick time.
+                // Use steady clock to generate a near perfect NDI tick time.
                 auto frametimeUs = static_cast<int>(1000000 / format_desc_.fps);
-                auto time_point = std::chrono::steady_clock::now();
+                auto time_point  = std::chrono::steady_clock::now();
                 time_point += std::chrono::microseconds(frametimeUs);
-                while (!send_thread.interruption_requested())
-                {
+                while (!send_thread.interruption_requested()) {
                     core::const_frame frame;
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
@@ -205,7 +204,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     time_point += std::chrono::microseconds(frametimeUs);
                 }
             } catch (boost::thread_interrupted) {
-                //NOTHING
+                // NOTHING
             }
         });
     }
@@ -215,11 +214,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
-	        {
-            	std::unique_lock<std::mutex> lock(buffer_mutex_);
-            	buffer_.push(std::move(frame));
-	        }
-	        worker_cond_.notify_all();
+            {
+                std::unique_lock<std::mutex> lock(buffer_mutex_);
+                buffer_.push(std::move(frame));
+            }
+            worker_cond_.notify_all();
             return true;
         });
     }

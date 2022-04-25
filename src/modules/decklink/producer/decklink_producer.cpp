@@ -402,8 +402,8 @@ class decklink_producer : public IDeckLinkInputCallback
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
-    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE   Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents,
                                                       IDeckLinkDisplayMode*            newDisplayMode,

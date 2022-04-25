@@ -108,8 +108,7 @@ class destroy_consumer_proxy : public frame_consumer
 
             pointer_guard.reset();
             counter--;
-        })
-            .detach();
+        }).detach();
     }
 
     std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }

@@ -49,8 +49,8 @@
 #include <common/env.h>
 #include <common/executor.h>
 #include <common/future.h>
-#include <common/scope_exit.h>
 #include <common/prec_timer.h>
+#include <common/scope_exit.h>
 #include <common/timer.h>
 
 #include <boost/algorithm/string.hpp>
@@ -160,10 +160,10 @@ std::mutex& get_global_init_destruct_mutex()
 
 std::wstring url_from_path(std::wstring in)
 {
-    DWORD        out_length = INTERNET_MAX_URL_LENGTH * 2;
-    PWSTR        out_buf = (PWSTR)malloc(out_length + 4);
+    DWORD out_length = INTERNET_MAX_URL_LENGTH * 2;
+    PWSTR out_buf    = (PWSTR)malloc(out_length + 4);
     CASPAR_SCOPE_EXIT { free(out_buf); };
-    HRESULT      ret     = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
+    HRESULT ret = UrlCreateFromPathW(in.c_str(), out_buf, &out_length, NULL);
     if (SUCCEEDED(ret)) {
         return std::wstring(out_buf);
     } else {
@@ -593,8 +593,8 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
     swf_t::header_t header(filename);
 
-    const auto url = url_from_path(filename);
-    auto producer = spl::make_shared<flash_producer>(
+    const auto url      = url_from_path(filename);
+    auto       producer = spl::make_shared<flash_producer>(
         dependencies.frame_factory, dependencies.format_desc, url, header.frame_width, header.frame_height);
 
     producer->call({L"start_rendering"}).get();

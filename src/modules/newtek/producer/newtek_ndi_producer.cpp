@@ -151,13 +151,12 @@ struct newtek_ndi_producer : public core::frame_producer
             frame_timer_.restart();
             NDIlib_video_frame_v2_t video_frame;
             NDIlib_audio_frame_v2_t audio_frame;
-            ndi_lib_->framesync_capture_video(
-                ndi_framesync_, &video_frame, NDIlib_frame_format_type_progressive);
+            ndi_lib_->framesync_capture_video(ndi_framesync_, &video_frame, NDIlib_frame_format_type_progressive);
             ndi_lib_->framesync_capture_audio(ndi_framesync_,
-                                                     &audio_frame,
-                                                     format_desc_.audio_sample_rate,
-                                                     format_desc_.audio_channels,
-                                                     format_desc_.audio_cadence[++cadence_counter_ %= cadence_length_]);
+                                              &audio_frame,
+                                              format_desc_.audio_sample_rate,
+                                              format_desc_.audio_channels,
+                                              format_desc_.audio_cadence[++cadence_counter_ %= cadence_length_]);
 
             CASPAR_SCOPE_EXIT
             {

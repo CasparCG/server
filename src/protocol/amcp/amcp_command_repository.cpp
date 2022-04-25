@@ -44,8 +44,8 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
 
     // Start with subcommand syntax like MIXER CLEAR etc
     if (!subcommand.empty()) {
-        auto fullname      = name + L" " + subcommand;
-        auto subcmd = commands.find(fullname);
+        auto fullname = name + L" " + subcommand;
+        auto subcmd   = commands.find(fullname);
 
         if (subcmd != commands.end()) {
             tokens.pop_front();
@@ -99,7 +99,6 @@ parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, in
     }
 }
 
-
 struct amcp_command_repository::impl
 {
     std::vector<channel_context>                         channels;
@@ -137,11 +136,10 @@ struct amcp_command_repository::impl
         }
     }
 
-
     AMCPCommand::ptr_type create_command(const std::wstring&      name,
                                          const std::wstring&      request_id,
-                                                                  IO::ClientInfoPtr        client,
-                                                                  std::list<std::wstring>& tokens) const
+                                         IO::ClientInfoPtr        client,
+                                         std::list<std::wstring>& tokens) const
     {
         command_context ctx(std::move(client),
                             channel_context(),
@@ -160,11 +158,11 @@ struct amcp_command_repository::impl
     }
 
     AMCPCommand::ptr_type create_channel_command(const std::wstring&      name,
-        const std::wstring& request_id,
-                                                                          IO::ClientInfoPtr        client,
-                                                                          unsigned int             channel_index,
-                                                                          int                      layer_index,
-                                                                          std::list<std::wstring>& tokens) const
+                                                 const std::wstring&      request_id,
+                                                 IO::ClientInfoPtr        client,
+                                                 unsigned int             channel_index,
+                                                 int                      layer_index,
+                                                 std::list<std::wstring>& tokens) const
     {
         auto channel = channels.at(channel_index);
 

@@ -63,7 +63,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         if (0 == depth)
             routeSources.clear();
 
-        if (std::find_if(layerVec.begin(), layerVec.end(), [l](std::pair<int, bool> p) { return p.first == l; }) != layerVec.end()) {
+        if (std::find_if(layerVec.begin(), layerVec.end(), [l](std::pair<int, bool> p) { return p.first == l; }) !=
+            layerVec.end()) {
             return;
         }
 
@@ -88,7 +89,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             layerOK = false;
         }
 
-        if (std::find_if(layerVec.begin(), layerVec.end(), [l](std::pair<int, bool> p) { return p.first == l; }) == layerVec.end()) {
+        if (std::find_if(layerVec.begin(), layerVec.end(), [l](std::pair<int, bool> p) { return p.first == l; }) ==
+            layerVec.end()) {
             layerVec.push_back(std::make_pair(l, layerOK));
         }
     }
@@ -140,8 +142,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto& layer = p->second;
                     auto& tween = tweens_[p->first];
 
-                    layer_frame res    = {};
-                    res.foreground     = draw_frame::push(l.second ? layer.receive(format_desc, nb_samples) : draw_frame(), tween.fetch());
+                    layer_frame res = {};
+                    res.foreground  = draw_frame::push(l.second ? layer.receive(format_desc, nb_samples) : draw_frame(),
+                                                      tween.fetch());
                     res.has_background = layer.has_background();
                     if (std::find(fetch_background.begin(), fetch_background.end(), p->first) !=
                         fetch_background.end()) {
@@ -230,8 +233,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
-    
-	std::future<void> preview(int index)
+
+    std::future<void> preview(int index)
     {
         return executor_.begin_invoke([=] { get_layer(index).preview(); });
     }

@@ -155,8 +155,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
                 amcp->parse(wcmd);
             }
         }
-    })
-        .detach();
+    }).detach();
     future.wait();
 
     caspar_server.reset();
@@ -217,7 +216,7 @@ int main(int argc, char** argv)
     // Increase process priority.
     increase_process_priority();
 
-    std::wstring             config_file_name(L"casparcg.config");
+    std::wstring config_file_name(L"casparcg.config");
 
     try {
         // Configure environment properties from configuration.

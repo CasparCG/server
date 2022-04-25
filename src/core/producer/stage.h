@@ -65,12 +65,12 @@ class stage final
 
     std::future<void> apply_transforms(const std::vector<transform_tuple_t>& transforms);
     std::future<void>
-                                 apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration, const tweener& tween);
+    apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration, const tweener& tween);
     std::future<void>            clear_transforms(int index);
     std::future<void>            clear_transforms();
     std::future<frame_transform> get_current_transform(int index);
     std::future<void>
-                              load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false);
+    load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false);
     std::future<void>         preview(int index);
     std::future<void>         pause(int index);
     std::future<void>         resume(int index);

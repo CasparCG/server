@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <string>
 #include <list>
+#include <string>
 
 namespace caspar { namespace IO {
 

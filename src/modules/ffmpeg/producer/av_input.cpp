@@ -8,8 +8,8 @@
 #include <common/param.h>
 #include <common/scope_exit.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/filesystem.hpp>
 
 #include <set>
 

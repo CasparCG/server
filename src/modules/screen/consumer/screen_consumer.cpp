@@ -228,10 +228,10 @@ struct screen_consumer
 
         thread_ = std::thread([this] {
             try {
-                const auto window_style = config_.borderless ? sf::Style::None
-                                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                                : sf::Style::Fullscreen;
-                sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+                const auto    window_style = config_.borderless ? sf::Style::None
+                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                : sf::Style::Fullscreen;
+                sf::VideoMode desktop      = sf::VideoMode::getDesktopMode();
                 sf::VideoMode mode(
                     config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
                 window_.create(mode,

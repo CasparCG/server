@@ -13,8 +13,8 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <boost/thread.hpp>
 #include <boost/optional.hpp>
+#include <boost/thread.hpp>
 
 struct AVPacket;
 struct AVFormatContext;

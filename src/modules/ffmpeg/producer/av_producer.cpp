@@ -17,10 +17,10 @@
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/except.h>
+#include <common/executor.h>
 #include <common/os/thread.h>
 #include <common/scope_exit.h>
 #include <common/timer.h>
-#include <common/executor.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -77,23 +77,23 @@ class Decoder
     Decoder(const Decoder&) = delete;
     Decoder& operator=(const Decoder&) = delete;
 
-    AVStream* st = nullptr;
-    int64_t next_pts = AV_NOPTS_VALUE;
-    std::atomic<bool> eof = { false };
+    AVStream*         st       = nullptr;
+    int64_t           next_pts = AV_NOPTS_VALUE;
+    std::atomic<bool> eof      = {false};
 
     std::queue<std::shared_ptr<AVPacket>> input;
-    mutable boost::mutex input_mutex;
-    boost::condition_variable input_cond;
-    int input_capacity = 2;
+    mutable boost::mutex                  input_mutex;
+    boost::condition_variable             input_cond;
+    int                                   input_capacity = 2;
 
     std::queue<std::shared_ptr<AVFrame>> output;
-    mutable boost::mutex output_mutex;
-    boost::condition_variable output_cond;
-    int output_capacity = 8;
+    mutable boost::mutex                 output_mutex;
+    boost::condition_variable            output_cond;
+    int                                  output_capacity = 8;
 
     boost::thread thread;
 
-public:
+  public:
     std::shared_ptr<AVCodecContext> ctx;
 
     Decoder() = default;
@@ -140,12 +140,11 @@ public:
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
-        thread = boost::thread([=]()
-        {
+        thread = boost::thread([=]() {
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
-                    auto ret = avcodec_receive_frame(ctx.get(), av_frame.get());
+                    auto ret      = avcodec_receive_frame(ctx.get(), av_frame.get());
 
                     if (ret == AVERROR(EAGAIN)) {
                         std::shared_ptr<AVPacket> packet;
@@ -159,8 +158,8 @@ public:
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
-                        next_pts = AV_NOPTS_VALUE;
-                        eof = true;
+                        next_pts      = AV_NOPTS_VALUE;
+                        eof           = true;
 
                         {
                             boost::unique_lock<boost::mutex> lock(output_mutex);
@@ -181,13 +180,13 @@ public:
                         auto duration_pts = av_frame->pkt_duration;
                         if (duration_pts <= 0) {
                             if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-                                const auto ticks =
-                                    av_stream_get_parser(st) ? av_stream_get_parser(st)->repeat_pict + 1 : ctx->ticks_per_frame;
-                                duration_pts = static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks /
-                                    ctx->framerate.num / ctx->ticks_per_frame;
-                                duration_pts = av_rescale_q(duration_pts, { 1, AV_TIME_BASE }, st->time_base);
+                                const auto ticks = av_stream_get_parser(st) ? av_stream_get_parser(st)->repeat_pict + 1
+                                                                            : ctx->ticks_per_frame;
+                                duration_pts     = static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks /
+                                               ctx->framerate.num / ctx->ticks_per_frame;
+                                duration_pts = av_rescale_q(duration_pts, {1, AV_TIME_BASE}, st->time_base);
                             } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-                                duration_pts = av_rescale_q(av_frame->nb_samples, { 1, ctx->sample_rate }, st->time_base);
+                                duration_pts = av_rescale_q(av_frame->nb_samples, {1, ctx->sample_rate}, st->time_base);
                             }
                         }
 
@@ -570,7 +569,7 @@ struct Filter
 
         auto av_frame = alloc_frame();
         auto ret      = nb_samples >= 0 ? av_buffersink_get_samples(sink, av_frame.get(), nb_samples)
-                                   : av_buffersink_get_frame(sink, av_frame.get());
+                                        : av_buffersink_get_frame(sink, av_frame.get());
 
         if (ret == AVERROR(EAGAIN)) {
             return false;
@@ -802,13 +801,12 @@ struct AVProducer::Impl
 
                 std::vector<std::future<bool>> futures;
 
-
                 if (!video_filter_.frame) {
                     futures.push_back(video_executor_->begin_invoke([&]() { return video_filter_(); }));
                 }
 
                 if (!audio_filter_.frame) {
-                    futures.push_back(audio_executor_->begin_invoke([&]() { return audio_filter_(audio_cadence[0]);  }));
+                    futures.push_back(audio_executor_->begin_invoke([&]() { return audio_filter_(audio_cadence[0]); }));
                 }
 
                 for (auto& future : futures) {
@@ -1027,8 +1025,7 @@ struct AVProducer::Impl
   private:
     bool want_packet()
     {
-        return std::any_of(
-            decoders_.begin(), decoders_.end(), [](auto& p) { return p.second.want_packet(); });
+        return std::any_of(decoders_.begin(), decoders_.end(), [](auto& p) { return p.second.want_packet(); });
     }
 
     bool schedule()

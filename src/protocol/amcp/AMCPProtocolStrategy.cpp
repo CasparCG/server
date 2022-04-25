@@ -119,8 +119,8 @@ struct AMCPProtocolStrategy::impl
 
         std::wstring request_id;
         std::wstring command_name;
-        error_state err = parse_command_string(client, tokens, request_id, command_name);
-        if (err!= error_state::no_error) {
+        error_state  err = parse_command_string(client, tokens, request_id, command_name);
+        if (err != error_state::no_error) {
             std::wstringstream answer;
 
             if (!request_id.empty())
@@ -143,19 +143,18 @@ struct AMCPProtocolStrategy::impl
                     answer << L"500 FAILED\r\n";
                     break;
                 default:
-                    CASPAR_THROW_EXCEPTION(programming_error()
-                                           << msg_info(L"Unhandled error_state enum constant " +
-                                                       std::to_wstring(static_cast<int>(err))));
+                    CASPAR_THROW_EXCEPTION(programming_error() << msg_info(L"Unhandled error_state enum constant " +
+                                                                           std::to_wstring(static_cast<int>(err))));
             }
             client->send(answer.str());
         }
     }
 
   private:
-    error_state parse_command_string(ClientInfoPtr                               client,
-                                     std::list<std::wstring>                     tokens,
-                                     std::wstring&                               request_id,
-                                     std::wstring&                               command_name)
+    error_state parse_command_string(ClientInfoPtr           client,
+                                     std::list<std::wstring> tokens,
+                                     std::wstring&           request_id,
+                                     std::wstring&           command_name)
     {
         try {
             // Discard GetSwitch
