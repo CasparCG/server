@@ -334,7 +334,7 @@ struct image_mixer::impl
     core::const_frame import_d3d_texture(const void*                                tag,
                                          const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture,
                                          bool                                       vflip,
-                                         core::pixel_format format) override
+                                         core::pixel_format                         format) override
     {
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)

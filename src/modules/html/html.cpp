@@ -130,7 +130,6 @@ class renderer_application
         window->SetValue(
             "remove", CefV8Value::CreateFunction("remove", new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
 
-        
         CefRefPtr<CefV8Value>     ret;
         CefRefPtr<CefV8Exception> exception;
         bool                      injected = context->Eval(R"(
@@ -209,7 +208,6 @@ class renderer_application
         }
     }
 
-    
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
                                   CefRefPtr<CefFrame>          frame,
                                   CefProcessId                 source_process,

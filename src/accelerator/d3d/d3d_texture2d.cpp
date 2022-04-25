@@ -15,7 +15,6 @@ d3d_texture2d::d3d_texture2d(ID3D11Texture2D* tex)
 {
     share_handle_ = nullptr;
 
-    
     D3D11_TEXTURE2D_DESC desc;
     texture_->GetDesc(&desc);
     width_  = desc.Width;
@@ -33,10 +32,9 @@ d3d_texture2d::d3d_texture2d(ID3D11Texture2D* tex)
         }
     }
 
-    if (share_handle_  == nullptr || !wglDXSetResourceShareHandleNV(texture_.get(), share_handle_)) {
+    if (share_handle_ == nullptr || !wglDXSetResourceShareHandleNV(texture_.get(), share_handle_)) {
         CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to setup shared d3d texture."));
     }
-
 }
 
 d3d_texture2d::~d3d_texture2d()

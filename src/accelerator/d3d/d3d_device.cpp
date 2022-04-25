@@ -16,8 +16,8 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 
-#include <mutex>
 #include <atlcomcli.h>
+#include <mutex>
 
 namespace caspar { namespace accelerator { namespace d3d {
 struct d3d_device::impl : public std::enable_shared_from_this<impl>
