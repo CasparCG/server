@@ -167,7 +167,12 @@ class transition_producer : public frame_producer
             dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
             src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * dir;
         } else if (info_.type == transition_type::wipe) {
-            dst_frame.transform().image_transform.clip_scale[0] = delta;
+            if (info_.direction == transition_direction::from_right) {
+                dst_frame.transform().image_transform.clip_scale[0] = delta;
+            } else {
+                dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
+
+            }
         }
 
         return draw_frame::over(src_frame, dst_frame);
