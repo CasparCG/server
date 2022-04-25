@@ -35,7 +35,7 @@ FROM ${IMAGE_BASE} as build-casparcg
 	RUN ln -s /build/staging /staging && \
 		/source/shell/copy_deps.sh shell/casparcg /staging/lib
 
-FROM nvidia/opengl:1.0-glvnd-devel-ubuntu18.04
+FROM nvidia/opengl:1.2-glvnd-devel-ubuntu20.04
 	COPY --from=build-casparcg /staging /opt/casparcg
 
 	RUN set -ex; \

@@ -20,7 +20,7 @@ System Requirements
 
 ### Linux
 
- - Only Ubuntu 18.04 is supported, but other versions may work
+ - Only Ubuntu 20.04 is supported, but other versions may work
 
 Getting Started
 ---------------

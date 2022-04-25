@@ -1,4 +1,4 @@
-FROM buildpack-deps:bionic
+FROM buildpack-deps:focal
 
 RUN apt-get update && apt-get install -yq --no-install-recommends \
 	autoconf \
@@ -28,7 +28,6 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	libxcursor-dev \
 	libxinerama-dev \
 	libxi-dev \
-	libnih-dbus-dev \
 	libsfml-dev \
 	libxrandr-dev \
 	libudev-dev \
