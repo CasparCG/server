@@ -30,6 +30,7 @@
 #include <common/tweener.h>
 
 #include <core/frame/draw_frame.h>
+#include <core/video_format.h>
 
 #include <functional>
 #include <future>
@@ -47,6 +48,13 @@ struct layer_frame
     draw_frame foreground;
     draw_frame background;
     bool       has_background;
+};
+
+struct stage_frames
+{
+    core::video_format_desc format_desc;
+    int                     nb_samples;
+    std::vector<draw_frame> frames;
 };
 
 /**
@@ -98,12 +106,13 @@ class stage final : public stage_base
     stage& operator=(const stage&);
 
   public:
-    explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
+    explicit stage(int                                         channel_index,
+                   spl::shared_ptr<caspar::diagnostics::graph> graph,
+                   const core::video_format_desc&              format_desc);
 
-    std::vector<draw_frame> operator()(const video_format_desc&                     format_desc,
-                                       int                                          nb_samples,
-                                       std::vector<int>&                            fetch_background,
-                                       std::function<void(int, const layer_frame&)> routesCb);
+    const stage_frames operator()(uint64_t                                     frame_number,
+                                  std::vector<int>&                            fetch_background,
+                                  std::function<void(int, const layer_frame&)> routesCb);
 
     std::future<void>            apply_transforms(const std::vector<transform_tuple_t>& transforms) override;
     std::future<void>            apply_transform(int                     index,
@@ -137,6 +146,9 @@ class stage final : public stage_base
 
     std::future<void>            execute(std::function<void()> k) override;
     std::unique_lock<std::mutex> get_lock() const;
+
+    core::video_format_desc video_format_desc() const;
+    std::future<void>       video_format_desc(const core::video_format_desc& format_desc);
 
   private:
     struct impl;

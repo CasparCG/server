@@ -52,6 +52,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
 
+    mutable std::mutex      format_desc_mutex_;
+    core::video_format_desc format_desc_;
+
     executor   executor_{L"stage " + std::to_wstring(channel_index_)};
     std::mutex lock_;
 
@@ -100,26 +103,30 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         auto it = layers_.find(index);
         if (it == std::end(layers_)) {
-            it = layers_.emplace(index, layer()).first;
+            it = layers_.emplace(index, layer(video_format_desc())).first;
         }
         return it->second;
     }
 
   public:
-    impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
+    impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, const core::video_format_desc& format_desc)
         : channel_index_(channel_index)
         , graph_(std::move(graph))
+        , format_desc_(format_desc)
     {
     }
 
-    std::vector<draw_frame> operator()(const video_format_desc&                     format_desc,
-                                       int                                          nb_samples,
-                                       std::vector<int>&                            fetch_background,
-                                       std::function<void(int, const layer_frame&)> routesCb)
+    const stage_frames operator()(uint64_t                                     frame_number,
+                                  std::vector<int>&                            fetch_background,
+                                  std::function<void(int, const layer_frame&)> routesCb)
     {
         return executor_.invoke([=] {
             std::map<int, layer_frame> frames;
-            std::vector<draw_frame>    stage_frames;
+            stage_frames               result = {};
+
+            result.format_desc = video_format_desc();
+            result.nb_samples =
+                result.format_desc.audio_cadence[frame_number % result.format_desc.audio_cadence.size()];
 
             try {
                 for (auto& t : tweens_)
@@ -156,12 +163,12 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto& tween = tweens_[p->first];
 
                     layer_frame res = {};
-                    res.foreground  = draw_frame::push(l.second ? layer.receive(format_desc, nb_samples) : draw_frame(),
-                                                      tween.fetch());
+                    res.foreground =
+                        draw_frame::push(l.second ? layer.receive(result.nb_samples) : draw_frame(), tween.fetch());
                     res.has_background = layer.has_background();
                     if (std::find(fetch_background.begin(), fetch_background.end(), p->first) !=
                         fetch_background.end()) {
-                        res.background = layer.receive_background(format_desc, nb_samples);
+                        res.background = layer.receive_background(result.nb_samples);
                     }
                     frames[p->first] = res;
 
@@ -170,12 +177,12 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
 
                 for (auto& p : frames) {
-                    stage_frames.push_back(p.second.foreground);
+                    result.frames.push_back(p.second.foreground);
                 }
 
                 // push stage_frames to support any channel routes that have been set
                 layer_frame chan_lf = {};
-                chan_lf.foreground  = draw_frame(stage_frames);
+                chan_lf.foreground  = draw_frame(result.frames);
                 routesCb(-1, chan_lf);
 
                 monitor::state state;
@@ -188,7 +195,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
 
-            return stage_frames;
+            return result;
         });
     }
 
@@ -355,10 +362,28 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     }
 
     std::unique_lock<std::mutex> get_lock() { return std::move(std::unique_lock<std::mutex>(lock_)); }
+
+    core::video_format_desc video_format_desc() const
+    {
+        std::lock_guard<std::mutex> lock(format_desc_mutex_);
+        return format_desc_;
+    }
+
+    std::future<void> video_format_desc(const core::video_format_desc& format_desc)
+    {
+        return executor_.begin_invoke([=] {
+            {
+                std::lock_guard<std::mutex> lock(format_desc_mutex_);
+                format_desc_ = format_desc;
+            }
+
+            layers_.clear();
+        });
+    }
 };
 
-stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
-    : impl_(new impl(channel_index, std::move(graph)))
+stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph, const core::video_format_desc& format_desc)
+    : impl_(new impl(channel_index, std::move(graph), format_desc))
 {
 }
 std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params)
@@ -407,14 +432,18 @@ stage::swap_layer(int index, int other_index, const std::shared_ptr<stage_base>&
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-std::vector<draw_frame> stage::operator()(const video_format_desc&                     format_desc,
-                                          int                                          nb_samples,
-                                          std::vector<int>&                            fetch_background,
-                                          std::function<void(int, const layer_frame&)> routesCb)
+const stage_frames stage::operator()(uint64_t                                     frame_number,
+                                     std::vector<int>&                            fetch_background,
+                                     std::function<void(int, const layer_frame&)> routesCb)
 {
-    return (*impl_)(format_desc, nb_samples, fetch_background, routesCb);
+    return (*impl_)(frame_number, fetch_background, routesCb);
 }
-core::monitor::state         stage::state() const { return impl_->state_; }
+core::monitor::state    stage::state() const { return impl_->state_; }
+core::video_format_desc stage::video_format_desc() const { return impl_->video_format_desc(); }
+std::future<void>       stage::video_format_desc(const core::video_format_desc& format_desc)
+{
+    return impl_->video_format_desc(format_desc);
+}
 std::unique_lock<std::mutex> stage::get_lock() const { return impl_->get_lock(); }
 std::future<void>            stage::execute(std::function<void()> func)
 {

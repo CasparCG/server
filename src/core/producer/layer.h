@@ -36,7 +36,7 @@ class layer final
     layer& operator=(const layer&);
 
   public:
-    explicit layer();
+    explicit layer(const core::video_format_desc format_desc);
     layer(layer&& other);
 
     layer& operator=(layer&& other);
@@ -50,8 +50,8 @@ class layer final
     void resume();
     void stop();
 
-    draw_frame receive(const video_format_desc& format_desc, int nb_samples);
-    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples);
+    draw_frame receive(int nb_samples);
+    draw_frame receive_background(int nb_samples);
 
     core::monitor::state state() const;
 

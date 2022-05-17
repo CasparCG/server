@@ -84,9 +84,6 @@ class video_channel final
     const core::output&                 output() const;
     core::output&                       output();
 
-    core::video_format_desc video_format_desc() const;
-    void                    video_format_desc(const core::video_format_desc& format_desc);
-
     spl::shared_ptr<core::frame_factory> frame_factory();
 
     int index() const;

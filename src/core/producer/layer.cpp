@@ -32,7 +32,8 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {
-    monitor::state state_;
+    monitor::state                state_;
+    const core::video_format_desc format_desc_;
 
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
@@ -41,6 +42,11 @@ struct layer::impl
     bool paused_    = false;
 
   public:
+    impl(const core::video_format_desc format_desc)
+        : format_desc_(format_desc)
+    {
+    }
+
     void pause() { paused_ = true; }
 
     void resume() { paused_ = false; }
@@ -89,7 +95,7 @@ struct layer::impl
         auto_play_  = false;
     }
 
-    draw_frame receive(const video_format_desc& format_desc, int nb_samples)
+    draw_frame receive(int nb_samples)
     {
         try {
             if (foreground_->following_producer() != core::frame_producer::empty()) {
@@ -134,7 +140,7 @@ struct layer::impl
         }
     }
 
-    draw_frame receive_background(const video_format_desc& format_desc, int nb_samples)
+    draw_frame receive_background(int nb_samples)
     {
         try {
             return background_->first_frame();
@@ -147,8 +153,8 @@ struct layer::impl
     }
 };
 
-layer::layer()
-    : impl_(new impl())
+layer::layer(const core::video_format_desc format_desc)
+    : impl_(new impl(format_desc))
 {
 }
 layer::layer(layer&& other)
@@ -170,14 +176,8 @@ void       layer::preview() { impl_->preview(false); }
 void       layer::pause() { impl_->pause(); }
 void       layer::resume() { impl_->resume(); }
 void       layer::stop() { impl_->stop(); }
-draw_frame layer::receive(const video_format_desc& format_desc, int nb_samples)
-{
-    return impl_->receive(format_desc, nb_samples);
-}
-draw_frame layer::receive_background(const video_format_desc& format_desc, int nb_samples)
-{
-    return impl_->receive_background(format_desc, nb_samples);
-}
+draw_frame layer::receive(int nb_samples) { return impl_->receive(nb_samples); }
+draw_frame layer::receive_background(int nb_samples) { return impl_->receive_background(nb_samples); }
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }

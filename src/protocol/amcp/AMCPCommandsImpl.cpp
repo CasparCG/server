@@ -195,7 +195,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
     return core::frame_producer_dependencies(channel->frame_factory(),
                                              get_channels(ctx),
                                              ctx.static_context->format_repository,
-                                             channel->video_format_desc(),
+                                             channel->stage()->video_format_desc(),
                                              ctx.static_context->producer_registry,
                                              ctx.static_context->cg_registry);
 }
@@ -272,11 +272,12 @@ std::wstring loadbg_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
 
-    auto channel = ctx.channel.raw_channel;
+    auto channel   = ctx.channel.raw_channel;
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
     try {
-        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
+        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx),
+                                                                          ctx.parameters);
 
         if (pFP == frame_producer::empty())
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(ctx.parameters.size() > 0 ? ctx.parameters[0] : L""));
@@ -297,6 +298,8 @@ std::wstring loadbg_command(command_context& ctx)
             transition_producer = create_transition_producer(pFP, transitionInfo);
         }
 
+        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
+        // initialised
         ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
@@ -391,7 +394,6 @@ std::wstring clear_all_command(command_context& ctx)
     return L"202 CLEAR ALL OK\r\n";
 }
 
-
 std::future<std::wstring> call_command(command_context& ctx)
 {
     const auto result = ctx.channel.stage->call(ctx.layer_index(), ctx.parameters).share();
@@ -476,8 +478,8 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.raw_channel->output().add(
-        ctx.static_context->consumer_registry->create_consumer({L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
+    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
+        {L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -506,7 +508,7 @@ std::wstring set_command(command_context& ctx)
     if (name == L"MODE") {
         auto format_desc = ctx.static_context->format_repository.find(value);
         if (format_desc.format != core::video_format::invalid) {
-            ctx.channel.raw_channel->video_format_desc(format_desc);
+            ctx.channel.raw_channel->stage()->video_format_desc(format_desc);
             return L"202 SET MODE OK\r\n";
         }
 
@@ -1338,8 +1340,8 @@ std::wstring channel_grid_command(command_context& ctx)
     params.push_back(L"0");
     params.push_back(L"NAME");
     params.push_back(L"Channel Grid Window");
-    auto screen =
-        ctx.static_context->consumer_registry->create_consumer(params, ctx.static_context->format_repository, get_channels(ctx));
+    auto screen = ctx.static_context->consumer_registry->create_consumer(
+        params, ctx.static_context->format_repository, get_channels(ctx));
 
     self.raw_channel->output().add(screen);
 
@@ -1483,7 +1485,8 @@ std::wstring info_command(command_context& ctx)
     replyString << L"200 INFO OK\r\n";
 
     for (size_t n = 0; n < ctx.channels.size(); ++n) {
-        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->video_format_desc().name << L" PLAYING\r\n";
+        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->stage()->video_format_desc().name
+                    << L" PLAYING\r\n";
     }
     replyString << L"\r\n";
     return replyString.str();
