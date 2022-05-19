@@ -123,7 +123,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
-        ndi_video_frame_.frame_rate_N         = format_desc.framerate.numerator();
+        ndi_video_frame_.frame_rate_N         = format_desc.framerate.numerator() * format_desc.field_count;
         ndi_video_frame_.frame_rate_D         = format_desc.framerate.denominator();
         ndi_video_frame_.FourCC               = NDIlib_FourCC_type_BGRA;
         ndi_video_frame_.line_stride_in_bytes = format_desc.width * 4;

@@ -124,9 +124,7 @@ struct Filter
             }
 
             if (doFps) {
-                filter_spec += (boost::format(",fps=%d/%d") % format_desc.framerate.numerator() %
-                                format_desc.framerate.denominator())
-                                   .str();
+                filter_spec += (boost::format(",fps=%d/%d") % format_desc.time_scale % format_desc.duration).str();
             }
         } else {
             if (filter_spec.empty()) {

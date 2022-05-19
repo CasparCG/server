@@ -554,7 +554,7 @@ class html_producer : public core::frame_producer
 
             CefBrowserSettings browser_settings;
             browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
-            double fps             = format_desc.fps;
+            double fps             = format_desc.fps * format_desc.field_count;
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);
         });

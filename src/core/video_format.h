@@ -80,7 +80,7 @@ struct video_format_desc final
     int                  square_width;
     int                  square_height;
     int                  field_count;
-    double               fps; // actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
+    double               fps; // actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
     boost::rational<int> framerate;
     int                  time_scale;
     int                  duration;

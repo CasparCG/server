@@ -179,8 +179,9 @@ struct Stream
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              format_desc.width % format_desc.height % AV_PIX_FMT_YUVA422P % format_desc.duration %
-                             format_desc.time_scale % sar.numerator() % sar.denominator() %
-                             format_desc.framerate.numerator() % format_desc.framerate.denominator())
+                             (format_desc.time_scale * format_desc.field_count) % sar.numerator() % sar.denominator() %
+                             (format_desc.framerate.numerator() * format_desc.field_count) %
+                             format_desc.framerate.denominator())
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 

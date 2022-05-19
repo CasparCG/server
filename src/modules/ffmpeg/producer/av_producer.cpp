@@ -298,7 +298,8 @@ struct Filter
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
             }
 
-            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
+            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
+                            (format_desc.framerate.numerator() * format_desc.field_count) %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
@@ -646,7 +647,7 @@ struct AVProducer::Impl
          int                                  seekable)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
-        , format_tb_({format_desc.duration, format_desc.time_scale})
+        , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
         , name_(name)
         , path_(path)
         , input_(path, graph_, seekable >= 0 && seekable < 2 ? boost::optional<bool>(false) : boost::optional<bool>())

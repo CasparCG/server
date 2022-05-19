@@ -168,7 +168,8 @@ struct video_channel::impl final
                     state["stage"]       = stage_->state();
                     state["mixer"]       = mixer_.state();
                     state["output"]      = output_.state();
-                    state["framerate"]   = {stage_frames.format_desc.framerate.numerator(),
+                    state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
+                                                stage_frames.format_desc.field_count,
                                             stage_frames.format_desc.framerate.denominator()};
                     state_               = state;
 

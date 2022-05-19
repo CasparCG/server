@@ -74,7 +74,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
         air_send_.reset(airsend::create(format_desc.width,
                                         format_desc.height,
-                                        format_desc.time_scale,
+                                        format_desc.time_scale * format_desc.field_count,
                                         format_desc.duration,
                                         true,
                                         static_cast<float>(format_desc.square_width) /
