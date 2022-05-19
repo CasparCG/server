@@ -655,8 +655,6 @@ struct bluefish_producer
         std::lock_guard<std::mutex> lock(state_mutex_);
         return state_;
     }
-
-    boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 };
 
 class bluefish_producer_proxy : public core::frame_producer
@@ -699,8 +697,6 @@ class bluefish_producer_proxy : public core::frame_producer
     std::wstring print() const override { return producer_->print(); }
 
     std::wstring name() const override { return L"bluefish"; }
-
-    boost::rational<int> get_out_framerate() const { return producer_->get_out_framerate(); }
 };
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

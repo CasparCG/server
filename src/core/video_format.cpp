@@ -245,5 +245,4 @@ std::wostream& operator<<(std::wostream& out, const video_format_desc& format_de
     return out;
 }
 
-
 }} // namespace caspar::core
