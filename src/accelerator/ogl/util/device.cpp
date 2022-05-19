@@ -56,7 +56,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
     using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     EGLDisplay eglDisplay_;
-    EGLSurface eglSurface_;
     EGLContext eglContext_;
 
     std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
@@ -75,10 +74,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::thread                         thread_;
 
     impl()
-        : eglDisplay_(EGL_NO_DISPLAY), eglSurface_(EGL_NO_SURFACE), eglContext_(EGL_NO_CONTEXT)
+        : eglDisplay_(EGL_NO_DISPLAY), eglContext_(EGL_NO_CONTEXT)
         , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
+
+        // Forces EGL headless mode
+        std::string envDisplay = getenv("DISPLAY");
+        unsetenv("DISPLAY");
 
         eglDisplay_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -86,7 +89,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         eglInitialize(eglDisplay_, &major, &minor);
 
         const EGLint configAttribs[] = {
-          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
           EGL_BLUE_SIZE, 8,
           EGL_GREEN_SIZE, 8,
           EGL_RED_SIZE, 8,
@@ -94,21 +96,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
           EGL_NONE
         };
 
-        const EGLint pbufferAttribs[] = {
-            EGL_WIDTH, 1,
-            EGL_HEIGHT, 1,
-            EGL_NONE,
-        };
-
         EGLint numConfigs;
         EGLConfig eglConfig;
         if (!eglChooseConfig(eglDisplay_, configAttribs, &eglConfig, 1, &numConfigs)) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglChooseConfig"));
-        }
-
-        eglSurface_ = eglCreatePbufferSurface(eglDisplay_, eglConfig, pbufferAttribs);
-        if (eglSurface_ == EGL_NO_SURFACE) {
-            CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglCreatePbufferSurface"));
         }
 
         if (!eglBindAPI(EGL_OPENGL_API)) {
@@ -120,7 +111,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglCreateContext"));
         }
 
-        if (!eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_)) {
+        if (!eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext_)) {
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize OpenGL: eglMakeCurrent"));
         }
 
@@ -143,13 +134,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
                                                "since it does not support OpenGL 4.5 or higher."));
         }
 
+        // Restore DISPLAY
+        setenv("DISPLAY", envDisplay.c_str(), 0);
+
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
         eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
         thread_ = std::thread([&] {
-            eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
+            eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext_);
             set_thread_name(L"OpenGL Device");
             service_.run();
             eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -161,7 +155,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         work_.reset();
         thread_.join();
 
-        eglMakeCurrent(eglDisplay_, eglSurface_, eglSurface_, eglContext_);
+        eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext_);
 
         for (auto& pool : host_pools_)
             pool.clear();
@@ -177,10 +171,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         if (eglContext_ != EGL_NO_CONTEXT) {
             eglDestroyContext(eglDisplay_, eglContext_);
-        }
-
-        if (eglSurface_ != EGL_NO_SURFACE) {
-            eglDestroySurface(eglDisplay_, eglSurface_);
         }
 
         eglTerminate(eglDisplay_);
