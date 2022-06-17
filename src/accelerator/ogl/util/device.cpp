@@ -89,6 +89,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         eglInitialize(eglDisplay_, &major, &minor);
 
         const EGLint configAttribs[] = {
+          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
           EGL_BLUE_SIZE, 8,
           EGL_GREEN_SIZE, 8,
           EGL_RED_SIZE, 8,
