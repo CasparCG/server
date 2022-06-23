@@ -39,13 +39,43 @@ FROM nvidia/opengl:1.2-glvnd-devel-ubuntu20.04
 	COPY --from=build-casparcg /staging /opt/casparcg
 
 	RUN set -ex; \
-		apt-get update; \
+		apt-get update; \    
+		DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends tzdata; \
 		apt-get install -y --no-install-recommends \
 			libc++1 \
 			libnss3 \
 			fontconfig \
-		; \
-		rm -rf /var/lib/apt/lists/*
+			libxrandr2 \
+			libogg-dev \
+			libcairo-dev \
+			libnuma1 \
+			libgomp1 \      
+			libvorbisfile3 \
+			libxinerama1 \
+			libxi6 \
+			libxss1 \
+			libwayland-egl1-mesa \
+			libwayland-cursor0 \
+			libxkbcommon-dev \
+			libfribidi-dev \
+			libharfbuzz-dev \
+			libicu66 \
+			libjxr-dev \
+			libjpeg-dev \
+			libraw-dev \
+			libtiff-dev \
+			libopenexr24 \
+			libxcomposite-dev \
+			libxdamage1 \
+			libxtst-dev \
+			libpango-1.0-0 \
+			libpangocairo-1.0-0 \
+			libatk1.0-0 \
+			libatk-bridge2.0-0 \
+			libxcursor1 \ 
+			mpg123 \
+			; \
+			rm -rf /var/lib/apt/lists/*
 
 	WORKDIR /opt/casparcg
 
