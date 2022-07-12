@@ -893,7 +893,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.embedded_audio    = ptree.get(L"embedded-audio", config.embedded_audio);
     config.base_buffer_depth = ptree.get(L"buffer-depth", config.base_buffer_depth);
 
-    auto format_desc_str = ptree.get(L"video-format", L"");
+    auto format_desc_str = ptree.get(L"video-mode", L"");
     if (format_desc_str.size() > 0) {
         auto format_desc     = core::video_format_desc(format_desc_str);
         if (format_desc.format == core::video_format::invalid)
@@ -901,12 +901,15 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.format = format_desc.format;
     }
 
-    config.src_x    = ptree.get(L"src-x", config.src_x);
-    config.src_y    = ptree.get(L"src-y", config.src_y);
-    config.dest_x   = ptree.get(L"dest-x", config.dest_x);
-    config.dest_y   = ptree.get(L"dest-y", config.dest_y);
-    config.region_w = ptree.get(L"region-w", config.region_w);
-    config.region_h = ptree.get(L"region-h", config.region_h);
+    auto subregion_tree = ptree.get_child_optional(L"subregion");
+    if (subregion_tree) {
+        config.src_x    = subregion_tree->get(L"src-x", config.src_x);
+        config.src_y    = subregion_tree->get(L"src-y", config.src_y);
+        config.dest_x   = subregion_tree->get(L"dest-x", config.dest_x);
+        config.dest_y   = subregion_tree->get(L"dest-y", config.dest_y);
+        config.region_w = subregion_tree->get(L"width", config.region_w);
+        config.region_h = subregion_tree->get(L"height", config.region_h);
+    }
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }
