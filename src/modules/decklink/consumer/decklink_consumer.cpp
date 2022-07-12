@@ -94,9 +94,12 @@ struct configuration
     int       base_buffer_depth = 3;
 
     core::video_format format = core::video_format::invalid;
-    int                region_x = 0;
-    int                region_y = 0;
-    // TODO - copy_width, copy_height, dst_x, dst_y ?
+    int                src_x = 0;
+    int                src_y    = 0;
+    int                dest_x    = 0;
+    int                dest_y    = 0;
+    int                region_w = 0;
+    int                region_h = 0;
 
     int buffer_depth() const
     {
@@ -345,7 +348,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         int firstLine = topField ? 0 : 1;
 
-        if (channel_format_desc_.format == decklink_format_desc_.format) {
+        if (channel_format_desc_.format == decklink_format_desc_.format && config_.src_x == 0 && config_.src_y == 0 &&
+            config_.region_w == 0 && config_.region_h == 0 && config_.dest_x == 0 && config_.dest_y == 0) {
+            // Fast path
             size_t byte_count_line = (size_t)decklink_format_desc_.width * 4;
             for (int y = firstLine; y < decklink_format_desc_.height; y += field_count_) {
                 std::memcpy(reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_line,
@@ -353,29 +358,28 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                             byte_count_line);
             }
         } else {
+            // Take a sub-region
+            
             // Some repetetive numbers
-            // Future: line_pad_start if we want some black at the start of the row
-          //  int pixel_copy_count_per_line = std::min(channel_format_desc_.width - std::abs(config_.region_x),
-          //                                           decklink_format_desc_.width); // Number of pixels to copy
-           // int bytes_copy_per_line       = pixel_copy_count_per_line * 4;
-
-           // int copy_line_count =
-           //     std::min((int)channel_format_desc_.height - std::abs(config_.region_y), (int)decklink_format_desc_.height);
-            //int skip_lines_end   = std::max(decklink_format_desc_.height - copy_line_count, 0);
-
             size_t    byte_count_dest_line  = (size_t)decklink_format_desc_.width * 4;
             size_t    byte_count_src_line   = (size_t)channel_format_desc_.width * 4;
-            size_t    byte_offset_src_line  = std::max(0, (config_.region_x * 4));
-            size_t    byte_offset_dest_line = std::max(0, (config_.region_x * -4));
-            int y_skip_src_lines      = std::max(0, config_.region_y);
-            int       y_skip_dest_lines     = std::max(0, -config_.region_y);
+            size_t    byte_offset_src_line  = std::max(0, (config_.src_x * 4));
+            size_t    byte_offset_dest_line = std::max(0, (config_.dest_x * 4));
+            int       y_skip_src_lines      = std::max(0, config_.src_y);
+            int       y_skip_dest_lines     = std::max(0, config_.dest_y);
+
             size_t    byte_copy_per_line =
                 std::min(byte_count_src_line - byte_offset_src_line, byte_count_dest_line - byte_offset_dest_line);
-            size_t    byte_pad_end_of_line  = std::max(
+            if (config_.region_w > 0) // If the user chose a width, respect that
+                byte_copy_per_line = std::min(byte_copy_per_line, (size_t)config_.region_w * 4);
+
+            size_t byte_pad_end_of_line = std::max(
                 ((size_t)decklink_format_desc_.width * 4) - byte_copy_per_line - byte_offset_dest_line, (size_t)0);
+
             int copy_line_count = std::min(channel_format_desc_.height - y_skip_src_lines,
                                            decklink_format_desc_.height - y_skip_dest_lines);
-             
+            if (config_.region_h > 0) // If the user chose a height, respect that
+                copy_line_count = std::min(copy_line_count, config_.region_h);
 
             for (int y = firstLine; y < y_skip_dest_lines; y += field_count_) {
                 // Fill the line with black
@@ -897,8 +901,12 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.format = format_desc.format;
     }
 
-    config.region_x  = ptree.get(L"region-x", config.region_x);
-    config.region_y  = ptree.get(L"region-y", config.region_y);
+    config.src_x    = ptree.get(L"src-x", config.src_x);
+    config.src_y    = ptree.get(L"src-y", config.src_y);
+    config.dest_x   = ptree.get(L"dest-x", config.dest_x);
+    config.dest_y   = ptree.get(L"dest-y", config.dest_y);
+    config.region_w = ptree.get(L"region-w", config.region_w);
+    config.region_h = ptree.get(L"region-h", config.region_h);
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }
