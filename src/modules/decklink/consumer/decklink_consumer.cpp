@@ -300,6 +300,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback
 {
+    const core::video_format_repository format_repository_;
     const int           channel_index_;
     const configuration config_;
 
@@ -429,25 +430,31 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     core::video_format_desc get_decklink_format(const configuration&           config,
                                                 const core::video_format_desc& channel_format_desc)
     {
-        if (config.format == core::video_format::invalid || config.format == channel_format_desc.format) {
-            return channel_format_desc;
-        } else {
-            auto decklink_format = core::video_format_desc(config.format);
-            if (decklink_format.format == core::video_format::invalid ||
-                decklink_format.framerate != channel_format_desc.framerate) {
-                CASPAR_LOG(warning) << L"Ignoring specified format for decklink";
-                return channel_format_desc;
-            } else {
+        if (config.format != core::video_format::invalid && config.format != channel_format_desc.format) {
+            auto decklink_format = format_repository_.find_format(config.format);
+            if (decklink_format.format != core::video_format::invalid &&
+                decklink_format.format != core::video_format::custom &&
+                decklink_format.framerate == channel_format_desc.framerate) {
                 return decklink_format;
+            } else {
+                CASPAR_LOG(warning) << L"Ignoring specified format for decklink";
             }
         }
+
+        if (channel_format_desc.format == core::video_format::invalid ||
+            channel_format_desc.format == core::video_format::custom)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Decklink does not support the channel format"));
+        
+        return channel_format_desc;
     }
 
   public:
-    decklink_consumer(const configuration&           config,
+    decklink_consumer(const core::video_format_repository& format_repository,
+                      const configuration&                 config,
                       const core::video_format_desc& channel_format_desc,
                       int                            channel_index)
-        : channel_index_(channel_index)
+        : format_repository_(format_repository)
+        , channel_index_(channel_index)
         , config_(config)
         , channel_format_desc_(channel_format_desc)
         , decklink_format_desc_(get_decklink_format(config, channel_format_desc_))
@@ -775,14 +782,17 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
+    const core::video_format_repository format_repository_;
     const configuration                config_;
     std::unique_ptr<decklink_consumer> consumer_;
     core::video_format_desc            format_desc_;
     executor                           executor_;
 
   public:
-    explicit decklink_consumer_proxy(const configuration& config)
-        : config_(config)
+    explicit decklink_consumer_proxy(const core::video_format_repository& format_repository,
+                                     const configuration&                 config)
+        : format_repository_(format_repository)
+        , config_(config)
         , executor_(L"decklink_consumer[" + std::to_wstring(config.device_index) + L"]")
     {
         executor_.begin_invoke([=] { com_initialize(); });
@@ -802,7 +812,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));
+            consumer_.reset(new decklink_consumer(format_repository_, config_, format_desc, channel_index));
         });
     }
 
@@ -820,7 +830,8 @@ struct decklink_consumer_proxy : public core::frame_consumer
     bool has_synchronization_clock() const override { return true; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository, 
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK")) {
@@ -855,11 +866,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     config.embedded_audio = contains_param(L"EMBEDDED_AUDIO", params);
     config.key_only       = contains_param(L"KEY_ONLY", params);
 
-    return spl::make_shared<decklink_consumer_proxy>(config);
+    return spl::make_shared<decklink_consumer_proxy>(format_repository, config);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
+                              const core::video_format_repository&              format_repository, 
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;
@@ -895,8 +907,8 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 
     auto format_desc_str = ptree.get(L"video-mode", L"");
     if (format_desc_str.size() > 0) {
-        auto format_desc     = core::video_format_desc(format_desc_str);
-        if (format_desc.format == core::video_format::invalid)
+        auto format_desc = format_repository.find(format_desc_str);
+        if (format_desc.format == core::video_format::invalid || format_desc.format == core::video_format::custom)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
         config.format = format_desc.format;
     }
@@ -911,7 +923,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.region_h = subregion_tree->get(L"height", config.region_h);
     }
 
-    return spl::make_shared<decklink_consumer_proxy>(config);
+    return spl::make_shared<decklink_consumer_proxy>(format_repository, config);
 }
 
 }} // namespace caspar::decklink

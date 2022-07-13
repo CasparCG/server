@@ -33,9 +33,11 @@ namespace caspar { namespace oal {
 
 spl::shared_ptr<core::frame_consumer>
 create_consumer(const std::vector<std::wstring>&                         params,
+                const core::video_format_repository&                     format_repository, 
                 const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::/*ptree*/ wptree&,
+                              const core::video_format_repository&                     format_repository, 
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
 }} // namespace caspar::oal
