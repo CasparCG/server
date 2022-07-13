@@ -211,6 +211,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 {
     return core::frame_producer_dependencies(channel->frame_factory(),
                                              get_channels(ctx),
+                                             ctx.format_repository,
                                              channel->video_format_desc(),
                                              ctx.producer_registry,
                                              ctx.cg_registry);
@@ -506,7 +507,7 @@ std::wstring set_command(command_context& ctx)
     std::wstring value = boost::to_upper_copy(ctx.parameters[1]);
 
     if (name == L"MODE") {
-        auto format_desc = core::video_format_desc(value);
+        auto format_desc = ctx.format_repository.find(value);
         if (format_desc.format != core::video_format::invalid) {
             ctx.channel.channel->video_format_desc(format_desc);
             return L"202 SET MODE OK\r\n";

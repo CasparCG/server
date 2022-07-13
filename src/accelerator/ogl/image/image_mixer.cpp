@@ -75,11 +75,13 @@ class image_renderer
 {
     spl::shared_ptr<device> ogl_;
     image_kernel            kernel_;
+    const size_t            max_frame_size_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl, const size_t max_frame_size)
         : ogl_(ogl)
         , kernel_(ogl_)
+        , max_frame_size_(max_frame_size)
     {
     }
 
@@ -87,7 +89,7 @@ class image_renderer
                                                       const core::video_format_desc& format_desc)
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(8192 * 8192 * 8, 0);
+            static const std::vector<uint8_t> buffer(max_frame_size_, 0);
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
 
@@ -236,9 +238,9 @@ struct image_mixer::impl
     std::vector<layer*>                layer_stack_;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl, int channel_id)
+    impl(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size)
         : ogl_(ogl)
-        , renderer_(ogl)
+        , renderer_(ogl, max_frame_size)
         , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
@@ -374,8 +376,8 @@ struct image_mixer::impl
 #endif
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id)
-    : impl_(std::make_unique<impl>(ogl, channel_id))
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size)
+    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size))
 {
 }
 image_mixer::~image_mixer() {}

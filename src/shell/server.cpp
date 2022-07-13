@@ -100,6 +100,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 struct server::impl
 {
     std::shared_ptr<boost::asio::io_service>           io_service_ = create_running_io_service();
+    video_format_repository                            video_format_repository_;
     accelerator::accelerator                           accelerator_;
     std::shared_ptr<amcp::amcp_command_repository>     amcp_command_repo_;
     std::vector<spl::shared_ptr<IO::AsyncEventServer>> async_servers_;
@@ -116,7 +117,8 @@ struct server::impl
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
-        : accelerator_()
+        : video_format_repository_()
+        , accelerator_(video_format_repository_)
         , producer_registry_(spl::make_shared<core::frame_producer_registry>())
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
         , shutdown_server_now_(std::move(shutdown_server_now))
@@ -124,8 +126,12 @@ struct server::impl
         caspar::core::diagnostics::osd::register_sink();
 
         auto ogl_device    = accelerator_.get_device();
-        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
-            cg_registry_, producer_registry_, consumer_registry_, ogl_device, shutdown_server_now_);
+        amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(video_format_repository_,
+                                                                             cg_registry_,
+                                                                             producer_registry_,
+                                                                             consumer_registry_,
+                                                                             ogl_device,
+                                                                             shutdown_server_now_);
 
         module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_);
 
@@ -135,6 +141,9 @@ struct server::impl
 
     void start()
     {
+        setup_video_modes(env::properties());
+        CASPAR_LOG(info) << L"Initialized video modes.";
+
         auto xml_channels = setup_channels(env::properties());
         CASPAR_LOG(info) << L"Initialized channels.";
 
@@ -170,6 +179,79 @@ struct server::impl
         core::diagnostics::osd::shutdown();
     }
 
+    void setup_video_modes(const boost::property_tree::wptree& pt)
+    {
+        using boost::property_tree::wptree;
+
+        auto videomodes_config = pt.get_child_optional(L"configuration.video-modes");
+        if (videomodes_config) {
+            for (auto& xml_channel :
+                 pt | witerate_children(L"configuration.video-modes") | welement_context_iteration) {
+                ptree_verify_element_name(xml_channel, L"video-mode");
+
+                const std::wstring id = xml_channel.second.get(L"id", L"");
+                if (id == L"")
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode id: " + id));
+
+                const int width  = xml_channel.second.get<int>(L"width", 0);
+                const int height = xml_channel.second.get<int>(L"height", 0);
+                if (width == 0 || height == 0)
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid dimensions: " +
+                                                                    boost::lexical_cast<std::wstring>(width) + L"x" +
+                                                                    boost::lexical_cast<std::wstring>(height)));
+
+                const int timescale = xml_channel.second.get<int>(L"time-scale", 60000);
+                const int duration  = xml_channel.second.get<int>(L"duration", 1000);
+                if (timescale == 0 || duration == 0)
+                    CASPAR_THROW_EXCEPTION(
+                        user_error() << msg_info(L"Invalid framerate: " + boost::lexical_cast<std::wstring>(timescale) +
+                                                 L"/" + boost::lexical_cast<std::wstring>(duration)));
+
+                std::vector<int> cadence;
+                int              cadence_sum = 0;
+
+                const std::wstring     cadence_str = xml_channel.second.get(L"cadence", L"");
+                std::set<std::wstring> cadence_parts;
+                boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
+
+                for (auto& cad : cadence_parts) {
+                    if (cad == L"")
+                        continue;
+
+                    const int c = std::stoi(cad);
+                    cadence.push_back(c);
+                    cadence_sum += c;
+                }
+
+                if (cadence.size() == 0) {
+                    const int c = static_cast<int>(48000 / (static_cast<double>(timescale) / duration) + 0.5);
+                    cadence.push_back(c);
+                    cadence_sum += c;
+                }
+
+                const auto new_format = video_format_desc(video_format::custom,1,
+                                                          width,
+                                                          height,
+                                                          width,
+                                                          height,
+                                                          timescale,
+                                                          duration,
+                                                          id,
+                                                          cadence); // TODO - fields, cadence
+                //			if (cadence_sum != new_format.audio_sample_rate)
+                //				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Audio cadence sum doesn't
+                //match sample rate. "));
+
+                const auto existing = video_format_repository_.find(id);
+                if (existing.format != video_format::invalid)
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Video-mode already exists: " + id));
+
+                video_format_repository_.store(new_format);
+            }
+        }
+    }
+
+
     std::vector<boost::property_tree::wptree> setup_channels(const boost::property_tree::wptree& pt)
     {
         using boost::property_tree::wptree;
@@ -181,7 +263,7 @@ struct server::impl
             ptree_verify_element_name(xml_channel, L"channel");
 
             auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
-            auto format_desc     = video_format_desc(format_desc_str);
+            auto format_desc     = video_format_repository_.find(format_desc_str);
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
@@ -346,12 +428,14 @@ struct server::impl
                                         spl::make_shared<amcp::AMCPProtocolStrategy>(
                                             port_description, spl::make_shared_ptr(amcp_command_repo_)));
         if (boost::iequals(name, L"CII"))
-            return wrap_legacy_protocol(
-                "\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
+            return wrap_legacy_protocol("\r\n",
+                                        spl::make_shared<cii::CIIProtocolStrategy>(
+                                            channels_, video_format_repository_, cg_registry_, producer_registry_));
         if (boost::iequals(name, L"CLOCK"))
             return spl::make_shared<to_unicode_adapter_factory>(
                 "ISO-8859-1",
-                spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
+                spl::make_shared<CLK::clk_protocol_strategy_factory>(
+                    channels_, video_format_repository_, cg_registry_, producer_registry_));
 
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
     }
