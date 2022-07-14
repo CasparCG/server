@@ -219,8 +219,22 @@ video_format_desc::video_format_desc()
 
 bool operator==(const video_format_desc& lhs, const video_format_desc& rhs)
 {
-    // TODO - expand on this if format is custom
-    return lhs.format == rhs.format;
+    if (lhs.format == video_format::custom || rhs.format == video_format::custom) {
+        if (lhs.format != rhs.format) {
+            // If one is custom, and the other isnt, then they dont match
+            return false;
+        }
+
+        // TODO - expand on this
+        if (lhs.width != rhs.width || lhs.height != rhs.height || lhs.framerate != rhs.framerate) {
+            return false;
+        }
+
+        return true;
+    } else {
+        // If neither are custom, look just at the format
+        return lhs.format == rhs.format;
+    }
 }
 
 bool operator!=(const video_format_desc& lhs, const video_format_desc& rhs) { return !(lhs == rhs); }

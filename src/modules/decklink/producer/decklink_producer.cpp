@@ -341,7 +341,6 @@ class decklink_producer : public IDeckLinkInputCallback
         // use user-provided format if available, or choose the channel's output format
         if (!format.empty()) {
             input_format = format_repository.find(format);
-            // TODO - what if this is invalid?
         }
 
         mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
@@ -419,7 +418,6 @@ class decklink_producer : public IDeckLinkInputCallback
             auto fmt     = get_caspar_video_format(newMode);
 
             auto new_fmt = format_repository_.find_format(fmt);
-            // TODO - what if this is invalid?
 
             CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to "
                              << new_fmt.name;

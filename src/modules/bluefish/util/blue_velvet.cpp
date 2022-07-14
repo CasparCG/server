@@ -676,7 +676,6 @@ core::video_format_desc get_format_desc(const core::video_format_repository& for
 
     fmt.field_count   = field_count;
     fmt               = format_repository.find_format(get_caspar_video_format(vid_fmt_ext));
-    // TODO - what if it returns invalid?
     fmt.size          = size;
     fmt.audio_cadence = std::move(audio_cadence);
     fmt.name          = blue.get_wstring_for_video_mode(vid_fmt_ext);

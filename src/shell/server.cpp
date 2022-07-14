@@ -200,6 +200,11 @@ struct server::impl
                                                                     boost::lexical_cast<std::wstring>(width) + L"x" +
                                                                     boost::lexical_cast<std::wstring>(height)));
 
+                const int field_count = xml_channel.second.get<int>(L"field-count", 1);
+                if (field_count != 1 && field_count != 2)
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid field-count: " +
+                                                                    boost::lexical_cast<std::wstring>(field_count)));
+
                 const int timescale = xml_channel.second.get<int>(L"time-scale", 60000);
                 const int duration  = xml_channel.second.get<int>(L"duration", 1000);
                 if (timescale == 0 || duration == 0)
@@ -229,7 +234,8 @@ struct server::impl
                     cadence_sum += c;
                 }
 
-                const auto new_format = video_format_desc(video_format::custom,1,
+                const auto new_format = video_format_desc(video_format::custom,
+                                                          field_count,
                                                           width,
                                                           height,
                                                           width,
@@ -237,10 +243,8 @@ struct server::impl
                                                           timescale,
                                                           duration,
                                                           id,
-                                                          cadence); // TODO - fields, cadence
-                //			if (cadence_sum != new_format.audio_sample_rate)
-                //				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Audio cadence sum doesn't
-                //match sample rate. "));
+                                                          cadence);
+                // TODO: verify cadence_sum to look correct
 
                 const auto existing = video_format_repository_.find(id);
                 if (existing.format != video_format::invalid)

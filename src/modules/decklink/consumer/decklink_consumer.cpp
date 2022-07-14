@@ -389,7 +389,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
 
             int firstFillLine = y_skip_dest_lines; 
-            if (field_count_ != 1 && firstFillLine % 2 != firstLine) // TODO - verify this
+            if (field_count_ != 1 && firstFillLine % 2 != firstLine)
                 firstFillLine += 1;
             for (int y = firstFillLine; y < y_skip_dest_lines + copy_line_count; y += field_count_) {
                 auto line_start_ptr = reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_dest_line;
@@ -414,7 +414,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
             // Calculate the first line number to fill with black
             int firstPadEndLine = y_skip_dest_lines + copy_line_count;
-            if (field_count_ != 1 && firstPadEndLine % 2 != firstLine) // TODO - verify this
+            if (field_count_ != 1 && firstPadEndLine % 2 != firstLine)
                 firstPadEndLine += 1;
             for (int y = firstPadEndLine; y < decklink_format_desc_.height; y += field_count_) {
                 // Fill the line with black
