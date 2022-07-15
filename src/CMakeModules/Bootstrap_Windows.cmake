@@ -157,7 +157,7 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 # CEF
 if (ENABLE_HTML)
 	set(CEF_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.sdk.95.0.1-MediaHandler.2467/CEF")
-	set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.24670/CEF")
+	set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.2467/CEF")
 	set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.2467/CEF")
 	link_directories("${NUGET_PACKAGES_FOLDER}/casparcg.cef.sdk.95.0.1-MediaHandler.2467/CEF/x64")
 
