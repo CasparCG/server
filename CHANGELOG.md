@@ -1,3 +1,20 @@
+CasparCG 2.3.3 LTS Stable
+==========================================
+
+### Producers
+##### Improvements
+* Image Scroll Producer: Ported from 2.1
+
+
+CasparCG 2.3.2 LTS Stable
+==========================================
+
+### Producers
+##### Fixes
+* Packages: Update TBB library to v2021.1.1 - fixes CPU and memory growth when deleting threads
+* FFmpeg: Fix possible deadlock leading to producer not being cleaned up correctly
+
+
 CasparCG 2.3.2 Beta
 ==========================================
 
