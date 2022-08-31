@@ -105,18 +105,18 @@ class OutboundPacketStream
     OutboundPacketStream& operator<<(bool rhs);
     OutboundPacketStream& operator<<(const NilType& rhs);
     OutboundPacketStream& operator<<(const InfinitumType& rhs);
-    OutboundPacketStream& operator<<(int32 rhs);
+    OutboundPacketStream& operator<<(int32_t rhs);
 
     //#ifndef __x86_64__
     //    OutboundPacketStream& operator<<( int rhs )
-    //            { *this << (int32)rhs; return *this; }
+    //            { *this << (int32_t)rhs; return *this; }
     //#endif
 
     OutboundPacketStream& operator<<(float rhs);
     OutboundPacketStream& operator<<(char rhs);
     OutboundPacketStream& operator<<(const RgbaColor& rhs);
     OutboundPacketStream& operator<<(const MidiMessage& rhs);
-    OutboundPacketStream& operator<<(int64 rhs);
+    OutboundPacketStream& operator<<(int64_t rhs);
     OutboundPacketStream& operator<<(const TimeTag& rhs);
     OutboundPacketStream& operator<<(double rhs);
     OutboundPacketStream& operator<<(const char* rhs);
@@ -142,7 +142,7 @@ class OutboundPacketStream
     // elementSizePtr_ has two special values: 0 indicates that a bundle
     // isn't open, and elementSizePtr_==data_ indicates that a bundle is
     // open but that it doesn't have a size slot (ie the outermost bundle)
-    uint32* elementSizePtr_;
+    uint32_t* elementSizePtr_;
 
     bool messageIsInProgress_;
 };

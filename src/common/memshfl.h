@@ -23,6 +23,9 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
+#elif __ARM_ARCH
+#define SIMDE_ENABLE_NATIVE_ALIASES
+#include <simde/x86/ssse3.h>
 #else
 #include <tmmintrin.h>
 #endif
