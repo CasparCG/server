@@ -70,10 +70,12 @@ ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
 
 ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
 ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
-IF (CONFIG_ARCH MATCHES "x86_64")
+IF (CONFIG_ARCH MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
     ADD_COMPILE_OPTIONS (-msse3)
     ADD_COMPILE_OPTIONS (-mssse3)
     ADD_COMPILE_OPTIONS (-msse4.1)
+ELSE ()
+    ADD_COMPILE_DEFINITIONS (USE_SIMDE)
 ENDIF ()
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 

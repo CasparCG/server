@@ -21,13 +21,15 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#elif __ARM_ARCH
+#ifdef USE_SIMDE
 #define SIMDE_ENABLE_NATIVE_ALIASES
 #include <simde/x86/ssse3.h>
 #else
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <tmmintrin.h>
+#endif
 #endif
 
 namespace caspar {
