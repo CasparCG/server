@@ -297,6 +297,10 @@ struct Stream
             enc->thread_type = FF_THREAD_SLICE;
         }
 
+        if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
+            enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        }
+
         auto dict = to_dict(std::move(stream_options));
         CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
@@ -308,10 +312,6 @@ struct Stream
 
         if (codec->type == AVMEDIA_TYPE_AUDIO && !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
             av_buffersink_set_frame_size(sink, enc->frame_size);
-        }
-
-        if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
-            enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
     }
 
