@@ -16,6 +16,7 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 
+#include <atlcomcli.h>
 #include <mutex>
 
 namespace caspar { namespace accelerator { namespace d3d {
@@ -41,7 +42,6 @@ struct d3d_device::impl : public std::enable_shared_from_this<impl>
             D3D_FEATURE_LEVEL_11_0,
             D3D_FEATURE_LEVEL_10_1,
             D3D_FEATURE_LEVEL_10_0,
-            D3D_FEATURE_LEVEL_9_3,
         };
         UINT num_feature_levels = sizeof(feature_levels) / sizeof(feature_levels[0]);
 
@@ -83,13 +83,23 @@ struct d3d_device::impl : public std::enable_shared_from_this<impl>
             });
             ctx_    = std::make_shared<d3d_device_context>(pctx);
 
+            CComQIPtr<ID3D11Device1> d3d11_1(device_.get());
+            if (!d3d11_1) {
+                return;
+            }
+
+            /* needs to support extended resource sharing */
+            D3D11_FEATURE_DATA_D3D11_OPTIONS opts = {};
+            hr = d3d11_1->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS, &opts, sizeof(opts));
+            if (FAILED(hr) || !opts.ExtendedResourceSharing) {
+                CASPAR_THROW_EXCEPTION(bad_alloc() << msg_info(L"Device does not support ExtendedResourceSharing"));
+            }
+
             {
-                IDXGIDevice* dxgi_dev = nullptr;
-                hr                    = device_->QueryInterface(__uuidof(dxgi_dev), (void**)&dxgi_dev);
-                if (SUCCEEDED(hr)) {
+                CComQIPtr<IDXGIDevice> dxgi_dev = device_.get();
+                if (dxgi_dev) {
                     IDXGIAdapter* dxgi_adapt = nullptr;
                     hr                       = dxgi_dev->GetAdapter(&dxgi_adapt);
-                    dxgi_dev->Release();
                     if (SUCCEEDED(hr)) {
                         DXGI_ADAPTER_DESC desc;
                         hr = dxgi_adapt->GetDesc(&desc);
@@ -111,11 +121,15 @@ struct d3d_device::impl : public std::enable_shared_from_this<impl>
     std::shared_ptr<d3d_texture2d> open_shared_texture(void* handle)
     {
         ID3D11Texture2D* tex = nullptr;
-        auto             hr  = device_->OpenSharedResource(handle, __uuidof(ID3D11Texture2D), (void**)(&tex));
-        if (FAILED(hr))
-            return nullptr;
 
-        return std::make_shared<d3d_texture2d>(tex);
+        CComQIPtr<ID3D11Device1> dev = device_.get();
+        if (dev) {
+            auto hr = dev->OpenSharedResource1((HANDLE)(uintptr_t)handle, __uuidof(ID3D11Texture2D), (void**)(&tex));
+            if (SUCCEEDED(hr))
+                return std::make_shared<d3d_texture2d>(tex);
+        }
+
+        return nullptr;
     }
 };
 

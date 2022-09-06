@@ -63,7 +63,11 @@ void caspar_log(const CefRefPtr<CefBrowser>&        browser,
         auto msg = CefProcessMessage::Create(LOG_MESSAGE_NAME);
         msg->GetArgumentList()->SetInt(0, level);
         msg->GetArgumentList()->SetString(1, message);
-        browser->SendProcessMessage(PID_BROWSER, msg);
+
+        CefRefPtr<CefFrame> mainFrame = browser->GetMainFrame();
+        if (mainFrame) {
+            mainFrame->SendProcessMessage(PID_BROWSER, msg);
+        }
     }
 }
 
@@ -87,7 +91,10 @@ class remove_handler : public CefV8Handler
             return false;
         }
 
-        browser_->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(REMOVE_MESSAGE_NAME));
+        CefRefPtr<CefFrame> mainFrame = browser_->GetMainFrame();
+        if (mainFrame) {
+            mainFrame->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(REMOVE_MESSAGE_NAME));
+        }
 
         return true;
     }
@@ -186,6 +193,7 @@ class renderer_application
             command_line->AppendSwitch("enable-webgl");
         }
 
+        command_line->AppendSwitch("disable-web-security");
         command_line->AppendSwitch("enable-begin-frame-scheduling");
         command_line->AppendSwitch("enable-media-stream");
         command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
@@ -193,6 +201,7 @@ class renderer_application
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
             // smoothly
+
             command_line->AppendSwitch("disable-gpu");
             command_line->AppendSwitch("disable-gpu-compositing");
             command_line->AppendSwitchWithValue("disable-gpu-vsync", "gpu");
@@ -200,6 +209,7 @@ class renderer_application
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefRefPtr<CefFrame>          frame,
                                   CefProcessId                 source_process,
                                   CefRefPtr<CefProcessMessage> message) override
     {

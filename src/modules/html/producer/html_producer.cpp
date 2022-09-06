@@ -179,17 +179,18 @@ class html_client
         }
     }
 
-    bool OnBeforePopup(CefRefPtr<CefBrowser>   browser,
-                       CefRefPtr<CefFrame>     frame,
-                       const CefString&        target_url,
-                       const CefString&        target_frame_name,
-                       WindowOpenDisposition   target_disposition,
-                       bool                    user_gesture,
-                       const CefPopupFeatures& popupFeatures,
-                       CefWindowInfo&          windowInfo,
-                       CefRefPtr<CefClient>&   client,
-                       CefBrowserSettings&     settings,
-                       bool*                   no_javascript_access) override
+    bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
+                       CefRefPtr<CefFrame>            frame,
+                       const CefString&               target_url,
+                       const CefString&               target_frame_name,
+                       WindowOpenDisposition          target_disposition,
+                       bool                           user_gesture,
+                       const CefPopupFeatures&        popupFeatures,
+                       CefWindowInfo&                 windowInfo,
+                       CefRefPtr<CefClient>&          client,
+                       CefBrowserSettings&            settings,
+                       CefRefPtr<CefDictionaryValue>& dict,
+                       bool*                          no_javascript_access) override
     {
         // This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon
         // closing
@@ -255,6 +256,9 @@ class html_client
     }
 
 #ifdef WIN32
+    /*
+    * This is the old implementation, based on the original patch and not the obs variant.
+    * It is kept here for when something gets merged upstream as this might be the needed implementation
     void OnAcceleratedPaint(CefRefPtr<CefBrowser> browser,
                             PaintElementType      type,
                             const RectList&       dirtyRects,
@@ -296,6 +300,67 @@ class html_client
                     }
                 }
             }
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
+    }
+    */
+
+    /*
+     * This is where the shared textures get fed into. It is specific to the obs builds (hence the 2 suffix), so might
+     * be removed/renamed when the change is accepted upstream
+     */
+    void OnAcceleratedPaint2(CefRefPtr<CefBrowser> browser,
+                             PaintElementType      type,
+                             const RectList&       dirtyRects,
+                             void*                 shared_handle,
+                             bool                  new_texture) override
+    {
+        try {
+            if (!shared_texture_enable_)
+                return;
+
+            graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
+            paint_timer_.restart();
+            CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
+
+            if (type != PET_VIEW)
+                return;
+
+            if (new_texture && d3d_shared_buffer_) {
+                d3d_shared_buffer_.reset();
+            }
+
+            if (!d3d_shared_buffer_) {
+                d3d_shared_buffer_ = d3d_device_->open_shared_texture(shared_handle);
+                if (!d3d_shared_buffer_)
+                    CASPAR_LOG(error) << print() << L" could not open shared texture!";
+            }
+
+            if (d3d_shared_buffer_) {
+                core::pixel_format format = core::pixel_format::invalid;
+                if (d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
+                    format = core::pixel_format::bgra;
+                } else if (d3d_shared_buffer_->format() == DXGI_FORMAT_R8G8B8A8_UNORM) {
+                    format = core::pixel_format::rgba;
+                }
+
+                if (format != core::pixel_format::invalid) {
+                    auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, true, format);
+                    core::draw_frame dframe(std::move(frame));
+
+                    {
+                        std::lock_guard<std::mutex> lock(frames_mutex_);
+
+                        frames_.push(dframe);
+                        while (frames_.size() > 8) {
+                            frames_.pop();
+                            graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                        }
+                    }
+                }
+            }
+
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
         }
@@ -357,6 +422,7 @@ class html_client
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefRefPtr<CefFrame>          frame,
                                   CefProcessId                 source_process,
                                   CefRefPtr<CefProcessMessage> message) override
     {
@@ -391,8 +457,12 @@ class html_client
 
     void invoke_requested_animation_frames()
     {
-        if (browser_ != nullptr)
-            browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
+        if (browser_ != nullptr) {
+            CefRefPtr<CefFrame> mainFrame = browser_->GetMainFrame();
+            if (mainFrame) {
+                mainFrame->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
+            }
+        }
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
@@ -477,17 +547,16 @@ class html_producer : public core::frame_producer
             client_ = new html_client(frame_factory, graph_, format_desc, shared_texture_enable, url_);
 
             CefWindowInfo window_info;
-            window_info.width                        = format_desc.square_width;
-            window_info.height                       = format_desc.square_height;
+            window_info.bounds.width                 = format_desc.square_width;
+            window_info.bounds.height                = format_desc.square_height;
             window_info.windowless_rendering_enabled = true;
             window_info.shared_texture_enabled       = shared_texture_enable;
 
             CefBrowserSettings browser_settings;
-            browser_settings.web_security = cef_state_t::STATE_DISABLED;
-            browser_settings.webgl        = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
-            double fps                    = format_desc.fps;
+            browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
+            double fps             = format_desc.fps;
             browser_settings.windowless_frame_rate = int(ceil(fps));
-            CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
+            CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);
         });
     }
 
