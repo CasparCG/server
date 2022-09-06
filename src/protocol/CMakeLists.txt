@@ -10,13 +10,6 @@ set(SOURCES
 		amcp/amcp_args.cpp
 		amcp/amcp_command_repository_wrapper.cpp
 
-		cii/CIICommandsImpl.cpp
-		cii/CIIProtocolStrategy.cpp
-
-		clk/CLKProtocolStrategy.cpp
-		clk/clk_commands.cpp
-		clk/clk_command_processor.cpp
-
 		osc/oscpack/OscOutboundPacketStream.cpp
 		osc/oscpack/OscPrintReceivedElements.cpp
 		osc/oscpack/OscReceivedElements.cpp
@@ -41,14 +34,6 @@ set(HEADERS
 		amcp/amcp_shared.h
 		amcp/amcp_args.h
 		amcp/amcp_command_context.h
-
-		cii/CIICommand.h
-		cii/CIICommandsImpl.h
-		cii/CIIProtocolStrategy.h
-
-		clk/CLKProtocolStrategy.h
-		clk/clk_commands.h
-		clk/clk_command_processor.h
 
 		osc/oscpack/MessageMappingOscPacketListener.h
 		osc/oscpack/OscException.h
