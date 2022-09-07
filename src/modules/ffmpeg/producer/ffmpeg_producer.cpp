@@ -39,6 +39,7 @@
 #include <boost/logic/tribool.hpp>
 
 #include <cstdint>
+#include <fstream>
 
 #pragma warning(push, 1)
 
