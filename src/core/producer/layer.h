@@ -50,8 +50,8 @@ class layer final
     void resume();
     void stop();
 
-    draw_frame receive(int nb_samples);
-    draw_frame receive_background(int nb_samples);
+    draw_frame receive(const video_field field, int nb_samples);
+    draw_frame receive_background(const video_field field, int nb_samples);
 
     core::monitor::state state() const;
 

@@ -27,8 +27,8 @@ class AVProducer
                boost::optional<bool>                loop,
                int                                  seekable);
 
-    core::draw_frame prev_frame();
-    core::draw_frame next_frame();
+    core::draw_frame prev_frame(const core::video_field field);
+    core::draw_frame next_frame(const core::video_field field);
 
     AVProducer& seek(int64_t time);
     int64_t     time() const;

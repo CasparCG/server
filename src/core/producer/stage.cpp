@@ -128,6 +128,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             result.nb_samples =
                 result.format_desc.audio_cadence[frame_number % result.format_desc.audio_cadence.size()];
 
+            auto is_interlaced = format_desc_.field_count == 2;
+            auto field1        = is_interlaced ? video_field::a : video_field::progressive;
+
             try {
                 for (auto& t : tweens_)
                     t.second.tick(1);
@@ -154,6 +157,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_)
                     orderSourceLayers(layerVec, routed_layers, p.first, 0);
 
+                // when running interlaced, both fields are be pulled at once.
+                // This will risk some stutter for freshly created producers, but it lets us tick at 25hz and avoids
+                // amcp changes starting on the second field
+
                 for (auto& l : layerVec) {
                     auto p = layers_.find(l.first);
                     if (p == layers_.end())
@@ -162,14 +169,26 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     auto& layer = p->second;
                     auto& tween = tweens_[p->first];
 
+                    auto has_background_route =
+                        std::find(fetch_background.begin(), fetch_background.end(), p->first) != fetch_background.end();
+
                     layer_frame res = {};
-                    res.foreground =
-                        draw_frame::push(l.second ? layer.receive(result.nb_samples) : draw_frame(), tween.fetch());
+                    if (l.second)
+                        res.foreground1 = draw_frame::push(layer.receive(field1, result.nb_samples), tween.fetch());
+
                     res.has_background = layer.has_background();
-                    if (std::find(fetch_background.begin(), fetch_background.end(), p->first) !=
-                        fetch_background.end()) {
-                        res.background = layer.receive_background(result.nb_samples);
+                    if (has_background_route)
+                        res.background1 = layer.receive_background(field1, result.nb_samples);
+
+                    if (is_interlaced) {
+                        res.is_interlaced = true;
+                        if (l.second)
+                            res.foreground2 =
+                                draw_frame::push(layer.receive(video_field::b, result.nb_samples), tween.fetch());
+                        if (has_background_route)
+                            res.background2 = layer.receive_background(video_field::b, result.nb_samples);
                     }
+
                     frames[p->first] = res;
 
                     // push received foreground frame to any configured route producer
@@ -177,12 +196,17 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
 
                 for (auto& p : frames) {
-                    result.frames.push_back(p.second.foreground);
+                    result.frames.push_back(p.second.foreground1);
+                    if (is_interlaced)
+                        result.frames2.push_back(p.second.foreground2);
                 }
 
                 // push stage_frames to support any channel routes that have been set
                 layer_frame chan_lf = {};
-                chan_lf.foreground  = draw_frame(result.frames);
+                chan_lf.is_interlaced = is_interlaced;
+                chan_lf.foreground1 = draw_frame(result.frames);
+                if (is_interlaced)
+                    chan_lf.foreground2 = draw_frame(result.frames2);
                 routesCb(-1, chan_lf);
 
                 monitor::state state;

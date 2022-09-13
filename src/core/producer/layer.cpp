@@ -77,7 +77,15 @@ struct layer::impl
             if (!paused_) {
                 background_->leading_producer(foreground_);
             } else {
-                background_->leading_producer(spl::make_shared<core::frame_producer>(foreground_->last_frame()));
+                if (format_desc_.field_count == 2) {
+                    auto frame1 = foreground_->last_frame(core::video_field::a);
+                    auto frame2 = foreground_->last_frame(core::video_field::b);
+                    background_->leading_producer(
+                        spl::make_shared<core::const_producer>(std::move(frame1), std::move(frame2)));
+                } else {
+                    auto frame = foreground_->last_frame(core::video_field::progressive);
+                    background_->leading_producer(spl::make_shared<core::const_producer>(frame, frame));
+                }
             }
 
             foreground_ = std::move(background_);
@@ -95,10 +103,10 @@ struct layer::impl
         auto_play_  = false;
     }
 
-    draw_frame receive(int nb_samples)
+    draw_frame receive(const video_field field, int nb_samples)
     {
         try {
-            if (foreground_->following_producer() != core::frame_producer::empty()) {
+            if (foreground_->following_producer() != core::frame_producer::empty() && field != video_field::b) {
                 foreground_ = foreground_->following_producer();
             }
 
@@ -109,15 +117,15 @@ struct layer::impl
                     auto time     = static_cast<std::int64_t>(foreground_->frame_number());
                     auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
                     frames_left   = duration - time - *auto_play_delta;
-                    if (frames_left < 1) {
+                    if (frames_left < 1 && field != video_field::b) {
                         play();
                     }
                 }
             }
 
-            auto frame = paused_ ? core::draw_frame{} : foreground_->receive(nb_samples);
+            auto frame = paused_ ? core::draw_frame{} : foreground_->receive(field, nb_samples);
             if (!frame) {
-                frame = foreground_->last_frame();
+                frame = foreground_->last_frame(field);
             }
 
             state_                           = {};
@@ -140,10 +148,10 @@ struct layer::impl
         }
     }
 
-    draw_frame receive_background(int nb_samples)
+    draw_frame receive_background(const video_field field, int nb_samples)
     {
         try {
-            return background_->first_frame();
+            return background_->first_frame(field);
 
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
@@ -176,8 +184,11 @@ void       layer::preview() { impl_->preview(false); }
 void       layer::pause() { impl_->pause(); }
 void       layer::resume() { impl_->resume(); }
 void       layer::stop() { impl_->stop(); }
-draw_frame layer::receive(int nb_samples) { return impl_->receive(nb_samples); }
-draw_frame layer::receive_background(int nb_samples) { return impl_->receive_background(nb_samples); }
+draw_frame layer::receive(const video_field field, int nb_samples) { return impl_->receive(field, nb_samples); }
+draw_frame layer::receive_background(const video_field field, int nb_samples)
+{
+    return impl_->receive_background(field, nb_samples);
+}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }

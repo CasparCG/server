@@ -570,7 +570,7 @@ class html_producer : public core::frame_producer
 
     std::wstring name() const override { return L"html"; }
 
-    core::draw_frame receive_impl(int nb_samples) override
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         if (client_ != nullptr) {
             return client_->receive();
@@ -579,9 +579,9 @@ class html_producer : public core::frame_producer
         return core::draw_frame::empty();
     }
 
-    core::draw_frame first_frame() override { return receive_impl(0); }
+    core::draw_frame first_frame(const core::video_field field) override { return receive_impl(field, 0); }
 
-    core::draw_frame last_frame() override
+    core::draw_frame last_frame(const core::video_field field) override
     {
         if (client_ != nullptr) {
             return client_->last_frame();

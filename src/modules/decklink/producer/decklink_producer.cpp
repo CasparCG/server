@@ -70,6 +70,8 @@ extern "C" {
 
 #include <boost/format.hpp>
 
+#include <mutex>
+
 #include "../decklink_api.h"
 
 using namespace caspar::ffmpeg;
@@ -102,7 +104,7 @@ struct Filter
             bool                 doScale = dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width;
             boost::rational<int> bmdFramerate(
                 timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2), frameDuration / 1000);
-            bool doFps = bmdFramerate != format_desc.framerate;
+            bool doFps = bmdFramerate != (format_desc.framerate * format_desc.field_count);
             bool i2p   = (dm->GetFieldDominance() != bmdProgressiveFrame) && (1 == format_desc.field_count);
 
             std::string deintStr =
@@ -120,11 +122,14 @@ struct Filter
             }
 
             if (doScale) {
+                // TODO - why are we doing this in ffmpeg rather than on the gpu in the mixer?
                 filter_spec += (boost::format(",scale=%dx%d") % format_desc.width % format_desc.height).str();
             }
 
             if (doFps) {
-                filter_spec += (boost::format(",fps=%d/%d") % format_desc.time_scale % format_desc.duration).str();
+                filter_spec += (boost::format(",fps=%d/%d") % (format_desc.time_scale * format_desc.field_count) %
+                                format_desc.duration)
+                                   .str();
             }
         } else {
             if (filter_spec.empty()) {
@@ -297,14 +302,19 @@ class decklink_producer : public IDeckLinkInputCallback
     spl::shared_ptr<core::frame_factory> frame_factory_;
     const core::video_format_repository  format_repository_;
 
+    int64_t frame_count_ = 0;
+
     double in_sync_  = 0.0;
     double out_sync_ = 0.0;
 
     bool freeze_on_lost_;
     bool has_signal_;
 
-    tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
-    core::draw_frame                                last_frame_;
+    core::draw_frame last_frame_;
+
+    int                                                        buffer_capacity_ = 4;
+    std::deque<std::pair<core::draw_frame, core::video_field>> buffer_;
+    mutable std::mutex                                         buffer_mutex_;
 
     std::exception_ptr exception_;
 
@@ -346,8 +356,6 @@ class decklink_producer : public IDeckLinkInputCallback
         audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
-
-        frame_buffer_.set_capacity(3);
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -460,6 +468,12 @@ class decklink_producer : public IDeckLinkInputCallback
 
         CASPAR_SCOPE_EXIT
         {
+            size_t buffer_size = 0;
+            {
+                std::lock_guard<std::mutex> lock(buffer_mutex_);
+                buffer_size = buffer_.size();
+            }
+
             {
                 std::lock_guard<std::mutex> lock(state_mutex_);
                 state_["file/name"]              = model_name_;
@@ -468,7 +482,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 state_["file/audio/channels"]    = format_desc_.audio_channels;
                 state_["file/fps"]               = format_desc_.fps;
                 state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
-                state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+                state_["buffer"]                 = {static_cast<int>(buffer_size), buffer_capacity_};
                 state_["has_signal"]             = has_signal_;
 
                 if (video) {
@@ -478,12 +492,11 @@ class decklink_producer : public IDeckLinkInputCallback
             }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
-            graph_->set_value("output-buffer",
-                              static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
+            graph_->set_value("output-buffer", static_cast<float>(buffer_size) / static_cast<float>(buffer_capacity_));
         };
 
         try {
-            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.hz * 0.5);
             tick_timer_.restart();
 
             BMDTimeValue in_video_pts = 0LL;
@@ -501,6 +514,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 const auto flags = video->GetFlags();
                 has_signal_      = !(flags & bmdFrameHasNoInputSource);
                 if (freeze_on_lost_ && !has_signal_) {
+                    frame_count_ = 0;
                     return S_OK;
                 }
 
@@ -612,11 +626,24 @@ class decklink_producer : public IDeckLinkInputCallback
                 graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
 
                 auto frame = core::draw_frame(make_frame(this, *frame_factory_, av_video, av_audio));
-                if (!frame_buffer_.try_push(frame)) {
-                    core::draw_frame dummy;
-                    frame_buffer_.try_pop(dummy);
-                    frame_buffer_.try_push(frame);
-                    graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                auto field = core::video_field::progressive;
+                if (format_desc_.field_count == 2) {
+                    field = frame_count_ % 2 == 0 ? core::video_field::a : core::video_field::b;
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(buffer_mutex_);
+
+                    buffer_.emplace_back(std::make_pair(frame, field));
+                    frame_count_++;
+
+                    if (buffer_.size() > buffer_capacity_) {
+                        buffer_.pop_front();
+                        // If interlaced, pop a second frame, to drop a whole source frame.
+                        if (format_desc_.field_count == 2)
+                            buffer_.pop_front();
+                        graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                    }
                 }
 
                 boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
@@ -629,26 +656,42 @@ class decklink_producer : public IDeckLinkInputCallback
         return S_OK;
     }
 
-    core::draw_frame get_frame(bool use_last_frame)
+    core::draw_frame get_frame(const core::video_field field, bool use_last_frame)
     {
         if (exception_ != nullptr) {
             std::rethrow_exception(exception_);
         }
 
         core::draw_frame frame;
+        bool             wrong_field = false;
+        {
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
+            if (buffer_.size() > 0) {
+                auto& candidate = buffer_.front();
+                if (candidate.second == field || candidate.second == core::video_field::progressive) {
+                    frame = std::move(candidate.first);
+                    buffer_.pop_front();
+                } else {
+                    wrong_field = true;
+                }
+            } else {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+            }
 
-        if (!frame_buffer_.try_pop(frame)) {
-            if (freeze_on_lost_ || use_last_frame)
-                frame = last_frame_;
-            graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
-        } else {
-            last_frame_ = frame;
+            graph_->set_value("output-buffer",
+                              static_cast<float>(buffer_.size()) / static_cast<float>(buffer_capacity_));
         }
 
-        graph_->set_value("output-buffer",
-                          static_cast<float>(frame_buffer_.size()) / static_cast<float>(frame_buffer_.capacity()));
-
-        return frame;
+        if (wrong_field) {
+            return last_frame_;
+        } else if (!frame && (freeze_on_lost_ || use_last_frame)) {
+            return last_frame_;
+        } else {
+            if (frame) {
+                last_frame_ = frame;
+            }
+            return frame;
+        }
     }
 
     std::wstring print() const
@@ -703,11 +746,17 @@ class decklink_producer_proxy : public core::frame_producer
 
     // frame_producer
 
-    core::draw_frame receive_impl(int nb_samples) override { return producer_->get_frame(false); }
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
+    {
+        return producer_->get_frame(field, false);
+    }
 
-    core::draw_frame first_frame() override { return receive_impl(0); }
+    core::draw_frame first_frame(const core::video_field field) override { return receive_impl(field, 0); }
 
-    core::draw_frame last_frame() override { return core::draw_frame::still(producer_->get_frame(true)); }
+    core::draw_frame last_frame(const core::video_field field) override
+    {
+        return core::draw_frame::still(producer_->get_frame(field, true));
+    }
 
     uint32_t nb_frames() const override { return length_; }
 

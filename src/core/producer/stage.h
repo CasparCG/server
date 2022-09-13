@@ -45,8 +45,11 @@ namespace caspar { namespace core {
 
 struct layer_frame
 {
-    draw_frame foreground;
-    draw_frame background;
+    bool       is_interlaced;
+    draw_frame foreground1;
+    draw_frame background1;
+    draw_frame foreground2;
+    draw_frame background2;
     bool       has_background;
 };
 
@@ -55,6 +58,7 @@ struct stage_frames
     core::video_format_desc format_desc;
     int                     nb_samples;
     std::vector<draw_frame> frames;
+    std::vector<draw_frame> frames2;
 };
 
 /**

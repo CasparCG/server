@@ -63,8 +63,12 @@ class command_context
     void send_to_flash(const std::wstring& data)
     {
         if (!clock_loaded_) {
-            core::frame_producer_dependencies dependencies(
-                channel_->frame_factory(), channels_, format_repository_, channel_->stage()->video_format_desc(), producer_registry_, cg_registry_);
+            core::frame_producer_dependencies dependencies(channel_->frame_factory(),
+                                                           channels_,
+                                                           format_repository_,
+                                                           channel_->stage()->video_format_desc(),
+                                                           producer_registry_,
+                                                           cg_registry_);
             cg_registry_
                 ->get_or_create_proxy(channel_, dependencies, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")
                 ->add(0, L"hawrysklocka/clock", true, L"", data);

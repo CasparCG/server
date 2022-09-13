@@ -86,12 +86,12 @@ struct video_channel::impl final
                     continue;
 
                 if (r.first.index == -1) {
-                    route->signal(layer_frame.foreground);
+                    route->signal(layer_frame.foreground1, layer_frame.foreground2);
                 } else if (r.first.mode == route_mode::background ||
                            (r.first.mode == route_mode::next && layer_frame.has_background)) {
-                    route->signal(draw_frame::pop(layer_frame.background));
+                    route->signal(draw_frame::pop(layer_frame.background1), draw_frame::pop(layer_frame.background2));
                 } else {
-                    route->signal(draw_frame::pop(layer_frame.foreground));
+                    route->signal(draw_frame::pop(layer_frame.foreground1), draw_frame::pop(layer_frame.foreground2));
                 }
             }
         }
@@ -150,19 +150,23 @@ struct video_channel::impl final
                     // Produce
                     caspar::timer produce_timer;
                     auto          stage_frames = (*stage_)(frame_counter_, background_routes, routesCb);
-                    graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.fps * 0.5);
+                    graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.hz * 0.5);
 
                     // Mix
                     caspar::timer mix_timer;
                     auto mixed_frame = mixer_(stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples);
-                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.fps * 0.5);
+                    auto mixed_frame2 =
+                        stage_frames.format_desc.field_count == 2
+                            ? mixer_(stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples)
+                            : const_frame{};
+                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.hz * 0.5);
 
                     // Consume
                     caspar::timer consume_timer;
-                    output_(std::move(mixed_frame), stage_frames.format_desc);
-                    graph_->set_value("consume-time", consume_timer.elapsed() * stage_frames.format_desc.fps * 0.5);
+                    output_(std::move(mixed_frame), std::move(mixed_frame2), stage_frames.format_desc);
+                    graph_->set_value("consume-time", consume_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
-                    graph_->set_value("frame-time", frame_timer.elapsed() * stage_frames.format_desc.fps * 0.5);
+                    graph_->set_value("frame-time", frame_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     monitor::state state = {};
                     state["stage"]       = stage_->state();
@@ -175,7 +179,7 @@ struct video_channel::impl final
 
                     caspar::timer osc_timer;
                     tick_(state_);
-                    graph_->set_value("osc-time", osc_timer.elapsed() * stage_frames.format_desc.fps * 0.5);
+                    graph_->set_value("osc-time", osc_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
