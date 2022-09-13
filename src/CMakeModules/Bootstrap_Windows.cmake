@@ -19,6 +19,7 @@ set(CASPARCG_MODULE_UNINIT_STATEMENTS "" CACHE INTERNAL "")
 set(CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL "")
 set(CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES "" CACHE INTERNAL "")
+set(CASPARCG_RUNTIME_DEPENDENCIES_DIRS "" CACHE INTERNAL "")
 
 function(casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	set(CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
@@ -62,6 +63,9 @@ endfunction()
 
 function(casparcg_add_runtime_dependency FILE_TO_COPY)
 	set(CASPARCG_RUNTIME_DEPENDENCIES "${CASPARCG_RUNTIME_DEPENDENCIES}" "${FILE_TO_COPY}" CACHE INTERNAL "")
+endfunction()
+function(casparcg_add_runtime_dependency_dir FILE_TO_COPY)
+	set(CASPARCG_RUNTIME_DEPENDENCIES_DIRS "${CASPARCG_RUNTIME_DEPENDENCIES_DIRS}" "${FILE_TO_COPY}" CACHE INTERNAL "")
 endfunction()
 
 set(PACKAGES_FOLDER "${PROJECT_SOURCE_DIR}/packages")
@@ -161,13 +165,13 @@ if (ENABLE_HTML)
 	set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.2467/CEF")
 	link_directories("${NUGET_PACKAGES_FOLDER}/casparcg.cef.sdk.95.0.1-MediaHandler.2467/CEF/x64")
 
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
+	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_200_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
 
-	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/swiftshader")
+	casparcg_add_runtime_dependency_dir("${CEF_BIN_PATH}/swiftshader")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
