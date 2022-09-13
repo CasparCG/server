@@ -139,6 +139,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                 for (auto& l : layerVec) {
                     auto  p     = layers_.find(l.first);
+                    if (p == layers_.end())
+                        continue;
+                    
                     auto& layer = p->second;
                     auto& tween = tweens_[p->first];
 
@@ -154,6 +157,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                     // push received foreground frame to any configured route producer
                     routesCb(p->first, res);
+
                 }
 
                 for (auto& p : frames) {
