@@ -34,6 +34,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <alloca.h>
 
 #include <common/endian.h>
 

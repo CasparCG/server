@@ -24,6 +24,8 @@
 
 #include <GL/glew.h>
 
+#include <atomic>
+
 namespace caspar { namespace accelerator { namespace ogl {
 
 static std::atomic<int>         g_w_total_count;
