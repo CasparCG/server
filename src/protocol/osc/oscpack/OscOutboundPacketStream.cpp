@@ -34,12 +34,13 @@
 
 #include <cassert>
 #include <cstring>
-#include <alloca.h>
 
 #include <common/endian.h>
 
 #if defined(__WIN32__) || defined(WIN32)
 #include <malloc.h> // for alloca
+#else
+#include <alloca.h>
 #endif
 
 #include "OscHostEndianness.h"

@@ -4,6 +4,9 @@ set BUILD_ARCHIVE_NAME=casparcg_server
 set BUILD_VCVARSALL=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat
 set BUILD_7ZIP=C:\Program Files\7-Zip\7z.exe
 
+@REM Github Actions has Enterprise available
+if DEFINED CI set BUILD_VCVARSALL=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat
+
 :: Clean and enter shadow build folder
 echo Cleaning...
 if exist dist rmdir dist /s /q || goto :error
