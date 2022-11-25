@@ -19,8 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include <tbb/tbbmalloc_proxy.h>
-
 #include "included_modules.h"
 #include "server.h"
 
