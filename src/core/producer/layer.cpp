@@ -37,33 +37,27 @@ struct layer::impl
 
     bool auto_play_ = false;
     bool paused_    = false;
+    bool live_      = false;
 
   public:
     void pause() { paused_ = true; }
 
     void resume() { paused_ = false; }
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview_producer, bool auto_play)
+    void load(spl::shared_ptr<frame_producer> producer, bool preview_producer, bool auto_play, bool live)
     {
         background_ = std::move(producer);
+        live_       = live;
         auto_play_  = auto_play;
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
-            play();
+            play(false);
         } else if (preview_producer) {
-            preview(true);
+            play(true);
         }
     }
 
-    void preview(bool force)
-    {
-        if (force || background_ != frame_producer::empty()) {
-            play();
-            paused_ = true;
-        }
-    }
-
-    void play()
+    void play(bool paused = false)
     {
         if (background_ != frame_producer::empty()) {
             if (!paused_) {
@@ -76,9 +70,11 @@ struct layer::impl
             background_ = frame_producer::empty();
 
             auto_play_ = false;
+            paused_ = !live_ && paused;
+        } else {
+            paused_ = paused;
         }
 
-        paused_ = false;
     }
 
     void stop()
@@ -105,6 +101,10 @@ struct layer::impl
                         play();
                     }
                 }
+            }
+
+            if (live_) {
+                background_->receive(nb_samples);
             }
 
             auto frame = paused_ ? core::draw_frame{} : foreground_->receive(nb_samples);
@@ -136,7 +136,6 @@ struct layer::impl
     {
         try {
             return background_->first_frame();
-
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             background_ = frame_producer::empty();
@@ -159,12 +158,12 @@ layer& layer::operator=(layer&& other)
     return *this;
 }
 void layer::swap(layer& other) { impl_.swap(other.impl_); }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play)
+void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play, bool live)
 {
-    return impl_->load(std::move(frame_producer), preview, auto_play);
+    return impl_->load(std::move(frame_producer), preview, auto_play, live);
 }
-void       layer::play() { impl_->play(); }
-void       layer::preview() { impl_->preview(false); }
+void       layer::play() { impl_->play(false); }
+void       layer::preview() { impl_->play(true); }
 void       layer::pause() { impl_->pause(); }
 void       layer::resume() { impl_->resume(); }
 void       layer::stop() { impl_->stop(); }
