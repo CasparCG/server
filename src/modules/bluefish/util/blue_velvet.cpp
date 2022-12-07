@@ -556,7 +556,10 @@ spl::shared_ptr<bvc_wrapper> create_blue(int device_index)
     return blue;
 }
 
-core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoModeExt vid_fmt_ext, EMemoryFormat mem_fmt)
+core::video_format_desc get_format_desc(const core::video_format_repository& format_repository,
+                                        bvc_wrapper&                        blue,
+                                        EVideoModeExt                       vid_fmt_ext,
+                                        EMemoryFormat                       mem_fmt)
 {
     core::video_format_desc fmt;
     unsigned int     width, height, duration = 0, time_scale = 0, rate = 0, bIs1001 = 0, is_progressive = 0, size = 0;
@@ -672,7 +675,7 @@ core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoModeExt vid_fmt
         field_count = 2;
 
     fmt.field_count   = field_count;
-    fmt               = get_caspar_video_format(vid_fmt_ext);
+    fmt               = format_repository.find_format(get_caspar_video_format(vid_fmt_ext));
     fmt.size          = size;
     fmt.audio_cadence = std::move(audio_cadence);
     fmt.name          = blue.get_wstring_for_video_mode(vid_fmt_ext);

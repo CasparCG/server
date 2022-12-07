@@ -125,7 +125,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>&     params,
+                                                           const core::video_format_repository& format_repository, 
                                                            std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
@@ -136,6 +137,7 @@ spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_ivga_consumer(const boost::property_tree::wptree&               ptree,
+                                   const core::video_format_repository&              format_repository, 
                                    std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<newtek_ivga_consumer>();

@@ -156,6 +156,7 @@ class print_consumer_proxy : public frame_consumer
 
 spl::shared_ptr<core::frame_consumer>
 frame_consumer_registry::create_consumer(const std::vector<std::wstring>&            params,
+                                         const core::video_format_repository&        format_repository, 
                                          std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     if (params.empty())
@@ -166,7 +167,7 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
     if (!std::any_of(
             consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
                 try {
-                    consumer = factory(params, channels);
+                    consumer = factory(params, format_repository, channels);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -181,6 +182,7 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
 spl::shared_ptr<frame_consumer>
 frame_consumer_registry::create_consumer(const std::wstring&                         element_name,
                                          const boost::property_tree::wptree&         element,
+                                         const core::video_format_repository&        format_repository, 
                                          std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     auto& preconfigured_consumer_factories = impl_->preconfigured_consumer_factories;
@@ -191,7 +193,7 @@ frame_consumer_registry::create_consumer(const std::wstring&                    
                                << msg_info(L"No consumer factory registered for element name " + element_name));
 
     return spl::make_shared<destroy_consumer_proxy>(
-        spl::make_shared<print_consumer_proxy>(found->second(element, channels)));
+        spl::make_shared<print_consumer_proxy>(found->second(element, format_repository, channels)));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()

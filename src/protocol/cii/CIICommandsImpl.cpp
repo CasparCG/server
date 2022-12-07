@@ -124,7 +124,11 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
         std::wstring value = parameters[3];
         boost::to_upper(value);
 
-        this->pCIIStrategy_->GetChannel()->video_format_desc(core::video_format_desc(value));
+        const core::video_format_desc newformat = this->pCIIStrategy_->FindFormat(value);
+        if (newformat.format == core::video_format::invalid)
+            return;
+
+        this->pCIIStrategy_->GetChannel()->video_format_desc(newformat);
     }
 }
 
