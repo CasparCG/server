@@ -153,11 +153,7 @@ class Decoder
                             packet = std::move(input.front());
                             input.pop();
                         }
-                        try {
-                            FF(avcodec_send_packet(ctx.get(), packet.get()));
-                        } catch (ffmpeg::ffmpeg_error_t) {
-                            // Do nothing...
-                        }
+                        avcodec_send_packet(ctx.get(), packet.get());
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
