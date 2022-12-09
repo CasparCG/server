@@ -354,16 +354,16 @@ struct Stream
         return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
     }
 
-    void send(core::const_frame&                             in_frame,
+    void send(std::pair<core::const_frame, int>&             in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
 
-        if (in_frame) {
+        if (in_frame.first) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame = make_av_video_frame(in_frame, format_desc);
+                frame = make_av_video_frame(in_frame.first, format_desc);
 
                 {
                     auto frame2                 = alloc_frame();
@@ -401,12 +401,11 @@ struct Stream
                     frame = std::move(frame2);
                 }
 
-                frame->pts = pts;
+                frame->pts = in_frame.second;
                 pts += 1;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
-                frame      = make_av_audio_frame(in_frame, format_desc);
-                frame->pts = pts;
-                pts += frame->nb_samples;
+                frame      = make_av_audio_frame(in_frame.first, format_desc);
+                frame->pts = in_frame.second * frame->nb_samples;
             } else {
                 // TODO
             }
@@ -450,6 +449,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
     bool                    realtime_ = false;
+    int                     frame_number = 0;
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -459,7 +459,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
 
-    tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
+    tbb::concurrent_bounded_queue<std::pair<core::const_frame, int> > frame_buffer_;
     std::thread                                      frame_thread_;
 
   public:
@@ -486,7 +486,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.push(core::const_frame{});
+            frame_buffer_.push(std::make_pair(core::const_frame{}, -1));
             frame_thread_.join();
         }
     }
@@ -645,7 +645,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                         state_["file/frame"] = frame_number++;
                     }
 
-                    core::const_frame frame;
+                    std::pair<core::const_frame, int> frame;
                     frame_buffer_.pop(frame);
                     graph_->set_value("input",
                                       static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
@@ -664,7 +664,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                         });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
-                    if (!frame) {
+                    if (!frame.first) {
                         packet_buffer.push(nullptr);
                         break;
                     }
@@ -687,7 +687,7 @@ struct ffmpeg_consumer : public core::frame_consumer
             }
         }
 
-        if (!frame_buffer_.try_push(frame)) {
+        if (!frame_buffer_.try_push(std::make_pair(frame, this->frame_number++))) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
         graph_->set_value("input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
