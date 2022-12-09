@@ -44,3 +44,4 @@ FORWARD2(caspar, core, struct write_frame_consumer);
 FORWARD2(caspar, core, struct frame_producer_dependencies);
 FORWARD2(caspar, core, struct module_dependencies);
 FORWARD2(caspar, core, class frame_producer_registry);
+FORWARD2(caspar, core, class video_format_repository);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/mixer/mixer.h>
+#include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -20,7 +21,7 @@ class accelerator_device
 class accelerator
 {
   public:
-    explicit accelerator();
+    explicit accelerator(const core::video_format_repository format_repository);
     accelerator(accelerator&) = delete;
     ~accelerator();
 

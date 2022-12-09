@@ -211,6 +211,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 {
     return core::frame_producer_dependencies(channel->frame_factory(),
                                              get_channels(ctx),
+                                             ctx.format_repository,
                                              channel->video_format_desc(),
                                              ctx.producer_registry,
                                              ctx.cg_registry);
@@ -450,7 +451,7 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx));
+    auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, ctx.format_repository, get_channels(ctx));
     ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
@@ -467,7 +468,7 @@ std::wstring remove_command(command_context& ctx)
             return L"402 REMOVE FAILED\r\n";
         }
 
-        index = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))->index();
+        index = ctx.consumer_registry->create_consumer(ctx.parameters, ctx.format_repository, get_channels(ctx))->index();
     }
 
     if (!ctx.channel.channel->output().remove(index)) {
@@ -479,7 +480,8 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({L"IMAGE"}, get_channels(ctx)));
+    ctx.channel.channel->output().add(
+        ctx.consumer_registry->create_consumer({L"IMAGE"}, ctx.format_repository, get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -506,7 +508,7 @@ std::wstring set_command(command_context& ctx)
     std::wstring value = boost::to_upper_copy(ctx.parameters[1]);
 
     if (name == L"MODE") {
-        auto format_desc = core::video_format_desc(value);
+        auto format_desc = ctx.format_repository.find(value);
         if (format_desc.format != core::video_format::invalid) {
             ctx.channel.channel->video_format_desc(format_desc);
             return L"202 SET MODE OK\r\n";
@@ -1311,7 +1313,7 @@ std::wstring channel_grid_command(command_context& ctx)
     params.push_back(L"0");
     params.push_back(L"NAME");
     params.push_back(L"Channel Grid Window");
-    auto screen = ctx.consumer_registry->create_consumer(params, get_channels(ctx));
+    auto screen = ctx.consumer_registry->create_consumer(params, ctx.format_repository, get_channels(ctx));
 
     self.channel->output().add(screen);
 

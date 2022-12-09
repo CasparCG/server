@@ -171,6 +171,7 @@ struct bluefish_producer
     unsigned int            mode_;
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
+    const core::video_format_repository  format_repository_;
     std::vector<uint8_t>                 conversion_buffer_;
 
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
@@ -194,17 +195,20 @@ struct bluefish_producer
     bluefish_producer(const bluefish_producer&) = delete;
     bluefish_producer& operator=(const bluefish_producer&) = delete;
 
-    bluefish_producer(const core::video_format_desc&              format_desc,
-                      int                                         device_index,
-                      int                                         stream_index,
-                      int                                         uhd_mode,
-                      const spl::shared_ptr<core::frame_factory>& frame_factory)
+    bluefish_producer(
+        const core::video_format_desc& format_desc,
+        int                                         device_index,
+        int                                         stream_index,
+        int                                         uhd_mode,
+        const spl::shared_ptr<core::frame_factory>& frame_factory,
+        const core::video_format_repository& format_repository)
         : device_index_(device_index)
         , stream_index_(stream_index)
         , blue_(create_blue(device_index))
         , model_name_(get_card_desc(*blue_, device_index))
         , channel_format_desc_(format_desc)
         , frame_factory_(frame_factory)
+        , format_repository_(format_repository)
         , memory_format_on_card_(MEM_FMT_RGB)
         , sync_format_(UPD_FMT_FRAME)
         , uhd_mode_(uhd_mode)
@@ -241,8 +245,10 @@ struct bluefish_producer
             }
 
             blue_->get_card_property32(VIDEO_MODE_EXT_INPUT, &mode_);
-            format_desc_ = get_format_desc(
-                *blue_, static_cast<EVideoModeExt>(mode_), static_cast<EMemoryFormat>(memory_format_on_card_));
+            format_desc_   = get_format_desc(format_repository,
+                                           *blue_,
+                                           static_cast<EVideoModeExt>(mode_),
+                                           static_cast<EMemoryFormat>(memory_format_on_card_));
             audio_cadence_ = format_desc_.audio_cadence;
 
             if (format_desc_.size == 0) {
@@ -662,6 +668,7 @@ class bluefish_producer_proxy : public core::frame_producer
   public:
     explicit bluefish_producer_proxy(const core::video_format_desc&              format_desc,
                                      const spl::shared_ptr<core::frame_factory>& frame_factory,
+                                     const core::video_format_repository& format_repository,
                                      int                                         device_index,
                                      int                                         stream_index,
                                      int                                         uhd_mode,
@@ -672,7 +679,7 @@ class bluefish_producer_proxy : public core::frame_producer
         auto ctx = core::diagnostics::call_context::for_thread();
         executor_.invoke([=] {
             core::diagnostics::call_context::for_thread() = ctx;
-            producer_.reset(new bluefish_producer(format_desc, device_index, stream_index, uhd_mode, frame_factory));
+            producer_.reset(new bluefish_producer(format_desc, device_index, stream_index, uhd_mode, frame_factory, format_repository));
         });
     }
 
@@ -715,10 +722,10 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         uhd_mode = 0;
 
     auto length         = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-    auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
+    auto in_format_desc = dependencies.format_repository.find(get_param(L"FORMAT", params, L"INVALID"));
 
     auto producer = spl::make_shared<bluefish_producer_proxy>(
-        dependencies.format_desc, dependencies.frame_factory, device_index, stream_index, uhd_mode, length);
+        dependencies.format_desc, dependencies.frame_factory, dependencies.format_repository, device_index, stream_index, uhd_mode, length);
 
     return create_destroy_proxy(producer);
 }

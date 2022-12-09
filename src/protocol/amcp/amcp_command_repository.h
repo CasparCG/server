@@ -35,7 +35,8 @@ namespace caspar { namespace protocol { namespace amcp {
 class amcp_command_repository
 {
   public:
-    amcp_command_repository(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    amcp_command_repository(const core::video_format_repository                         format_repository,
+                            const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                             const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                             const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
                             const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,

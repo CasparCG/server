@@ -102,6 +102,7 @@ parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, in
 struct amcp_command_repository::impl
 {
     std::vector<channel_context>                         channels;
+    const core::video_format_repository                  format_repository;
     spl::shared_ptr<core::cg_producer_registry>          cg_registry;
     spl::shared_ptr<const core::frame_producer_registry> producer_registry;
     spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
@@ -113,12 +114,14 @@ struct amcp_command_repository::impl
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands;
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands;
 
-    impl(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+    impl(const core::video_format_repository                         format_repository,
+         const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
          const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
          const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
          std::function<void(bool)>                                   shutdown_server_now)
-        : cg_registry(cg_registry)
+        : format_repository(format_repository)
+        , cg_registry(cg_registry)
         , producer_registry(producer_registry)
         , consumer_registry(consumer_registry)
         , ogl_device(ogl_device)
@@ -146,6 +149,7 @@ struct amcp_command_repository::impl
                             -1,
                             -1,
                             channels,
+                            format_repository,
                             cg_registry,
                             producer_registry,
                             consumer_registry,
@@ -171,6 +175,7 @@ struct amcp_command_repository::impl
                             channel_index,
                             layer_index,
                             channels,
+                            format_repository,
                             cg_registry,
                             producer_registry,
                             consumer_registry,
@@ -231,12 +236,13 @@ struct amcp_command_repository::impl
 };
 
 amcp_command_repository::amcp_command_repository(
+    const core::video_format_repository                         format_repository,
     const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
     const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
     const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
     const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
     std::function<void(bool)>                                   shutdown_server_now)
-    : impl_(new impl(cg_registry, producer_registry, consumer_registry, ogl_device, shutdown_server_now))
+    : impl_(new impl(format_repository,cg_registry, producer_registry, consumer_registry, ogl_device, shutdown_server_now))
 {
 }
 

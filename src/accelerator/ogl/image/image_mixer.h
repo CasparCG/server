@@ -36,7 +36,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class image_mixer final : public core::image_mixer
 {
   public:
-    image_mixer(const spl::shared_ptr<class device>& ogl, int channel_id);
+    image_mixer(const spl::shared_ptr<class device>& ogl, int channel_id, const size_t max_frame_size);
     image_mixer(const image_mixer&) = delete;
 
     ~image_mixer();

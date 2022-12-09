@@ -595,7 +595,8 @@ struct screen_consumer_proxy : public core::frame_consumer
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository, 
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
@@ -631,6 +632,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const core::video_format_repository&                     format_repository, 
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config;
