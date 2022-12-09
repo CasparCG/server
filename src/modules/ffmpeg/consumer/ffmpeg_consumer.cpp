@@ -67,7 +67,6 @@ extern "C" {
 #endif
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
 #include <memory>
