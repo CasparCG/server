@@ -140,11 +140,7 @@ class html_client
         }
 
         loaded_ = false;
-        executor_.begin_invoke([&] {
-            for (auto n = 0; n < 4; ++n) {
-                update();
-            }
-        });
+        executor_.begin_invoke([&] { update(); });
     }
 
     void close()
@@ -248,7 +244,7 @@ class html_client
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             frames_.push(core::draw_frame(std::move(frame)));
-            while (frames_.size() > 8) {
+            while (frames_.size() > 4) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -294,7 +290,7 @@ class html_client
                     std::lock_guard<std::mutex> lock(frames_mutex_);
 
                     frames_.push(dframe);
-                    while (frames_.size() > 8) {
+                    while (frames_.size() > 4) {
                         frames_.pop();
                         graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
                     }
@@ -353,7 +349,7 @@ class html_client
                         std::lock_guard<std::mutex> lock(frames_mutex_);
 
                         frames_.push(dframe);
-                        while (frames_.size() > 8) {
+                        while (frames_.size() > 4) {
                             frames_.pop();
                             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
                         }
@@ -455,19 +451,6 @@ class html_client
         return false;
     }
 
-    void invoke_requested_animation_frames()
-    {
-        if (browser_ != nullptr) {
-            CefRefPtr<CefFrame> mainFrame = browser_->GetMainFrame();
-            if (mainFrame) {
-                mainFrame->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
-            }
-        }
-
-        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
-        tick_timer_.restart();
-    }
-
     bool try_pop(core::draw_frame& result)
     {
         std::lock_guard<std::mutex> lock(frames_mutex_);
@@ -484,8 +467,6 @@ class html_client
 
     void update()
     {
-        invoke_requested_animation_frames();
-
         core::draw_frame frame;
         if (try_pop(frame)) {
             std::lock_guard<std::mutex> lock(last_frame_mutex_);
@@ -554,7 +535,7 @@ class html_producer : public core::frame_producer
 
             CefBrowserSettings browser_settings;
             browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
-            double fps             = format_desc.fps * format_desc.field_count;
+            double fps             = format_desc.fps;
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);
         });
