@@ -21,7 +21,7 @@
 #pragma once
 
 #include "../interop/Processing.NDI.Lib.h"
-#include "protocol/amcp/AMCPCommand.h"
+#include "protocol/amcp/amcp_command_context.h"
 #include <string>
 
 namespace caspar { namespace newtek { namespace ndi {

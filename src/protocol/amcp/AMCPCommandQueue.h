@@ -30,19 +30,18 @@ namespace caspar { namespace protocol { namespace amcp {
 
 class AMCPCommandQueue
 {
-    AMCPCommandQueue(const AMCPCommandQueue&);
-    AMCPCommandQueue& operator=(const AMCPCommandQueue&);
-
   public:
     using ptr_type = spl::shared_ptr<AMCPCommandQueue>;
 
-    AMCPCommandQueue(const std::wstring& name);
+    AMCPCommandQueue(const std::wstring& name, const std::vector<channel_context>& channels);
     ~AMCPCommandQueue();
 
-    void AddCommand(AMCPCommand::ptr_type pCommand);
+    void AddCommand(std::shared_ptr<AMCPGroupCommand> command);
+    void Execute(std::shared_ptr<AMCPGroupCommand> cmd) const;
 
   private:
-    executor executor_;
+    executor                            executor_;
+    const std::vector<channel_context>& channels_;
 };
 
 }}} // namespace caspar::protocol::amcp
