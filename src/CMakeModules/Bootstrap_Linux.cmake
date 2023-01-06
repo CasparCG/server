@@ -23,9 +23,11 @@ ENDIF ()
 
 SET (BOOST_ROOT_PATH "/opt/boost" CACHE STRING "Path to Boost")
 SET (ENV{BOOST_ROOT} "${BOOST_ROOT_PATH}")
-SET (Boost_USE_DEBUG_LIBS ON)
-SET (Boost_USE_RELEASE_LIBS OFF)
-SET (Boost_USE_STATIC_LIBS ON)
+if (NOT USE_SYSTEM_BOOST)
+	SET (Boost_USE_DEBUG_LIBS ON)
+	SET (Boost_USE_RELEASE_LIBS OFF)
+	SET (Boost_USE_STATIC_LIBS ON)
+endif()
 FIND_PACKAGE (Boost 1.66.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
 
 SET (FFMPEG_ROOT_PATH "/opt/ffmpeg/lib/pkgconfig" CACHE STRING "Path to FFMPEG")
@@ -67,6 +69,10 @@ ADD_DEFINITIONS (-D__NO_INLINE__) # Needed for precompiled headers to work
 ADD_DEFINITIONS (-DBOOST_NO_SWPRINTF) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 ADD_DEFINITIONS (-DTBB_USE_CAPTURED_EXCEPTION=1)
 ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
+
+if (USE_SYSTEM_BOOST)
+	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
+endif()
 
 ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
 ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
