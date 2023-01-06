@@ -40,7 +40,7 @@ class IDeckLinkEncoderConfiguration_v10_5;
 
 /* Interface IDeckLinkEncoderConfiguration_v10_5 - DeckLink Encoder Configuration interface. Obtained from IDeckLinkEncoderInput */
 
-class IDeckLinkEncoderConfiguration_v10_5 : public IUnknown
+class BMD_PUBLIC IDeckLinkEncoderConfiguration_v10_5 : public IUnknown
 {
 public:
     virtual HRESULT SetFlag (/* in */ BMDDeckLinkEncoderConfigurationID cfgID, /* in */ bool value) = 0;

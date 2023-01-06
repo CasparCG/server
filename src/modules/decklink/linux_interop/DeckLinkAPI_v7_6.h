@@ -31,6 +31,7 @@
 #define __DeckLink_API_v7_6_h__
 
 #include "DeckLinkAPI.h"
+#include "DeckLinkAPI_v10_11.h"
 
 // Interface ID Declarations
 
@@ -83,7 +84,7 @@ class IDeckLinkVideoConversion_v7_6;
 
 /* Interface IDeckLinkVideoOutputCallback - Frame completion callback. */
 
-class IDeckLinkVideoOutputCallback_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkVideoOutputCallback_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT ScheduledFrameCompleted (/* in */ IDeckLinkVideoFrame_v7_6 *completedFrame, /* in */ BMDOutputFrameCompletionResult result) = 0;
@@ -96,7 +97,7 @@ protected:
 
 /* Interface IDeckLinkInputCallback - Frame arrival callback. */
 
-class IDeckLinkInputCallback_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkInputCallback_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode_v7_6 *newDisplayMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags) = 0;
@@ -109,7 +110,7 @@ protected:
 
 /* Interface IDeckLinkDisplayModeIterator - enumerates over supported input/output display modes. */
 
-class IDeckLinkDisplayModeIterator_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkDisplayModeIterator_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT Next (/* out */ IDeckLinkDisplayMode_v7_6 **deckLinkDisplayMode) = 0;
@@ -121,7 +122,7 @@ protected:
 
 /* Interface IDeckLinkDisplayMode - represents a display mode */
 
-class IDeckLinkDisplayMode_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkDisplayMode_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT GetName (/* out */ const char **name) = 0;
@@ -138,10 +139,10 @@ protected:
 
 /* Interface IDeckLinkOutput - Created by QueryInterface from IDeckLink. */
 
-class IDeckLinkOutput_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkOutput_v7_6 : public IUnknown
 {
 public:
-    virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* out */ BMDDisplayModeSupport *result) = 0;
+	virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* out */ BMDDisplayModeSupport_v10_11 *result) = 0;
     virtual HRESULT GetDisplayModeIterator (/* out */ IDeckLinkDisplayModeIterator_v7_6 **iterator) = 0;
 
     virtual HRESULT SetScreenPreviewCallback (/* in */ IDeckLinkScreenPreviewCallback_v7_6 *previewCallback) = 0;
@@ -194,10 +195,10 @@ protected:
 
 /* Interface IDeckLinkInput_v7_6 - Created by QueryInterface from IDeckLink. */
 
-class IDeckLinkInput_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkInput_v7_6 : public IUnknown
 {
 public:
-    virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* out */ BMDDisplayModeSupport *result) = 0;
+	virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* out */ BMDDisplayModeSupport_v10_11 *result) = 0;
     virtual HRESULT GetDisplayModeIterator (/* out */ IDeckLinkDisplayModeIterator_v7_6 **iterator) = 0;
 
     virtual HRESULT SetScreenPreviewCallback (/* in */ IDeckLinkScreenPreviewCallback_v7_6 *previewCallback) = 0;
@@ -233,7 +234,7 @@ protected:
 
 /* Interface IDeckLinkTimecode - Used for video frame timecode representation. */
 
-class IDeckLinkTimecode_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkTimecode_v7_6 : public IUnknown
 {
 public:
     virtual BMDTimecodeBCD GetBCD (void) = 0;
@@ -248,7 +249,7 @@ protected:
 
 /* Interface IDeckLinkVideoFrame - Interface to encapsulate a video frame; can be caller-implemented. */
 
-class IDeckLinkVideoFrame_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkVideoFrame_v7_6 : public IUnknown
 {
 public:
     virtual long GetWidth (void) = 0;
@@ -268,7 +269,7 @@ protected:
 
 /* Interface IDeckLinkMutableVideoFrame - Created by IDeckLinkOutput::CreateVideoFrame. */
 
-class IDeckLinkMutableVideoFrame_v7_6 : public IDeckLinkVideoFrame_v7_6
+class BMD_PUBLIC IDeckLinkMutableVideoFrame_v7_6 : public IDeckLinkVideoFrame_v7_6
 {
 public:
     virtual HRESULT SetFlags (BMDFrameFlags newFlags) = 0;
@@ -284,7 +285,7 @@ protected:
 
 /* Interface IDeckLinkVideoInputFrame - Provided by the IDeckLinkVideoInput frame arrival callback. */
 
-class IDeckLinkVideoInputFrame_v7_6 : public IDeckLinkVideoFrame_v7_6
+class BMD_PUBLIC IDeckLinkVideoInputFrame_v7_6 : public IDeckLinkVideoFrame_v7_6
 {
 public:
     virtual HRESULT GetStreamTime (/* out */ BMDTimeValue *frameTime, /* out */ BMDTimeValue *frameDuration, BMDTimeScale timeScale) = 0;
@@ -297,7 +298,7 @@ protected:
 
 /* Interface IDeckLinkScreenPreviewCallback - Screen preview callback */
 
-class IDeckLinkScreenPreviewCallback_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkScreenPreviewCallback_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT DrawFrame (/* in */ IDeckLinkVideoFrame_v7_6 *theFrame) = 0;
@@ -309,7 +310,7 @@ protected:
 
 /* Interface IDeckLinkGLScreenPreviewHelper - Created with CoCreateInstance(). */
 
-class IDeckLinkGLScreenPreviewHelper_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkGLScreenPreviewHelper_v7_6 : public IUnknown
 {
 public:
 
@@ -326,7 +327,7 @@ protected:
 
 /* Interface IDeckLinkVideoConversion - Created with CoCreateInstance(). */
 
-class IDeckLinkVideoConversion_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkVideoConversion_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT ConvertFrame (/* in */ IDeckLinkVideoFrame_v7_6* srcFrame, /* in */ IDeckLinkVideoFrame_v7_6* dstFrame) = 0;
@@ -337,7 +338,7 @@ protected:
 
 /* Interface IDeckLinkConfiguration - Created by QueryInterface from IDeckLink. */
 
-class IDeckLinkConfiguration_v7_6 : public IUnknown
+class BMD_PUBLIC IDeckLinkConfiguration_v7_6 : public IUnknown
 {
 public:
     virtual HRESULT GetConfigurationValidator (/* out */ IDeckLinkConfiguration_v7_6 **configObject) = 0;
@@ -393,9 +394,9 @@ public:
 
 extern "C" {
 
-	IDeckLinkIterator*							CreateDeckLinkIteratorInstance_v7_6 (void);
-	IDeckLinkGLScreenPreviewHelper_v7_6*		CreateOpenGLScreenPreviewHelper_v7_6 (void);
-    IDeckLinkVideoConversion_v7_6*				CreateVideoConversionInstance_v7_6 (void);
+	IDeckLinkIterator*							BMD_PUBLIC CreateDeckLinkIteratorInstance_v7_6 (void);
+	IDeckLinkGLScreenPreviewHelper_v7_6*		BMD_PUBLIC CreateOpenGLScreenPreviewHelper_v7_6 (void);
+    IDeckLinkVideoConversion_v7_6*				BMD_PUBLIC CreateVideoConversionInstance_v7_6 (void);
 
 };
 

@@ -42,7 +42,7 @@
 class IDeckLinkDeckControl_v7_9;
 
 /* Interface IDeckLinkDeckControl_v7_9 - Deck Control main interface */
-class IDeckLinkDeckControl_v7_9 : public IUnknown
+class BMD_PUBLIC IDeckLinkDeckControl_v7_9 : public IUnknown
 {
 public:
     virtual HRESULT Open (/* in */ BMDTimeScale timeScale, /* in */ BMDTimeValue timeValue, /* in */ bool timecodeIsDropFrame, /* out */ BMDDeckControlError *error) = 0;

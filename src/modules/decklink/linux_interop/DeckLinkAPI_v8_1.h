@@ -52,7 +52,7 @@ enum _BMDDeckControlVTRControlState_v8_1 {
 
 /* Interface IDeckLinkDeckControlStatusCallback_v8_1 - Deck control state change callback. */
 
-class IDeckLinkDeckControlStatusCallback_v8_1 : public IUnknown
+class BMD_PUBLIC IDeckLinkDeckControlStatusCallback_v8_1 : public IUnknown
 {
 public:
     virtual HRESULT TimecodeUpdate (/* in */ BMDTimecodeBCD currentTimecode) = 0;
@@ -66,7 +66,7 @@ protected:
 
 /* Interface IDeckLinkDeckControl_v8_1 - Deck Control main interface */
 
-class IDeckLinkDeckControl_v8_1 : public IUnknown
+class BMD_PUBLIC IDeckLinkDeckControl_v8_1 : public IUnknown
 {
 public:
     virtual HRESULT Open (/* in */ BMDTimeScale timeScale, /* in */ BMDTimeValue timeValue, /* in */ bool timecodeIsDropFrame, /* out */ BMDDeckControlError *error) = 0;
