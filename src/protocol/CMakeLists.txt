@@ -2,11 +2,13 @@ cmake_minimum_required (VERSION 3.10)
 project (protocol)
 
 set(SOURCES
+		amcp/AMCPCommand.cpp
 		amcp/AMCPCommandQueue.cpp
 		amcp/AMCPCommandsImpl.cpp
 		amcp/AMCPProtocolStrategy.cpp
 		amcp/amcp_command_repository.cpp
 		amcp/amcp_args.cpp
+		amcp/amcp_command_repository_wrapper.cpp
 
 		cii/CIICommandsImpl.cpp
 		cii/CIIProtocolStrategy.cpp
@@ -36,8 +38,10 @@ set(HEADERS
 		amcp/AMCPCommandsImpl.h
 		amcp/AMCPProtocolStrategy.h
 		amcp/amcp_command_repository.h
+		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
 		amcp/amcp_args.h
+		amcp/amcp_command_context.h
 
 		cii/CIICommand.h
 		cii/CIICommandsImpl.h

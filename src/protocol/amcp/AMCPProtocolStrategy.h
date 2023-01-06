@@ -21,31 +21,20 @@
 
 #pragma once
 
-#include "../util/ProtocolStrategy.h"
+#include "../util/ClientInfo.h"
 
 #include <common/memory.h>
 
-#include <future>
+#include "amcp_command_repository.h"
+
 #include <string>
 
 namespace caspar { namespace protocol { namespace amcp {
 
-class AMCPProtocolStrategy : public IO::IProtocolStrategy
-{
-  public:
-    AMCPProtocolStrategy(const std::wstring& name, const spl::shared_ptr<class amcp_command_repository>& repo);
+IO::protocol_strategy_factory<char>::ptr
+create_char_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo);
 
-    virtual ~AMCPProtocolStrategy();
-
-    void        Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) override;
-    std::string GetCodepage() const override { return "UTF-8"; }
-
-  private:
-    struct impl;
-    spl::unique_ptr<impl> impl_;
-
-    AMCPProtocolStrategy(const AMCPProtocolStrategy&) = delete;
-    AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&) = delete;
-};
+IO::protocol_strategy_factory<wchar_t>::ptr
+create_wchar_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo);
 
 }}} // namespace caspar::protocol::amcp

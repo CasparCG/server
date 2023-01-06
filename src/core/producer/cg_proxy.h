@@ -90,6 +90,4 @@ class cg_producer_registry
     cg_producer_registry& operator=(const cg_producer_registry&) = delete;
 };
 
-void init_cg_proxy_as_producer(core::module_dependencies dependencies);
-
 }} // namespace caspar::core
