@@ -35,7 +35,6 @@
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/executor.h>
 #include <common/future.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
@@ -99,7 +98,6 @@ class html_client
     mutable std::mutex                   frames_mutex_;
 
     core::draw_frame   last_frame_;
-    mutable std::mutex last_frame_mutex_;
 
     CefRefPtr<CefBrowser> browser_;
 
@@ -107,8 +105,6 @@ class html_client
     std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
     std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
 #endif
-
-    executor executor_;
 
   public:
     html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
@@ -124,7 +120,6 @@ class html_client
 #ifdef WIN32
         , d3d_device_(accelerator::d3d::d3d_device::get_device())
 #endif
-        , executor_(L"html_producer")
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -140,7 +135,6 @@ class html_client
         }
 
         loaded_ = false;
-        executor_.begin_invoke([&] { update(); });
     }
 
     void close()
@@ -152,16 +146,34 @@ class html_client
         });
     }
 
-    core::draw_frame receive()
+    bool try_pop(const core::video_field field, core::draw_frame& result)
     {
-        auto frame = last_frame();
-        executor_.begin_invoke([&] { update(); });
-        return frame;
+        std::lock_guard<std::mutex> lock(frames_mutex_);
+
+        if (!frames_.empty()) {
+            result = std::move(frames_.front());
+            frames_.pop();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    core::draw_frame receive(const core::video_field field)
+    {
+        core::draw_frame frame;
+        if (try_pop(field, frame)) {
+            last_frame_ = frame;
+        } else {
+            graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
+        }
+
+        return last_frame_;
     }
 
     core::draw_frame last_frame() const
     {
-        std::lock_guard<std::mutex> lock(last_frame_mutex_);
         return last_frame_;
     }
 
@@ -451,30 +463,6 @@ class html_client
         return false;
     }
 
-    bool try_pop(core::draw_frame& result)
-    {
-        std::lock_guard<std::mutex> lock(frames_mutex_);
-
-        if (!frames_.empty()) {
-            result = std::move(frames_.front());
-            frames_.pop();
-
-            return true;
-        }
-
-        return false;
-    }
-
-    void update()
-    {
-        core::draw_frame frame;
-        if (try_pop(frame)) {
-            std::lock_guard<std::mutex> lock(last_frame_mutex_);
-            last_frame_ = frame;
-        } else {
-            graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
-        }
-    }
 
     void do_execute_javascript(const std::wstring& javascript)
     {
@@ -554,7 +542,7 @@ class html_producer : public core::frame_producer
     core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         if (client_ != nullptr) {
-            return client_->receive();
+            return client_->receive(field);
         }
 
         return core::draw_frame::empty();
