@@ -343,9 +343,13 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
     bool doFrame(std::shared_ptr<void>& image_data, std::vector<std::int32_t>& audio_data, bool topField)
     {
-        core::const_frame frame(pop());
+        core::const_frame frame = pop();
         if (abort_request_)
             return false;
+
+        // No point copying an empty frame
+        if (!frame)
+            return true;
 
         int firstLine = topField ? 0 : 1;
 
