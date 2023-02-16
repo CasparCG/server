@@ -42,7 +42,7 @@ struct buffer::impl
     GLenum     target_ = 0;
     GLbitfield flags_  = 0;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
   public:

@@ -15,7 +15,7 @@ class d3d_texture2d
 
     ~d3d_texture2d();
 
-    d3d_texture2d(const d3d_texture2d&) = delete;
+    d3d_texture2d(const d3d_texture2d&)            = delete;
     d3d_texture2d& operator=(const d3d_texture2d&) = delete;
 
     uint32_t width() const { return width_; }

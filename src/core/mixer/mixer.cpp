@@ -49,7 +49,7 @@ struct mixer::impl
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)

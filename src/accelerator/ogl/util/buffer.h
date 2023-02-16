@@ -37,7 +37,7 @@ class buffer final
     ~buffer();
 
     buffer& operator=(const buffer&) = delete;
-    buffer& operator                 =(buffer&& other);
+    buffer& operator=(buffer&& other);
 
     void bind();
     void unbind();

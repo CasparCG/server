@@ -3,7 +3,6 @@
 #include "../util/lock_container.h"
 #include <core/producer/stage.h>
 #include <core/video_channel.h>
-#include <core/producer/stage.h>
 #include <utility>
 
 namespace caspar { namespace protocol { namespace amcp {

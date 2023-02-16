@@ -33,7 +33,7 @@ namespace caspar { namespace core {
 class frame_factory
 {
   public:
-    frame_factory()        = default;
+    frame_factory()                                = default;
     frame_factory& operator=(const frame_factory&) = delete;
     virtual ~frame_factory()                       = default;
 

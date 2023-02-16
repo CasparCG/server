@@ -177,19 +177,19 @@ video_format_desc video_format_repository::find_format(const video_format& forma
 {
     return impl_->find_format(format);
 }
-void             video_format_repository::store(const video_format_desc& format) { impl_->store(format); }
+void video_format_repository::store(const video_format_desc& format) { impl_->store(format); }
 
 std::size_t video_format_repository::get_max_video_format_size() const { return impl_->get_max_video_format_size(); }
 
-video_format_desc::video_format_desc(const video_format format,
-                                     const int          field_count,
-                                     const int          width,
-                                     const int          height,
-                                     const int          square_width,
-                                     const int          square_height,
-                                     const int          time_scale,
-                                     const int          duration,
-                                     const std::wstring name,
+video_format_desc::video_format_desc(const video_format     format,
+                                     const int              field_count,
+                                     const int              width,
+                                     const int              height,
+                                     const int              square_width,
+                                     const int              square_height,
+                                     const int              time_scale,
+                                     const int              duration,
+                                     const std::wstring     name,
                                      const std::vector<int> audio_cadence)
     : format(format)
     , width(width)

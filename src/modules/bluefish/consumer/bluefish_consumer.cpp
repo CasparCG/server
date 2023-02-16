@@ -206,7 +206,7 @@ struct bluefish_consumer
     caspar::timer                       tick_timer_;
     caspar::timer                       sync_timer_;
 
-    bluefish_consumer(const bluefish_consumer&) = delete;
+    bluefish_consumer(const bluefish_consumer&)            = delete;
     bluefish_consumer& operator=(const bluefish_consumer&) = delete;
 
     bluefish_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
@@ -874,7 +874,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository, 
+                                                      const core::video_format_repository& format_repository,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"BLUEFISH")) {
@@ -929,7 +929,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              const core::video_format_repository&              format_repository, 
+                              const core::video_format_repository&              format_repository,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;

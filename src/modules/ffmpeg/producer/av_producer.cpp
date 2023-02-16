@@ -76,7 +76,7 @@ struct Frame
 
 class Decoder
 {
-    Decoder(const Decoder&) = delete;
+    Decoder(const Decoder&)            = delete;
     Decoder& operator=(const Decoder&) = delete;
 
     AVStream*         st       = nullptr;
