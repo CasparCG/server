@@ -632,10 +632,12 @@ struct bluefish_producer
         }
     }
 
-    core::draw_frame get_frame()
+    core::draw_frame get_frame(const core::video_field field)
     {
         if (exception_ != nullptr)
             std::rethrow_exception(exception_);
+
+        // TODO - field
 
         core::draw_frame frame;
         if (!frame_buffer_.try_pop(frame)) {
@@ -654,8 +656,6 @@ struct bluefish_producer
         std::lock_guard<std::mutex> lock(state_mutex_);
         return state_;
     }
-
-    boost::rational<int> get_out_framerate() const { return format_desc_.framerate; }
 };
 
 class bluefish_producer_proxy : public core::frame_producer
@@ -692,15 +692,16 @@ class bluefish_producer_proxy : public core::frame_producer
 
     // frame_producer
 
-    core::draw_frame receive_impl(int nb_samples) override { return producer_->get_frame(); }
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
+    {
+        return producer_->get_frame(field);
+    }
 
     uint32_t nb_frames() const override { return length_; }
 
     std::wstring print() const override { return producer_->print(); }
 
     std::wstring name() const override { return L"bluefish"; }
-
-    boost::rational<int> get_out_framerate() const { return producer_->get_out_framerate(); }
 };
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

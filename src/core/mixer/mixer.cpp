@@ -82,7 +82,7 @@ struct mixer::impl
                 return const_frame(std::move(image_data), std::move(audio), desc);
             }));
 
-        if (buffer_.size() < 2) {
+        if (buffer_.size() <= format_desc.field_count) {
             return const_frame{};
         }
 

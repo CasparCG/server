@@ -195,7 +195,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
     return core::frame_producer_dependencies(channel->frame_factory(),
                                              get_channels(ctx),
                                              ctx.static_context->format_repository,
-                                             channel->video_format_desc(),
+                                             channel->stage()->video_format_desc(),
                                              ctx.static_context->producer_registry,
                                              ctx.static_context->cg_registry);
 }
@@ -298,6 +298,8 @@ std::wstring loadbg_command(command_context& ctx)
             transition_producer = create_transition_producer(pFP, transitionInfo);
         }
 
+        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
+        // initialised
         ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
@@ -506,7 +508,7 @@ std::wstring set_command(command_context& ctx)
     if (name == L"MODE") {
         auto format_desc = ctx.static_context->format_repository.find(value);
         if (format_desc.format != core::video_format::invalid) {
-            ctx.channel.raw_channel->video_format_desc(format_desc);
+            ctx.channel.raw_channel->stage()->video_format_desc(format_desc);
             return L"202 SET MODE OK\r\n";
         }
 
@@ -1483,7 +1485,8 @@ std::wstring info_command(command_context& ctx)
     replyString << L"200 INFO OK\r\n";
 
     for (size_t n = 0; n < ctx.channels.size(); ++n) {
-        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->video_format_desc().name << L" PLAYING\r\n";
+        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->stage()->video_format_desc().name
+                    << L" PLAYING\r\n";
     }
     replyString << L"\r\n";
     return replyString.str();

@@ -179,8 +179,9 @@ struct Stream
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              format_desc.width % format_desc.height % AV_PIX_FMT_YUVA422P % format_desc.duration %
-                             format_desc.time_scale % sar.numerator() % sar.denominator() %
-                             format_desc.framerate.numerator() % format_desc.framerate.denominator())
+                             (format_desc.time_scale * format_desc.field_count) % sar.numerator() % sar.denominator() %
+                             (format_desc.framerate.numerator() * format_desc.field_count) %
+                             format_desc.framerate.denominator())
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
@@ -678,8 +679,10 @@ struct ffmpeg_consumer : public core::frame_consumer
         });
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
+        // TODO - field alignment
+
         {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {

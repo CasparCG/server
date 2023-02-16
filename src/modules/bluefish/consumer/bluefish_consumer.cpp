@@ -619,8 +619,9 @@ struct bluefish_consumer
             CASPAR_LOG(error) << print() << TEXT(" Failed to disable audio output.");
     }
 
-    bool send(core::const_frame frame)
+    bool send(core::video_field field, core::const_frame frame)
     {
+        // TODO - field alignment
         {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
@@ -858,9 +859,9 @@ struct bluefish_consumer_proxy : public core::frame_consumer
         });
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        return executor_.begin_invoke([=] { return consumer_->send(frame); });
+        return executor_.begin_invoke([=] { return consumer_->send(field, frame); });
     }
 
     std::wstring print() const override { return consumer_ ? consumer_->print() : L"[bluefish_consumer]"; }

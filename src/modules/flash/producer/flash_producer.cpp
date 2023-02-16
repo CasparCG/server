@@ -409,7 +409,7 @@ struct flash_producer : public core::frame_producer
         graph_->set_value("buffered", ratio);
     }
 
-    core::draw_frame receive_impl(int nb_samples) override
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         auto frame = last_frame_;
 

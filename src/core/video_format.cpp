@@ -41,14 +41,14 @@ struct video_format_repository::impl
         : formats_()
     {
         const std::vector<video_format_desc> default_formats = {
-            {video_format::pal, 2, 720, 576, 1024, 576, 50000, 1000, L"PAL", {1920 / 2}},
+            {video_format::pal, 2, 720, 576, 1024, 576, 25000, 1000, L"PAL", {1920 / 2}},
             {video_format::ntsc,
              2,
              720,
              486,
              720,
              540,
-             60000,
+             30000,
              1001,
              L"NTSC",
              {801, 801, 801, 800, 801, 801, 801, 800, 801, 801}},
@@ -70,18 +70,18 @@ struct video_format_repository::impl
             {video_format::x720p5000, 1, 1280, 720, 1280, 720, 50000, 1000, L"720p5000", {960}},
             {video_format::x720p5994, 1, 1280, 720, 1280, 720, 60000, 1001, L"720p5994", {801, 800, 801, 801, 801}},
             {video_format::x720p6000, 1, 1280, 720, 1280, 720, 60000, 1000, L"720p6000", {800}},
-            {video_format::x1080i5000, 2, 1920, 1080, 1920, 1080, 50000, 1000, L"1080i5000", {1920 / 2}},
+            {video_format::x1080i5000, 2, 1920, 1080, 1920, 1080, 25000, 1000, L"1080i5000", {1920 / 2}},
             {video_format::x1080i5994,
              2,
              1920,
              1080,
              1920,
              1080,
-             60000,
+             30000,
              1001,
              L"1080i5994",
              {801, 801, 801, 800, 801, 801, 801, 800, 801, 801}},
-            {video_format::x1080i6000, 2, 1920, 1080, 1920, 1080, 60000, 1000, L"1080i6000", {1600 / 2}},
+            {video_format::x1080i6000, 2, 1920, 1080, 1920, 1080, 30000, 1000, L"1080i6000", {1600 / 2}},
             {video_format::x1080p2398, 1, 1920, 1080, 1920, 1080, 24000, 1001, L"1080p2398", {2002}},
             {video_format::x1080p2400, 1, 1920, 1080, 1920, 1080, 24000, 1000, L"1080p2400", {2000}},
             {video_format::x1080p2500, 1, 1920, 1080, 1920, 1080, 25000, 1000, L"1080p2500", {1920}},
@@ -181,8 +181,6 @@ void video_format_repository::store(const video_format_desc& format) { impl_->st
 
 std::size_t video_format_repository::get_max_video_format_size() const { return impl_->get_max_video_format_size(); }
 
-const std::vector<video_format_desc> format_descs = {};
-
 video_format_desc::video_format_desc(const video_format     format,
                                      const int              field_count,
                                      const int              width,
@@ -199,7 +197,8 @@ video_format_desc::video_format_desc(const video_format     format,
     , square_width(square_width)
     , square_height(square_height)
     , field_count(field_count)
-    , fps(static_cast<double>(time_scale) / static_cast<double>(duration))
+    , hz(static_cast<double>(time_scale) / static_cast<double>(duration))
+    , fps(hz * field_count)
     , framerate(time_scale, duration)
     , time_scale(time_scale)
     , duration(duration)

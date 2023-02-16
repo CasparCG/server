@@ -59,7 +59,7 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
         return core::frame_producer_dependencies(GetChannel()->frame_factory(),
                                                  channels_,
                                                  format_repository_,
-                                                 GetChannel()->video_format_desc(),
+                                                 GetChannel()->stage()->video_format_desc(),
                                                  producer_registry_,
                                                  cg_registry_);
     }

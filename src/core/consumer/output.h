@@ -27,6 +27,8 @@
 #include <common/forward.h>
 #include <common/memory.h>
 
+#include <core/video_format.h>
+
 #include <memory>
 
 FORWARD2(caspar, diagnostics, class graph);
@@ -42,7 +44,8 @@ class output final
     output& operator=(const output&) = delete;
     ~output();
 
-    void operator()(const_frame frame, const video_format_desc& format_desc);
+    // Send a frame to the output. If running an interlaced channel, two frames will be provided
+    void operator()(const_frame frame, const_frame frame2, const video_format_desc& format_desc);
 
     void add(const spl::shared_ptr<frame_consumer>& consumer);
     void add(int index, const spl::shared_ptr<frame_consumer>& consumer);

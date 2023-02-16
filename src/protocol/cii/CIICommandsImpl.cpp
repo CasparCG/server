@@ -128,7 +128,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
         if (newformat.format == core::video_format::invalid)
             return;
 
-        this->pCIIStrategy_->GetChannel()->video_format_desc(newformat);
+        this->pCIIStrategy_->GetChannel()->stage()->video_format_desc(newformat);
     }
 }
 
