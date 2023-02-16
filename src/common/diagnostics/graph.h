@@ -55,7 +55,7 @@ class graph
     struct impl;
     std::shared_ptr<impl> impl_;
 
-    graph(const graph&) = delete;
+    graph(const graph&)            = delete;
     graph& operator=(const graph&) = delete;
 };
 
@@ -65,7 +65,7 @@ namespace spi {
 
 class graph_sink
 {
-    graph_sink(const graph_sink&) = delete;
+    graph_sink(const graph_sink&)            = delete;
     graph_sink& operator=(const graph_sink&) = delete;
 
   public:

@@ -138,7 +138,8 @@ struct server::impl
         setup_amcp_command_repo();
         CASPAR_LOG(info) << L"Initialized command repository.";
 
-        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_wrapper_);
+        module_dependencies dependencies(
+            cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_wrapper_);
         initialize_modules(dependencies);
         CASPAR_LOG(info) << L"Initialized modules.";
 
@@ -274,8 +275,6 @@ struct server::impl
             channels_.push_back(channel);
         }
 
-
-
         return xml_channels;
     }
 
@@ -350,7 +349,7 @@ struct server::impl
                     try {
                         if (name != L"<xmlcomment>")
                             channel->output().add(consumer_registry_->create_consumer(
-                                    name, xml_consumer.second, video_format_repository_, channels_));
+                                name, xml_consumer.second, video_format_repository_, channels_));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }
@@ -388,8 +387,8 @@ struct server::impl
     {
         amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(build_channel_contexts(channels_));
 
-        auto ogl_device    = accelerator_.get_device();
-        auto ctx = std::make_shared<amcp::amcp_command_static_context>(
+        auto ogl_device = accelerator_.get_device();
+        auto ctx        = std::make_shared<amcp::amcp_command_static_context>(
             video_format_repository_,
             cg_registry_,
             producer_registry_,

@@ -86,7 +86,7 @@ class cg_producer_registry
     struct impl;
     spl::shared_ptr<impl> impl_;
 
-    cg_producer_registry(const cg_producer_registry&) = delete;
+    cg_producer_registry(const cg_producer_registry&)            = delete;
     cg_producer_registry& operator=(const cg_producer_registry&) = delete;
 };
 

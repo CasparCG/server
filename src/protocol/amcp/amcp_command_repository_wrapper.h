@@ -38,8 +38,10 @@ class command_context_factory
 
     command_context create(const command_context_simple& simple_ctx, const std::vector<channel_context>& channels) const
     {
-        const channel_context channel = simple_ctx.channel_index >= 0 ? channels.at(simple_ctx.channel_index) : channel_context();
-        auto ctx = command_context(static_context_, channels, simple_ctx.client, channel, simple_ctx.channel_index, simple_ctx.layer_id);
+        const channel_context channel =
+            simple_ctx.channel_index >= 0 ? channels.at(simple_ctx.channel_index) : channel_context();
+        auto ctx = command_context(
+            static_context_, channels, simple_ctx.client, channel, simple_ctx.channel_index, simple_ctx.layer_id);
         ctx.parameters = std::move(simple_ctx.parameters);
         return std::move(ctx);
     }
@@ -58,20 +60,22 @@ class amcp_command_repository_wrapper
     {
     }
 
-    void register_command(std::wstring category, std::wstring name, amcp_command_impl_func_future command, int min_num_params);
+    void register_command(std::wstring                  category,
+                          std::wstring                  name,
+                          amcp_command_impl_func_future command,
+                          int                           min_num_params);
 
-    void
-    register_command(std::wstring category, std::wstring name, amcp_command_impl_func command, int min_num_params);
+    void register_command(std::wstring category, std::wstring name, amcp_command_impl_func command, int min_num_params);
+
+    void register_channel_command(std::wstring                  category,
+                                  std::wstring                  name,
+                                  amcp_command_impl_func_future command,
+                                  int                           min_num_params);
 
     void register_channel_command(std::wstring           category,
                                   std::wstring           name,
-                                  amcp_command_impl_func_future command,
-                                  int                    min_num_params);
-
-    void register_channel_command(std::wstring            category,
-                                  std::wstring            name,
                                   amcp_command_impl_func command,
-                                  int                     min_num_params);
+                                  int                    min_num_params);
 
   private:
     std::shared_ptr<amcp_command_repository> repo_;

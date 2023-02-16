@@ -219,7 +219,7 @@ class sting_producer : public frame_producer
     draw_frame
     compose(draw_frame dst_frame, draw_frame src_frame, draw_frame mask_frame, draw_frame overlay_frame) const
     {
-        const double delta    = get_audio_delta();
+        const double delta                           = get_audio_delta();
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
 

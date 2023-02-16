@@ -27,7 +27,6 @@
 #include <common/except.h>
 #include <common/future.h>
 #include <common/timer.h>
-#include <common/future.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 

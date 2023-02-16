@@ -34,7 +34,7 @@ struct shader::impl
     std::unordered_map<std::string, GLint> uniform_locations_;
     std::unordered_map<std::string, GLint> attrib_locations_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
   public:

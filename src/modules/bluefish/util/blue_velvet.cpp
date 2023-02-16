@@ -557,9 +557,9 @@ spl::shared_ptr<bvc_wrapper> create_blue(int device_index)
 }
 
 core::video_format_desc get_format_desc(const core::video_format_repository& format_repository,
-                                        bvc_wrapper&                        blue,
-                                        EVideoModeExt                       vid_fmt_ext,
-                                        EMemoryFormat                       mem_fmt)
+                                        bvc_wrapper&                         blue,
+                                        EVideoModeExt                        vid_fmt_ext,
+                                        EMemoryFormat                        mem_fmt)
 {
     core::video_format_desc fmt;
     unsigned int     width, height, duration = 0, time_scale = 0, rate = 0, bIs1001 = 0, is_progressive = 0, size = 0;

@@ -32,7 +32,7 @@ namespace caspar { namespace protocol { namespace amcp {
 
 struct amcp_command_static_context
 {
-    const core::video_format_repository                  format_repository;
+    const core::video_format_repository                        format_repository;
     const spl::shared_ptr<core::cg_producer_registry>          cg_registry;
     const spl::shared_ptr<const core::frame_producer_registry> producer_registry;
     const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
@@ -40,9 +40,9 @@ struct amcp_command_static_context
     std::function<void(bool)>                                  shutdown_server_now;
     std::string                                                proxy_host;
     std::string                                                proxy_port;
-    std::weak_ptr<accelerator::accelerator_device>       ogl_device;
+    std::weak_ptr<accelerator::accelerator_device>             ogl_device;
 
-    amcp_command_static_context(const core::video_format_repository&                 format_repository,
+    amcp_command_static_context(const core::video_format_repository&                       format_repository,
                                 const spl::shared_ptr<core::cg_producer_registry>          cg_registry,
                                 const spl::shared_ptr<const core::frame_producer_registry> producer_registry,
                                 const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
@@ -50,7 +50,7 @@ struct amcp_command_static_context
                                 std::function<void(bool)>                                  shutdown_server_now,
                                 std::string                                                proxy_host,
                                 std::string                                                proxy_port,
-                                std::weak_ptr<accelerator::accelerator_device>       ogl_device)
+                                std::weak_ptr<accelerator::accelerator_device>             ogl_device)
         : format_repository(std::move(format_repository))
         , cg_registry(std::move(cg_registry))
         , producer_registry(std::move(producer_registry))
@@ -59,7 +59,7 @@ struct amcp_command_static_context
         , shutdown_server_now(shutdown_server_now)
         , proxy_host(proxy_host)
         , proxy_port(proxy_port)
-    , ogl_device(std::move(ogl_device))
+        , ogl_device(std::move(ogl_device))
     {
     }
 };

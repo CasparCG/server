@@ -10,7 +10,7 @@ class d3d_device
     d3d_device();
     ~d3d_device();
 
-    d3d_device(const d3d_device&) = delete;
+    d3d_device(const d3d_device&)            = delete;
     d3d_device& operator=(const d3d_device&) = delete;
 
     std::wstring adapter_name() const;

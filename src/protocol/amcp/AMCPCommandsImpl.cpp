@@ -272,11 +272,12 @@ std::wstring loadbg_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
 
-    auto channel = ctx.channel.raw_channel;
+    auto channel   = ctx.channel.raw_channel;
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
     try {
-        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
+        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx),
+                                                                          ctx.parameters);
 
         if (pFP == frame_producer::empty())
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(ctx.parameters.size() > 0 ? ctx.parameters[0] : L""));
@@ -391,7 +392,6 @@ std::wstring clear_all_command(command_context& ctx)
     return L"202 CLEAR ALL OK\r\n";
 }
 
-
 std::future<std::wstring> call_command(command_context& ctx)
 {
     const auto result = ctx.channel.stage->call(ctx.layer_index(), ctx.parameters).share();
@@ -476,8 +476,8 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.raw_channel->output().add(
-        ctx.static_context->consumer_registry->create_consumer({L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
+    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
+        {L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -1338,8 +1338,8 @@ std::wstring channel_grid_command(command_context& ctx)
     params.push_back(L"0");
     params.push_back(L"NAME");
     params.push_back(L"Channel Grid Window");
-    auto screen =
-        ctx.static_context->consumer_registry->create_consumer(params, ctx.static_context->format_repository, get_channels(ctx));
+    auto screen = ctx.static_context->consumer_registry->create_consumer(
+        params, ctx.static_context->format_repository, get_channels(ctx));
 
     self.raw_channel->output().add(screen);
 

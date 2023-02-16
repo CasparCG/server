@@ -18,7 +18,10 @@ struct accelerator::impl
     std::shared_ptr<ogl::device>        ogl_device_;
     const core::video_format_repository format_repository_;
 
-    impl(const core::video_format_repository format_repository): format_repository_(format_repository) {}
+    impl(const core::video_format_repository format_repository)
+        : format_repository_(format_repository)
+    {
+    }
 
     std::unique_ptr<core::image_mixer> create_image_mixer(const int channel_id)
     {

@@ -114,7 +114,7 @@ struct image_consumer : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository, 
+                                                      const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"IMAGE"))

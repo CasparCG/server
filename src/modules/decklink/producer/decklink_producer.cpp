@@ -324,7 +324,7 @@ class decklink_producer : public IDeckLinkInputCallback
     decklink_producer(const core::video_format_desc&              format_desc,
                       int                                         device_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory,
-                      const core::video_format_repository&        format_repository, 
+                      const core::video_format_repository&        format_repository,
                       const std::string&                          vfilter,
                       const std::string&                          afilter,
                       const std::wstring&                         format,
@@ -676,7 +676,7 @@ class decklink_producer_proxy : public core::frame_producer
   public:
     explicit decklink_producer_proxy(const core::video_format_desc&              format_desc,
                                      const spl::shared_ptr<core::frame_factory>& frame_factory,
-                                     const core::video_format_repository&        format_repository, 
+                                     const core::video_format_repository&        format_repository,
                                      int                                         device_index,
                                      const std::string&                          vfilter,
                                      const std::string&                          afilter,

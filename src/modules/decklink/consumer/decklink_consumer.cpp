@@ -29,11 +29,11 @@
 
 #include "../decklink_api.h"
 
-#include <core/video_format.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/video_format.h>
 
 #include <common/array.h>
 #include <common/diagnostics/graph.h>
@@ -93,11 +93,11 @@ struct configuration
     bool      key_only          = false;
     int       base_buffer_depth = 3;
 
-    core::video_format format = core::video_format::invalid;
-    int                src_x = 0;
+    core::video_format format   = core::video_format::invalid;
+    int                src_x    = 0;
     int                src_y    = 0;
-    int                dest_x    = 0;
-    int                dest_y    = 0;
+    int                dest_x   = 0;
+    int                dest_y   = 0;
     int                region_w = 0;
     int                region_h = 0;
 
@@ -301,8 +301,8 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
 struct decklink_consumer : public IDeckLinkVideoOutputCallback
 {
     const core::video_format_repository format_repository_;
-    const int           channel_index_;
-    const configuration config_;
+    const int                           channel_index_;
+    const configuration                 config_;
 
     com_ptr<IDeckLink>                    decklink_      = get_device(config_.device_index);
     com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
@@ -360,16 +360,16 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
         } else {
             // Take a sub-region
-            
-            // Some repetetive numbers
-            size_t    byte_count_dest_line  = (size_t)decklink_format_desc_.width * 4;
-            size_t    byte_count_src_line   = (size_t)channel_format_desc_.width * 4;
-            size_t    byte_offset_src_line  = std::max(0, (config_.src_x * 4));
-            size_t    byte_offset_dest_line = std::max(0, (config_.dest_x * 4));
-            int       y_skip_src_lines      = std::max(0, config_.src_y);
-            int       y_skip_dest_lines     = std::max(0, config_.dest_y);
 
-            size_t    byte_copy_per_line =
+            // Some repetetive numbers
+            size_t byte_count_dest_line  = (size_t)decklink_format_desc_.width * 4;
+            size_t byte_count_src_line   = (size_t)channel_format_desc_.width * 4;
+            size_t byte_offset_src_line  = std::max(0, (config_.src_x * 4));
+            size_t byte_offset_dest_line = std::max(0, (config_.dest_x * 4));
+            int    y_skip_src_lines      = std::max(0, config_.src_y);
+            int    y_skip_dest_lines     = std::max(0, config_.dest_y);
+
+            size_t byte_copy_per_line =
                 std::min(byte_count_src_line - byte_offset_src_line, byte_count_dest_line - byte_offset_dest_line);
             if (config_.region_w > 0) // If the user chose a width, respect that
                 byte_copy_per_line = std::min(byte_copy_per_line, (size_t)config_.region_w * 4);
@@ -388,11 +388,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
                     reinterpret_cast<char*>(image_data.get()) + (byte_count_dest_line * y), 0, byte_count_dest_line);
             }
 
-            int firstFillLine = y_skip_dest_lines; 
+            int firstFillLine = y_skip_dest_lines;
             if (field_count_ != 1 && firstFillLine % 2 != firstLine)
                 firstFillLine += 1;
             for (int y = firstFillLine; y < y_skip_dest_lines + copy_line_count; y += field_count_) {
-                auto line_start_ptr = reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_dest_line;
+                auto line_start_ptr   = reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_dest_line;
                 auto line_content_ptr = line_start_ptr + byte_offset_dest_line; // Future
 
                 // Fill the start with black
@@ -444,15 +444,15 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         if (channel_format_desc.format == core::video_format::invalid ||
             channel_format_desc.format == core::video_format::custom)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Decklink does not support the channel format"));
-        
+
         return channel_format_desc;
     }
 
   public:
     decklink_consumer(const core::video_format_repository& format_repository,
                       const configuration&                 config,
-                      const core::video_format_desc& channel_format_desc,
-                      int                            channel_index)
+                      const core::video_format_desc&       channel_format_desc,
+                      int                                  channel_index)
         : format_repository_(format_repository)
         , channel_index_(channel_index)
         , config_(config)
@@ -589,7 +589,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         thread_local auto priority_set = false;
         if (!priority_set) {
             priority_set = true;
-            //set_thread_realtime_priority();
+            // set_thread_realtime_priority();
         }
         try {
             auto elapsed     = tick_timer_.elapsed();
@@ -783,10 +783,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 struct decklink_consumer_proxy : public core::frame_consumer
 {
     const core::video_format_repository format_repository_;
-    const configuration                config_;
-    std::unique_ptr<decklink_consumer> consumer_;
-    core::video_format_desc            format_desc_;
-    executor                           executor_;
+    const configuration                 config_;
+    std::unique_ptr<decklink_consumer>  consumer_;
+    core::video_format_desc             format_desc_;
+    executor                            executor_;
 
   public:
     explicit decklink_consumer_proxy(const core::video_format_repository& format_repository,
@@ -831,7 +831,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository, 
+                                                      const core::video_format_repository& format_repository,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK")) {
@@ -871,7 +871,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              const core::video_format_repository&              format_repository, 
+                              const core::video_format_repository&              format_repository,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;

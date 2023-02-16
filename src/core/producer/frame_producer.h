@@ -152,7 +152,7 @@ class frame_producer_registry
     struct impl;
     spl::shared_ptr<impl> impl_;
 
-    frame_producer_registry(const frame_producer_registry&) = delete;
+    frame_producer_registry(const frame_producer_registry&)            = delete;
     frame_producer_registry& operator=(const frame_producer_registry&) = delete;
 };
 

@@ -21,7 +21,7 @@ class lock_container
     struct impl;
     spl::unique_ptr<impl> impl_;
 
-    lock_container(const lock_container&) = delete;
+    lock_container(const lock_container&)            = delete;
     lock_container& operator=(const lock_container&) = delete;
 };
 }} // namespace caspar::IO

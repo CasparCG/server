@@ -156,9 +156,10 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             // we fall back to calling av_image_fill_pointers with a NULL image buffer. We can't unconditionally use
             // av_image_fill_pointers because it will not accept a NULL buffer on ffmpeg >= 5.0.
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 56, 100)
-            size_t sizes[4];
+            size_t    sizes[4];
             ptrdiff_t linesizes1[4];
-            for (int i = 0; i < 4; i++) linesizes1[i] = linesizes[i];
+            for (int i = 0; i < 4; i++)
+                linesizes1[i] = linesizes[i];
             av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
             auto size2 = static_cast<int>(sizes[1]);
 #else
@@ -166,7 +167,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             av_image_fill_pointers(dummy_pict_data, pix_fmt, height, NULL, linesizes);
             auto size2 = static_cast<int>(dummy_pict_data[2] - dummy_pict_data[1]);
 #endif
-            auto h2    = size2 / linesizes[1];
+            auto h2 = size2 / linesizes[1];
 
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1));
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1));
