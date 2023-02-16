@@ -97,7 +97,7 @@ class html_client
     std::queue<core::draw_frame>         frames_;
     mutable std::mutex                   frames_mutex_;
 
-    core::draw_frame   last_frame_;
+    core::draw_frame last_frame_;
 
     CefRefPtr<CefBrowser> browser_;
 
@@ -172,10 +172,7 @@ class html_client
         return last_frame_;
     }
 
-    core::draw_frame last_frame() const
-    {
-        return last_frame_;
-    }
+    core::draw_frame last_frame() const { return last_frame_; }
 
     void execute_javascript(const std::wstring& javascript)
     {
@@ -462,7 +459,6 @@ class html_client
 
         return false;
     }
-
 
     void do_execute_javascript(const std::wstring& javascript)
     {

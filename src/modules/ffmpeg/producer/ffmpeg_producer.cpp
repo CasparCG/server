@@ -107,7 +107,7 @@ struct ffmpeg_producer : public core::frame_producer
 
     core::draw_frame last_frame(const core::video_field field) override { return producer_->prev_frame(field); }
 
-    core::draw_frame receive_impl(const core::video_field field,int nb_samples) override
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         return producer_->next_frame(field);
     }

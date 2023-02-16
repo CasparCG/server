@@ -29,10 +29,10 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_channel.h>
 
+#include <boost/optional.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/regex.hpp>
 #include <boost/signals2.hpp>
-#include <boost/optional.hpp>
 
 #include <tbb/concurrent_queue.h>
 

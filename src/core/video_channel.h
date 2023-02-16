@@ -59,8 +59,8 @@ struct route
     route& operator=(route&&)      = default;
 
     boost::signals2::signal<void(class draw_frame, class draw_frame)> signal;
-    video_format_desc                               format_desc;
-    std::wstring                                    name;
+    video_format_desc                                                 format_desc;
+    std::wstring                                                      name;
 };
 
 class video_channel final

@@ -77,11 +77,11 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
       public:
         empty_frame_producer() {}
 
-        draw_frame receive_impl(const core::video_field field, int nb_samples) override { return draw_frame{}; }
-        uint32_t                  nb_frames() const override { return 0; }
-        std::wstring              print() const override { return L"empty"; }
-        std::wstring              name() const override { return L"empty"; }
-        uint32_t                  frame_number() const override { return 0; }
+        draw_frame   receive_impl(const core::video_field field, int nb_samples) override { return draw_frame{}; }
+        uint32_t     nb_frames() const override { return 0; }
+        std::wstring print() const override { return L"empty"; }
+        std::wstring name() const override { return L"empty"; }
+        uint32_t     frame_number() const override { return 0; }
         std::future<std::wstring> call(const std::vector<std::wstring>& params) override
         {
             CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";

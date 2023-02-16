@@ -202,9 +202,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
 
                 // push stage_frames to support any channel routes that have been set
-                layer_frame chan_lf = {};
+                layer_frame chan_lf   = {};
                 chan_lf.is_interlaced = is_interlaced;
-                chan_lf.foreground1 = draw_frame(result.frames);
+                chan_lf.foreground1   = draw_frame(result.frames);
                 if (is_interlaced)
                     chan_lf.foreground2 = draw_frame(result.frames2);
                 routesCb(-1, chan_lf);

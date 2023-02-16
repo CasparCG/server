@@ -277,7 +277,7 @@ struct image_scroll_producer : public core::frame_producer
 
     double speed_from_duration(double duration_seconds) const
     {
-        return get_total_num_pixels() / (duration_seconds * format_desc_.fps );
+        return get_total_num_pixels() / (duration_seconds * format_desc_.fps);
     }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
