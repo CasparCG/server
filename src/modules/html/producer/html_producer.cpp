@@ -94,6 +94,7 @@ class html_client
     std::queue<core::draw_frame>         frames_;
     mutable std::mutex                   frames_mutex_;
     const size_t                         frames_max_size_ = 4;
+    std::atomic<bool>                    closing_;
 
     core::draw_frame last_frame_;
 
@@ -134,6 +135,7 @@ class html_client
         }
 
         loaded_ = false;
+        closing_ = false;
     }
 
     void reload()
@@ -146,6 +148,8 @@ class html_client
 
     void close()
     {
+        closing_ = true;
+
         html::invoke([=] {
             if (browser_ != nullptr) {
                 browser_->GetHost()->CloseBrowser(true);
@@ -239,7 +243,7 @@ class html_client
                  int                   width,
                  int                   height) override
     {
-        if (shared_texture_enable_)
+        if (shared_texture_enable_ || closing_)
             return;
 
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -281,7 +285,7 @@ class html_client
                             void*                 shared_handle) override
     {
         try {
-            if (!shared_texture_enable_)
+            if (!shared_texture_enable_ || closing_)
                 return;
 
             graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
