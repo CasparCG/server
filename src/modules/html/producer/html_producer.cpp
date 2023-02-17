@@ -86,17 +86,18 @@ class html_client
     caspar::timer                       frame_timer_;
     caspar::timer                       paint_timer_;
 
-    spl::shared_ptr<core::frame_factory> frame_factory_;
-    core::video_format_desc              format_desc_;
-    bool                                 shared_texture_enable_;
-    tbb::concurrent_queue<std::wstring>  javascript_before_load_;
-    std::atomic<bool>                    loaded_;
-    std::queue<core::draw_frame>         frames_;
-    mutable std::mutex                   frames_mutex_;
-    const size_t                         frames_max_size_ = 4;
-    std::atomic<bool>                    closing_;
+    spl::shared_ptr<core::frame_factory>                        frame_factory_;
+    core::video_format_desc                                     format_desc_;
+    bool                                                        shared_texture_enable_;
+    tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
+    std::atomic<bool>                                           loaded_;
+    std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
+    mutable std::mutex                                          frames_mutex_;
+    const size_t                                                frames_max_size_ = 4;
+    std::atomic<bool>                                           closing_;
 
-    core::draw_frame last_frame_;
+    core::draw_frame   last_frame_;
+    std::int_least64_t last_frame_time_;
 
     CefRefPtr<CefBrowser> browser_;
 
@@ -134,7 +135,7 @@ class html_client
             state_["file/path"] = u8(url_);
         }
 
-        loaded_ = false;
+        loaded_  = false;
         closing_ = false;
     }
 
@@ -157,12 +158,38 @@ class html_client
         });
     }
 
-    bool try_pop(const core::video_field field, core::draw_frame& result)
+    bool try_pop(const core::video_field field)
     {
         std::lock_guard<std::mutex> lock(frames_mutex_);
 
         if (!frames_.empty()) {
-            result = std::move(frames_.front());
+            /*
+             * CEF in gpu-enabled mode only sends frames when something changes, and interlaced channels
+             * consume two frames in a short time span.
+             * This can interact poorly and cause the second
+             * field of an animation repeat the first.
+             * If there is a single field in the buffer, it may
+             * want delaying to avoid this stutter.
+             * The hazard here is that sometimes animations will
+             * start a field later than intended.
+             */
+            if (field == core::video_field::a && frames_.size() == 1) {
+                auto now_time = now();
+
+                // Make sure there has been a gap before this pop, of at least a couple of frames
+                auto follows_gap_in_frames = (now_time - last_frame_time_) > 100;
+
+                // Check if the sole buffered frame is too young to have a partner field generated (with a tolerance)
+                auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
+                auto front_frame_is_too_young = (now_time - frames_.front().first) < time_per_frame;
+
+                if (follows_gap_in_frames && front_frame_is_too_young) {
+                    return false;
+                }
+            }
+
+            last_frame_time_ = frames_.front().first;
+            last_frame_      = std::move(frames_.front().second);
             frames_.pop();
 
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
@@ -175,10 +202,7 @@ class html_client
 
     core::draw_frame receive(const core::video_field field)
     {
-        core::draw_frame frame;
-        if (try_pop(field, frame)) {
-            last_frame_ = frame;
-        } else {
+        if (!try_pop(field)) {
             graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
         }
 
@@ -229,6 +253,13 @@ class html_client
     }
 
   private:
+    std::int_least64_t now()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::high_resolution_clock::now().time_since_epoch())
+            .count();
+    }
+
     void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
@@ -265,12 +296,11 @@ class html_client
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
-            frames_.push(core::draw_frame(std::move(frame)));
-            while (frames_.size() > frames_max_size_) {
+            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame))));
+            while (frames_.size() > 4) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
-
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
         }
     }
@@ -313,12 +343,11 @@ class html_client
                 {
                     std::lock_guard<std::mutex> lock(frames_mutex_);
 
-                    frames_.push(dframe);
-                    while (frames_.size() > frames_max_size_) {
+                    frames_.push(std::make_pair(now(), std::move(dframe)));
+                    while (frames_.size() > 4) {
                         frames_.pop();
                         graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
                     }
-
                     graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
                 }
             }
@@ -457,7 +486,7 @@ class html_client
 
             {
                 std::lock_guard<std::mutex> lock(frames_mutex_);
-                frames_.push(core::draw_frame::empty());
+                frames_.push(std::make_pair(now(), core::draw_frame::empty()));
             }
 
             {
