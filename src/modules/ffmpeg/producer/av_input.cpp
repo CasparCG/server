@@ -130,8 +130,10 @@ void Input::internal_reset()
     const AVInputFormat* input_format = nullptr;
     auto           url_parts    = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
-        FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
+        FF(av_dict_set(&options, "multiple_requests", "1", 0));
         FF(av_dict_set(&options, "reconnect", "1", 0));
+        FF(av_dict_set(&options, "reconnect_on_network_error", "1", 0));
+        FF(av_dict_set(&options, "reconnect_on_http_error", "5xx,420,429", 0));
         FF(av_dict_set(&options, "reconnect_streamed", "1", 0));
         FF(av_dict_set(&options, "reconnect_delay_max", "120", 0));
         FF(av_dict_set(&options, "short_seek_size", "1M", 0));
