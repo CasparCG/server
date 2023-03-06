@@ -18,6 +18,7 @@ extern "C" {
 #pragma warning(pop)
 #endif
 
+#include <array>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
