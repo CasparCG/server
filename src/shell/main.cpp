@@ -62,7 +62,11 @@ namespace caspar {
 void setup_global_locale()
 {
     boost::locale::generator gen;
+#if BOOST_VERSION >= 108100
+    gen.categories(boost::locale::category_t::codepage);
+#else
     gen.categories(boost::locale::codepage_facet);
+#endif
 
     std::locale::global(gen(""));
 
