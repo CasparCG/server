@@ -101,14 +101,12 @@ struct Filter
                 filter_spec = "null";
             }
 
-            bool                 doScale = dm->GetHeight() != format_desc.height || dm->GetWidth() != format_desc.width;
             boost::rational<int> bmdFramerate(
                 timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2), frameDuration / 1000);
             bool doFps = bmdFramerate != (format_desc.framerate * format_desc.field_count);
             bool i2p   = (dm->GetFieldDominance() != bmdProgressiveFrame) && (1 == format_desc.field_count);
 
-            std::string deintStr =
-                (doScale || doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
+            std::string deintStr = (doFps || i2p) ? ",bwdif=mode=send_field" : ",yadif=mode=send_field_nospatial";
             switch (dm->GetFieldDominance()) {
                 case bmdUpperFieldFirst:
                     filter_spec += deintStr + ":parity=tff:deint=all";
@@ -119,11 +117,6 @@ struct Filter
                 case bmdUnknownFieldDominance:
                     filter_spec += deintStr + ":parity=auto:deint=interlaced";
                     break;
-            }
-
-            if (doScale) {
-                // TODO - why are we doing this in ffmpeg rather than on the gpu in the mixer?
-                filter_spec += (boost::format(",scale=%dx%d") % format_desc.width % format_desc.height).str();
             }
 
             if (doFps) {
