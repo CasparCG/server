@@ -205,6 +205,15 @@ class Decoder
                 }
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
+            } catch (ffmpeg::ffmpeg_error_t& ex) {
+                if (auto errn = boost::get_error_info<ffmpeg_errn_info>(ex)) {
+                    if (*errn == AVERROR_EXIT) {
+                        return;
+                    }
+                }
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
             }
         });
     }
