@@ -215,6 +215,7 @@ class Decoder
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
+            eof = true;
         });
     }
 
