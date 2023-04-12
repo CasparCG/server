@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 	autoconf \
 	automake \
 	cmake \
+	ninja-build \
 	curl \
 	bzip2 \
 	clang \

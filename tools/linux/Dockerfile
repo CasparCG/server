@@ -12,8 +12,6 @@ FROM ${IMAGE_BASE} as build-casparcg
 	COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
 	COPY --from=cef /opt/cef /opt/cef
 
-	ARG PROC_COUNT=8
-
 	RUN mkdir /source && mkdir /build && mkdir /install
 
 	COPY ./src /source
@@ -27,8 +25,8 @@ FROM ${IMAGE_BASE} as build-casparcg
 	ARG CXX
 	ARG GIT_HASH
 
-	RUN cmake /source
-	RUN make -j $PROC_COUNT
+	RUN cmake -GNinja /source
+	RUN ninja
 
 	# Find a better way to copy deps
 	RUN ln -s /build/staging /staging && \
