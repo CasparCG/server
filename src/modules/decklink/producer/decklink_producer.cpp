@@ -606,12 +606,12 @@ class decklink_producer : public IDeckLinkInputCallback
                                 static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
 
                 if (std::abs(in_sync - in_sync_) > 0.01) {
-                    CASPAR_LOG(warning) << print() << " in-sync changed: " << in_sync;
+                    CASPAR_LOG(trace) << print() << " in-sync changed: " << in_sync;
                 }
                 in_sync_ = in_sync;
 
                 if (std::abs(out_sync - out_sync_) > 0.01) {
-                    CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
+                    CASPAR_LOG(trace) << print() << " out-sync changed: " << out_sync;
                 }
                 out_sync_ = out_sync;
 
