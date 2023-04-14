@@ -137,6 +137,13 @@ class html_client
         loaded_ = false;
     }
 
+    void reload() {
+        html::begin_invoke([=] {
+            if (browser_ != nullptr)
+                browser_->Reload();
+        });
+    }
+
     void close()
     {
         html::invoke([=] {
@@ -562,7 +569,11 @@ class html_producer : public core::frame_producer
 
         auto javascript = params.at(0);
 
-        client_->execute_javascript(javascript);
+        if (javascript == L"RELOAD") {
+            client_->reload();
+        } else {
+            client_->execute_javascript(javascript);
+        }
 
         return make_ready_future(std::wstring());
     }
