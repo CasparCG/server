@@ -233,9 +233,16 @@ bool has_invalid_protocol(const std::wstring& filename)
 
 bool is_readable(const std::wstring& filename)
 {
+#ifdef _MSC_VER
+    // Windows can't open std::ifstream with a unicode std::string
+    std::ifstream file(filename);
+#else
     auto u8filename = u8(filename);
 
+    // Linux can't open a std::ifstream with a std::wstring
     std::ifstream file(u8filename);
+#endif
+
     if (file) {
         return true;
     }
