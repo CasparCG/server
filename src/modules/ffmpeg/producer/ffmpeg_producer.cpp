@@ -292,10 +292,9 @@ bool is_valid_file(const std::wstring& filename)
     return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
-std::wstring probe_stem(const std::wstring& stem)
+boost::filesystem::path probe_stem(const boost::filesystem::path& stem)
 {
-    auto stem2  = boost::filesystem::path(stem);
-    auto parent = find_case_insensitive(stem2.parent_path().wstring());
+    auto parent = find_case_insensitive(stem.parent_path().wstring());
 
     if (!parent)
         return L"";
@@ -303,9 +302,9 @@ std::wstring probe_stem(const std::wstring& stem)
     auto dir = boost::filesystem::path(*parent);
 
     for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
-        if (boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) &&
+        if (boost::iequals(it->path().stem().wstring(), stem.filename().wstring()) &&
             is_valid_file(it->path().wstring()))
-            return it->path().wstring();
+            return it->path();
     }
     return L"";
 }
@@ -317,12 +316,16 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto path = name;
 
     if (!boost::contains(path, L"://")) {
-        auto mediaPath     = env::media_folder() + L"/" + path;
-        auto fullMediaPath = find_case_insensitive(mediaPath);
+        auto mediaPath     = boost::filesystem::absolute(env::media_folder() + L"/" + path);
+        auto fullMediaPath = find_case_insensitive(mediaPath.generic_wstring());
         if (fullMediaPath && is_valid_file(*fullMediaPath)) {
             path = *fullMediaPath;
+        } else if (mediaPath.has_extension()) {
+            // If there is an extension, then we don't need to probe to find a matching file
+            path = L"";
+            name = L"";
         } else {
-            path = boost::filesystem::path(probe_stem(mediaPath)).generic_wstring();
+            path = probe_stem(mediaPath).generic_wstring();
             name += boost::filesystem::path(path).extension().wstring();
         }
     } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
