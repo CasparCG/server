@@ -74,8 +74,10 @@ if (USE_SYSTEM_BOOST)
 	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
 endif()
 
+IF (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+	ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
+endif()
 ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
-ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
 ADD_COMPILE_OPTIONS (-msse3)
 ADD_COMPILE_OPTIONS (-mssse3)
 ADD_COMPILE_OPTIONS (-msse4.1)
