@@ -38,12 +38,9 @@ namespace caspar { namespace log {
 template <typename T>
 void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
-    std::locale loc;
+    std::locale loc(""); // Use system locale
     std::replace_if(
-        str.begin(),
-        str.end(),
-        [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n') || c > static_cast<T>(127); },
-        with);
+        str.begin(), str.end(), [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n'); }, with);
 }
 
 template <typename T>
