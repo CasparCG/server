@@ -300,9 +300,10 @@ boost::filesystem::path probe_stem(const boost::filesystem::path& stem)
         return L"";
 
     auto dir = boost::filesystem::path(*parent);
+    auto loc = std::locale(""); // Use system locale
 
     for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
-        if (boost::iequals(it->path().stem().wstring(), stem.filename().wstring()) &&
+        if (boost::iequals(it->path().stem().wstring(), stem.filename().wstring(), loc) &&
             is_valid_file(it->path().wstring()))
             return it->path();
     }

@@ -42,6 +42,8 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
     p = absolute(p);
     path result;
 
+    auto loc = std::locale(""); // Use system locale
+
     for (auto part : p) {
         auto concatenated = result / part;
 
@@ -53,7 +55,7 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
             for (auto it = directory_iterator(absolute(result)); it != directory_iterator(); ++it) {
                 auto leaf = it->path().leaf();
 
-                if (boost::algorithm::iequals(part.wstring(), leaf.wstring())) {
+                if (boost::algorithm::iequals(part.wstring(), leaf.wstring(), loc)) {
                     result = result / leaf;
                     found  = true;
                     break;
