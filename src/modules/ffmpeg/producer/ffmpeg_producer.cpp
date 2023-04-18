@@ -38,9 +38,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/logic/tribool.hpp>
 
-#include <cstdint>
-#include <fstream>
-
 #pragma warning(push, 1)
 
 extern "C" {
@@ -199,7 +196,7 @@ struct ffmpeg_producer : public core::frame_producer
     core::monitor::state state() const override { return producer_->state(); }
 };
 
-boost::tribool has_valid_extension(const std::wstring& filename)
+boost::tribool has_valid_extension(const boost::filesystem::path& filename)
 {
     static const auto invalid_exts = {
         L".tga", L".tiff", L".tif", L".jp2", L".jpx", L".j2k", L".j2c", L".swf", L".ct", L".html", L".htm"};
@@ -207,7 +204,7 @@ boost::tribool has_valid_extension(const std::wstring& filename)
                                     L".h264", L".prores", L".mkv",  L".mxf", L".ts",  L".mp3", L".wav",  L".wma",
                                     L".nut",  L".flac",   L".opus", L".ogg", L".ogv", L".oga", L".webm", L".webp"};
 
-    auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
+    auto ext = boost::to_lower_copy(filename.extension().wstring());
 
     if (std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end()) {
         return boost::tribool(true);
@@ -219,11 +216,11 @@ boost::tribool has_valid_extension(const std::wstring& filename)
     return boost::tribool(boost::indeterminate);
 }
 
-bool has_invalid_protocol(const std::wstring& filename)
+bool has_invalid_protocol(const boost::filesystem::path& filename)
 {
     static const auto invalid_protocols = {L"ndi:"};
 
-    auto protocol = boost::to_lower_copy(boost::filesystem::path(filename).root_name().wstring());
+    auto protocol = boost::to_lower_copy(filename.root_name().wstring());
 
     if (std::find(invalid_protocols.begin(), invalid_protocols.end(), protocol) != invalid_protocols.end()) {
         return true;
@@ -231,25 +228,16 @@ bool has_invalid_protocol(const std::wstring& filename)
     return false;
 }
 
-bool is_readable(const std::wstring& filename)
+bool is_readable(const boost::filesystem::path& filename)
 {
-#ifdef _MSC_VER
-    // Windows can't open std::ifstream with a unicode std::string
-    std::ifstream file(filename);
-#else
-    auto u8filename = u8(filename);
-
-    // Linux can't open a std::ifstream with a std::wstring
-    std::ifstream file(u8filename);
-#endif
-
+    boost::filesystem::ifstream file(filename);
     if (file) {
         return true;
     }
     return false;
 }
 
-bool is_valid_file(const std::wstring& filename)
+bool is_valid_file(const boost::filesystem::path& filename)
 {
     if (!is_readable(filename)) {
         return false;
@@ -263,17 +251,15 @@ bool is_valid_file(const std::wstring& filename)
         return false;
     }
 
-    auto u8filename = u8(filename);
-
     int         score = 0;
     AVProbeData pb    = {};
-    pb.filename       = u8filename.c_str();
+    pb.filename       = filename.generic_string().c_str();
 
     if (av_probe_input_format2(&pb, false, &score) != nullptr) {
         return true;
     }
 
-    std::ifstream file(u8filename);
+    boost::filesystem::ifstream file(filename);
 
     std::vector<unsigned char> buf;
     for (auto file_it = std::istreambuf_iterator<char>(file);
