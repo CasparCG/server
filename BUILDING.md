@@ -15,7 +15,7 @@ Windows
 Development using Visual Studio
 -------------------------------
 
-1. Install Visual Studio 2017.
+1. Install Visual Studio 2019.
 
 2. Install CMake (http://www.cmake.org/download/).
 
@@ -27,7 +27,7 @@ Development using Visual Studio
 
 6. `cd build`
 
-7. `cmake -G "Visual Studio 15 2017" -A x64 ../src`
+7. `cmake -G "Visual Studio 16 2019" -A x64 ../src`
 
 8. Open `CasparCG Server.sln`
 
