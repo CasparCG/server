@@ -1,3 +1,53 @@
+CasparCG 2.4.0 (Unreleased) 
+==========================================
+
+### Core
+##### Improvements
+* Custom resultions can be specified in casparcg.config
+* Interlaced mixer pipeline to ensure field accuracy
+* Preserve unicode characters in console input/output
+* Producers to be run at startup can be defined in casparcg.config
+* Support 8K frames
+* AMCP: Add CLEAR ALL command
+* AMCP: Command batching syntax
+* AMCP: LOAD/LOADBG/PLAY commands accept a CLEAR_ON_404 parameter, to instruct the layer to be cleared when the requested file was not found
+* Build: Support newer versions of Boost
+* Build: Support newer versions of TBB
+* Build: Disable precompiled headers for linux
+* Build: Support VS2022
+* Linux: Support setting thread priorities
+* Transitions: Support additional audio fade properties for STING transition
+##### Fixes
+* OpenGL: Fix support for recent Linux drivers
+* Linux: Fix endless looping on stdin
+* Route: Fix error when clearing layer
+* Transitions: Fix wipe duration
+
+### Producers
+##### Improvements
+* Decklink: Output a subregion of the channel
+* Decklink: Scale received frames on GPU
+* FFmpeg: Update to v5.1
+* FFmpeg: Improve performance
+* FFmpeg: Allow specifying both SEEK and IN for PLAY commands
+* HTML: Update to CEF 95
+* HTML: `CALL 1-10 RELOAD` to reload a renderer
+* NDI: Upgrade to NDI5
+##### Fixes
+* FFmpeg: Prevent loading unreadable files
+* FFmpeg: Unable to play files with unicode filenames
+* HTML: media-stream permission denied
+
+### Consumers
+##### Improvements
+* Decklink: Configure device duplex modes in casparcg.config
+* NDI: Upgrade to NDI5
+##### Fixes
+* Decklink: Fix stutter when loading clips
+* FFmpeg: Fix RTMP streaming missing headers
+* NDI: dejitter
+
+
 CasparCG 2.3.3 LTS Stable
 ==========================================
 
