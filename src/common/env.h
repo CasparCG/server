@@ -36,6 +36,8 @@ const std::wstring& template_folder();
 const std::wstring& data_folder();
 const std::wstring& version();
 
+bool log_to_file();
+
 const boost::property_tree::wptree& properties();
 
 void log_configuration_warnings();

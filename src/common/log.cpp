@@ -53,6 +53,8 @@ using namespace boost::placeholders;
 
 namespace caspar { namespace log {
 
+logging_config current_config;
+
 std::string current_exception_diagnostic_information()
 {
     {
@@ -105,7 +107,7 @@ class column_writer
     std::atomic<int> column_width_;
 
   public:
-    column_writer(int initial_width = 0)
+    explicit column_writer(int initial_width = 0)
         : column_width_(initial_width)
     {
     }
@@ -114,22 +116,27 @@ class column_writer
     void write(Stream& out, const Val& value)
     {
         std::wstring to_string = boost::lexical_cast<std::wstring>(value);
-        int          length    = static_cast<int>(to_string.size());
-        int          read_width;
 
-        while (true) {
-            read_width = column_width_;
-            if (read_width >= length || column_width_.compare_exchange_strong(length, read_width)) {
-                break;
+        if (!current_config.align_columns) {
+            out << L"[" << to_string << L"] ";
+        } else {
+            int length = static_cast<int>(to_string.size());
+            int read_width;
+
+            while (true) {
+                read_width = column_width_;
+                if (read_width >= length || column_width_.compare_exchange_strong(length, read_width)) {
+                    break;
+                }
             }
-        }
 
-        read_width = column_width_;
+            read_width = column_width_;
 
-        out << L"[" << to_string << L"] ";
+            out << L"[" << to_string << L"] ";
 
-        for (int n = 0; n < read_width - length; ++n) {
-            out << L" ";
+            for (int n = 0; n < read_width - length; ++n) {
+                out << L" ";
+            }
         }
     }
 };
@@ -137,7 +144,7 @@ class column_writer
 template <typename Stream>
 void my_formatter(bool print_all_characters, const boost::log::record_view& rec, Stream& strm)
 {
-    static column_writer thread_id_column;
+    // static column_writer thread_id_column;
     static column_writer severity_column(7);
     namespace expr = boost::log::expressions;
 
@@ -206,8 +213,6 @@ void add_cout_sink()
     logging::core::get()->add_sink(stream_sink);
 }
 
-std::wstring current_log_level;
-
 bool set_log_level(const std::wstring& lvl)
 {
     if (boost::iequals(lvl, L"trace"))
@@ -225,10 +230,13 @@ bool set_log_level(const std::wstring& lvl)
     else
         return false;
 
-    current_log_level = lvl;
+    // TODO is this a race condition?
+    current_config.current_level = lvl;
     return true;
 }
 
-std::wstring& get_log_level() { return current_log_level; }
+std::wstring& get_log_level() { return current_config.current_level; }
+
+void set_log_column_alignment(bool align_columns) { current_config.align_columns = align_columns; }
 
 }} // namespace caspar::log

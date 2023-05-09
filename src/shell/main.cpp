@@ -225,6 +225,8 @@ int main(int argc, char** argv)
         log::add_cout_sink();
         env::configure(config_file_name);
 
+        log::set_log_column_alignment(env::properties().get(L"configuration.log-align-columns", true));
+
         {
             std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");
             if (!log::set_log_level(target_level)) {
@@ -237,10 +239,15 @@ int main(int argc, char** argv)
             wait_for_remote_debugging();
 
         // Start logging to file.
-        log::add_file_sink(env::log_folder() + L"caspar");
-        std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
-                   << std::endl
-                   << std::endl;
+        if (env::log_to_file()) {
+            log::add_file_sink(env::log_folder() + L"caspar");
+            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
+                       << std::endl
+                       << std::endl;
+        } else {
+            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to console" << std::endl
+                       << std::endl;
+        }
 
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();
