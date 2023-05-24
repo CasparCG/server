@@ -13,7 +13,6 @@ option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 LIST (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 if (MSVC)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT casparcg)
 	INCLUDE (Bootstrap_Windows)
 else ()
 	INCLUDE (Bootstrap_Linux)
