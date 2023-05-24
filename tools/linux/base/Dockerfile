@@ -1,79 +1,9 @@
 FROM buildpack-deps:focal
 
-RUN apt-get update && apt-get install -yq --no-install-recommends \
-	autoconf \
-	automake \
-	cmake \
-	ninja-build \
-	curl \
-	bzip2 \
-	clang \
-	g++ \
-	gcc \
-	git \
-	gperf \
-	libtool \
-	make \
-	nasm \
-	perl \
-	pkg-config \
-	python \
-	yasm \
-	zlib1g-dev \
-	libexpat1-dev \
-	lsb-release \
-	libglew-dev \
-	libfreeimage-dev \
-	libtbb-dev \
-	libopenal-dev \
-	libxcursor-dev \
-	libxinerama-dev \
-	libxi-dev \
-	libsfml-dev \
-	libxrandr-dev \
-	libudev-dev \
-	libglu1-mesa-dev \
-	libharfbuzz0b \
-	libpangoft2-1.0-0 \
-	libcairo2 \
-	libv4l-0 \
-	libraw1394-11 \
-	libavc1394-0 \
-	libiec61883-0 \
-	libxtst6 \
-	libnss3 \
-	libnspr4 \
-	libgconf-2-4 \
-	libasound2 \
-	libopus-dev \
-	libgsm1-dev \
-	libmodplug-dev \
-	libvpx-dev \
-	libass-dev \
-	libbluray-dev \
-	libfribidi-dev \
-	libgmp-dev \
-	libgnutls28-dev \
-	libmp3lame-dev \
-	libopencore-amrnb-dev \
-	libopencore-amrwb-dev \
-	librtmp-dev \
-	libtheora-dev \
-	libx264-dev \
-	libxvidcore-dev \
-	libx265-dev \
-	libxss1 \
-	libgtk2.0-0 \
-	libatspi2.0-dev \
-	libatk-bridge2.0-dev \
-	libopenjp2-7-dev \
-	libopenmpt-dev \
-	libshine-dev \
-	libsnappy-dev \
-	libsoxr-dev \
-	libspeex-dev \
-	libtwolame-dev \
-	libvo-amrwbenc-dev \
-	libwavpack-dev \
-	libsdl2-dev
+ADD install-dependencies /
+
+RUN chmod +x /install-dependencies
+RUN apt-get update && \
+	/install-dependencies ; \
+	rm -rf /var/lib/apt/lists/*
 
