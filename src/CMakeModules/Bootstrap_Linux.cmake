@@ -28,7 +28,7 @@ if (NOT USE_SYSTEM_BOOST)
 	SET (Boost_USE_RELEASE_LIBS OFF)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
-FIND_PACKAGE (Boost 1.66.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
 
 SET (FFMPEG_ROOT_PATH "/opt/ffmpeg/lib/pkgconfig" CACHE STRING "Path to FFMPEG")
 SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${FFMPEG_ROOT_PATH}")
@@ -69,6 +69,8 @@ ADD_DEFINITIONS (-D__NO_INLINE__) # Needed for precompiled headers to work
 ADD_DEFINITIONS (-DBOOST_NO_SWPRINTF) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 ADD_DEFINITIONS (-DTBB_USE_CAPTURED_EXCEPTION=1)
 ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
+ADD_DEFINITIONS (-DBOOST_LOCALE_HIDE_AUTO_PTR) # Needed for C++17 in boost 1.67+
+
 
 if (USE_SYSTEM_BOOST)
 	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
