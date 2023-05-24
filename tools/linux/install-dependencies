@@ -17,7 +17,7 @@ apt-get install -yq --no-install-recommends \
 	nasm \
 	perl \
 	pkg-config \
-	python \
+	python3 \
 	yasm \
 	zlib1g-dev \
 	libexpat1-dev \
@@ -75,4 +75,5 @@ apt-get install -yq --no-install-recommends \
 	libtwolame-dev \
 	libvo-amrwbenc-dev \
 	libwavpack-dev \
-	libsdl2-dev
+	libsdl2-dev \
+	libwebp-dev

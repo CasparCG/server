@@ -1,0 +1,41 @@
+name: Build Linux with system dependencies
+
+on:
+    push:
+        # branches: [ "master" ]
+    pull_request:
+        branches: ["master"]
+
+jobs:
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                os:
+                    - ubuntu-20.04
+                    # - ubuntu-22.04 TODO-enable this once it can use a system ffmpeg too
+
+        runs-on: ${{ matrix.os }}
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Setup environment
+              run: |
+                  sudo apt-get update
+                  sudo ./tools/linux/install-dependencies
+                  sudo ./tools/linux/extract-deps-from-docker
+
+                  sudo apt-get install libboost-all-dev
+
+            - name: Run build
+              run: |
+
+                  mkdir build
+                  cd build
+
+                  cmake ../src -DUSE_SYSTEM_BOOST=ON
+                  make -j2
+
+              env:
+                  CI: 1
