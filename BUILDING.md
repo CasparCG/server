@@ -66,3 +66,5 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.
 
 -DUSE_SYSTEM_BOOST - (Linux only) use the version of Boost from your OS.
+
+-DUSE_SYSTEM_FFMPEG - (Linux only) use the version of ffmpeg from your OS.
