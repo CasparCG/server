@@ -38,7 +38,7 @@ class scoped_call_context
 {
     call_context saved_;
 
-    scoped_call_context(const scoped_call_context&) = delete;
+    scoped_call_context(const scoped_call_context&)            = delete;
     scoped_call_context& operator=(const scoped_call_context&) = delete;
 
   public:

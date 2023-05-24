@@ -39,6 +39,7 @@ namespace caspar { namespace env {
 std::wstring                 initial;
 std::wstring                 media;
 std::wstring                 log;
+bool                         log_enabled = true;
 std::wstring                 ftemplate;
 std::wstring                 data;
 boost::property_tree::wptree pt;
@@ -95,7 +96,13 @@ void configure(const std::wstring& filename)
 
         auto paths = pt.get_child(L"configuration.paths");
         media      = clean_path(paths.get(L"media-path", initial + L"/media/"));
-        log        = clean_path(paths.get(L"log-path", initial + L"/log/"));
+
+        auto log_path_node  = paths.get_child(L"log-path");
+        log_enabled = !log_path_node.get(L"<xmlattr>.disabled", false);
+        if (log_enabled) {
+            log = clean_path(log_path_node.get_value(initial + L"/log/"));
+        }
+
         ftemplate =
             clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
         data = clean_path(paths.get(L"data-path", initial + L"/data/"));
@@ -105,11 +112,14 @@ void configure(const std::wstring& filename)
     }
 
     media     = ensure_trailing_slash(resolve_or_create(media));
-    log       = ensure_trailing_slash(resolve_or_create(log));
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
     data      = ensure_trailing_slash(resolve_or_create(data));
 
-    ensure_writable(log);
+    if (log_enabled) {
+        log = ensure_trailing_slash(resolve_or_create(log));
+        ensure_writable(log);
+    }
+
     ensure_writable(ftemplate);
     ensure_writable(data);
 }
@@ -130,6 +140,12 @@ const std::wstring& log_folder()
 {
     check_is_configured();
     return log;
+}
+
+bool log_to_file()
+{
+    check_is_configured();
+    return log_enabled;
 }
 
 const std::wstring& template_folder()

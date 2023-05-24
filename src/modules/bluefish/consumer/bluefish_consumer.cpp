@@ -206,7 +206,7 @@ struct bluefish_consumer
     caspar::timer                       tick_timer_;
     caspar::timer                       sync_timer_;
 
-    bluefish_consumer(const bluefish_consumer&) = delete;
+    bluefish_consumer(const bluefish_consumer&)            = delete;
     bluefish_consumer& operator=(const bluefish_consumer&) = delete;
 
     bluefish_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
@@ -619,8 +619,9 @@ struct bluefish_consumer
             CASPAR_LOG(error) << print() << TEXT(" Failed to disable audio output.");
     }
 
-    bool send(core::const_frame frame)
+    bool send(core::video_field field, core::const_frame frame)
     {
+        // TODO - field alignment
         {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
@@ -858,9 +859,9 @@ struct bluefish_consumer_proxy : public core::frame_consumer
         });
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        return executor_.begin_invoke([=] { return consumer_->send(frame); });
+        return executor_.begin_invoke([=] { return consumer_->send(field, frame); });
     }
 
     std::wstring print() const override { return consumer_ ? consumer_->print() : L"[bluefish_consumer]"; }
@@ -872,7 +873,8 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     bool has_synchronization_clock() const override { return true; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"BLUEFISH")) {
@@ -881,11 +883,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     configuration config;
 
-    const auto device_index       = params.size() > 1 ? std::stoi(params.at(1)) : 1;
-    const auto device_stream      = contains_param(L"SDI-STREAM", params);
-    const auto embedded_audio     = contains_param(L"EMBEDDED_AUDIO", params);
-    const auto keyer_option       = contains_param(L"KEYER", params);
-    const auto keyer_audio_option = contains_param(L"INTERNAL-KEYER-AUDIO-SOURCE", params);
+    // const auto device_index       = params.size() > 1 ? std::stoi(params.at(1)) : 1;
+    // const auto device_stream      = contains_param(L"SDI-STREAM", params);
+    // const auto embedded_audio     = contains_param(L"EMBEDDED_AUDIO", params);
+    // const auto keyer_option       = contains_param(L"KEYER", params);
+    // const auto keyer_audio_option = contains_param(L"INTERNAL-KEYER-AUDIO-SOURCE", params);
 
     config.device_stream = bluefish_hardware_output_channel::channel_1;
     if (contains_param(L"1", params))
@@ -927,6 +929,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
+                              const core::video_format_repository&              format_repository,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     configuration config;

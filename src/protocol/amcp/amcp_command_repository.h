@@ -26,8 +26,6 @@
 
 #include <common/memory.h>
 
-#include <core/fwd.h>
-
 #include <functional>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -35,24 +33,7 @@ namespace caspar { namespace protocol { namespace amcp {
 class amcp_command_repository
 {
   public:
-    amcp_command_repository(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
-                            const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
-                            const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-                            const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
-                            std::function<void(bool)>                                   shutdown_server_now);
-
-    void init(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
-
-    AMCPCommand::ptr_type create_command(const std::wstring&      name,
-                                         const std::wstring&      request_id,
-                                         IO::ClientInfoPtr        client,
-                                         std::list<std::wstring>& tokens) const;
-    AMCPCommand::ptr_type create_channel_command(const std::wstring&      name,
-                                                 const std::wstring&      request_id,
-                                                 IO::ClientInfoPtr        client,
-                                                 unsigned int             channel_index,
-                                                 int                      layer_index,
-                                                 std::list<std::wstring>& tokens) const;
+    amcp_command_repository(const std::vector<channel_context>& channels);
 
     std::shared_ptr<AMCPCommand>
          parse_command(IO::ClientInfoPtr client, std::list<std::wstring> tokens, const std::wstring& request_id) const;
@@ -61,6 +42,7 @@ class amcp_command_repository
     const std::vector<channel_context>& channels() const;
 
     void register_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
+
     void
     register_channel_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
 
@@ -68,7 +50,7 @@ class amcp_command_repository
     struct impl;
     spl::shared_ptr<impl> impl_;
 
-    amcp_command_repository(const amcp_command_repository&) = delete;
+    amcp_command_repository(const amcp_command_repository&)            = delete;
     amcp_command_repository& operator=(const amcp_command_repository&) = delete;
 };
 

@@ -126,8 +126,12 @@ void Input::internal_reset()
 
     static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = {L"dshow", L"v4l2", L"iec61883"};
 
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+    const AVInputFormat* input_format = nullptr;
+#else
     AVInputFormat* input_format = nullptr;
-    auto           url_parts    = caspar::protocol_split(u16(filename_));
+#endif
+    auto url_parts = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
         FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));

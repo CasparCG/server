@@ -25,6 +25,7 @@
 #include <common/memory.h>
 
 #include <core/frame/frame.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/video_format.h>
 
@@ -35,7 +36,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class image_mixer final : public core::image_mixer
 {
   public:
-    image_mixer(const spl::shared_ptr<class device>& ogl, int channel_id);
+    image_mixer(const spl::shared_ptr<class device>& ogl, int channel_id, const size_t max_frame_size);
     image_mixer(const image_mixer&) = delete;
 
     ~image_mixer();
@@ -45,8 +46,10 @@ class image_mixer final : public core::image_mixer
     std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;
     core::mutable_frame                    create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 #ifdef WIN32
-    core::const_frame
-    import_d3d_texture(const void* tag, const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture, bool vflip) override;
+    core::const_frame import_d3d_texture(const void*                                tag,
+                                         const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture,
+                                         bool                                       vflip,
+                                         core::pixel_format                         format) override;
 #endif
 
     // core::image_mixer

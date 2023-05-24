@@ -97,7 +97,7 @@ class color_producer : public frame_producer
 
     // frame_producer
 
-    draw_frame receive_impl(int nb_samples) override
+    draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         CASPAR_SCOPE_EXIT { state_["color"] = color_str_; };
         return frame_;

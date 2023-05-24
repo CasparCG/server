@@ -2,8 +2,8 @@ ARG IMAGE_BASE
 
 FROM ${IMAGE_BASE} as BUILD
 	ARG PROC_COUNT=8
-	ENV FFMPEG_COMMIT n4.2.2
-	ENV FFMPEG_NVCODEC_COMMIT n9.1.23.1
+	ENV FFMPEG_COMMIT n5.1.3
+	ENV FFMPEG_NVCODEC_COMMIT n12.0.16.0
 
 	RUN wget https://github.com/FFmpeg/nv-codec-headers/archive/${FFMPEG_NVCODEC_COMMIT}.tar.gz && \
 		tar zxf ${FFMPEG_NVCODEC_COMMIT}.tar.gz
@@ -36,7 +36,6 @@ FROM ${IMAGE_BASE} as BUILD
 			--enable-libtheora \
 			--enable-libtwolame \
 			--enable-libvpx \
-			--enable-libwavpack \
 			--enable-libwebp \
 			--enable-libx264 \
 			--enable-libx265 \
@@ -52,7 +51,6 @@ FROM ${IMAGE_BASE} as BUILD
 			--enable-cuvid \
 			--enable-nvenc \
 			--enable-nvdec \
-			--enable-avisynth \
 			--enable-libopenmpt \
 			--prefix=/opt/ffmpeg \
 			&& \
@@ -67,5 +65,8 @@ FROM ${IMAGE_BASE} as BUILD
 			# --enable-libmfx \
 			# --enable-libmysofa \ # errors while building
 			# --enable-amf \
+
+	# Broken for 22.04
+			# --enable-avisynth \
 FROM scratch
 	COPY --from=BUILD /opt/ffmpeg /opt/ffmpeg

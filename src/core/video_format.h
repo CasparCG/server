@@ -25,9 +25,18 @@
 #include <string>
 #include <vector>
 
+#include <common/memory.h>
+
 #include <boost/rational.hpp>
 
 namespace caspar { namespace core {
+
+enum class video_field
+{
+    progressive,
+    a,
+    b,
+};
 
 enum class video_format
 {
@@ -65,6 +74,7 @@ enum class video_format
     x2160p5994,
     x2160p6000,
     invalid,
+    custom,
     count
 };
 
@@ -77,7 +87,8 @@ struct video_format_desc final
     int                  square_width;
     int                  square_height;
     int                  field_count;
-    double               fps; // actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
+    double               hz;  // actual tickrate of the channel, e.g. i50 = 25 hz, p50 = 50 hz
+    double               fps; // actual fieldrate, e.g. i50 = 50 fps, p50 = 50 fps
     boost::rational<int> framerate;
     int                  time_scale;
     int                  duration;
@@ -99,8 +110,7 @@ struct video_format_desc final
                       std::wstring     name,
                       std::vector<int> audio_cadence);
 
-    video_format_desc(video_format format = video_format::invalid);
-    video_format_desc(const std::wstring& name);
+    video_format_desc();
 };
 
 bool operator==(const video_format_desc& rhs, const video_format_desc& lhs);
@@ -108,6 +118,22 @@ bool operator!=(const video_format_desc& rhs, const video_format_desc& lhs);
 
 std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc);
 
-std::vector<int> find_audio_cadence(const boost::rational<int>& framerate, bool log_quiet = false);
+class video_format_repository
+{
+  public:
+    explicit video_format_repository();
+
+    video_format_desc find(const std::wstring& name) const;
+    video_format_desc find_format(const video_format& format) const;
+    void              store(const video_format_desc& format);
+
+    std::size_t get_max_video_format_size() const;
+
+    static video_format_desc invalid();
+
+  private:
+    struct impl;
+    spl::shared_ptr<impl> impl_;
+};
 
 }} // namespace caspar::core

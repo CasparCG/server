@@ -129,7 +129,7 @@ std::map<std::string, NDIlib_source_t> get_current_sources()
 void not_installed()
 {
     CASPAR_THROW_EXCEPTION(not_supported()
-                           << msg_info(dll_name() + L" not available. Install NDI Redist version 3.7 or higher from " +
+                           << msg_info(dll_name() + L" not available. Install NDI Redist version 5.0 or higher from " +
                                        u16(NDILIB_REDIST_URL)));
 }
 

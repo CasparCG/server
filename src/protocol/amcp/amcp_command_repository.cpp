@@ -25,16 +25,34 @@
 
 #include <common/env.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <map>
 
 namespace caspar { namespace protocol { namespace amcp {
 
+AMCPCommand::ptr_type make_cmd(amcp_command_func        func,
+                               const std::wstring&      name,
+                               const std::wstring&      id,
+                               IO::ClientInfoPtr        client,
+                               unsigned int             channel_index,
+                               int                      layer_index,
+                               std::list<std::wstring>& tokens)
+{
+    const std::vector<std::wstring> parameters(tokens.begin(), tokens.end());
+    const command_context_simple    ctx(std::move(client), channel_index, layer_index, std::move(parameters));
+
+    return std::make_shared<AMCPCommand>(ctx, func, name, id);
+}
+
 AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_command_func, int>>& commands,
                                    const std::wstring&                                              name,
                                    const std::wstring&                                              request_id,
-                                   command_context&                                                 ctx,
+                                   IO::ClientInfoPtr                                                client,
+                                   int                                                              channel_index,
+                                   int                                                              layer_index,
                                    std::list<std::wstring>&                                         tokens)
 {
     std::wstring subcommand;
@@ -44,22 +62,24 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
 
     // Start with subcommand syntax like MIXER CLEAR etc
     if (!subcommand.empty()) {
-        auto fullname = name + L" " + subcommand;
-        auto subcmd   = commands.find(fullname);
+        const auto fullname = name + L" " + subcommand;
+        const auto subcmd   = commands.find(fullname);
 
         if (subcmd != commands.end()) {
             tokens.pop_front();
-            ctx.parameters = std::move(std::vector<std::wstring>(tokens.begin(), tokens.end()));
-            return std::make_shared<AMCPCommand>(
-                ctx, subcmd->second.first, subcmd->second.second, fullname, request_id);
+
+            if (tokens.size() >= subcmd->second.second) {
+                return make_cmd(
+                    subcmd->second.first, fullname, request_id, std::move(client), channel_index, layer_index, tokens);
+            }
         }
     }
 
     // Resort to ordinary command
-    auto command = commands.find(name);
-    if (command != commands.end()) {
-        ctx.parameters = std::move(std::vector<std::wstring>(tokens.begin(), tokens.end()));
-        return std::make_shared<AMCPCommand>(ctx, command->second.first, command->second.second, name, request_id);
+    const auto command = commands.find(name);
+
+    if (command != commands.end() && tokens.size() >= command->second.second) {
+        return make_cmd(command->second.first, name, request_id, std::move(client), channel_index, layer_index, tokens);
     }
 
     return nullptr;
@@ -101,85 +121,45 @@ parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, in
 
 struct amcp_command_repository::impl
 {
-    std::vector<channel_context>                         channels;
-    spl::shared_ptr<core::cg_producer_registry>          cg_registry;
-    spl::shared_ptr<const core::frame_producer_registry> producer_registry;
-    spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
-    std::weak_ptr<accelerator::accelerator_device>       ogl_device;
-    std::function<void(bool)>                            shutdown_server_now;
-    std::string proxy_host = u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1"));
-    std::string proxy_port = u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000"));
+    const std::vector<channel_context> channels_;
 
-    std::map<std::wstring, std::pair<amcp_command_func, int>> commands;
-    std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands;
+    std::map<std::wstring, std::pair<amcp_command_func, int>> commands{};
+    std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands{};
 
-    impl(const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
-         const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
-         const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-         const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
-         std::function<void(bool)>                                   shutdown_server_now)
-        : cg_registry(cg_registry)
-        , producer_registry(producer_registry)
-        , consumer_registry(consumer_registry)
-        , ogl_device(ogl_device)
-        , shutdown_server_now(shutdown_server_now)
+    impl(const std::vector<channel_context>& channels)
+        : channels_(channels)
     {
-    }
-
-    void init(const std::vector<spl::shared_ptr<core::video_channel>>& video_channels)
-    {
-        int index = 0;
-        for (const auto& channel : video_channels) {
-            std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
-            this->channels.push_back(channel_context(channel, lifecycle_key));
-            ++index;
-        }
     }
 
     AMCPCommand::ptr_type create_command(const std::wstring&      name,
-                                         const std::wstring&      request_id,
+                                         const std::wstring&      id,
                                          IO::ClientInfoPtr        client,
                                          std::list<std::wstring>& tokens) const
     {
-        command_context ctx(std::move(client),
-                            channel_context(),
-                            -1,
-                            -1,
-                            channels,
-                            cg_registry,
-                            producer_registry,
-                            consumer_registry,
-                            shutdown_server_now,
-                            proxy_host,
-                            proxy_port,
-                            ogl_device);
+        auto command = find_command(commands, name, id, std::move(client), -1, -1, tokens);
 
-        return find_command(commands, name, request_id, ctx, tokens);
+        if (command)
+            return command;
+
+        return nullptr;
     }
 
     AMCPCommand::ptr_type create_channel_command(const std::wstring&      name,
-                                                 const std::wstring&      request_id,
+                                                 const std::wstring&      id,
                                                  IO::ClientInfoPtr        client,
                                                  unsigned int             channel_index,
                                                  int                      layer_index,
                                                  std::list<std::wstring>& tokens) const
     {
-        auto channel = channels.at(channel_index);
+        if (channels_.size() <= channel_index)
+            return nullptr;
 
-        command_context ctx(std::move(client),
-                            channel,
-                            channel_index,
-                            layer_index,
-                            channels,
-                            cg_registry,
-                            producer_registry,
-                            consumer_registry,
-                            shutdown_server_now,
-                            proxy_host,
-                            proxy_port,
-                            ogl_device);
+        auto command = find_command(channel_commands, name, id, std::move(client), channel_index, layer_index, tokens);
 
-        return find_command(channel_commands, name, request_id, ctx, tokens);
+        if (command)
+            return command;
+
+        return nullptr;
     }
 
     std::shared_ptr<AMCPCommand>
@@ -212,48 +192,25 @@ struct amcp_command_repository::impl
             command = create_command(command_name, request_id, client, tokens);
         }
 
-        if (command && command->parameters().size() < command->minimum_parameters()) {
-            CASPAR_LOG(error) << "Not enough parameters in command: " << command_name;
-            return nullptr;
-        }
-
         return std::move(command);
     }
 
     bool check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
     {
-        if (channel_index < 0)
+        if (channel_index < 0 || channel_index >= channels_.size())
             return true;
 
-        auto lock = channels.at(channel_index).lock;
+        auto lock = channels_.at(channel_index).lock;
         return !(lock && !lock->check_access(client));
     }
 };
 
-amcp_command_repository::amcp_command_repository(
-    const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
-    const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
-    const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-    const std::weak_ptr<accelerator::accelerator_device>&       ogl_device,
-    std::function<void(bool)>                                   shutdown_server_now)
-    : impl_(new impl(cg_registry, producer_registry, consumer_registry, ogl_device, shutdown_server_now))
+amcp_command_repository::amcp_command_repository(const std::vector<channel_context>& channels)
+    : impl_(new impl(channels))
 {
 }
 
-void amcp_command_repository::init(const std::vector<spl::shared_ptr<core::video_channel>>& channels)
-{
-    impl_->init(channels);
-}
-
-AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring&      name,
-                                                              const std::wstring&      request_id,
-                                                              IO::ClientInfoPtr        client,
-                                                              std::list<std::wstring>& tokens) const
-{
-    return impl_->create_command(name, request_id, client, tokens);
-}
-
-const std::vector<channel_context>& amcp_command_repository::channels() const { return impl_->channels; }
+const std::vector<channel_context>& amcp_command_repository::channels() const { return impl_->channels_; }
 
 std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientInfoPtr       client,
                                                                     std::list<std::wstring> tokens,
@@ -265,16 +222,6 @@ std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientIn
 bool amcp_command_repository::check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
 {
     return impl_->check_channel_lock(client, channel_index);
-}
-
-AMCPCommand::ptr_type amcp_command_repository::create_channel_command(const std::wstring&      name,
-                                                                      const std::wstring&      request_id,
-                                                                      IO::ClientInfoPtr        client,
-                                                                      unsigned int             channel_index,
-                                                                      int                      layer_index,
-                                                                      std::list<std::wstring>& tokens) const
-{
-    return impl_->create_channel_command(name, request_id, client, channel_index, layer_index, tokens);
 }
 
 void amcp_command_repository::register_command(std::wstring      category,

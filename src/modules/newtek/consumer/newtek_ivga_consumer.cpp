@@ -74,7 +74,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
         air_send_.reset(airsend::create(format_desc.width,
                                         format_desc.height,
-                                        format_desc.time_scale,
+                                        format_desc.time_scale * format_desc.field_count,
                                         format_desc.duration,
                                         true,
                                         static_cast<float>(format_desc.square_width) /
@@ -87,7 +87,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
         CASPAR_VERIFY(air_send_);
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data(0).size());
 
@@ -125,7 +125,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>&     params,
+                                                           const core::video_format_repository& format_repository,
                                                            std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
@@ -136,6 +137,7 @@ spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_ivga_consumer(const boost::property_tree::wptree&               ptree,
+                                   const core::video_format_repository&              format_repository,
                                    std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<newtek_ivga_consumer>();

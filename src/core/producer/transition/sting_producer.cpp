@@ -36,16 +36,38 @@
 
 namespace caspar { namespace core {
 
+struct frame_pair
+{
+    draw_frame field1;
+    draw_frame field2;
+
+    draw_frame get(video_field field)
+    {
+        if (field == video_field::b)
+            return field2;
+        else
+            return field1;
+    }
+
+    void set(video_field field, const draw_frame& frame)
+    {
+        if (field == video_field::b)
+            field2 = frame;
+        else
+            field1 = frame;
+    }
+};
+
 class sting_producer : public frame_producer
 {
     monitor::state  state_;
     uint32_t        current_frame_ = 0;
     caspar::tweener audio_tweener_{L"linear"};
 
-    core::draw_frame dst_;
-    core::draw_frame src_;
-    core::draw_frame mask_;
-    core::draw_frame overlay_;
+    frame_pair dst_;
+    frame_pair src_;
+    frame_pair mask_;
+    frame_pair overlay_;
 
     const sting_info info_;
 
@@ -100,7 +122,7 @@ class sting_producer : public frame_producer
         return autoplay2;
     }
 
-    draw_frame receive_impl(int nb_samples) override
+    draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         auto duration = target_duration();
 
@@ -114,63 +136,67 @@ class sting_producer : public frame_producer
         };
 
         if (duration && current_frame_ >= *duration) {
-            return dst_producer_->receive(nb_samples);
+            return dst_producer_->receive(field, nb_samples);
         }
 
-        if (!src_) {
-            src_ = src_producer_->receive(nb_samples);
-            if (!src_) {
-                src_ = src_producer_->last_frame();
+        auto src = src_.get(field);
+        if (!src) {
+            src = src_producer_->receive(field, nb_samples);
+            src_.set(field, src);
+            if (!src) {
+                src = src_producer_->last_frame(field);
             }
         }
 
         bool started_dst = current_frame_ >= info_.trigger_point;
-        if (!dst_ && started_dst) {
-            dst_ = dst_producer_->receive(nb_samples);
-            if (!dst_) {
-                dst_ = dst_producer_->last_frame();
+        auto dst         = dst_.get(field);
+        if (!dst && started_dst) {
+            dst = dst_producer_->receive(field, nb_samples);
+            dst_.set(field, dst);
+            if (!dst) {
+                dst = dst_producer_->last_frame(field);
             }
 
-            if (!dst_) { // Not ready yet
-                auto res = src_;
-                src_     = draw_frame{};
-                return res;
+            if (!dst) { // Not ready yet
+                src_.set(field, draw_frame{});
+                return src;
             }
         }
 
-        if (!mask_) {
-            mask_ = mask_producer_->receive(nb_samples);
+        auto mask = mask_.get(field);
+        if (!mask) {
+            mask = mask_producer_->receive(field, nb_samples);
+            mask_.set(field, mask);
         }
         bool expecting_overlay = overlay_producer_ != core::frame_producer::empty();
-        if (expecting_overlay && !overlay_) {
-            overlay_ = overlay_producer_->receive(nb_samples);
+        auto overlay           = overlay_.get(field);
+        if (expecting_overlay && !overlay) {
+            overlay = overlay_producer_->receive(field, nb_samples);
+            overlay_.set(field, overlay);
         }
 
         // Not started, and mask or overlay is not ready
-        bool mask_and_overlay_valid = mask_ && (!expecting_overlay || overlay_);
+        bool mask_and_overlay_valid = mask && (!expecting_overlay || overlay);
         if (current_frame_ == 0 && !mask_and_overlay_valid) {
-            auto res = src_;
-            src_     = draw_frame{};
-            return res;
+            src_.set(field, draw_frame{});
+            return src;
         }
 
         // Ensure mask and overlay are in perfect sync
-        auto mask    = mask_;
-        auto overlay = overlay_;
         if (!mask_and_overlay_valid) {
             // If one is behind, then fetch the last_frame of both
-            mask    = mask_producer_->last_frame();
-            overlay = overlay_producer_->last_frame();
+            mask    = mask_producer_->last_frame(field);
+            overlay = overlay_producer_->last_frame(field);
         }
 
-        auto res = compose(dst_, src_, mask, overlay);
+        auto res = compose(dst, src, mask, overlay);
 
-        dst_ = draw_frame{};
-        src_ = draw_frame{};
+        dst_.set(field, draw_frame{});
+        src_.set(field, draw_frame{});
 
         if (mask_and_overlay_valid) {
-            mask_    = draw_frame{};
-            overlay_ = draw_frame{};
+            mask_.set(field, draw_frame{});
+            overlay_.set(field, draw_frame{});
 
             current_frame_ += 1;
         }
@@ -178,7 +204,7 @@ class sting_producer : public frame_producer
         return res;
     }
 
-    core::draw_frame first_frame() override { return dst_producer_->first_frame(); }
+    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_->first_frame(field); }
 
     uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
 
@@ -219,7 +245,7 @@ class sting_producer : public frame_producer
     draw_frame
     compose(draw_frame dst_frame, draw_frame src_frame, draw_frame mask_frame, draw_frame overlay_frame) const
     {
-        const double delta    = get_audio_delta();
+        const double delta                           = get_audio_delta();
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
 

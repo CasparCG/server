@@ -40,8 +40,11 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
   public:
     CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
+                        const core::video_format_repository&                        format_repository,
                         const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                         const spl::shared_ptr<const core::frame_producer_registry>& producer_registry);
+
+    core::video_format_desc FindFormat(const std::wstring& id) const;
 
     void        Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo) override;
     std::string GetCodepage() const override { return "ISO-8859-1"; } // ISO 8859-1
@@ -55,7 +58,8 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
     {
         return core::frame_producer_dependencies(GetChannel()->frame_factory(),
                                                  channels_,
-                                                 GetChannel()->video_format_desc(),
+                                                 format_repository_,
+                                                 GetChannel()->stage()->video_format_desc(),
                                                  producer_registry_,
                                                  cg_registry_);
     }
@@ -118,6 +122,7 @@ class CIIProtocolStrategy : public IO::IProtocolStrategy
     spl::shared_ptr<core::cg_producer_registry>          cg_registry_;
     spl::shared_ptr<const core::frame_producer_registry> producer_registry_;
     std::vector<spl::shared_ptr<core::video_channel>>    channels_;
+    core::video_format_repository                        format_repository_;
 };
 
 }}} // namespace caspar::protocol::cii

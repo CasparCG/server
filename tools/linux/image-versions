@@ -1,6 +1,8 @@
 #!/bin/bash
 
-export IMAGE_BASE=casparcg/base:1.4.0
-export IMAGE_CEF=casparcg/cef:3.3578.1870-4
-export IMAGE_BOOST=casparcg/boost:1.66-7
-export IMAGE_FFMPEG=casparcg/ffmpeg:4.2.2-3
+export IMAGE_PREFIX=ghcr.io/casparcg/server/
+
+export IMAGE_BASE=${IMAGE_PREFIX}base:focal-2
+export IMAGE_CEF=${IMAGE_PREFIX}cef:95.0.4638.69-obs-1
+export IMAGE_BOOST=${IMAGE_PREFIX}boost:1.67-0
+export IMAGE_FFMPEG=${IMAGE_PREFIX}ffmpeg:5.1.3-0

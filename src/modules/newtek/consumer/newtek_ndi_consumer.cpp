@@ -123,7 +123,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
-        ndi_video_frame_.frame_rate_N         = format_desc.framerate.numerator();
+        ndi_video_frame_.frame_rate_N         = format_desc.framerate.numerator() * format_desc.field_count;
         ndi_video_frame_.frame_rate_D         = format_desc.framerate.denominator();
         ndi_video_frame_.FourCC               = NDIlib_FourCC_type_BGRA;
         ndi_video_frame_.line_stride_in_bytes = format_desc.width * 4;
@@ -209,7 +209,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         });
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -246,7 +246,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
 
-spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&     params,
+                                                          const core::video_format_repository& format_repository,
                                                           std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
@@ -258,6 +259,7 @@ spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std:
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_ndi_consumer(const boost::property_tree::wptree&               ptree,
+                                  const core::video_format_repository&              format_repository,
                                   std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     auto name         = ptree.get(L"name", L"");

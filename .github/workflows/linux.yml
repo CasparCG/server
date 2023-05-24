@@ -1,0 +1,59 @@
+name: Build Linux
+
+on:
+    push:
+        # branches: [ "master" ]
+    pull_request:
+        branches: ["master"]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Run build
+              run: |
+                  ./tools/linux/ensure-base-images
+                  ./tools/linux/build-in-docker
+                  ./tools/linux/extract-from-docker
+
+                  zip -r casparcg_server.zip casparcg_server/
+              env:
+                  CI: 1
+
+            - name: Rename build
+              id: "rename-build"
+              shell: bash
+              run: |
+                  TARGET=casparcg-server-${{ github.sha }}-ubuntu20.zip
+                  mv casparcg_server.zip "$TARGET"
+
+                  echo "artifactname=$TARGET" >> $GITHUB_OUTPUT
+
+                  # check if a release branch, or master, or a tag
+                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
+                  then
+                    # Only proceed if we have an sftp password
+                    if [ -n "${{ secrets.SFTP_PASSWORD }}" ]
+                    then
+
+                        echo "uploadname=$TARGET" >> $GITHUB_OUTPUT
+                    fi
+                  fi
+
+            - uses: actions/upload-artifact@v3
+              with:
+                  name: upload-artifact
+                  path: ${{ steps.rename-build.outputs.artifactname }}
+
+            - name: Copy single file to remote
+              uses: garygrossgarten/github-action-scp@v0.8.0
+              if: ${{ steps.rename-build.outputs.uploadname }}
+              with:
+                  local: "${{ steps.rename-build.outputs.uploadname }}"
+                  remote: "${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"
+                  host: ${{ secrets.SFTP_HOST }}
+                  username: ${{ secrets.SFTP_USERNAME }}
+                  password: ${{ secrets.SFTP_PASSWORD }}

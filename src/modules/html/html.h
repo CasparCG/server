@@ -29,7 +29,6 @@
 
 namespace caspar { namespace html {
 
-const std::string TICK_MESSAGE_NAME   = "CasparCGTick";
 const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
 const std::string LOG_MESSAGE_NAME    = "CasparCGLog";
 

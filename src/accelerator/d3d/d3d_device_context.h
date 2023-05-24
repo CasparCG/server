@@ -13,7 +13,7 @@ class d3d_device_context
   public:
     d3d_device_context(ID3D11DeviceContext* ctx);
 
-    d3d_device_context(const d3d_device_context&) = delete;
+    d3d_device_context(const d3d_device_context&)            = delete;
     d3d_device_context& operator=(const d3d_device_context&) = delete;
 
     ID3D11DeviceContext* context() const { return ctx_.get(); }

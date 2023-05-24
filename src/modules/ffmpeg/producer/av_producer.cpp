@@ -37,6 +37,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/error.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
@@ -64,9 +65,10 @@ struct Frame
     std::shared_ptr<AVFrame> video;
     std::shared_ptr<AVFrame> audio;
     core::draw_frame         frame;
-    int64_t                  start_time = AV_NOPTS_VALUE;
-    int64_t                  pts        = AV_NOPTS_VALUE;
-    int64_t                  duration   = 0;
+    int64_t                  start_time  = AV_NOPTS_VALUE;
+    int64_t                  pts         = AV_NOPTS_VALUE;
+    int64_t                  duration    = 0;
+    int64_t                  frame_count = 0;
 };
 
 // TODO (fix) Handle ts discontinuities.
@@ -74,7 +76,7 @@ struct Frame
 
 class Decoder
 {
-    Decoder(const Decoder&) = delete;
+    Decoder(const Decoder&)            = delete;
     Decoder& operator=(const Decoder&) = delete;
 
     AVStream*         st       = nullptr;
@@ -114,8 +116,6 @@ class Decoder
         }
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
-
-        FF(av_opt_set_int(ctx.get(), "refcounted_frames", 1, 0));
 
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
@@ -299,7 +299,8 @@ struct Filter
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
             }
 
-            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") % format_desc.framerate.numerator() %
+            filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
+                            (format_desc.framerate.numerator() * format_desc.field_count) %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
@@ -647,7 +648,7 @@ struct AVProducer::Impl
          int                                  seekable)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
-        , format_tb_({format_desc.duration, format_desc.time_scale})
+        , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
         , name_(name)
         , path_(path)
         , input_(path, graph_, seekable >= 0 && seekable < 2 ? boost::optional<bool>(false) : boost::optional<bool>())
@@ -861,7 +862,8 @@ struct AVProducer::Impl
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
             }
 
-            frame.frame = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
+            frame.frame       = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
+            frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);
 
@@ -873,12 +875,14 @@ struct AVProducer::Impl
                 }
             }
 
-            graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.fps * 0.5);
+            if (format_desc_.field_count != 2 || frame_count_ % 2 == 1) {
+                // Update the frame-time every other frame when interlaced
+                graph_->set_value("frame-time", frame_timer.elapsed() * format_desc_.hz * 0.5);
+                frame_timer.restart();
+            }
 
-            frame_timer.restart();
             decode_timer.restart();
 
-            frame_count_ += 1;
             graph_->set_value("buffer", static_cast<double>(buffer_.size()) / static_cast<double>(buffer_capacity_));
 
             boost::range::rotate(audio_cadence, std::end(audio_cadence) - 1);
@@ -894,25 +898,28 @@ struct AVProducer::Impl
         state_["loop"]      = loop_;
     }
 
-    core::draw_frame prev_frame()
+    core::draw_frame prev_frame(const core::video_field field)
     {
         CASPAR_SCOPE_EXIT { update_state(); };
 
-        if (frame_flush_ || !frame_) {
-            boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+        // Don't start a new frame on the 2nd field
+        if (field != core::video_field::b) {
+            if (frame_flush_ || !frame_) {
+                boost::lock_guard<boost::mutex> lock(buffer_mutex_);
 
-            if (!buffer_.empty()) {
-                frame_          = buffer_[0].frame;
-                frame_time_     = buffer_[0].pts;
-                frame_duration_ = buffer_[0].duration;
-                frame_flush_    = false;
+                if (!buffer_.empty()) {
+                    frame_          = buffer_[0].frame;
+                    frame_time_     = buffer_[0].pts;
+                    frame_duration_ = buffer_[0].duration;
+                    frame_flush_    = false;
+                }
             }
         }
 
         return core::draw_frame::still(frame_);
     }
 
-    core::draw_frame next_frame()
+    core::draw_frame next_frame(const core::video_field field)
     {
         CASPAR_SCOPE_EXIT { update_state(); };
 
@@ -936,6 +943,16 @@ struct AVProducer::Impl
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
             latency_ += 1;
             return core::draw_frame{};
+        }
+
+        if (format_desc_.field_count == 2) {
+            // Check if the next frame is the correct 'field'
+            auto is_field_1 = (buffer_[0].frame_count % 2) == 0;
+            if ((field == core::video_field::a && !is_field_1) || (field == core::video_field::b && is_field_1)) {
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                latency_ += 1;
+                return core::draw_frame{};
+            }
         }
 
         if (latency_ != -1) {
@@ -1175,9 +1192,9 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
 {
 }
 
-core::draw_frame AVProducer::next_frame() { return impl_->next_frame(); }
+core::draw_frame AVProducer::next_frame(const core::video_field field) { return impl_->next_frame(field); }
 
-core::draw_frame AVProducer::prev_frame() { return impl_->prev_frame(); }
+core::draw_frame AVProducer::prev_frame(const core::video_field field) { return impl_->prev_frame(field); }
 
 AVProducer& AVProducer::seek(int64_t time)
 {

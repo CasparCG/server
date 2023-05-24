@@ -129,8 +129,9 @@ struct newtek_ndi_producer : public core::frame_producer
 
     std::wstring name() const override { return L"ndi"; }
 
-    core::draw_frame receive_impl(int hints) override
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
+        // TODO - fields
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
         if (executor_.size() < 2) {
@@ -251,10 +252,10 @@ struct newtek_ndi_producer : public core::frame_producer
         CASPAR_VERIFY(ndi_recv_instance_);
     }
 
-    core::draw_frame last_frame() override
+    core::draw_frame last_frame(const core::video_field field) override
     {
         if (!last_frame_) {
-            last_frame_ = receive_impl(0);
+            last_frame_ = receive_impl(field, 0);
         }
         return core::draw_frame::still(last_frame_);
     }

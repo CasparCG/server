@@ -80,12 +80,12 @@ std::size_t tokenize(const std::wstring& message, std::list<std::wstring>& pToke
             inQuote = !inQuote;
 
             if (inParamList == 0) {
-				if (!inQuote) {
-					pTokenVector.push_back(currentToken);
-					currentToken.clear();
-				}
-				continue;
-			}
+                if (!inQuote) {
+                    pTokenVector.push_back(currentToken);
+                    currentToken.clear();
+                }
+                continue;
+            }
         }
 
         currentToken += message[charIndex];

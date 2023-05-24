@@ -29,13 +29,14 @@
 
 #include "../util/http_request.h"
 #include "AMCPCommandQueue.h"
-#include "amcp_command_repository.h"
 #include "amcp_args.h"
+#include "amcp_command_repository.h"
 
 #include <common/env.h>
 
 #include <common/base64.h>
 #include <common/filesystem.h>
+#include <common/future.h>
 #include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/param.h>
@@ -104,24 +105,6 @@ namespace caspar { namespace protocol { namespace amcp {
 using namespace core;
 namespace pt = boost::property_tree;
 
-std::wstring read_file_base64(const boost::filesystem::path& file)
-{
-    using namespace boost::archive::iterators;
-
-    boost::filesystem::ifstream filestream(file, std::ios::binary);
-
-    if (!filestream)
-        return L"";
-
-    auto              length = boost::filesystem::file_size(file);
-    std::vector<char> bytes;
-    bytes.resize(length);
-    filestream.read(bytes.data(), length);
-
-    std::string result(to_base64(bytes.data(), length));
-    return std::wstring(result.begin(), result.end());
-}
-
 std::wstring read_utf8_file(const boost::filesystem::path& file)
 {
     std::wstringstream           result;
@@ -141,7 +124,11 @@ std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
     boost::locale::generator gen;
     gen.locale_cache_enabled(true);
+#if BOOST_VERSION >= 108100
+    gen.categories(boost::locale::category_t::codepage);
+#else
     gen.categories(boost::locale::codepage_facet);
+#endif
 
     std::stringstream           result_stream;
     boost::filesystem::ifstream filestream(file);
@@ -201,7 +188,7 @@ std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_con
 {
     std::vector<spl::shared_ptr<core::video_channel>> result;
     for (auto& cc : ctx.channels) {
-        result.push_back(spl::make_shared_ptr(cc.channel));
+        result.push_back(spl::make_shared_ptr(cc.raw_channel));
     }
     return result;
 }
@@ -211,11 +198,11 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 {
     return core::frame_producer_dependencies(channel->frame_factory(),
                                              get_channels(ctx),
-                                             channel->video_format_desc(),
-                                             ctx.producer_registry,
-                                             ctx.cg_registry);
+                                             ctx.static_context->format_repository,
+                                             channel->stage()->video_format_desc(),
+                                             ctx.static_context->producer_registry,
+                                             ctx.static_context->cg_registry);
 }
-
 
 bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo)
 {
@@ -289,11 +276,12 @@ std::wstring loadbg_command(command_context& ctx)
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
     core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
 
-    auto channel   = ctx.channel.channel;
+    auto channel   = ctx.channel.raw_channel;
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
     try {
-        auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
+        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx),
+                                                                          ctx.parameters);
 
         if (pFP == frame_producer::empty())
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(ctx.parameters.size() > 0 ? ctx.parameters[0] : L""));
@@ -314,10 +302,12 @@ std::wstring loadbg_command(command_context& ctx)
             transition_producer = create_transition_producer(pFP, transitionInfo);
         }
 
-        channel->stage().load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
+        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
+        // initialised
+        ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-            channel->stage().load(
+            ctx.channel.stage->load(
                 ctx.layer_index(), core::create_color_producer(channel->frame_factory(), 0), false, auto_play);
         }
         throw;
@@ -334,18 +324,18 @@ std::wstring load_command(command_context& ctx)
 
     if (ctx.parameters.empty()) {
         // Must be a promoting load
-        ctx.channel.channel->stage().preview(ctx.layer_index());
+        ctx.channel.stage->preview(ctx.layer_index());
     } else {
         try {
-            auto pFP  = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx),
-                                                              ctx.parameters);
+            auto pFP = ctx.static_context->producer_registry->create_producer(
+                get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
             auto pFP2 = create_transition_producer(pFP, transition_info{});
 
-            ctx.channel.channel->stage().load(ctx.layer_index(), pFP2, true);
+            ctx.channel.stage->load(ctx.layer_index(), pFP2, true);
         } catch (file_not_found&) {
             if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-                ctx.channel.channel->stage().load(
-                    ctx.layer_index(), core::create_color_producer(ctx.channel.channel->frame_factory(), 0), true);
+                ctx.channel.stage->load(
+                    ctx.layer_index(), core::create_color_producer(ctx.channel.raw_channel->frame_factory(), 0), true);
             }
             throw;
         }
@@ -361,31 +351,31 @@ std::wstring play_command(command_context& ctx)
             loadbg_command(ctx);
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-            ctx.channel.channel->stage().play(ctx.layer_index());
+            ctx.channel.stage->play(ctx.layer_index());
         }
         throw;
     }
 
-    ctx.channel.channel->stage().play(ctx.layer_index());
+    ctx.channel.stage->play(ctx.layer_index());
 
     return L"202 PLAY OK\r\n";
 }
 
 std::wstring pause_command(command_context& ctx)
 {
-    ctx.channel.channel->stage().pause(ctx.layer_index());
+    ctx.channel.stage->pause(ctx.layer_index());
     return L"202 PAUSE OK\r\n";
 }
 
 std::wstring resume_command(command_context& ctx)
 {
-    ctx.channel.channel->stage().resume(ctx.layer_index());
+    ctx.channel.stage->resume(ctx.layer_index());
     return L"202 RESUME OK\r\n";
 }
 
 std::wstring stop_command(command_context& ctx)
 {
-    ctx.channel.channel->stage().stop(ctx.layer_index());
+    ctx.channel.stage->stop(ctx.layer_index());
     return L"202 STOP OK\r\n";
 }
 
@@ -393,16 +383,24 @@ std::wstring clear_command(command_context& ctx)
 {
     int index = ctx.layer_index(std::numeric_limits<int>::min());
     if (index != std::numeric_limits<int>::min())
-        ctx.channel.channel->stage().clear(index);
+        ctx.channel.stage->clear(index);
     else
-        ctx.channel.channel->stage().clear();
+        ctx.channel.stage->clear();
 
     return L"202 CLEAR OK\r\n";
 }
 
-std::wstring call_command(command_context& ctx)
+std::wstring clear_all_command(command_context& ctx)
 {
-    auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters).get();
+    for (size_t n = 0; n < ctx.channels.size(); ++n)
+        ctx.channels.at(n).stage->clear();
+
+    return L"202 CLEAR ALL OK\r\n";
+}
+
+std::future<std::wstring> call_command(command_context& ctx)
+{
+    const auto result = ctx.channel.stage->call(ctx.layer_index(), ctx.parameters).share();
 
     // TODO: because of std::async deferred timed waiting does not work
 
@@ -410,13 +408,17 @@ std::wstring call_command(command_context& ctx)
     if (wait_res == std::future_status::timeout)
     CASPAR_THROW_EXCEPTION(timed_out());*/
 
-    std::wstringstream replyString;
-    if (result.empty())
-        replyString << L"202 CALL OK\r\n";
-    else
-        replyString << L"201 CALL OK\r\n" << result << L"\r\n";
+    return std::async(std::launch::deferred, [result]() -> std::wstring {
+        std::wstring res = result.get();
 
-    return replyString.str();
+        std::wstringstream replyString;
+        if (res.empty())
+            replyString << L"202 CALL OK\r\n";
+        else
+            replyString << L"201 CALL OK\r\n" << res << L"\r\n";
+
+        return replyString.str();
+    });
 }
 
 std::wstring swap_command(command_context& ctx)
@@ -427,17 +429,15 @@ std::wstring swap_command(command_context& ctx)
         std::vector<std::wstring> strs;
         boost::split(strs, ctx.parameters[0], boost::is_any_of(L"-"));
 
-        auto ch1 = ctx.channel.channel;
         auto ch2 = ctx.channels.at(std::stoi(strs.at(0)) - 1);
 
         int l1 = ctx.layer_index();
         int l2 = std::stoi(strs.at(1));
 
-        ch1->stage().swap_layer(l1, l2, ch2.channel->stage(), swap_transforms);
+        ctx.channel.stage->swap_layer(l1, l2, ch2.stage, swap_transforms);
     } else {
-        auto ch1 = ctx.channel.channel;
         auto ch2 = ctx.channels.at(std::stoi(ctx.parameters[0]) - 1);
-        ch1->stage().swap_layers(ch2.channel->stage(), swap_transforms);
+        ctx.channel.stage->swap_layers(ch2.stage, swap_transforms);
     }
 
     return L"202 SWAP OK\r\n";
@@ -450,8 +450,9 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx));
-    ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
+    auto consumer = ctx.static_context->consumer_registry->create_consumer(
+        ctx.parameters, ctx.static_context->format_repository, get_channels(ctx));
+    ctx.channel.raw_channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
 }
@@ -467,10 +468,12 @@ std::wstring remove_command(command_context& ctx)
             return L"402 REMOVE FAILED\r\n";
         }
 
-        index = ctx.consumer_registry->create_consumer(ctx.parameters, get_channels(ctx))->index();
+        index = ctx.static_context->consumer_registry
+                    ->create_consumer(ctx.parameters, ctx.static_context->format_repository, get_channels(ctx))
+                    ->index();
     }
 
-    if (!ctx.channel.channel->output().remove(index)) {
+    if (!ctx.channel.raw_channel->output().remove(index)) {
         return L"404 REMOVE FAILED\r\n";
     }
 
@@ -479,7 +482,8 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({L"IMAGE"}, get_channels(ctx)));
+    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
+        {L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
@@ -506,9 +510,9 @@ std::wstring set_command(command_context& ctx)
     std::wstring value = boost::to_upper_copy(ctx.parameters[1]);
 
     if (name == L"MODE") {
-        auto format_desc = core::video_format_desc(value);
+        auto format_desc = ctx.static_context->format_repository.find(value);
         if (format_desc.format != core::video_format::invalid) {
-            ctx.channel.channel->video_format_desc(format_desc);
+            ctx.channel.raw_channel->stage()->video_format_desc(format_desc);
             return L"202 SET MODE OK\r\n";
         }
 
@@ -676,10 +680,11 @@ std::wstring cg_add_command(command_context& ctx)
     }
 
     auto filename = ctx.parameters.at(1);
-    auto proxy    = ctx.cg_registry->get_or_create_proxy(spl::make_shared_ptr(ctx.channel.channel),
-                                                      get_producer_dependencies(ctx.channel.channel, ctx),
-                                                      ctx.layer_index(core::cg_proxy::DEFAULT_LAYER),
-                                                      filename);
+    auto proxy =
+        ctx.static_context->cg_registry->get_or_create_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
+                                                             get_producer_dependencies(ctx.channel.raw_channel, ctx),
+                                                             ctx.layer_index(core::cg_proxy::DEFAULT_LAYER),
+                                                             filename);
 
     if (proxy == core::cg_proxy::empty())
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not find template " + filename));
@@ -692,8 +697,8 @@ std::wstring cg_add_command(command_context& ctx)
 std::wstring cg_play_command(command_context& ctx)
 {
     int layer = std::stoi(ctx.parameters.at(0));
-    ctx.cg_registry
-        ->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
+    ctx.static_context->cg_registry
+        ->get_proxy(spl::make_shared_ptr(ctx.channel.raw_channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
         ->play(layer);
 
     return L"202 CG OK\r\n";
@@ -701,8 +706,8 @@ std::wstring cg_play_command(command_context& ctx)
 
 spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 {
-    auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel),
-                                            ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
+    auto proxy = ctx.static_context->cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
+                                                            ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
 
     if (proxy == cg_proxy::empty())
         CASPAR_THROW_EXCEPTION(expected_user_error() << msg_info(L"No CG proxy running on layer"));
@@ -736,7 +741,7 @@ std::wstring cg_remove_command(command_context& ctx)
 
 std::wstring cg_clear_command(command_context& ctx)
 {
-    ctx.channel.channel->stage().clear(ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
+    ctx.channel.stage->clear(ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
 
     return L"202 CG OK\r\n";
 }
@@ -773,17 +778,20 @@ std::wstring cg_invoke_command(command_context& ctx)
 
 // Mixer Commands
 
-core::frame_transform get_current_transform(command_context& ctx)
+std::future<core::frame_transform> get_current_transform(command_context& ctx)
 {
-    return ctx.channel.channel->stage().get_current_transform(ctx.layer_index()).get();
+    return ctx.channel.stage->get_current_transform(ctx.layer_index());
 }
 
 template <typename Func>
-std::wstring reply_value(command_context& ctx, const Func& extractor)
+std::future<std::wstring> reply_value(command_context& ctx, const Func& extractor)
 {
-    auto value = extractor(get_current_transform(ctx));
+    auto transform = get_current_transform(ctx).share();
 
-    return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(value) + L"\r\n";
+    return std::async(std::launch::deferred, [transform, extractor]() -> std::wstring {
+        auto value = extractor(transform.get());
+        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(value) + L"\r\n";
+    });
 }
 
 class transforms_applier
@@ -806,11 +814,14 @@ class transforms_applier
 
     void add(stage::transform_tuple_t&& transform) { transforms_.push_back(std::move(transform)); }
 
-    void commit_deferred()
+    std::future<void> commit_deferred()
     {
-        auto& transforms = deferred_transforms_[ctx_.channel_index];
-        ctx_.channel.channel->stage().apply_transforms(transforms).get();
-        transforms.clear();
+        const auto f = ctx_.channel.stage->apply_transforms(deferred_transforms_[ctx_.channel_index]).share();
+
+        return std::async(std::launch::deferred, [=]() {
+            f.get();
+            deferred_transforms_[ctx_.channel_index].clear();
+        });
     }
 
     void apply()
@@ -819,12 +830,12 @@ class transforms_applier
             auto& defer_tranforms = deferred_transforms_[ctx_.channel_index];
             defer_tranforms.insert(defer_tranforms.end(), transforms_.begin(), transforms_.end());
         } else
-            ctx_.channel.channel->stage().apply_transforms(transforms_);
+            ctx_.channel.stage->apply_transforms(transforms_);
     }
 };
 tbb::concurrent_unordered_map<int, std::vector<stage::transform_tuple_t>> transforms_applier::deferred_transforms_;
 
-std::wstring mixer_keyer_command(command_context& ctx)
+std::future<std::wstring> mixer_keyer_command(command_context& ctx)
 {
     if (ctx.parameters.empty())
         return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.is_key ? 1 : 0; });
@@ -841,10 +852,10 @@ std::wstring mixer_keyer_command(command_context& ctx)
         tweener(L"linear")));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_invert_command(command_context& ctx)
+std::future<std::wstring> mixer_invert_command(command_context& ctx)
 {
     if (ctx.parameters.empty())
         return reply_value(ctx, [](const frame_transform& t) { return t.image_transform.invert ? 1 : 0; });
@@ -861,20 +872,23 @@ std::wstring mixer_invert_command(command_context& ctx)
         tweener(L"linear")));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring ANIMATION_SYNTAX = L" {[duration:int] {[tween:string]|linear}|0 linear}}";
-
-std::wstring mixer_chroma_command(command_context& ctx)
+std::future<std::wstring> mixer_chroma_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto chroma = get_current_transform(ctx).image_transform.chroma;
-        return L"201 MIXER OK\r\n" + std::wstring(chroma.enable ? L"1 " : L"0 ") + std::to_wstring(chroma.target_hue) +
-               L" " + std::to_wstring(chroma.hue_width) + L" " + std::to_wstring(chroma.min_saturation) + L" " +
-               std::to_wstring(chroma.min_brightness) + L" " + std::to_wstring(chroma.softness) + L" " +
-               std::to_wstring(chroma.spill_suppress) + L" " + std::to_wstring(chroma.spill_suppress_saturation) +
-               L" " + std::wstring(chroma.show_mask ? L"1" : L"0") + L"\r\n";
+        auto chroma2 = get_current_transform(ctx).share();
+
+        return std::async(std::launch::deferred, [chroma2]() -> std::wstring {
+            auto chroma = chroma2.get().image_transform.chroma;
+            return L"201 MIXER OK\r\n" + std::wstring(chroma.enable ? L"1 " : L"0 ") +
+                   std::to_wstring(chroma.target_hue) + L" " + std::to_wstring(chroma.hue_width) + L" " +
+                   std::to_wstring(chroma.min_saturation) + L" " + std::to_wstring(chroma.min_brightness) + L" " +
+                   std::to_wstring(chroma.softness) + L" " + std::to_wstring(chroma.spill_suppress) + L" " +
+                   std::to_wstring(chroma.spill_suppress_saturation) + L" " +
+                   std::wstring(chroma.show_mask ? L"1" : L"0") + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -933,10 +947,10 @@ std::wstring mixer_chroma_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_blend_command(command_context& ctx)
+std::future<std::wstring> mixer_blend_command(command_context& ctx)
 {
     if (ctx.parameters.empty())
         return reply_value(ctx, [](const frame_transform& t) { return get_blend_mode(t.image_transform.blend_mode); });
@@ -953,11 +967,12 @@ std::wstring mixer_blend_command(command_context& ctx)
         tweener(L"linear")));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
 template <typename Getter, typename Setter>
-std::wstring single_double_animatable_mixer_command(command_context& ctx, const Getter& getter, const Setter& setter)
+std::future<std::wstring>
+single_double_animatable_mixer_command(command_context& ctx, const Getter& getter, const Setter& setter)
 {
     if (ctx.parameters.empty())
         return reply_value(ctx, getter);
@@ -977,10 +992,10 @@ std::wstring single_double_animatable_mixer_command(command_context& ctx, const 
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_opacity_command(command_context& ctx)
+std::future<std::wstring> mixer_opacity_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
         ctx,
@@ -988,7 +1003,7 @@ std::wstring mixer_opacity_command(command_context& ctx)
         [](frame_transform& t, double value) { t.image_transform.opacity = value; });
 }
 
-std::wstring mixer_brightness_command(command_context& ctx)
+std::future<std::wstring> mixer_brightness_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
         ctx,
@@ -996,7 +1011,7 @@ std::wstring mixer_brightness_command(command_context& ctx)
         [](frame_transform& t, double value) { t.image_transform.brightness = value; });
 }
 
-std::wstring mixer_saturation_command(command_context& ctx)
+std::future<std::wstring> mixer_saturation_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
         ctx,
@@ -1004,7 +1019,7 @@ std::wstring mixer_saturation_command(command_context& ctx)
         [](frame_transform& t, double value) { t.image_transform.saturation = value; });
 }
 
-std::wstring mixer_contrast_command(command_context& ctx)
+std::future<std::wstring> mixer_contrast_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
         ctx,
@@ -1012,13 +1027,16 @@ std::wstring mixer_contrast_command(command_context& ctx)
         [](frame_transform& t, double value) { t.image_transform.contrast = value; });
 }
 
-std::wstring mixer_levels_command(command_context& ctx)
+std::future<std::wstring> mixer_levels_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto levels = get_current_transform(ctx).image_transform.levels;
-        return L"201 MIXER OK\r\n" + std::to_wstring(levels.min_input) + L" " + std::to_wstring(levels.max_input) +
-               L" " + std::to_wstring(levels.gamma) + L" " + std::to_wstring(levels.min_output) + L" " +
-               std::to_wstring(levels.max_output) + L"\r\n";
+        auto levels2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [levels2]() -> std::wstring {
+            auto levels = levels2.get().image_transform.levels;
+            return L"201 MIXER OK\r\n" + std::to_wstring(levels.min_input) + L" " + std::to_wstring(levels.max_input) +
+                   L" " + std::to_wstring(levels.gamma) + L" " + std::to_wstring(levels.min_output) + L" " +
+                   std::to_wstring(levels.max_output) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1041,17 +1059,20 @@ std::wstring mixer_levels_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_fill_command(command_context& ctx)
+std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto transform   = get_current_transform(ctx).image_transform;
-        auto translation = transform.fill_translation;
-        auto scale       = transform.fill_scale;
-        return L"201 MIXER OK\r\n" + std::to_wstring(translation[0]) + L" " + std::to_wstring(translation[1]) + L" " +
-               std::to_wstring(scale[0]) + L" " + std::to_wstring(scale[1]) + L"\r\n";
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto transform   = transform2.get().image_transform;
+            auto translation = transform.fill_translation;
+            auto scale       = transform.fill_scale;
+            return L"201 MIXER OK\r\n" + std::to_wstring(translation[0]) + L" " + std::to_wstring(translation[1]) +
+                   L" " + std::to_wstring(scale[0]) + L" " + std::to_wstring(scale[1]) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1075,18 +1096,21 @@ std::wstring mixer_fill_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_clip_command(command_context& ctx)
+std::future<std::wstring> mixer_clip_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto transform   = get_current_transform(ctx).image_transform;
-        auto translation = transform.clip_translation;
-        auto scale       = transform.clip_scale;
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto transform   = transform2.get().image_transform;
+            auto translation = transform.clip_translation;
+            auto scale       = transform.clip_scale;
 
-        return L"201 MIXER OK\r\n" + std::to_wstring(translation[0]) + L" " + std::to_wstring(translation[1]) + L" " +
-               std::to_wstring(scale[0]) + L" " + std::to_wstring(scale[1]) + L"\r\n";
+            return L"201 MIXER OK\r\n" + std::to_wstring(translation[0]) + L" " + std::to_wstring(translation[1]) +
+                   L" " + std::to_wstring(scale[0]) + L" " + std::to_wstring(scale[1]) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1110,15 +1134,18 @@ std::wstring mixer_clip_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_anchor_command(command_context& ctx)
+std::future<std::wstring> mixer_anchor_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto transform = get_current_transform(ctx).image_transform;
-        auto anchor    = transform.anchor;
-        return L"201 MIXER OK\r\n" + std::to_wstring(anchor[0]) + L" " + std::to_wstring(anchor[1]) + L"\r\n";
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto transform = transform2.get().image_transform;
+            auto anchor    = transform.anchor;
+            return L"201 MIXER OK\r\n" + std::to_wstring(anchor[0]) + L" " + std::to_wstring(anchor[1]) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1138,15 +1165,18 @@ std::wstring mixer_anchor_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_crop_command(command_context& ctx)
+std::future<std::wstring> mixer_crop_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto crop = get_current_transform(ctx).image_transform.crop;
-        return L"201 MIXER OK\r\n" + std::to_wstring(crop.ul[0]) + L" " + std::to_wstring(crop.ul[1]) + L" " +
-               std::to_wstring(crop.lr[0]) + L" " + std::to_wstring(crop.lr[1]) + L"\r\n";
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto crop = transform2.get().image_transform.crop;
+            return L"201 MIXER OK\r\n" + std::to_wstring(crop.ul[0]) + L" " + std::to_wstring(crop.ul[1]) + L" " +
+                   std::to_wstring(crop.lr[0]) + L" " + std::to_wstring(crop.lr[1]) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1170,10 +1200,10 @@ std::wstring mixer_crop_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_rotation_command(command_context& ctx)
+std::future<std::wstring> mixer_rotation_command(command_context& ctx)
 {
     static const double PI = 3.141592653589793;
 
@@ -1183,14 +1213,18 @@ std::wstring mixer_rotation_command(command_context& ctx)
         [](frame_transform& t, double value) { t.image_transform.angle = value * PI / 180.0; });
 }
 
-std::wstring mixer_perspective_command(command_context& ctx)
+std::future<std::wstring> mixer_perspective_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto perspective = get_current_transform(ctx).image_transform.perspective;
-        return L"201 MIXER OK\r\n" + std::to_wstring(perspective.ul[0]) + L" " + std::to_wstring(perspective.ul[1]) +
-               L" " + std::to_wstring(perspective.ur[0]) + L" " + std::to_wstring(perspective.ur[1]) + L" " +
-               std::to_wstring(perspective.lr[0]) + L" " + std::to_wstring(perspective.lr[1]) + L" " +
-               std::to_wstring(perspective.ll[0]) + L" " + std::to_wstring(perspective.ll[1]) + L"\r\n";
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto perspective = transform2.get().image_transform.perspective;
+            return L"201 MIXER OK\r\n" + std::to_wstring(perspective.ul[0]) + L" " +
+                   std::to_wstring(perspective.ul[1]) + L" " + std::to_wstring(perspective.ur[0]) + L" " +
+                   std::to_wstring(perspective.ur[1]) + L" " + std::to_wstring(perspective.lr[0]) + L" " +
+                   std::to_wstring(perspective.lr[1]) + L" " + std::to_wstring(perspective.ll[0]) + L" " +
+                   std::to_wstring(perspective.ll[1]) + L"\r\n";
+        });
     }
 
     transforms_applier transforms(ctx);
@@ -1222,10 +1256,10 @@ std::wstring mixer_perspective_command(command_context& ctx)
         tween));
     transforms.apply();
 
-    return L"202 MIXER OK\r\n";
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::wstring mixer_volume_command(command_context& ctx)
+std::future<std::wstring> mixer_volume_command(command_context& ctx)
 {
     return single_double_animatable_mixer_command(
         ctx,
@@ -1236,12 +1270,12 @@ std::wstring mixer_volume_command(command_context& ctx)
 std::wstring mixer_mastervolume_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
-        auto volume = ctx.channel.channel->mixer().get_master_volume();
+        auto volume = ctx.channel.raw_channel->mixer().get_master_volume();
         return L"201 MIXER OK\r\n" + std::to_wstring(volume) + L"\r\n";
     }
 
-    float master_volume = std::stof(ctx.parameters.at(0));
-    ctx.channel.channel->mixer().set_master_volume(master_volume);
+    float master_volume = boost::lexical_cast<float>(ctx.parameters.at(0));
+    ctx.channel.raw_channel->mixer().set_master_volume(master_volume);
 
     return L"202 MIXER OK\r\n";
 }
@@ -1278,12 +1312,11 @@ std::wstring mixer_grid_command(command_context& ctx)
     return L"202 MIXER OK\r\n";
 }
 
-std::wstring mixer_commit_command(command_context& ctx)
+std::future<std::wstring> mixer_commit_command(command_context& ctx)
 {
     transforms_applier transforms(ctx);
-    transforms.commit_deferred();
-
-    return L"202 MIXER OK\r\n";
+    auto               r = transforms.commit_deferred().share();
+    return std::async(std::launch::deferred, [r]() -> std::wstring { return L"202 MIXER OK\r\n"; });
 }
 
 std::wstring mixer_clear_command(command_context& ctx)
@@ -1291,9 +1324,9 @@ std::wstring mixer_clear_command(command_context& ctx)
     int layer = ctx.layer_id;
 
     if (layer == -1)
-        ctx.channel.channel->stage().clear_transforms();
+        ctx.channel.stage->clear_transforms();
     else
-        ctx.channel.channel->stage().clear_transforms(layer);
+        ctx.channel.stage->clear_transforms(layer);
 
     return L"202 MIXER OK\r\n";
 }
@@ -1311,17 +1344,19 @@ std::wstring channel_grid_command(command_context& ctx)
     params.push_back(L"0");
     params.push_back(L"NAME");
     params.push_back(L"Channel Grid Window");
-    auto screen = ctx.consumer_registry->create_consumer(params, get_channels(ctx));
+    auto screen = ctx.static_context->consumer_registry->create_consumer(
+        params, ctx.static_context->format_repository, get_channels(ctx));
 
-    self.channel->output().add(screen);
+    self.raw_channel->output().add(screen);
 
     for (auto& channel : ctx.channels) {
-        if (channel.channel != self.channel) {
+        if (channel.raw_channel != self.raw_channel) {
             core::diagnostics::call_context::for_thread().layer = index;
-            auto producer                                       = ctx.producer_registry->create_producer(
-                get_producer_dependencies(self.channel, ctx), L"route://" + std::to_wstring(channel.channel->index()));
-            self.channel->stage().load(index, producer, false);
-            self.channel->stage().play(index);
+            auto producer = ctx.static_context->producer_registry->create_producer(
+                get_producer_dependencies(self.raw_channel, ctx),
+                L"route://" + std::to_wstring(channel.raw_channel->index()));
+            self.stage->load(index, producer, false);
+            self.stage->play(index);
             index++;
         }
     }
@@ -1329,11 +1364,10 @@ std::wstring channel_grid_command(command_context& ctx)
     auto num_channels       = ctx.channels.size() - 1;
     int  square_side_length = std::ceil(std::sqrt(num_channels));
 
-    ctx.channel_index = self.channel->index();
-    ctx.channel       = self;
-    ctx.parameters.clear();
-    ctx.parameters.push_back(std::to_wstring(square_side_length));
-    mixer_grid_command(ctx);
+    auto ctx2 =
+        command_context(ctx.static_context, ctx.channels, ctx.client, self, self.raw_channel->index(), ctx.layer_id);
+    ctx2.parameters.push_back(std::to_wstring(square_side_length));
+    mixer_grid_command(ctx2);
 
     return L"202 CHANNEL_GRID OK\r\n";
 }
@@ -1342,7 +1376,7 @@ std::wstring channel_grid_command(command_context& ctx)
 
 std::wstring make_request(command_context& ctx, const std::string& path, const std::wstring& default_response)
 {
-    auto res = http::request(ctx.proxy_host, ctx.proxy_port, path);
+    auto res = http::request(ctx.static_context->proxy_host, ctx.static_context->proxy_port, path);
     if (res.status_code >= 500 || res.body.size() == 0) {
         CASPAR_LOG(error) << "Failed to connect to media-scanner. Is it running? \nReason: " << res.status_message;
         return default_response;
@@ -1423,7 +1457,7 @@ std::wstring info_channel_command(command_context& ctx)
     pt::wptree info;
     pt::wptree channel_info;
 
-    auto state = ctx.channel.channel->state();
+    auto state = ctx.channel.raw_channel->state();
     for (const auto& p : state) {
         const auto replaced = boost::algorithm::replace_all_copy(p.first, "/", ".");
         // avoid digit-only nodes in XML
@@ -1455,7 +1489,8 @@ std::wstring info_command(command_context& ctx)
     replyString << L"200 INFO OK\r\n";
 
     for (size_t n = 0; n < ctx.channels.size(); ++n) {
-        replyString << n + 1 << L" " << ctx.channels.at(n).channel->video_format_desc().name << L" PLAYING\r\n";
+        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->stage()->video_format_desc().name
+                    << L" PLAYING\r\n";
     }
     replyString << L"\r\n";
     return replyString.str();
@@ -1510,13 +1545,13 @@ std::wstring bye_command(command_context& ctx)
 
 std::wstring kill_command(command_context& ctx)
 {
-    ctx.shutdown_server_now(false); // false for not attempting to restart
+    ctx.static_context->shutdown_server_now(false); // false for not attempting to restart
     return L"202 KILL OK\r\n";
 }
 
 std::wstring restart_command(command_context& ctx)
 {
-    ctx.shutdown_server_now(true); // true for attempting to restart
+    ctx.static_context->shutdown_server_now(true); // true for attempting to restart
     return L"202 RESTART OK\r\n";
 }
 
@@ -1562,7 +1597,7 @@ std::wstring lock_command(command_context& ctx)
 
 std::wstring gl_info_command(command_context& ctx)
 {
-    auto device = ctx.ogl_device.lock();
+    auto device = ctx.static_context->ogl_device.lock();
     if (!device)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
 
@@ -1578,7 +1613,7 @@ std::wstring gl_info_command(command_context& ctx)
 
 std::wstring gl_gc_command(command_context& ctx)
 {
-    auto device = ctx.ogl_device.lock();
+    auto device = ctx.static_context->ogl_device.lock();
     if (!device)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
 
@@ -1587,80 +1622,80 @@ std::wstring gl_gc_command(command_context& ctx)
     return L"202 GL GC OK\r\n";
 }
 
-void register_commands(amcp_command_repository& repo)
+void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
-    repo.register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
-    repo.register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"CLEAR", clear_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"CALL", call_command, 1);
-    repo.register_channel_command(L"Basic Commands", L"SWAP", swap_command, 1);
-    repo.register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
-    repo.register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
-    repo.register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
-    repo.register_channel_command(L"Basic Commands", L"SET", set_command, 2);
-    repo.register_command(L"Basic Commands", L"LOCK", lock_command, 2);
+    repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"CLEAR", clear_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"CALL", call_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"SWAP", swap_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
+    repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
+    repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"SET", set_command, 2);
+    repo->register_command(L"Basic Commands", L"LOCK", lock_command, 2);
 
-    repo.register_command(L"Data Commands", L"DATA STORE", data_store_command, 2);
-    repo.register_command(L"Data Commands", L"DATA RETRIEVE", data_retrieve_command, 1);
-    repo.register_command(L"Data Commands", L"DATA LIST", data_list_command, 0);
-    repo.register_command(L"Data Commands", L"DATA REMOVE", data_remove_command, 1);
+    repo->register_command(L"Data Commands", L"DATA STORE", data_store_command, 2);
+    repo->register_command(L"Data Commands", L"DATA RETRIEVE", data_retrieve_command, 1);
+    repo->register_command(L"Data Commands", L"DATA LIST", data_list_command, 0);
+    repo->register_command(L"Data Commands", L"DATA REMOVE", data_remove_command, 1);
 
-    repo.register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
-    repo.register_channel_command(L"Template Commands", L"CG PLAY", cg_play_command, 1);
-    repo.register_channel_command(L"Template Commands", L"CG STOP", cg_stop_command, 1);
-    repo.register_channel_command(L"Template Commands", L"CG NEXT", cg_next_command, 1);
-    repo.register_channel_command(L"Template Commands", L"CG REMOVE", cg_remove_command, 1);
-    repo.register_channel_command(L"Template Commands", L"CG CLEAR", cg_clear_command, 0);
-    repo.register_channel_command(L"Template Commands", L"CG UPDATE", cg_update_command, 2);
-    repo.register_channel_command(L"Template Commands", L"CG INVOKE", cg_invoke_command, 2);
+    repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
+    repo->register_channel_command(L"Template Commands", L"CG PLAY", cg_play_command, 1);
+    repo->register_channel_command(L"Template Commands", L"CG STOP", cg_stop_command, 1);
+    repo->register_channel_command(L"Template Commands", L"CG NEXT", cg_next_command, 1);
+    repo->register_channel_command(L"Template Commands", L"CG REMOVE", cg_remove_command, 1);
+    repo->register_channel_command(L"Template Commands", L"CG CLEAR", cg_clear_command, 0);
+    repo->register_channel_command(L"Template Commands", L"CG UPDATE", cg_update_command, 2);
+    repo->register_channel_command(L"Template Commands", L"CG INVOKE", cg_invoke_command, 2);
 
-    repo.register_channel_command(L"Mixer Commands", L"MIXER KEYER", mixer_keyer_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER INVERT", mixer_invert_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER CHROMA", mixer_chroma_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER BLEND", mixer_blend_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER OPACITY", mixer_opacity_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER BRIGHTNESS", mixer_brightness_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER SATURATION", mixer_saturation_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER CONTRAST", mixer_contrast_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER LEVELS", mixer_levels_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER CROP", mixer_crop_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER ROTATION", mixer_rotation_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER PERSPECTIVE", mixer_perspective_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
-    repo.register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
-    repo.register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER KEYER", mixer_keyer_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER INVERT", mixer_invert_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CHROMA", mixer_chroma_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER BLEND", mixer_blend_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER OPACITY", mixer_opacity_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER BRIGHTNESS", mixer_brightness_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER SATURATION", mixer_saturation_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CONTRAST", mixer_contrast_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER LEVELS", mixer_levels_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CROP", mixer_crop_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER ROTATION", mixer_rotation_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER PERSPECTIVE", mixer_perspective_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
+    repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
-    repo.register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);
-    repo.register_command(L"Thumbnail Commands", L"THUMBNAIL RETRIEVE", thumbnail_retrieve_command, 1);
-    repo.register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE", thumbnail_generate_command, 1);
-    repo.register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE_ALL", thumbnail_generateall_command, 0);
+    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);
+    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL RETRIEVE", thumbnail_retrieve_command, 1);
+    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE", thumbnail_generate_command, 1);
+    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE_ALL", thumbnail_generateall_command, 0);
 
-    repo.register_command(L"Query Commands", L"CINF", cinf_command, 1);
-    repo.register_command(L"Query Commands", L"CLS", cls_command, 0);
-    repo.register_command(L"Query Commands", L"FLS", fls_command, 0);
-    repo.register_command(L"Query Commands", L"TLS", tls_command, 0);
-    repo.register_command(L"Query Commands", L"VERSION", version_command, 0);
-    repo.register_command(L"Query Commands", L"DIAG", diag_command, 0);
-    repo.register_command(L"Query Commands", L"BYE", bye_command, 0);
-    repo.register_command(L"Query Commands", L"KILL", kill_command, 0);
-    repo.register_command(L"Query Commands", L"RESTART", restart_command, 0);
-    repo.register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
-    repo.register_command(L"Query Commands", L"INFO", info_command, 0);
-    repo.register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
-    repo.register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
-    repo.register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
-    repo.register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
+    repo->register_command(L"Query Commands", L"CINF", cinf_command, 1);
+    repo->register_command(L"Query Commands", L"CLS", cls_command, 0);
+    repo->register_command(L"Query Commands", L"FLS", fls_command, 0);
+    repo->register_command(L"Query Commands", L"TLS", tls_command, 0);
+    repo->register_command(L"Query Commands", L"VERSION", version_command, 0);
+    repo->register_command(L"Query Commands", L"DIAG", diag_command, 0);
+    repo->register_command(L"Query Commands", L"BYE", bye_command, 0);
+    repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
+    repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
+    repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
+    repo->register_command(L"Query Commands", L"INFO", info_command, 0);
+    repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
+    repo->register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
+    repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
+    repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 }
-
 }}} // namespace caspar::protocol::amcp

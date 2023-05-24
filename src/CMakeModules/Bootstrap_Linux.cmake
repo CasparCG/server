@@ -23,10 +23,12 @@ ENDIF ()
 
 SET (BOOST_ROOT_PATH "/opt/boost" CACHE STRING "Path to Boost")
 SET (ENV{BOOST_ROOT} "${BOOST_ROOT_PATH}")
-SET (Boost_USE_DEBUG_LIBS ON)
-SET (Boost_USE_RELEASE_LIBS OFF)
-SET (Boost_USE_STATIC_LIBS ON)
-FIND_PACKAGE (Boost 1.66.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+if (NOT USE_SYSTEM_BOOST)
+	SET (Boost_USE_DEBUG_LIBS ON)
+	SET (Boost_USE_RELEASE_LIBS OFF)
+	SET (Boost_USE_STATIC_LIBS ON)
+endif()
+FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
 
 SET (FFMPEG_ROOT_PATH "/opt/ffmpeg/lib/pkgconfig" CACHE STRING "Path to FFMPEG")
 SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${FFMPEG_ROOT_PATH}")
@@ -67,9 +69,17 @@ ADD_DEFINITIONS (-D__NO_INLINE__) # Needed for precompiled headers to work
 ADD_DEFINITIONS (-DBOOST_NO_SWPRINTF) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 ADD_DEFINITIONS (-DTBB_USE_CAPTURED_EXCEPTION=1)
 ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
+ADD_DEFINITIONS (-DBOOST_LOCALE_HIDE_AUTO_PTR) # Needed for C++17 in boost 1.67+
 
+
+if (USE_SYSTEM_BOOST)
+	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
+endif()
+
+IF (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+	ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
+endif()
 ADD_COMPILE_OPTIONS (-std=c++14) # Needed for precompiled headers to work
-ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work
 IF (CONFIG_ARCH MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
     ADD_COMPILE_OPTIONS (-msse3)
     ADD_COMPILE_OPTIONS (-mssse3)
@@ -99,9 +109,12 @@ SET (CASPARCG_MODULE_INIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_UNINIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
-SET (CASPARCG_RUNTIME_DEPENDENCIES "" CACHE INTERNAL "")
 
-INCLUDE (PrecompiledHeader)
+# This PrecompiledHeader helper is broken on linux in debug builds
+#INCLUDE (PrecompiledHeader)
+FUNCTION (add_precompiled_header TARGET HEADER)
+	# Ignore
+ENDFUNCTION ()
 
 FUNCTION (casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
@@ -145,8 +158,4 @@ FUNCTION (join_list VALUES GLUE OUTPUT)
 	STRING (REGEX REPLACE "([^\\]|^);" "\\1${GLUE}" _TMP_STR "${VALUES}")
 	STRING (REGEX REPLACE "[\\](.)" "\\1" _TMP_STR "${_TMP_STR}") #fixes escaping
 	SET (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
-ENDFUNCTION ()
-
-FUNCTION (casparcg_add_runtime_dependency FILE_TO_COPY)
-	SET (CASPARCG_RUNTIME_DEPENDENCIES "${CASPARCG_RUNTIME_DEPENDENCIES}" "${FILE_TO_COPY}" CACHE INTERNAL "")
 ENDFUNCTION ()
