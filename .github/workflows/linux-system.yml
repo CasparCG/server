@@ -26,7 +26,15 @@ jobs:
                   sudo ./tools/linux/install-dependencies
                   sudo ./tools/linux/extract-deps-from-docker
 
-                  sudo apt-get install libboost-all-dev
+                  sudo apt-get install -y libboost-all-dev \
+                    libavcodec-dev \
+                    libavformat-dev \
+                    libavdevice-dev \
+                    libavutil-dev \
+                    libavfilter-dev \
+                    libswscale-dev \
+                    libpostproc-dev \
+                    libswresample-dev
 
             - name: Run build
               run: |
