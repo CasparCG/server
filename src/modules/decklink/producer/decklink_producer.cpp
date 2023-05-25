@@ -603,7 +603,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 auto in_sync = static_cast<double>(in_video_pts) / AV_TIME_BASE -
                                static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
                 auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den -
-                                static_cast<double>(av_audio->pts * video_tb.num) / audio_tb.den;
+                                static_cast<double>(av_audio->pts * audio_tb.num) / audio_tb.den;
 
                 if (std::abs(in_sync - in_sync_) > 0.01) {
                     CASPAR_LOG(warning) << print() << " in-sync changed: " << in_sync;
