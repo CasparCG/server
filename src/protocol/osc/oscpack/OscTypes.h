@@ -30,38 +30,15 @@
 #ifndef INCLUDED_OSCTYPES_H
 #define INCLUDED_OSCTYPES_H
 
+#include <cstdint>
+
 namespace osc {
 
 // basic types
-
-#if defined(__BORLANDC__) || defined(_MSC_VER)
-
-using int64  = __int64;
-using uint64 = unsigned __int64;
-
-#elif defined(__x86_64__) || defined(_M_X64)
-
-typedef long          int64;
-typedef unsigned long uint64;
-
-#else
-
-typedef long long          int64;
-typedef unsigned long long uint64;
-
-#endif
-
-#if defined(__x86_64__) || defined(_M_X64)
-
-typedef signed int   int32;
-typedef unsigned int uint32;
-
-#else
-
-using int32  = long;
-using uint32 = unsigned long;
-
-#endif
+using int64 = std::int64_t;
+using uint64 = std::uint64_t;
+using int32 = std::int32_t;
+using uint32 = std::uint32_t;
 
 enum TypeTagValues
 {

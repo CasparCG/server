@@ -47,11 +47,11 @@
 
 namespace osc {
 
-static void FromInt32(char* p, int32 x)
+static void FromInt32(char* p, int32_t x)
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
     /*union{
-        osc::int32 i;
+        osc::int32_t i;
         char c[4];
     } u;
 
@@ -61,17 +61,17 @@ static void FromInt32(char* p, int32 x)
     p[2] = u.c[1];
     p[1] = u.c[2];
     p[0] = u.c[3];*/
-    *reinterpret_cast<int32*>(p) = caspar::swap_byte_order(x);
+    *reinterpret_cast<int32_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<int32*>(p)                 = x;
+    *reinterpret_cast<int32_t*>(p)                 = x;
 #endif
 }
 
-static void FromUInt32(char* p, uint32 x)
+static void FromUInt32(char* p, uint32_t x)
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
     /*union{
-        osc::uint32 i;
+        osc::uint32_t i;
         char c[4];
     } u;
 
@@ -81,17 +81,17 @@ static void FromUInt32(char* p, uint32 x)
     p[2] = u.c[1];
     p[1] = u.c[2];
     p[0] = u.c[3];*/
-    *reinterpret_cast<uint32*>(p) = caspar::swap_byte_order(x);
+    *reinterpret_cast<uint32_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<uint32*>(p)                = x;
+    *reinterpret_cast<uint32_t*>(p)                = x;
 #endif
 }
 
-static void FromInt64(char* p, int64 x)
+static void FromInt64(char* p, int64_t x)
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
     /*union{
-        osc::int64 i;
+        osc::int64_t i;
         char c[8];
     } u;
 
@@ -105,17 +105,17 @@ static void FromInt64(char* p, int64 x)
     p[2] = u.c[5];
     p[1] = u.c[6];
     p[0] = u.c[7];*/
-    *reinterpret_cast<int64*>(p) = caspar::swap_byte_order(x);
+    *reinterpret_cast<int64_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<int64*>(p)                 = x;
+    *reinterpret_cast<int64_t*>(p)                 = x;
 #endif
 }
 
-static void FromUInt64(char* p, uint64 x)
+static void FromUInt64(char* p, uint64_t x)
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
     /*union{
-        osc::uint64 i;
+        osc::uint64_t i;
         char c[8];
     } u;
 
@@ -129,9 +129,9 @@ static void FromUInt64(char* p, uint64 x)
     p[2] = u.c[5];
     p[1] = u.c[6];
     p[0] = u.c[7];*/
-    *reinterpret_cast<uint64*>(p) = caspar::swap_byte_order(x);
+    *reinterpret_cast<uint64_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<uint64*>(p)                = x;
+    *reinterpret_cast<uint64_t*>(p)                = x;
 #endif
 }
 
@@ -153,15 +153,15 @@ OutboundPacketStream::~OutboundPacketStream() {}
 char* OutboundPacketStream::BeginElement(char* beginPtr)
 {
     if (elementSizePtr_ == nullptr) {
-        elementSizePtr_ = reinterpret_cast<uint32*>(data_);
+        elementSizePtr_ = reinterpret_cast<uint32_t*>(data_);
 
         return beginPtr;
     }
     // store an offset to the old element size ptr in the element size slot
     // we store an offset rather than the actual pointer to be 64 bit clean.
-    *reinterpret_cast<uint32*>(beginPtr) = (uint32)(reinterpret_cast<char*>(elementSizePtr_) - data_);
+    *reinterpret_cast<uint32_t*>(beginPtr) = (uint32_t)(reinterpret_cast<char*>(elementSizePtr_) - data_);
 
-    elementSizePtr_ = reinterpret_cast<uint32*>(beginPtr);
+    elementSizePtr_ = reinterpret_cast<uint32_t*>(beginPtr);
 
     return beginPtr + 4;
 }
@@ -170,18 +170,18 @@ void OutboundPacketStream::EndElement(char* endPtr)
 {
     assert(elementSizePtr_ != nullptr);
 
-    if (elementSizePtr_ == reinterpret_cast<uint32*>(data_)) {
+    if (elementSizePtr_ == reinterpret_cast<uint32_t*>(data_)) {
         elementSizePtr_ = nullptr;
 
     } else {
         // while building an element, an offset to the containing element's
         // size slot is stored in the elements size slot (or a ptr to data_
         // if there is no containing element). We retrieve that here
-        uint32* previousElementSizePtr = (uint32*)(data_ + *reinterpret_cast<uint32*>(elementSizePtr_));
+        uint32_t* previousElementSizePtr = (uint32_t*)(data_ + *reinterpret_cast<uint32_t*>(elementSizePtr_));
 
         // then we store the element size in the slot, note that the element
         // size does not include the size slot, hence the - 4 below.
-        uint32 elementSize = static_cast<uint32>(endPtr - reinterpret_cast<char*>(elementSizePtr_)) - 4;
+        uint32_t elementSize = static_cast<uint32_t>(endPtr - reinterpret_cast<char*>(elementSizePtr_)) - 4;
         FromUInt32(reinterpret_cast<char*>(elementSizePtr_), elementSize);
 
         // finally, we reset the element size ptr to the containing element
@@ -326,7 +326,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const MessageTerminator& 
         // slot size includes comma and null terminator
         int typeTagSlotSize = RoundUp4(typeTagsCount + 2);
 
-        uint32 argumentsSize = static_cast<uint32>(argumentCurrent_ - messageCursor_);
+        uint32_t argumentsSize = static_cast<uint32_t>(argumentCurrent_ - messageCursor_);
 
         memmove(messageCursor_ + typeTagSlotSize, messageCursor_, argumentsSize);
 
@@ -390,7 +390,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const InfinitumType& rhs)
     return *this;
 }
 
-OutboundPacketStream& OutboundPacketStream::operator<<(int32 rhs)
+OutboundPacketStream& OutboundPacketStream::operator<<(int32_t rhs)
 {
     CheckForAvailableArgumentSpace(4);
 
@@ -462,7 +462,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(const MidiMessage& rhs)
     return *this;
 }
 
-OutboundPacketStream& OutboundPacketStream::operator<<(int64 rhs)
+OutboundPacketStream& OutboundPacketStream::operator<<(int64_t rhs)
 {
     CheckForAvailableArgumentSpace(8);
 
