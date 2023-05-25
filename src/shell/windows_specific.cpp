@@ -32,6 +32,9 @@
 #include <sstream>
 #include <thread>
 
+#include <fcntl.h>
+#include <io.h>
+
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
@@ -66,6 +69,10 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 
 void setup_prerequisites()
 {
+    // Enable utf8 console input and output
+    _setmode(_fileno(stdout), _O_U8TEXT);
+    _setmode(_fileno(stdin), _O_U16TEXT);
+
     SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
     // Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.

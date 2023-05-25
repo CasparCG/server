@@ -41,7 +41,7 @@ struct mutable_frame::impl
     frame_geometry                   geometry_ = frame_geometry::get_default();
     mutable_frame::commit_t          commit_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
     impl(const void*                      tag,

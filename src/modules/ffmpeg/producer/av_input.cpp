@@ -8,8 +8,8 @@
 #include <common/param.h>
 #include <common/scope_exit.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/filesystem.hpp>
 
 #include <set>
 
@@ -35,7 +35,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
     buffer_.set_capacity(256);
-    thread_ = std::thread([=] {
+    thread_ = boost::thread([=] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
@@ -55,6 +55,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
                     if (ret == AVERROR_EXIT) {
                         break;
+                    } else if (ret == AVERROR(EAGAIN)) {
+                        boost::this_thread::yield();
                     } else if (ret == AVERROR_EOF) {
                         eof_   = true;
                         packet = nullptr;
@@ -124,8 +126,12 @@ void Input::internal_reset()
 
     static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = {L"dshow", L"v4l2", L"iec61883"};
 
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+    const AVInputFormat* input_format = nullptr;
+#else
     AVInputFormat* input_format = nullptr;
-    auto           url_parts    = caspar::protocol_split(u16(filename_));
+#endif
+    auto url_parts = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
         FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));

@@ -48,7 +48,7 @@ class AsyncEventServer
   private:
     spl::shared_ptr<implementation> impl_;
 
-    AsyncEventServer(const AsyncEventServer&) = delete;
+    AsyncEventServer(const AsyncEventServer&)            = delete;
     AsyncEventServer& operator=(const AsyncEventServer&) = delete;
 };
 

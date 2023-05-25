@@ -36,7 +36,6 @@
 #include <boost/range/distance.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/rational.hpp>
-#include <boost/timer.hpp>
 #include <boost/variant.hpp>
 #include <common/array.h>
 #include <common/assert.h>

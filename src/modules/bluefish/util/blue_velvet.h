@@ -106,7 +106,10 @@ class bvc_wrapper
 spl::shared_ptr<bvc_wrapper> create_blue();
 spl::shared_ptr<bvc_wrapper> create_blue(int device_index);
 
-core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoModeExt vid_fmt, EMemoryFormat mem_fmt);
+core::video_format_desc get_format_desc(const core::video_format_repository& format_repository,
+                                        bvc_wrapper&                         blue,
+                                        EVideoModeExt                        vid_fmt,
+                                        EMemoryFormat                        mem_fmt);
 
 bool         is_epoch_card(bvc_wrapper& blue);
 bool         is_kronos_card(bvc_wrapper& blue);

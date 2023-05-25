@@ -56,11 +56,11 @@ struct route
     route(route&&)      = default;
 
     route& operator=(const route&) = delete;
-    route& operator=(route&&) = default;
+    route& operator=(route&&)      = default;
 
-    boost::signals2::signal<void(class draw_frame)> signal;
-    video_format_desc                               format_desc;
-    std::wstring                                    name;
+    boost::signals2::signal<void(class draw_frame, class draw_frame)> signal;
+    video_format_desc                                                 format_desc;
+    std::wstring                                                      name;
 };
 
 class video_channel final
@@ -77,15 +77,12 @@ class video_channel final
 
     core::monitor::state state() const;
 
-    const core::stage&  stage() const;
-    core::stage&        stage();
-    const core::mixer&  mixer() const;
-    core::mixer&        mixer();
-    const core::output& output() const;
-    core::output&       output();
-
-    core::video_format_desc video_format_desc() const;
-    void                    video_format_desc(const core::video_format_desc& format_desc);
+    const std::shared_ptr<core::stage>& stage() const;
+    std::shared_ptr<core::stage>&       stage();
+    const core::mixer&                  mixer() const;
+    core::mixer&                        mixer();
+    const core::output&                 output() const;
+    core::output&                       output();
 
     spl::shared_ptr<core::frame_factory> frame_factory();
 

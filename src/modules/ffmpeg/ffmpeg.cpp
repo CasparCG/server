@@ -49,37 +49,6 @@ extern "C" {
 }
 
 namespace caspar { namespace ffmpeg {
-int ffmpeg_lock_callback(void** mutex, enum AVLockOp op)
-{
-    if (mutex == nullptr)
-        return 0;
-
-    auto my_mutex = reinterpret_cast<std::recursive_mutex*>(*mutex);
-
-    switch (op) {
-        case AV_LOCK_CREATE: {
-            *mutex = new std::recursive_mutex();
-            break;
-        }
-        case AV_LOCK_OBTAIN: {
-            if (my_mutex != nullptr)
-                my_mutex->lock();
-            break;
-        }
-        case AV_LOCK_RELEASE: {
-            if (my_mutex != nullptr)
-                my_mutex->unlock();
-            break;
-        }
-        case AV_LOCK_DESTROY: {
-            delete my_mutex;
-            *mutex = nullptr;
-            break;
-        }
-    }
-    return 0;
-}
-
 static void sanitize(uint8_t* line)
 {
     while (*line != 0u) {
@@ -143,18 +112,18 @@ void log_for_thread(void* ptr, int level, const char* fmt, va_list vl) { log_cal
 
 void init(core::module_dependencies dependencies)
 {
-    av_lockmgr_register(ffmpeg_lock_callback);
     av_log_set_callback(log_for_thread);
 
-    avfilter_register_all();
-    av_register_all();
     avformat_network_init();
-    avcodec_register_all();
     avdevice_register_all();
 
+#if LIBAVFORMAT_VERSION_MAJOR < 59
     // mpegts demuxer does not seek acture with binary search.
     const auto ts_demuxer = av_find_input_format("mpegts");
-    ts_demuxer->flags = AVFMT_SHOW_IDS | AVFMT_TS_DISCONT | AVFMT_NOBINSEARCH | AVFMT_GENERIC_INDEX;
+    if (ts_demuxer) {
+        ts_demuxer->flags = AVFMT_SHOW_IDS | AVFMT_TS_DISCONT | AVFMT_NOBINSEARCH | AVFMT_GENERIC_INDEX;
+    }
+#endif
 
     dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer);
     dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_consumer);
@@ -166,6 +135,5 @@ void uninit()
 {
     // avfilter_uninit();
     avformat_network_deinit();
-    av_lockmgr_register(nullptr);
 }
 }} // namespace caspar::ffmpeg

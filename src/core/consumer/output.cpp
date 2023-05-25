@@ -81,13 +81,18 @@ struct output::impl
 
     bool remove(const spl::shared_ptr<frame_consumer>& consumer) { return remove(consumer->index()); }
 
-    void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
+    void operator()(const_frame input_frame1, const_frame input_frame2, const core::video_format_desc& format_desc)
     {
-        if (!input_frame) {
+        if (!input_frame1) {
             return;
         }
 
-        if (input_frame.size() != format_desc_.size) {
+        if (input_frame1.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
+            return;
+        }
+
+        if (input_frame2 && input_frame2.size() != format_desc_.size) {
             CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
@@ -116,36 +121,45 @@ struct output::impl
             consumers = consumers_;
         }
 
-        std::map<int, std::future<bool>> futures;
+        auto do_send = [this, &consumers](core::video_field field, core::const_frame frame) {
+            std::map<int, std::future<bool>> futures;
 
-        for (auto it = consumers.begin(); it != consumers.end();) {
-            try {
-                futures.emplace(it->first, it->second->send(input_frame));
-                ++it;
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-                it = consumers.erase(it);
+            for (auto it = consumers.begin(); it != consumers.end();) {
+                try {
+                    futures.emplace(it->first, it->second->send(field, frame));
+                    ++it;
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                    it = consumers.erase(it);
 
-                std::lock_guard<std::mutex> lock(consumers_mutex_);
-                consumers_.erase(it->first);
+                    std::lock_guard<std::mutex> lock(consumers_mutex_);
+                    consumers_.erase(it->first);
+                }
             }
-        }
 
-        for (auto& p : futures) {
-            try {
-                if (!p.second.get()) {
+            for (auto& p : futures) {
+                try {
+                    if (!p.second.get()) {
+                        consumers.erase(p.first);
+
+                        std::lock_guard<std::mutex> lock(consumers_mutex_);
+                        consumers_.erase(p.first);
+                    }
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
                     consumers.erase(p.first);
 
                     std::lock_guard<std::mutex> lock(consumers_mutex_);
                     consumers_.erase(p.first);
                 }
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-                consumers.erase(p.first);
-
-                std::lock_guard<std::mutex> lock(consumers_mutex_);
-                consumers_.erase(p.first);
             }
+        };
+
+        if (format_desc_.field_count == 2) {
+            do_send(core::video_field::a, input_frame1);
+            do_send(core::video_field::b, input_frame2);
+        } else {
+            do_send(core::video_field::progressive, input_frame1);
         }
 
         monitor::state state;
@@ -163,7 +177,7 @@ struct output::impl
             } else {
                 std::this_thread::sleep_until(*time);
             }
-            time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.fps));
+            time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.hz));
         } else {
             time_.reset();
         }
@@ -181,9 +195,9 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { i
 void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
 bool output::remove(int index) { return impl_->remove(index); }
 bool output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
-void output::operator()(const_frame frame, const video_format_desc& format_desc)
+void output::operator()(const_frame frame, const_frame frame2, const video_format_desc& format_desc)
 {
-    return (*impl_)(std::move(frame), format_desc);
+    return (*impl_)(std::move(frame), std::move(frame2), format_desc);
 }
 core::monitor::state output::state() const { return impl_->state_; }
 }} // namespace caspar::core

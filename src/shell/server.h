@@ -39,7 +39,7 @@ class server final
     struct impl;
     std::shared_ptr<impl> impl_;
 
-    server(const server&) = delete;
+    server(const server&)            = delete;
     server& operator=(const server&) = delete;
 };
 

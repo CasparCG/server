@@ -32,12 +32,12 @@ namespace caspar { namespace core {
 
 struct sting_info
 {
-    std::wstring mask_filename    = L"";
-    std::wstring overlay_filename = L"";
-    uint32_t     trigger_point    = 0;
+    std::wstring mask_filename       = L"";
+    std::wstring overlay_filename    = L"";
+    uint32_t     trigger_point       = 0;
+    uint32_t     audio_fade_start    = 0;
+    uint32_t     audio_fade_duration = UINT32_MAX;
 };
-
-bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo);
 
 spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,
                                                       const spl::shared_ptr<frame_producer>& destination,

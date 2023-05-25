@@ -54,7 +54,7 @@ class flash_cg_proxy : public core::cg_proxy
     spl::shared_ptr<core::frame_producer> flash_producer_;
     std::wstring                          base_folder_;
 
-    flash_cg_proxy(const flash_cg_proxy&) = delete;
+    flash_cg_proxy(const flash_cg_proxy&)            = delete;
     flash_cg_proxy& operator=(const flash_cg_proxy&) = delete;
 
   public:

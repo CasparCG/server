@@ -5,6 +5,7 @@
 *.sln
 .settings
 .vscode
+.idea
 .vs
 build
 dist

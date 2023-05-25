@@ -26,6 +26,8 @@
 
 #include <common/memory.h>
 
+#include <core/video_format.h>
+
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
@@ -46,7 +48,7 @@ class frame_consumer
     frame_consumer() {}
     virtual ~frame_consumer() {}
 
-    virtual std::future<bool> send(const_frame frame)                                             = 0;
+    virtual std::future<bool> send(const core::video_field field, const_frame frame)              = 0;
     virtual void              initialize(const video_format_desc& format_desc, int channel_index) = 0;
 
     virtual core::monitor::state state() const
@@ -62,10 +64,12 @@ class frame_consumer
 };
 
 using consumer_factory_t =
-    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&,
+    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&            params,
+                                                  const core::video_format_repository&        format_repository,
                                                   std::vector<spl::shared_ptr<video_channel>> channels)>;
 using preconfigured_consumer_factory_t =
     std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&         element,
+                                                  const core::video_format_repository&        format_repository,
                                                   std::vector<spl::shared_ptr<video_channel>> channels)>;
 
 class frame_consumer_registry
@@ -76,15 +80,17 @@ class frame_consumer_registry
     void register_preconfigured_consumer_factory(const std::wstring&                     element_name,
                                                  const preconfigured_consumer_factory_t& factory);
     spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&            params,
+                                                    const core::video_format_repository&        format_repository,
                                                     std::vector<spl::shared_ptr<video_channel>> channels) const;
     spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                         element_name,
                                                     const boost::property_tree::wptree&         element,
+                                                    const core::video_format_repository&        format_repository,
                                                     std::vector<spl::shared_ptr<video_channel>> channels) const;
 
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
-    frame_consumer_registry(const frame_consumer_registry&) = delete;
+    frame_consumer_registry(const frame_consumer_registry&)            = delete;
     frame_consumer_registry& operator=(const frame_consumer_registry&) = delete;
 };
 

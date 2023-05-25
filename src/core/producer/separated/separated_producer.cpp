@@ -33,14 +33,36 @@
 
 namespace caspar { namespace core {
 
+struct frame_pair
+{
+    draw_frame field1;
+    draw_frame field2;
+
+    draw_frame get(video_field field)
+    {
+        if (field == video_field::b)
+            return field2;
+        else
+            return field1;
+    }
+
+    void set(video_field field, const draw_frame& frame)
+    {
+        if (field == video_field::b)
+            field2 = frame;
+        else
+            field1 = frame;
+    }
+};
+
 class separated_producer : public frame_producer
 {
     monitor::state state_;
 
     spl::shared_ptr<frame_producer> fill_producer_;
     spl::shared_ptr<frame_producer> key_producer_;
-    draw_frame                      fill_;
-    draw_frame                      key_;
+    frame_pair                      fill_;
+    frame_pair                      key_;
 
   public:
     explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
@@ -52,16 +74,16 @@ class separated_producer : public frame_producer
 
     // frame_producer
 
-    draw_frame last_frame() override
+    draw_frame last_frame(const core::video_field field) override
     {
-        return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
+        return draw_frame::mask(fill_producer_->last_frame(field), key_producer_->last_frame(field));
     }
-    draw_frame first_frame() override
+    draw_frame first_frame(const core::video_field field) override
     {
-        return draw_frame::mask(fill_producer_->first_frame(), key_producer_->first_frame());
+        return draw_frame::mask(fill_producer_->first_frame(field), key_producer_->first_frame(field));
     }
 
-    draw_frame receive_impl(int nb_samples) override
+    draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         CASPAR_SCOPE_EXIT
         {
@@ -69,22 +91,27 @@ class separated_producer : public frame_producer
             state_["keyer"] = key_producer_->state();
         };
 
-        if (!fill_) {
-            fill_ = fill_producer_->receive(nb_samples);
+        auto fill = fill_.get(field);
+        auto key  = key_.get(field);
+
+        if (!fill) {
+            fill = fill_producer_->receive(field, nb_samples);
         }
 
-        if (!key_) {
-            key_ = key_producer_->receive(nb_samples);
+        if (!key) {
+            key = key_producer_->receive(field, nb_samples);
         }
 
-        if (!fill_ || !key_) {
+        if (!fill || !key) {
+            fill_.set(field, fill);
+            key_.set(field, key);
             return core::draw_frame{};
         }
 
-        auto frame = draw_frame::mask(fill_, key_);
+        auto frame = draw_frame::mask(fill, key);
 
-        fill_ = draw_frame{};
-        key_  = draw_frame{};
+        fill_.set(field, draw_frame{});
+        key_.set(field, draw_frame{});
 
         return frame;
     }

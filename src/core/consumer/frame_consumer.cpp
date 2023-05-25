@@ -108,12 +108,14 @@ class destroy_consumer_proxy : public frame_consumer
 
             pointer_guard.reset();
             counter--;
-        })
-            .detach();
+        }).detach();
     }
 
-    std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }
-    void              initialize(const video_format_desc& format_desc, int channel_index) override
+    std::future<bool> send(const core::video_field field, const_frame frame) override
+    {
+        return consumer_->send(field, std::move(frame));
+    }
+    void initialize(const video_format_desc& format_desc, int channel_index) override
     {
         return consumer_->initialize(format_desc, channel_index);
     }
@@ -142,8 +144,11 @@ class print_consumer_proxy : public frame_consumer
         CASPAR_LOG(info) << str << L" Uninitialized.";
     }
 
-    std::future<bool> send(const_frame frame) override { return consumer_->send(std::move(frame)); }
-    void              initialize(const video_format_desc& format_desc, int channel_index) override
+    std::future<bool> send(const core::video_field field, const_frame frame) override
+    {
+        return consumer_->send(field, std::move(frame));
+    }
+    void initialize(const video_format_desc& format_desc, int channel_index) override
     {
         consumer_->initialize(format_desc, channel_index);
         CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
@@ -157,6 +162,7 @@ class print_consumer_proxy : public frame_consumer
 
 spl::shared_ptr<core::frame_consumer>
 frame_consumer_registry::create_consumer(const std::vector<std::wstring>&            params,
+                                         const core::video_format_repository&        format_repository,
                                          std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     if (params.empty())
@@ -167,7 +173,7 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
     if (!std::any_of(
             consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
                 try {
-                    consumer = factory(params, channels);
+                    consumer = factory(params, format_repository, channels);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -182,6 +188,7 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
 spl::shared_ptr<frame_consumer>
 frame_consumer_registry::create_consumer(const std::wstring&                         element_name,
                                          const boost::property_tree::wptree&         element,
+                                         const core::video_format_repository&        format_repository,
                                          std::vector<spl::shared_ptr<video_channel>> channels) const
 {
     auto& preconfigured_consumer_factories = impl_->preconfigured_consumer_factories;
@@ -192,7 +199,7 @@ frame_consumer_registry::create_consumer(const std::wstring&                    
                                << msg_info(L"No consumer factory registered for element name " + element_name));
 
     return spl::make_shared<destroy_consumer_proxy>(
-        spl::make_shared<print_consumer_proxy>(found->second(element, channels)));
+        spl::make_shared<print_consumer_proxy>(found->second(element, format_repository, channels)));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
@@ -200,7 +207,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
     class empty_frame_consumer : public frame_consumer
     {
       public:
-        std::future<bool> send(const_frame) override { return make_ready_future(false); }
+        std::future<bool> send(const core::video_field field, const_frame) override { return make_ready_future(false); }
         void              initialize(const video_format_desc&, int) override {}
         std::wstring      print() const override { return L"empty"; }
         std::wstring      name() const override { return L"empty"; }

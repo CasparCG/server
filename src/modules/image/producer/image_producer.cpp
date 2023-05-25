@@ -101,11 +101,11 @@ struct image_producer : public core::frame_producer
 
     // frame_producer
 
-    core::draw_frame last_frame() override { return frame_; }
+    core::draw_frame last_frame(const core::video_field field) override { return frame_; }
 
-    core::draw_frame first_frame() override { return frame_; }
+    core::draw_frame first_frame(const core::video_field field) override { return frame_; }
 
-    core::draw_frame receive_impl(int nb_samples) override
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         state_["file/path"] = description_;
         return frame_;

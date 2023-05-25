@@ -40,7 +40,7 @@ struct texture::impl
     GLsizei stride_ = 0;
     GLsizei size_   = 0;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
   public:

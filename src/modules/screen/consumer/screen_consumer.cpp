@@ -152,7 +152,7 @@ struct screen_consumer
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
-    screen_consumer(const screen_consumer&) = delete;
+    screen_consumer(const screen_consumer&)            = delete;
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
@@ -228,10 +228,10 @@ struct screen_consumer
 
         thread_ = std::thread([this] {
             try {
-                const auto window_style = config_.borderless ? sf::Style::None
-                                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                                : sf::Style::Fullscreen;
-                sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+                const auto    window_style = config_.borderless ? sf::Style::None
+                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
+                                                                : sf::Style::Fullscreen;
+                sf::VideoMode desktop      = sf::VideoMode::getDesktopMode();
                 sf::VideoMode mode(
                     config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
                 window_.create(mode,
@@ -463,7 +463,7 @@ struct screen_consumer
         tick_timer_.restart();
     }
 
-    std::future<bool> send(const core::const_frame& frame)
+    std::future<bool> send(core::video_field field, const core::const_frame& frame)
     {
         if (!frame_buffer_.try_push(frame)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -584,7 +584,10 @@ struct screen_consumer_proxy : public core::frame_consumer
         consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_index);
     }
 
-    std::future<bool> send(core::const_frame frame) override { return consumer_->send(frame); }
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
+    {
+        return consumer_->send(field, frame);
+    }
 
     std::wstring print() const override { return consumer_ ? consumer_->print() : L"[screen_consumer]"; }
 
@@ -595,7 +598,8 @@ struct screen_consumer_proxy : public core::frame_consumer
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
@@ -631,6 +635,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config;

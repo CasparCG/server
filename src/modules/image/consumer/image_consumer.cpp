@@ -67,7 +67,7 @@ struct image_consumer : public core::frame_consumer
 
     void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override {}
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         auto filename = filename_;
 
@@ -113,7 +113,8 @@ struct image_consumer : public core::frame_consumer
     int index() const override { return 100; }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                         params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"IMAGE"))

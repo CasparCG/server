@@ -50,9 +50,9 @@ const std::wstring& dll_name()
 static std::mutex                              find_instance_mutex;
 static std::shared_ptr<NDIlib_find_instance_t> find_instance;
 
-NDIlib_v3* load_library()
+NDIlib_v5* load_library()
 {
-    static NDIlib_v3* ndi_lib = nullptr;
+    static NDIlib_v5* ndi_lib = nullptr;
 
     if (ndi_lib)
         return ndi_lib;
@@ -68,14 +68,14 @@ NDIlib_v3* load_library()
         module   = LoadLibrary(dll_path.c_str());
     }
 
-    FARPROC NDIlib_v3_load = NULL;
+    FARPROC NDIlib_v5_load = NULL;
     if (module) {
         CASPAR_LOG(info) << L"Loaded " << dll_path;
         static std::shared_ptr<void> lib(module, FreeLibrary);
-        NDIlib_v3_load = GetProcAddress(module, "NDIlib_v3_load");
+        NDIlib_v5_load = GetProcAddress(module, "NDIlib_v5_load");
     }
 
-    if (!NDIlib_v3_load) {
+    if (!NDIlib_v5_load) {
         not_installed();
     }
 
@@ -89,20 +89,20 @@ NDIlib_v3* load_library()
     }
 
     // The main NDI entry point for dynamic loading if we got the library
-    const NDIlib_v3* (*NDIlib_v3_load)(void) = NULL;
+    const NDIlib_v5* (*NDIlib_v5_load)(void) = NULL;
     if (hNDILib) {
         CASPAR_LOG(info) << L"Loaded " << dll_path;
         static std::shared_ptr<void> lib(hNDILib, dlclose);
-        *((void**)&NDIlib_v3_load) = dlsym(hNDILib, "NDIlib_v3_load");
+        *((void**)&NDIlib_v5_load) = dlsym(hNDILib, "NDIlib_v5_load");
     }
 
-    if (!NDIlib_v3_load) {
+    if (!NDIlib_v5_load) {
         not_installed();
     }
 
 #endif
 
-    ndi_lib = (NDIlib_v3*)(NDIlib_v3_load());
+    ndi_lib = (NDIlib_v5*)(NDIlib_v5_load());
 
     if (!ndi_lib->NDIlib_initialize()) {
         not_initialized();
@@ -129,7 +129,7 @@ std::map<std::string, NDIlib_source_t> get_current_sources()
 void not_installed()
 {
     CASPAR_THROW_EXCEPTION(not_supported()
-                           << msg_info(dll_name() + L" not available. Install NDI Redist version 3.7 or higher from " +
+                           << msg_info(dll_name() + L" not available. Install NDI Redist version 5.0 or higher from " +
                                        u16(NDILIB_REDIST_URL)));
 }
 

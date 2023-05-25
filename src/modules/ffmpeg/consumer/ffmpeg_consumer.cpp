@@ -57,6 +57,7 @@ extern "C" {
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -152,9 +153,6 @@ struct Stream
             FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc");
         }
 
-        graph->nb_threads = 16;
-        graph->execute    = graph_execute;
-
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
@@ -181,8 +179,9 @@ struct Stream
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              format_desc.width % format_desc.height % AV_PIX_FMT_YUVA422P % format_desc.duration %
-                             format_desc.time_scale % sar.numerator() % sar.denominator() %
-                             format_desc.framerate.numerator() % format_desc.framerate.denominator())
+                             (format_desc.time_scale * format_desc.field_count) % sar.numerator() % sar.denominator() %
+                             (format_desc.framerate.numerator() * format_desc.field_count) %
+                             format_desc.framerate.denominator())
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
@@ -300,6 +299,10 @@ struct Stream
             enc->thread_type = FF_THREAD_SLICE;
         }
 
+        if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
+            enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        }
+
         auto dict = to_dict(std::move(stream_options));
         CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
         FF(avcodec_open2(enc.get(), codec, &dict));
@@ -311,10 +314,6 @@ struct Stream
 
         if (codec->type == AVMEDIA_TYPE_AUDIO && !(codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)) {
             av_buffersink_set_frame_size(sink, enc->frame_size);
-        }
-
-        if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
-            enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
     }
 
@@ -680,8 +679,10 @@ struct ffmpeg_consumer : public core::frame_consumer
         });
     }
 
-    std::future<bool> send(core::const_frame frame) override
+    std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
+        // TODO - field alignment
+
         {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
@@ -712,7 +713,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&                  params,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
+                                                      const core::video_format_repository& format_repository,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
@@ -728,6 +730,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
+                              const core::video_format_repository&              format_repository,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),

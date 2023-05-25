@@ -49,7 +49,7 @@ struct mixer::impl
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
     impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
@@ -82,7 +82,7 @@ struct mixer::impl
                 return const_frame(std::move(image_data), std::move(audio), desc);
             }));
 
-        if (buffer_.size() < 2) {
+        if (buffer_.size() <= format_desc.field_count) {
             return const_frame{};
         }
 

@@ -30,7 +30,7 @@ class mutable_frame final
     ~mutable_frame();
 
     mutable_frame& operator=(const mutable_frame&) = delete;
-    mutable_frame& operator                        =(mutable_frame&& other);
+    mutable_frame& operator=(mutable_frame&& other);
 
     void swap(mutable_frame& other);
 

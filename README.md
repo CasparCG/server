@@ -16,11 +16,11 @@ System Requirements
 
 ### Windows
 
- - Windows 7 and 10 are supported
+ - Only Windows 10 is supported
 
 ### Linux
 
- - Only Ubuntu 18.04 is supported, but other versions may work
+ - Ubuntu 20.04 and 22.04 are supported
 
 Getting Started
 ---------------

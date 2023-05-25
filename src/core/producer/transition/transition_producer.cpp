@@ -39,9 +39,6 @@ class transition_producer : public frame_producer
     monitor::state state_;
     int            current_frame_ = 0;
 
-    core::draw_frame dst_;
-    core::draw_frame src_;
-
     const transition_info info_;
 
     spl::shared_ptr<frame_producer> dst_producer_ = frame_producer::empty();
@@ -57,23 +54,23 @@ class transition_producer : public frame_producer
 
     // frame_producer
 
-    core::draw_frame last_frame() override
+    core::draw_frame last_frame(const core::video_field field) override
     {
         CASPAR_SCOPE_EXIT { update_state(); };
 
-        auto src = src_producer_->last_frame();
-        auto dst = dst_producer_->last_frame();
+        auto src = src_producer_->last_frame(field);
+        auto dst = dst_producer_->last_frame(field);
 
         return dst && current_frame_ >= info_.duration ? dst : src;
     }
 
-    core::draw_frame first_frame() override { return dst_producer_->first_frame(); }
+    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_->first_frame(field); }
 
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return dst_ && current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
+        return current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
     }
 
     boost::optional<int64_t> auto_play_delta() const override { return info_.duration; }
@@ -100,31 +97,31 @@ class transition_producer : public frame_producer
         }();
     }
 
-    draw_frame receive_impl(int nb_samples) override
+    draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         CASPAR_SCOPE_EXIT { update_state(); };
 
-        dst_ = dst_producer_->receive(nb_samples);
-        if (!dst_) {
-            dst_ = dst_producer_->last_frame();
+        auto dst = dst_producer_->receive(field, nb_samples);
+        if (!dst) {
+            dst = dst_producer_->last_frame(field);
         }
 
-        src_ = src_producer_->receive(nb_samples);
-        if (!src_) {
-            src_ = src_producer_->last_frame();
+        auto src = src_producer_->receive(field, nb_samples);
+        if (!src) {
+            src = src_producer_->last_frame(field);
         }
 
-        if (!dst_) {
-            return src_;
+        if (!dst) {
+            return src;
         }
 
         if (current_frame_ >= info_.duration) {
-            return dst_;
+            return dst;
         }
 
         current_frame_ += 1;
 
-        return compose(dst_, src_);
+        return compose(dst, src);
     }
 
     uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
@@ -167,7 +164,11 @@ class transition_producer : public frame_producer
             dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
             src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * dir;
         } else if (info_.type == transition_type::wipe) {
-            dst_frame.transform().image_transform.clip_scale[0] = delta;
+            if (info_.direction == transition_direction::from_right) {
+                dst_frame.transform().image_transform.clip_scale[0] = delta;
+            } else {
+                dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
+            }
         }
 
         return draw_frame::over(src_frame, dst_frame);

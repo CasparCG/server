@@ -34,7 +34,7 @@ class texture final
     ~texture();
 
     texture& operator=(const texture&) = delete;
-    texture& operator                  =(texture&& other);
+    texture& operator=(texture&& other);
 
 #ifdef WIN32
     void copy_from(int source);

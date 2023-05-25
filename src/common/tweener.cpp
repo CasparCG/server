@@ -54,6 +54,7 @@
 #include <boost/regex.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <string>
 #include <unordered_map>

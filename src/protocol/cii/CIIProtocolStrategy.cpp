@@ -45,6 +45,7 @@ const std::wstring CIIProtocolStrategy::MessageDelimiter = L"\r\n";
 const wchar_t      CIIProtocolStrategy::TokenDelimiter   = L'\\';
 
 CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>&    channels,
+                                         const core::video_format_repository&                        format_repository,
                                          const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                                          const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
     : executor_(L"CIIProtocolStrategy")
@@ -52,8 +53,11 @@ CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core:
     , cg_registry_(cg_registry)
     , producer_registry_(producer_registry)
     , channels_(channels)
+    , format_repository_(format_repository)
 {
 }
+
+video_format_desc CIIProtocolStrategy::FindFormat(const std::wstring& id) const { return format_repository_.find(id); }
 
 // The paser method expects message to be complete messages with the delimiter stripped away.
 // Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
@@ -189,8 +193,8 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName,
 void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 {
     try {
-        pChannel_->stage().load(0, GetPreparedTemplate(titleName));
-        pChannel_->stage().play(0);
+        pChannel_->stage()->load(0, GetPreparedTemplate(titleName));
+        pChannel_->stage()->play(0);
 
         CASPAR_LOG(info) << L"Displayed title " << titleName;
     } catch (caspar_exception&) {
@@ -212,14 +216,14 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
     auto pTransition = create_transition_producer(pFP, transition);
 
     try {
-        pChannel_->stage().load(0, pTransition);
+        pChannel_->stage()->load(0, pTransition);
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
         CASPAR_LOG(error) << L"Failed to display " << filename;
         return;
     }
 
-    pChannel_->stage().play(0);
+    pChannel_->stage()->play(0);
 
     CASPAR_LOG(info) << L"Displayed " << filename;
 }

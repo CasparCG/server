@@ -3,6 +3,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
+#include <core/video_format.h>
 
 #include <boost/optional.hpp>
 
@@ -21,12 +22,13 @@ class AVProducer
                boost::optional<std::string>         vfilter,
                boost::optional<std::string>         afilter,
                boost::optional<int64_t>             start,
+               boost::optional<int64_t>             seek,
                boost::optional<int64_t>             duration,
                boost::optional<bool>                loop,
                int                                  seekable);
 
-    core::draw_frame prev_frame();
-    core::draw_frame next_frame();
+    core::draw_frame prev_frame(const core::video_field field);
+    core::draw_frame next_frame(const core::video_field field);
 
     AVProducer& seek(int64_t time);
     int64_t     time() const;

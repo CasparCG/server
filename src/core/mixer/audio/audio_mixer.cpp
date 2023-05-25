@@ -56,7 +56,7 @@ struct audio_mixer::impl
     std::atomic<float>                  master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph> graph_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
     impl(spl::shared_ptr<diagnostics::graph> graph)
