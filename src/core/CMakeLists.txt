@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (core)
 
 set(SOURCES
@@ -75,14 +75,16 @@ set(HEADERS
 )
 
 add_library(core ${SOURCES} ${HEADERS})
+target_compile_features(core PRIVATE cxx_std_14)
+target_include_directories(core PRIVATE
+    ..
+    ${BOOST_INCLUDE_PATH}
+    ${TBB_INCLUDE_PATH}
+    ${SFML_INCLUDE_PATH}
+    ${GLEW_INCLUDE_PATH}
+    )
 add_precompiled_header(core StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
-
-include_directories(..)
-include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
-include_directories(${SFML_INCLUDE_PATH})
-include_directories(${GLEW_INCLUDE_PATH})
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
@@ -98,12 +100,4 @@ source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 
-if (MSVC)
-	target_link_libraries(core
-			common
-	)
-else()
-	target_link_libraries(core
-			common
-	)
-endif()
+target_link_libraries(core common)

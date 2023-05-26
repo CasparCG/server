@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (common)
 
 set(SOURCES
@@ -63,13 +63,16 @@ set(HEADERS
 )
 
 add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+target_compile_features(common PRIVATE cxx_std_14)
+target_include_directories(common PRIVATE
+    ..
+    ${BOOST_INCLUDE_PATH}
+    ${TBB_INCLUDE_PATH}
+    ${GLEW_INCLUDE_PATH}
+    )
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
-include_directories(..)
-include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
-include_directories(${GLEW_INCLUDE_PATH})
 
 source_group(sources ./*)
 source_group(sources\\gl gl/*)
