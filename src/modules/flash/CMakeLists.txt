@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (flash)
 
 set(SOURCES
@@ -27,14 +27,17 @@ set(HEADERS
 )
 
 add_library(flash ${SOURCES} ${HEADERS})
+target_compile_features(flash PRIVATE cxx_std_14)
+target_include_directories(flash PRIVATE
+    ..
+    ../..
+    ${BOOST_INCLUDE_PATH}
+    ${TBB_INCLUDE_PATH}
+    ${ZLIB_INCLUDE_PATH}
+    )
 add_precompiled_header(flash StdAfx.h FORCEINCLUDE)
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
-include_directories(..)
-include_directories(../..)
-include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
-include_directories(${ZLIB_INCLUDE_PATH})
 
 set_target_properties(flash PROPERTIES FOLDER modules)
 source_group(sources\\interop interop/*)

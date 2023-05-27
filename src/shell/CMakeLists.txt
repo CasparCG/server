@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (shell)
 
 join_list("${CASPARCG_MODULE_INCLUDE_STATEMENTS}" "\n" CASPARCG_MODULE_INCLUDE_STATEMENTS)
@@ -31,10 +31,12 @@ set(HEADERS
 )
 
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-
-include_directories(..)
-include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
+target_compile_features(casparcg PRIVATE cxx_std_14)
+target_include_directories(casparcg PRIVATE
+    ..
+    ${BOOST_INCLUDE_PATH}
+    ${TBB_INCLUDE_PATH}
+    )
 
 source_group(sources ./*)
 

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (accelerator)
 
 set(SOURCES
@@ -49,15 +49,18 @@ bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "v
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
 
 add_library(accelerator ${SOURCES} ${HEADERS} ${WIN32_SPECIFIC_SOURCES} ${WIN32_SPECIFIC_HEADERS})
+target_compile_features(accelerator PRIVATE cxx_std_14)
+target_include_directories(accelerator PRIVATE
+    ..
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${BOOST_INCLUDE_PATH}
+    ${TBB_INCLUDE_PATH}
+    ${GLEW_INCLUDE_PATH}
+    ${FFMPEG_INCLUDE_PATH}
+    ${SFML_INCLUDE_PATH}
+    )
 add_precompiled_header(accelerator StdAfx.h FORCEINCLUDE)
 
-include_directories(..)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
-include_directories(${GLEW_INCLUDE_PATH})
-include_directories(${FFMPEG_INCLUDE_PATH})
-include_directories(${SFML_INCLUDE_PATH})
 
 source_group(sources ./.*)
 source_group(sources\\cpu\\image cpu/image/.*)

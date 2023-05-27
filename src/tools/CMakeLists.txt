@@ -1,7 +1,9 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 
-include_directories(..)
 add_executable(bin2c bin2c.cpp)
+target_compile_features(bin2c PRIVATE cxx_std_14)
+
+target_include_directories(bin2c PRIVATE ..)
 
 function(bin2c source_file dest_file namespace obj_name)
     ADD_CUSTOM_COMMAND(
@@ -10,4 +12,3 @@ function(bin2c source_file dest_file namespace obj_name)
         DEPENDS bin2c ${CMAKE_CURRENT_SOURCE_DIR}/${source_file}
     )
 endfunction()
-
