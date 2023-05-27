@@ -1,5 +1,5 @@
-#include "../thread.h"
-#include "../../utf.h"
+#include "common/os/thread.h"
+#include "common/utf.h"
 #include <pthread.h>
 #include <sched.h>
 

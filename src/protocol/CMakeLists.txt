@@ -30,7 +30,6 @@ set(SOURCES
 		util/http_request.cpp
 		util/tokenize.cpp
 
-		StdAfx.cpp
 )
 set(HEADERS
 		amcp/AMCPCommand.h
@@ -81,7 +80,7 @@ target_include_directories(protocol  PRIVATE
     ${BOOST_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
     )
-add_precompiled_header(protocol StdAfx.h FORCEINCLUDE)
+target_precompile_headers(protocol PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 source_group(sources\\amcp amcp/*)

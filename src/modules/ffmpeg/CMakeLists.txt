@@ -9,7 +9,6 @@ set(SOURCES
 	consumer/ffmpeg_consumer.cpp
 
 	ffmpeg.cpp
-	StdAfx.cpp
 )
 set(HEADERS
 	util/av_assert.h
@@ -32,7 +31,7 @@ target_include_directories(ffmpeg PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-add_precompiled_header(ffmpeg StdAfx.h FORCEINCLUDE)
+target_precompile_headers(ffmpeg PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(ffmpeg PROPERTIES FOLDER modules)

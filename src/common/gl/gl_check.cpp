@@ -23,8 +23,8 @@
 ///////////////////////////
 #include "gl_check.h"
 
-#include "../except.h"
-#include "../log.h"
+#include "common/except.h"
+#include "common/log.h"
 
 #include <GL/glew.h>
 

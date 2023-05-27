@@ -49,7 +49,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tweener.h"
 
-#include "except.h"
+#include "include/common/except.h"
 
 #include <boost/regex.hpp>
 

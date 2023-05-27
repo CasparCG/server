@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../memory.h"
+#include "common/memory.h"
 
 #include <functional>
 #include <string>

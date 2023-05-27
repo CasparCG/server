@@ -7,7 +7,6 @@ set(SOURCES
 		producer/decklink_producer.cpp
 
 		decklink.cpp
-		StdAfx.cpp
 )
 set(HEADERS
 		consumer/decklink_consumer.h
@@ -22,7 +21,6 @@ set(HEADERS
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
-			StdAfx.c
 			interop/DeckLinkAPI_i.c
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
@@ -60,7 +58,7 @@ target_include_directories(decklink PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-add_precompiled_header(decklink StdAfx.h FORCEINCLUDE)
+target_precompile_headers(decklink PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(decklink PROPERTIES FOLDER modules)

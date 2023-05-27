@@ -19,6 +19,9 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
+#if defined _MSC_VER
+#include <common/compiler/vs/disable_silly_warnings.h>
+#endif
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <algorithm>

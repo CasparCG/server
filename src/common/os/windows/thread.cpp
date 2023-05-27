@@ -1,10 +1,10 @@
-#include "../thread.h"
+#include "common/os/thread.h"
 
 #include <thread>
 
 #include <windows.h>
 
-#include "../../utf.h"
+#include "common/utf.h"
 
 namespace caspar {
 

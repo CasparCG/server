@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "except.h"
-#include "log.h"
+#include "common/except.h"
+#include "common/log.h"
 
 #ifdef _MSC_VER
 #define _CASPAR_DBG_BREAK _CrtDbgBreak()
