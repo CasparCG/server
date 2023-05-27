@@ -60,7 +60,7 @@ target_include_directories(decklink PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-add_precompiled_header(decklink StdAfx.h FORCEINCLUDE)
+target_precompile_headers(decklink PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(decklink PROPERTIES FOLDER modules)

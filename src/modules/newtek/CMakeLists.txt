@@ -52,7 +52,7 @@ target_include_directories(newtek PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-add_precompiled_header(newtek StdAfx.h FORCEINCLUDE)
+target_precompile_headers(newtek PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(newtek PROPERTIES FOLDER modules)

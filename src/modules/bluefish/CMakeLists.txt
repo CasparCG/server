@@ -26,7 +26,7 @@ target_include_directories(bluefish PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-add_precompiled_header(bluefish StdAfx.h FORCEINCLUDE)
+target_precompile_headers(bluefish PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(bluefish PROPERTIES FOLDER modules)

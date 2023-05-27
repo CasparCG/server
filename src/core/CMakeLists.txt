@@ -83,7 +83,7 @@ target_include_directories(core PRIVATE
     ${SFML_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
-add_precompiled_header(core StdAfx.h FORCEINCLUDE)
+target_precompile_headers(core PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 source_group(sources ./*)
