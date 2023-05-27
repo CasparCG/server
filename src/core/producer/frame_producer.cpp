@@ -87,8 +87,13 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
             CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
             return make_ready_future(std::wstring());
         }
-        draw_frame last_frame(const core::video_field field) override { return draw_frame{}; }
-        draw_frame first_frame(const core::video_field field) override { return draw_frame{}; }
+        draw_frame           last_frame(const core::video_field field) override { return draw_frame{}; }
+        draw_frame           first_frame(const core::video_field field) override { return draw_frame{}; }
+        core::monitor::state state() const override
+        {
+            static const monitor::state empty;
+            return empty;
+        }
     };
 
     static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();

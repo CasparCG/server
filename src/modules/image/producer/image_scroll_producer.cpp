@@ -403,7 +403,7 @@ struct image_scroll_producer : public core::frame_producer
         }
     }
 
-    core::monitor::state& state() { return state_; }
+    core::monitor::state state() const override { return state_; }
 };
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies,

@@ -56,11 +56,11 @@ class route_producer
     int                                                            source_channel_;
     int                                                            source_layer_;
 
-    int get_source_channel() const { return source_channel_; }
-    int get_source_layer() const { return source_layer_; }
+    int get_source_channel() const override { return source_channel_; }
+    int get_source_layer() const override { return source_layer_; }
 
     // set the buffer depth to 2 for cross-channel routes, 1 otherwise
-    void set_cross_channel(bool cross)
+    void set_cross_channel(bool cross) override
     {
         if (cross) {
             buffer_.set_capacity(2);
@@ -153,6 +153,18 @@ class route_producer
     std::wstring print() const override { return L"route[" + route_->name + L"]"; }
 
     std::wstring name() const override { return L"route"; }
+
+    core::monitor::state state() const override
+    {
+        core::monitor::state state;
+        state["route/channel"] = source_channel_;
+
+        if (source_layer_ > -1) {
+            state["route/layer"] = source_layer_;
+        }
+
+        return state;
+    }
 };
 
 spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_producer_dependencies& dependencies,
@@ -176,8 +188,8 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
             mode = core::route_mode::next;
     }
 
-    auto channel_it = boost::find_if(dependencies.channels,
-                                     [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel; });
+    auto channel_it = boost::find_if(
+        dependencies.channels, [=](const spl::shared_ptr<core::video_channel>& ch) { return ch->index() == channel; });
 
     if (channel_it == dependencies.channels.end()) {
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + std::to_wstring(channel)));

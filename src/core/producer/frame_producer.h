@@ -88,16 +88,12 @@ class frame_producer
         CASPAR_THROW_EXCEPTION(not_implemented());
     }
 
-    virtual core::monitor::state state() const
-    {
-        static const monitor::state empty;
-        return empty;
-    }
-    virtual std::wstring print() const { return L"frame_producer"; }
-    virtual std::wstring name() const { return L"frame_producer"; }
-    virtual uint32_t     frame_number() const { return frame_number_; }
-    virtual uint32_t     nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
-    virtual draw_frame   last_frame(const video_field field)
+    virtual core::monitor::state state() const = 0;
+    virtual std::wstring         print() const = 0;
+    virtual std::wstring         name() const { return L"frame_producer"; }
+    virtual uint32_t             frame_number() const { return frame_number_; }
+    virtual uint32_t             nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
+    virtual draw_frame           last_frame(const video_field field)
     {
         if (!last_frame_) {
             last_frame_ = receive_impl(field, 0);
@@ -118,13 +114,13 @@ class frame_producer
 
 class const_producer : public core::frame_producer
 {
-    core::draw_frame frame1_;
-    core::draw_frame frame2_;
+    const core::draw_frame frame1_;
+    const core::draw_frame frame2_;
 
   public:
     const_producer(core::draw_frame frame1, core::draw_frame frame2)
-        : frame1_(frame1)
-        , frame2_(frame2)
+        : frame1_(std::move(frame1))
+        , frame2_(std::move(frame2))
     {
     }
 
@@ -139,6 +135,16 @@ class const_producer : public core::frame_producer
     }
 
     core::draw_frame first_frame(const core::video_field field) override { return last_frame(field); }
+
+    std::wstring name() const override { return L"const_producer"; }
+
+    std::wstring print() const override { return L"const_producer"; }
+
+    core::monitor::state state() const override
+    {
+        static const monitor::state empty;
+        return empty;
+    }
 };
 
 class frame_producer_registry;
