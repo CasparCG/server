@@ -516,7 +516,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         start_playback();
     }
 
-    ~decklink_consumer() override
+    ~decklink_consumer()
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
@@ -812,6 +812,14 @@ struct decklink_consumer_proxy : public core::frame_consumer
     int index() const override { return 300 + config_.device_index; }
 
     bool has_synchronization_clock() const override { return true; }
+
+    core::monitor::state state() const override
+    {
+        core::monitor::state state;
+        state["decklink/index"] = config_.device_index;
+        state["decklink/embedded_audio"] = config_.embedded_audio;
+        return state;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,

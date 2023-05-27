@@ -51,11 +51,7 @@ class frame_consumer
     virtual std::future<bool> send(const core::video_field field, const_frame frame)              = 0;
     virtual void              initialize(const video_format_desc& format_desc, int channel_index) = 0;
 
-    virtual core::monitor::state state() const
-    {
-        static const monitor::state empty;
-        return empty;
-    }
+    virtual core::monitor::state state() const = 0;
 
     virtual std::wstring print() const = 0;
     virtual std::wstring name() const  = 0;

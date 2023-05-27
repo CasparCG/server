@@ -594,6 +594,13 @@ struct screen_consumer_proxy : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 
     int index() const override { return 600 + (config_.key_only ? 10 : 0) + config_.screen_index; }
+
+    core::monitor::state state() const override
+    {
+        core::monitor::state state;
+        state["screen/index"] = config_.screen_index;
+        return state;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,

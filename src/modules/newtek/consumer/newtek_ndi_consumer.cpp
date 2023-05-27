@@ -242,6 +242,14 @@ struct newtek_ndi_consumer : public core::frame_consumer
     int index() const override { return 900; }
 
     bool has_synchronization_clock() const override { return false; }
+
+    core::monitor::state state() const override
+    {
+        core::monitor::state state;
+        state["ndi/name"] = name_;
+        state["ndi/allow_fields"] = allow_fields_;
+        return state;
+    }
 };
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);

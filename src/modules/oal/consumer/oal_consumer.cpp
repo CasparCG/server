@@ -379,6 +379,12 @@ struct oal_consumer : public core::frame_consumer
     bool has_synchronization_clock() const override { return false; }
 
     int index() const override { return 500; }
+
+    core::monitor::state state() const override
+    {
+        static const core::monitor::state empty;
+        return empty;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,

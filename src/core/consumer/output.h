@@ -38,14 +38,16 @@ namespace caspar { namespace core {
 class output final
 {
   public:
-    explicit output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
+    explicit output(const spl::shared_ptr<diagnostics::graph>& graph,
+                    const video_format_desc&                   format_desc,
+                    int                                        channel_index);
 
     output(const output&)            = delete;
     output& operator=(const output&) = delete;
     ~output();
 
     // Send a frame to the output. If running an interlaced channel, two frames will be provided
-    void operator()(const_frame frame, const_frame frame2, const video_format_desc& format_desc);
+    void operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc);
 
     void add(const spl::shared_ptr<frame_consumer>& consumer);
     void add(int index, const spl::shared_ptr<frame_consumer>& consumer);

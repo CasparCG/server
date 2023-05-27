@@ -213,6 +213,11 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
         std::wstring      name() const override { return L"empty"; }
         bool              has_synchronization_clock() const override { return false; }
         int               index() const override { return -1; }
+        core::monitor::state state() const override
+        {
+            static const monitor::state empty;
+            return empty;
+        }
     };
     static spl::shared_ptr<frame_consumer> consumer = spl::make_shared<empty_frame_consumer>();
     return consumer;

@@ -123,6 +123,12 @@ struct newtek_ivga_consumer : public core::frame_consumer
     int index() const override { return 900; }
 
     bool has_synchronization_clock() const override { return false; }
+
+    core::monitor::state state() const override
+    {
+        static const core::monitor::state empty;
+        return empty;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>&     params,

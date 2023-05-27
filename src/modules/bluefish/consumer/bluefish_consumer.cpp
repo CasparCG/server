@@ -871,6 +871,15 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     int index() const override { return 400 + config_.device_index; }
 
     bool has_synchronization_clock() const override { return true; }
+
+    core::monitor::state state() const override
+    {
+        core::monitor::state state;
+        state["bluefish/index"] = config_.device_index;
+        state["bluefish/stream"] = static_cast<unsigned int>(config_.device_stream);
+        state["bluefish/embedded_audio"] = config_.embedded_audio;
+        return state;
+    }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,

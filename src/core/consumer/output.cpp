@@ -23,8 +23,6 @@
 #include "frame_consumer.h"
 
 #include "../frame/frame.h"
-#include "../monitor/monitor.h"
-#include "../video_format.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -35,6 +33,7 @@
 #include <chrono>
 #include <map>
 #include <thread>
+#include <utility>
 
 namespace caspar { namespace core {
 
@@ -53,10 +52,10 @@ struct output::impl
     boost::optional<time_point_t> time_;
 
   public:
-    impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
-        : graph_(std::move(graph))
+    impl(const spl::shared_ptr<diagnostics::graph>& graph, video_format_desc format_desc, int channel_index)
+        : graph_(graph)
         , channel_index_(channel_index)
-        , format_desc_(format_desc)
+        , format_desc_(std::move(format_desc))
     {
     }
 
@@ -81,7 +80,9 @@ struct output::impl
 
     bool remove(const spl::shared_ptr<frame_consumer>& consumer) { return remove(consumer->index()); }
 
-    void operator()(const_frame input_frame1, const_frame input_frame2, const core::video_format_desc& format_desc)
+    void operator()(const const_frame&             input_frame1,
+                    const const_frame&             input_frame2,
+                    const core::video_format_desc& format_desc)
     {
         if (!input_frame1) {
             return;
@@ -121,7 +122,7 @@ struct output::impl
             consumers = consumers_;
         }
 
-        auto do_send = [this, &consumers](core::video_field field, core::const_frame frame) {
+        auto do_send = [this, &consumers](core::video_field field, const core::const_frame& frame) {
             std::map<int, std::future<bool>> futures;
 
             for (auto it = consumers.begin(); it != consumers.end();) {
@@ -165,6 +166,7 @@ struct output::impl
         monitor::state state;
         for (auto& p : consumers) {
             state["port"][p.first] = p.second->state();
+            state["port"][p.first]["consumer"] = p.second->name();
         }
         state_ = std::move(state);
 
@@ -186,8 +188,10 @@ struct output::impl
     std::wstring print() const { return L"output[" + std::to_wstring(channel_index_) + L"]"; }
 };
 
-output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
-    : impl_(new impl(std::move(graph), format_desc, channel_index))
+output::output(const spl::shared_ptr<diagnostics::graph>& graph,
+               const video_format_desc&                   format_desc,
+               int                                        channel_index)
+    : impl_(new impl(graph, format_desc, channel_index))
 {
 }
 output::~output() {}
@@ -195,9 +199,9 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { i
 void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
 bool output::remove(int index) { return impl_->remove(index); }
 bool output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
-void output::operator()(const_frame frame, const_frame frame2, const video_format_desc& format_desc)
+void output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
 {
-    return (*impl_)(std::move(frame), std::move(frame2), format_desc);
+    return (*impl_)(frame, frame2, format_desc);
 }
 core::monitor::state output::state() const { return impl_->state_; }
 }} // namespace caspar::core

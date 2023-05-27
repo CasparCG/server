@@ -393,7 +393,7 @@ class decklink_producer : public IDeckLinkInputCallback
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    ~decklink_producer() override
+    ~decklink_producer()
     {
         if (input_ != nullptr) {
             input_->StopStreams();
