@@ -86,10 +86,10 @@ target_precompile_headers(decklink PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>
 
 
-    $<$<COMPILE_LANGUAGE:CXX>:<atlbase.h$<ANGLE-R>>
+    $<$<PLATFORM_ID:Windows>:$<$<COMPILE_LANGUAGE:CXX>:<atlbase.h$<ANGLE-R>>>
 
-    $<$<COMPILE_LANGUAGE:CXX>:<atlcom.h$<ANGLE-R>>
-    $<$<COMPILE_LANGUAGE:CXX>:<atlhost.h$<ANGLE-R>>
+    $<$<PLATFORM_ID:Windows>:$<$<COMPILE_LANGUAGE:CXX>:<atlcom.h$<ANGLE-R>>>
+    $<$<PLATFORM_ID:Windows>:$<$<COMPILE_LANGUAGE:CXX>:<atlhost.h$<ANGLE-R>>>
 
     $<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>
 
@@ -100,8 +100,8 @@ target_precompile_headers(decklink PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:../common/utf.h>"
 
 
-    "$<$<COMPILE_LANGUAGE:C>:<rpc.h$<ANGLE-R>>"
-    "$<$<COMPILE_LANGUAGE:C>:<rpcndr.h$<ANGLE-R>>"
+    "$<$<PLATFORM_ID:Windows>:<rpc.h$<ANGLE-R>>"
+    "$<$<PLATFORM_ID:Windows>:<rpcndr.h$<ANGLE-R>>"
 
     )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
