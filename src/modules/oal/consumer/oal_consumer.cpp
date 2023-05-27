@@ -33,7 +33,6 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
-#include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
 #include <boost/algorithm/string/erase.hpp>
@@ -130,7 +129,7 @@ class device
     ALCdevice* get() { return device_; }
 
   private:
-    ALCchar* iterate_and_find_device(const char* list, const std::wstring& device_name)
+    static ALCchar* iterate_and_find_device(const char* list, const std::wstring& device_name)
     {
         ALCchar* result = nullptr;
 

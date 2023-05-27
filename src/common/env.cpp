@@ -97,8 +97,8 @@ void configure(const std::wstring& filename)
         auto paths = pt.get_child(L"configuration.paths");
         media      = clean_path(paths.get(L"media-path", initial + L"/media/"));
 
-        auto log_path_node  = paths.get_child(L"log-path");
-        log_enabled = !log_path_node.get(L"<xmlattr>.disabled", false);
+        auto log_path_node = paths.get_child(L"log-path");
+        log_enabled        = !log_path_node.get(L"<xmlattr>.disabled", false);
         if (log_enabled) {
             log = clean_path(log_path_node.get_value(initial + L"/log/"));
         }

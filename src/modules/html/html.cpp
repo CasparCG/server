@@ -201,7 +201,7 @@ bool intercept_command_line(int argc, char** argv)
     return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0;
 }
 
-void init(core::module_dependencies dependencies)
+void init(const core::module_dependencies& dependencies)
 {
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 

@@ -137,7 +137,8 @@ class html_client
         loaded_ = false;
     }
 
-    void reload() {
+    void reload()
+    {
         html::begin_invoke([=] {
             if (browser_ != nullptr)
                 browser_->Reload();

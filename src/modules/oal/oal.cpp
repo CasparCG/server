@@ -27,7 +27,7 @@
 
 namespace caspar { namespace oal {
 
-void init(core::module_dependencies dependencies)
+void init(const core::module_dependencies& dependencies)
 {
     dependencies.consumer_registry->register_consumer_factory(L"System Audio Consumer", create_consumer);
     dependencies.consumer_registry->register_preconfigured_consumer_factory(L"system-audio",

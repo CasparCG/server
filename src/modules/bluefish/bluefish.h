@@ -26,6 +26,6 @@
 namespace caspar { namespace bluefish {
 
 std::wstring get_version();
-void         init(core::module_dependencies dependencies);
+void         init(const core::module_dependencies& dependencies);
 
 }} // namespace caspar::bluefish

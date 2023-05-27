@@ -30,7 +30,6 @@
 #include <common/gl/gl_check.h>
 #include <common/log.h>
 #include <common/memory.h>
-#include <common/memshfl.h>
 #include <common/param.h>
 #include <common/timer.h>
 #include <common/utf.h>
@@ -46,7 +45,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <memory>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -530,7 +528,7 @@ struct screen_consumer
         }
     }
 
-    std::pair<float, float> none()
+    std::pair<float, float> none() const
     {
         float width =
             static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
@@ -539,7 +537,7 @@ struct screen_consumer
         return std::make_pair(width, height);
     }
 
-    std::pair<float, float> uniform()
+    std::pair<float, float> uniform() const
     {
         float aspect = static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) /
                        static_cast<float>(square_height_);
@@ -549,9 +547,9 @@ struct screen_consumer
         return std::make_pair(width, height);
     }
 
-    std::pair<float, float> Fill() { return std::make_pair(1.0f, 1.0f); }
+    static std::pair<float, float> Fill() { return std::make_pair(1.0f, 1.0f); }
 
-    std::pair<float, float> uniform_to_fill()
+    std::pair<float, float> uniform_to_fill() const
     {
         float wr =
             static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);

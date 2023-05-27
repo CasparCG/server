@@ -27,8 +27,6 @@
 #include "../decklink.h"
 #include "../util/util.h"
 
-#include "../decklink_api.h"
-
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
@@ -39,7 +37,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/executor.h>
-#include <common/future.h>
 #include <common/memshfl.h>
 #include <common/param.h>
 #include <common/timer.h>
@@ -47,16 +44,16 @@
 #include <tbb/scalable_allocator.h>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <atomic>
 #include <common/prec_timer.h>
 #include <condition_variable>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <utility>
 
 namespace caspar { namespace decklink {
 
@@ -190,9 +187,9 @@ class decklink_frame : public IDeckLinkVideoFrame
     int                     nb_samples_;
 
   public:
-    decklink_frame(std::shared_ptr<void> data, const core::video_format_desc& format_desc, int nb_samples)
-        : format_desc_(format_desc)
-        , data_(data)
+    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples)
+        : format_desc_(std::move(format_desc))
+        , data_(std::move(data))
         , nb_samples_(nb_samples)
     {
     }
@@ -218,7 +215,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
     long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width * 4); }
+    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width) * 4; }
     BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
     BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
 
@@ -241,12 +238,12 @@ class decklink_frame : public IDeckLinkVideoFrame
 struct key_video_context : public IDeckLinkVideoOutputCallback
 {
     const configuration                   config_;
-    com_ptr<IDeckLink>                    decklink_      = get_device(config_.key_device_index());
-    com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_    = iface_cast<IDeckLinkAttributes>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    std::atomic<int64_t>                  scheduled_frames_completed_;
+    com_ptr<IDeckLink>                    decklink_                   = get_device(config_.key_device_index());
+    com_iface_ptr<IDeckLinkOutput>        output_                     = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>         keyer_                      = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkAttributes>    attributes_                 = iface_cast<IDeckLinkAttributes>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration> configuration_              = iface_cast<IDeckLinkConfiguration>(decklink_);
+    std::atomic<int64_t>                  scheduled_frames_completed_ = {0};
 
     key_video_context(const configuration& config, const std::wstring& print)
         : config_(config)
@@ -274,7 +271,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
-    virtual ~key_video_context()
+    ~key_video_context()
     {
         if (output_) {
             output_->StopScheduledPlayback(0, nullptr, 0);
@@ -454,14 +451,14 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     }
 
   public:
-    decklink_consumer(const core::video_format_repository& format_repository,
-                      const configuration&                 config,
-                      const core::video_format_desc&       channel_format_desc,
-                      int                                  channel_index)
-        : format_repository_(format_repository)
+    decklink_consumer(core::video_format_repository format_repository,
+                      const configuration&          config,
+                      core::video_format_desc       channel_format_desc,
+                      int                           channel_index)
+        : format_repository_(std::move(format_repository))
         , channel_index_(channel_index)
         , config_(config)
-        , channel_format_desc_(channel_format_desc)
+        , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config, channel_format_desc_))
     {
         if (config.duplex != configuration::duplex_t::default_duplex) {
@@ -469,7 +466,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         }
 
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            key_context_.reset(new key_video_context(config, print()));
+            key_context_ = std::make_unique<key_video_context>(config, print());
         }
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -519,7 +516,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         start_playback();
     }
 
-    ~decklink_consumer()
+    ~decklink_consumer() override
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
@@ -671,7 +668,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
             if (!abort_request_) {
-                frame = std::move(buffer_.front());
+                frame = buffer_.front();
                 buffer_.pop();
             }
         }
@@ -777,16 +774,15 @@ struct decklink_consumer_proxy : public core::frame_consumer
     executor                            executor_;
 
   public:
-    explicit decklink_consumer_proxy(const core::video_format_repository& format_repository,
-                                     const configuration&                 config)
-        : format_repository_(format_repository)
+    explicit decklink_consumer_proxy(core::video_format_repository format_repository, const configuration& config)
+        : format_repository_(std::move(format_repository))
         , config_(config)
         , executor_(L"decklink_consumer[" + std::to_wstring(config.device_index) + L"]")
     {
         executor_.begin_invoke([=] { com_initialize(); });
     }
 
-    ~decklink_consumer_proxy()
+    ~decklink_consumer_proxy() override
     {
         executor_.invoke([=] {
             set_thread_realtime_priority();
@@ -800,7 +796,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_.reset(new decklink_consumer(format_repository_, config_, format_desc, channel_index));
+            consumer_ = std::make_unique<decklink_consumer>(format_repository_, config_, format_desc, channel_index);
         });
     }
 
@@ -822,7 +818,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
                                                       const core::video_format_repository& format_repository,
                                                       std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
-    if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK")) {
+    if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
     }
 
@@ -894,7 +890,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.base_buffer_depth = ptree.get(L"buffer-depth", config.base_buffer_depth);
 
     auto format_desc_str = ptree.get(L"video-mode", L"");
-    if (format_desc_str.size() > 0) {
+    if (!format_desc_str.empty()) {
         auto format_desc = format_repository.find(format_desc_str);
         if (format_desc.format == core::video_format::invalid || format_desc.format == core::video_format::custom)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));

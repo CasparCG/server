@@ -42,10 +42,7 @@
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 
-#include <tbb/concurrent_queue.h>
-
 #include <boost/algorithm/string.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
 #ifdef _MSC_VER
@@ -87,10 +84,10 @@ struct Filter
 
     Filter() {}
 
-    Filter(std::string                    filter_spec,
-           AVMediaType                    type,
-           const core::video_format_desc& format_desc,
-           com_ptr<IDeckLinkDisplayMode>  dm)
+    Filter(std::string                          filter_spec,
+           AVMediaType                          type,
+           const core::video_format_desc&       format_desc,
+           const com_ptr<IDeckLinkDisplayMode>& dm)
     {
         BMDTimeScale timeScale;
         BMDTimeValue frameDuration;
@@ -322,22 +319,22 @@ class decklink_producer : public IDeckLinkInputCallback
     Filter audio_filter_;
 
   public:
-    decklink_producer(const core::video_format_desc&              format_desc,
+    decklink_producer(core::video_format_desc                     format_desc,
                       int                                         device_index,
                       const spl::shared_ptr<core::frame_factory>& frame_factory,
                       const core::video_format_repository&        format_repository,
-                      const std::string&                          vfilter,
-                      const std::string&                          afilter,
+                      std::string                                 vfilter,
+                      std::string                                 afilter,
                       const std::wstring&                         format,
                       bool                                        freeze_on_lost)
         : device_index_(device_index)
-        , format_desc_(format_desc)
+        , format_desc_(std::move(format_desc))
         , frame_factory_(frame_factory)
         , format_repository_(format_repository)
         , freeze_on_lost_(freeze_on_lost)
         , input_format(format_desc_)
-        , vfilter_(vfilter)
-        , afilter_(afilter)
+        , vfilter_(std::move(vfilter))
+        , afilter_(std::move(afilter))
     {
         // use user-provided format if available, or choose the channel's output format
         if (!format.empty()) {
@@ -396,7 +393,7 @@ class decklink_producer : public IDeckLinkInputCallback
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    ~decklink_producer()
+    ~decklink_producer() override
     {
         if (input_ != nullptr) {
             input_->StopStreams();
@@ -659,7 +656,7 @@ class decklink_producer : public IDeckLinkInputCallback
         bool             wrong_field = false;
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);
-            if (buffer_.size() > 0) {
+            if (!buffer_.empty()) {
                 auto& candidate = buffer_.front();
                 if (candidate.second == field || candidate.second == core::video_field::progressive) {
                     frame = std::move(candidate.first);
@@ -727,7 +724,7 @@ class decklink_producer_proxy : public core::frame_producer
         });
     }
 
-    ~decklink_producer_proxy()
+    ~decklink_producer_proxy() override
     {
         executor_.invoke([=] {
             producer_.reset();

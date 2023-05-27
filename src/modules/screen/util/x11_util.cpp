@@ -22,12 +22,11 @@
 #include "x11_util.h"
 
 #include <X11/X.h>
-#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
 bool window_always_on_top(const sf::Window& window)
 {
-    Display* disp = XOpenDisplay(NULL);
+    Display* disp = XOpenDisplay(nullptr);
     if (!disp)
         return false;
 

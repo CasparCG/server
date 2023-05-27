@@ -223,7 +223,7 @@ void copy_template_hosts()
     }
 }
 
-void init(core::module_dependencies dependencies)
+void init(const core::module_dependencies& dependencies)
 {
     if (env::properties().get(L"configuration.flash.enabled", false)) {
         CASPAR_LOG(warning) << "Flash is no longer a recommended way of creating dynamic templates. Adobe have "

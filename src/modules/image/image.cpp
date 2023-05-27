@@ -40,7 +40,7 @@ namespace caspar { namespace image {
 
 std::wstring version() { return u16(FreeImage_GetVersion()); }
 
-void init(core::module_dependencies dependencies)
+void init(const core::module_dependencies& dependencies)
 {
     FreeImage_Initialise();
     dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer);
