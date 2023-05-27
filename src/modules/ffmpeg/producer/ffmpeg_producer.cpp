@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../StdAfx.h"
 
 #include "ffmpeg_producer.h"
 
@@ -41,8 +40,6 @@
 #pragma warning(push, 1)
 
 extern "C" {
-#define __STDC_CONSTANT_MACROS
-#define __STDC_LIMIT_MACROS
 #include <libavformat/avformat.h>
 }
 

@@ -19,7 +19,6 @@
  * Author: Krzysztof Zegzula, zegzulakrzysztof@gmail.com
  */
 
-#include "../StdAfx.h"
 
 #include "ndi.h"
 

@@ -10,7 +10,6 @@ set(SOURCES
 
 		newtek.cpp
 
-		StdAfx.cpp
 )
 set(HEADERS
 		consumer/newtek_ndi_consumer.h
@@ -35,7 +34,6 @@ set(HEADERS
 		interop/Processing.NDI.structs.h
 		interop/Processing.NDI.utilities.h
 
-		StdAfx.h
 )
 
 if (MSVC)
@@ -52,7 +50,25 @@ target_include_directories(newtek PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-target_precompile_headers(newtek PRIVATE "StdAfx.h")
+target_precompile_headers(newtek PRIVATE
+    <algorithm>
+    <array>
+    <deque>
+    <functional>
+    <math.h>
+    <memory>
+    <queue>
+    <string>
+    <vector>
+
+    <common/memory.h>
+
+    <common/except.h>
+    <common/log.h>
+
+    <assert.h>
+
+    )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(newtek PROPERTIES FOLDER modules)

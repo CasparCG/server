@@ -20,7 +20,6 @@
  */
 
 #include "blue_velvet.h"
-#include "../StdAfx.h"
 #include <core/video_format.h>
 
 #define IMPLEMENTATION_BLUEVELVETC_FUNC_PTR

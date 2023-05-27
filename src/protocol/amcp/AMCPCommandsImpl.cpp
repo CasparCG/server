@@ -19,7 +19,6 @@
  * Author: Nicklas P Andersson
  */
 
-#include "../StdAfx.h"
 
 #if defined(_MSC_VER)
 #pragma warning(push, 1) // TODO: Legacy code, just disable warnings

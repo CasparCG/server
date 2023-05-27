@@ -19,7 +19,6 @@
  * Author: Nicklas P Andersson
  */
 
-#include "../StdAfx.h"
 
 #include "AMCPCommand.h"
 #include "AMCPCommandQueue.h"

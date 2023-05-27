@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "StdAfx.h"
 
 #include "ffmpeg.h"
 
@@ -40,8 +39,6 @@
 #endif
 
 extern "C" {
-#define __STDC_CONSTANT_MACROS
-#define __STDC_LIMIT_MACROS
 #include <libavdevice/avdevice.h>
 #include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>

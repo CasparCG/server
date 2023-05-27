@@ -28,7 +28,6 @@ set(SOURCES
 		producer/layer.cpp
 		producer/stage.cpp
 
-		StdAfx.cpp
 		video_channel.cpp
 		video_format.cpp
 )
@@ -69,7 +68,6 @@ set(HEADERS
 
 		fwd.h
 		module_dependencies.h
-		StdAfx.h
 		video_channel.h
 		video_format.h
 )
@@ -83,7 +81,63 @@ target_include_directories(core PRIVATE
     ${SFML_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
-target_precompile_headers(core PRIVATE "StdAfx.h")
+target_precompile_headers(core PRIVATE
+    "../common/compiler/vs/disable_silly_warnings.h"
+    <GL/glew.h>
+    <SFML/Graphics.hpp>
+    <algorithm>
+    <atomic>
+    <boost/algorithm/string.hpp>
+    <boost/algorithm/string/predicate.hpp>
+    <boost/chrono/duration.hpp>
+    <boost/circular_buffer.hpp>
+    <boost/filesystem.hpp>
+    <boost/lexical_cast.hpp>
+    <boost/optional.hpp>
+    <boost/range/adaptors.hpp>
+    <boost/range/algorithm.hpp>
+    <boost/range/algorithm/equal.hpp>
+    <boost/range/distance.hpp>
+    <boost/range/iterator_range.hpp>
+    <boost/rational.hpp>
+    <boost/variant.hpp>
+    <common/array.h>
+    <common/assert.h>
+    <common/diagnostics/graph.h>
+    <common/enum_class.h>
+    <common/env.h>
+    <common/except.h>
+    <common/executor.h>
+    <common/forward.h>
+    <common/future.h>
+    <common/log.h>
+    <common/memory.h>
+    <common/memshfl.h>
+    <common/os/filesystem.h>
+    <common/prec_timer.h>
+    <common/timer.h>
+    <common/tweener.h>
+    <cstddef>
+    <cstdint>
+    <functional>
+    <future>
+    <list>
+    <map>
+    <memory>
+    <mutex>
+    <numeric>
+    <queue>
+    <set>
+    <sstream>
+    <stack>
+    <string>
+    <tbb/concurrent_queue.h>
+    <tbb/concurrent_unordered_map.h>
+    <tuple>
+    <type_traits>
+    <unordered_map>
+    <vector>
+    )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 source_group(sources ./*)

@@ -10,7 +10,6 @@ set(SOURCES
 		env.cpp
 		filesystem.cpp
 		log.cpp
-		stdafx.cpp
 		tweener.cpp
 		utf.cpp
 )
@@ -56,7 +55,6 @@ set(HEADERS
 		prec_timer.h
 		ptree.h
 		scope_exit.h
-		stdafx.h
 		timer.h
 		tweener.h
 		utf.h
@@ -70,7 +68,59 @@ target_include_directories(common PRIVATE
     ${TBB_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
-target_precompile_headers(common PRIVATE "stdafx.h")
+target_precompile_headers(common PRIVATE
+    "compiler/vs/disable_silly_warnings.h"
+    <algorithm>
+    <atomic>
+    <boost/core/null_deleter.hpp>
+    <boost/date_time/posix_time/posix_time.hpp>
+    <boost/exception/all.hpp>
+    <boost/filesystem.hpp>
+    <boost/filesystem/convenience.hpp>
+    <boost/filesystem/fstream.hpp>
+    <boost/filesystem/operations.hpp>
+    <boost/filesystem/path.hpp>
+    <GL/glew.h>
+    <boost/make_shared.hpp>
+    <boost/optional.hpp>
+    <boost/property_tree/ptree.hpp>
+    <boost/property_tree/ptree_fwd.hpp>
+    <boost/property_tree/xml_parser.hpp>
+    <boost/range/adaptor/sliced.hpp>
+    <boost/range/adaptor/transformed.hpp>
+    <boost/range/join.hpp>
+    <boost/regex.hpp>
+    <boost/shared_ptr.hpp>
+    <boost/thread.hpp>
+    <boost/throw_exception.hpp>
+    <cmath>
+    <cstddef>
+    <cstdint>
+    <cstring>
+    <ctime>
+    <exception>
+    <fstream>
+    <functional>
+    <future>
+    <initializer_list>
+    <iomanip>
+    <ios>
+    <iostream>
+    <list>
+    <locale>
+    <map>
+    <memory>
+    <mutex>
+    <ostream>
+    <stdexcept>
+    <string>
+    <tbb/concurrent_queue.h>
+    <tuple>
+    <type_traits>
+    <unordered_map>
+    <vector>
+
+   )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 

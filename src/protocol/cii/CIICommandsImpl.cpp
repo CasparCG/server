@@ -19,7 +19,6 @@
  * Author: Nicklas P Andersson
  */
 
-#include "../StdAfx.h"
 
 #pragma warning(disable : 4244)
 

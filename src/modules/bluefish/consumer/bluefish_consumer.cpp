@@ -20,7 +20,6 @@
  *         James Wise, james.wise@bluefish444.com
  */
 
-#include "../StdAfx.h"
 
 #include "../util/blue_velvet.h"
 #include "../util/memory.h"

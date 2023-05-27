@@ -19,7 +19,6 @@
  * Author: Julian Waller, julian@superfly.tv
  */
 
-#include "../StdAfx.h"
 
 #include "AMCPCommand.h"
 #include <core/producer/stage.h>

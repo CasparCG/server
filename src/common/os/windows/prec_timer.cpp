@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "../../stdafx.h"
 
 #include "../../prec_timer.h"
 

@@ -30,7 +30,6 @@ set(SOURCES
 		util/http_request.cpp
 		util/tokenize.cpp
 
-		StdAfx.cpp
 )
 set(HEADERS
 		amcp/AMCPCommand.h
@@ -71,7 +70,6 @@ set(HEADERS
 		util/http_request.h
 		util/tokenize.h
 
-		StdAfx.h
 )
 
 add_library(protocol ${SOURCES} ${HEADERS})
@@ -81,7 +79,32 @@ target_include_directories(protocol  PRIVATE
     ${BOOST_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
     )
-target_precompile_headers(protocol PRIVATE "StdAfx.h")
+target_precompile_headers(protocol PRIVATE
+    <algorithm>
+    <cmath>
+    <cstdint>
+    <deque>
+    <functional>
+    <memory>
+    <queue>
+    <set>
+    <sstream>
+    <string>
+    <vector>
+
+    <boost/asio.hpp>
+    <boost/filesystem.hpp>
+    <boost/range/algorithm.hpp>
+
+    <common/memory.h>
+    <common/utf.h>
+
+    <common/except.h>
+    <common/log.h>
+
+    <cassert>
+
+    )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 source_group(sources\\amcp amcp/*)

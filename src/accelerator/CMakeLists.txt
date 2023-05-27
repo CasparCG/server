@@ -12,7 +12,6 @@ set(SOURCES
 	ogl/util/texture.cpp
 
 	accelerator.cpp
-	StdAfx.cpp
 )
 if (MSVC)
 	set(WIN32_SPECIFIC_SOURCES
@@ -35,7 +34,6 @@ set(HEADERS
 	ogl_image_fragment.h
 
 	accelerator.h
-	StdAfx.h
 )
 if (MSVC)
 	set(WIN32_SPECIFIC_HEADERS
@@ -59,7 +57,56 @@ target_include_directories(accelerator PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     ${SFML_INCLUDE_PATH}
     )
-target_precompile_headers(accelerator PRIVATE "StdAfx.h")
+target_precompile_headers(accelerator PRIVATE
+    "../common/compiler/vs/disable_silly_warnings.h"
+    <GL/glew.h>
+    <SFML/Window/Context.hpp>
+    <algorithm>
+    <array>
+    <boost/algorithm/cxx11/all_of.hpp>
+    <boost/asio/deadline_timer.hpp>
+    <boost/asio/dispatch.hpp>
+    <boost/asio/io_context.hpp>
+    <boost/asio/io_service.hpp>
+    <boost/asio/post.hpp>
+    <boost/asio/spawn.hpp>
+    <boost/property_tree/ptree_fwd.hpp>
+    <boost/range/adaptor/transformed.hpp>
+    <boost/range/algorithm_ext/erase.hpp>
+    <cmath>
+    "../common/array.h"
+    "../common/assert.h"
+    "../common/env.h"
+    "../common/except.h"
+    "../common/forward.h"
+    "../common/future.h"
+    "../common/gl/gl_check.h"
+    "../common/memory.h"
+    "../common/scope_exit.h"
+    "../core/frame/frame.h"
+    "../core/frame/frame_transform.h"
+    "../core/frame/frame_visitor.h"
+    "../core/frame/geometry.h"
+    "../core/frame/pixel_format.h"
+    "../core/fwd.h"
+    "../core/mixer/image/blend_modes.h"
+    "../core/mixer/image/image_mixer.h"
+    "../core/video_format.h"
+    <cstddef>
+    <cstdint>
+    <future>
+    <memory>
+    <mutex>
+    <set>
+    <string>
+    <tbb/concurrent_queue.h>
+    <tbb/concurrent_unordered_map.h>
+    <thread>
+    <type_traits>
+    <unordered_map>
+    <vector>
+
+    )
 
 
 source_group(sources ./.*)

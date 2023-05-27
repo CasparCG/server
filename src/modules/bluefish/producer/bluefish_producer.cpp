@@ -21,7 +21,6 @@
  *        James Wise, james.wise@bluefish444.com
  */
 
-#include "../StdAfx.h"
 
 #include "bluefish_producer.h"
 

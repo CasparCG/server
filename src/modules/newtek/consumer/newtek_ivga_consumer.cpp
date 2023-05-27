@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag@live.com
  */
 
-#include "../StdAfx.h"
 
 #include "newtek_ivga_consumer.h"
 

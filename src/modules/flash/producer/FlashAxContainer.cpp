@@ -19,7 +19,6 @@
  * Author: Nicklas P Andersson
  */
 
-#include "../stdafx.h"
 
 #include "../interop/TimerHelper.h"
 #include "FlashAxContainer.h"

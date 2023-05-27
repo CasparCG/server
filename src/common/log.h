@@ -27,8 +27,11 @@
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/trivial.hpp>
+#pragma warning(push)
+#pragma warning(disable: 4005)
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
+#pragma warning(pop)
 #include <boost/stacktrace.hpp>
 
 #include <atomic>

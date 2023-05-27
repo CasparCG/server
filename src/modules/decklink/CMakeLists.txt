@@ -7,7 +7,6 @@ set(SOURCES
 		producer/decklink_producer.cpp
 
 		decklink.cpp
-		StdAfx.cpp
 )
 set(HEADERS
 		consumer/decklink_consumer.h
@@ -18,11 +17,9 @@ set(HEADERS
 
 		decklink.h
 		decklink_api.h
-		StdAfx.h
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
-			StdAfx.c
 			interop/DeckLinkAPI_i.c
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
@@ -60,7 +57,53 @@ target_include_directories(decklink PRIVATE
     ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-target_precompile_headers(decklink PRIVATE "StdAfx.h")
+target_compile_definitions(decklink PRIVATE
+    __STDC_CONSTANT_MACROS
+    __STDC_LIMIT_MACROS
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+)
+target_precompile_headers(decklink PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<assert.h$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<atomic$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/algorithm/string.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/circular_buffer.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/filesystem.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/property_tree/ptree.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/range.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<boost/range/algorithm.hpp$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<deque$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<math.h$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<memory$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<mutex$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<queue$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<string$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<tbb/cache_aligned_allocator.h$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<tbb/concurrent_queue.h$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>
+
+
+    $<$<COMPILE_LANGUAGE:CXX>:<atlbase.h$<ANGLE-R>>
+
+    $<$<COMPILE_LANGUAGE:CXX>:<atlcom.h$<ANGLE-R>>
+    $<$<COMPILE_LANGUAGE:CXX>:<atlhost.h$<ANGLE-R>>
+
+    $<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>
+
+    "$<$<COMPILE_LANGUAGE:CXX>:../common/except.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:../common/log.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:../common/memory.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:../common/timer.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:../common/utf.h>"
+
+
+    "$<$<COMPILE_LANGUAGE:C>:<rpc.h$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:C>:<rpcndr.h$<ANGLE-R>>"
+
+    )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 set_target_properties(decklink PROPERTIES FOLDER modules)

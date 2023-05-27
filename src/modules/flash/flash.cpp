@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include "StdAfx.h"
 
 #include "flash.h"
 #include "util/swf.h"
