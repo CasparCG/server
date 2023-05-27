@@ -81,7 +81,7 @@ class frame_producer
         return frame;
     }
 
-    virtual draw_frame receive_impl(const video_field field, int nb_samples) { return core::draw_frame{}; }
+    virtual draw_frame receive_impl(const video_field field, int nb_samples) = 0;
 
     virtual std::future<std::wstring> call(const std::vector<std::wstring>& params)
     {
@@ -90,7 +90,7 @@ class frame_producer
 
     virtual core::monitor::state state() const = 0;
     virtual std::wstring         print() const = 0;
-    virtual std::wstring         name() const { return L"frame_producer"; }
+    virtual std::wstring         name() const = 0;
     virtual uint32_t             frame_number() const { return frame_number_; }
     virtual uint32_t             nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
     virtual draw_frame           last_frame(const video_field field)
@@ -135,6 +135,8 @@ class const_producer : public core::frame_producer
     }
 
     core::draw_frame first_frame(const core::video_field field) override { return last_frame(field); }
+
+    core::draw_frame receive_impl(const video_field field, int nb_samples) override { return last_frame(field); }
 
     std::wstring name() const override { return L"const_producer"; }
 
