@@ -7,4 +7,9 @@ docker pull $IMAGE_CEF || docker build -t $IMAGE_CEF --build-arg PROC_COUNT --bu
 docker pull $IMAGE_BOOST || docker build -t $IMAGE_BOOST --build-arg PROC_COUNT --build-arg IMAGE_BASE tools/linux/boost
 docker pull $IMAGE_FFMPEG || docker build -t $IMAGE_FFMPEG --build-arg PROC_COUNT --build-arg IMAGE_BASE tools/linux/ffmpeg
 
-# TODO - push images if auth variables are defined
+if [ "$CASPARCG_PUSH_IMAGES" = true ]; then
+  docker push $IMAGE_BASE
+  docker push $IMAGE_CEF
+  docker push $IMAGE_BOOST
+  docker push $IMAGE_FFMPEG
+fi

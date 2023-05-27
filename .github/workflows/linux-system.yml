@@ -24,7 +24,6 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo ./tools/linux/install-dependencies
-                  sudo ./tools/linux/extract-deps-from-docker
 
                   sudo apt-get install -y libboost-all-dev \
                     libavcodec-dev \
@@ -35,6 +34,13 @@ jobs:
                     libswscale-dev \
                     libpostproc-dev \
                     libswresample-dev
+
+            - name: Extract docker dependencies
+              run: |
+                  ./tools/linux/ensure-base-images
+                  sudo ./tools/linux/extract-deps-from-docker
+              env:
+                  CI: 1
 
             - name: Run build
               run: |
