@@ -25,12 +25,12 @@ class mutable_frame final
                            const struct pixel_format_desc&  desc,
                            commit_t                         commit = nullptr);
     mutable_frame(const mutable_frame&) = delete;
-    mutable_frame(mutable_frame&& other);
+    mutable_frame(mutable_frame&& other) noexcept;
 
     ~mutable_frame();
 
     mutable_frame& operator=(const mutable_frame&) = delete;
-    mutable_frame& operator=(mutable_frame&& other);
+    mutable_frame& operator                        =(mutable_frame&& other);
 
     void swap(mutable_frame& other);
 

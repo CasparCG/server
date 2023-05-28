@@ -41,7 +41,7 @@ struct mutable_frame::impl
     frame_geometry                   geometry_ = frame_geometry::get_default();
     mutable_frame::commit_t          commit_;
 
-    impl(const impl&)            = delete;
+    impl(const impl&) = delete;
     impl& operator=(const impl&) = delete;
 
     impl(const void*                      tag,
@@ -66,7 +66,7 @@ mutable_frame::mutable_frame(const void*                      tag,
     : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, std::move(commit)))
 {
 }
-mutable_frame::mutable_frame(mutable_frame&& other)
+mutable_frame::mutable_frame(mutable_frame&& other) noexcept
     : impl_(std::move(other.impl_))
 {
 }
@@ -91,7 +91,7 @@ struct const_frame::impl
 {
     std::vector<array<const std::uint8_t>> image_data_;
     array<const std::int32_t>              audio_data_;
-    core::pixel_format_desc                desc_     = pixel_format::invalid;
+    core::pixel_format_desc                desc_     = core::pixel_format_desc(pixel_format::invalid);
     frame_geometry                         geometry_ = frame_geometry::get_default();
     boost::any                             opaque_;
 

@@ -66,7 +66,7 @@ struct pixel_format_desc final
 
     pixel_format_desc() = default;
 
-    pixel_format_desc(pixel_format format)
+    explicit pixel_format_desc(pixel_format format)
         : format(format)
     {
     }

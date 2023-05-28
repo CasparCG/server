@@ -28,13 +28,7 @@
 #include "producer/image_producer.h"
 #include "producer/image_scroll_producer.h"
 
-#include <core/consumer/frame_consumer.h>
-#include <core/producer/frame_producer.h>
-
 #include <common/utf.h>
-
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace image {
 

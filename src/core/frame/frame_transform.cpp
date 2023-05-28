@@ -24,6 +24,7 @@
 #include <boost/range/algorithm/equal.hpp>
 
 #include <cmath>
+#include <utility>
 
 namespace caspar { namespace core {
 
@@ -60,7 +61,7 @@ image_transform& image_transform::operator*=(const image_transform& other)
     // TODO (fix)
     auto aspect_ratio = 1.0;
 
-    std::array<double, 2> rotated;
+    std::array<double, 2> rotated{};
 
     auto orig_x = other.fill_translation[0];
     auto orig_y = other.fill_translation[1] / aspect_ratio;
@@ -115,7 +116,7 @@ image_transform image_transform::operator*(const image_transform& other) const
 double do_tween(double time, double source, double dest, double duration, const tweener& tween)
 {
     return tween(time, source, dest - source, duration);
-};
+}
 
 template <typename Rect>
 void do_tween_rectangle(const Rect&    source,
@@ -144,7 +145,7 @@ void do_tween_corners(const corners& source,
     out.ur[1] = do_tween(time, source.ur[1], dest.ur[1], duration, tweener);
     out.ll[0] = do_tween(time, source.ll[0], dest.ll[0], duration, tweener);
     out.ll[1] = do_tween(time, source.ll[1], dest.ll[1], duration, tweener);
-};
+}
 
 image_transform image_transform::tween(double                 time,
                                        const image_transform& source,
@@ -199,7 +200,7 @@ image_transform image_transform::tween(double                 time,
     return result;
 }
 
-bool eq(double lhs, double rhs) { return std::abs(lhs - rhs) < 5e-8; };
+bool eq(double lhs, double rhs) { return std::abs(lhs - rhs) < 5e-8; }
 
 bool operator==(const corners& lhs, const corners& rhs)
 {
@@ -263,7 +264,7 @@ bool operator==(const audio_transform& lhs, const audio_transform& rhs) { return
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return !(lhs == rhs); }
 
 // frame_transform
-frame_transform::frame_transform() {}
+frame_transform::frame_transform() = default;
 
 frame_transform& frame_transform::operator*=(const frame_transform& other)
 {
@@ -301,11 +302,11 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs) { return
 tweened_transform::tweened_transform(const frame_transform& source,
                                      const frame_transform& dest,
                                      int                    duration,
-                                     const tweener&         tween)
+                                     tweener                tween)
     : source_(source)
     , dest_(dest)
     , duration_(duration)
-    , tweener_(tween)
+    , tweener_(std::move(tween))
 {
 }
 

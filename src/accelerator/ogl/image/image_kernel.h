@@ -39,7 +39,7 @@ enum class keyer
 
 struct draw_params final
 {
-    core::pixel_format_desc                     pix_desc = core::pixel_format::invalid;
+    core::pixel_format_desc                     pix_desc = core::pixel_format_desc(core::pixel_format::invalid);
     std::vector<spl::shared_ptr<class texture>> textures;
     core::image_transform                       transform;
     core::frame_geometry                        geometry   = core::frame_geometry::get_default();

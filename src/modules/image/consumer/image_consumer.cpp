@@ -21,16 +21,15 @@
 
 #include "image_consumer.h"
 
+#if defined(_MSC_VER)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#if defined(_MSC_VER)
 #include <windows.h>
 #endif
 #include <FreeImage.h>
 
 #include <common/array.h>
 #include <common/env.h>
-#include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/utf.h>
@@ -42,9 +41,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include <tbb/concurrent_queue.h>
-
-#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -98,7 +94,7 @@ struct image_consumer : public core::frame_consumer
                 FreeImage_Save(FIF_PNG, bitmap.get(), u8(filename2).c_str(), 0);
 #endif
             } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
+                CASPAR_LOG_CURRENT_EXCEPTION()
             }
         });
         async.detach();

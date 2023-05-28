@@ -130,7 +130,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
     int linesizes[4];
     av_image_fill_linesizes(linesizes, pix_fmt, width);
 
-    core::pixel_format_desc desc = get_pixel_format(pix_fmt);
+    core::pixel_format_desc desc = core::pixel_format_desc(get_pixel_format(pix_fmt));
 
     switch (desc.format) {
         case core::pixel_format::gray:

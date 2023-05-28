@@ -47,7 +47,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <algorithm>
 #include <set>
@@ -89,10 +88,8 @@ struct image_producer : public core::frame_producer
     void load(const std::shared_ptr<FIBITMAP>& bitmap)
     {
         FreeImage_FlipVertical(bitmap.get());
-        core::pixel_format_desc desc;
-        desc.format = core::pixel_format::bgra;
-        desc.planes.push_back(
-            core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+        core::pixel_format_desc desc(core::pixel_format::bgra);
+        desc.planes.emplace_back(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4);
         auto frame = frame_factory_->create_frame(this, desc);
 
         std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
@@ -120,18 +117,18 @@ struct image_producer : public core::frame_producer
     core::monitor::state state() const override { return state_; }
 };
 
-class ieq
-{
-    std::wstring test_;
-
-  public:
-    explicit ieq(std::wstring test)
-        : test_(std::move(test))
-    {
-    }
-
-    bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
-};
+//class ieq
+//{
+//    std::wstring test_;
+//
+//  public:
+//    explicit ieq(std::wstring test)
+//        : test_(std::move(test))
+//    {
+//    }
+//
+//    bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
+//};
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
