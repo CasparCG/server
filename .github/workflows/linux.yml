@@ -24,14 +24,14 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
               env:
-                  has_token: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' }}
+                  has_token: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' && github.event_name == 'push' }}
 
             - name: Prepare dependencies
               run: |
                   ./tools/linux/ensure-base-images
               env:
                   CI: 1
-                  CASPARCG_PUSH_IMAGES: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' }}
+                  CASPARCG_PUSH_IMAGES: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' && github.event_name == 'push' }}
 
             - name: Run build
               run: |
