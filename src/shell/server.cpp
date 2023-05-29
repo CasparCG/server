@@ -110,7 +110,7 @@ struct server::impl
     spl::shared_ptr<core::frame_consumer_registry>         consumer_registry_;
     std::function<void(bool)>                              shutdown_server_now_;
 
-    impl(const impl&)            = delete;
+    impl(const impl&) = delete;
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
@@ -393,7 +393,8 @@ struct server::impl
             shutdown_server_now_,
             u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1")),
             u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000")),
-            ogl_device);
+            ogl_device,
+            spl::make_shared_ptr(osc_client_));
 
         amcp_context_factory_ = std::make_shared<amcp::command_context_factory>(ctx);
 

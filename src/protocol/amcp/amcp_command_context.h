@@ -27,6 +27,7 @@
 #include <accelerator/accelerator.h>
 #include <core/consumer/frame_consumer.h>
 #include <future>
+#include <protocol/osc/client.h>
 #include <utility>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -42,6 +43,7 @@ struct amcp_command_static_context
     const std::string                                          proxy_host;
     const std::string                                          proxy_port;
     std::weak_ptr<accelerator::accelerator_device>             ogl_device;
+    const spl::shared_ptr<osc::client>                         osc_client;
 
     amcp_command_static_context(core::video_format_repository                               format_repository,
                                 const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
@@ -51,7 +53,8 @@ struct amcp_command_static_context
                                 std::function<void(bool)>                                   shutdown_server_now,
                                 std::string                                                 proxy_host,
                                 std::string                                                 proxy_port,
-                                std::weak_ptr<accelerator::accelerator_device>              ogl_device)
+                                std::weak_ptr<accelerator::accelerator_device>              ogl_device,
+                                const spl::shared_ptr<osc::client>&                         osc_client)
         : format_repository(std::move(format_repository))
         , cg_registry(cg_registry)
         , producer_registry(producer_registry)
@@ -61,6 +64,7 @@ struct amcp_command_static_context
         , proxy_host(std::move(proxy_host))
         , proxy_port(std::move(proxy_port))
         , ogl_device(std::move(ogl_device))
+        , osc_client(osc_client)
     {
     }
 };
