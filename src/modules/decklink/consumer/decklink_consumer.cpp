@@ -831,7 +831,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
         }
 
         if (config_.keyer == configuration::keyer_t::external_keyer) {
-            auto a                  = L"external";
             state["decklink/keyer"] = std::wstring(L"external");
         } else if (config_.keyer == configuration::keyer_t::internal_keyer) {
             state["decklink/keyer"] = std::wstring(L"internal");
