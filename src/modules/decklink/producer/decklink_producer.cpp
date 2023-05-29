@@ -511,6 +511,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 std::lock_guard<std::mutex> lock(state_mutex_);
                 state_["file/name"]              = model_name_;
                 state_["file/path"]              = device_index_;
+                state_["file/format"]            = format_desc_.name;
                 state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
                 state_["file/audio/channels"]    = format_desc_.audio_channels;
                 state_["file/fps"]               = format_desc_.fps;

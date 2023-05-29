@@ -77,9 +77,10 @@ class transition_producer : public frame_producer
 
     void update_state()
     {
-        state_                     = dst_producer_->state();
-        state_["transition/frame"] = {current_frame_, info_.duration};
-        state_["transition/type"]  = [&]() -> std::string {
+        state_                        = dst_producer_->state();
+        state_["transition/producer"] = dst_producer_->name();
+        state_["transition/frame"]    = {current_frame_, info_.duration};
+        state_["transition/type"]     = [&]() -> std::string {
             switch (info_.type) {
                 case transition_type::mix:
                     return "mix";
