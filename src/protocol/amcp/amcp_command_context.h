@@ -27,6 +27,7 @@
 #include <accelerator/accelerator.h>
 #include <core/consumer/frame_consumer.h>
 #include <future>
+#include <utility>
 
 namespace caspar { namespace protocol { namespace amcp {
 
@@ -38,27 +39,27 @@ struct amcp_command_static_context
     const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     const std::shared_ptr<amcp_command_repository>             parser;
     std::function<void(bool)>                                  shutdown_server_now;
-    std::string                                                proxy_host;
-    std::string                                                proxy_port;
+    const std::string                                          proxy_host;
+    const std::string                                          proxy_port;
     std::weak_ptr<accelerator::accelerator_device>             ogl_device;
 
-    amcp_command_static_context(const core::video_format_repository&                       format_repository,
-                                const spl::shared_ptr<core::cg_producer_registry>          cg_registry,
-                                const spl::shared_ptr<const core::frame_producer_registry> producer_registry,
-                                const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
-                                const std::shared_ptr<amcp_command_repository>             parser,
-                                std::function<void(bool)>                                  shutdown_server_now,
-                                std::string                                                proxy_host,
-                                std::string                                                proxy_port,
-                                std::weak_ptr<accelerator::accelerator_device>             ogl_device)
+    amcp_command_static_context(core::video_format_repository                               format_repository,
+                                const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
+                                const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
+                                const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
+                                std::shared_ptr<amcp_command_repository>                    parser,
+                                std::function<void(bool)>                                   shutdown_server_now,
+                                std::string                                                 proxy_host,
+                                std::string                                                 proxy_port,
+                                std::weak_ptr<accelerator::accelerator_device>              ogl_device)
         : format_repository(std::move(format_repository))
-        , cg_registry(std::move(cg_registry))
-        , producer_registry(std::move(producer_registry))
-        , consumer_registry(std::move(consumer_registry))
+        , cg_registry(cg_registry)
+        , producer_registry(producer_registry)
+        , consumer_registry(consumer_registry)
         , parser(std::move(parser))
-        , shutdown_server_now(shutdown_server_now)
-        , proxy_host(proxy_host)
-        , proxy_port(proxy_port)
+        , shutdown_server_now(std::move(shutdown_server_now))
+        , proxy_host(std::move(proxy_host))
+        , proxy_port(std::move(proxy_port))
         , ogl_device(std::move(ogl_device))
     {
     }
@@ -77,15 +78,15 @@ struct command_context
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
     command_context(std::shared_ptr<amcp_command_static_context> static_context,
-                    const std::vector<channel_context>           channels,
-                    IO::ClientInfoPtr                            client,
+                    std::vector<channel_context>                 channels,
+                    const IO::ClientInfoPtr&                     client,
                     channel_context                              channel,
                     int                                          channel_index,
                     int                                          layer_id)
-        : static_context(static_context)
+        : static_context(std::move(static_context))
         , channels(std::move(channels))
-        , client(std::move(client))
-        , channel(channel)
+        , client(client)
+        , channel(std::move(channel))
         , channel_index(channel_index)
         , layer_id(layer_id)
     {

@@ -123,7 +123,8 @@ class AMCPProtocolStrategy
 
     // The parser method expects message to be complete messages with the delimiter stripped away.
     // Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
-    void parse(const std::wstring& message, ClientInfoPtr client, const std::shared_ptr<AMCPClientBatchInfo>& batch)
+    void
+    parse(const std::wstring& message, const ClientInfoPtr& client, const std::shared_ptr<AMCPClientBatchInfo>& batch)
     {
         std::list<std::wstring> tokens;
         IO::tokenize(message, tokens);
@@ -177,7 +178,7 @@ class AMCPProtocolStrategy
     }
 
   private:
-    error_state parse_command_string(ClientInfoPtr                               client,
+    error_state parse_command_string(const ClientInfoPtr&                        client,
                                      const std::shared_ptr<AMCPClientBatchInfo>& batch,
                                      std::list<std::wstring>                     tokens,
                                      std::wstring&                               request_id,
@@ -310,7 +311,7 @@ class AMCPClientStrategy : public IO::protocol_strategy<wchar_t>
 class amcp_client_strategy_factory : public IO::protocol_strategy_factory<wchar_t>
 {
   public:
-    amcp_client_strategy_factory(const std::shared_ptr<AMCPProtocolStrategy> strategy)
+    explicit amcp_client_strategy_factory(const std::shared_ptr<AMCPProtocolStrategy>& strategy)
         : strategy_(strategy)
     {
     }
@@ -327,7 +328,7 @@ class amcp_client_strategy_factory : public IO::protocol_strategy_factory<wchar_
 IO::protocol_strategy_factory<char>::ptr
 create_char_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
 {
-    auto amcp_strategy = spl::make_shared<AMCPProtocolStrategy>(std::move(name), repo);
+    auto amcp_strategy = spl::make_shared<AMCPProtocolStrategy>(name, repo);
     auto amcp_client   = spl::make_shared<amcp_client_strategy_factory>(amcp_strategy);
     auto to_unicode    = spl::make_shared<IO::to_unicode_adapter_factory>("UTF-8", amcp_client);
     return spl::make_shared<IO::delimiter_based_chunking_strategy_factory<char>>("\r\n", to_unicode);
@@ -336,7 +337,7 @@ create_char_amcp_strategy_factory(const std::wstring& name, const spl::shared_pt
 IO::protocol_strategy_factory<wchar_t>::ptr
 create_wchar_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
 {
-    auto amcp_strategy = spl::make_shared<AMCPProtocolStrategy>(std::move(name), repo);
+    auto amcp_strategy = spl::make_shared<AMCPProtocolStrategy>(name, repo);
     auto amcp_client   = spl::make_shared<amcp_client_strategy_factory>(amcp_strategy);
     return spl::make_shared<IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", amcp_client);
 }

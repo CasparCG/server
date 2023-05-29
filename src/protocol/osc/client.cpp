@@ -221,6 +221,6 @@ std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp:
     return impl_->get_subscription_token(endpoint);
 }
 
-void client::send(core::monitor::state state) { impl_->send(state); }
+void client::send(const core::monitor::state& state) { impl_->send(state); }
 
 }}} // namespace caspar::protocol::osc
