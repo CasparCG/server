@@ -91,13 +91,13 @@ struct configuration
     bool      key_only          = false;
     int       base_buffer_depth = 3;
 
-    core::video_format format   = core::video_format::invalid;
-    int                src_x    = 0;
-    int                src_y    = 0;
-    int                dest_x   = 0;
-    int                dest_y   = 0;
-    int                region_w = 0;
-    int                region_h = 0;
+    core::video_format_desc format;
+    int                     src_x    = 0;
+    int                     src_y    = 0;
+    int                     dest_x   = 0;
+    int                     dest_y   = 0;
+    int                     region_w = 0;
+    int                     region_h = 0;
 
     int buffer_depth() const
     {
@@ -106,6 +106,11 @@ struct configuration
     }
 
     int key_device_index() const { return key_device_idx == 0 ? device_index + 1 : key_device_idx; }
+
+    bool has_subregion_geometry() const
+    {
+        return src_x != 0 || src_y != 0 || region_w != 0 || region_h != 0 || dest_x != 0 || dest_y != 0;
+    }
 };
 
 template <typename Configuration>
@@ -350,8 +355,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
 
         int firstLine = topField ? 0 : 1;
 
-        if (channel_format_desc_.format == decklink_format_desc_.format && config_.src_x == 0 && config_.src_y == 0 &&
-            config_.region_w == 0 && config_.region_h == 0 && config_.dest_x == 0 && config_.dest_y == 0) {
+        if (channel_format_desc_.format == decklink_format_desc_.format && !config_.has_subregion_geometry()) {
             // Fast path
             size_t byte_count_line = (size_t)decklink_format_desc_.width * 4;
             for (int y = firstLine; y < decklink_format_desc_.height; y += decklink_format_desc_.field_count) {
@@ -432,12 +436,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     core::video_format_desc get_decklink_format(const configuration&           config,
                                                 const core::video_format_desc& channel_format_desc)
     {
-        if (config.format != core::video_format::invalid && config.format != channel_format_desc.format) {
-            auto decklink_format = format_repository_.find_format(config.format);
-            if (decklink_format.format != core::video_format::invalid &&
-                decklink_format.format != core::video_format::custom &&
-                decklink_format.framerate == channel_format_desc.framerate) {
-                return decklink_format;
+        if (config.format.format != core::video_format::invalid && config.format.format != channel_format_desc.format) {
+            if (config.format.format != core::video_format::invalid &&
+                config.format.format != core::video_format::custom &&
+                config.format.framerate == channel_format_desc.framerate) {
+                return config.format;
             } else {
                 CASPAR_LOG(warning) << L"Ignoring specified format for decklink";
             }
@@ -631,7 +634,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
             }
 
             std::shared_ptr<void>     image_data(scalable_aligned_malloc(decklink_format_desc_.size, 64),
-                                             scalable_aligned_free);
+                                                 scalable_aligned_free);
             std::vector<std::int32_t> audio_data;
 
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
@@ -816,8 +819,41 @@ struct decklink_consumer_proxy : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["decklink/index"] = config_.device_index;
-        state["decklink/embedded_audio"] = config_.embedded_audio;
+
+        state["decklink/index"]          = config_.device_index;
+        state["decklink/embedded-audio"] = config_.embedded_audio;
+        state["decklink/key-only"]       = config_.key_only;
+        state["decklink/buffer-depth"]   = config_.base_buffer_depth;
+        if (config_.format.format == core::video_format::invalid) {
+            state["decklink/video-mode"] = format_desc_.name;
+        } else {
+            state["decklink/video-mode"] = config_.format.name;
+        }
+
+        if (config_.keyer == configuration::keyer_t::external_keyer) {
+            auto a                  = L"external";
+            state["decklink/keyer"] = std::wstring(L"external");
+        } else if (config_.keyer == configuration::keyer_t::internal_keyer) {
+            state["decklink/keyer"] = std::wstring(L"internal");
+        } else if (config_.keyer == configuration::keyer_t::external_separate_device_keyer) {
+            state["decklink/keyer"] = std::wstring(L"external_separate_device");
+        }
+
+        if (config_.latency == configuration::latency_t::low_latency) {
+            state["decklink/latency"] = std::wstring(L"low");
+        } else if (config_.latency == configuration::latency_t::normal_latency) {
+            state["decklink/latency"] = std::wstring(L"normal");
+        }
+
+        if (config_.has_subregion_geometry()) {
+            state["decklink/subregion/src-x"]  = config_.src_x;
+            state["decklink/subregion/src-y"]  = config_.src_y;
+            state["decklink/subregion/src-x"]  = config_.dest_x;
+            state["decklink/subregion/dest-y"] = config_.dest_y;
+            state["decklink/subregion/width"]  = config_.region_w;
+            state["decklink/subregion/height"] = config_.region_h;
+        }
+
         return state;
     }
 };
@@ -902,7 +938,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         auto format_desc = format_repository.find(format_desc_str);
         if (format_desc.format == core::video_format::invalid || format_desc.format == core::video_format::custom)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
-        config.format = format_desc.format;
+        config.format = format_desc;
     }
 
     auto subregion_tree = ptree.get_child_optional(L"subregion");

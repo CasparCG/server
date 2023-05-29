@@ -263,7 +263,8 @@ struct newtek_ndi_producer : public core::frame_producer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["ndi/name"] = u8(name_);
+        state["ndi/name"]          = u8(name_);
+        state["ndi/low_bandwidth"] = low_bandwidth_;
         return state;
     }
 

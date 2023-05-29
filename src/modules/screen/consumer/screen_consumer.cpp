@@ -497,9 +497,9 @@ struct screen_consumer
         if (config_.sbs_key) {
             draw_coords_ = {
                 // First half fill
-                {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
-                {0, target_ratio.second, 1.0, 0.0},                   // upper right
-                {0, -target_ratio.second, 1.0, 1.0},                  // lower right
+                {-target_ratio.first, target_ratio.second, 0.0, 0.0},  // upper left
+                {0, target_ratio.second, 1.0, 0.0},                    // upper right
+                {0, -target_ratio.second, 1.0, 1.0},                   // lower right
 
                 {-target_ratio.first, target_ratio.second, 0.0, 0.0},  // upper left
                 {0, -target_ratio.second, 1.0, 1.0},                   // lower right
@@ -598,7 +598,10 @@ struct screen_consumer_proxy : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["screen/index"] = config_.screen_index;
+        state["screen/name"]          = config_.name;
+        state["screen/index"]         = config_.screen_index;
+        state["screen/key_only"]      = config_.key_only;
+        state["screen/always_on_top"] = config_.always_on_top;
         return state;
     }
 };
