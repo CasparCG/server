@@ -4,7 +4,7 @@
 
 #include <windows.h>
 
-#include "common/utf.h"
+#include "../../utf.h"
 
 namespace caspar {
 

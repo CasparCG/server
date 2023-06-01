@@ -49,11 +49,11 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/regex.hpp>
 
-#include "common/memory.h"
-#include "common/utf.h"
+#include <common/memory.h>
+#include <common/utf.h>
 
-#include "common/except.h"
-#include "common/log.h"
+#include <common/except.h>
+#include <common/log.h>
 #endif
 #include <rpc.h>
 #include <rpcndr.h>
