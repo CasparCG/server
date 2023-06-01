@@ -32,7 +32,7 @@
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/range/join.hpp>
 
-#include "include/common/except.h"
+#include "except.h"
 
 namespace caspar {
 

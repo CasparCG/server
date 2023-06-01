@@ -23,7 +23,7 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
-#include "common/compiler/vs/disable_silly_warnings.h"
+#include "../common/compiler/vs/disable_silly_warnings.h"
 
 #if defined _DEBUG && defined _MSC_VER
 #include <crtdbg.h>

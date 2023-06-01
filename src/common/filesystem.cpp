@@ -18,7 +18,7 @@
  *
  * Author: Helge Norberg, helge.norberg@svt.se
  */
-#include "include/common/except.h"
+#include "except.h"
 
 #include "filesystem.h"
 

@@ -35,9 +35,9 @@
 #include <string>
 #include <vector>
 
-#include <common/memory.h>
+#include "../common/memory.h"
 
-#include <common/except.h>
-#include <common/log.h>
+#include "../common/except.h"
+#include "../common/log.h"
 
 #include <assert.h>

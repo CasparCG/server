@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/except.h"
+#include "except.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>

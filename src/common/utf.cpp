@@ -18,7 +18,7 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-#include "include/common/utf.h"
+#include "utf.h"
 
 #pragma warning(push, 1)
 

@@ -19,7 +19,7 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#include <common/compiler/vs/disable_silly_warnings.h>
+#include "../common/compiler/vs/disable_silly_warnings.h"
 #include <algorithm>
 #include <atomic>
 #include <boost/algorithm/string/predicate.hpp>

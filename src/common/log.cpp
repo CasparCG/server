@@ -18,9 +18,9 @@
  *
  * Author: Robert Nagy, ronag89@gmail.com
  */
-#include "include/common/log.h"
+#include "log.h"
 
-#include "include/common/except.h"
+#include "except.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>

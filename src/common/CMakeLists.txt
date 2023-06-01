@@ -15,7 +15,7 @@ set(SOURCES
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
-			include/common/compiler/vs/disable_silly_warnings.h
+			compiler/vs/disable_silly_warnings.h
 
 			os/windows/filesystem.cpp
 			os/windows/prec_timer.cpp
@@ -35,7 +35,7 @@ set(HEADERS
 		gl/gl_check.h
 
 		os/filesystem.h
-		include/common/os/thread.h
+		os/thread.h
 
 		array.h
 		assert.h
@@ -43,29 +43,26 @@ set(HEADERS
 		endian.h
 		enum_class.h
 		env.h
-		include/common/executor.h
-		include/common/except.h
+		executor.h
+		except.h
 		filesystem.h
 		forward.h
 		future.h
-		include/common/log.h
-		include/common/memory.h
+		log.h
+		memory.h
 		memshfl.h
 		param.h
 		prec_timer.h
 		ptree.h
 		scope_exit.h
 		stdafx.h
-		include/common/timer.h
+		timer.h
 		tweener.h
-		include/common/utf.h
+		utf.h
 )
 
 add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 target_compile_features(common PRIVATE cxx_std_14)
-target_include_directories(common PUBLIC
-    include
-)
 target_include_directories(common PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
