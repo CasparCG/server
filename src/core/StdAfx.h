@@ -19,9 +19,7 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-#if defined _MSC_VER
-#include "../common/compiler/vs/disable_silly_warnings.h"
-#endif
+
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <algorithm>
@@ -40,6 +38,7 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/rational.hpp>
 #include <boost/variant.hpp>
+#include <common/compiler/vs/disable_silly_warnings.h>
 #include <common/array.h>
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>

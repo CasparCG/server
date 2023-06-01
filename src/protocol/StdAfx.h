@@ -51,10 +51,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include "../common/memory.h"
-#include "../common/utf.h"
+#include <common/memory.h>
+#include <common/utf.h>
 
-#include "../common/except.h"
-#include "../common/log.h"
+#include <common/except.h>
+#include <common/log.h>
 
 #include <cassert>
