@@ -23,7 +23,7 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
-#include "../common/compiler/vs/disable_silly_warnings.h"
+#include <common/compiler/vs/disable_silly_warnings.h>
 
 #if defined _DEBUG && defined _MSC_VER
 #include <crtdbg.h>
@@ -49,11 +49,11 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/regex.hpp>
 
-#include "../common/memory.h"
-#include "../common/utf.h"
+#include <common/memory.h>
+#include <common/utf.h>
 
-#include "../common/except.h"
-#include "../common/log.h"
+#include <common/except.h>
+#include <common/log.h>
 #endif
 #include <rpc.h>
 #include <rpcndr.h>

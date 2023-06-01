@@ -201,8 +201,6 @@ if (POLICY CMP0045)
 	cmake_policy(SET CMP0045 OLD)
 endif ()
 
-include(CMakeModules/PrecompiledHeader.cmake)
-
 add_subdirectory(tools)
 add_subdirectory(accelerator)
 add_subdirectory(common)

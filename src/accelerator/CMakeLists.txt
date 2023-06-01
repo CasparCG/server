@@ -12,7 +12,6 @@ set(SOURCES
 	ogl/util/texture.cpp
 
 	accelerator.cpp
-	StdAfx.cpp
 )
 if (MSVC)
 	set(WIN32_SPECIFIC_SOURCES
@@ -59,7 +58,7 @@ target_include_directories(accelerator PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     ${SFML_INCLUDE_PATH}
     )
-add_precompiled_header(accelerator StdAfx.h FORCEINCLUDE)
+target_precompile_headers(accelerator PRIVATE "StdAfx.h")
 
 
 source_group(sources ./.*)

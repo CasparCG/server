@@ -10,7 +10,6 @@ set(SOURCES
 		env.cpp
 		filesystem.cpp
 		log.cpp
-		stdafx.cpp
 		tweener.cpp
 		utf.cpp
 )
@@ -70,9 +69,9 @@ target_include_directories(common PRIVATE
     ${TBB_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
-add_precompiled_header(common stdafx.h FORCEINCLUDE)
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+target_precompile_headers(common PRIVATE "stdafx.h")
 
+configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 source_group(sources ./*)
 source_group(sources\\gl gl/*)

@@ -31,6 +31,7 @@
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
 #include <cinttypes>
+#include <common/compiler/vs/disable_silly_warnings.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/except.h>

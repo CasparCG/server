@@ -10,8 +10,6 @@ set(SOURCES
 		util/swf.cpp
 
 		flash.cpp
-		StdAfx.c
-		StdAfx.cpp
 )
 set(HEADERS
 		interop/axflash.h
@@ -35,7 +33,7 @@ target_include_directories(flash PRIVATE
     ${TBB_INCLUDE_PATH}
     ${ZLIB_INCLUDE_PATH}
     )
-add_precompiled_header(flash StdAfx.h FORCEINCLUDE)
+target_precompile_headers(flash PRIVATE "StdAfx.h")
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 
