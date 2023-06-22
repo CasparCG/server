@@ -36,6 +36,7 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/logic/tribool.hpp>
 
 #pragma warning(push, 1)
