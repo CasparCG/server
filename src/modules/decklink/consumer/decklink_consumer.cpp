@@ -127,13 +127,53 @@ void set_latency(const com_iface_ptr<Configuration>& config,
     }
 }
 
-void set_duplex(const com_iface_ptr<IDeckLinkAttributes>&    attributes,
-                const com_iface_ptr<IDeckLinkConfiguration>& config,
-                configuration::duplex_t                      duplex,
-                const std::wstring&                          print)
+com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkOutput>& device,
+                                               core::video_format                    fmt,
+                                               BMDPixelFormat                        pix_fmt,
+                                               BMDSupportedVideoModeFlags            flag)
+{
+    auto format = get_decklink_video_format(fmt);
+
+    IDeckLinkDisplayMode*         m = nullptr;
+    IDeckLinkDisplayModeIterator* iter;
+    if (SUCCEEDED(device->GetDisplayModeIterator(&iter))) {
+        auto iterator = wrap_raw<com_ptr>(iter, true);
+        while (SUCCEEDED(iterator->Next(&m)) && m != nullptr && m->GetDisplayMode() != format) {
+            m->Release();
+        }
+    }
+
+    if (!m)
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Device could not find requested video-format: " + std::to_string(format)));
+
+    com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
+
+    BMDDisplayMode actualMode = bmdModeUnknown;
+    BOOL           supported  = false;
+
+    if (FAILED(device->DoesSupportVideoMode(
+            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, flag, &actualMode, &supported)))
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+                               << msg_info(L"Could not determine whether device supports requested video format: " +
+                                           get_mode_name(mode)));
+    else if (!supported)
+        CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
+    else if (actualMode != bmdModeUnknown)
+        CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
+
+    return mode;
+}
+
+void set_duplex(const com_iface_ptr<IDeckLinkAttributes_v10_11>&    attributes,
+                const com_iface_ptr<IDeckLinkConfiguration_v10_11>& config,
+                configuration::duplex_t                             duplex,
+                const std::wstring&                                 print)
 {
     BOOL supportsDuplexModeConfiguration;
-    if (FAILED(attributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, &supportsDuplexModeConfiguration))) {
+    if (FAILED(
+            attributes->GetFlag(static_cast<BMDDeckLinkAttributeID>(BMDDeckLinkSupportsDuplexModeConfiguration_v10_11),
+                                &supportsDuplexModeConfiguration))) {
         CASPAR_LOG(error) << print
                           << L" Failed to set duplex mode, unable to check if card supports duplex mode setting.";
     };
@@ -143,23 +183,24 @@ void set_duplex(const com_iface_ptr<IDeckLinkAttributes>&    attributes,
         return;
     }
 
-    std::map<configuration::duplex_t, BMDDuplexMode> config_map{
-        {configuration::duplex_t::full_duplex, bmdDuplexModeFull},
-        {configuration::duplex_t::half_duplex, bmdDuplexModeHalf},
+    std::map<configuration::duplex_t, BMDDuplexMode_v10_11> config_map{
+        {configuration::duplex_t::full_duplex, bmdDuplexModeFull_v10_11},
+        {configuration::duplex_t::half_duplex, bmdDuplexModeHalf_v10_11},
     };
     auto duplex_mode = config_map[duplex];
 
-    if (FAILED(config->SetInt(bmdDeckLinkConfigDuplexMode, duplex_mode))) {
+    if (FAILED(
+            config->SetInt(static_cast<BMDDeckLinkConfigurationID>(bmdDeckLinkConfigDuplexMode_v10_11), duplex_mode))) {
         CASPAR_LOG(error) << print << L" Unable to set duplex mode.";
         return;
     }
     CASPAR_LOG(info) << print << L" Duplex mode set.";
 }
 
-void set_keyer(const com_iface_ptr<IDeckLinkAttributes>& attributes,
-               const com_iface_ptr<IDeckLinkKeyer>&      decklink_keyer,
-               configuration::keyer_t                    keyer,
-               const std::wstring&                       print)
+void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
+               const com_iface_ptr<IDeckLinkKeyer>&             decklink_keyer,
+               configuration::keyer_t                           keyer,
+               const std::wstring&                              print)
 {
     if (keyer == configuration::keyer_t::internal_keyer) {
         BOOL value = true;
@@ -242,13 +283,13 @@ class decklink_frame : public IDeckLinkVideoFrame
 
 struct key_video_context : public IDeckLinkVideoOutputCallback
 {
-    const configuration                   config_;
-    com_ptr<IDeckLink>                    decklink_                   = get_device(config_.key_device_index());
-    com_iface_ptr<IDeckLinkOutput>        output_                     = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_                      = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_                 = iface_cast<IDeckLinkAttributes>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_              = iface_cast<IDeckLinkConfiguration>(decklink_);
-    std::atomic<int64_t>                  scheduled_frames_completed_ = {0};
+    const configuration                       config_;
+    com_ptr<IDeckLink>                        decklink_      = get_device(config_.key_device_index());
+    com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
+    std::atomic<int64_t>                      scheduled_frames_completed_ = {0};
 
     key_video_context(const configuration& config, const std::wstring& print)
         : config_(config)
@@ -307,11 +348,11 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     const int                           channel_index_;
     const configuration                 config_;
 
-    com_ptr<IDeckLink>                    decklink_      = get_device(config_.device_index);
-    com_iface_ptr<IDeckLinkOutput>        output_        = iface_cast<IDeckLinkOutput>(decklink_);
-    com_iface_ptr<IDeckLinkConfiguration> configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
-    com_iface_ptr<IDeckLinkKeyer>         keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
-    com_iface_ptr<IDeckLinkAttributes>    attributes_    = iface_cast<IDeckLinkAttributes>(decklink_);
+    com_ptr<IDeckLink>                        decklink_      = get_device(config_.device_index);
+    com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
+    com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
+    com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     std::mutex         exception_mutex_;
     std::exception_ptr exception_;
@@ -339,7 +380,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
     std::unique_ptr<key_video_context>  key_context_;
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
-        get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault);
+        get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
 
     std::atomic<bool> abort_request_{false};
 
@@ -465,7 +506,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback
         , decklink_format_desc_(get_decklink_format(config, channel_format_desc_))
     {
         if (config.duplex != configuration::duplex_t::default_duplex) {
-            set_duplex(attributes_, configuration_, config.duplex, print());
+            set_duplex(iface_cast<IDeckLinkAttributes_v10_11>(decklink_),
+                       iface_cast<IDeckLinkConfiguration_v10_11>(decklink_),
+                       config.duplex,
+                       print());
         }
 
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {

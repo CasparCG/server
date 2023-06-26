@@ -273,6 +273,49 @@ struct Filter
     }
 };
 
+com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInput>& device,
+                                               BMDDisplayMode                       format,
+                                               BMDPixelFormat                       pix_fmt,
+                                               BMDSupportedVideoModeFlags           flag)
+{
+    IDeckLinkDisplayMode*         m = nullptr;
+    IDeckLinkDisplayModeIterator* iter;
+    if (SUCCEEDED(device->GetDisplayModeIterator(&iter))) {
+        auto iterator = wrap_raw<com_ptr>(iter, true);
+        while (SUCCEEDED(iterator->Next(&m)) && m != nullptr && m->GetDisplayMode() != format) {
+            m->Release();
+        }
+    }
+
+    if (!m)
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info("Device could not find requested video-format: " + std::to_string(format)));
+
+    com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
+
+    BMDDisplayMode actualMode = bmdModeUnknown;
+    BOOL           supported  = false;
+
+    if (FAILED(device->DoesSupportVideoMode(
+            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, flag, &supported)))
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+                               << msg_info(L"Could not determine whether device supports requested video format: " +
+                                           get_mode_name(mode)));
+    else if (!supported)
+        CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
+    else if (actualMode != bmdModeUnknown)
+        CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
+
+    return mode;
+}
+static com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInput>& device,
+                                                      core::video_format                   fmt,
+                                                      BMDPixelFormat                       pix_fmt,
+                                                      BMDSupportedVideoModeFlags           flag)
+{
+    return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
+}
+
 class decklink_producer : public IDeckLinkInputCallback
 {
     const int                           device_index_;
@@ -283,7 +326,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
     com_ptr<IDeckLink>                 decklink_   = get_device(device_index_);
     com_iface_ptr<IDeckLinkInput>      input_      = iface_cast<IDeckLinkInput>(decklink_);
-    com_iface_ptr<IDeckLinkAttributes> attributes_ = iface_cast<IDeckLinkAttributes>(decklink_);
+    com_iface_ptr<IDeckLinkProfileAttributes> attributes_ = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     const std::wstring model_name_ = get_model_name(decklink_);
 
@@ -341,7 +384,7 @@ class decklink_producer : public IDeckLinkInputCallback
             input_format = format_repository.find(format);
         }
 
-        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdSupportedVideoModeDefault);
         video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
         audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
 
@@ -422,7 +465,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
             // reinitializing filters because not all filters can handle on-the-fly format changes
             input_format = new_fmt;
-            mode_        = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdVideoOutputFlagDefault);
+            mode_        = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdSupportedVideoModeDefault);
 
             graph_->set_text(print());
 

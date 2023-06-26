@@ -106,7 +106,9 @@ T* get_raw(const CComPtr<T>& ptr)
 #else
 
 #include "linux_interop/DeckLinkAPI.h"
-#include "linux_interop/DeckLinkAPIConfiguration_v10_2.h"
+#include "linux_interop/DeckLinkAPIConfiguration.h"
+#include "linux_interop/DeckLinkAPIConfiguration_v10_11.h"
+#include "linux_interop/DeckLinkAPI_v10_11.h"
 #include <memory>
 #include <typeinfo>
 
@@ -187,24 +189,29 @@ REFIID iface_id<IDeckLinkConfiguration>()
     return IID_IDeckLinkConfiguration;
 }
 template <>
-REFIID iface_id<IDeckLinkConfiguration_v10_2>()
-{
-    return IID_IDeckLinkConfiguration_v10_2;
-}
-template <>
 REFIID iface_id<IDeckLinkKeyer>()
 {
     return IID_IDeckLinkKeyer;
 }
 template <>
-REFIID iface_id<IDeckLinkAttributes>()
+REFIID iface_id<IDeckLinkProfileAttributes>()
 {
-    return IID_IDeckLinkAttributes;
+    return IID_IDeckLinkProfileAttributes;
 }
 template <>
 REFIID iface_id<IDeckLinkInput>()
 {
     return IID_IDeckLinkInput;
+}
+template <>
+REFIID iface_id<IDeckLinkAttributes_v10_11>()
+{
+    return IID_IDeckLinkAttributes_v10_11;
+}
+template <>
+REFIID iface_id<IDeckLinkConfiguration_v10_11>()
+{
+    return IID_IDeckLinkConfiguration_v10_11;
 }
 
 template <typename I, typename T>
