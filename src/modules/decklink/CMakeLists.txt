@@ -3,6 +3,8 @@ project (decklink)
 
 set(SOURCES
 		consumer/decklink_consumer.cpp
+		consumer/frame.cpp
+		consumer/config.cpp
 
 		producer/decklink_producer.cpp
 
@@ -10,6 +12,8 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/decklink_consumer.h
+		consumer/frame.h
+		consumer/config.h
 
 		producer/decklink_producer.h
 
