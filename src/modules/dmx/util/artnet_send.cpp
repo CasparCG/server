@@ -8,11 +8,10 @@
 
 #include "artnet_send.h"
 
-#include <locale>
+#include <common/utf.h>
+
 #include <string>
 #include <vector>
-
-#include <codecvt>
 
 namespace caspar {
     namespace dmx {
@@ -47,9 +46,7 @@ namespace caspar {
 
             socket.open(boost::asio::ip::udp::v4());
 
-            std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
-            std::string host_ = converterX.to_bytes(host);
-
+            std::string host_ = u8(host);
             remote_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host_), port);
 
             boost::system::error_code err;

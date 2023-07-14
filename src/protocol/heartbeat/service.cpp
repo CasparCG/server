@@ -8,6 +8,8 @@
 
 #include "service.h"
 
+#include <utility>
+
 using namespace boost::asio::ip;
 
 namespace caspar {
@@ -21,6 +23,38 @@ namespace caspar {
                 {
                     socket_.set_option(udp::socket::reuse_address(true));
                     socket_.set_option(udp::socket::broadcast(true));
+                }
+
+                ~impl()
+                {
+                    if (!enabled_) return;
+
+                    abort_request_ = true;
+                    thread_.join();
+                }
+
+                void send_heartbeat() {
+                    boost::system::error_code err;
+                    socket_.send_to(boost::asio::buffer(message_), remote_endpoint_, 0, err);
+
+                    if (err) {
+                        CASPAR_LOG(error) << "Error sending heartbeat: " << err.message();
+                    }
+                }
+
+                void set_name(const std::string& name) {
+                    message_ = "CG " + name;
+                }
+
+                void enable(const configuration& config) {
+                    if (enabled_) return;
+                    enabled_ = true;
+
+                    address_v4 address = calculateBroadcastAddress();
+                    if (!config.host.empty()) address = address_v4::from_string(config.host);
+
+                    remote_endpoint_ = udp::endpoint(address, config.port);
+                    delay_ = config.delay;
 
                     thread_ = std::thread([this] {
                         try {
@@ -29,7 +63,7 @@ namespace caspar {
                                 auto now = std::chrono::system_clock::now();
                                 std::chrono::duration<double> elapsed_seconds = now - last_send;
 
-                                if (elapsed_seconds.count() > 1) {
+                                if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_seconds).count() > delay_) {
                                     send_heartbeat();
                                     last_send = now;
                                 }
@@ -40,28 +74,6 @@ namespace caspar {
                     });
                 }
 
-                ~impl()
-                {
-                    abort_request_ = true;
-                    thread_.join();
-                }
-
-                void send_heartbeat() {
-                    auto remote_endpoint = udp::endpoint(calculateBroadcastAddress(), 3468);
-                    std::string message = "CG " + name_;
-
-                    boost::system::error_code err;
-                    socket_.send_to(boost::asio::buffer(message), remote_endpoint, 0, err);
-
-                    if (err) {
-                        CASPAR_LOG(error) << "Error sending heartbeat: " << err.message();
-                    }
-                }
-
-                void set_name(std::string name) {
-                    name_ = name;
-                }
-
               private:
                 std::thread       thread_;
                 std::atomic<bool> abort_request_{false};
@@ -69,7 +81,11 @@ namespace caspar {
                 std::shared_ptr<boost::asio::io_context> service_;
                 udp::socket socket_;
 
-                std::string name_;
+                std::string message_;
+                bool enabled_ = false;
+
+                udp::endpoint remote_endpoint_;
+                int delay_ = 1000;
 
                 static address_v4 calculateBroadcastAddress() {
                     boost::asio::io_context ioContext;
@@ -100,8 +116,12 @@ namespace caspar {
                     impl_->send_heartbeat();
             }
 
-            void service::set_name(std::string name) {
+            void service::set_name(const std::string& name) {
                     impl_->set_name(name);
+            }
+
+            void service::enable(const configuration& config) {
+                    impl_->enable(config);
             }
 
             service::~service() {

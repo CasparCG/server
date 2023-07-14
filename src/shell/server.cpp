@@ -57,13 +57,9 @@
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
-#include <locale>
-#include <future>
 #include <thread>
 #include <utility>
-#include <codecvt>
 
 namespace caspar {
 using namespace core;
@@ -141,6 +137,9 @@ struct server::impl
         setup_meta(env::properties());
         CASPAR_LOG(info) << L"Initialized meta.";
 
+        setup_heartbeat(env::properties());
+        CASPAR_LOG(info) << L"Initialized heartbeat.";
+
         setup_video_modes(env::properties());
         CASPAR_LOG(info) << L"Initialized video modes.";
 
@@ -196,10 +195,27 @@ struct server::impl
 
         this->meta_ = meta;
 
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
-        std::string name_ = converterX.to_bytes(meta.name);
-
+        std::string name_ = u8(meta.name);
         this->heartbeat_service_->set_name(name_);
+    }
+
+    void setup_heartbeat(const boost::property_tree::wptree& pt)
+    {
+        using boost::property_tree::wptree;
+
+        bool enabled = pt.get(L"configuration.heartbeat.enabled", false);
+        if (!enabled) {
+            CASPAR_LOG(info) << L"Heartbeat disabled. Enable it in the configuration file to enable it.";
+            return;
+        }
+
+        heartbeat::configuration config;
+        config.host  = u8(pt.get(L"configuration.heartbeat.host", L""));
+        config.port  = pt.get(L"configuration.heartbeat.port", config.port);
+
+        config.delay = pt.get(L"configuration.heartbeat.delay", config.delay);
+
+        this->heartbeat_service_->enable(config);
     }
 
     void setup_video_modes(const boost::property_tree::wptree& pt)
