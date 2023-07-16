@@ -9,17 +9,12 @@
 
 #include "dmx_consumer.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#if defined(_MSC_VER)
-#include <windows.h>
-#endif
-
 #include <common/array.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
+#include <common/param.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
@@ -27,6 +22,7 @@
 #include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -35,26 +31,46 @@
 namespace caspar {
     namespace dmx {
 
+        struct configuration
+        {
+            int universe = 0;
+            std::wstring host = L"127.0.0.1";
+            int port = 6454;
+        };
+
         struct dmx_consumer : public core::frame_consumer
         {
+
+            const std::wstring      host_;
+            const int      port_;
+            const int      universe_;
 
          public:
                 // frame_consumer
 
-                explicit dmx_consumer()
+                dmx_consumer(configuration config)
+                    : universe_(config.universe)
+                    , host_(std::move(config.host))
+                    , port_(config.port)
                 {
+
                 }
+
 
                 void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override {}
 
                 std::future<bool> send(core::video_field field, core::const_frame frame) override
                 {
-                    std::thread async([frame] {
+                    auto port = port_;
+                    auto host = host_;
+
+                    auto universe = universe_;
+
+                    std::thread async([frame, port, host, universe] {
                         try {
                             array<const std::uint8_t> values = frame.image_data(0);
                             const std::uint8_t* value_ptr = values.data();
-                            std::vector<std::string> colors;
-                            std::vector<std::uint8_t> colors_dmx;
+                            std::vector<std::uint8_t> colors;
 
                             for (int i = 0; i < 10; i++) {
                                 const std::uint8_t* base_ptr = value_ptr + i * 4;
@@ -67,30 +83,19 @@ namespace caspar {
                                 std::uint8_t g = *g_ptr;
                                 std::uint8_t b = *b_ptr;
 
-                                colors_dmx.push_back(r);
-                                colors_dmx.push_back(g);
-                                colors_dmx.push_back(b);
-
-                                int value = (r << 16) | (g << 8) | b;
-
-                                std::stringstream ss;
-                                ss << "#";
-                                ss << std::hex << value;
-
-                                colors.push_back(ss.str());
+                                colors.push_back(r);
+                                colors.push_back(g);
+                                colors.push_back(b);
                             }
 
-                            std::string color_str = boost::join(colors, L" ");
-                            CASPAR_LOG(info) << L" Sending " << color_str;
-
-                            send_dmx_data(6454, "127.0.0.1", 0, colors_dmx);
+                            send_dmx_data(port, host, universe, colors);
                         } catch (...) {
                             CASPAR_LOG_CURRENT_EXCEPTION();
                         }
                     });
                     async.detach();
 
-                    return make_ready_future(false);
+                    return make_ready_future(true);
                 }
 
                 std::wstring print() const override { return L"dmx[]"; }
@@ -113,8 +118,26 @@ namespace caspar {
            if (params.empty() || !boost::iequals(params.at(0), L"DMX"))
                return core::frame_consumer::empty();
 
-           return spl::make_shared<dmx_consumer>();
+           configuration config;
+
+           config.universe     = get_param(L"UNIVERSE", params, 0);
+           config.host         = get_param(L"HOST", params, L"");
+           config.port         = get_param(L"PORT", params, 0);
+
+           return spl::make_shared<dmx_consumer>(config);
         }
 
+        spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
+                                          const core::video_format_repository&              format_repository,
+                                          std::vector<spl::shared_ptr<core::video_channel>> channels)
+        {
+           configuration config;
+
+           config.universe     = ptree.get(L"universe", config.universe);
+           config.host         = ptree.get(L"host", config.host);
+           config.port         = ptree.get(L"port", config.port);
+
+           return spl::make_shared<dmx_consumer>(config);
+        }
     }
 } // namespace caspar::dmx

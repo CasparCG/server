@@ -8,20 +8,17 @@
 
 #include "artnet_send.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#if defined(_MSC_VER)
-#include <windows.h>
-#endif
-
+#include <locale>
 #include <string>
 #include <vector>
+
+#include <codecvt>
 
 namespace caspar {
     namespace dmx {
 
-        void send_dmx_data(int port, std::string host, int universe, std::vector<std::uint8_t> data) {
-            int length = data.size();
+        void send_dmx_data(int port, const std::wstring& host, int universe, std::vector<std::uint8_t> data) {
+            size_t length = data.size();
             if (length > 512 || length % 2 != 0) {
                 // TODO: throw error
                 return;
@@ -55,8 +52,11 @@ namespace caspar {
             boost::asio::ip::udp::endpoint remote_endpoint;
 
             socket.open(boost::asio::ip::udp::v4());
+            
+            std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
+            std::string host_ = converterX.to_bytes(host);
 
-            remote_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host), port);
+            remote_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host_), port);
 
             boost::system::error_code err;
             socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);

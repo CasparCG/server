@@ -16,6 +16,6 @@
 namespace caspar {
     namespace dmx {
 
-        void send_dmx_data(int port, std::string host, int universe, std::vector<uint8_t> data);
+        void send_dmx_data(int port, const std::wstring& host, int universe, std::vector<uint8_t> data);
     }
 } // namespace caspar::dmx

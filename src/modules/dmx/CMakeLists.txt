@@ -22,6 +22,7 @@ target_include_directories(dmx PRIVATE
     ..
     ../..
     ${BOOST_INCLUDE_PATH}
+	${TBB_INCLUDE_PATH}
 )
 configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 

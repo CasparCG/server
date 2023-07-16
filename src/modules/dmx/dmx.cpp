@@ -24,6 +24,7 @@ namespace caspar {
             // TODO: Initialise DMX connection
 
             dependencies.consumer_registry->register_consumer_factory(L"DMX Consumer", create_consumer);
+            dependencies.consumer_registry->register_preconfigured_consumer_factory(L"dmx", create_preconfigured_consumer);
         }
 
         void uninit() {
