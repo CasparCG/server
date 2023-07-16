@@ -4,10 +4,14 @@ project (dmx)
 set(SOURCES
 		consumer/dmx_consumer.cpp
 
+		util/artnet_send.cpp
+
 		dmx.cpp
 )
 set(HEADERS
 		consumer/dmx_consumer.h
+
+		util/artnet_send.h
 
 		dmx.h
 )
@@ -23,6 +27,7 @@ configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_D
 
 set_target_properties(dmx PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
+source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(dmx common core)

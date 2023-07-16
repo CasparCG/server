@@ -49,15 +49,27 @@ namespace caspar {
 
                 std::future<bool> send(core::video_field field, core::const_frame frame) override
                 {
-                    std::thread async([frame, filename] {
+                    std::thread async([frame] {
                         try {
                             array<const std::uint8_t> values = frame.image_data(0);
-                            vector<string> colors;
+                            const std::uint8_t* value_ptr = values.data();
+                            std::vector<std::string> colors;
+                            std::vector<std::uint8_t> colors_dmx;
 
                             for (int i = 0; i < 10; i++) {
-                                uint8_t r = values[i * 4 + 0];
-                                uint8_t g = values[i * 4 + 1];
-                                uint8_t b = values[i * 4 + 2];
+                                const std::uint8_t* base_ptr = value_ptr + i * 4;
+
+                                const std::uint8_t* r_ptr = base_ptr + 0;
+                                const std::uint8_t* g_ptr = base_ptr + 1;
+                                const std::uint8_t* b_ptr = base_ptr + 2;
+
+                                std::uint8_t r = *r_ptr;
+                                std::uint8_t g = *g_ptr;
+                                std::uint8_t b = *b_ptr;
+
+                                colors_dmx.push_back(r);
+                                colors_dmx.push_back(g);
+                                colors_dmx.push_back(b);
 
                                 int value = (r << 16) | (g << 8) | b;
 
@@ -68,10 +80,10 @@ namespace caspar {
                                 colors.push_back(ss.str());
                             }
 
-                            string color_str = boost::join(colors, L" ");
-                            CASPAR_LOG(info) << print() << L" Sending " << color_str;
+                            std::string color_str = boost::join(colors, L" ");
+                            CASPAR_LOG(info) << L" Sending " << color_str;
 
-                            // TODO: use colors to output dmx data
+                            send_dmx_data(6454, "127.0.0.1", 0, colors_dmx);
                         } catch (...) {
                             CASPAR_LOG_CURRENT_EXCEPTION();
                         }
@@ -89,7 +101,8 @@ namespace caspar {
 
                 core::monitor::state state() const override
                 {
-
+                    core::monitor::state state;
+                    return state;
                 }
         };
 

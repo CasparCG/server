@@ -1,0 +1,67 @@
+/*
+* Copyright (c) 2023 Eliyah Sundström
+*
+* This file is part of an extension of the CasparCG project
+*
+* Author: Eliyah Sundström eliyah@sundstroem.com
+ */
+
+#include "artnet_send.h"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#if defined(_MSC_VER)
+#include <windows.h>
+#endif
+
+#include <string>
+#include <vector>
+
+namespace caspar {
+    namespace dmx {
+
+        void send_dmx_data(int port, std::string host, int universe, std::vector<std::uint8_t> data) {
+            int length = data.size();
+            if (length > 512 || length % 2 != 0) {
+                // TODO: throw error
+                return;
+            }
+
+            std::uint8_t hUni = (universe >> 8) & 0xff;
+            std::uint8_t lUni = universe & 0xff;
+
+            std::uint8_t hLen = (length >> 8) & 0xff;
+            std::uint8_t lLen = (length & 0xff);
+
+            std::uint8_t header[] = {65, 114, 116, 45, 78, 101, 116, 0, 0, 80, 0, 14, 0, 0, lUni, hUni, hLen, lLen};
+            std::uint8_t buffer[18 + 512];
+
+            for (int i = 0; i < 18 + 512; i++) {
+                if (i < 18) {
+                    buffer[i] = header[i];
+                    continue;
+                }
+
+                if (i - 18 < length) {
+                    buffer[i] = data[i - 18];
+                    continue;
+                }
+
+                buffer[i] = 0;
+            }
+
+            boost::asio::io_service io_service;
+            boost::asio::ip::udp::socket socket(io_service);
+            boost::asio::ip::udp::endpoint remote_endpoint;
+
+            socket.open(boost::asio::ip::udp::v4());
+
+            remote_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host), port);
+
+            boost::system::error_code err;
+            socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);
+
+            socket.close();
+        }
+    }
+} // namespace caspar::dmx

@@ -16,6 +16,8 @@
 #include <string>
 #include <vector>
 
+#include "../util/artnet_send.h"
+
 namespace caspar {
     namespace dmx {
 
