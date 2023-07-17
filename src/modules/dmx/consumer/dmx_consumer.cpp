@@ -9,9 +9,10 @@
 
 #include "dmx_consumer.h"
 
+#undef NOMINMAX
+// ^^ This is needed to avoid a conflict between boost asio and other header files defining NOMINMAX
+
 #include <common/array.h>
-#include <common/env.h>
-#include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/param.h>
@@ -24,7 +25,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -35,14 +35,14 @@ namespace caspar {
         {
             int universe = 0;
             std::wstring host = L"127.0.0.1";
-            int port = 6454;
+            unsigned short port = 6454;
         };
 
         struct dmx_consumer : public core::frame_consumer
         {
 
             const std::wstring      host_;
-            const int      port_;
+            const unsigned short      port_;
             const int      universe_;
 
          public:

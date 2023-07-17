@@ -17,7 +17,7 @@
 namespace caspar {
     namespace dmx {
 
-        void send_dmx_data(int port, const std::wstring& host, int universe, std::vector<std::uint8_t> data) {
+        void send_dmx_data(unsigned short port, const std::wstring& host, int universe, std::vector<std::uint8_t> data) {
             size_t length = data.size();
             if (length > 512 || length % 2 != 0) {
                 // TODO: throw error
