@@ -83,7 +83,7 @@ namespace caspar {
             unsigned short startAddress; // DMX address of the first channel in the fixture
             unsigned short fixtureCount; // number of fixtures in the chain, dividing along the width
 
-            box box;
+            box fixtureBox;
         };
 
         struct configuration
@@ -92,7 +92,7 @@ namespace caspar {
             std::wstring host = L"127.0.0.1";
             unsigned short port = 6454;
 
-            int refreshRate = 30;
+            int refreshRate = 10;
 
             std::vector<fixture> fixtures;
         };
@@ -209,24 +209,24 @@ namespace caspar {
                             computed_fixture.type = fixture.type;
                             computed_fixture.address = fixture.startAddress + i * fixture.type;
 
-                            computed_fixture.rect = compute_rect(fixture.box, i, fixture.fixtureCount);
+                            computed_fixture.rect = compute_rect(fixture.fixtureBox, i, fixture.fixtureCount);
                             computed_fixtures.push_back(computed_fixture);
                         }
                     }
                 }
 
-                static rect compute_rect(box box, int index, int count)
+                static rect compute_rect(box fixtureBox, int index, int count)
                 {
                     auto f_count = (float) count;
                     auto f_index = (float) index;
 
-                    float x = box.x;
-                    float y = box.y;
+                    float x = fixtureBox.x;
+                    float y = fixtureBox.y;
 
-                    float width  = box.width;
-                    float height = box.height;
+                    float width  = fixtureBox.width;
+                    float height = fixtureBox.height;
 
-                    float rotation = box.rotation;
+                    float rotation = fixtureBox.rotation;
 
                     float angle = M_PI * rotation / 180.0f;
 
@@ -261,14 +261,14 @@ namespace caspar {
                             oy + -dx *  sin_ +  dy *  cos_,
                     };
 
-                    rect rect {
+                    rect rectangle {
                             p1,
                             p2,
                             p3,
                             p4
                     };
 
-                    return rect;
+                    return rectangle;
                 }
 
                 static color average_color(const core::const_frame& frame, rect& rect) {
@@ -443,7 +443,7 @@ namespace caspar {
 
                         b.rotation = rotation;
 
-                        f.box = b;
+                        f.fixtureBox = b;
 
                         fixtures.push_back(f);
                 }
