@@ -58,7 +58,7 @@ namespace caspar {
             FixtureType type;
             unsigned short address;
 
-            rect rect;
+            rect rectangle;
         };
 
         struct color {
@@ -152,7 +152,7 @@ namespace caspar {
                     std::thread async([frame, this] {
                         try {
                             for (auto computed_fixture : computed_fixtures) {
-                                auto color = average_color(frame, computed_fixture.rect);
+                                auto color = average_color(frame, computed_fixture.rectangle);
                                 uint8_t* ptr = dmx_data + computed_fixture.address;
 
                                 switch (computed_fixture.type) {
@@ -209,7 +209,7 @@ namespace caspar {
                             computed_fixture.type = fixture.type;
                             computed_fixture.address = fixture.startAddress + i * fixture.type;
 
-                            computed_fixture.rect = compute_rect(fixture.fixtureBox, i, fixture.fixtureCount);
+                            computed_fixture.rectangle = compute_rect(fixture.fixtureBox, i, fixture.fixtureCount);
                             computed_fixtures.push_back(computed_fixture);
                         }
                     }
@@ -271,14 +271,14 @@ namespace caspar {
                     return rectangle;
                 }
 
-                static color average_color(const core::const_frame& frame, rect& rect) {
+                static color average_color(const core::const_frame& frame, rect& rectangle) {
                     int width = (int) frame.width();
                     int height = (int) frame.height();
 
-                    float y1 = rect.p1.y;
-                    float y2 = rect.p2.y;
-                    float y3 = rect.p3.y;
-                    float y4 = rect.p4.y;
+                    float y1 = rectangle.p1.y;
+                    float y2 = rectangle.p2.y;
+                    float y3 = rectangle.p3.y;
+                    float y4 = rectangle.p4.y;
 
                     float x_values[4];
                     float y_values[] = {
@@ -294,25 +294,25 @@ namespace caspar {
                         int c = i;
 
                         if (y1 == y_values[i]) {
-                            x_values[i] = rect.p1.x;
+                            x_values[i] = rectangle.p1.x;
                             i++;
                         }
                         if (i >= 4) break;
 
                         if (y2 == y_values[i]) {
-                            x_values[i] = rect.p2.x;
+                            x_values[i] = rectangle.p2.x;
                             i++;
                         }
                         if (i >= 4) break;
 
                         if (y3 == y_values[i]) {
-                            x_values[i] = rect.p3.x;
+                            x_values[i] = rectangle.p3.x;
                             i++;
                         }
                         if (i >= 4) break;
 
                         if (y4 == y_values[i]) {
-                            x_values[i] = rect.p4.x;
+                            x_values[i] = rectangle.p4.x;
                             i++;
                         }
                         if (c == i) return color{0, 0, 0}; // should never happen, but prevents infinite loop in case of the impossible
