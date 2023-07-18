@@ -30,7 +30,9 @@ set(SOURCES
 		util/http_request.cpp
 		util/tokenize.cpp
 
+		heartbeat/service.cpp
 )
+
 set(HEADERS
 		amcp/AMCPCommand.h
 		amcp/AMCPCommandQueue.h
@@ -69,6 +71,8 @@ set(HEADERS
 		util/strategy_adapters.h
 		util/http_request.h
 		util/tokenize.h
+
+        heartbeat/service.h
 
 		StdAfx.h
 )
