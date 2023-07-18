@@ -17,13 +17,7 @@
 namespace caspar {
     namespace dmx {
 
-        void send_dmx_data(unsigned short port, const std::wstring& host, int universe, std::vector<std::uint8_t> data) {
-            size_t length = data.size();
-            if (length > 512 || length % 2 != 0) {
-                // TODO: throw error
-                return;
-            }
-
+        void send_dmx_data(unsigned short port, const std::wstring& host, int universe, const std::uint8_t* data, size_t length) {
             std::uint8_t hUni = (universe >> 8) & 0xff;
             std::uint8_t lUni = universe & 0xff;
 
@@ -52,7 +46,7 @@ namespace caspar {
             boost::asio::ip::udp::endpoint remote_endpoint;
 
             socket.open(boost::asio::ip::udp::v4());
-            
+
             std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
             std::string host_ = converterX.to_bytes(host);
 
@@ -62,6 +56,17 @@ namespace caspar {
             socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);
 
             socket.close();
+        }
+
+        void send_dmx_data(unsigned short port, const std::wstring& host, int universe, std::vector<std::uint8_t> data) {
+            size_t length = data.size();
+
+            std::uint8_t buffer[512];
+            memset(buffer, 0, 512);
+
+            for (int i = 0; i < length; i++) buffer[i] = data[i];
+
+            send_dmx_data(port, host, universe, buffer, length);
         }
     }
 } // namespace caspar::dmx

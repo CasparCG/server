@@ -16,6 +16,7 @@
 namespace caspar {
     namespace dmx {
 
+        void send_dmx_data(unsigned short port, const std::wstring& host, int universe, const std::uint8_t* data, size_t length);
         void send_dmx_data(unsigned short port, const std::wstring& host, int universe, std::vector<uint8_t> data);
     }
 } // namespace caspar::dmx
