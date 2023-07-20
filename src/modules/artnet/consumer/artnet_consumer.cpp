@@ -426,7 +426,7 @@ namespace caspar {
 
                     boost::system::error_code err;
                     socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);
-                    if (err) throw std::runtime_error("Failed to send data");
+                    if (err) CASPAR_THROW_EXCEPTION(io_error() << msg_info(err.message()));
 
                     socket.close();
                 }
@@ -444,17 +444,18 @@ namespace caspar {
                         fixture f {};
 
                         int startAddress = xml_channel.second.get(L"start-address", 0);
-                        if (startAddress < 1) throw std::runtime_error("Fixture start address must be specified");
+                        if (startAddress < 1) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture start address must be specified"));
 
                         f.startAddress = startAddress - 1;
 
                         int fixtureCount = xml_channel.second.get(L"fixture-count", -1);
-                        if (fixtureCount < 0) throw std::runtime_error("Fixture count must be specified");
+                        if (fixtureCount < 0) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
 
                         f.fixtureCount = fixtureCount;
 
                         std::wstring type = xml_channel.second.get(L"type", L"");
-                        if (type.empty()) throw std::runtime_error("Fixture type must be specified, available types: DIMMER, RGB, RGBW");
+                        if (type.empty()) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture type must be specified"));
+
                         if (boost::iequals(type, L"DIMMER")) {
                             f.type = FixtureType::DIMMER;
                         } else if (boost::iequals(type, L"RGB")) {
@@ -462,7 +463,7 @@ namespace caspar {
                         } else if (boost::iequals(type, L"RGBW")) {
                             f.type = FixtureType::RGBW;
                         } else {
-                            throw std::runtime_error("Unknown fixture type: " + boost::locale::conv::utf_to_utf<char>(type));
+                            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown fixture type"));
                         }
 
                         box b {};
@@ -482,7 +483,6 @@ namespace caspar {
                         auto rotation = xml_channel.second.get(L"rotation", 0.0f);
 
                         b.rotation = rotation;
-
                         f.fixtureBox = b;
 
                         fixtures.push_back(f);
@@ -502,7 +502,7 @@ namespace caspar {
            config.port         = ptree.get(L"port", config.port);
            config.refreshRate  = ptree.get(L"refresh-rate", config.refreshRate);
 
-           if (config.refreshRate < 1) throw std::runtime_error("Refresh rate must be greater than 0");
+           if (config.refreshRate < 1) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Refresh rate must be at least 1"));
 
            config.fixtures     = get_fixtures_ptree(ptree);
 
