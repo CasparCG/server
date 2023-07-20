@@ -4,14 +4,10 @@ project (artnet)
 set(SOURCES
         consumer/artnet_consumer.cpp
 
-		util/artnet_send.cpp
-
 		artnet.cpp
 )
 set(HEADERS
         consumer/artnet_consumer.h
-
-		util/artnet_send.h
 
 		artnet.h
 )
@@ -49,5 +45,4 @@ endif()
 
 casparcg_add_include_statement("modules/artnet/artnet.h")
 casparcg_add_init_statement("artnet::init" "artnet")
-casparcg_add_uninit_statement("artnet::uninit")
 casparcg_add_module_project("artnet")

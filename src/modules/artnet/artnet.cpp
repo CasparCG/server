@@ -21,12 +21,7 @@ namespace caspar {
 
         void init(const core::module_dependencies& dependencies)
         {
-            // TODO: Initialise Artnet connection
             dependencies.consumer_registry->register_preconfigured_consumer_factory(L"artnet", create_preconfigured_consumer);
-        }
-
-        void uninit() {
-           // TODO: Remove Artnet connection
         }
 
     }
