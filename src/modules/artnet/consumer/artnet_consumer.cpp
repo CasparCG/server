@@ -7,7 +7,7 @@
  */
 
 
-#include "dmx_consumer.h"
+#include "artnet_consumer.h"
 
 #undef NOMINMAX
 // ^^ This is needed to avoid a conflict between boost asio and other header files defining NOMINMAX
@@ -34,7 +34,7 @@
 #define M_PI           3.14159265358979323846  /* pi */
 
 namespace caspar {
-    namespace dmx {
+    namespace artnet {
 
         enum FixtureType {
             DIMMER = 1,
@@ -97,7 +97,7 @@ namespace caspar {
             std::vector<fixture> fixtures;
         };
 
-        struct dmx_consumer : public core::frame_consumer
+        struct artnet_consumer : public core::frame_consumer
         {
 
             const configuration config;
@@ -106,7 +106,7 @@ namespace caspar {
          public:
                 // frame_consumer
 
-                explicit dmx_consumer(configuration config)
+                explicit artnet_consumer(configuration config)
                     : config(std::move(config))
                 {
                     compute_fixtures();
@@ -139,7 +139,7 @@ namespace caspar {
                     });
                 }
 
-                ~dmx_consumer()
+                ~artnet_consumer()
                 {
                     abort_request_ = true;
                     if (thread_.joinable()) {
@@ -182,9 +182,9 @@ namespace caspar {
                     return make_ready_future(true);
                 }
 
-                std::wstring print() const override { return L"dmx[]"; }
+                std::wstring print() const override { return L"artnet[]"; }
 
-                std::wstring name() const override { return L"dmx"; }
+                std::wstring name() const override { return L"artnet"; }
 
                 int index() const override { return 1337; }
 
@@ -446,13 +446,6 @@ namespace caspar {
                 return fixtures;
         }
 
-        spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                             const core::video_format_repository& format_repository,
-                                                             const std::vector<spl::shared_ptr<core::video_channel>>& channels)
-        {
-            return core::frame_consumer::empty(); // TODO implement
-        }
-
         spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
                                           const core::video_format_repository&              format_repository,
                                           std::vector<spl::shared_ptr<core::video_channel>> channels)
@@ -466,7 +459,7 @@ namespace caspar {
 
            config.fixtures     = get_fixtures_ptree(ptree);
 
-           return spl::make_shared<dmx_consumer>(config);
+           return spl::make_shared<artnet_consumer>(config);
         }
     }
-} // namespace caspar::dmx
+} // namespace caspar::artnet

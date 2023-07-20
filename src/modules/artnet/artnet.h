@@ -12,11 +12,11 @@
 #include <core/module_dependencies.h>
 
 namespace caspar {
-    namespace dmx {
+    namespace artnet {
 
         void init(const core::module_dependencies& dependencies);
         void uninit();
 
     }
-} // namespace caspar::dmx
+} // namespace caspar::artnet
 

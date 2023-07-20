@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace caspar {
-    namespace dmx {
+    namespace artnet {
 
         void send_dmx_data(unsigned short port, const std::wstring& host, int universe, const std::uint8_t* data, size_t length) {
             std::uint8_t hUni = (universe >> 8) & 0xff;
@@ -66,4 +66,4 @@ namespace caspar {
             send_dmx_data(port, host, universe, buffer, length);
         }
     }
-} // namespace caspar::dmx
+} // namespace caspar::artnet

@@ -7,7 +7,7 @@ add_subdirectory(oal)
 add_subdirectory(decklink)
 add_subdirectory(screen)
 add_subdirectory(newtek)
-add_subdirectory(dmx)
+add_subdirectory(artnet)
 
 if (ENABLE_HTML)
 	add_subdirectory(html)
