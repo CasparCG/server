@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../util/fixture_calculation.h"
+
 #include <common/memory.h>
 
 #include <core/consumer/frame_consumer.h>

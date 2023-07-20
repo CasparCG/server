@@ -10,7 +10,7 @@ set(HEADERS
         consumer/artnet_consumer.h
 
 		artnet.h
-)
+        util/fixture_calculation.cpp util/fixture_calculation.h)
 
 add_library(artnet ${SOURCES} ${HEADERS})
 target_compile_features(artnet PRIVATE cxx_std_14)
