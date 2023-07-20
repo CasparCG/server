@@ -29,8 +29,6 @@ set(SOURCES
 		util/strategy_adapters.cpp
 		util/http_request.cpp
 		util/tokenize.cpp
-
-		heartbeat/service.cpp
 )
 
 set(HEADERS
@@ -71,8 +69,6 @@ set(HEADERS
 		util/strategy_adapters.h
 		util/http_request.h
 		util/tokenize.h
-
-        heartbeat/service.h
 
 		StdAfx.h
 )
