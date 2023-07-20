@@ -275,47 +275,42 @@ namespace caspar {
                     int width = (int) frame.width();
                     int height = (int) frame.height();
 
-                    float y1 = rectangle.p1.y;
-                    float y2 = rectangle.p2.y;
-                    float y3 = rectangle.p3.y;
-                    float y4 = rectangle.p4.y;
-
-                    float x_values[4];
+                    float x_values[] = {
+                        rectangle.p1.x,
+                        rectangle.p2.x,
+                        rectangle.p3.x,
+                        rectangle.p4.x
+                    };
                     float y_values[] = {
-                            y1,
-                            y2,
-                            y3,
-                            y4
+                        rectangle.p1.y,
+                        rectangle.p2.y,
+                        rectangle.p3.y,
+                        rectangle.p4.y
                     };
 
-                    std::sort(std::begin(y_values), std::end(y_values));
+                    for (int i = 0; i < 3; i++) {
+                        for (int j = 3; j > i; j--) {
+                            if (y_values[j] > y_values[j - 1]) continue;
+                            if (y_values[j] < y_values[j - 1]) {
+                                float x = x_values[j];
+                                float y = y_values[j];
 
-                    for (int i = 0; i < 4;) {
-                        int c = i;
+                                x_values[j] = x_values[j - 1];
+                                y_values[j] = y_values[j - 1];
 
-                        if (y1 == y_values[i]) {
-                            x_values[i] = rectangle.p1.x;
-                            i++;
+                                x_values[j - 1] = x;
+                                y_values[j - 1] = y;
+
+                                continue;
+                            }
+
+                            if (x_values[j] < x_values[j - 1]) {
+                                float x = x_values[j];
+
+                                x_values[j] = x_values[j - 1];
+                                x_values[j - 1] = x;
+                            }
                         }
-                        if (i >= 4) break;
-
-                        if (y2 == y_values[i]) {
-                            x_values[i] = rectangle.p2.x;
-                            i++;
-                        }
-                        if (i >= 4) break;
-
-                        if (y3 == y_values[i]) {
-                            x_values[i] = rectangle.p3.x;
-                            i++;
-                        }
-                        if (i >= 4) break;
-
-                        if (y4 == y_values[i]) {
-                            x_values[i] = rectangle.p4.x;
-                            i++;
-                        }
-                        if (c == i) return color{0, 0, 0}; // should never happen, but prevents infinite loop in case of the impossible
                     }
 
                     const int indices[3][4] = {
