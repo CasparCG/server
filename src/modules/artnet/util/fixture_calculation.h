@@ -62,6 +62,7 @@ namespace caspar {
             FixtureType type;
             unsigned short startAddress; // DMX address of the first channel in the fixture
             unsigned short fixtureCount; // number of fixtures in the chain, dividing along the width
+            unsigned short fixtureChannels; // number of channels per fixture
 
             box fixtureBox;
         };

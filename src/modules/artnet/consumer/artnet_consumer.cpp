@@ -59,8 +59,8 @@ namespace caspar {
 
                 explicit artnet_consumer(configuration config)
                     :   config(std::move(config)),
-                        io_service(),
-                        socket(io_service)
+                        io_service_(),
+                        socket(io_service_)
                 {
                     socket.open(udp::v4());
 
@@ -161,7 +161,7 @@ namespace caspar {
                 std::thread       thread_;
                 std::atomic<bool> abort_request_{false};
 
-                io_service io_service;
+                io_service io_service_;
                 udp::socket socket;
                 udp::endpoint remote_endpoint;
 
@@ -171,7 +171,7 @@ namespace caspar {
                         for (int i = 0; i < fixture.fixtureCount; i++) {
                             computed_fixture computed_fixture{};
                             computed_fixture.type = fixture.type;
-                            computed_fixture.address = fixture.startAddress + i * fixture.type;
+                            computed_fixture.address = fixture.startAddress + i * fixture.fixtureChannels;
 
                             computed_fixture.rectangle = compute_rect(fixture.fixtureBox, i, fixture.fixtureCount);
                             computed_fixtures.push_back(computed_fixture);
@@ -244,6 +244,12 @@ namespace caspar {
                         } else {
                             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown fixture type"));
                         }
+
+                        int fixtureChannels = xml_channel.second.get(L"fixture-channels", -1);
+                        if (fixtureChannels < 0) fixtureChannels = f.type;
+                        if (fixtureChannels < f.type) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture channel count must be at least enough channels for current color mode"));
+
+                        f.fixtureChannels = fixtureChannels;
 
                         box b {};
 
