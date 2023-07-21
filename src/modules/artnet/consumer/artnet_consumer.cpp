@@ -102,7 +102,7 @@ namespace caspar {
 
                                     switch (computed_fixture.type) {
                                         case FixtureType::DIMMER:
-                                            ptr[0] =  0.279 * color.r + 0.547 * color.g + 0.106 * color.b
+                                            ptr[0] = (uint8_t) (0.279 * color.r + 0.547 * color.g + 0.106 * color.b);
                                             break;
                                         case FixtureType::RGB:
                                             ptr[0] = color.r;
