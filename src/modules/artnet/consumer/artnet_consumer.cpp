@@ -30,6 +30,7 @@
 #include <cmath>
 #include <utility>
 #include <vector>
+#include <thread>
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
