@@ -336,7 +336,7 @@ struct child_device_context
     void schedule_frame(core::const_frame frame)
     {
         bool isInterlaced = decklink_format_desc_.field_count != 1;
-        if (isInterlaced && !first_field_.has_value()) {
+        if (isInterlaced && !first_field_.is_initialized()) {
             // If this is interlaced it needs a pair of frames at a time
             first_field_ = frame;
             return;
