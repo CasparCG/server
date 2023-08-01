@@ -681,6 +681,7 @@ struct decklink_consumer
             }
 
             // Send frame to children
+            // TODO - parallel?
             for (auto& context : child_device_contexts_) {
                 context->schedule_frame(frame1);
                 if (isInterlaced) {
