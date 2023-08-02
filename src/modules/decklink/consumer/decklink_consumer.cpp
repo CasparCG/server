@@ -266,7 +266,7 @@ struct child_device_context
     com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
     com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
     std::atomic<int64_t>                      scheduled_frames_completed_ = {0};
-    const int                                 device_sync_group_;
+    int                                       device_sync_group_;
     boost::optional<core::const_frame>        first_field_;
 
     const std::wstring model_name_ = get_model_name(decklink_);
@@ -302,9 +302,10 @@ struct child_device_context
         set_latency(configuration_, config.latency, print);
         set_keyer(attributes_, keyer_, config.keyer, print);
 
-        if (device_sync_group > 0 &&
-            FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group))) {
+        if (device_sync_group_ > 0 &&
+            FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
             CASPAR_LOG(error) << print << L" Failed to enable sync group.";
+            device_sync_group_ = 0;
         } else {
             CASPAR_LOG(trace) << print << L" Joined sync group " << device_sync_group;
         }
@@ -331,6 +332,17 @@ struct child_device_context
                                                                      : bmdVideoOutputFlagDefault)))
             CASPAR_THROW_EXCEPTION(caspar_exception()
                                    << msg_info(print() + L" Could not enable secondary video output."));
+    }
+
+    template <typename Print>
+    void start_playback(const Print& print)
+    {
+        if (device_sync_group_ == 0) {
+            if (FAILED(output_->StartScheduledPlayback(0, decklink_format_desc_.time_scale, 1.0))) {
+                CASPAR_THROW_EXCEPTION(caspar_exception()
+                                       << msg_info(print() + L" Failed to schedule secondary playback."));
+            }
+        }
     }
 
     void schedule_frame(core::const_frame frame)
@@ -583,13 +595,8 @@ struct decklink_consumer
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule primary playback."));
         }
 
-        if (device_sync_group_ == 0) {
-            for (auto& context : child_device_contexts_) {
-                if (FAILED(context->output_->StartScheduledPlayback(0, decklink_format_desc_.time_scale, 1.0))) {
-                    CASPAR_THROW_EXCEPTION(caspar_exception()
-                                           << msg_info(print() + L" Failed to schedule secondary playback."));
-                }
-            }
+        for (auto& context : child_device_contexts_) {
+            context->start_playback([this]() { return print(); });
         }
     }
 
