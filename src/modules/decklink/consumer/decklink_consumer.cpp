@@ -346,7 +346,7 @@ struct child_device_context
         }
     }
 
-    void schedule_frame(core::const_frame frame)
+    void schedule_frame(core::const_frame frame, BMDTimeValue video_time)
     {
         bool isInterlaced = decklink_format_desc_.field_count != 1;
         if (isInterlaced && !first_field_.is_initialized()) {
@@ -369,15 +369,14 @@ struct child_device_context
         auto image_data = convert_frame_pair(
             channel_format_desc_, decklink_format_desc_, output_config_, frame1, frame2, mode_->GetFieldDominance());
 
-        schedule_next_video(image_data, 0);
+        schedule_next_video(image_data, 0, video_time);
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples)
+    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue video_time)
     {
         auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
             new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
-        if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
-                                               video_scheduled_,
+        if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame), video_time,
                                                decklink_format_desc_.duration,
                                                decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
@@ -407,7 +406,7 @@ struct child_device_context
 
         // Let the primary callback keep the pace, so no scheduling here.
 
-        CASPAR_LOG(info) << print_single() << scheduled_frames_completed_ << " " << video_scheduled_;
+        // CASPAR_LOG(info) << print_single() << scheduled_frames_completed_ << " " << video_scheduled_;
          
         return S_OK;
     }
@@ -532,17 +531,38 @@ struct decklink_consumer
 
             std::shared_ptr<void> image_data(scalable_aligned_malloc(decklink_format_desc_.size, 64),
                                              scalable_aligned_free);
-            schedule_next_video(image_data, nb_samples);
 
             for (auto& context : child_device_contexts_) {
-                context->schedule_next_video(image_data, 0);
+                context->schedule_next_video(image_data, 0, video_scheduled_);
             }
+
+            schedule_next_video(image_data, nb_samples);
         }
 
         if (config.embedded_audio) {
             output_->EndAudioPreroll();
         }
 
+        //std::this_thread::sleep_for(std::chrono::seconds(10));
+
+        for (int i = 0; i < 10; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+             BMDReferenceStatus reference_status;
+             if (output_->GetReferenceStatus(&reference_status) != S_OK) {
+                 CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+                 break;
+             } 
+
+             if (reference_status == BMDReferenceStatus::bmdReferenceLocked) {
+                 CASPAR_LOG(error) << print() << L" Reference signal: locked";
+                 
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+                 break;
+             }
+        }
+             
         start_playback();
     }
 
@@ -631,7 +651,7 @@ struct decklink_consumer
             auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
             ++scheduled_frames_completed_;
 
-            CASPAR_LOG(info) << print() << scheduled_frames_completed_ << " " << video_scheduled_;
+            // CASPAR_LOG(info) << print() << scheduled_frames_completed_ << " " << video_scheduled_;
 
             /*
             if (key_context_) {
@@ -678,6 +698,16 @@ struct decklink_consumer
             if (abort_request_)
                 return E_FAIL;
 
+            // Send frame to children
+            // TODO - parallel?
+            for (auto& context : child_device_contexts_) {
+                context->schedule_frame(frame1, video_scheduled_);
+                if (isInterlaced) {
+                    context->schedule_frame(frame2, video_scheduled_);
+                }
+            }
+
+
             {
                 auto image_data = convert_frame_pair(channel_format_desc_,
                                                      decklink_format_desc_,
@@ -695,15 +725,6 @@ struct decklink_consumer
                                         decklink_format_desc_.audio_channels;
 
                 schedule_next_video(image_data, nb_samples);
-            }
-
-            // Send frame to children
-            // TODO - parallel?
-            for (auto& context : child_device_contexts_) {
-                context->schedule_frame(frame1);
-                if (isInterlaced) {
-                    context->schedule_frame(frame2);
-                }
             }
 
             if (config_.embedded_audio) {
