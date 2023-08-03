@@ -239,7 +239,8 @@ struct decklink_base
             config.format.format != fallback_format_desc.format) {
             if (config.format.format != core::video_format::invalid &&
                 config.format.format != core::video_format::custom &&
-                config.format.framerate == fallback_format_desc.framerate) {
+                config.format.framerate * config.format.field_count ==
+                    fallback_format_desc.framerate * fallback_format_desc.field_count) {
                 return config.format;
             } else {
                 CASPAR_LOG(warning) << print() << L"Ignoring specified format for decklink";
