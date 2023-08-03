@@ -407,6 +407,8 @@ struct child_device_context
 
         // Let the primary callback keep the pace, so no scheduling here.
 
+        CASPAR_LOG(info) << print_single() << scheduled_frames_completed_ << " " << video_scheduled_;
+         
         return S_OK;
     }
 };
@@ -629,6 +631,8 @@ struct decklink_consumer
             auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
             ++scheduled_frames_completed_;
 
+            CASPAR_LOG(info) << print() << scheduled_frames_completed_ << " " << video_scheduled_;
+
             /*
             if (key_context_) {
                 graph_->set_value(
@@ -682,7 +686,12 @@ struct decklink_consumer
                                                      frame2,
                                                      mode_->GetFieldDominance());
 
-                const auto nb_samples = static_cast<int>(frame1.audio_data().size() + frame2.audio_data().size()) /
+                auto count = frame1.audio_data().size();
+                if (frame2) {
+                    count +=  frame2.audio_data().size();
+                }
+
+                const auto nb_samples = static_cast<int>(count) /
                                         decklink_format_desc_.audio_channels;
 
                 schedule_next_video(image_data, nb_samples);
