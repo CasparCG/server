@@ -486,7 +486,9 @@ struct decklink_consumer
 
         // If there are additional ports devices, then enable the sync group
         if (!config.secondaries.empty() || config.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            device_sync_group_ = 9; // TODO - random number
+            // A unique id is needed for this group, this is simpler than a random number
+            device_sync_group_ = config.primary.device_index;
+
             if (FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
                 device_sync_group_ = 0;
                 CASPAR_LOG(error) << print() << L" Failed to enable sync group.";
@@ -546,8 +548,7 @@ struct decklink_consumer
             output_->EndAudioPreroll();
         }
 
-        // TODO - config driven
-        wait_for_reference_lock(10);
+        wait_for_reference_lock();
 
         start_playback();
     }
@@ -568,17 +569,23 @@ struct decklink_consumer
         secondary_port_contexts_.clear();
     }
 
-    void wait_for_reference_lock(int max_wait_seconds)
+    void wait_for_reference_lock()
     {
-        // TODO - auto mode?
-        if (max_wait_seconds <= 0)
+        if (config_.wait_for_reference_duration == 0 ||
+            config_.wait_for_reference == configuration::wait_for_reference_t::disabled) {
+            // Wait disabled
             return;
+        }
+        if (config_.wait_for_reference == configuration::wait_for_reference_t::automatic && device_sync_group_ == 0) {
+            // Wait is not necessary
+            return;
+        }
 
         CASPAR_LOG(info) << print() << L" Reference signal: waiting for lock";
 
         // When using the sync group we need a reference lock before starting playback, otherwise the outputs will not
         // be locked correctly and will be out of sync
-        auto wait_end = std::chrono::system_clock::now() + std::chrono::seconds(max_wait_seconds);
+        auto wait_end = std::chrono::system_clock::now() + std::chrono::seconds(config_.wait_for_reference_duration);
         while (std::chrono::system_clock::now() < wait_end) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -1012,6 +1019,16 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     } else if (latency == L"normal") {
         config.latency = configuration::latency_t::normal_latency;
     }
+
+    auto wait_for_reference = ptree.get(L"wait-for-reference", L"auto");
+    if (wait_for_reference == L"disable" || wait_for_reference == L"disabled") {
+        config.wait_for_reference = configuration::wait_for_reference_t::disabled;
+    } else if (wait_for_reference == L"enable" || wait_for_reference == L"enabled") {
+        config.wait_for_reference = configuration::wait_for_reference_t::enabled;
+    } else {
+        config.wait_for_reference = configuration::wait_for_reference_t::automatic;
+    }
+    config.wait_for_reference_duration = ptree.get(L"wait-for-reference-duration", config.wait_for_reference_duration);
 
     config.primary = parse_output_config(ptree, format_repository);
     if (config.primary.device_index == -1)

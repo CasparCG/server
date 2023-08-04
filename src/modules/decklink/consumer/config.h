@@ -69,13 +69,22 @@ struct configuration
         default_latency = normal_latency
     };
 
+    enum class wait_for_reference_t
+    {
+        automatic,
+        enabled,
+        disabled,
+    };
+
     // int       device_index      = 1;
     // int       key_device_idx    = 0;
-    bool      embedded_audio    = false;
-    keyer_t   keyer             = keyer_t::default_keyer;
-    duplex_t  duplex            = duplex_t::default_duplex;
-    latency_t latency           = latency_t::default_latency;
-    int       base_buffer_depth = 3;
+    bool                 embedded_audio              = false;
+    keyer_t              keyer                       = keyer_t::default_keyer;
+    duplex_t             duplex                      = duplex_t::default_duplex;
+    latency_t            latency                     = latency_t::default_latency;
+    wait_for_reference_t wait_for_reference          = wait_for_reference_t::automatic;
+    int                  wait_for_reference_duration = 10; // seconds
+    int                  base_buffer_depth           = 3;
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
@@ -90,6 +99,6 @@ struct configuration
 };
 
 port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
-                                         const core::video_format_repository& format_repository);
+                                       const core::video_format_repository& format_repository);
 
 }} // namespace caspar::decklink
