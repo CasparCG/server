@@ -306,7 +306,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
-    ~decklink_secondary_port() final
+    ~decklink_secondary_port() override
     {
         if (output_) {
             if (device_sync_group_ == 0) {
@@ -364,7 +364,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
             frame1 = frame;
         }
 
-        auto image_data = convert_frame_pair(
+        auto image_data = convert_frame_for_port(
             channel_format_desc_, decklink_format_desc_, output_config_, frame1, frame2, mode_->GetFieldDominance());
 
         schedule_next_video(image_data, 0, display_time);
@@ -535,7 +535,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         start_playback();
     }
 
-    ~decklink_consumer() final
+    ~decklink_consumer() override
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
@@ -650,6 +650,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         if (!priority_set) {
             priority_set = true;
             // set_thread_realtime_priority();
+            set_thread_name(L"decklink_consumer[" + std::to_wstring(config_.primary.device_index) +
+                            L"]-ScheduledFrameCompleted");
         }
         try {
             auto tick_time = tick_timer_.elapsed() * decklink_format_desc_.hz * 0.5;
@@ -727,12 +729,12 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
                 if (i == -1) {
                     // Primary port
-                    std::shared_ptr<void> image_data = convert_frame_pair(channel_format_desc_,
-                                                                          decklink_format_desc_,
-                                                                          config_.primary,
-                                                                          frame1,
-                                                                          frame2,
-                                                                          mode_->GetFieldDominance());
+                    std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
+                                                                              decklink_format_desc_,
+                                                                              config_.primary,
+                                                                              frame1,
+                                                                              frame2,
+                                                                              mode_->GetFieldDominance());
 
                     schedule_next_video(image_data, nb_samples, video_display_time);
 

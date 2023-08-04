@@ -34,18 +34,9 @@
 
 namespace caspar { namespace decklink {
 
-std::shared_ptr<void> convert_to_key_only(const std::shared_ptr<void>& image_data, std::size_t byte_count);
-
-void convert_frame(const core::video_format_desc& channel_format_desc,
-                   const core::video_format_desc& decklink_format_desc,
-                   const port_configuration&    config,
-                   std::shared_ptr<void>&         image_data,
-                   bool                           topField,
-                   const core::const_frame&       frame);
-
-std::shared_ptr<void> convert_frame_pair(const core::video_format_desc& channel_format_desc,
+std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                          const core::video_format_desc& decklink_format_desc,
-                                         const port_configuration&    config,
+                                         const port_configuration&      config,
                                          const core::const_frame&       frame1,
                                          const core::const_frame&       frame2,
                                          BMDFieldDominance              field_dominance);
