@@ -376,9 +376,8 @@ struct child_device_context
     {
         auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
             new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
-        if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame), video_time,
-                                               decklink_format_desc_.duration,
-                                               decklink_format_desc_.time_scale))) {
+        if (FAILED(output_->ScheduleVideoFrame(
+                get_raw(packed_frame), video_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
         }
 
@@ -407,7 +406,7 @@ struct child_device_context
         // Let the primary callback keep the pace, so no scheduling here.
 
         // CASPAR_LOG(info) << print_single() << scheduled_frames_completed_ << " " << video_scheduled_;
-         
+
         return S_OK;
     }
 };
@@ -543,26 +542,9 @@ struct decklink_consumer
             output_->EndAudioPreroll();
         }
 
-        //std::this_thread::sleep_for(std::chrono::seconds(10));
+        // TODO - config driven
+        wait_for_reference_lock(10);
 
-        for (int i = 0; i < 10; i++) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-             BMDReferenceStatus reference_status;
-             if (output_->GetReferenceStatus(&reference_status) != S_OK) {
-                 CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
-                 break;
-             } 
-
-             if (reference_status == BMDReferenceStatus::bmdReferenceLocked) {
-                 CASPAR_LOG(error) << print() << L" Reference signal: locked";
-                 
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-                 break;
-             }
-        }
-             
         start_playback();
     }
 
@@ -578,6 +560,39 @@ struct decklink_consumer
             }
             output_->DisableVideoOutput();
         }
+    }
+
+    void wait_for_reference_lock(int max_wait_seconds)
+    {
+        // TODO - auto mode?
+        if (max_wait_seconds <= 0)
+            return;
+
+        CASPAR_LOG(info) << print() << L" Reference signal: waiting for lock";
+
+        // When using the sync group we need a reference lock before starting playback, otherwise the outputs will not
+        // be locked correctly and will be out of sync
+        auto wait_end = std::chrono::system_clock::now() + std::chrono::seconds(max_wait_seconds);
+        while (std::chrono::system_clock::now() < wait_end) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            BMDReferenceStatus reference_status;
+            if (output_->GetReferenceStatus(&reference_status) != S_OK) {
+                CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+                break;
+            }
+
+            if (reference_status & bmdReferenceLocked) {
+                CASPAR_LOG(info) << print() << L" Reference signal: locked";
+
+                // TODO - is this necessary? This is to give it a chance to stabilise before continuing
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                return;
+            }
+        }
+
+        CASPAR_LOG(warning) << print() << L" Reference signal: unable to acquire lock";
     }
 
     void enable_audio()
@@ -707,7 +722,6 @@ struct decklink_consumer
                 }
             }
 
-
             {
                 auto image_data = convert_frame_pair(channel_format_desc_,
                                                      decklink_format_desc_,
@@ -718,11 +732,10 @@ struct decklink_consumer
 
                 auto count = frame1.audio_data().size();
                 if (frame2) {
-                    count +=  frame2.audio_data().size();
+                    count += frame2.audio_data().size();
                 }
 
-                const auto nb_samples = static_cast<int>(count) /
-                                        decklink_format_desc_.audio_channels;
+                const auto nb_samples = static_cast<int>(count) / decklink_format_desc_.audio_channels;
 
                 schedule_next_video(image_data, nb_samples);
             }
