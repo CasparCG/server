@@ -35,7 +35,6 @@
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
-#include <common/array.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/executor.h>
@@ -43,6 +42,7 @@
 #include <common/ptree.h>
 #include <common/timer.h>
 
+#include <tbb/parallel_for.h>
 #include <tbb/scalable_allocator.h>
 
 #include <boost/circular_buffer.hpp>
@@ -681,6 +681,10 @@ struct decklink_consumer
             }
             */
 
+            /**
+             * TODO - track how the secondaries are doing by comparing IDeckLinkOutput::GetScheduledStreamTime
+             */
+
             if (result == bmdOutputFrameDisplayedLate) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
                 video_scheduled_ += decklink_format_desc_.duration;
@@ -720,45 +724,45 @@ struct decklink_consumer
             BMDTimeValue video_display_time = video_scheduled_;
             video_scheduled_ += decklink_format_desc_.duration;
 
-            {
-                std::shared_ptr<void> image_data = convert_frame_pair(channel_format_desc_,
-                                                                      decklink_format_desc_,
-                                                                      config_.primary,
-                                                                      frame1,
-                                                                      frame2,
-                                                                      mode_->GetFieldDominance());
-
-                std::size_t count = frame1.audio_data().size();
-                if (frame2) {
-                    count += frame2.audio_data().size();
-                }
-
-                const int nb_samples = static_cast<int>(count) / decklink_format_desc_.audio_channels;
-
-                schedule_next_video(image_data, nb_samples, video_display_time);
-            }
-
-            // Send frame to secondary ports
-            // TODO - parallel?
-            for (auto& context : secondary_port_contexts_) {
-                context->schedule_frame(frame1, video_display_time);
-                if (isInterlaced) {
-                    context->schedule_frame(frame2, video_display_time);
-                }
-            }
-
+            std::vector<std::int32_t> audio_data;
             if (config_.embedded_audio) {
-                std::vector<std::int32_t> audio_data;
                 audio_data.insert(audio_data.end(), frame1.audio_data().begin(), frame1.audio_data().end());
                 if (isInterlaced) {
                     audio_data.insert(audio_data.end(), frame2.audio_data().begin(), frame2.audio_data().end());
                 }
-
-                // TODO: is this reliable?
-                const int nb_samples = static_cast<int>(audio_data.size()) / decklink_format_desc_.audio_channels;
-
-                schedule_next_audio(std::move(audio_data), nb_samples);
             }
+            // TODO: is this reliable?
+            const int nb_samples = static_cast<int>(audio_data.size()) / decklink_format_desc_.audio_channels;
+
+            // Schedule video
+            tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
+                if (i == -1) {
+                    // Primary port
+                    std::shared_ptr<void> image_data = convert_frame_pair(channel_format_desc_,
+                                                                          decklink_format_desc_,
+                                                                          config_.primary,
+                                                                          frame1,
+                                                                          frame2,
+                                                                          mode_->GetFieldDominance());
+
+                    schedule_next_video(image_data, nb_samples, video_display_time);
+
+                    if (config_.embedded_audio) {
+                        schedule_next_audio(std::move(audio_data), nb_samples);
+                    }
+                } else {
+                    // Send frame to secondary ports
+                    auto& context = secondary_port_contexts_[i];
+                    context->schedule_frame(frame1, video_display_time);
+                    if (isInterlaced) {
+                        context->schedule_frame(frame2, video_display_time);
+                    }
+
+                    if (config_.embedded_audio) {
+                        // TODO - audio for secondaries?
+                    }
+                }
+            });
 
         } catch (...) {
             std::lock_guard<std::mutex> lock(exception_mutex_);
