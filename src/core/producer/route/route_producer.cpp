@@ -144,9 +144,9 @@ class route_producer
         }
 
         if (field == core::video_field::b) {
-            return core::draw_frame::still(frame_->second);
+            return frame_->second;
         } else {
-            return core::draw_frame::still(frame_->first);
+            return frame_->first;
         }
     }
 
