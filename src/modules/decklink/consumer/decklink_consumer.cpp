@@ -471,7 +471,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         diagnostics::register_graph(graph_);
 
         // If there are additional ports devices, then enable the sync group
-        if (!config.secondaries.empty() || config.keyer == configuration::keyer_t::external_separate_device_keyer) {
+        if (!config.secondaries.empty()) {
             // A unique id is needed for this group, this is simpler than a random number
             device_sync_group_ = config.primary.device_index;
 
@@ -491,15 +491,6 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                                          decklink_format_desc_,
                                                                                          print(),
                                                                                          device_sync_group_));
-        }
-        if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            port_configuration port_config = config_.primary; // Explicitly copy the config
-            port_config.device_index =
-                config.key_device_idx == 0 ? config_.primary.device_index + 1 : config.key_device_idx;
-            port_config.key_only = true;
-
-            secondary_port_contexts_.push_back(std::make_unique<decklink_secondary_port>(
-                config, port_config, channel_format_desc_, decklink_format_desc_, print(), device_sync_group_));
         }
 
         enable_video();
@@ -916,8 +907,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
             state["decklink/keyer"] = std::wstring(L"external");
         } else if (config_.keyer == configuration::keyer_t::internal_keyer) {
             state["decklink/keyer"] = std::wstring(L"internal");
-        } else if (config_.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            state["decklink/keyer"] = std::wstring(L"external_separate_device");
         }
 
         if (config_.latency == configuration::latency_t::low_latency) {
@@ -934,6 +923,8 @@ struct decklink_consumer_proxy : public core::frame_consumer
             state["decklink/subregion/width"]  = config_.primary.region_w;
             state["decklink/subregion/height"] = config_.primary.region_h;
         }
+
+        // TODO - include secondary ports
 
         return state;
     }

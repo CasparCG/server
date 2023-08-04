@@ -59,15 +59,6 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
 {
     configuration config;
 
-    auto keyer = ptree.get(L"keyer", L"default");
-    if (keyer == L"external") {
-        config.keyer = configuration::keyer_t::external_keyer;
-    } else if (keyer == L"internal") {
-        config.keyer = configuration::keyer_t::internal_keyer;
-    } else if (keyer == L"external_separate_device") {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
-    }
-
     auto duplex = ptree.get(L"duplex", L"default");
     if (duplex == L"full") {
         config.duplex = configuration::duplex_t::full_duplex;
@@ -96,7 +87,23 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
     if (config.primary.device_index == -1)
         config.primary.device_index = 1;
 
-    config.key_device_idx    = ptree.get(L"key-device", config.key_device_idx);
+    auto keyer = ptree.get(L"keyer", L"default");
+    if (keyer == L"external") {
+        config.keyer = configuration::keyer_t::external_keyer;
+    } else if (keyer == L"internal") {
+        config.keyer = configuration::keyer_t::internal_keyer;
+    } else if (keyer == L"external_separate_device") {
+        config.keyer = configuration::keyer_t::external_keyer;
+
+        auto key_config         = config.primary; // Copy the primary config
+        key_config.device_index = ptree.get(L"key-device", 0);
+        if (key_config.device_index == 0) {
+            key_config.device_index = config.primary.device_index + 1;
+        }
+        key_config.key_only = true;
+        config.secondaries.push_back(key_config);
+    }
+
     config.embedded_audio    = ptree.get(L"embedded-audio", config.embedded_audio);
     config.base_buffer_depth = ptree.get(L"buffer-depth", config.base_buffer_depth);
 
@@ -125,8 +132,6 @@ configuration parse_amcp_config(const std::vector<std::wstring>&     params,
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (contains_param(L"EXTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::external_keyer;
-    } else if (contains_param(L"EXTERNAL_SEPARATE_DEVICE_KEY", params)) {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
     } else {
         config.keyer = configuration::keyer_t::default_keyer;
     }

@@ -50,7 +50,6 @@ struct configuration
     {
         internal_keyer,
         external_keyer,
-        external_separate_device_keyer, // @deprecated
         default_keyer = external_keyer
     };
 
@@ -76,7 +75,6 @@ struct configuration
         disabled,
     };
 
-    int                  key_device_idx              = 0;
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
