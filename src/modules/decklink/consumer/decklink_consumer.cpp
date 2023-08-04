@@ -17,6 +17,7 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #include "../StdAfx.h"
@@ -38,8 +39,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/executor.h>
-#include <common/param.h>
-#include <common/ptree.h>
 #include <common/timer.h>
 
 #include <tbb/parallel_for.h>
@@ -507,9 +506,13 @@ struct decklink_consumer final
                                                                                          device_sync_group_));
         }
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
-            // TODO - need to generate a config with a mangled id
-            // child_device_contexts_.push_back(
-            // std::make_unique<child_device_context>(config, child_config, print(), device_sync_group_));
+            port_configuration port_config = config_.primary; // Explicitly copy the config
+            port_config.device_index =
+                config.key_device_idx == 0 ? config_.primary.device_index + 1 : config.key_device_idx;
+            port_config.key_only = true;
+
+            secondary_port_contexts_.push_back(std::make_unique<decklink_secondary_port>(
+                config, port_config, channel_format_desc_, decklink_format_desc_, print(), device_sync_group_));
         }
 
         enable_video();
@@ -957,33 +960,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         return core::frame_consumer::empty();
     }
 
-    configuration config;
-
-    if (params.size() > 1)
-        config.primary.device_index = std::stoi(params.at(1));
-
-    if (contains_param(L"INTERNAL_KEY", params)) {
-        config.keyer = configuration::keyer_t::internal_keyer;
-    } else if (contains_param(L"EXTERNAL_KEY", params)) {
-        config.keyer = configuration::keyer_t::external_keyer;
-    } else if (contains_param(L"EXTERNAL_SEPARATE_DEVICE_KEY", params)) {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
-    } else {
-        config.keyer = configuration::keyer_t::default_keyer;
-    }
-
-    if (contains_param(L"FULL_DUPLEX", params)) {
-        config.duplex = configuration::duplex_t::full_duplex;
-    } else if (contains_param(L"HALF_DUPLEX", params)) {
-        config.duplex = configuration::duplex_t::half_duplex;
-    }
-
-    if (contains_param(L"LOW_LATENCY", params)) {
-        config.latency = configuration::latency_t::low_latency;
-    }
-
-    config.embedded_audio   = contains_param(L"EMBEDDED_AUDIO", params);
-    config.primary.key_only = contains_param(L"KEY_ONLY", params);
+    configuration config = parse_amcp_config(params, format_repository);
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }
@@ -993,57 +970,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const core::video_format_repository&              format_repository,
                               std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
-    configuration config;
-
-    auto keyer = ptree.get(L"keyer", L"default");
-    if (keyer == L"external") {
-        config.keyer = configuration::keyer_t::external_keyer;
-    } else if (keyer == L"internal") {
-        config.keyer = configuration::keyer_t::internal_keyer;
-    } else if (keyer == L"external_separate_device") {
-        config.keyer = configuration::keyer_t::external_separate_device_keyer;
-    }
-
-    auto duplex = ptree.get(L"duplex", L"default");
-    if (duplex == L"full") {
-        config.duplex = configuration::duplex_t::full_duplex;
-    } else if (duplex == L"half") {
-        config.duplex = configuration::duplex_t::half_duplex;
-    }
-
-    auto latency = ptree.get(L"latency", L"default");
-    if (latency == L"low") {
-        config.latency = configuration::latency_t::low_latency;
-    } else if (latency == L"normal") {
-        config.latency = configuration::latency_t::normal_latency;
-    }
-
-    auto wait_for_reference = ptree.get(L"wait-for-reference", L"auto");
-    if (wait_for_reference == L"disable" || wait_for_reference == L"disabled") {
-        config.wait_for_reference = configuration::wait_for_reference_t::disabled;
-    } else if (wait_for_reference == L"enable" || wait_for_reference == L"enabled") {
-        config.wait_for_reference = configuration::wait_for_reference_t::enabled;
-    } else {
-        config.wait_for_reference = configuration::wait_for_reference_t::automatic;
-    }
-    config.wait_for_reference_duration = ptree.get(L"wait-for-reference-duration", config.wait_for_reference_duration);
-
-    config.primary = parse_output_config(ptree, format_repository);
-    if (config.primary.device_index == -1)
-        config.primary.device_index = 1;
-
-    config.embedded_audio    = ptree.get(L"embedded-audio", config.embedded_audio);
-    config.base_buffer_depth = ptree.get(L"buffer-depth", config.base_buffer_depth);
-
-    if (ptree.get_child_optional(L"ports")) {
-        for (auto& xml_port : ptree | witerate_children(L"ports") | welement_context_iteration) {
-            ptree_verify_element_name(xml_port, L"port");
-
-            port_configuration port_config = parse_output_config(xml_port.second, format_repository);
-
-            config.secondaries.push_back(port_config);
-        }
-    }
+    configuration config = parse_xml_config(ptree, format_repository);
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }

@@ -50,7 +50,7 @@ struct configuration
     {
         internal_keyer,
         external_keyer,
-        external_separate_device_keyer, // TODO - remove?
+        external_separate_device_keyer, // @deprecated
         default_keyer = external_keyer
     };
 
@@ -76,8 +76,7 @@ struct configuration
         disabled,
     };
 
-    // int       device_index      = 1;
-    // int       key_device_idx    = 0;
+    int                  key_device_idx              = 0;
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
@@ -98,7 +97,10 @@ struct configuration
     // int key_device_index() const { return key_device_idx == 0 ? device_index + 1 : key_device_idx; }
 };
 
-port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
-                                       const core::video_format_repository& format_repository);
+configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
+                               const core::video_format_repository& format_repository);
+
+configuration parse_amcp_config(const std::vector<std::wstring>&     params,
+                                const core::video_format_repository& format_repository);
 
 }} // namespace caspar::decklink
