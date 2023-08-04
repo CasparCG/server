@@ -121,7 +121,7 @@ void set_duplex(const com_iface_ptr<IDeckLinkAttributes_v10_11>&    attributes,
                                 &supportsDuplexModeConfiguration))) {
         CASPAR_LOG(error) << print
                           << L" Failed to set duplex mode, unable to check if card supports duplex mode setting.";
-    };
+    }
 
     if (!supportsDuplexModeConfiguration) {
         CASPAR_LOG(warning) << print << L" This device does not support setting the duplex mode.";
@@ -168,6 +168,28 @@ void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
         else
             CASPAR_LOG(info) << print << L" Enabled external keyer.";
     }
+}
+
+core::video_format_desc get_decklink_format(const port_configuration&      config,
+                                            const core::video_format_desc& fallback_format_desc,
+                                            const std::wstring&            print)
+{
+    if (config.format.format != core::video_format::invalid && config.format.format != fallback_format_desc.format) {
+        if (config.format.format != core::video_format::invalid && config.format.format != core::video_format::custom &&
+            config.format.framerate * config.format.field_count ==
+                fallback_format_desc.framerate * fallback_format_desc.field_count &&
+            config.format.duration == fallback_format_desc.duration) {
+            return config.format;
+        } else {
+            CASPAR_LOG(warning) << print << L"Ignoring specified format for decklink";
+        }
+    }
+
+    if (fallback_format_desc.format == core::video_format::invalid ||
+        fallback_format_desc.format == core::video_format::custom)
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Decklink does not support the channel format"));
+
+    return fallback_format_desc;
 }
 
 class decklink_frame : public IDeckLinkVideoFrame
@@ -226,38 +248,7 @@ class decklink_frame : public IDeckLinkVideoFrame
     [[nodiscard]] int nb_samples() const { return nb_samples_; }
 };
 
-struct decklink_base
-{
-  public:
-    [[nodiscard]] virtual std::wstring print() const = 0;
-
-    [[nodiscard]] core::video_format_desc get_decklink_format(const port_configuration&      config,
-                                                              const core::video_format_desc& fallback_format_desc) const
-    {
-        if (config.format.format != core::video_format::invalid &&
-            config.format.format != fallback_format_desc.format) {
-            if (config.format.format != core::video_format::invalid &&
-                config.format.format != core::video_format::custom &&
-                config.format.framerate * config.format.field_count ==
-                    fallback_format_desc.framerate * fallback_format_desc.field_count &&
-                config.format.duration == fallback_format_desc.duration) {
-                return config.format;
-            } else {
-                CASPAR_LOG(warning) << print() << L"Ignoring specified format for decklink";
-            }
-        }
-
-        if (fallback_format_desc.format == core::video_format::invalid ||
-            fallback_format_desc.format == core::video_format::custom)
-            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Decklink does not support the channel format"));
-
-        return fallback_format_desc;
-    }
-};
-
-struct decklink_secondary_port final
-    : public IDeckLinkVideoOutputCallback
-    , public decklink_base
+struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 {
     const configuration                       config_;
     const port_configuration                  output_config_;
@@ -288,7 +279,7 @@ struct decklink_secondary_port final
         , output_config_(std::move(output_config))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
-        , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
+        , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc, print))
     {
         if (config.duplex != configuration::duplex_t::default_duplex) {
             set_duplex(iface_cast<IDeckLinkAttributes_v10_11>(decklink_),
@@ -325,13 +316,11 @@ struct decklink_secondary_port final
         }
     }
 
-    [[nodiscard]] std::wstring print_single() const
+    [[nodiscard]] std::wstring print() const
     {
         return model_name_ + L" [" + std::to_wstring(output_config_.device_index) + L"|" + decklink_format_desc_.name +
                L"]";
     }
-
-    [[nodiscard]] std::wstring print() const final { return L"TODO"; }
 
     template <typename Print>
     void enable_video(const Print& print)
@@ -409,9 +398,7 @@ struct decklink_secondary_port final
     }
 };
 
-struct decklink_consumer final
-    : public IDeckLinkVideoOutputCallback
-    , public decklink_base
+struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 {
     const int           channel_index_;
     const configuration config_;
@@ -458,7 +445,7 @@ struct decklink_consumer final
         : channel_index_(channel_index)
         , config_(config)
         , channel_format_desc_(std::move(channel_format_desc))
-        , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
+        , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_, print()))
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -847,7 +834,7 @@ struct decklink_consumer final
         return !abort_request_;
     }
 
-    [[nodiscard]] std::wstring print() const final
+    [[nodiscard]] std::wstring print() const
     {
         std::wstringstream buffer;
 
@@ -855,7 +842,7 @@ struct decklink_consumer final
                << std::to_wstring(config_.primary.device_index) << L"|" << decklink_format_desc_.name << L"]";
 
         for (auto& context : secondary_port_contexts_) {
-            buffer << L" && " + context->print_single();
+            buffer << L" && " + context->print();
         }
 
         return buffer.str();
