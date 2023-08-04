@@ -282,6 +282,11 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc, print))
     {
+        if (main_decklink_format_desc.format != decklink_format_desc_.format) {
+            CASPAR_LOG(info) << print << L" Disabling sync group for output with different format.";
+            device_sync_group_ = 0;
+        }
+
         if (config.duplex != configuration::duplex_t::default_duplex) {
             set_duplex(iface_cast<IDeckLinkAttributes_v10_11>(decklink_),
                        iface_cast<IDeckLinkConfiguration_v10_11>(decklink_),
