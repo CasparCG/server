@@ -25,7 +25,7 @@
 
 namespace caspar { namespace decklink {
 
-struct output_configuration
+struct port_configuration
 {
     int  device_index = 1;
     bool key_only     = false;
@@ -77,8 +77,8 @@ struct configuration
     latency_t latency           = latency_t::default_latency;
     int       base_buffer_depth = 3;
 
-    output_configuration              main;
-    std::vector<output_configuration> children;
+    port_configuration              primary;
+    std::vector<port_configuration> secondaries;
 
     [[nodiscard]] int buffer_depth() const
     {
@@ -89,7 +89,7 @@ struct configuration
     // int key_device_index() const { return key_device_idx == 0 ? device_index + 1 : key_device_idx; }
 };
 
-output_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
+port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
                                          const core::video_format_repository& format_repository);
 
 }} // namespace caspar::decklink

@@ -224,23 +224,24 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) override { return S_FALSE; }
 
-    int nb_samples() const { return nb_samples_; }
+    [[nodiscard]] int nb_samples() const { return nb_samples_; }
 };
 
 struct decklink_base
 {
   public:
-    virtual std::wstring print() const = 0;
+    [[nodiscard]] virtual std::wstring print() const = 0;
 
-    core::video_format_desc get_decklink_format(const output_configuration&    config,
-                                                const core::video_format_desc& fallback_format_desc)
+    [[nodiscard]] core::video_format_desc get_decklink_format(const port_configuration&      config,
+                                                              const core::video_format_desc& fallback_format_desc) const
     {
         if (config.format.format != core::video_format::invalid &&
             config.format.format != fallback_format_desc.format) {
             if (config.format.format != core::video_format::invalid &&
                 config.format.format != core::video_format::custom &&
                 config.format.framerate * config.format.field_count ==
-                    fallback_format_desc.framerate * fallback_format_desc.field_count) {
+                    fallback_format_desc.framerate * fallback_format_desc.field_count &&
+                config.format.duration == fallback_format_desc.duration) {
                 return config.format;
             } else {
                 CASPAR_LOG(warning) << print() << L"Ignoring specified format for decklink";
@@ -255,12 +256,12 @@ struct decklink_base
     }
 };
 
-struct child_device_context
+struct decklink_secondary_port
     : public IDeckLinkVideoOutputCallback
     , public decklink_base
 {
     const configuration                       config_;
-    const output_configuration                output_config_;
+    const port_configuration                  output_config_;
     com_ptr<IDeckLink>                        decklink_      = get_device(output_config_.device_index);
     com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
     com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
@@ -271,21 +272,21 @@ struct child_device_context
 
     const std::wstring model_name_ = get_model_name(decklink_);
 
-    long long video_scheduled_ = 0;
+    // long long video_scheduled_ = 0;
 
     const core::video_format_desc channel_format_desc_;
     const core::video_format_desc decklink_format_desc_;
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
 
-    child_device_context(const configuration&        config,
-                         const output_configuration& output_config,
-                         core::video_format_desc     channel_format_desc,
-                         core::video_format_desc     main_decklink_format_desc,
-                         const std::wstring&         print,
-                         int                         device_sync_group)
+    decklink_secondary_port(const configuration&           config,
+                            port_configuration             output_config,
+                            core::video_format_desc        channel_format_desc,
+                            const core::video_format_desc& main_decklink_format_desc,
+                            const std::wstring&            print,
+                            int                            device_sync_group)
         : config_(config)
-        , output_config_(output_config)
+        , output_config_(std::move(output_config))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
@@ -314,13 +315,13 @@ struct child_device_context
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
-    std::wstring print_single() const
+    [[nodiscard]] std::wstring print_single() const
     {
         return model_name_ + L" [" + std::to_wstring(output_config_.device_index) + L"|" + decklink_format_desc_.name +
                L"]";
     }
 
-    std::wstring print() const override { return L"TODO"; }
+    [[nodiscard]] std::wstring print() const override { return L"TODO"; }
 
     template <typename Print>
     void enable_video(const Print& print)
@@ -380,10 +381,10 @@ struct child_device_context
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
         }
 
-        video_scheduled_ += decklink_format_desc_.duration;
+        // video_scheduled_ += decklink_format_desc_.duration;
     }
 
-    ~child_device_context()
+    ~decklink_secondary_port() override
     {
         if (output_) {
             output_->StopScheduledPlayback(0, nullptr, 0);
@@ -413,7 +414,7 @@ struct decklink_consumer
     const int           channel_index_;
     const configuration config_;
 
-    com_ptr<IDeckLink>                        decklink_      = get_device(config_.main.device_index);
+    com_ptr<IDeckLink>                        decklink_      = get_device(config_.primary.device_index);
     com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
     com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
     com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
@@ -438,12 +439,12 @@ struct decklink_consumer
 
     boost::circular_buffer<std::vector<int32_t>> audio_container_{static_cast<unsigned long>(buffer_size_ + 1)};
 
-    spl::shared_ptr<diagnostics::graph>                graph_;
-    caspar::timer                                      tick_timer_;
-    reference_signal_detector                          reference_signal_detector_{output_};
-    std::atomic<int64_t>                               scheduled_frames_completed_{0};
-    std::vector<std::unique_ptr<child_device_context>> child_device_contexts_;
-    int                                                device_sync_group_;
+    spl::shared_ptr<diagnostics::graph>                   graph_;
+    caspar::timer                                         tick_timer_;
+    reference_signal_detector                             reference_signal_detector_{output_};
+    std::atomic<int64_t>                                  scheduled_frames_completed_{0};
+    std::vector<std::unique_ptr<decklink_secondary_port>> secondary_port_contexts_;
+    int                                                   device_sync_group_;
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
@@ -455,7 +456,7 @@ struct decklink_consumer
         : channel_index_(channel_index)
         , config_(config)
         , channel_format_desc_(std::move(channel_format_desc))
-        , decklink_format_desc_(get_decklink_format(config.main, channel_format_desc_))
+        , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -480,8 +481,8 @@ struct decklink_consumer
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        // If there are child devices, then
-        if (!config.children.empty() || config.keyer == configuration::keyer_t::external_separate_device_keyer) {
+        // If there are additional ports devices, then enable the sync group
+        if (!config.secondaries.empty() || config.keyer == configuration::keyer_t::external_separate_device_keyer) {
             device_sync_group_ = 9; // TODO - random number
             if (FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
                 device_sync_group_ = 0;
@@ -491,10 +492,14 @@ struct decklink_consumer
             }
         }
 
-        // create the child devices
-        for (auto& child_config : config_.children) {
-            child_device_contexts_.push_back(std::make_unique<child_device_context>(
-                config, child_config, channel_format_desc_, decklink_format_desc_, print(), device_sync_group_));
+        // create the secondary ports
+        for (auto& secondary_port_config : config_.secondaries) {
+            secondary_port_contexts_.push_back(std::make_unique<decklink_secondary_port>(config,
+                                                                                         secondary_port_config,
+                                                                                         channel_format_desc_,
+                                                                                         decklink_format_desc_,
+                                                                                         print(),
+                                                                                         device_sync_group_));
         }
         if (config.keyer == configuration::keyer_t::external_separate_device_keyer) {
             // TODO - need to generate a config with a mangled id
@@ -527,7 +532,7 @@ struct decklink_consumer
                                              scalable_aligned_free);
 
             schedule_next_video(image_data, nb_samples, video_scheduled_);
-            for (auto& context : child_device_contexts_) {
+            for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }
 
@@ -544,7 +549,7 @@ struct decklink_consumer
         start_playback();
     }
 
-    ~decklink_consumer()
+    ~decklink_consumer() override
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
@@ -618,7 +623,7 @@ struct decklink_consumer
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
         }
 
-        for (auto& context : child_device_contexts_) {
+        for (auto& context : secondary_port_contexts_) {
             context->enable_video([this]() { return print(); });
         }
     }
@@ -629,7 +634,7 @@ struct decklink_consumer
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule primary playback."));
         }
 
-        for (auto& context : child_device_contexts_) {
+        for (auto& context : secondary_port_contexts_) {
             context->start_playback([this]() { return print(); });
         }
     }
@@ -661,8 +666,6 @@ struct decklink_consumer
 
             auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
             ++scheduled_frames_completed_;
-
-            // CASPAR_LOG(info) << print() << scheduled_frames_completed_ << " " << video_scheduled_;
 
             /*
             if (key_context_) {
@@ -715,7 +718,7 @@ struct decklink_consumer
             {
                 std::shared_ptr<void> image_data = convert_frame_pair(channel_format_desc_,
                                                                       decklink_format_desc_,
-                                                                      config_.main,
+                                                                      config_.primary,
                                                                       frame1,
                                                                       frame2,
                                                                       mode_->GetFieldDominance());
@@ -730,9 +733,9 @@ struct decklink_consumer
                 schedule_next_video(image_data, nb_samples, video_display_time);
             }
 
-            // Send frame to children
+            // Send frame to secondary ports
             // TODO - parallel?
-            for (auto& context : child_device_contexts_) {
+            for (auto& context : secondary_port_contexts_) {
                 context->schedule_frame(frame1, video_display_time);
                 if (isInterlaced) {
                     context->schedule_frame(frame2, video_display_time);
@@ -790,7 +793,7 @@ struct decklink_consumer
             CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
         }
 
-        // TODO - audio to child devices?
+        // TODO - audio to secondary ports?
 
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
@@ -840,14 +843,14 @@ struct decklink_consumer
         return !abort_request_;
     }
 
-    std::wstring print() const override
+    [[nodiscard]] std::wstring print() const final
     {
         std::wstringstream buffer;
 
         buffer << model_name_ << L" [" + std::to_wstring(channel_index_) << L"-"
-               << std::to_wstring(config_.main.device_index) << L"|" << decklink_format_desc_.name << L"]";
+               << std::to_wstring(config_.primary.device_index) << L"|" << decklink_format_desc_.name << L"]";
 
-        for (auto& context : child_device_contexts_) {
+        for (auto& context : secondary_port_contexts_) {
             buffer << L" && " + context->print_single();
         }
 
@@ -865,7 +868,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
   public:
     explicit decklink_consumer_proxy(const configuration& config)
         : config_(config)
-        , executor_(L"decklink_consumer[" + std::to_wstring(config.main.device_index) + L"]")
+        , executor_(L"decklink_consumer[" + std::to_wstring(config.primary.device_index) + L"]")
     {
         executor_.begin_invoke([=] { com_initialize(); });
     }
@@ -893,26 +896,29 @@ struct decklink_consumer_proxy : public core::frame_consumer
         return executor_.begin_invoke([=] { return consumer_->send(field, frame); });
     }
 
-    std::wstring print() const override { return consumer_ ? consumer_->print() : L"[decklink_consumer]"; }
+    [[nodiscard]] std::wstring print() const override
+    {
+        return consumer_ ? consumer_->print() : L"[decklink_consumer]";
+    }
 
-    std::wstring name() const override { return L"decklink"; }
+    [[nodiscard]] std::wstring name() const override { return L"decklink"; }
 
-    int index() const override { return 300 + config_.main.device_index; }
+    [[nodiscard]] int index() const override { return 300 + config_.primary.device_index; }
 
-    bool has_synchronization_clock() const override { return true; }
+    [[nodiscard]] bool has_synchronization_clock() const override { return true; }
 
-    core::monitor::state state() const override
+    [[nodiscard]] core::monitor::state state() const override
     {
         core::monitor::state state;
 
-        state["decklink/index"]          = config_.main.device_index;
+        state["decklink/index"]          = config_.primary.device_index;
         state["decklink/embedded-audio"] = config_.embedded_audio;
-        state["decklink/key-only"]       = config_.main.key_only;
+        state["decklink/key-only"]       = config_.primary.key_only;
         state["decklink/buffer-depth"]   = config_.base_buffer_depth;
-        if (config_.main.format.format == core::video_format::invalid) {
+        if (config_.primary.format.format == core::video_format::invalid) {
             state["decklink/video-mode"] = format_desc_.name;
         } else {
-            state["decklink/video-mode"] = config_.main.format.name;
+            state["decklink/video-mode"] = config_.primary.format.name;
         }
 
         if (config_.keyer == configuration::keyer_t::external_keyer) {
@@ -929,13 +935,13 @@ struct decklink_consumer_proxy : public core::frame_consumer
             state["decklink/latency"] = std::wstring(L"normal");
         }
 
-        if (config_.main.has_subregion_geometry()) {
-            state["decklink/subregion/src-x"]  = config_.main.src_x;
-            state["decklink/subregion/src-y"]  = config_.main.src_y;
-            state["decklink/subregion/src-x"]  = config_.main.dest_x;
-            state["decklink/subregion/dest-y"] = config_.main.dest_y;
-            state["decklink/subregion/width"]  = config_.main.region_w;
-            state["decklink/subregion/height"] = config_.main.region_h;
+        if (config_.primary.has_subregion_geometry()) {
+            state["decklink/subregion/src-x"]  = config_.primary.src_x;
+            state["decklink/subregion/src-y"]  = config_.primary.src_y;
+            state["decklink/subregion/src-x"]  = config_.primary.dest_x;
+            state["decklink/subregion/dest-y"] = config_.primary.dest_y;
+            state["decklink/subregion/width"]  = config_.primary.region_w;
+            state["decklink/subregion/height"] = config_.primary.region_h;
         }
 
         return state;
@@ -953,7 +959,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     configuration config;
 
     if (params.size() > 1)
-        config.main.device_index = std::stoi(params.at(1));
+        config.primary.device_index = std::stoi(params.at(1));
 
     if (contains_param(L"INTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::internal_keyer;
@@ -975,8 +981,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.latency = configuration::latency_t::low_latency;
     }
 
-    config.embedded_audio = contains_param(L"EMBEDDED_AUDIO", params);
-    config.main.key_only  = contains_param(L"KEY_ONLY", params);
+    config.embedded_audio   = contains_param(L"EMBEDDED_AUDIO", params);
+    config.primary.key_only = contains_param(L"KEY_ONLY", params);
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }
@@ -1011,9 +1017,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.latency = configuration::latency_t::normal_latency;
     }
 
-    config.main = parse_output_config(ptree, format_repository);
-    if (config.main.device_index == -1)
-        config.main.device_index = 1;
+    config.primary = parse_output_config(ptree, format_repository);
+    if (config.primary.device_index == -1)
+        config.primary.device_index = 1;
 
     config.embedded_audio    = ptree.get(L"embedded-audio", config.embedded_audio);
     config.base_buffer_depth = ptree.get(L"buffer-depth", config.base_buffer_depth);
@@ -1022,9 +1028,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         for (auto& xml_port : ptree | witerate_children(L"ports") | welement_context_iteration) {
             ptree_verify_element_name(xml_port, L"port");
 
-            output_configuration port_config = parse_output_config(xml_port.second, format_repository);
+            port_configuration port_config = parse_output_config(xml_port.second, format_repository);
 
-            config.children.push_back(port_config);
+            config.secondaries.push_back(port_config);
         }
     }
 

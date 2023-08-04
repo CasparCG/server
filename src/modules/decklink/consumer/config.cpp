@@ -23,10 +23,10 @@
 
 namespace caspar { namespace decklink {
 
-output_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
+port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
                                          const core::video_format_repository& format_repository)
 {
-    output_configuration port_config;
+    port_configuration port_config;
     port_config.device_index = ptree.get(L"device", -1);
     port_config.key_only     = ptree.get(L"key-only", port_config.key_only);
 
