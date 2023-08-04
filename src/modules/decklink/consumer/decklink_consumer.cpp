@@ -311,7 +311,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
-    ~decklink_secondary_port() override
+    ~decklink_secondary_port()
     {
         if (output_) {
             if (device_sync_group_ == 0) {
@@ -540,7 +540,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         start_playback();
     }
 
-    ~decklink_consumer() override
+    ~decklink_consumer()
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
