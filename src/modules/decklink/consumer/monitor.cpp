@@ -23,8 +23,34 @@
 
 namespace caspar { namespace decklink {
 
+core::monitor::state get_state_for_port(const port_configuration&      port_config,
+                                        const core::video_format_desc& channel_format)
+{
+    core::monitor::state state;
 
-core::monitor::state get_state_for_config(const configuration& config, const core::video_format_desc& channel_format){
+    state["index"]    = port_config.device_index;
+    state["key-only"] = port_config.key_only;
+
+    if (port_config.format.format == core::video_format::invalid) {
+        state["video-mode"] = channel_format.name;
+    } else {
+        state["video-mode"] = port_config.format.name;
+    }
+
+    if (port_config.has_subregion_geometry()) {
+        state["subregion/src-x"]  = port_config.src_x;
+        state["subregion/src-y"]  = port_config.src_y;
+        state["subregion/src-x"]  = port_config.dest_x;
+        state["subregion/dest-y"] = port_config.dest_y;
+        state["subregion/width"]  = port_config.region_w;
+        state["subregion/height"] = port_config.region_h;
+    }
+
+    return state;
+}
+
+core::monitor::state get_state_for_config(const configuration& config, const core::video_format_desc& channel_format)
+{
     core::monitor::state state;
 
     state["decklink"] = get_state_for_port(config.primary, channel_format);
@@ -51,30 +77,5 @@ core::monitor::state get_state_for_config(const configuration& config, const cor
 
     return state;
 }
-core::monitor::state get_state_for_port(const port_configuration& port_config, const core::video_format_desc& channel_format)
-{
-    core::monitor::state state;
-
-    state["index"]    = port_config.device_index;
-    state["key-only"] = port_config.key_only;
-
-    if (port_config.format.format == core::video_format::invalid) {
-        state["video-mode"] = channel_format.name;
-    } else {
-        state["video-mode"] = port_config.format.name;
-    }
-
-    if (port_config.has_subregion_geometry()) {
-        state["subregion/src-x"]  = port_config.src_x;
-        state["subregion/src-y"]  = port_config.src_y;
-        state["subregion/src-x"]  = port_config.dest_x;
-        state["subregion/dest-y"] = port_config.dest_y;
-        state["subregion/width"]  = port_config.region_w;
-        state["subregion/height"] = port_config.region_h;
-    }
-
-    return state;
-}
-
 
 }} // namespace caspar::decklink
