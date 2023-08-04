@@ -569,15 +569,16 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         // be locked correctly and will be out of sync
         auto wait_end = std::chrono::system_clock::now() + std::chrono::seconds(config_.wait_for_reference_duration);
         while (std::chrono::system_clock::now() < wait_end) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
             BMDReferenceStatus reference_status;
             if (output_->GetReferenceStatus(&reference_status) != S_OK) {
                 CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
                 break;
             }
 
-            if (reference_status & bmdReferenceLocked) {
+            if (reference_status & bmdReferenceNotSupportedByHardware) {
+                CASPAR_LOG(info) << print() << L" Reference signal: not supported by hardware.";
+                break;
+            } else if (reference_status & bmdReferenceLocked) {
                 CASPAR_LOG(info) << print() << L" Reference signal: locked";
 
                 // TODO - is this necessary? This is to give it a chance to stabilise before continuing
@@ -585,6 +586,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
                 return;
             }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         CASPAR_LOG(warning) << print() << L" Reference signal: unable to acquire lock";
