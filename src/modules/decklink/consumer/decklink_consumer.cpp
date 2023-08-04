@@ -256,7 +256,7 @@ struct decklink_base
     }
 };
 
-struct decklink_secondary_port
+struct decklink_secondary_port final
     : public IDeckLinkVideoOutputCallback
     , public decklink_base
 {
@@ -315,13 +315,24 @@ struct decklink_secondary_port
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
+    ~decklink_secondary_port() final
+    {
+        if (output_) {
+            if (device_sync_group_ == 0) {
+                output_->StopScheduledPlayback(0, nullptr, 0);
+            }
+
+            output_->DisableVideoOutput();
+        }
+    }
+
     [[nodiscard]] std::wstring print_single() const
     {
         return model_name_ + L" [" + std::to_wstring(output_config_.device_index) + L"|" + decklink_format_desc_.name +
                L"]";
     }
 
-    [[nodiscard]] std::wstring print() const override { return L"TODO"; }
+    [[nodiscard]] std::wstring print() const final { return L"TODO"; }
 
     template <typename Print>
     void enable_video(const Print& print)
@@ -384,17 +395,6 @@ struct decklink_secondary_port
         // video_scheduled_ += decklink_format_desc_.duration;
     }
 
-    ~decklink_secondary_port() override
-    {
-        if (output_) {
-            if (device_sync_group_ == 0) {
-                output_->StopScheduledPlayback(0, nullptr, 0);
-            }
-
-            output_->DisableVideoOutput();
-        }
-    }
-
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
     ULONG STDMETHODCALLTYPE   AddRef() override { return 1; }
     ULONG STDMETHODCALLTYPE   Release() override { return 1; }
@@ -410,7 +410,7 @@ struct decklink_secondary_port
     }
 };
 
-struct decklink_consumer
+struct decklink_consumer final
     : public IDeckLinkVideoOutputCallback
     , public decklink_base
 {
@@ -553,7 +553,7 @@ struct decklink_consumer
         start_playback();
     }
 
-    ~decklink_consumer() override
+    ~decklink_consumer() final
     {
         abort_request_ = true;
         buffer_cond_.notify_all();
@@ -808,8 +808,6 @@ struct decklink_consumer
                                                  nullptr))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
         }
-
-        // TODO - audio to secondary ports?
 
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
