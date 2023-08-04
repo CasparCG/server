@@ -26,6 +26,7 @@
 #include "config.h"
 #include "decklink_consumer.h"
 #include "frame.h"
+#include "monitor.h"
 
 #include "../decklink.h"
 #include "../util/util.h"
@@ -889,45 +890,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
     [[nodiscard]] bool has_synchronization_clock() const override { return true; }
 
-    [[nodiscard]] core::monitor::state state() const override
-    {
-        core::monitor::state state;
-
-        state["decklink/index"]          = config_.primary.device_index;
-        state["decklink/embedded-audio"] = config_.embedded_audio;
-        state["decklink/key-only"]       = config_.primary.key_only;
-        state["decklink/buffer-depth"]   = config_.base_buffer_depth;
-        if (config_.primary.format.format == core::video_format::invalid) {
-            state["decklink/video-mode"] = format_desc_.name;
-        } else {
-            state["decklink/video-mode"] = config_.primary.format.name;
-        }
-
-        if (config_.keyer == configuration::keyer_t::external_keyer) {
-            state["decklink/keyer"] = std::wstring(L"external");
-        } else if (config_.keyer == configuration::keyer_t::internal_keyer) {
-            state["decklink/keyer"] = std::wstring(L"internal");
-        }
-
-        if (config_.latency == configuration::latency_t::low_latency) {
-            state["decklink/latency"] = std::wstring(L"low");
-        } else if (config_.latency == configuration::latency_t::normal_latency) {
-            state["decklink/latency"] = std::wstring(L"normal");
-        }
-
-        if (config_.primary.has_subregion_geometry()) {
-            state["decklink/subregion/src-x"]  = config_.primary.src_x;
-            state["decklink/subregion/src-y"]  = config_.primary.src_y;
-            state["decklink/subregion/src-x"]  = config_.primary.dest_x;
-            state["decklink/subregion/dest-y"] = config_.primary.dest_y;
-            state["decklink/subregion/width"]  = config_.primary.region_w;
-            state["decklink/subregion/height"] = config_.primary.region_h;
-        }
-
-        // TODO - include secondary ports
-
-        return state;
-    }
+    [[nodiscard]] core::monitor::state state() const override { return get_state_for_config(config_, format_desc_); }
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
