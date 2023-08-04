@@ -387,7 +387,10 @@ struct decklink_secondary_port
     ~decklink_secondary_port() override
     {
         if (output_) {
-            output_->StopScheduledPlayback(0, nullptr, 0);
+            if (device_sync_group_ == 0) {
+                output_->StopScheduledPlayback(0, nullptr, 0);
+            }
+
             output_->DisableVideoOutput();
         }
     }
@@ -439,10 +442,10 @@ struct decklink_consumer
 
     boost::circular_buffer<std::vector<int32_t>> audio_container_{static_cast<unsigned long>(buffer_size_ + 1)};
 
-    spl::shared_ptr<diagnostics::graph>                   graph_;
-    caspar::timer                                         tick_timer_;
-    reference_signal_detector                             reference_signal_detector_{output_};
-    std::atomic<int64_t>                                  scheduled_frames_completed_{0};
+    spl::shared_ptr<diagnostics::graph> graph_;
+    caspar::timer                       tick_timer_;
+    reference_signal_detector           reference_signal_detector_{output_};
+    // std::atomic<int64_t>                                  scheduled_frames_completed_{0};
     std::vector<std::unique_ptr<decklink_secondary_port>> secondary_port_contexts_;
     int                                                   device_sync_group_;
 
@@ -561,6 +564,8 @@ struct decklink_consumer
             }
             output_->DisableVideoOutput();
         }
+
+        secondary_port_contexts_.clear();
     }
 
     void wait_for_reference_lock(int max_wait_seconds)
@@ -665,7 +670,7 @@ struct decklink_consumer
             reference_signal_detector_.detect_change([this]() { return print(); });
 
             auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
-            ++scheduled_frames_completed_;
+            // ++scheduled_frames_completed_;
 
             /*
             if (key_context_) {
@@ -800,19 +805,6 @@ struct decklink_consumer
 
     void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
-        /*
-        if (key_context_) {
-            auto key_frame =
-                wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(key, decklink_format_desc_, nb_samples));
-            if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame),
-                                                                 video_scheduled_,
-                                                                 decklink_format_desc_.duration,
-                                                                 decklink_format_desc_.time_scale))) {
-                CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
-            }
-        }
-         */
-
         auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
             new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
         if (FAILED(output_->ScheduleVideoFrame(
