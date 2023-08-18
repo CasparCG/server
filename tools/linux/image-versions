@@ -4,5 +4,5 @@ export IMAGE_PREFIX=ghcr.io/casparcg/server/
 
 export IMAGE_BASE=${IMAGE_PREFIX}base:jammy-0
 export IMAGE_CEF=${IMAGE_PREFIX}cef:95.0.4638.69-obs-2
-export IMAGE_BOOST=${IMAGE_PREFIX}boost:1.67-1
+export IMAGE_BOOST=${IMAGE_PREFIX}boost:1.67-2
 export IMAGE_FFMPEG=${IMAGE_PREFIX}ffmpeg:5.1.3-1
