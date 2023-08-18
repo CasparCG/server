@@ -46,7 +46,7 @@ jobs:
               id: "rename-build"
               shell: bash
               run: |
-                  TARGET=casparcg-server-${{ github.sha }}-ubuntu20.zip
+                  TARGET=casparcg-server-${{ github.sha }}-ubuntu22.zip
                   mv casparcg_server.zip "$TARGET"
 
                   echo "artifactname=$TARGET" >> $GITHUB_OUTPUT

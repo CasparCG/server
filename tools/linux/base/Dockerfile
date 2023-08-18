@@ -1,4 +1,4 @@
-FROM buildpack-deps:focal
+FROM buildpack-deps:jammy
 
 ADD install-dependencies /
 
