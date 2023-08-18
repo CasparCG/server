@@ -38,16 +38,34 @@ jobs:
                   ./tools/linux/build-in-docker
                   ./tools/linux/extract-from-docker
 
-                  zip -r casparcg_server.zip casparcg_server/
               env:
                   CI: 1
+
+            - name: Download media-scanner
+              uses: robinraju/release-downloader@v1.8
+              with:
+                  repository: "casparcg/media-scanner"
+                  latest: true
+                  fileName: "*-linux-x64.zip"
+                  tarBall: false
+                  zipBall: false
+                  out-file-path: "casparcg_server/media-scanner"
+                  extract: true
+
+            - name: Tidy media-scanner download
+              shell: bash
+              run: |
+                  rm casparcg_server/media-scanner/*.zip
+                  mv casparcg_server/media-scanner/* casparcg_server/
+                  rmdir casparcg_server/media-scanner
+                  chmod +x casparcg_server/scanner
 
             - name: Rename build
               id: "rename-build"
               shell: bash
               run: |
                   TARGET=casparcg-server-${{ github.sha }}-ubuntu22.zip
-                  mv casparcg_server.zip "$TARGET"
+                  zip -r "$TARGET" casparcg_server/
 
                   echo "artifactname=$TARGET" >> $GITHUB_OUTPUT
 

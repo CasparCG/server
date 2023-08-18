@@ -103,6 +103,9 @@ casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-57.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-56.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-4.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-6.dll")
+# for scanner:
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
 
 # TBB
 set(TBB_INCLUDE_PATH "${PACKAGES_FOLDER}/tbb/include")

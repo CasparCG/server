@@ -19,11 +19,28 @@ jobs:
                   path: dist/packages
                   key: ${{ runner.os }}-nuget
 
+            - name: Download media-scanner
+              uses: robinraju/release-downloader@v1.8
+              with:
+                  repository: "casparcg/media-scanner"
+                  latest: true
+                  fileName: "*-win32-x64.zip"
+                  tarBall: false
+                  zipBall: false
+                  out-file-path: "media-scanner"
+                  extract: true
+
+            - name: Tidy media-scanner download
+              shell: bash
+              run: |
+                  rm media-scanner/*.zip
+
             - name: Run build
               run: |
                   ./tools/windows/build.bat
               env:
                   CI: 1
+                  MEDIA_SCANNER_FOLDER: "..\\media-scanner"
 
             - name: Rename build
               id: "rename-build"
