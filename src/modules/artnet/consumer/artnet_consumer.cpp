@@ -1,10 +1,23 @@
 /*
-* Copyright (c) 2023 Eliyah Sundström
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-* This file is part of an extension of the CasparCG project
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Eliyah Sundström eliyah@sundstroem.com
- */
+*/
 
 
 #include "artnet_consumer.h"
@@ -74,11 +87,11 @@ namespace caspar {
 
                 void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override {
                     thread_ = std::thread([this] {
-                        try {
-                            long long time = 1000 / config.refreshRate;
-                            auto last_send = std::chrono::system_clock::now();
+                        long long time = 1000 / config.refreshRate;
+                        auto last_send = std::chrono::system_clock::now();
 
-                            while (!abort_request_) {
+                        while (!abort_request_) {
+                            try {
                                 auto now = std::chrono::system_clock::now();
                                 std::chrono::duration<double> elapsed_seconds = now - last_send;
                                 long long elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_seconds).count();
@@ -121,9 +134,9 @@ namespace caspar {
                                 }
 
                                 send_dmx_data(dmx_data, 512);
+                            } catch (...) {
+                                CASPAR_LOG_CURRENT_EXCEPTION();
                             }
-                        } catch (...) {
-                            CASPAR_LOG_CURRENT_EXCEPTION();
                         }
                     });
                 }
@@ -151,6 +164,13 @@ namespace caspar {
                 core::monitor::state state() const override
                 {
                     core::monitor::state state;
+                    state["artnet/computed-fixtures"] = computed_fixtures.size();
+                    state["artnet/fixtures"] = config.fixtures.size();
+                    state["artnet/universe"] = config.universe;
+                    state["artnet/host"] = config.host;
+                    state["artnet/port"] = config.port;
+                    state["artnet/refresh-rate"] = config.refreshRate;
+
                     return state;
                 }
 
@@ -229,7 +249,7 @@ namespace caspar {
                         f.startAddress = startAddress - 1;
 
                         int fixtureCount = xml_channel.second.get(L"fixture-count", -1);
-                        if (fixtureCount < 0) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
+                        if (fixtureCount < 1) CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
 
                         f.fixtureCount = fixtureCount;
 

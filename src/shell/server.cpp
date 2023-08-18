@@ -94,10 +94,6 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
     });
 }
 
-struct meta {
-    std::wstring name;
-};
-
 struct server::impl
 {
     std::shared_ptr<boost::asio::io_service>               io_service_ = create_running_io_service();
@@ -114,7 +110,6 @@ struct server::impl
     spl::shared_ptr<core::cg_producer_registry>            cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>         producer_registry_;
     spl::shared_ptr<core::frame_consumer_registry>         consumer_registry_;
-    meta                                                   meta_;
     std::function<void(bool)>                              shutdown_server_now_;
 
     impl(const impl&)            = delete;
@@ -132,9 +127,6 @@ struct server::impl
 
     void start()
     {
-        setup_meta(env::properties());
-        CASPAR_LOG(info) << L"Initialized meta.";
-
         setup_video_modes(env::properties());
         CASPAR_LOG(info) << L"Initialized video modes.";
 
@@ -178,16 +170,6 @@ struct server::impl
 
         uninitialize_modules();
         core::diagnostics::osd::shutdown();
-    }
-
-    void setup_meta(const boost::property_tree::wptree& pt)
-    {
-        using boost::property_tree::wptree;
-
-        meta meta;
-        meta.name = pt.get(L"configuration.meta.name", L"casparcg");
-
-        this->meta_ = meta;
     }
 
     void setup_video_modes(const boost::property_tree::wptree& pt)
