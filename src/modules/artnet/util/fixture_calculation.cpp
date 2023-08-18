@@ -182,8 +182,8 @@ namespace caspar {
                 float bx2 = x_values[indices[index][3]];
                 float by2 = y_values[indices[index][3]];
 
-                auto x1 = 0
-                auto x2 = width - 1;
+                int x1 = 0;
+                int x2 = width - 1;
 
                 // If the lines are horizontal, we can skip the calculations
                 // This only happens if the box is oriented in 90 degree increments
