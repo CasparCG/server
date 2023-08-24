@@ -56,9 +56,7 @@
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
-#include <future>
 #include <thread>
 #include <utility>
 

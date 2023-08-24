@@ -29,8 +29,8 @@ set(SOURCES
 		util/strategy_adapters.cpp
 		util/http_request.cpp
 		util/tokenize.cpp
-
 )
+
 set(HEADERS
 		amcp/AMCPCommand.h
 		amcp/AMCPCommandQueue.h
