@@ -8,6 +8,7 @@ CasparCG 2.4.0 (Unreleased)
 * Preserve unicode characters in console input/output
 * Producers to be run at startup can be defined in casparcg.config
 * Support 8K frames
+* Remove undocumented CII and CLK protocol implementations
 * AMCP: Add CLEAR ALL command
 * AMCP: Command batching syntax
 * AMCP: LOAD/LOADBG/PLAY commands accept a CLEAR_ON_404 parameter, to instruct the layer to be cleared when the requested file was not found
@@ -16,8 +17,11 @@ CasparCG 2.4.0 (Unreleased)
 * Build: Disable precompiled headers for linux
 * Build: Support VS2022
 * Linux: Support setting thread priorities
+* Linux: Initial ARM64 compatibility
+* Logging: add config option to disable logging to file and to disable column alignment 
 * Transitions: Support additional audio fade properties for STING transition
 ##### Fixes
+* AMCP: Ensure all consumers and producers are reported in `INFO` commands
 * OpenGL: Fix support for recent Linux drivers
 * Linux: Fix endless looping on stdin
 * Route: Fix error when clearing layer
@@ -25,7 +29,7 @@ CasparCG 2.4.0 (Unreleased)
 
 ### Producers
 ##### Improvements
-* Decklink: Output a subregion of the channel
+* Decklink: Require driver 11.0 or later
 * Decklink: Scale received frames on GPU
 * FFmpeg: Update to v5.1
 * FFmpeg: Improve performance
@@ -33,14 +37,19 @@ CasparCG 2.4.0 (Unreleased)
 * HTML: Update to CEF 95
 * HTML: `CALL 1-10 RELOAD` to reload a renderer
 * NDI: Upgrade to NDI5
+* System Audio: Allow specifying output device to use
 ##### Fixes
+* Decklink: Log spamming when using some input formats
 * FFmpeg: Prevent loading unreadable files
 * FFmpeg: Unable to play files with unicode filenames
 * HTML: media-stream permission denied
 
 ### Consumers
 ##### Improvements
+* Artnet: New artnet consumer
 * Decklink: Configure device duplex modes in casparcg.config
+* Decklink: Output a subregion of the channel
+* Decklink: Add secondary outputs in a consumer, to ensure sync when used within a single card
 * NDI: Upgrade to NDI5
 ##### Fixes
 * Decklink: Fix stutter when loading clips
