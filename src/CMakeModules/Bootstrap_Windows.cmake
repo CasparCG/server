@@ -113,10 +113,6 @@ set(TBB_BIN_PATH "${PACKAGES_FOLDER}/tbb/bin/intel64")
 link_directories("${PACKAGES_FOLDER}/tbb/lib/intel64")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
 
 # GLEW
 set(GLEW_INCLUDE_PATH "${PACKAGES_FOLDER}/glew/include")

@@ -43,11 +43,11 @@
 #include <common/timer.h>
 
 #include <tbb/parallel_for.h>
-#include <tbb/scalable_allocator.h>
 
 #include <boost/circular_buffer.hpp>
 
 #include <atomic>
+#include <common/memshfl.h>
 #include <common/prec_timer.h>
 #include <condition_variable>
 #include <future>
@@ -520,8 +520,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                     nb_samples);
             }
 
-            std::shared_ptr<void> image_data(scalable_aligned_malloc(decklink_format_desc_.size, 64),
-                                             scalable_aligned_free);
+            std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size);
 
             schedule_next_video(image_data, nb_samples, video_scheduled_);
             for (auto& context : secondary_port_contexts_) {

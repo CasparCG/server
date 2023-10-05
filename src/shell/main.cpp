@@ -19,16 +19,10 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-// tbbmalloc_proxy:
-// Replace the standard memory allocation routines in Microsoft* C/C++ RTL
-// (malloc/free, global new/delete, etc.) with the TBB memory allocator.
-
 #if defined _DEBUG && defined _MSC_VER
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #include <stdlib.h>
-#else
-#include <tbb/tbbmalloc_proxy.h>
 #endif
 
 #include "included_modules.h"

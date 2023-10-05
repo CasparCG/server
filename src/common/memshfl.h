@@ -34,6 +34,16 @@
 
 namespace caspar {
 
+#ifdef _MSC_VER
+static std::shared_ptr<void> create_aligned_buffer(size_t size) {
+    return std::shared_ptr<void>(_aligned_malloc(size, 64), _aligned_free);
+}
+#else
+static std::shared_ptr<void> create_aligned_buffer(size_t size) {
+    return std::shared_ptr<void>(aligned_alloc(64, size), free);
+}
+#endif
+
 static void* aligned_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {
     __m128i*       dest128   = reinterpret_cast<__m128i*>(dest);
