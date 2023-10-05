@@ -88,16 +88,6 @@ struct output::impl
             return;
         }
 
-        if (input_frame1.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
-            return;
-        }
-
-        if (input_frame2 && input_frame2.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
-            return;
-        }
-
         auto time = std::move(time_);
 
         if (format_desc_ != format_desc) {
@@ -113,6 +103,16 @@ struct output::impl
             }
             format_desc_ = format_desc;
             time_        = boost::none;
+            return;
+        }
+
+        if (input_frame1.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
+            return;
+        }
+
+        if (input_frame2 && input_frame2.size() != format_desc_.size) {
+            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
 
