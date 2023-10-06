@@ -361,6 +361,7 @@ class html_client
      * This is where the shared textures get fed into. It is specific to the obs builds (hence the 2 suffix), so might
      * be removed/renamed when the change is accepted upstream
      */
+    /*
     void OnAcceleratedPaint2(CefRefPtr<CefBrowser> browser,
                              PaintElementType      type,
                              const RectList&       dirtyRects,
@@ -417,6 +418,7 @@ class html_client
             CASPAR_LOG_CURRENT_EXCEPTION();
         }
     }
+    */
 #endif
 
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
@@ -553,7 +555,8 @@ class html_producer : public core::frame_producer
             bool       shared_texture_enable = false;
 
 #ifdef WIN32
-            shared_texture_enable = enable_gpu && accelerator::d3d::d3d_device::get_device();
+            // This is not currently implemented by CEF
+            // shared_texture_enable = enable_gpu && accelerator::d3d::d3d_device::get_device();
 #endif
 
             client_ = new html_client(frame_factory, graph_, format_desc, shared_texture_enable, url_);
