@@ -15,7 +15,7 @@ set(HEADERS
 )
 
 add_library(html ${SOURCES} ${HEADERS})
-target_compile_features(html PRIVATE cxx_std_14)
+target_compile_features(html PRIVATE cxx_std_17)
 target_include_directories(html PRIVATE
     ..
     ../..

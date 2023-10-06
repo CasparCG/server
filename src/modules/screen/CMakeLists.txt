@@ -29,7 +29,7 @@ else ()
 endif ()
 
 add_library(screen ${SOURCES} ${OS_SPECIFIC_SOURCES} ${HEADERS} ${OS_SPECIFIC_HEADERS})
-target_compile_features(screen PRIVATE cxx_std_14)
+target_compile_features(screen PRIVATE cxx_std_17)
 target_include_directories(screen PRIVATE
     ..
     ../..

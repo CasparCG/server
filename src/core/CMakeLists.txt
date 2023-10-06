@@ -74,7 +74,7 @@ set(HEADERS
 )
 
 add_library(core ${SOURCES} ${HEADERS})
-target_compile_features(core PRIVATE cxx_std_14)
+target_compile_features(core PRIVATE cxx_std_17)
 target_include_directories(core PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}

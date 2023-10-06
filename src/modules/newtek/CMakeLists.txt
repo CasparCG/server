@@ -43,7 +43,7 @@ if (MSVC)
 endif()
 
 add_library(newtek ${SOURCES} ${HEADERS})
-target_compile_features(newtek PRIVATE cxx_std_14)
+target_compile_features(newtek PRIVATE cxx_std_17)
 target_include_directories(newtek PRIVATE
     ..
     ../..

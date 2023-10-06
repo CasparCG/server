@@ -31,7 +31,7 @@ set(HEADERS
 )
 
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-target_compile_features(casparcg PRIVATE cxx_std_14)
+target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}

@@ -13,7 +13,7 @@ set(HEADERS
 )
 
 add_library(oal ${SOURCES} ${HEADERS})
-target_compile_features(oal PRIVATE cxx_std_14)
+target_compile_features(oal PRIVATE cxx_std_17)
 target_include_directories(oal PRIVATE
     ..
     ../..

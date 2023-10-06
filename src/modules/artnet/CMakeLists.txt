@@ -13,7 +13,7 @@ set(HEADERS
         util/fixture_calculation.cpp util/fixture_calculation.h)
 
 add_library(artnet ${SOURCES} ${HEADERS})
-target_compile_features(artnet PRIVATE cxx_std_14)
+target_compile_features(artnet PRIVATE cxx_std_17)
 target_include_directories(artnet PRIVATE
     ..
     ../..

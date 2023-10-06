@@ -23,7 +23,7 @@ set(HEADERS
 )
 
 add_library(ffmpeg ${SOURCES} ${HEADERS})
-target_compile_features(ffmpeg PRIVATE cxx_std_14)
+target_compile_features(ffmpeg PRIVATE cxx_std_17)
 target_include_directories(ffmpeg PRIVATE
     ..
     ../..

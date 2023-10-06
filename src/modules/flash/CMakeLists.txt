@@ -25,7 +25,7 @@ set(HEADERS
 )
 
 add_library(flash ${SOURCES} ${HEADERS})
-target_compile_features(flash PRIVATE cxx_std_14)
+target_compile_features(flash PRIVATE cxx_std_17)
 target_include_directories(flash PRIVATE
     ..
     ../..

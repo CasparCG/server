@@ -62,7 +62,7 @@ set(HEADERS
 )
 
 add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-target_compile_features(common PRIVATE cxx_std_14)
+target_compile_features(common PRIVATE cxx_std_17)
 target_include_directories(common PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
