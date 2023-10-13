@@ -57,10 +57,10 @@ extern "C" {
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libavutil/channel_layout.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -69,8 +69,12 @@ extern "C" {
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_invoke.h>
 
+#include <chrono>
+#include <future>
 #include <memory>
 #include <thread>
+
+using namespace std::chrono_literals;
 
 namespace caspar { namespace ffmpeg {
 
@@ -321,10 +325,10 @@ struct Stream
 
         if (in_frame.first) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame = make_av_video_frame(in_frame.first, format_desc);
+                frame      = make_av_video_frame(in_frame.first, format_desc);
                 frame->pts = in_frame.second;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
-                frame = make_av_audio_frame(in_frame.first, format_desc);
+                frame      = make_av_audio_frame(in_frame.first, format_desc);
                 frame->pts = in_frame.second * frame->nb_samples;
             } else {
                 // TODO
@@ -368,7 +372,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     mutable std::mutex      state_mutex_;
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
-    bool                    realtime_ = false;
+    bool                    realtime_    = false;
     int                     frame_number = 0;
 
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -379,8 +383,11 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
 
-    tbb::concurrent_bounded_queue<std::pair<core::const_frame, int> > frame_buffer_;
-    std::thread                                      frame_thread_;
+    tbb::concurrent_bounded_queue<std::pair<core::const_frame, int>> frame_buffer_;
+    std::thread                                                      frame_thread_;
+
+    std::atomic<bool> offline_;
+    std::future<void> offline_timeout_;
 
   public:
     ffmpeg_consumer(std::string path, std::string args, bool realtime)
@@ -392,6 +399,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         , realtime_(realtime)
         , path_(std::move(path))
         , args_(std::move(args))
+        , offline_(false)
     {
         state_["file/path"] = u8(path_);
 
@@ -558,6 +566,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
+                offline_                  = false;
                 std::int32_t frame_number = 0;
                 while (true) {
                     {
@@ -598,12 +607,43 @@ struct ffmpeg_consumer : public core::frame_consumer
         });
     }
 
+    void go_offline()
+    {
+        if (frame_thread_.joinable()) {
+            frame_thread_.join();
+        }
+        frame_buffer_.clear();
+        offline_         = true;
+        offline_timeout_ = std::async(std::launch::async, []() { std::this_thread::sleep_for(5s); });
+        CASPAR_LOG(info) << print() << " Attempting reconnection in 5s";
+    }
+
+    void try_go_online() { initialize(format_desc_, channel_index_); }
+
     std::future<bool> send(core::const_frame frame) override
     {
-        {
+        try {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
-                std::rethrow_exception(exception_);
+                auto exception = exception_;
+                exception_     = nullptr;
+                std::rethrow_exception(exception);
+            }
+        } catch (...) {
+            if (!offline_) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            } else {
+                CASPAR_LOG(warning) << print() << " Reconnection attempt failed";
+            }
+            go_offline();
+        }
+
+        if (offline_) {
+            auto status = offline_timeout_.wait_for(0s);
+            if (status == std::future_status::ready) {
+                try_go_online();
+            } else {
+                return make_ready_future(true);
             }
         }
 
