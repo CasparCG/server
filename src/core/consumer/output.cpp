@@ -67,7 +67,7 @@ struct output::impl
         consumer->initialize(format_desc_, channel_index_);
 
         std::lock_guard<std::mutex> lock(consumers_mutex_);
-        consumers_.emplace(index, std::move(consumer));
+        consumers_.emplace(consumer->index(), std::move(consumer));
     }
 
     void add(const spl::shared_ptr<frame_consumer>& consumer) { add(consumer->index(), consumer); }
@@ -124,10 +124,11 @@ struct output::impl
                 ++it;
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
-                it = consumers.erase(it);
+                auto index = it->first;
+                it         = consumers.erase(it);
 
                 std::lock_guard<std::mutex> lock(consumers_mutex_);
-                consumers_.erase(it->first);
+                consumers_.erase(index);
             }
         }
 
