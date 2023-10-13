@@ -131,10 +131,11 @@ struct output::impl
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
+                    auto index = it->first;
                     it = consumers.erase(it);
 
                     std::lock_guard<std::mutex> lock(consumers_mutex_);
-                    consumers_.erase(it->first);
+                    consumers_.erase(index);
                 }
             }
 
