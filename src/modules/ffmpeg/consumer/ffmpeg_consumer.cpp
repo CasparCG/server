@@ -74,9 +74,13 @@ extern "C" {
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <chrono>
+#include <future>
 #include <memory>
 #include <optional>
 #include <thread>
+
+using namespace std::chrono_literals;
 
 namespace caspar { namespace ffmpeg {
 
@@ -486,6 +490,9 @@ struct ffmpeg_consumer : public core::frame_consumer
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     std::thread                                      frame_thread_;
 
+    std::atomic<bool> offline_;
+    std::future<void> offline_timeout_;
+
     common::bit_depth depth_;
 
   public:
@@ -498,6 +505,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         , realtime_(realtime)
         , path_(std::move(path))
         , args_(std::move(args))
+        , offline_(false)
         , depth_(depth)
     {
         state_["file/path"] = u8(path_);
@@ -665,6 +673,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
+                offline_                  = false;
                 std::int32_t frame_number = 0;
                 while (true) {
                     {
@@ -705,14 +714,45 @@ struct ffmpeg_consumer : public core::frame_consumer
         });
     }
 
+    void go_offline()
+    {
+        if (frame_thread_.joinable()) {
+            frame_thread_.join();
+        }
+        frame_buffer_.clear();
+        offline_         = true;
+        offline_timeout_ = std::async(std::launch::async, []() { std::this_thread::sleep_for(5s); });
+        CASPAR_LOG(info) << print() << " Attempting reconnection in 5s";
+    }
+
+    void try_go_online() { initialize(format_desc_, channel_index_); }
+
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         // TODO - field alignment
 
-        {
+        try {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
-                std::rethrow_exception(exception_);
+                auto exception = exception_;
+                exception_     = nullptr;
+                std::rethrow_exception(exception);
+            }
+        } catch (...) {
+            if (!offline_) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            } else {
+                CASPAR_LOG(warning) << print() << " Reconnection attempt failed";
+            }
+            go_offline();
+        }
+
+        if (offline_) {
+            auto status = offline_timeout_.wait_for(0s);
+            if (status == std::future_status::ready) {
+                try_go_online();
+            } else {
+                return make_ready_future(true);
             }
         }
 
