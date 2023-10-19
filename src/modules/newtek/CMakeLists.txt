@@ -37,11 +37,6 @@ set(HEADERS
 		StdAfx.h
 )
 
-if (MSVC)
-	list(APPEND SOURCES util/air_send.cpp consumer/newtek_ivga_consumer.cpp)
-	list(APPEND HEADERS util/air_send.h consumer/newtek_ivga_consumer.h)
-endif()
-
 add_library(newtek ${SOURCES} ${HEADERS})
 target_compile_features(newtek PRIVATE cxx_std_17)
 target_include_directories(newtek PRIVATE

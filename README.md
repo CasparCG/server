@@ -40,8 +40,6 @@ Getting Started
     3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
         fp_11.8.800.94_archive\11_8_r800_94\flashplayer11_8r800_94_winax.exe
 
-    - For NewTek iVGA support (Windows only), please download and install the iVGA driver from (http://new.tk/NetworkSendRedist)
-
 3. Configure the server by editing the self-documented "casparcg.config" file in
    a text editor.
 
