@@ -27,8 +27,10 @@
 #include <accelerator/accelerator.h>
 #include <core/consumer/frame_consumer.h>
 #include <future>
-#include <protocol/osc/client.h>
+#include <common/forward.h>
 #include <utility>
+
+FORWARD3(caspar, protocol, osc, class client);
 
 namespace caspar { namespace protocol { namespace amcp {
 

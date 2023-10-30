@@ -54,6 +54,8 @@
 #include <core/producer/transition/transition_producer.h>
 #include <core/video_format.h>
 
+#include <protocol/osc/client.h>
+
 #include <algorithm>
 #include <fstream>
 #include <future>
