@@ -34,8 +34,7 @@ target_include_directories(flash PRIVATE
     ${ZLIB_INCLUDE_PATH}
     )
 target_precompile_headers(flash PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
-
+casparcg_add_build_dependencies(flash)
 
 set_target_properties(flash PROPERTIES FOLDER modules)
 source_group(sources\\interop interop/*)

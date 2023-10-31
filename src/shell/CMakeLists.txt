@@ -6,7 +6,6 @@ join_list("${CASPARCG_MODULE_INIT_STATEMENTS}" "\n" CASPARCG_MODULE_INIT_STATEME
 join_list("${CASPARCG_MODULE_UNINIT_STATEMENTS}" "\n" CASPARCG_MODULE_UNINIT_STATEMENTS)
 join_list("${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}" "\n" CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS)
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${CMAKE_BINARY_DIR}/generated/included_modules.h")
-CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
 
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
@@ -37,6 +36,7 @@ target_include_directories(casparcg PRIVATE
     ${BOOST_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
     )
+casparcg_add_build_dependencies(casparcg)
 
 source_group(sources ./*)
 
@@ -101,11 +101,10 @@ else ()
 endif ()
 
 add_custom_target(casparcg_copy_dependencies ALL)
+casparcg_add_build_dependencies(casparcg_copy_dependencies)
 
 set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
 add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory \"${OUTPUT_FOLDER}\")
-
-
 
 if (MSVC)
 	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES})
@@ -116,7 +115,6 @@ if (MSVC)
 
 	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_DIRS})
 		get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
-		message(STATUS "AAAC: ${FILE_TO_COPY} ${FOLDER_NAME}")
 		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}\")
 		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}\")
 	endforeach(FILE_TO_COPY)

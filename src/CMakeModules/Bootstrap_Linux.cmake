@@ -118,6 +118,10 @@ FUNCTION (add_precompiled_header TARGET HEADER)
 	# Ignore
 ENDFUNCTION ()
 
+FUNCTION (casparcg_add_build_dependencies PROJECT)
+	# Ignore
+ENDFUNCTION ()
+
 FUNCTION (casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
 			"#include <${HEADER_FILE_TO_INCLUDE}>"

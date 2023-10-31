@@ -1,5 +1,10 @@
 cmake_minimum_required (VERSION 3.16)
 
+include(ExternalProject)
+
+INCLUDE (PlatformIntrospection)
+_DETERMINE_CPU_COUNT (CONFIG_CPU_COUNT)
+
 find_package(Git)
 
 set(CONFIG_VERSION_GIT_HASH "N/A")
@@ -13,6 +18,10 @@ endif ()
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generated/version.h")
 INCLUDE_DIRECTORIES ("${CMAKE_BINARY_DIR}/generated")
 
+set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
+set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
+set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
+
 set(CASPARCG_MODULE_INCLUDE_STATEMENTS "" CACHE INTERNAL "")
 set(CASPARCG_MODULE_INIT_STATEMENTS "" CACHE INTERNAL "")
 set(CASPARCG_MODULE_UNINIT_STATEMENTS "" CACHE INTERNAL "")
@@ -20,6 +29,15 @@ set(CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL "
 set(CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES "" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES_DIRS "" CACHE INTERNAL "")
+
+set(CASPARCG_EXTERNAL_PROJECTS "" CACHE INTERNAL "")
+function (casparcg_add_external_project NAME)
+	set(CASPARCG_EXTERNAL_PROJECTS "${CASPARCG_EXTERNAL_PROJECTS}" "${NAME}" CACHE INTERNAL "")
+endfunction()
+
+function(casparcg_add_build_dependencies PROJECT)
+	add_dependencies(${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+endfunction()
 
 function(casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	set(CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
@@ -68,33 +86,61 @@ function(casparcg_add_runtime_dependency_dir FILE_TO_COPY)
 	set(CASPARCG_RUNTIME_DEPENDENCIES_DIRS "${CASPARCG_RUNTIME_DEPENDENCIES_DIRS}" "${FILE_TO_COPY}" CACHE INTERNAL "")
 endfunction()
 
-set(PACKAGES_FOLDER "${PROJECT_SOURCE_DIR}/packages")
-set(NUGET_PACKAGES_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/packages")
-
 casparcg_add_runtime_dependency("${PROJECT_SOURCE_DIR}/shell/casparcg.config")
 
 # BOOST
-set(BOOST_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/boost.1.67.0.0/lib/native/include")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_atomic-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_chrono-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_context-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_coroutine-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_date_time-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_filesystem-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_locale-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_log-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_log_setup-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_regex-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_system-vc141.1.67.0.0/lib/native")
-link_directories("${NUGET_PACKAGES_FOLDER}/boost_thread-vc141.1.67.0.0/lib/native")
+casparcg_add_external_project(boost)
+if (BOOST_USE_PRECOMPILED)
+	ExternalProject_Add(boost
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0-precompiled.zip
+	URL_HASH MD5=8fd5450206d48acc51dff83ce5a34a20
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+	)
+	ExternalProject_Get_Property(boost SOURCE_DIR)
+	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_67")
+	link_directories("${SOURCE_DIR}/lib")
+else ()
+	set(BOOST_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost-install)
+	ExternalProject_Add(boost
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0.zip
+	URL_HASH MD5=6da1ba65f8d33b1d306616e5acd87f67
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	BUILD_IN_SOURCE 1
+	CONFIGURE_COMMAND ./bootstrap.bat
+		--with-libraries=filesystem
+		--with-libraries=locale
+		--with-libraries=log
+		--with-libraries=log_setup
+		--with-libraries=regex
+		--with-libraries=system
+		--with-libraries=thread
+	BUILD_COMMAND ./b2 install --prefix=${BOOST_INSTALL_DIR} link=static variant=release threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	INSTALL_COMMAND ""
+	)
+	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_67")
+	link_directories("${BOOST_INSTALL_DIR}/lib")
+endif ()
 add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
 add_definitions( -DBOOST_COROUTINES_NO_DEPRECATION_WARNING )
 add_definitions( -DBOOST_LOCALE_HIDE_AUTO_PTR )
 
 # FFMPEG
-set(FFMPEG_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.5.1.2/build/native/include")
-set(FFMPEG_BIN_PATH "${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.5.1.2/build/native/bin/x64")
-link_directories("${NUGET_PACKAGES_FOLDER}/FFmpeg.Stable.5.1.2/build/native/lib/x64")
+casparcg_add_external_project(ffmpeg-lib)
+ExternalProject_Add(ffmpeg-lib
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-5.1.2-full_build-shared.zip
+	URL_HASH MD5=bcb1efb68701a4b71e8a7efd9b817965
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(ffmpeg-lib SOURCE_DIR)
+set(FFMPEG_INCLUDE_PATH "${SOURCE_DIR}/include")
+set(FFMPEG_BIN_PATH "${SOURCE_DIR}/bin")
+link_directories("${SOURCE_DIR}/lib")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-59.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-59.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-8.dll")
@@ -108,51 +154,104 @@ casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
 
 # TBB
-set(TBB_INCLUDE_PATH "${PACKAGES_FOLDER}/tbb/include")
-set(TBB_BIN_PATH "${PACKAGES_FOLDER}/tbb/bin/intel64")
-link_directories("${PACKAGES_FOLDER}/tbb/lib/intel64")
+casparcg_add_external_project(tbb)
+ExternalProject_Add(tbb
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
+	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(tbb SOURCE_DIR)
+set(TBB_INCLUDE_PATH "${SOURCE_DIR}/include")
+set(TBB_BIN_PATH "${SOURCE_DIR}/redist/intel64/vc14")
+link_directories("${SOURCE_DIR}/lib/intel64/vc14")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll")
 
 # GLEW
-set(GLEW_INCLUDE_PATH "${PACKAGES_FOLDER}/glew/include")
-set(GLEW_BIN_PATH "${PACKAGES_FOLDER}/glew/bin/win32")
-link_directories("${PACKAGES_FOLDER}/glew/lib/win32")
+casparcg_add_external_project(glew)
+ExternalProject_Add(glew
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/glew/glew-2.2.0-win32.zip
+	URL_HASH MD5=1feddfe8696c192fa46a0df8eac7d4bf
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(glew SOURCE_DIR)
+set(GLEW_INCLUDE_PATH ${SOURCE_DIR}/include)
+set(GLEW_BIN_PATH ${SOURCE_DIR}/bin/Release/x64)
+link_directories(${SOURCE_DIR}/lib/Release/x64)
 add_definitions( -DGLEW_NO_GLU )
 casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 
 # SFML
-set(SFML_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/sfml-system.2.4.2.0/build/native/include")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-graphics.2.4.2.0/build/native/lib/x64/v140/Release/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-window.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-window.2.4.2.0/build/native/lib/x64/v140/Release/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-system.2.4.2.0/build/native/lib/x64/v140/Debug/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/sfml-system.2.4.2.0/build/native/lib/x64/v140/Release/dynamic")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-graphics.redist.2.4.2.0/build/native/bin/x64/v140/Debug/dynamic/sfml-graphics-d-2.dll")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-graphics.redist.2.4.2.0/build/native/bin/x64/v140/Release/dynamic/sfml-graphics-2.dll")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-window.redist.2.4.2.0/build/native/bin/x64/v140/Debug/dynamic/sfml-window-d-2.dll")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-window.redist.2.4.2.0/build/native/bin/x64/v140/Release/dynamic/sfml-window-2.dll")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4.2.0/build/native/bin/x64/v140/Debug/dynamic/sfml-system-d-2.dll")
-casparcg_add_runtime_dependency("${NUGET_PACKAGES_FOLDER}/sfml-system.redist.2.4.2.0/build/native/bin/x64/v140/Release/dynamic/sfml-system-2.dll")
+casparcg_add_external_project(sfml)
+ExternalProject_Add(sfml
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.4.2-windows-vc14-64-bit.zip
+	URL_HASH MD5=8a2f747335fa21a7a232976daa9031ac
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(sfml SOURCE_DIR)
+set(SFML_INCLUDE_PATH ${SOURCE_DIR}/include)
+set(SFML_BIN_PATH "${SOURCE_DIR}/bin")
+link_directories(${SOURCE_DIR}/lib)
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-d-2.dll")
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-2.dll")
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-d-2.dll")
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-2.dll")
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-d-2.dll")
+casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll")
 
 # FREEIMAGE
-set(FREEIMAGE_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.3.17.0/build/native/include")
-set(FREEIMAGE_BIN_PATH "${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.redist.3.17.0/build/native/bin/x64/dynamic")
-link_directories("${NUGET_PACKAGES_FOLDER}/native.freeimage.vc140.3.17.0/build/native/lib/x64")
-casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImage.dll")
-casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImaged.dll")
+casparcg_add_external_project(freeimage)
+ExternalProject_Add(freeimage
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/freeimage/FreeImage3180Win32Win64.zip
+	URL_HASH MD5=393d3df75b14cbcb4887da1c395596e2
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(freeimage SOURCE_DIR)
+set(FREEIMAGE_INCLUDE_PATH "${SOURCE_DIR}/Dist/x64")
+set(FREEIMAGE_BIN_PATH "${FREEIMAGE_INCLUDE_PATH}")
+link_directories("${FREEIMAGE_INCLUDE_PATH}")
+casparcg_add_runtime_dependency("${FREEIMAGE_INCLUDE_PATH}/FreeImage.dll")
 
 #ZLIB
-set(ZLIB_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/include")
-link_directories("${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/lib_release")
-link_directories("${NUGET_PACKAGES_FOLDER}/zlib-msvc-x64.1.2.11.8900/build/native/lib_debug")
+casparcg_add_external_project(zlib)
+ExternalProject_Add(zlib
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/zlib/zlib-1.3.tar.gz
+	URL_HASH MD5=60373b133d630f74f4a1f94c1185a53f
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(zlib SOURCE_DIR)
+ExternalProject_Get_Property(zlib BINARY_DIR)
+set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
+link_directories(${BINARY_DIR}/Release)
 
 # OPENAL
-set(OPENAL_INCLUDE_PATH "${PACKAGES_FOLDER}/openal/include")
-set(OPENAL_BIN_PATH "${PACKAGES_FOLDER}/openal/bin/win32")
-link_directories("${PACKAGES_FOLDER}/openal/lib/win32")
-casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
+casparcg_add_external_project(openal)
+ExternalProject_Add(openal
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/openal/openal-soft-1.19.1-bin.zip
+	URL_HASH MD5=b78ef1ba26f7108e763f92df6bbc3fa5
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	BUILD_IN_SOURCE 1
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND cp bin/Win64/soft_oal.dll bin/Win64/OpenAL32.dll
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(openal SOURCE_DIR)
+set(OPENAL_INCLUDE_PATH "${SOURCE_DIR}/include")
+link_directories("${SOURCE_DIR}/libs/Win64")
+casparcg_add_runtime_dependency("${SOURCE_DIR}/bin/Win64/OpenAL32.dll")
 
 # LIBERATION_FONTS
 set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
@@ -160,10 +259,22 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 
 # CEF
 if (ENABLE_HTML)
-	set(CEF_INCLUDE_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.sdk.95.0.1-MediaHandler.2467/CEF")
-	set(CEF_BIN_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.2467/CEF")
-	set(CEF_RESOURCE_PATH "${NUGET_PACKAGES_FOLDER}/casparcg.cef.redist.x64.95.0.1-MediaHandler.2467/CEF")
-	link_directories("${NUGET_PACKAGES_FOLDER}/casparcg.cef.sdk.95.0.1-MediaHandler.2467/CEF/x64")
+	casparcg_add_external_project(cef)
+	ExternalProject_Add(cef
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_4638_windows_x64.zip
+		URL_HASH MD5=14ad547122903eba3f145322fb02bc6d
+		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
+		INSTALL_COMMAND ""
+	)
+	ExternalProject_Get_Property(cef SOURCE_DIR)
+	ExternalProject_Get_Property(cef BINARY_DIR)
+
+	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
+	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
+	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
+	link_directories(${SOURCE_DIR}/Release)
+	link_directories(${BINARY_DIR}/libcef_dll_wrapper/Release)
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")

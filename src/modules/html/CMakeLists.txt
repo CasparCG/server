@@ -23,12 +23,11 @@ target_include_directories(html PRIVATE
     ${TBB_INCLUDE_PATH}
     ${CEF_INCLUDE_PATH}
     )
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
-
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
+casparcg_add_build_dependencies(html)
 
 if(MSVC)
 	target_link_libraries(html
@@ -37,9 +36,9 @@ if(MSVC)
 		accelerator
 
 		optimized libcef
-		optimized release/VS2019/libcef_dll_wrapper
+		optimized libcef_dll_wrapper
 		debug debug/libcef
-		debug debug/VS2019/libcef_dll_wrapper
+		debug libcef_dll_wrapper
 	)
 else()
 	target_link_libraries(html
