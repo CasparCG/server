@@ -22,17 +22,18 @@ set(HEADERS
 	StdAfx.h
 )
 
-add_library(ffmpeg ${SOURCES} ${HEADERS})
-target_compile_features(ffmpeg PRIVATE cxx_std_17)
+casparcg_add_module_project(ffmpeg
+	SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "ffmpeg::init"
+	UNINIT_FUNCTION "ffmpeg::uninit"
+)
+
 target_include_directories(ffmpeg PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(ffmpeg PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(ffmpeg)
 
 set_target_properties(ffmpeg PROPERTIES FOLDER modules)
 source_group(sources ./*)
@@ -41,19 +42,10 @@ source_group(sources\\producer ./producer/.*)
 source_group(sources\\util ./util/.*)
 
 if (MSVC)
-	target_link_libraries(ffmpeg
-		common
-		core
-	)
+	# target_link_libraries(ffmpeg
+	# )
 else()
 	target_link_libraries(ffmpeg
-			common
-			core
 			${FFMPEG_LIBRARIES}
 	)
 endif()
-
-casparcg_add_include_statement("modules/ffmpeg/ffmpeg.h")
-casparcg_add_init_statement("ffmpeg::init" "ffmpeg")
-casparcg_add_uninit_statement("ffmpeg::uninit")
-casparcg_add_module_project("ffmpeg")

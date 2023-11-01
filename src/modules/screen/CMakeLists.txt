@@ -20,34 +20,29 @@ bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "frag
 
 if (MSVC)
 else ()
-	set(OS_SPECIFIC_HEADERS
+	list(APPEND HEADERS
 			util/x11_util.h
 			)
-	set(OS_SPECIFIC_SOURCES
+	list(APPEND SOURCES
 			util/x11_util.cpp
 			)
 endif ()
 
-add_library(screen ${SOURCES} ${OS_SPECIFIC_SOURCES} ${HEADERS} ${OS_SPECIFIC_HEADERS})
-target_compile_features(screen PRIVATE cxx_std_17)
+casparcg_add_module_project(screen
+	SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "screen::init"
+)
 target_include_directories(screen PRIVATE
     ..
     ../..
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     ${SFML_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
-casparcg_add_build_dependencies(screen)
 
 set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
-target_link_libraries(screen common core accelerator ffmpeg)
-
-casparcg_add_include_statement("modules/screen/screen.h")
-casparcg_add_init_statement("screen::init" "screen")
-casparcg_add_module_project("screen")
+target_link_libraries(screen accelerator ffmpeg)

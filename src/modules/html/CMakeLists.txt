@@ -14,25 +14,25 @@ set(HEADERS
 		html.h
 )
 
-add_library(html ${SOURCES} ${HEADERS})
-target_compile_features(html PRIVATE cxx_std_17)
+casparcg_add_module_project(html
+	SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "html::init"
+	UNINIT_FUNCTION "html::uninit"
+	CLI_INTERCEPTOR "html::intercept_command_line"
+)
+
 target_include_directories(html PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${CEF_INCLUDE_PATH}
     )
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
-casparcg_add_build_dependencies(html)
 
 if(MSVC)
 	target_link_libraries(html
-		common
-		core
 		accelerator
 
 		optimized libcef
@@ -42,16 +42,8 @@ if(MSVC)
 	)
 else()
 	target_link_libraries(html
-		common
-		core
-
 		${CEF_BIN_PATH}/libcef.so
 		${CEF_BIN_PATH}/libcef_dll_wrapper.a
 	)
 endif()
 
-casparcg_add_include_statement("modules/html/html.h")
-casparcg_add_init_statement("html::init" "html")
-casparcg_add_uninit_statement("html::uninit")
-casparcg_add_command_line_arg_interceptor("html::intercept_command_line")
-casparcg_add_module_project("html")

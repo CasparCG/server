@@ -16,17 +16,16 @@ set(HEADERS
 	StdAfx.h
 )
 
-add_library(bluefish ${SOURCES} ${HEADERS})
-target_compile_features(bluefish PRIVATE cxx_std_17)
+casparcg_add_module_project(bluefish
+    SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "bluefish::init"
+)
 target_include_directories(bluefish PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(bluefish PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(bluefish)
 
 set_target_properties(bluefish PROPERTIES FOLDER modules)
 source_group(sources ./*)
@@ -35,11 +34,4 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources\\interop interop/*)
 
-target_link_libraries(  bluefish
-                        common
-                        core
-                        ffmpeg)
-
-casparcg_add_include_statement("modules/bluefish/bluefish.h")
-casparcg_add_init_statement("bluefish::init" "bluefish")
-casparcg_add_module_project("bluefish")
+target_link_libraries(bluefish ffmpeg)
