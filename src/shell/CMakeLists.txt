@@ -7,18 +7,6 @@ join_list("${CASPARCG_MODULE_UNINIT_STATEMENTS}" "\n" CASPARCG_MODULE_UNINIT_STA
 join_list("${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}" "\n" CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS)
 CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${CMAKE_BINARY_DIR}/generated/included_modules.h")
 
-if (MSVC)
-	set(OS_SPECIFIC_SOURCES
-			resource.h
-			shell.rc
-			windows_specific.cpp
-	)
-else ()
-	set(OS_SPECIFIC_SOURCES
-			linux_specific.cpp
-	)
-endif ()
-
 set(SOURCES
 		casparcg.config
 		main.cpp
@@ -29,7 +17,20 @@ set(HEADERS
 		server.h
 )
 
-add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+if (MSVC)
+	list(APPEND SOURCES
+			resource.h
+			shell.rc
+			windows_specific.cpp
+	)
+else ()
+	list(APPEND SOURCES
+			linux_specific.cpp
+	)
+endif ()
+
+
+add_executable(casparcg ${SOURCES} ${HEADERS})
 target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..

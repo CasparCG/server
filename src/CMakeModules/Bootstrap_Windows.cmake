@@ -5,18 +5,6 @@ include(ExternalProject)
 INCLUDE (PlatformIntrospection)
 _DETERMINE_CPU_COUNT (CONFIG_CPU_COUNT)
 
-find_package(Git)
-
-set(CONFIG_VERSION_GIT_HASH "N/A")
-
-if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/../.git")
-	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
-			ARGS rev-parse --verify --short HEAD
-			OUTPUT_VARIABLE CONFIG_VERSION_GIT_HASH)
-endif ()
-
-INCLUDE_DIRECTORIES ("${CMAKE_BINARY_DIR}/generated")
-
 set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
@@ -255,11 +243,3 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /Ot /Gy /bigobj")
 if (POLICY CMP0045)
 	cmake_policy(SET CMP0045 OLD)
 endif ()
-
-add_subdirectory(tools)
-add_subdirectory(accelerator)
-add_subdirectory(common)
-add_subdirectory(core)
-add_subdirectory(modules)
-add_subdirectory(protocol)
-add_subdirectory(shell)

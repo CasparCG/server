@@ -14,7 +14,7 @@ set(SOURCES
 	accelerator.cpp
 )
 if (MSVC)
-	set(WIN32_SPECIFIC_SOURCES
+	list(APPEND SOURCES
         d3d/d3d_device.cpp
 		d3d/d3d_device_context.cpp
 		d3d/d3d_texture2d.cpp
@@ -37,7 +37,7 @@ set(HEADERS
 	StdAfx.h
 )
 if (MSVC)
-	set(WIN32_SPECIFIC_HEADERS
+	list(APPEND HEADERS
         d3d/d3d_device.h
 		d3d/d3d_device_context.h
 		d3d/d3d_texture2d.h
@@ -47,7 +47,7 @@ endif ()
 bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
 
-casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS} ${WIN32_SPECIFIC_SOURCES} ${WIN32_SPECIFIC_HEADERS})
+casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(accelerator PRIVATE
     ..
     ${CMAKE_CURRENT_BINARY_DIR}
