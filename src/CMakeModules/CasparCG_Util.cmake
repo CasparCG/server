@@ -9,7 +9,34 @@ FUNCTION(casparcg_add_build_dependencies PROJECT)
 	ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
 ENDFUNCTION()
 
-# Add a module to be linked into the application
+# CasparCG version of CMake `add_library`
+FUNCTION (casparcg_add_library PROJECT)
+	cmake_parse_arguments(
+        PARSED_ARGS # prefix of output variables
+        "" # list of names of the boolean arguments (only defined ones will be true)
+        "" # list of names of mono-valued arguments
+        "SOURCES" # list of names of multi-valued arguments (output variables are lists)
+        ${ARGN} # arguments of the function to parse, here we take the all original ones
+    )
+
+	if(NOT PROJECT)
+        message(FATAL_ERROR "You must provide a project name")
+	endif()
+
+	# Setup the library and some default config
+	ADD_LIBRARY (${PROJECT} ${PARSED_ARGS_SOURCES})
+	target_compile_features (${PROJECT} PRIVATE cxx_std_17)
+	target_include_directories(${PROJECT} PRIVATE
+		${BOOST_INCLUDE_PATH}
+		${TBB_INCLUDE_PATH}
+	)
+
+	# Setup dependency on ExternalProject
+	ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+
+ENDFUNCTION ()
+
+# CasparCG version of CMake `add_library` specifically for modules
 SET (CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
 FUNCTION (casparcg_add_module_project PROJECT)
 	cmake_parse_arguments(
@@ -19,10 +46,6 @@ FUNCTION (casparcg_add_module_project PROJECT)
         "SOURCES" # list of names of multi-valued arguments (output variables are lists)
         ${ARGN} # arguments of the function to parse, here we take the all original ones
     )
-
-	if(NOT PROJECT)
-        message(FATAL_ERROR "You must provide a project name")
-	endif()
 
 	# Use project if name is missing
 	if (NOT PARSED_ARGS_NAME)
@@ -38,17 +61,9 @@ FUNCTION (casparcg_add_module_project PROJECT)
 	endif()
 
 	# Setup the library and some default config
-	ADD_LIBRARY (${PROJECT} ${PARSED_ARGS_SOURCES})
-	target_compile_features (${PROJECT} PRIVATE cxx_std_17)
-	target_include_directories(${PROJECT} PRIVATE
-		${BOOST_INCLUDE_PATH}
-		${TBB_INCLUDE_PATH}
-	)
+	casparcg_add_library (${PROJECT} SOURCES ${PARSED_ARGS_SOURCES})
 	target_link_libraries(${PROJECT} common core)
 
-	# Setup dependency on ExternalProject
-	ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
-	
 	# Setup linker and code loading
 	SET (CASPARCG_MODULE_PROJECTS "${CASPARCG_MODULE_PROJECTS}" "${PROJECT}" CACHE INTERNAL "")
 	SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
@@ -80,7 +95,6 @@ FUNCTION (casparcg_add_module_project PROJECT)
 	ENDIF ()
   
 ENDFUNCTION ()
-
 
 # http://stackoverflow.com/questions/7172670/best-shortest-way-to-join-a-list-in-cmake
 FUNCTION (join_list VALUES GLUE OUTPUT)

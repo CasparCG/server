@@ -73,17 +73,13 @@ set(HEADERS
 		video_format.h
 )
 
-add_library(core ${SOURCES} ${HEADERS})
-target_compile_features(core PRIVATE cxx_std_17)
+casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(core PRIVATE
     ..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${SFML_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
 target_precompile_headers(core PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(core)
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
