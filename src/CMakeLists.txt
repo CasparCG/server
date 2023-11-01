@@ -12,6 +12,9 @@ option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 # Add custom cmake modules path
 LIST (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
+INCLUDE (CasparCG_Util)
+CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generated/version.h")
+
 if (MSVC)
 	INCLUDE (Bootstrap_Windows)
 else ()
@@ -24,7 +27,6 @@ else ()
 	MESSAGE (STATUS "Target build type: ${CMAKE_BUILD_TYPE}")
 	MESSAGE (STATUS "Build Version: ${CONFIG_VERSION_MAJOR}.${CONFIG_VERSION_MINOR}.${CONFIG_VERSION_BUG} ${CONFIG_VERSION_TAG} (Revision: ${CONFIG_VERSION_GIT_HASH})")
 
-	CONFIGURE_FILE ("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generated/version.h")
 	INCLUDE_DIRECTORIES ("${CMAKE_BINARY_DIR}/generated")
 
 	ADD_SUBDIRECTORY (tools)
