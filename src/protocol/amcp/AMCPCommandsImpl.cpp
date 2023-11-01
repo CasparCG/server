@@ -1317,8 +1317,11 @@ std::wstring mixer_grid_command(command_context& ctx)
 std::future<std::wstring> mixer_commit_command(command_context& ctx)
 {
     transforms_applier transforms(ctx);
-    auto               r = transforms.commit_deferred().share();
-    return std::async(std::launch::deferred, [r]() -> std::wstring { return L"202 MIXER OK\r\n"; });
+    const auto         r = transforms.commit_deferred().share();
+    return std::async(std::launch::deferred, [r]() -> std::wstring {
+        r.get();
+        return L"202 MIXER OK\r\n";
+    });
 }
 
 std::wstring mixer_clear_command(command_context& ctx)
