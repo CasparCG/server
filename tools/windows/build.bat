@@ -20,10 +20,6 @@ call "%BUILD_VCVARSALL%" amd64 || goto :error
 cd dist || goto :error
 cmake -G "Visual Studio 16 2019" -A x64 ..\src || goto :error
 
-:: Restore dependencies
-echo Restore dependencies...
-nuget restore || goto :error
-
 :: Build with MSBuild
 echo Building...
 msbuild "CasparCG Server.sln" /t:Clean /p:Configuration=Release || goto :error

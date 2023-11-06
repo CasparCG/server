@@ -47,7 +47,7 @@ target_include_directories(newtek PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(newtek PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(newtek)
 
 set_target_properties(newtek PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

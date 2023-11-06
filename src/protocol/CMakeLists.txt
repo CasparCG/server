@@ -66,7 +66,7 @@ target_include_directories(protocol  PRIVATE
     ${TBB_INCLUDE_PATH}
     )
 target_precompile_headers(protocol PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(protocol)
 
 source_group(sources\\amcp amcp/*)
 source_group(sources\\cii cii/*)

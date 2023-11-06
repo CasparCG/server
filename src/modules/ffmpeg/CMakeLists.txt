@@ -32,7 +32,7 @@ target_include_directories(ffmpeg PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(ffmpeg PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(ffmpeg)
 
 set_target_properties(ffmpeg PROPERTIES FOLDER modules)
 source_group(sources ./*)

@@ -36,7 +36,7 @@ target_include_directories(image PRIVATE
     ${FREEIMAGE_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
     )
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(image)
 
 set_target_properties(image PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

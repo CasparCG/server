@@ -65,7 +65,7 @@ target_include_directories(decklink PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(decklink PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(decklink)
 
 set_target_properties(decklink PROPERTIES FOLDER modules)
 source_group(sources ./*)

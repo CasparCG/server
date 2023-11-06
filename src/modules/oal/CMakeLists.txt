@@ -22,7 +22,7 @@ target_include_directories(oal PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     ${OPENAL_INCLUDE_PATH}
     )
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(oal)
 
 set_target_properties(oal PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

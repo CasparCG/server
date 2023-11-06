@@ -26,7 +26,7 @@ target_include_directories(bluefish PRIVATE
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(bluefish PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(bluefish)
 
 set_target_properties(bluefish PROPERTIES FOLDER modules)
 source_group(sources ./*)

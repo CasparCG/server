@@ -55,11 +55,10 @@ target_include_directories(accelerator PRIVATE
     ${BOOST_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
-    ${FFMPEG_INCLUDE_PATH}
     ${SFML_INCLUDE_PATH}
     )
 target_precompile_headers(accelerator PRIVATE "StdAfx.h")
-
+casparcg_add_build_dependencies(accelerator)
 
 source_group(sources ./.*)
 source_group(sources\\cpu\\image cpu/image/.*)

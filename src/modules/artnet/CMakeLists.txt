@@ -20,7 +20,7 @@ target_include_directories(artnet PRIVATE
     ${BOOST_INCLUDE_PATH}
 	${TBB_INCLUDE_PATH}
 )
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(artnet)
 
 set_target_properties(artnet PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

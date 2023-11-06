@@ -83,7 +83,7 @@ target_include_directories(core PRIVATE
     ${GLEW_INCLUDE_PATH}
     )
 target_precompile_headers(core PRIVATE "StdAfx.h")
-configure_file("${PROJECT_SOURCE_DIR}/packages.config" "${CMAKE_CURRENT_BINARY_DIR}/packages.config")
+casparcg_add_build_dependencies(core)
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)

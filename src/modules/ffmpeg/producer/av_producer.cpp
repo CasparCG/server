@@ -55,6 +55,7 @@ extern "C" {
 #include <queue>
 #include <sstream>
 #include <string>
+#include <thread>
 
 namespace caspar { namespace ffmpeg {
 
@@ -790,7 +791,7 @@ struct AVProducer::Impl
                         frame = Frame{};
                         seek_internal(start);
                     } else {
-                        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     }
                     // TODO (fix) Limit live polling due to bugs.
                     continue;
@@ -829,7 +830,7 @@ struct AVProducer::Impl
                     }
 
                     // TODO (perf): Avoid live loop.
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(warning_debounce > 25 ? 20 : 5));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(warning_debounce > 25 ? 20 : 5));
                 }
                 continue;
             }
