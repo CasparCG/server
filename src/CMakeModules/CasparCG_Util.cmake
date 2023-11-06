@@ -6,7 +6,9 @@ ENDFUNCTION()
 
 # Mark a project as depending on all of the ExternalProjects, to ensure build order
 FUNCTION(casparcg_add_build_dependencies PROJECT)
-	ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+	if (CASPARCG_EXTERNAL_PROJECTS)
+		ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+	endif()
 ENDFUNCTION()
 
 # CasparCG version of CMake `add_library`
@@ -31,8 +33,10 @@ FUNCTION (casparcg_add_library PROJECT)
 		${TBB_INCLUDE_PATH}
 	)
 
-	# Setup dependency on ExternalProject
-	ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+	if (CASPARCG_EXTERNAL_PROJECTS)
+		# Setup dependency on ExternalProject
+		ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+	endif()
 
 ENDFUNCTION ()
 
