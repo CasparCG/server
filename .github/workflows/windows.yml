@@ -13,12 +13,6 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: Cache nuget
-              uses: actions/cache@v3
-              with:
-                  path: dist/packages
-                  key: ${{ runner.os }}-nuget
-
             - name: Download media-scanner
               uses: robinraju/release-downloader@v1.8
               with:
