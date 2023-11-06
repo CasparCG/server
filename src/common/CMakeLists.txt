@@ -14,7 +14,7 @@ set(SOURCES
 		utf.cpp
 )
 if (MSVC)
-	set(OS_SPECIFIC_SOURCES
+	list(APPEND SOURCES
 			compiler/vs/disable_silly_warnings.h
 
 			os/windows/filesystem.cpp
@@ -23,7 +23,7 @@ if (MSVC)
 			os/windows/windows.h
 	)
 else ()
-	set(OS_SPECIFIC_SOURCES
+	list(APPEND SOURCES
 			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
 			os/linux/thread.cpp
@@ -61,16 +61,12 @@ set(HEADERS
 		utf.h
 )
 
-add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
-target_compile_features(common PRIVATE cxx_std_17)
+casparcg_add_library(common SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(common PRIVATE
     ..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${GLEW_INCLUDE_PATH}
     )
 target_precompile_headers(common PRIVATE "stdafx.h")
-casparcg_add_build_dependencies(common)
 
 source_group(sources ./*)
 source_group(sources\\gl gl/*)

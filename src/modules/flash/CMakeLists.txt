@@ -24,17 +24,16 @@ set(HEADERS
 		StdAfx.h
 )
 
-add_library(flash ${SOURCES} ${HEADERS})
-target_compile_features(flash PRIVATE cxx_std_17)
+casparcg_add_module_project(flash
+	SOURCES ${SOURCES} ${HEADERS} 
+	INIT_FUNCTION "flash::init"
+)
 target_include_directories(flash PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${ZLIB_INCLUDE_PATH}
     )
 target_precompile_headers(flash PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(flash)
 
 set_target_properties(flash PROPERTIES FOLDER modules)
 source_group(sources\\interop interop/*)
@@ -42,8 +41,4 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(flash common core)
 
-casparcg_add_include_statement("modules/flash/flash.h")
-casparcg_add_init_statement("flash::init" "flash")
-casparcg_add_module_project("flash")

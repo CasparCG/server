@@ -58,15 +58,11 @@ set(HEADERS
 		StdAfx.h
 )
 
-add_library(protocol ${SOURCES} ${HEADERS})
-target_compile_features(protocol PRIVATE cxx_std_17)
+casparcg_add_library(protocol SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(protocol  PRIVATE
     ..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     )
 target_precompile_headers(protocol PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(protocol)
 
 source_group(sources\\amcp amcp/*)
 source_group(sources\\cii cii/*)

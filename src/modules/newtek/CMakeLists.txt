@@ -37,17 +37,16 @@ set(HEADERS
 		StdAfx.h
 )
 
-add_library(newtek ${SOURCES} ${HEADERS})
-target_compile_features(newtek PRIVATE cxx_std_17)
+casparcg_add_module_project(newtek
+	SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "newtek::init"
+)
 target_include_directories(newtek PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(newtek PRIVATE "StdAfx.h")
-casparcg_add_build_dependencies(newtek)
 
 set_target_properties(newtek PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
@@ -57,11 +56,5 @@ source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(newtek
-	common
-	core
     ffmpeg
 )
-
-casparcg_add_include_statement("modules/newtek/newtek.h")
-casparcg_add_init_statement("newtek::init" "newtek")
-casparcg_add_module_project("newtek")

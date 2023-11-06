@@ -27,16 +27,15 @@ set(HEADERS
 		image.h
 )
 
-add_library(image ${SOURCES} ${HEADERS})
-target_compile_features(image PRIVATE cxx_std_17)
+casparcg_add_module_project(image
+	SOURCES ${SOURCES} ${HEADERS}
+	INIT_FUNCTION "image::init"
+)
 target_include_directories(image PRIVATE
     ..
     ../..
-    ${BOOST_INCLUDE_PATH}
     ${FREEIMAGE_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     )
-casparcg_add_build_dependencies(image)
 
 set_target_properties(image PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
@@ -44,26 +43,14 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(image common core)
-
 if(MSVC)
 	target_link_libraries(image
-		common
-		core
-
 		optimized FreeImage.lib
 		debug FreeImaged.lib
 	)
 else()
 	target_link_libraries(image
-		common
-		core
-
 		freeimage
 	)
 endif()
 
-casparcg_add_include_statement("modules/image/image.h")
-casparcg_add_init_statement("image::init" "image")
-casparcg_add_uninit_statement("image::uninit")
-casparcg_add_module_project("image")
