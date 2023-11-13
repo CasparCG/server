@@ -105,16 +105,54 @@ set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
 add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory \"${OUTPUT_FOLDER}\")
 
 if (MSVC)
-	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES})
+	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG})
 		get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
-		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\")
-		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\")
+		add_custom_command(
+			TARGET casparcg_copy_dependencies
+			POST_BUILD 
+			COMMAND if $(ConfigurationName) == Debug (
+				echo \"Copy Debug ${FILE_TO_COPY}\" &&
+				${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
+				${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
+			)
+		)
+	endforeach(FILE_TO_COPY)
+	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_RELEASE})
+		get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
+		add_custom_command(
+			TARGET casparcg_copy_dependencies
+			POST_BUILD 
+			COMMAND if $(ConfigurationName) NEQ Debug (
+				echo \"Copy Release ${FILE_TO_COPY}\" &&
+				${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
+				${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
+			)
+		)
 	endforeach(FILE_TO_COPY)
 
-	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_DIRS})
+	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG_DIRS})
 		get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
-		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}\")
-		add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}\")
+		add_custom_command(
+			TARGET casparcg_copy_dependencies
+			POST_BUILD 
+			COMMAND if $(ConfigurationName) == Debug (
+				echo \"Copy Debug ${FILE_TO_COPY}\" &&
+				${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
+				${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"
+			)
+		)
+	endforeach(FILE_TO_COPY)
+	foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_RELEASE_DIRS})
+		get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
+		add_custom_command(
+			TARGET casparcg_copy_dependencies
+			POST_BUILD 
+			COMMAND if $(ConfigurationName) NEQ Debug (
+				echo \"Copy Release ${FILE_TO_COPY}\" &&
+				${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
+				${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"
+			)
+		)
 	endforeach(FILE_TO_COPY)
 else ()
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)

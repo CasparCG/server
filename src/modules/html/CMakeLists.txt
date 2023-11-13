@@ -35,9 +35,8 @@ if(MSVC)
 	target_link_libraries(html
 		accelerator
 
-		optimized libcef
+		libcef
 		optimized Release/libcef_dll_wrapper
-		debug libcef
 		debug Debug/libcef_dll_wrapper
 	)
 else()
