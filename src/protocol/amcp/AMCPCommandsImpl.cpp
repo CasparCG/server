@@ -818,11 +818,12 @@ class transforms_applier
 
     std::future<void> commit_deferred()
     {
-        const auto f = ctx_.channel.stage->apply_transforms(deferred_transforms_[ctx_.channel_index]).share();
+        const int  channel_index = ctx_.channel_index;
+        const auto f             = ctx_.channel.stage->apply_transforms(deferred_transforms_[channel_index]).share();
 
         return std::async(std::launch::deferred, [=]() {
             f.get();
-            deferred_transforms_[ctx_.channel_index].clear();
+            deferred_transforms_[channel_index].clear();
         });
     }
 
