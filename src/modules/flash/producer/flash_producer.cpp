@@ -306,7 +306,7 @@ class flash_renderer
         ax_->Tick();
 
         if (ax_->InvalidRect()) {
-            core::pixel_format_desc desc = core::pixel_format::bgra;
+            core::pixel_format_desc desc = core::pixel_format_desc(core::pixel_format::bgra);
             desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
             auto frame = frame_factory_->create_frame(this, desc);
 
@@ -369,7 +369,7 @@ struct flash_producer : public core::frame_producer
     std::unique_ptr<flash_renderer> renderer_;
     std::atomic<bool>               has_renderer_;
 
-    executor executor_ = L"flash_producer";
+    executor executor_ = executor(L"flash_producer");
 
   public:
     flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
