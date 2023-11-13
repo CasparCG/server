@@ -19,7 +19,6 @@
  * Author: Robert Nagy, ronag89@gmail.com
  */
 
-
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <algorithm>
@@ -38,9 +37,9 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/rational.hpp>
 #include <boost/variant.hpp>
-#include <common/compiler/vs/disable_silly_warnings.h>
 #include <common/array.h>
 #include <common/assert.h>
+#include <common/compiler/vs/disable_silly_warnings.h>
 #include <common/diagnostics/graph.h>
 #include <common/enum_class.h>
 #include <common/env.h>

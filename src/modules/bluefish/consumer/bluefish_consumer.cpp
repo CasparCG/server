@@ -875,8 +875,8 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["bluefish/index"] = config_.device_index;
-        state["bluefish/stream"] = static_cast<unsigned int>(config_.device_stream);
+        state["bluefish/index"]          = config_.device_index;
+        state["bluefish/stream"]         = static_cast<unsigned int>(config_.device_stream);
         state["bluefish/embedded_audio"] = config_.embedded_audio;
         return state;
     }

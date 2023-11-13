@@ -25,9 +25,9 @@
 #include "amcp_command_repository.h"
 #include "amcp_shared.h"
 #include <accelerator/accelerator.h>
+#include <common/forward.h>
 #include <core/consumer/frame_consumer.h>
 #include <future>
-#include <common/forward.h>
 #include <utility>
 
 FORWARD3(caspar, protocol, osc, class client);

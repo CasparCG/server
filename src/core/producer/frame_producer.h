@@ -90,7 +90,7 @@ class frame_producer
 
     virtual core::monitor::state state() const = 0;
     virtual std::wstring         print() const = 0;
-    virtual std::wstring         name() const = 0;
+    virtual std::wstring         name() const  = 0;
     virtual uint32_t             frame_number() const { return frame_number_; }
     virtual uint32_t             nb_frames() const { return std::numeric_limits<uint32_t>::max(); }
     virtual draw_frame           last_frame(const video_field field)

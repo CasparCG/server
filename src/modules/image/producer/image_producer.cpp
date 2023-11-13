@@ -117,18 +117,18 @@ struct image_producer : public core::frame_producer
     core::monitor::state state() const override { return state_; }
 };
 
-//class ieq
+// class ieq
 //{
-//    std::wstring test_;
+//     std::wstring test_;
 //
-//  public:
-//    explicit ieq(std::wstring test)
-//        : test_(std::move(test))
-//    {
-//    }
+//   public:
+//     explicit ieq(std::wstring test)
+//         : test_(std::move(test))
+//     {
+//     }
 //
-//    bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
-//};
+//     bool operator()(const std::wstring& elem) const { return boost::iequals(elem, test_); }
+// };
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)

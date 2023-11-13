@@ -110,7 +110,7 @@ struct server::impl
     spl::shared_ptr<core::frame_consumer_registry>         consumer_registry_;
     std::function<void(bool)>                              shutdown_server_now_;
 
-    impl(const impl&) = delete;
+    impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)

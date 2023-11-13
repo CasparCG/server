@@ -160,7 +160,7 @@ class tweened_transform
   public:
     tweened_transform() = default;
 
-    tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, tweener  tween);
+    tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, tweener tween);
 
     const frame_transform& dest() const;
 

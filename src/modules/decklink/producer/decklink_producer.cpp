@@ -324,8 +324,8 @@ class decklink_producer : public IDeckLinkInputCallback
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
-    com_ptr<IDeckLink>                 decklink_   = get_device(device_index_);
-    com_iface_ptr<IDeckLinkInput>      input_      = iface_cast<IDeckLinkInput>(decklink_);
+    com_ptr<IDeckLink>                        decklink_   = get_device(device_index_);
+    com_iface_ptr<IDeckLinkInput>             input_      = iface_cast<IDeckLinkInput>(decklink_);
     com_iface_ptr<IDeckLinkProfileAttributes> attributes_ = iface_cast<IDeckLinkProfileAttributes>(decklink_);
 
     const std::wstring model_name_ = get_model_name(decklink_);

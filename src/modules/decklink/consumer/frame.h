@@ -35,10 +35,10 @@
 namespace caspar { namespace decklink {
 
 std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                         const core::video_format_desc& decklink_format_desc,
-                                         const port_configuration&      config,
-                                         const core::const_frame&       frame1,
-                                         const core::const_frame&       frame2,
-                                         BMDFieldDominance              field_dominance);
+                                             const core::video_format_desc& decklink_format_desc,
+                                             const port_configuration&      config,
+                                             const core::const_frame&       frame1,
+                                             const core::const_frame&       frame2,
+                                             BMDFieldDominance              field_dominance);
 
 }} // namespace caspar::decklink

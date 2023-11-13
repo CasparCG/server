@@ -132,7 +132,7 @@ struct output::impl
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                     auto index = it->first;
-                    it = consumers.erase(it);
+                    it         = consumers.erase(it);
 
                     std::lock_guard<std::mutex> lock(consumers_mutex_);
                     consumers_.erase(index);
@@ -166,7 +166,7 @@ struct output::impl
 
         monitor::state state;
         for (auto& p : consumers) {
-            state["port"][p.first] = p.second->state();
+            state["port"][p.first]             = p.second->state();
             state["port"][p.first]["consumer"] = p.second->name();
         }
         state_ = std::move(state);

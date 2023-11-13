@@ -246,7 +246,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["ndi/name"] = name_;
+        state["ndi/name"]         = name_;
         state["ndi/allow_fields"] = allow_fields_;
         return state;
     }
