@@ -69,9 +69,6 @@
 #include <accelerator/d3d/d3d_texture2d.h>
 #endif
 
-#pragma comment(lib, "libcef.lib")
-#pragma comment(lib, "libcef_dll_wrapper.lib")
-
 namespace caspar { namespace html {
 
 class html_client

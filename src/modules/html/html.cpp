@@ -44,9 +44,6 @@
 #include <include/cef_version.h>
 #pragma warning(pop)
 
-#pragma comment(lib, "libcef.lib")
-#pragma comment(lib, "libcef_dll_wrapper.lib")
-
 #ifdef WIN32
 #include <accelerator/d3d/d3d_device.h>
 #endif

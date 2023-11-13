@@ -45,8 +45,7 @@ source_group(sources ./*)
 
 if(MSVC)
 	target_link_libraries(image
-		optimized FreeImage.lib
-		debug FreeImaged.lib
+		FreeImage.lib
 	)
 else()
 	target_link_libraries(image

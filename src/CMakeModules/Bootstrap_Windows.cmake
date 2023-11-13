@@ -25,8 +25,8 @@ casparcg_add_runtime_dependency("${PROJECT_SOURCE_DIR}/shell/casparcg.config")
 casparcg_add_external_project(boost)
 if (BOOST_USE_PRECOMPILED)
 	ExternalProject_Add(boost
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0-precompiled.zip
-	URL_HASH MD5=8fd5450206d48acc51dff83ce5a34a20
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0-win32-x64-debug-release.zip
+	URL_HASH MD5=a10a3c92c79cde3aa4ab6e60137b54d5
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
@@ -50,7 +50,7 @@ else ()
 		--with-libraries=regex
 		--with-libraries=system
 		--with-libraries=thread
-	BUILD_COMMAND ./b2 install --prefix=${BOOST_INSTALL_DIR} link=static variant=release threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
 	INSTALL_COMMAND ""
 	)
 	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_67")
@@ -207,7 +207,7 @@ if (ENABLE_HTML)
 	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
 	link_directories(${SOURCE_DIR}/Release)
-	link_directories(${BINARY_DIR}/libcef_dll_wrapper/Release)
+	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
