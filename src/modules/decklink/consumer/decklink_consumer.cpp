@@ -439,7 +439,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     reference_signal_detector           reference_signal_detector_{output_};
     // std::atomic<int64_t>                                  scheduled_frames_completed_{0};
     std::vector<std::unique_ptr<decklink_secondary_port>> secondary_port_contexts_;
-    int                                                   device_sync_group_;
+    int                                                   device_sync_group_ = 0;
 
     com_ptr<IDeckLinkDisplayMode> mode_ =
         get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
