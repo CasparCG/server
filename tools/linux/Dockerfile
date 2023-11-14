@@ -1,16 +1,13 @@
 ARG IMAGE_BASE
 ARG IMAGE_BOOST
 ARG IMAGE_FFMPEG
-ARG IMAGE_CEF
 
 FROM ${IMAGE_BOOST} as boost
 FROM ${IMAGE_FFMPEG} as ffmpeg
-FROM ${IMAGE_CEF} as cef
 
 FROM ${IMAGE_BASE} as build-casparcg
 	COPY --from=boost /opt/boost /opt/boost
 	COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
-	COPY --from=cef /opt/cef /opt/cef
 
 	RUN mkdir /source && mkdir /build && mkdir /install
 
