@@ -41,8 +41,7 @@ if(MSVC)
 	)
 else()
 	target_link_libraries(html
-		${CEF_BIN_PATH}/libcef.so
-		${CEF_BIN_PATH}/libcef_dll_wrapper.a
+		${CEF_LIB}
 	)
 endif()
 
