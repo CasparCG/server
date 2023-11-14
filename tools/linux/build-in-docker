@@ -10,7 +10,6 @@ docker build -t casparcg/server \
   --build-arg PROC_COUNT \
   --build-arg GIT_HASH \
   --build-arg IMAGE_BASE \
-  --build-arg IMAGE_CEF \
   --build-arg IMAGE_BOOST \
   --build-arg IMAGE_FFMPEG \
   -f $PWD/tools/linux/Dockerfile $PWD
