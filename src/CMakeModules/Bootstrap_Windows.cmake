@@ -206,8 +206,8 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_4638_windows_x64.zip
-		URL_HASH MD5=14ad547122903eba3f145322fb02bc6d
+		URL https://builds.julusian.dev/casparcg/dependencies/cef_binary_103.0.0-5060-shared-textures.2595%2Bgf60566c%2Bchromium-103.0.5060.134_windows64_minimal.zip
+		URL_HASH MD5=339888c265370152e9c5f7cf27830304
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
 		INSTALL_COMMAND ""
@@ -227,7 +227,6 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
 
-	casparcg_add_runtime_dependency_dir("${CEF_BIN_PATH}/swiftshader")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
