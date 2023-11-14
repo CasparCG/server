@@ -48,15 +48,22 @@ if (ENABLE_HTML)
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off
 		INSTALL_COMMAND ""
+		BUILD_BYPRODUCTS
+			"<SOURCE_DIR>/Release/libcef.so"
+			"<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
 	)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
-	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
-	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
-	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
-	link_directories(${SOURCE_DIR}/Release)
-	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
+	# Note: All of these must be referenced in the BUILD_BYPRODUCTS above, to satisfy ninja
+	set(CEF_LIB
+		"${SOURCE_DIR}/Release/libcef.so" 
+		"${BINARY_DIR}/libcef_dll_wrapper/libcef_dll_wrapper.a"
+	)
+
+	set(CEF_INCLUDE_PATH "${SOURCE_DIR}")
+	set(CEF_BIN_PATH "${SOURCE_DIR}/Release")
+	set(CEF_RESOURCE_PATH "${SOURCE_DIR}/Resources")
 endif ()
 
 SET (BOOST_INCLUDE_PATH "${Boost_INCLUDE_DIRS}")
@@ -65,10 +72,6 @@ SET (GLEW_INCLUDE_PATH "${GLEW_INCLUDE_DIRS}")
 SET (SFML_INCLUDE_PATH "${SFML_INCLUDE_DIR}")
 SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")
 SET (FREEIMAGE_INCLUDE_PATH "${FreeImage_INCLUDE_DIRS}")
-
-set(CEF_INCLUDE_PATH "${CEF_ROOT_DIR}")
-set(CEF_BIN_PATH "${CEF_ROOT_DIR}/Release")
-set(CEF_RESOURCE_PATH "${CEF_ROOT_DIR}/Resources")
 
 SET_PROPERTY (GLOBAL PROPERTY USE_FOLDERS ON)
 
