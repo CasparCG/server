@@ -340,7 +340,7 @@ struct image_mixer::impl
     {
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)
-            ogl_->dispatch_sync([=] { d3d_texture->gen_gl_texture(ogl_->d3d_interop()); });
+            d3d_texture->gen_gl_texture(ogl_);
 
         // copy directx texture to gl texture
         auto gl_texture = ogl_->dispatch_sync([=] {

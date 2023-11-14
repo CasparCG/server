@@ -8,6 +8,7 @@
 #include <memory>
 
 namespace caspar { namespace accelerator { namespace d3d {
+
 class d3d_texture2d
 {
   public:
@@ -26,21 +27,22 @@ class d3d_texture2d
 
     void* share_handle() const { return share_handle_; }
 
-    ID3D11Texture2D* texture() const { return texture_.get(); }
+    ID3D11Texture2D* texture() const { return texture_; }
 
     uint32_t gl_texture_id() const { return gl_texture_id_; }
 
-    void gen_gl_texture(const std::shared_ptr<void>& interop);
+    void gen_gl_texture(std::shared_ptr<ogl::device>);
 
   private:
     HANDLE share_handle_;
 
-    std::shared_ptr<ID3D11Texture2D> const texture_;
-    uint32_t                               width_  = 0;
-    uint32_t                               height_ = 0;
-    DXGI_FORMAT                            format_ = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+    ID3D11Texture2D* texture_;
+    uint32_t         width_  = 0;
+    uint32_t         height_ = 0;
+    DXGI_FORMAT      format_ = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 
-    std::shared_ptr<void> texture_handle_;
-    uint32_t              gl_texture_id_ = 0;
+    std::weak_ptr<ogl::device> ogl_;
+    HANDLE                     texture_handle_ = nullptr;
+    uint32_t                   gl_texture_id_  = 0;
 };
 }}} // namespace caspar::accelerator::d3d
