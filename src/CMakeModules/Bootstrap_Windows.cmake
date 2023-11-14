@@ -2,9 +2,6 @@ cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
 
-INCLUDE (PlatformIntrospection)
-_DETERMINE_CPU_COUNT (CONFIG_CPU_COUNT)
-
 set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
