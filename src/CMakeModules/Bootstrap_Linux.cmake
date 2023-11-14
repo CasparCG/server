@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.16)
 
+include(ExternalProject)
+
 # Determine build (target) platform
 INCLUDE (PlatformIntrospection)
 _DETERMINE_PLATFORM (CONFIG_PLATFORM)
@@ -39,8 +41,22 @@ FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
 FIND_PACKAGE (X11 REQUIRED)
 
 if (ENABLE_HTML)
-	SET(CEF_ROOT_DIR "/opt/cef" CACHE STRING "Path to CEF")
-	FIND_PACKAGE (CEF REQUIRED)
+	casparcg_add_external_project(cef)
+	ExternalProject_Add(cef
+		URL https://cef-builds.spotifycdn.com/cef_binary_103.0.12%2Bg8eb56c7%2Bchromium-103.0.5060.134_linux64_minimal.tar.bz2
+		URL_HASH SHA1=2f6500b81ea780feaabae41570192aef71d60963
+		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+		CMAKE_ARGS -DUSE_SANDBOX=Off
+		INSTALL_COMMAND ""
+	)
+	ExternalProject_Get_Property(cef SOURCE_DIR)
+	ExternalProject_Get_Property(cef BINARY_DIR)
+
+	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
+	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
+	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
+	link_directories(${SOURCE_DIR}/Release)
+	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
 endif ()
 
 SET (BOOST_INCLUDE_PATH "${Boost_INCLUDE_DIRS}")
