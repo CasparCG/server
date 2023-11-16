@@ -22,11 +22,6 @@
 namespace caspar { namespace accelerator { namespace d3d {
 struct d3d_device::impl : public std::enable_shared_from_this<impl>
 {
-    using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<d3d_texture2d>>;
-
-    mutable std::mutex                                     device_pools_mutex_;
-    tbb::concurrent_unordered_map<size_t, texture_queue_t> device_pools_;
-
     std::wstring                        adaptor_name_ = L"N/A";
     std::shared_ptr<ID3D11Device>       device_;
     std::shared_ptr<d3d_device_context> ctx_;

@@ -45,7 +45,11 @@ d3d_texture2d::~d3d_texture2d()
         ogl->dispatch_sync([&] {
             const std::shared_ptr<void> interop = ogl->d3d_interop();
             if (texture_handle_ != nullptr && interop != nullptr) {
-                wglDXUnlockObjectsNV(interop.get(), 1, &texture_handle_);
+                if (is_locked_) {
+                    wglDXUnlockObjectsNV(interop.get(), 1, &texture_handle_);
+                    is_locked_ = false;
+                }
+
                 wglDXUnregisterObjectNV(interop.get(), texture_handle_);
                 texture_handle_ = nullptr;
             }
@@ -100,7 +104,63 @@ void d3d_texture2d::gen_gl_texture(std::shared_ptr<ogl::device> ogl)
             gl_texture_id_ = 0;
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to lock shared d3d texture."));
         }
+
+        is_locked_ = true;
     });
+}
+
+void d3d_texture2d::lock_gl()
+{
+    if (is_locked_)
+        return;
+
+    if (!texture_handle_ || gl_texture_id_ == 0) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("texture is not ready to be locked."));
+    }
+
+    const std::shared_ptr<ogl::device> ogl = ogl_.lock();
+    if (ogl == nullptr) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("failed to lock opengl device."));
+    }
+
+    const std::shared_ptr<void> interop = ogl->d3d_interop();
+    if (!interop) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("d3d interop not setup to lock shared d3d texture."));
+    }
+
+    bool res = ogl->dispatch_sync([&] { return wglDXLockObjectsNV(interop.get(), 1, &texture_handle_); });
+    if (!res) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to lock shared d3d texture."));
+    }
+
+    is_locked_ = true;
+}
+
+void d3d_texture2d::unlock_gl()
+{
+    if (!is_locked_)
+        return;
+
+    if (!texture_handle_ || gl_texture_id_ == 0) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("texture is not ready to be locked."));
+    }
+
+    const std::shared_ptr<ogl::device> ogl = ogl_.lock();
+    if (ogl == nullptr) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("failed to lock opengl device."));
+    }
+
+    const std::shared_ptr<void> interop = ogl->d3d_interop();
+    if (!interop) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("d3d interop not setup to unlock shared d3d texture."));
+    }
+
+    bool res = ogl->dispatch_sync([&] { return wglDXUnlockObjectsNV(interop.get(), 1, &texture_handle_); });
+    if (!res) {
+        CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to unlock shared d3d texture."));
+    }
+
+    is_locked_ = false;
 }
 
 }}} // namespace caspar::accelerator::d3d

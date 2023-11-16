@@ -33,6 +33,10 @@ class d3d_texture2d
 
     void gen_gl_texture(std::shared_ptr<ogl::device>);
 
+    void lock_gl();
+
+    void unlock_gl();
+
   private:
     HANDLE share_handle_;
 
@@ -44,5 +48,6 @@ class d3d_texture2d
     std::weak_ptr<ogl::device> ogl_;
     HANDLE                     texture_handle_ = nullptr;
     uint32_t                   gl_texture_id_  = 0;
+    bool                       is_locked_ = false;
 };
 }}} // namespace caspar::accelerator::d3d

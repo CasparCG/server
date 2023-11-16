@@ -341,14 +341,20 @@ struct image_mixer::impl
         // map directx texture with wgl texture
         if (d3d_texture->gl_texture_id() == 0)
             d3d_texture->gen_gl_texture(ogl_);
+        else
+            // signal d3d to flush/sync the texture
+            d3d_texture->lock_gl();
 
-        // copy directx texture to gl texture
+        // copy d3d texture to gl texture
         auto gl_texture = ogl_->dispatch_sync([=] {
             return ogl_->copy_async(d3d_texture->gl_texture_id(), d3d_texture->width(), d3d_texture->height(), 4);
         });
 
         // make gl texture to draw
         std::vector<future_texture> textures{make_ready_future(gl_texture.get())};
+
+        // signal d3d is free to take ownership
+        d3d_texture->unlock_gl();
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
         core::pixel_format_desc          desc(core::pixel_format::bgra);
