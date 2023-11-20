@@ -85,6 +85,7 @@ class html_client
     caspar::timer                       tick_timer_;
     caspar::timer                       frame_timer_;
     caspar::timer                       paint_timer_;
+    caspar::timer                       test_timer_;
 
     spl::shared_ptr<core::frame_factory>                        frame_factory_;
     core::video_format_desc                                     format_desc_;
@@ -291,7 +292,13 @@ class html_client
         auto frame = frame_factory_->create_frame(this, pixel_desc);
         auto src   = (char*)buffer;
         auto dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
-        std::memcpy(dst, src, width * height * 4);
+        auto chunksize = height * width;
+        test_timer_.restart();
+        //std::memcpy(dst, src, width * height *4);
+
+        tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
+
+        graph_->set_value("memcpy", test_timer_.elapsed() * format_desc_.fps * 0.5 * 5);
 
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);

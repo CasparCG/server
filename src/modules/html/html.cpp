@@ -166,6 +166,9 @@ class renderer_application
     {
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
+
+            // This gives better performance on the gpu->cpu readback
+            command_line->AppendSwitchWithValue("use-angle", "gl");
         }
 
         command_line->AppendSwitch("disable-web-security");
