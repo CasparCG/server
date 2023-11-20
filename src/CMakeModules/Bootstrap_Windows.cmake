@@ -203,8 +203,8 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_4638_windows_x64.zip
-		URL_HASH MD5=14ad547122903eba3f145322fb02bc6d
+		URL https://cef-builds.spotifycdn.com/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_windows64_minimal.tar.bz2
+		URL_HASH MD5=cff21bce81bada2a9e5f0afbec0858f0
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
 		INSTALL_COMMAND ""
@@ -223,16 +223,17 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_200_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/snapshot_blob.bin")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/v8_context_snapshot.bin")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/libcef.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_elf.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/d3dcompiler_47.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/libEGL.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/libGLESv2.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/vk_swiftshader.dll")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/vk_swiftshader_icd.json")
-	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/vulkan-1.dll")
+	
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_47.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libEGL.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libGLESv2.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vk_swiftshader.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vk_swiftshader_icd.json")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vulkan-1.dll")
 endif ()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
