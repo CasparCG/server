@@ -292,7 +292,7 @@ class html_client
             std::memcpy(dst, src, width * height * 4);
         }
 #else
-        // On my one test linux machine, doing a single memcpy doesn't have the same cost as windows,
+        // In my linux tests, doing a single memcpy doesn't have the same cost as windows,
         // making using tbb excessive
         std::memcpy(dst, src, width * height * 4);
 #endif
