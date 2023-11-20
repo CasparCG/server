@@ -278,14 +278,20 @@ class html_client
         auto frame = frame_factory_->create_frame(this, pixel_desc);
         auto src   = (char*)buffer;
         auto dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
-        auto chunksize = height * width;
         test_timer_.restart();
 
+#ifdef WIN32
         if (gpu_enabled_) {
+            auto chunksize = height * width;
             tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
         } else {
             std::memcpy(dst, src, width * height * 4);
         }
+#else
+        // On my one test linux machine, doing a single memcpy doesn't have the same cost as windows,
+        // making using tbb excessive
+        std::memcpy(dst, src, width * height * 4);
+#endif
 
         graph_->set_value("memcpy", test_timer_.elapsed() * format_desc_.fps * 0.5 * 5);
 
