@@ -21,13 +21,6 @@
 
 #pragma once
 
-#ifdef WIN32
-#include <common/forward.h>
-#include <core/frame/pixel_format.h>
-#include <memory>
-FORWARD3(caspar, accelerator, d3d, class d3d_texture2d);
-#endif
-
 namespace caspar { namespace core {
 
 class frame_factory
@@ -41,12 +34,6 @@ class frame_factory
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
-#ifdef WIN32
-    virtual class const_frame import_d3d_texture(const void* video_stream_tag,
-                                                 const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture,
-                                                 bool                                                    vflip,
-                                                 core::pixel_format                                      format) = 0;
-#endif
 };
 
 }} // namespace caspar::core

@@ -13,13 +13,6 @@ set(SOURCES
 
 	accelerator.cpp
 )
-if (MSVC)
-	list(APPEND SOURCES
-        d3d/d3d_device.cpp
-		d3d/d3d_device_context.cpp
-		d3d/d3d_texture2d.cpp
-	)
-endif ()
 set(HEADERS
 	ogl/image/image_kernel.h
 	ogl/image/image_mixer.h
@@ -36,13 +29,6 @@ set(HEADERS
 	accelerator.h
 	StdAfx.h
 )
-if (MSVC)
-	list(APPEND HEADERS
-        d3d/d3d_device.h
-		d3d/d3d_device_context.h
-		d3d/d3d_texture2d.h
-	)
-endif ()
 
 bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
@@ -61,6 +47,5 @@ source_group(sources\\cpu\\image cpu/image/.*)
 source_group(sources\\cpu\\util cpu/util/.*)
 source_group(sources\\ogl\\image ogl/image/.*)
 source_group(sources\\ogl\\util ogl/util/.*)
-source_group(sources\\d3d d3d/.*)
 
 target_link_libraries(accelerator common core)

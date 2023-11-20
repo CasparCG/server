@@ -74,10 +74,6 @@ if (MSVC)
 		avdevice.lib
 		swscale.lib
 		swresample.lib
-
-		d3d9.lib
-		d3d11.lib
-		dxgi.lib
 	)
 else ()
 	target_link_libraries(casparcg
