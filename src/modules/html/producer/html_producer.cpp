@@ -271,18 +271,17 @@ class html_client
         if (type != PET_VIEW)
             return;
 
-        core::pixel_format_desc pixel_desc;
-        pixel_desc.format = core::pixel_format::bgra;
-        pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+        core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
+        pixel_desc.planes.emplace_back(width, height, 4);
 
-        auto frame = frame_factory_->create_frame(this, pixel_desc);
-        auto src   = (char*)buffer;
-        auto dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
+        core::mutable_frame frame = frame_factory_->create_frame(this, pixel_desc);
+        char* src   = (char*)buffer;
+        char* dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
         test_timer_.restart();
 
 #ifdef WIN32
         if (gpu_enabled_) {
-            auto chunksize = height * width;
+            int chunksize = height * width;
             tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
         } else {
             std::memcpy(dst, src, width * height * 4);
