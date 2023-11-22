@@ -64,6 +64,7 @@
 #include <vector>
 
 #include "../html.h"
+#include "rectangles.h"
 
 namespace caspar { namespace html {
 
@@ -273,9 +274,19 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
-
-    void combine_rectangles(RectList& my_rects, const RectList& new_rects, int width, int height) {
-        // TODO
+    inline void copy_whole_frame(char* src, char* dst, int width, int height) {
+#ifdef WIN32
+        if (gpu_enabled_) {
+            int chunksize = height * width;
+            tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
+        } else {
+            std::memcpy(dst, src, width * height * 4);
+        }
+#else
+        // In my linux tests, doing a single memcpy doesn't have the same cost as windows,
+        // making using tbb excessive
+        std::memcpy(dst, src, width * height * 4);
+#endif
     }
 
 
@@ -296,14 +307,21 @@ class html_client
         if (type != PET_VIEW)
             return;
 
-        CASPAR_LOG(info) << "rects " << dirtyRects.size();
-
+        // Update the dirty rectangles for each frame in the pool
         frame_pool_->for_each([&](std::any& data) {
             if (!data.has_value()) {
-                data.emplace<RectList>();
+                std::vector<Rectangle> rects;
+                for (const auto &rect :dirtyRects) {
+                    rects.emplace_back(rect);
+                }
+                data.emplace<std::vector<Rectangle>>(std::move(rects));
+            } else {
+                auto& rects = std::any_cast<std::vector<Rectangle>&>(data);
+                for (const auto &rect :dirtyRects) {
+                    rects.emplace_back(rect);
+                }
+                merge_rectangles(rects, width, height);
             }
-            auto rects = std::any_cast<RectList>(data);
-            combine_rectangles(rects, dirtyRects, width, height);
         });
 
         std::pair<core::mutable_frame, std::any&> frame = frame_pool_->create_frame();
@@ -312,24 +330,40 @@ class html_client
         test_timer_.restart();
 
         if (frame.second.has_value()) {
-            auto rects = std::any_cast<RectList>(frame.second);
+            // The frame has dirty rectangles, so selectively copy those portions
+            auto& rects = std::any_cast<std::vector<Rectangle>&>(frame.second);
+
+            if (rects.empty() || (rects.size() == 1 && is_full_frame(rects[0], width, height))) {
+                copy_whole_frame(src, dst, width, height);
+            } else {
+                // int pixel_count = 0 ;
+                // for (const Rectangle& rect :rects) {
+                //     pixel_count += (rect.r_x - rect.l_x) * (rect.r_y - rect.l_y);
+                // }
+
+                int linesize = width * 4;
+                tbb::parallel_for(static_cast<std::size_t>(0), rects.size(), [&](std::size_t index) {
+                    const Rectangle & rect = rects[index];
+                    int rowcount = rect.r_y - rect.l_y;
+                    if (rect.r_x <= rect.l_x || rowcount <= 0) return; // Sanity check
+
+                    int start_offset = rect.l_y * linesize + rect.l_x*4;
+                    int chunksize = (rect.r_x - rect.l_x) * 4;
+
+                    // TODO - parallel?
+                    for (int y = 0; y < rowcount; ++y) {
+                        std::memcpy(dst + start_offset + y * linesize, src + start_offset + y * linesize, chunksize);
+                    }
+                });
+
+                // double percent = ((double)pixel_count) / (width * height) * 100;
+            }
+
             rects.clear();
-
-            // TODO - perform selective copy!
-        }
-
-#ifdef WIN32
-        if (gpu_enabled_) {
-            int chunksize = height * width;
-            tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
         } else {
-            std::memcpy(dst, src, width * height * 4);
+            // Either a new frame, or dirty rectangles are disabled
+            copy_whole_frame(src, dst, width, height);
         }
-#else
-        // In my linux tests, doing a single memcpy doesn't have the same cost as windows,
-        // making using tbb excessive
-        std::memcpy(dst, src, width * height * 4);
-#endif
 
         graph_->set_value("memcpy", test_timer_.elapsed() * format_desc_.fps * 0.5 * 5);
 
