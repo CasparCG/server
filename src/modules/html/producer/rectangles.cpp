@@ -21,6 +21,8 @@
 
 #include "rectangles.h"
 
+#include <algorithm>
+
 namespace caspar::html {
 
 bool is_full_frame(const Rectangle& rect, int width, int height)
@@ -116,32 +118,5 @@ bool merge_rectangles(std::vector<Rectangle>& rects, int width, int height)
     // TODO - recursive?
     return true;
 }
-
-/*
-std::vector<CefRect>
-combine_rectangles(const std::vector<CefRect>& my_rects, const std::vector<CefRect>& new_rects, int width, int height)
-{
-    if (new_rects.empty())
-        return my_rects;
-
-    // Nothing to compare to
-    if (my_rects.empty()) {
-        // TODO: This assumes CEF provides isolated non-overlapping rectangles
-        return new_rects;
-    }
-
-    // If any are full-frame, then that is the only rectangle of interest
-    bool full_frame = are_any_full_frame(my_rects, width, height) || are_any_full_frame(new_rects, width, height);
-    if (full_frame) {
-        return {CefRect(0, 0, width, height)};
-    }
-
-    std::vector<CefRect> updated_rects = my_rects;
-
-    // TODO
-
-    return updated_rects;
-}
- */
 
 } // namespace caspar::html

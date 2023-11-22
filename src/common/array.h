@@ -75,7 +75,7 @@ class array final
         caspar::array<T> cloned;
         cloned.ptr_ = ptr_;
         cloned.size_ = size_;
-        cloned.storage_ = storage_; // TODO - does this get freed correctly?
+        cloned.storage_ = storage_;
         return cloned;
     }
 
