@@ -43,8 +43,6 @@ class frame_factory
 
     frame_factory(const frame_factory&) = delete;
 
-    virtual class caspar::array<std::uint8_t> create_buffer (int size) = 0;
-    virtual class mutable_frame import_buffers(const void* video_stream_tag, const struct pixel_format_desc& desc, std::vector<class caspar::array<std::uint8_t>> buffers) = 0;
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
     virtual std::unique_ptr<frame_pool> create_frame_pool(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;

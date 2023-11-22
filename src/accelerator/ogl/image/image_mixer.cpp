@@ -223,7 +223,7 @@ class image_renderer
 };
 
 struct image_mixer::impl
-    : public core::frame_factory
+    : public frame_factory_gl
     , public std::enable_shared_from_this<impl>
 {
     spl::shared_ptr<device>            ogl_;
@@ -304,7 +304,7 @@ struct image_mixer::impl
         return ogl_->create_array(size);
     }
 
-    core::mutable_frame import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers) override {
+    core::mutable_frame import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers, std::shared_ptr<void> drop_hook) override {
         if (desc.planes.size() != buffers.size()) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Mismatch in number of buffers and planes"));
         }
@@ -315,7 +315,7 @@ struct image_mixer::impl
             std::move(buffers),
             array<int32_t>{},
             desc,
-            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
+            [weak_self, desc, drop_hook = std::move(drop_hook)](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
                     return std::any{};
@@ -325,7 +325,11 @@ struct image_mixer::impl
                     textures.emplace_back(self->ogl_->copy_async(
                         image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
                 }
-                return std::make_shared<decltype(textures)>(std::move(textures));
+                // TODO - can this be done without the double shared_ptr?
+                auto raw_ptr = std::make_shared<decltype(textures)>(std::move(textures));
+                return std::shared_ptr<decltype(textures)>(raw_ptr.get(), [raw_ptr, drop_hook] (decltype(textures)* ptr){
+                    // Automatically freed
+                });
             });
     }
 
@@ -336,7 +340,7 @@ struct image_mixer::impl
             image_data.push_back(ogl_->create_array(plane.size));
         }
 
-        return import_buffers(tag, desc, std::move(image_data));
+        return import_buffers(tag, desc, std::move(image_data), nullptr);
     }
 
 
@@ -356,12 +360,6 @@ void image_mixer::pop() { impl_->pop(); }
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc)
 {
     return impl_->render(format_desc);
-}
-caspar::array<std::uint8_t> image_mixer::create_buffer(int size) {
-    return impl_->create_buffer(size);
-}
-core::mutable_frame image_mixer::import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers){
-    return impl_->import_buffers(tag, desc, std::move(buffers));
 }
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {

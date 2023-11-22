@@ -23,7 +23,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-frame_pool::frame_pool(std::shared_ptr<core::frame_factory> frame_factory,
+frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory,
                        const void*                          tag,
                        const core::pixel_format_desc&       desc)
     : frame_factory_(std::move(frame_factory))
@@ -38,6 +38,49 @@ frame_pool::~frame_pool()
     // TODO
 }
 
-core::mutable_frame frame_pool::create_frame() { return frame_factory_->create_frame(tag_, desc_); }
+core::mutable_frame frame_pool::create_frame()
+{
+    // TODO - ensure width and height match. If not then empty the pool?
+
+    // TODO - is there risk of order issues with the atomics
+
+    std::shared_ptr<pooled_buffer> frame;
+
+    // Find a frame which is not in use
+    for (const std::shared_ptr<pooled_buffer>& candidate : pool_) {
+        if (!candidate->in_use) {
+            frame = candidate;
+            CASPAR_LOG(info) << L"reuse pooled_buffer";
+            break;
+        }
+    }
+
+    // Add a new buffer to the pool
+    if (!frame) {
+        frame = std::make_shared<pooled_buffer>();
+
+        for (const core::pixel_format_desc::plane& plane : desc_.planes) {
+            frame->buffers.push_back(frame_factory_->create_buffer(plane.size));
+        }
+
+        pool_.push_back(frame);
+        CASPAR_LOG(info) << L"allocate new pooled_buffer #" << pool_.size();
+    }
+
+    frame->in_use = true;
+
+    // Make copies of the buffers
+    std::vector<caspar::array<uint8_t>> buffers;
+    for (const caspar::array<std::uint8_t>& buffer : frame->buffers) {
+        buffers.push_back(buffer.clone());
+    }
+
+    auto drop_hook = std::shared_ptr<void>(nullptr, [frame = std::move(frame)](void*) {
+        // Mark as no longer in use, once the buffers are freed
+        frame->in_use = false;
+    });
+
+    return frame_factory_->import_buffers(tag_, desc_, std::move(buffers), std::move(drop_hook));
+}
 
 }}} // namespace caspar::accelerator::ogl

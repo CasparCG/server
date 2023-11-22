@@ -27,12 +27,19 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include "image_mixer.h"
+
 namespace caspar { namespace accelerator { namespace ogl {
+
+struct pooled_buffer {
+    std::vector<caspar::array<std::uint8_t>> buffers;
+    std::atomic<bool> in_use;
+};
 
 class frame_pool : public core::frame_pool
 {
   public:
-    frame_pool(std::shared_ptr<core::frame_factory> frame_factory, const void* tag, const core::pixel_format_desc& desc);
+    frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, const core::pixel_format_desc& desc);
     frame_pool(const frame_pool&) = delete;
 
     ~frame_pool();
@@ -42,9 +49,11 @@ class frame_pool : public core::frame_pool
     core::mutable_frame create_frame() override;
 
   private:
-    const std::shared_ptr<core::frame_factory> frame_factory_;
+    const std::shared_ptr<frame_factory_gl> frame_factory_;
     const void* tag_;
-    const core::pixel_format_desc& desc_;
+    const core::pixel_format_desc desc_;
+
+    std::vector<std::shared_ptr<pooled_buffer>> pool_;
 };
 
 }}}
