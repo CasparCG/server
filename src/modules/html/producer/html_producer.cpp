@@ -68,16 +68,6 @@
 
 namespace caspar { namespace html {
 
-class pooled_buffer
-{
-  public:
-    pooled_buffer(caspar::array<std::uint8_t> buffer) : buffer(std::move(buffer)){}
-
-
-    const caspar::array<std::uint8_t> buffer;
-    std::atomic<bool>   in_use = {false};
-};
-
 class html_client
     : public CefClient
     , public CefRenderHandler
@@ -288,7 +278,6 @@ class html_client
         std::memcpy(dst, src, width * height * 4);
 #endif
     }
-
 
     void OnPaint(CefRefPtr<CefBrowser> browser,
                  PaintElementType      type,
