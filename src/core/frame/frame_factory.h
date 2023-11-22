@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <any>
+
 namespace caspar { namespace core {
 
 class frame_pool {
@@ -31,7 +33,9 @@ class frame_pool {
 
     frame_pool(const frame_pool&) = delete;
 
-    virtual class mutable_frame create_frame() = 0;
+    virtual std::pair<class mutable_frame, std::any&> create_frame() = 0;
+
+    virtual void for_each(const std::function<void(std::any& data)>& fn) = 0;
 };
 
 class frame_factory

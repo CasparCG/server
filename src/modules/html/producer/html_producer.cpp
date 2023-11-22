@@ -273,6 +273,12 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
+
+    void combine_rectangles(RectList& my_rects, const RectList& new_rects, int width, int height) {
+        // TODO
+    }
+
+
     void OnPaint(CefRefPtr<CefBrowser> browser,
                  PaintElementType      type,
                  const RectList&       dirtyRects,
@@ -292,10 +298,25 @@ class html_client
 
         CASPAR_LOG(info) << "rects " << dirtyRects.size();
 
-        core::mutable_frame frame = frame_pool_->create_frame();
+        frame_pool_->for_each([&](std::any& data) {
+            if (!data.has_value()) {
+                data.emplace<RectList>();
+            }
+            auto rects = std::any_cast<RectList>(data);
+            combine_rectangles(rects, dirtyRects, width, height);
+        });
+
+        std::pair<core::mutable_frame, std::any&> frame = frame_pool_->create_frame();
         char*               src   = (char*)buffer;
-        char*               dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
+        char*               dst   = reinterpret_cast<char*>(frame.first.image_data(0).begin());
         test_timer_.restart();
+
+        if (frame.second.has_value()) {
+            auto rects = std::any_cast<RectList>(frame.second);
+            rects.clear();
+
+            // TODO - perform selective copy!
+        }
 
 #ifdef WIN32
         if (gpu_enabled_) {
@@ -316,7 +337,7 @@ class html_client
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame))));
-            while (frames_.size() > 4) {
+            while (frames_.size() > frames_max_size_) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
