@@ -21,16 +21,15 @@
 
 #include "frame_pool.h"
 
+#include <utility>
+
 namespace caspar { namespace accelerator { namespace ogl {
 
-frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory,
-                       const void*                          tag,
-                       const core::pixel_format_desc&       desc)
+frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, core::pixel_format_desc desc)
     : frame_factory_(std::move(frame_factory))
     , tag_(tag)
-    , desc_(desc)
+    , desc_(std::move(desc))
 {
-    // TODO
 }
 
 frame_pool::~frame_pool()
@@ -38,7 +37,7 @@ frame_pool::~frame_pool()
     // TODO
 }
 
-core::mutable_frame frame_pool::create_frame()
+std::pair<core::mutable_frame, std::any&> frame_pool::create_frame()
 {
     // TODO - ensure width and height match. If not then empty the pool?
 
@@ -50,7 +49,6 @@ core::mutable_frame frame_pool::create_frame()
     for (const std::shared_ptr<pooled_buffer>& candidate : pool_) {
         if (!candidate->in_use) {
             frame = candidate;
-            CASPAR_LOG(info) << L"reuse pooled_buffer";
             break;
         }
     }
@@ -64,7 +62,6 @@ core::mutable_frame frame_pool::create_frame()
         }
 
         pool_.push_back(frame);
-        CASPAR_LOG(info) << L"allocate new pooled_buffer #" << pool_.size();
     }
 
     frame->in_use = true;
@@ -75,12 +72,21 @@ core::mutable_frame frame_pool::create_frame()
         buffers.push_back(buffer.clone());
     }
 
-    auto drop_hook = std::shared_ptr<void>(nullptr, [frame = std::move(frame)](void*) {
+    auto drop_hook = std::shared_ptr<void>(nullptr, [frame](void*) {
         // Mark as no longer in use, once the buffers are freed
         frame->in_use = false;
     });
 
-    return frame_factory_->import_buffers(tag_, desc_, std::move(buffers), std::move(drop_hook));
+    auto new_frame = frame_factory_->import_buffers(tag_, desc_, std::move(buffers), std::move(drop_hook));
+
+    return std::make_pair(std::move(new_frame), std::ref(frame->data));
+}
+
+void frame_pool::for_each(const std::function<void(std::any& data)>& fn)
+{
+    for (std::shared_ptr<pooled_buffer>& candidate : pool_) {
+        fn(candidate->data);
+    }
 }
 
 }}} // namespace caspar::accelerator::ogl

@@ -34,19 +34,23 @@ namespace caspar { namespace accelerator { namespace ogl {
 struct pooled_buffer {
     std::vector<caspar::array<std::uint8_t>> buffers;
     std::atomic<bool> in_use;
+
+    std::any data;
 };
 
 class frame_pool : public core::frame_pool
 {
   public:
-    frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, const core::pixel_format_desc& desc);
+    frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, core::pixel_format_desc  desc);
     frame_pool(const frame_pool&) = delete;
 
     ~frame_pool();
 
     frame_pool& operator=(const frame_pool&) = delete;
 
-    core::mutable_frame create_frame() override;
+    std::pair<core::mutable_frame, std::any&> create_frame() override;
+
+    void for_each(const std::function<void(std::any& data)>& fn) override;
 
   private:
     const std::shared_ptr<frame_factory_gl> frame_factory_;
