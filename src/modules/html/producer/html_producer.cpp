@@ -103,7 +103,6 @@ class html_client
     std::atomic<bool>                                           closing_;
 
     std::unique_ptr<core::frame_pool> frame_pool_;
-    std::vector<std::shared_ptr<pooled_buffer>> buffer_pool_;
 
     core::draw_frame   last_frame_;
     std::int_least64_t last_frame_time_;
@@ -279,41 +278,6 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
-    caspar::array<std::uint8_t> find_next_pooled_frame(int width, int height)
-    {
-        // TODO - ensure width and height match. If not then empty the pool?
-
-        // TODO - is there risk of order issues with the atomics
-
-        std::shared_ptr<pooled_buffer> frame;
-
-        // Find a frame which is not in use
-        for (const std::shared_ptr<pooled_buffer>& candidate : buffer_pool_) {
-            if (!candidate->in_use) {
-                frame = candidate;
-                CASPAR_LOG(info) << L"reuse pooled_buffer";
-                break;
-            }
-        }
-
-        // Add a new buffer to the pool
-        if (!frame) {
-            frame = std::make_shared<pooled_buffer>(frame_factory_->create_buffer(width * height * 4));
-            buffer_pool_.push_back(frame);
-            CASPAR_LOG(info) << L"allocate new pooled_buffer #" << buffer_pool_.size();
-        }
-        frame->in_use = true;
-
-        // Pass frame to ensure this buffer outlives the array it is derived from
-        auto ptr = std::shared_ptr<void>(nullptr, [frame](void*) {
-            // Mark the buffer as not in use
-            frame->in_use = false;
-        });
-
-        return caspar::array<std::uint8_t>(frame->buffer.data(), frame->buffer.size(), ptr);
-
-    }
-
     void OnPaint(CefRefPtr<CefBrowser> browser,
                  PaintElementType      type,
                  const RectList&       dirtyRects,
@@ -331,10 +295,9 @@ class html_client
         if (type != PET_VIEW)
             return;
 
-
-        caspar::array<std::uint8_t> dest_buffer = find_next_pooled_frame(width, height);
+        core::mutable_frame frame = frame_pool_->create_frame();
         char*               src   = (char*)buffer;
-        char*               dst   = reinterpret_cast<char*>(dest_buffer.begin());
+        char*               dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
         test_timer_.restart();
 
 #ifdef WIN32
@@ -349,13 +312,6 @@ class html_client
         // making using tbb excessive
         std::memcpy(dst, src, width * height * 4);
 #endif
-
-        core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
-        pixel_desc.planes.emplace_back(width, height, 4);
-
-        std::vector<caspar::array<std::uint8_t>> image_data;
-        image_data.push_back(std::move(dest_buffer));
-        core::mutable_frame frame = frame_factory_->import_buffers(this, pixel_desc, std::move(image_data));
 
         graph_->set_value("memcpy", test_timer_.elapsed() * format_desc_.fps * 0.5 * 5);
 

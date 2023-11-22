@@ -21,6 +21,7 @@
 #include "image_mixer.h"
 
 #include "image_kernel.h"
+#include "frame_pool.h"
 
 #include "../util/buffer.h"
 #include "../util/device.h"
@@ -340,8 +341,7 @@ struct image_mixer::impl
 
 
     std::unique_ptr<core::frame_pool> create_frame_pool(const void* tag, const core::pixel_format_desc& desc) override {
-        // TODO
-        return nullptr;
+        return std::make_unique<frame_pool>(shared_from_this(), tag, desc);
     }
 };
 
