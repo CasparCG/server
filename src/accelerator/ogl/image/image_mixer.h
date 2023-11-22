@@ -33,6 +33,12 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
+class frame_factory_gl: public core::frame_factory {
+  public:
+    virtual caspar::array<std::uint8_t> create_buffer(int size) = 0;
+    virtual core::mutable_frame import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers, std::shared_ptr<void> drop_hook) = 0;
+};
+
 class image_mixer final : public core::image_mixer
 {
   public:
@@ -44,8 +50,6 @@ class image_mixer final : public core::image_mixer
     image_mixer& operator=(const image_mixer&) = delete;
 
     std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;
-    caspar::array<std::uint8_t> create_buffer(int size)override;
-    core::mutable_frame import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers) override;
     core::mutable_frame                    create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
     std::unique_ptr<core::frame_pool> create_frame_pool(const void* tag, const core::pixel_format_desc& desc) override;
