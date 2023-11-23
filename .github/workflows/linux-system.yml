@@ -35,13 +35,6 @@ jobs:
                     libpostproc-dev \
                     libswresample-dev
 
-            - name: Extract docker dependencies
-              run: |
-                  ./tools/linux/ensure-base-images
-                  sudo ./tools/linux/extract-deps-from-docker
-              env:
-                  CI: 1
-
             - name: Run build
               run: |
 
