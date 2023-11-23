@@ -19,6 +19,8 @@
  * Author: Julian Waller, julian@superfly.tv
  */
 
+#define NOMINMAX
+
 #include "rectangles.h"
 
 #include <algorithm>

@@ -271,7 +271,7 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
-    static inline void copy_whole_frame(char* src, char* dst, int width, int height)
+    inline void copy_whole_frame(char* src, char* dst, int width, int height)
     {
 #ifdef WIN32
         if (gpu_enabled_) {
