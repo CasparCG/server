@@ -187,7 +187,7 @@ ExternalProject_Add(openal
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	BUILD_IN_SOURCE 1
 	CONFIGURE_COMMAND ""
-	BUILD_COMMAND cp bin/Win64/soft_oal.dll bin/Win64/OpenAL32.dll
+	BUILD_COMMAND ${CMAKE_COMMAND} -E copy bin/Win64/soft_oal.dll bin/Win64/OpenAL32.dll
 	INSTALL_COMMAND ""
 )
 ExternalProject_Get_Property(openal SOURCE_DIR)
