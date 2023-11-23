@@ -27,7 +27,14 @@ namespace caspar::html {
 
 bool is_full_frame(const Rectangle& rect, int width, int height)
 {
-    return rect.l_x == 0 && rect.l_y == 0 && rect.r_x == width && rect.r_y == height;
+    // Use some tolerance, so that when we get close to being the full frame, we copy everything
+    int tolerance_n = 9;
+    int tolerance_d = 10;
+
+    int target_pixel_count = (width * height * tolerance_n) / tolerance_d;
+    int rect_pixel_count   = (rect.r_x - rect.l_x) * (rect.r_y - rect.l_y);
+
+    return rect_pixel_count >= target_pixel_count;
 }
 
 bool are_any_full_frame(const std::vector<Rectangle>& rects, int width, int height)
