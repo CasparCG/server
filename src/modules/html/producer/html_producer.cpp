@@ -87,6 +87,7 @@ class html_client
     spl::shared_ptr<core::frame_factory>                        frame_factory_;
     core::video_format_desc                                     format_desc_;
     bool                                                        gpu_enabled_;
+    const bool                                                  use_dirty_regions_;
     tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
     std::atomic<bool>                                           loaded_;
     std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
@@ -106,12 +107,14 @@ class html_client
                 const spl::shared_ptr<diagnostics::graph>& graph,
                 core::video_format_desc                    format_desc,
                 bool                                       gpu_enabled,
+                bool                                       use_dirty_regions,
                 std::wstring                               url)
         : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
         , gpu_enabled_(gpu_enabled)
+        , use_dirty_regions_(use_dirty_regions)
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -263,7 +266,7 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
-    inline void copy_whole_frame(char* src, char* dst, int width, int height)
+    static inline void copy_whole_frame(char* src, char* dst, int width, int height)
     {
 #ifdef WIN32
         if (gpu_enabled_) {
@@ -296,22 +299,24 @@ class html_client
         if (type != PET_VIEW)
             return;
 
-        // Update the dirty rectangles for each frame in the pool
-        frame_pool_->for_each([&](std::any& data) {
-            if (!data.has_value()) {
-                std::vector<Rectangle> rects;
-                for (const auto& rect : dirtyRects) {
-                    rects.emplace_back(rect);
+        if (use_dirty_regions_) {
+            // Update the dirty rectangles for each frame in the pool
+            frame_pool_->for_each([&](std::any& data) {
+                if (!data.has_value()) {
+                    std::vector<Rectangle> rects;
+                    for (const auto& rect : dirtyRects) {
+                        rects.emplace_back(rect);
+                    }
+                    data.emplace<std::vector<Rectangle>>(std::move(rects));
+                } else {
+                    auto& rects = std::any_cast<std::vector<Rectangle>&>(data);
+                    for (const auto& rect : dirtyRects) {
+                        rects.emplace_back(rect);
+                    }
+                    merge_rectangles(rects, width, height);
                 }
-                data.emplace<std::vector<Rectangle>>(std::move(rects));
-            } else {
-                auto& rects = std::any_cast<std::vector<Rectangle>&>(data);
-                for (const auto& rect : dirtyRects) {
-                    rects.emplace_back(rect);
-                }
-                merge_rectangles(rects, width, height);
-            }
-        });
+            });
+        }
 
         // Ensure the pool is using the correct format
         auto pool_pixel_format = frame_pool_->pixel_format();
@@ -327,7 +332,7 @@ class html_client
         char*                                     dst   = reinterpret_cast<char*>(frame.first.image_data(0).begin());
         test_timer_.restart();
 
-        if (frame.second.has_value()) {
+        if (use_dirty_regions_ && frame.second.has_value()) {
             // The frame has dirty rectangles, so selectively copy those portions
             auto& rects = std::any_cast<std::vector<Rectangle>&>(frame.second);
 
@@ -501,9 +506,10 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+            const bool enable_gpu        = env::properties().get(L"configuration.html.enable-gpu", false);
+            const bool use_dirty_regions = env::properties().get(L"configuration.html.use-dirty-regions", false);
 
-            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, use_dirty_regions, url_);
 
             CefWindowInfo window_info;
             window_info.bounds.width                 = format_desc.square_width;
