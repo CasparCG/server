@@ -115,7 +115,6 @@ bool merge_rectangles(std::vector<Rectangle>& rects, int width, int height)
     // Snip out any rectangles that are invalid
     rects.erase(remove_if(rects.begin(), rects.end(), is_invalid), rects.end());
 
-    // TODO - recursive?
     return true;
 }
 
