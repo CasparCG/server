@@ -403,7 +403,7 @@ class html_client
                     {
                         std::lock_guard<std::mutex> lock(frames_mutex_);
 
-                        frames_.push(dframe);
+                        frames_.push(std::make_pair(now(), dframe));
                         while (frames_.size() > frames_max_size_) {
                             frames_.pop();
                             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
