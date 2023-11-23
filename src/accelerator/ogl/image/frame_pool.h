@@ -29,7 +29,7 @@
 
 #include "image_mixer.h"
 
-namespace caspar { namespace accelerator { namespace ogl {
+namespace caspar::accelerator::ogl {
 
 struct pooled_buffer
 {
@@ -45,7 +45,7 @@ class frame_pool : public core::frame_pool
     frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, core::pixel_format_desc desc);
     frame_pool(const frame_pool&) = delete;
 
-    ~frame_pool() = default;
+    ~frame_pool() override = default;
 
     frame_pool& operator=(const frame_pool&) = delete;
 
@@ -53,12 +53,15 @@ class frame_pool : public core::frame_pool
 
     void for_each(const std::function<void(std::any& data)>& fn) override;
 
+    void                                         pixel_format(core::pixel_format_desc desc) override;
+    [[nodiscard]] const core::pixel_format_desc& pixel_format() const override;
+
   private:
     const std::shared_ptr<frame_factory_gl> frame_factory_;
     const void*                             tag_;
-    const core::pixel_format_desc           desc_;
+    core::pixel_format_desc                 desc_;
 
     std::vector<std::shared_ptr<pooled_buffer>> pool_;
 };
 
-}}} // namespace caspar::accelerator::ogl
+} // namespace caspar::accelerator::ogl

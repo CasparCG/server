@@ -122,7 +122,6 @@ class html_client
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        // TODO - is this the correct way to define the format?
         core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
         pixel_desc.planes.emplace_back(format_desc_.square_width, format_desc_.square_height, 4);
         frame_pool_ = frame_factory_->create_frame_pool(this, pixel_desc);
@@ -313,6 +312,15 @@ class html_client
                 merge_rectangles(rects, width, height);
             }
         });
+
+        // Ensure the pool is using the correct format
+        auto pool_pixel_format = frame_pool_->pixel_format();
+        if (pool_pixel_format.planes.empty() || pool_pixel_format.planes[0].height != height ||
+            pool_pixel_format.planes[0].width != width) {
+            core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
+            pixel_desc.planes.emplace_back(width, height, 4);
+            frame_pool_->pixel_format(pixel_desc);
+        }
 
         std::pair<core::mutable_frame, std::any&> frame = frame_pool_->create_frame();
         char*                                     src   = (char*)buffer;
