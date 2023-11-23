@@ -23,7 +23,7 @@
 
 #include <utility>
 
-namespace caspar { namespace accelerator { namespace ogl {
+namespace caspar::accelerator::ogl {
 
 frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const void* tag, core::pixel_format_desc desc)
     : frame_factory_(std::move(frame_factory))
@@ -34,8 +34,6 @@ frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const vo
 
 std::pair<core::mutable_frame, std::any&> frame_pool::create_frame()
 {
-    // TODO - ensure width and height match. If not then empty the pool?
-
     // TODO - is there risk of order issues with the atomics?
 
     std::shared_ptr<pooled_buffer> frame;
@@ -84,4 +82,13 @@ void frame_pool::for_each(const std::function<void(std::any& data)>& fn)
     }
 }
 
-}}} // namespace caspar::accelerator::ogl
+void frame_pool::pixel_format(core::pixel_format_desc desc)
+{
+    desc_ = desc;
+
+    pool_.clear();
+}
+
+const core::pixel_format_desc& frame_pool::pixel_format() const { return desc_; }
+
+} // namespace caspar::accelerator::ogl

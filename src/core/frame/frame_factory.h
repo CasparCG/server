@@ -25,23 +25,27 @@
 
 namespace caspar { namespace core {
 
-class frame_pool {
+class frame_pool
+{
   public:
-    frame_pool()                                = default;
+    frame_pool()        = default;
     frame_pool& operator=(const frame_pool&) = delete;
-    virtual ~frame_pool()                       = default;
+    virtual ~frame_pool()                    = default;
 
     frame_pool(const frame_pool&) = delete;
 
     virtual std::pair<class mutable_frame, std::any&> create_frame() = 0;
 
     virtual void for_each(const std::function<void(std::any& data)>& fn) = 0;
+
+    virtual void                                         pixel_format(core::pixel_format_desc desc) = 0;
+    [[nodiscard]] virtual const core::pixel_format_desc& pixel_format() const                       = 0;
 };
 
 class frame_factory
 {
   public:
-    frame_factory()                                = default;
+    frame_factory()        = default;
     frame_factory& operator=(const frame_factory&) = delete;
     virtual ~frame_factory()                       = default;
 
@@ -49,7 +53,8 @@ class frame_factory
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
-    virtual std::unique_ptr<frame_pool> create_frame_pool(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
+    virtual std::unique_ptr<frame_pool> create_frame_pool(const void*                     video_stream_tag,
+                                                          const struct pixel_format_desc& desc) = 0;
 };
 
 }} // namespace caspar::core
