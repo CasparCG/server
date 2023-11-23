@@ -172,8 +172,7 @@ void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
 }
 
 core::video_format_desc get_decklink_format(const port_configuration&      config,
-                                            const core::video_format_desc& fallback_format_desc,
-                                            const std::wstring&            print)
+                                            const core::video_format_desc& fallback_format_desc)
 {
     if (config.format.format != core::video_format::invalid && config.format.format != fallback_format_desc.format) {
         if (config.format.format != core::video_format::invalid && config.format.format != core::video_format::custom &&
@@ -181,8 +180,6 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
                 fallback_format_desc.framerate * fallback_format_desc.field_count &&
             config.format.duration == fallback_format_desc.duration) {
             return config.format;
-        } else {
-            CASPAR_LOG(warning) << print << L"Ignoring specified format for decklink";
         }
     }
 
@@ -280,7 +277,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         , output_config_(std::move(output_config))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
-        , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc, print))
+        , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
     {
         if (main_decklink_format_desc.format != decklink_format_desc_.format) {
             CASPAR_LOG(info) << print << L" Disabling sync group for output with different format.";
@@ -451,7 +448,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         : channel_index_(channel_index)
         , config_(config)
         , channel_format_desc_(std::move(channel_format_desc))
-        , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_, print()))
+        , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
