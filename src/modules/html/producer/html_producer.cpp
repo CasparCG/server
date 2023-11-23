@@ -372,7 +372,7 @@ class html_client
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
-            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame))));
+            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame.first))));
             while (frames_.size() > frames_max_size_) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
