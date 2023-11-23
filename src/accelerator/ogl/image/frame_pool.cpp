@@ -32,16 +32,11 @@ frame_pool::frame_pool(std::shared_ptr<frame_factory_gl> frame_factory, const vo
 {
 }
 
-frame_pool::~frame_pool()
-{
-    // TODO
-}
-
 std::pair<core::mutable_frame, std::any&> frame_pool::create_frame()
 {
     // TODO - ensure width and height match. If not then empty the pool?
 
-    // TODO - is there risk of order issues with the atomics
+    // TODO - is there risk of order issues with the atomics?
 
     std::shared_ptr<pooled_buffer> frame;
 

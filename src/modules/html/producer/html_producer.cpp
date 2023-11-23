@@ -269,7 +269,8 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
-    inline void copy_whole_frame(char* src, char* dst, int width, int height) {
+    inline void copy_whole_frame(char* src, char* dst, int width, int height)
+    {
 #ifdef WIN32
         if (gpu_enabled_) {
             int chunksize = height * width;
@@ -305,13 +306,13 @@ class html_client
         frame_pool_->for_each([&](std::any& data) {
             if (!data.has_value()) {
                 std::vector<Rectangle> rects;
-                for (const auto &rect :dirtyRects) {
+                for (const auto& rect : dirtyRects) {
                     rects.emplace_back(rect);
                 }
                 data.emplace<std::vector<Rectangle>>(std::move(rects));
             } else {
                 auto& rects = std::any_cast<std::vector<Rectangle>&>(data);
-                for (const auto &rect :dirtyRects) {
+                for (const auto& rect : dirtyRects) {
                     rects.emplace_back(rect);
                 }
                 merge_rectangles(rects, width, height);
@@ -319,8 +320,8 @@ class html_client
         });
 
         std::pair<core::mutable_frame, std::any&> frame = frame_pool_->create_frame();
-        char*               src   = (char*)buffer;
-        char*               dst   = reinterpret_cast<char*>(frame.first.image_data(0).begin());
+        char*                                     src   = (char*)buffer;
+        char*                                     dst   = reinterpret_cast<char*>(frame.first.image_data(0).begin());
         test_timer_.restart();
 
         if (frame.second.has_value()) {
@@ -330,27 +331,21 @@ class html_client
             if (rects.empty() || (rects.size() == 1 && is_full_frame(rects[0], width, height))) {
                 copy_whole_frame(src, dst, width, height);
             } else {
-                // int pixel_count = 0 ;
-                // for (const Rectangle& rect :rects) {
-                //     pixel_count += (rect.r_x - rect.l_x) * (rect.r_y - rect.l_y);
-                // }
-
                 int linesize = width * 4;
                 tbb::parallel_for(static_cast<std::size_t>(0), rects.size(), [&](std::size_t index) {
-                    const Rectangle & rect = rects[index];
-                    int rowcount = rect.r_y - rect.l_y;
-                    if (rect.r_x <= rect.l_x || rowcount <= 0) return; // Sanity check
+                    const Rectangle& rect     = rects[index];
+                    int              rowcount = rect.r_y - rect.l_y;
+                    if (rect.r_x <= rect.l_x || rowcount <= 0)
+                        return; // Sanity check
 
-                    int start_offset = rect.l_y * linesize + rect.l_x*4;
-                    int chunksize = (rect.r_x - rect.l_x) * 4;
+                    int start_offset = rect.l_y * linesize + rect.l_x * 4;
+                    int chunksize    = (rect.r_x - rect.l_x) * 4;
 
                     // TODO - parallel?
                     for (int y = 0; y < rowcount; ++y) {
                         std::memcpy(dst + start_offset + y * linesize, src + start_offset + y * linesize, chunksize);
                     }
                 });
-
-                // double percent = ((double)pixel_count) / (width * height) * 100;
             }
 
             rects.clear();
