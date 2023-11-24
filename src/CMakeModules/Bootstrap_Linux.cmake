@@ -44,6 +44,7 @@ if (ENABLE_HTML)
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off
 		INSTALL_COMMAND ""
+		PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
 		BUILD_BYPRODUCTS
 			"<SOURCE_DIR>/Release/libcef.so"
 			"<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
