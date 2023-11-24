@@ -20,8 +20,8 @@
  */
 #include "image_mixer.h"
 
-#include "image_kernel.h"
 #include "frame_pool.h"
+#include "image_kernel.h"
 
 #include "../util/buffer.h"
 #include "../util/device.h"
@@ -282,7 +282,8 @@ struct image_mixer::impl
                 item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
                                                             item.pix_desc.planes[n].width,
                                                             item.pix_desc.planes[n].height,
-                                                            item.pix_desc.planes[n].stride));
+                                                            item.pix_desc.planes[n].stride,
+                                                            nullptr));
             }
         }
 
@@ -300,11 +301,13 @@ struct image_mixer::impl
         return renderer_(std::move(layers_), format_desc);
     }
 
-    caspar::array<std::uint8_t> create_buffer(int size) override {
-        return ogl_->create_array(size);
-    }
+    caspar::array<std::uint8_t> create_buffer(int size) override { return ogl_->create_array(size); }
 
-    core::mutable_frame import_buffers(const void* tag, const core::pixel_format_desc& desc, std::vector<caspar::array<std::uint8_t>> buffers, std::shared_ptr<void> drop_hook) override {
+    core::mutable_frame import_buffers(const void*                              tag,
+                                       const core::pixel_format_desc&           desc,
+                                       std::vector<caspar::array<std::uint8_t>> buffers,
+                                       std::shared_ptr<void>                    drop_hook) override
+    {
         if (desc.planes.size() != buffers.size()) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Mismatch in number of buffers and planes"));
         }
@@ -315,7 +318,8 @@ struct image_mixer::impl
             std::move(buffers),
             array<int32_t>{},
             desc,
-            [weak_self, desc, drop_hook = std::move(drop_hook)](std::vector<array<const std::uint8_t>> image_data) -> std::any {
+            [weak_self, desc, drop_hook = std::move(drop_hook)](
+                std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
                     return std::any{};
@@ -323,13 +327,9 @@ struct image_mixer::impl
                 std::vector<future_texture> textures;
                 for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
                     textures.emplace_back(self->ogl_->copy_async(
-                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
+                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, drop_hook));
                 }
-                // TODO - can this be done without the double shared_ptr?
-                auto raw_ptr = std::make_shared<decltype(textures)>(std::move(textures));
-                return std::shared_ptr<decltype(textures)>(raw_ptr.get(), [raw_ptr, drop_hook] (decltype(textures)* ptr){
-                    // Automatically freed
-                });
+                return std::make_shared<decltype(textures)>(std::move(textures));
             });
     }
 
@@ -343,8 +343,8 @@ struct image_mixer::impl
         return import_buffers(tag, desc, std::move(image_data), nullptr);
     }
 
-
-    std::unique_ptr<core::frame_pool> create_frame_pool(const void* tag, const core::pixel_format_desc& desc) override {
+    std::unique_ptr<core::frame_pool> create_frame_pool(const void* tag, const core::pixel_format_desc& desc) override
+    {
         return std::make_unique<frame_pool>(shared_from_this(), tag, desc);
     }
 };

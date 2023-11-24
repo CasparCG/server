@@ -66,7 +66,7 @@ std::pair<core::mutable_frame, std::any&> frame_pool::create_frame()
     }
 
     auto drop_hook = std::shared_ptr<void>(nullptr, [frame](void*) {
-        // Mark as no longer in use, once the buffers are freed
+        // This means the copy of each buffer has completed, and is no longer in use
         frame->in_use = false;
     });
 
