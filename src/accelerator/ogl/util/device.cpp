@@ -36,7 +36,6 @@
 #include <SFML/Window/Context.hpp>
 
 #ifdef WIN32
-#include "../../d3d/d3d_device.h"
 #include <GL/wglew.h>
 #endif
 
@@ -73,11 +72,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
     GLuint fbo_;
 
     std::wstring version_;
-
-#ifdef WIN32
-    std::shared_ptr<d3d::d3d_device> d3d_device_;
-    std::shared_ptr<void>            interop_handle_;
-#endif
 
     io_context                          service_;
     decltype(make_work_guard(service_)) work_;
@@ -117,21 +111,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
         device_.setActive(false);
-
-#ifdef WIN32
-        if (env::properties().get(L"configuration.html.enable-gpu", false)) {
-            d3d_device_ = d3d::d3d_device::get_device();
-        }
-        if (d3d_device_) {
-            interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
-                if (p)
-                    wglDXCloseDeviceNV(p);
-            });
-
-            if (!interop_handle_)
-                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
-        }
-#endif
 
         thread_ = std::thread([&] {
             device_.setActive(true);
@@ -455,13 +434,6 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
-#ifdef WIN32
-std::shared_ptr<void>                 device::d3d_interop() const { return impl_->interop_handle_; }
-std::future<std::shared_ptr<texture>> device::copy_async(GLuint source, int width, int height, int stride)
-{
-    return impl_->copy_async(source, width, height, stride);
-}
-#endif
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }

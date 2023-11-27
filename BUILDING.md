@@ -62,7 +62,7 @@ _Note: if you ran docker with sudo, CasparCG server will not be able to run with
 2. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 3. `cd casparcg-server-master`
 4. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-5. Extract Boost, FFmpeg and CEF from the docker images via `sudo ./tools/linux/extract-deps-from-docker`. Alternatively these can be prepared manually by following the steps laid out in each Dockerfile
+5. Extract Boost and FFmpeg from the docker images via `sudo ./tools/linux/extract-deps-from-docker`. Alternatively these can be prepared manually by following the steps laid out in each Dockerfile
 6. `mkdir build && cd build`
 7. `cmake ../src`
 8. `make -j8`

@@ -10,6 +10,7 @@ SET (CONFIG_VERSION_TAG "Dev")
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 
 # Add custom cmake modules path
+SET (CASPARCG_PATCH_DIR ${CMAKE_SOURCE_DIR}/CMakeModules/patches)
 LIST (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 # Determine the git hash

@@ -44,10 +44,6 @@
 #include <include/cef_version.h>
 #pragma warning(pop)
 
-#ifdef WIN32
-#include <accelerator/d3d/d3d_device.h>
-#endif
-
 namespace caspar { namespace html {
 
 std::unique_ptr<executor> g_cef_executor;
@@ -166,6 +162,9 @@ class renderer_application
     {
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
+
+            // This gives better performance on the gpu->cpu readback
+            command_line->AppendSwitchWithValue("use-angle", "gl");
         }
 
         command_line->AppendSwitch("disable-web-security");
@@ -209,14 +208,6 @@ void init(const core::module_dependencies& dependencies)
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
         const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
-
-#ifdef WIN32
-        if (enable_gpu) {
-            auto dev = accelerator::d3d::d3d_device::get_device();
-            if (!dev)
-                CASPAR_LOG(warning) << L"Failed to create directX device for cef gpu acceleration";
-        }
-#endif
 
         CefSettings settings;
         settings.command_line_args_disabled   = false;
