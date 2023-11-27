@@ -1,5 +1,5 @@
---- CMakeLists.txt      2023-11-24 09:53:18.695186368 +0000
-+++ CMakeLists.txt      2023-11-24 09:54:17.970959700 +0000
+--- CMakeLists.txt
++++ CMakeLists.txt
 @@ -132,11 +132,8 @@
  # Global setup.
  #
