@@ -12,16 +12,20 @@ CasparCG 2.4.0 (Unreleased)
 * AMCP: Add CLEAR ALL command
 * AMCP: Command batching syntax
 * AMCP: LOAD/LOADBG/PLAY commands accept a CLEAR_ON_404 parameter, to instruct the layer to be cleared when the requested file was not found
+* AMCP: Add commands to subscribe and unsubscribe to OSC on any port number
+* Build: Require C++17 for building
 * Build: Support newer versions of Boost
 * Build: Support newer versions of TBB
 * Build: Disable precompiled headers for linux
 * Build: Support VS2022
+* Build: Replace nuget and locally committed dependencies with direct http downloads
 * Linux: Support setting thread priorities
 * Linux: Initial ARM64 compatibility
 * Logging: add config option to disable logging to file and to disable column alignment 
 * Transitions: Support additional audio fade properties for STING transition
 ##### Fixes
 * AMCP: Ensure all consumers and producers are reported in `INFO` commands
+* AMCP: Deferred mixer operations were not being cleared after being applied
 * OpenGL: Fix support for recent Linux drivers
 * Linux: Fix endless looping on stdin
 * Route: Fix error when clearing layer
@@ -34,7 +38,7 @@ CasparCG 2.4.0 (Unreleased)
 * FFmpeg: Update to v5.1
 * FFmpeg: Improve performance
 * FFmpeg: Allow specifying both SEEK and IN for PLAY commands
-* HTML: Update to CEF 95
+* HTML: Update to CEF 117
 * HTML: `CALL 1-10 RELOAD` to reload a renderer
 * NDI: Upgrade to NDI5
 * System Audio: Allow specifying output device to use
@@ -50,6 +54,7 @@ CasparCG 2.4.0 (Unreleased)
 * Decklink: Configure device duplex modes in casparcg.config
 * Decklink: Output a subregion of the channel
 * Decklink: Add secondary outputs in a consumer, to ensure sync when used within a single card
+* iVGA: Remove consumer
 * NDI: Upgrade to NDI5
 ##### Fixes
 * Decklink: Fix stutter when loading clips
