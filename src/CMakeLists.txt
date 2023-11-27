@@ -7,6 +7,9 @@ SET (CONFIG_VERSION_MINOR 4)
 SET (CONFIG_VERSION_BUG 0)
 SET (CONFIG_VERSION_TAG "Dev")
 
+set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
+set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
+
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 
 # Add custom cmake modules path
