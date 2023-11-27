@@ -39,7 +39,7 @@ FIND_PACKAGE (X11 REQUIRED)
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL https://cef-builds.spotifycdn.com/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_linux64_minimal.tar.bz2
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_linux64_minimal.tar.bz2
 		URL_HASH SHA1=7e6c9cf591cf3b1dabe65a7611f5fc166df2ec1e
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off
