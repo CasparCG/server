@@ -140,11 +140,11 @@ struct image_scroll_producer : public core::frame_producer
         if (end_time_)
             speed = -1.0;
 
-        auto bitmap = load_image(filename_);
-        FreeImage_FlipVertical(bitmap.get());
+        auto bitmap = load_image(filename_, false);
+        FreeImage_FlipVertical(bitmap.bitmap.get());
 
-        width_  = FreeImage_GetWidth(bitmap.get());
-        height_ = FreeImage_GetHeight(bitmap.get());
+        width_  = FreeImage_GetWidth(bitmap.bitmap.get());
+        height_ = FreeImage_GetHeight(bitmap.bitmap.get());
 
         bool vertical   = width_ == format_desc_.width;
         bool horizontal = height_ == format_desc_.height;
@@ -169,7 +169,7 @@ struct image_scroll_producer : public core::frame_producer
 
         speed_ = speed_tweener(speed, speed, 0, tweener(L"linear"));
 
-        auto                   bytes = FreeImage_GetBits(bitmap.get());
+        auto                   bytes = FreeImage_GetBits(bitmap.bitmap.get());
         auto                   count = width_ * height_ * 4;
         image_view<bgra_pixel> original_view(bytes, width_, height_);
 
@@ -193,7 +193,7 @@ struct image_scroll_producer : public core::frame_producer
             caspar::tweener        blur_tweener(L"easeInQuad");
             blur(original_view, blurred_view, angle, motion_blur_px, blur_tweener);
             bytes = blurred_copy.get();
-            bitmap.reset();
+            bitmap.bitmap.reset();
         }
 
         if (vertical) {

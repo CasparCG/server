@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <core/frame/pixel_format.h>
 #include <memory>
 #include <set>
 #include <string>
@@ -29,8 +30,15 @@ struct FIBITMAP;
 
 namespace caspar { namespace image {
 
-std::shared_ptr<FIBITMAP>     load_image(const std::wstring& filename);
-std::shared_ptr<FIBITMAP>     load_png_from_memory(const void* memory_location, size_t size);
+struct loaded_image
+{
+    std::shared_ptr<FIBITMAP> bitmap;
+    core::pixel_format        format;
+    int                       stride;
+};
+
+loaded_image                  load_image(const std::wstring& filename, bool allow_all_formats);
+loaded_image                  load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
 const std::set<std::wstring>& supported_extensions();
 
 }} // namespace caspar::image

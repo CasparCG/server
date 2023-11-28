@@ -35,6 +35,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
@@ -67,7 +68,7 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_image(description_));
+        load(load_image(description_, true));
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
@@ -80,19 +81,20 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_png_from_memory(png_data, size));
+        load(load_png_from_memory(png_data, size, true));
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    void load(const std::shared_ptr<FIBITMAP>& bitmap)
+    void load(const loaded_image& image)
     {
-        FreeImage_FlipVertical(bitmap.get());
-        core::pixel_format_desc desc(core::pixel_format::bgra);
-        desc.planes.emplace_back(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4);
-        auto frame = frame_factory_->create_frame(this, desc);
+        core::pixel_format_desc desc(image.format);
+        desc.planes.emplace_back(
+            FreeImage_GetWidth(image.bitmap.get()), FreeImage_GetHeight(image.bitmap.get()), image.stride);
+        auto frame       = frame_factory_->create_frame(this, desc);
+        frame.geometry() = core::frame_geometry::get_default_vflip();
 
-        std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
+        std::copy_n(FreeImage_GetBits(image.bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
         frame_ = core::draw_frame(std::move(frame));
     }
 
