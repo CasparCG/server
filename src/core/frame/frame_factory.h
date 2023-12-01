@@ -23,18 +23,6 @@
 
 namespace caspar { namespace core {
 
-class frame_factory
-{
-  public:
-    frame_factory()                                = default;
-    frame_factory& operator=(const frame_factory&) = delete;
-    virtual ~frame_factory()                       = default;
-
-    frame_factory(const frame_factory&) = delete;
-
-    virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
-};
-
 class frame_converter {
   public:
     frame_converter()                                = default;
@@ -45,8 +33,23 @@ class frame_converter {
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
-    virtual class draw_frame convert_frame(const class mutable_frame) = 0;
+    virtual class draw_frame convert_frame(const class mutable_frame& frame) = 0;
 
 };
+
+class frame_factory
+{
+  public:
+    frame_factory()                                = default;
+    frame_factory& operator=(const frame_factory&) = delete;
+    virtual ~frame_factory()                       = default;
+
+    frame_factory(const frame_factory&) = delete;
+
+    virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
+
+    virtual std::shared_ptr<frame_converter> create_frame_converter() = 0;
+};
+
 
 }} // namespace caspar::core

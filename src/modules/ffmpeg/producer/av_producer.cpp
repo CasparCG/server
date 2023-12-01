@@ -602,7 +602,7 @@ struct AVProducer::Impl
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
-    const std::shared_ptr<core::frame_factory> frame_factory_;
+    const std::shared_ptr<core::frame_converter> frame_factory_;
     const core::video_format_desc              format_desc_;
     const AVRational                           format_tb_;
     const std::string                          name_;
@@ -655,7 +655,7 @@ struct AVProducer::Impl
          boost::optional<int64_t>             duration,
          bool                                 loop,
          int                                  seekable)
-        : frame_factory_(frame_factory)
+        : frame_factory_(frame_factory->create_frame_converter())
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
         , name_(name)
