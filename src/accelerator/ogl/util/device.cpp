@@ -437,6 +437,9 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
+//std::future<std::shared_ptr<texture>> device::convert_frame() {
+    // TODO
+//}
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }
