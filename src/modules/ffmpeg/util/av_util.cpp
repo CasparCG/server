@@ -141,11 +141,11 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
         case AV_PIX_FMT_YUV444P10LE:
         case AV_PIX_FMT_YUV422P10LE:
         case AV_PIX_FMT_YUV420P10LE:
-            return core::pixel_format::ycbcr; // TODO 10bit
+            return core::pixel_format::ycbcr10;
         case AV_PIX_FMT_YUVA444P10LE:
         case AV_PIX_FMT_YUVA422P10LE:
         case AV_PIX_FMT_YUVA420P10LE:
-            return core::pixel_format::ycbcra; // TODO 10bit
+            return core::pixel_format::ycbcra10;
         default:
             return core::pixel_format::invalid;
     }

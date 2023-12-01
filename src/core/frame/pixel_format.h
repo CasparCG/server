@@ -38,6 +38,8 @@ enum class pixel_format
     bgr,
     rgb,
     uyvy,
+    ycbcr10,
+    ycbcra10,
     count,
     invalid,
 };
