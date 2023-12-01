@@ -178,7 +178,9 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             return desc;
         }
         case core::pixel_format::ycbcr:
-        case core::pixel_format::ycbcra: {
+        case core::pixel_format::ycbcra:
+        case core::pixel_format::ycbcr10:
+        case core::pixel_format::ycbcra10:{
             // Find chroma height
             // av_image_fill_plane_sizes is not available until ffmpeg 4.4, but we still need to support ffmpeg 4.2, so
             // we fall back to calling av_image_fill_pointers with a NULL image buffer. We can't unconditionally use
@@ -201,7 +203,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1));
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], h2, 1));
 
-            if (desc.format == core::pixel_format::ycbcra)
+            if (desc.format == core::pixel_format::ycbcra||desc.format == core::pixel_format::ycbcra10)
                 desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1));
 
             return desc;

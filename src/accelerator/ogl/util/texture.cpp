@@ -28,9 +28,9 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
-static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
-static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};
+static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA, GL_RGBA};
+static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, GL_RGBA32F};
+static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV, GL_UNSIGNED_BYTE};
 
 struct texture::impl
 {
@@ -50,12 +50,22 @@ struct texture::impl
         , stride_(stride)
         , size_(width * height * stride)
     {
+        if (stride == 5) {
+            size_ = width * height * 16;
+        }
+
+
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
         GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
         GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
         GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[stride_], width_, height_));
+
+
+        //bind();
+        //GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width, height, 0, FORMAT[stride_], GL_FLOAT, nullptr)); // HACK
+        //unbind();
     }
 
     ~impl() { glDeleteTextures(1, &id_); }
@@ -131,7 +141,7 @@ void texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
 int  texture::width() const { return impl_->width_; }
 int  texture::height() const { return impl_->height_; }
 int  texture::stride() const { return impl_->stride_; }
-int  texture::size() const { return impl_->width_ * impl_->height_ * impl_->stride_; }
+int  texture::size() const { return impl_->size_; }
 int  texture::id() const { return impl_->id_; }
 
 }}} // namespace caspar::accelerator::ogl

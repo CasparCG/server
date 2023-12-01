@@ -52,7 +52,9 @@ class device final
                                       copy_async(const array<const uint8_t>& source, int width, int height, int stride);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
 
-//    std::future<std::shared_ptr<texture>> convert_frame(std::vector<array<const std::uint8_t>> image_data);
+    std::future<std::shared_ptr<texture>>
+    convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format);
+
     template <typename Func>
     auto dispatch_async(Func&& func)
     {

@@ -305,19 +305,19 @@ struct image_mixer::impl
     std::vector<future_texture> convert_frame(const std::vector<array<const std::uint8_t>>& image_data,
                                               const core::pixel_format_desc&                desc) const
     {
+        const auto& plane0 = desc.planes[0]; // TODO - this doesnt feel safe, or accurate
 
         std::vector<future_texture> textures;
-        const auto& plane0 =  desc.planes[0]; // TODO - this doesnt feel safe, or accurate
+        /*
         const auto texture = ogl_->create_texture(plane0.width, plane0.height,
                                                                    4); // TODO - don't clear
 
         // TODO - how to run and link shader?
         textures.emplace_back(make_ready_future(texture));
-
-                /*
-        const auto texture = ogl_->convert_frame(std::move(image_data), desc);
-        textures.emplace_back(texture);
 */
+
+        textures.emplace_back(ogl_->convert_frame(
+            image_data, plane0.width, plane0.height, 1)); // TODO - what is this 'format' parameter?
 
         return textures;
     }

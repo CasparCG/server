@@ -21,8 +21,9 @@
 #include "device.h"
 
 #include "buffer.h"
-#include "shader.h"
+#include "compute_shader.h"
 #include "texture.h"
+
 
 #include <common/array.h>
 #include <common/assert.h>
@@ -41,6 +42,7 @@
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <memory>
 #include <boost/asio/spawn.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -50,6 +52,8 @@
 #include <array>
 #include <future>
 #include <thread>
+
+#include "ogl_image_to_rgba.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -68,6 +72,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     using sync_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
     sync_queue_t sync_queue_;
+
+    std::unique_ptr<compute_shader> compute_shader_;
 
     GLuint fbo_;
 
@@ -112,6 +118,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+
+        compute_shader_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
 
         device_.setActive(false);
 
@@ -175,7 +183,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
     {
-        CASPAR_VERIFY(stride > 0 && stride < 5);
+        CASPAR_VERIFY(stride > 0 && stride < 6);
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
@@ -220,6 +228,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         auto ptr = reinterpret_cast<uint8_t*>(buf->data());
         return array<uint8_t>(ptr, buf->size(), buf);
     }
+
+
 
     std::future<std::shared_ptr<texture>>
     copy_async(const array<const uint8_t>& source, int width, int height, int stride)
@@ -280,6 +290,42 @@ struct device::impl : public std::enable_shared_from_this<impl>
             auto ptr  = reinterpret_cast<uint8_t*>(buf->data());
             auto size = buf->size();
             return array<const uint8_t>(ptr, size, std::move(buf));
+        });
+    }
+
+    std::future<std::shared_ptr<texture>>
+    convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)
+    {
+        return dispatch_async([=] {
+
+            auto tex = create_texture(width, height, 5, false);
+
+            //tex->bind(0);
+            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            compute_shader_->use();
+
+            glDispatchCompute((unsigned int)width, (unsigned int)height, 1);
+
+            // make sure writing to image has finished before read
+//            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // TODO - this will probably block the main rendering loop
+            glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+
+
+            /*
+std::shared_ptr<buffer> buf;
+            auto tmp = source.storage<std::shared_ptr<buffer>>();
+            if (tmp) {
+                buf = *tmp;
+            } else {
+                buf = create_buffer(static_cast<int>(source.size()), true);
+                // TODO (perf) Copy inside a TBB worker.
+                std::memcpy(buf->data(), source.data(), source.size());
+            }
+             */
+
+            // tex->copy_from(*buf);
+            return tex;
         });
     }
 
@@ -437,9 +483,11 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
-//std::future<std::shared_ptr<texture>> device::convert_frame() {
-    // TODO
-//}
+std::future<std::shared_ptr<texture>>
+device::convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)
+{
+    return impl_->convert_frame(sources, width, height, format);
+}
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }

@@ -8,6 +8,7 @@ set(SOURCES
 	ogl/image/frame_converter.cpp
 
 	ogl/util/buffer.cpp
+	ogl/util/compute_shader.cpp
 	ogl/util/device.cpp
 	ogl/util/shader.cpp
 	ogl/util/texture.cpp
@@ -21,12 +22,14 @@ set(HEADERS
 	ogl/image/frame_converter.h
 
 	ogl/util/buffer.h
+	ogl/util/compute_shader.h
 	ogl/util/device.h
 	ogl/util/shader.h
 	ogl/util/texture.h
 
 	ogl_image_vertex.h
 	ogl_image_fragment.h
+	ogl_image_to_rgba.h
 
 	accelerator.h
 	StdAfx.h
@@ -34,6 +37,7 @@ set(HEADERS
 
 bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
 bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+bin2c("ogl/image/shader_to_rgba.comp" "ogl_image_to_rgba.h" "caspar::accelerator::ogl" "compute_to_rgba_shader")
 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(accelerator PRIVATE
