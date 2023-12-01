@@ -27,6 +27,11 @@ core::mutable_frame     make_frame(void*                    tag,
                                    std::shared_ptr<AVFrame> video,
                                    std::shared_ptr<AVFrame> audio);
 
+core::mutable_frame make_frame2(void*                                         tag,
+                                const std::shared_ptr<core::frame_converter>& frame_factory,
+                                std::shared_ptr<AVFrame>                      video,
+                                std::shared_ptr<AVFrame>                      audio);
+
 std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 

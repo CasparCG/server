@@ -40,19 +40,12 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
-core::mutable_frame make_frame(void*                    tag,
-                               core::frame_factory&     frame_factory,
-                               std::shared_ptr<AVFrame> video,
-                               std::shared_ptr<AVFrame> audio)
+core::mutable_frame copy_frame_tmp(core::mutable_frame            frame,
+                                   const core::pixel_format_desc& pix_desc,
+                                   const std::vector<int>&        data_map,
+                                   std::shared_ptr<AVFrame>       video,
+                                   std::shared_ptr<AVFrame>       audio)
 {
-    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
-
-    const auto pix_desc =
-        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
-              : core::pixel_format_desc(core::pixel_format::invalid);
-
-    auto frame = frame_factory.create_frame(tag, pix_desc);
-
     tbb::parallel_invoke(
         [&]() {
             if (video) {
@@ -82,6 +75,38 @@ core::mutable_frame make_frame(void*                    tag,
         });
 
     return frame;
+}
+
+core::mutable_frame make_frame(void*                    tag,
+                               core::frame_factory&     frame_factory,
+                               std::shared_ptr<AVFrame> video,
+                               std::shared_ptr<AVFrame> audio)
+{
+    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
+
+    const auto pix_desc =
+        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
+              : core::pixel_format_desc(core::pixel_format::invalid);
+
+    auto frame = frame_factory.create_frame(tag, pix_desc);
+
+    return copy_frame_tmp(std::move(frame), pix_desc, data_map, std::move(video), std::move(audio));
+}
+
+core::mutable_frame make_frame2(void*                                         tag,
+                                const std::shared_ptr<core::frame_converter>& frame_factory,
+                                std::shared_ptr<AVFrame>                      video,
+                                std::shared_ptr<AVFrame>                      audio)
+{
+    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
+
+    const auto pix_desc =
+        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
+              : core::pixel_format_desc(core::pixel_format::invalid);
+
+    auto frame = frame_factory->create_frame(tag, pix_desc);
+
+    return copy_frame_tmp(std::move(frame), pix_desc, data_map, std::move(video), std::move(audio));
 }
 
 core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)

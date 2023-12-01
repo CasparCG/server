@@ -25,6 +25,7 @@
 #include "../util/buffer.h"
 #include "../util/device.h"
 #include "../util/texture.h"
+#include "frame_converter.h"
 
 #include <common/array.h>
 #include <common/future.h>
@@ -327,6 +328,11 @@ struct image_mixer::impl
                 return std::make_shared<decltype(textures)>(std::move(textures));
             });
     }
+
+    std::shared_ptr<core::frame_converter> create_frame_converter() override
+    {
+       return std::make_shared<ogl_frame_converter>(ogl_);
+    }
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size)
@@ -344,6 +350,10 @@ std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
     return impl_->create_frame(tag, desc);
+}
+std::shared_ptr<core::frame_converter> image_mixer::create_frame_converter()
+{
+    return impl_->create_frame_converter();
 }
 
 }}} // namespace caspar::accelerator::ogl
