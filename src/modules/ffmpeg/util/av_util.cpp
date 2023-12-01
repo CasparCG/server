@@ -102,23 +102,25 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
         case AV_PIX_FMT_ABGR:
             return core::pixel_format::abgr;
         case AV_PIX_FMT_YUV444P:
-            return core::pixel_format::ycbcr;
         case AV_PIX_FMT_YUV422P:
-            return core::pixel_format::ycbcr;
         case AV_PIX_FMT_YUV420P:
-            return core::pixel_format::ycbcr;
         case AV_PIX_FMT_YUV411P:
-            return core::pixel_format::ycbcr;
         case AV_PIX_FMT_YUV410P:
             return core::pixel_format::ycbcr;
         case AV_PIX_FMT_YUVA420P:
-            return core::pixel_format::ycbcra;
         case AV_PIX_FMT_YUVA422P:
-            return core::pixel_format::ycbcra;
         case AV_PIX_FMT_YUVA444P:
             return core::pixel_format::ycbcra;
         case AV_PIX_FMT_UYVY422:
             return core::pixel_format::uyvy;
+        case AV_PIX_FMT_YUV444P10LE:
+        case AV_PIX_FMT_YUV422P10LE:
+        case AV_PIX_FMT_YUV420P10LE:
+            return core::pixel_format::ycbcr; // TODO 10bit
+        case AV_PIX_FMT_YUVA444P10LE:
+        case AV_PIX_FMT_YUVA422P10LE:
+        case AV_PIX_FMT_YUVA420P10LE:
+            return core::pixel_format::ycbcra; // TODO 10bit
         default:
             return core::pixel_format::invalid;
     }

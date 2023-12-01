@@ -35,4 +35,18 @@ class frame_factory
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 };
 
+class frame_converter {
+  public:
+    frame_converter()                                = default;
+    frame_converter& operator=(const frame_converter&) = delete;
+    virtual ~frame_converter()                       = default;
+
+    frame_converter(const frame_converter&) = delete;
+
+    virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
+
+    virtual class draw_frame convert_frame(const class mutable_frame) = 0;
+
+};
+
 }} // namespace caspar::core

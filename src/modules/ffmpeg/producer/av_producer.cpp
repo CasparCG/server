@@ -508,6 +508,14 @@ struct Filter
                                               AV_PIX_FMT_YUVA422P,
                                               AV_PIX_FMT_YUVA420P,
                                               AV_PIX_FMT_UYVY422,
+                                              AV_PIX_FMT_YUV444P10LE,
+                                              AV_PIX_FMT_YUV422P10LE,
+                                              AV_PIX_FMT_YUV420P10LE,
+                                              // AV_PIX_FMT_YUV410P10LE,
+                                              AV_PIX_FMT_YUVA444P10LE,
+                                              AV_PIX_FMT_YUVA422P10LE,
+                                              AV_PIX_FMT_YUVA420P10LE,
+                                              // AV_PIX_FMT_UYVY42210LE,
                                               AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
