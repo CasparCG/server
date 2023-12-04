@@ -54,10 +54,10 @@ struct compute_shader::impl
 
         const char* compute_source = compute_source_str.c_str();
 
-        auto compute_shader = glCreateShaderObjectARB(GL_COMPUTE_SHADER);
+        auto compute_shader = glCreateShader(GL_COMPUTE_SHADER);
 
-        GL(glShaderSourceARB(compute_shader, 1, &compute_source, NULL));
-        GL(glCompileShaderARB(compute_shader));
+        GL(glShaderSource(compute_shader, 1, &compute_source, NULL));
+        GL(glCompileShader(compute_shader));
 
         GL(glGetObjectParameterivARB(compute_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
         if (success == GL_FALSE) {
@@ -69,12 +69,12 @@ struct compute_shader::impl
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
         }
 
-        program_ = glCreateProgramObjectARB();
+        program_ = glCreateProgram();
 
-        GL(glAttachObjectARB(program_, compute_shader));
-        GL(glLinkProgramARB(program_));
+        GL(glAttachShader(program_, compute_shader));
+        GL(glLinkProgram(program_));
 
-        GL(glDeleteObjectARB(compute_shader));
+        GL(glDeleteShader(compute_shader));
 
         GL(glGetObjectParameterivARB(program_, GL_OBJECT_LINK_STATUS_ARB, &success));
         if (success == GL_FALSE) {
@@ -85,7 +85,7 @@ struct compute_shader::impl
             str << "Failed to link shader program:" << std::endl << info << std::endl;
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
         }
-        GL(glUseProgramObjectARB(program_));
+        GL(glUseProgram(program_));
     }
 
     ~impl() { glDeleteProgram(program_); }
@@ -122,7 +122,7 @@ struct compute_shader::impl
         GL(glUniform1f(get_uniform_location(name.c_str()), static_cast<float>(value)));
     }
 
-    void use() { GL(glUseProgramObjectARB(program_)); }
+    void use() { GL(glUseProgram(program_)); }
 };
 
 compute_shader::compute_shader(const std::string& compute_source_str)

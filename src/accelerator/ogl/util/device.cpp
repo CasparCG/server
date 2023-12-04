@@ -119,7 +119,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
-        compute_shader_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
 
         device_.setActive(false);
 
@@ -298,10 +297,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         return dispatch_async([=] {
 
+            if (!compute_shader_)
+            compute_shader_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
+
             auto tex = create_texture(width, height, 5, false);
 
-            //tex->bind(0);
-            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            tex->bind(0);
+            //compute_shader_->use();
+            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
             compute_shader_->use();
 
             glDispatchCompute((unsigned int)width, (unsigned int)height, 1);
@@ -310,6 +313,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
 //            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // TODO - this will probably block the main rendering loop
             glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
+            glFlush();
+
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 
             /*
