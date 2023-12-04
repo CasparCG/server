@@ -220,16 +220,9 @@ boost::tribool has_valid_extension(const boost::filesystem::path& filename)
     return boost::tribool(boost::indeterminate);
 }
 
-bool has_invalid_protocol(const boost::filesystem::path& filename)
+bool has_invalid_protocol(const std::wstring& filename)
 {
-    static const auto invalid_protocols = {L"ndi:"};
-
-    auto protocol = boost::to_lower_copy(filename.root_name().wstring());
-
-    if (std::find(invalid_protocols.begin(), invalid_protocols.end(), protocol) != invalid_protocols.end()) {
-        return true;
-    }
-    return false;
+    return boost::algorithm::istarts_with(filename, L"ndi://");
 }
 
 bool is_readable(const boost::filesystem::path& filename)
