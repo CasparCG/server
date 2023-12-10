@@ -193,6 +193,21 @@ set(OPENAL_INCLUDE_PATH "${SOURCE_DIR}/include")
 link_directories("${SOURCE_DIR}/libs/Win64")
 casparcg_add_runtime_dependency("${SOURCE_DIR}/bin/Win64/OpenAL32.dll")
 
+# flash template host
+casparcg_add_external_project(flashtemplatehost)
+ExternalProject_Add(flashtemplatehost
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/flash-template-host/flash-template-host-files.zip
+	URL_HASH MD5=360184ce21e34d585d1d898fdd7a6bd8
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	BUILD_IN_SOURCE 1
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(flashtemplatehost SOURCE_DIR)
+set(TEMPLATE_HOST_PATH "${SOURCE_DIR}")
+# casparcg_add_runtime_dependency_dir("${TEMPLATE_HOST_PATH}")
+
 # LIBERATION_FONTS
 set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
