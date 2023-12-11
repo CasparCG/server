@@ -364,9 +364,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         duration = out - in;
     }
 
-    // TODO (fix) use raw input?
-    auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
-    auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
+    auto vfilter = get_param(L"VF", params, filter_str);
+    auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
 
     try {
         auto producer = spl::make_shared<ffmpeg_producer>(dependencies.frame_factory,
