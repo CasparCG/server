@@ -28,6 +28,7 @@
 #include "frame_converter.h"
 
 #include <common/array.h>
+#include <common/bit_depth.h>
 #include <common/future.h>
 #include <common/log.h>
 
@@ -319,6 +320,12 @@ struct image_mixer::impl
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
     {
+        return create_frame(tag, desc, common::bit_depth::bit8); // TODO: replace with channel default
+    }
+
+    core::mutable_frame
+    create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth) override
+    {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
             image_data.push_back(ogl_->create_array(plane.size));
@@ -380,6 +387,11 @@ std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
     return impl_->create_frame(tag, desc);
+}
+core::mutable_frame
+image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth)
+{
+    return impl_->create_frame(tag, desc, depth);
 }
 std::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
 
