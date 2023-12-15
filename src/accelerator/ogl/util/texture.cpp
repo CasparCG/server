@@ -22,33 +22,37 @@
 
 #include "buffer.h"
 
+#include <common/bit_depth.h>
 #include <common/gl/gl_check.h>
 
 #include <GL/glew.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA, GL_RGBA, GL_RED};
-static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, GL_RGBA32F, GL_R16F};
-static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE};
+static GLenum FORMAT[]             = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
+static GLenum INTERNAL_FORMAT[][5] = {{0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8}, {0, GL_R16, GL_RG16, GL_RGB16, GL_RGBA16}};
+static GLenum TYPE[][5] = {{0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV},
+                           {0, GL_UNSIGNED_SHORT, GL_UNSIGNED_SHORT, GL_UNSIGNED_SHORT, GL_UNSIGNED_SHORT}};
 
 struct texture::impl
 {
-    GLuint  id_     = 0;
-    GLsizei width_  = 0;
-    GLsizei height_ = 0;
-    GLsizei stride_ = 0;
-    GLsizei size_   = 0;
+    GLuint            id_     = 0;
+    GLsizei           width_  = 0;
+    GLsizei           height_ = 0;
+    GLsizei           stride_ = 0;
+    GLsizei           size_   = 0;
+    common::bit_depth depth_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
   public:
-    impl(int width, int height, int stride)
+    impl(int width, int height, int stride, common::bit_depth depth)
         : width_(width)
         , height_(height)
         , stride_(stride)
-        , size_(width * height * stride)
+        , depth_(depth)
+        , size_(width * height * stride * (1 + static_cast<int>(depth)))
     {
         if (stride == 5) {
             size_ = width * height * 16;
@@ -62,7 +66,7 @@ struct texture::impl
         GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[stride_], width_, height_));
+        GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[static_cast<int>(depth)][stride_], width_, height_));
     }
 
     ~impl() { glDeleteTextures(1, &id_); }
@@ -79,7 +83,7 @@ struct texture::impl
 
     void attach() { GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0)); }
 
-    void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[stride_], nullptr)); }
+    void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], nullptr)); }
 
 #ifdef WIN32
     void copy_from(int texture_id)
@@ -99,7 +103,8 @@ struct texture::impl
             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         }
 
-        GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], nullptr));
+        GL(glTextureSubImage2D(
+            id_, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], nullptr));
 
         src.unbind();
     }
@@ -107,13 +112,13 @@ struct texture::impl
     void copy_to(buffer& dst)
     {
         dst.bind();
-        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[stride_], size_, nullptr));
+        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], size_, nullptr));
         dst.unbind();
     }
 };
 
-texture::texture(int width, int height, int stride)
-    : impl_(new impl(width, height, stride))
+texture::texture(int width, int height, int stride, common::bit_depth depth)
+    : impl_(new impl(width, height, stride, depth))
 {
 }
 texture::texture(texture&& other)
@@ -138,6 +143,7 @@ void texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
 int  texture::width() const { return impl_->width_; }
 int  texture::height() const { return impl_->height_; }
 int  texture::stride() const { return impl_->stride_; }
+common::bit_depth texture::depth() const { return impl_->depth_; }
 int  texture::size() const { return impl_->size_; }
 int  texture::id() const { return impl_->id_; }
 
