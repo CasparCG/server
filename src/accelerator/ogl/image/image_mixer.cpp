@@ -74,11 +74,13 @@ class image_renderer
     spl::shared_ptr<device> ogl_;
     image_kernel            kernel_;
     const size_t            max_frame_size_;
+    common::bit_depth       depth_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl, const size_t max_frame_size)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl, common::bit_depth depth, const size_t max_frame_size)
         : ogl_(ogl)
         , kernel_(ogl_)
+        , depth_(depth)
         , max_frame_size_(max_frame_size)
     {
     }
@@ -87,12 +89,12 @@ class image_renderer
                                                       const core::video_format_desc& format_desc)
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(max_frame_size_, 0);
-            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
+            static const std::vector<uint8_t> buffer(max_frame_size * 2, 0); // TODO better
+            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true, depth_));
         }
 
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
-            auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
+            auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
             draw(target_texture, std::move(layers), format_desc);
 
@@ -125,7 +127,7 @@ class image_renderer
         std::shared_ptr<texture> local_mix_texture;
 
         if (layer.blend_mode != core::blend_mode::normal) {
-            auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+            auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
 
             for (auto& item : layer.items)
                 draw(layer_texture,
@@ -172,9 +174,9 @@ class image_renderer
         }
 
         if (item.transform.is_key) {
-            local_key_texture = local_key_texture
-                                    ? local_key_texture
-                                    : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
+            local_key_texture =
+                local_key_texture ? local_key_texture
+                                  : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, depth_);
 
             draw_params.background = local_key_texture;
             draw_params.local_key  = nullptr;
@@ -182,9 +184,9 @@ class image_renderer
 
             kernel_.draw(std::move(draw_params));
         } else if (item.transform.is_mix) {
-            local_mix_texture = local_mix_texture
-                                    ? local_mix_texture
-                                    : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+            local_mix_texture =
+                local_mix_texture ? local_mix_texture
+                                  : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
 
             draw_params.background = local_mix_texture;
             draw_params.local_key  = std::move(local_key_texture);
@@ -234,12 +236,14 @@ struct image_mixer::impl
     std::vector<core::image_transform> transform_stack_;
     std::vector<layer>                 layers_; // layer/stream/items
     std::vector<layer*>                layer_stack_;
+    common::bit_depth                  depth_;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size)
+    impl(const spl::shared_ptr<device>& ogl, int channel_id, common::bit_depth depth, const size_t max_frame_size)
         : ogl_(ogl)
-        , renderer_(ogl, max_frame_size)
+        , renderer_(ogl, depth, max_frame_size)
         , transform_stack_(1)
+        , depth_(depth)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
     }
@@ -320,7 +324,7 @@ struct image_mixer::impl
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
     {
-        return create_frame(tag, desc, common::bit_depth::bit8); // TODO: replace with channel default
+        return create_frame(tag, desc, depth_);
     }
 
     core::mutable_frame
@@ -372,8 +376,8 @@ struct image_mixer::impl
     }
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size)
-    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size))
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id, common::bit_depth depth, const size_t max_frame_size)
+    : impl_(std::make_unique<impl>(ogl, channel_id, depth,max_frame_size))
 {
 }
 image_mixer::~image_mixer() {}
