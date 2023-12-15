@@ -48,14 +48,10 @@ class device final
 
     std::shared_ptr<class texture>
                    create_texture(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8);
-    array<uint8_t> create_array(int size);
+    array<uint8_t> create_array(int size, common::bit_depth depth);
 
     std::future<std::shared_ptr<class texture>>
-                                      copy_async(const array<const uint8_t>& source,
-                                                 int                         width,
-                                                 int                         height,
-                                                 int                         stride,
-                                                 common::bit_depth           depth = common::bit_depth::bit8); // TODO: remove default value
+                                      copy_async(const array<const uint8_t>& source, int width, int height, int stride);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
 
     std::future<std::shared_ptr<texture>>

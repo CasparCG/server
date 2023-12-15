@@ -328,7 +328,7 @@ struct image_mixer::impl
     {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            image_data.push_back(ogl_->create_array(plane.size));
+            image_data.push_back(ogl_->create_array(plane.size, depth));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
