@@ -66,8 +66,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     sf::Context device_;
 
-    std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4> device_pools_;
-    std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>  host_pools_;
+    std::array<std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4>, 2> device_pools_;
+    std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>                 host_pools_;
 
     using sync_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
@@ -140,8 +140,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         for (auto& pool : host_pools_)
             pool.clear();
 
-        for (auto& pool : device_pools_)
-            pool.clear();
+        for (auto& pools : device_pools_)
+            for (auto& pool : pools)
+                pool.clear();
 
         sync_queue_.clear();
 
@@ -180,17 +181,18 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version() { return version_; }
 
-    std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
+    std::shared_ptr<texture> create_texture(int width, int height, int stride, common::bit_depth depth, bool clear)
     {
         CASPAR_VERIFY(stride > 0 && stride < 7);
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
-        auto pool = &device_pools_[stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
+        auto pool =
+            &device_pools_[static_cast<int>(depth)][stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
-            tex = std::make_shared<texture>(width, height, stride);
+            tex = std::make_shared<texture>(width, height, stride, depth);
         }
 
         if (clear) {
@@ -231,7 +233,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 
     std::future<std::shared_ptr<texture>>
-    copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+    copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth)
     {
         return dispatch_async([=] {
             std::shared_ptr<buffer> buf;
@@ -245,7 +247,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 std::memcpy(buf->data(), source.data(), source.size());
             }
 
-            auto tex = create_texture(width, height, stride, false);
+            auto tex = create_texture(width, height, stride, depth, false);
             tex->copy_from(*buf);
             // TODO (perf) save tex on source
             return tex;
@@ -355,32 +357,35 @@ struct device::impl : public std::enable_shared_from_this<impl>
         size_t                       total_pooled_device_buffer_count = 0;
 
         for (size_t i = 0; i < device_pools_.size(); ++i) {
-            auto& pools      = device_pools_.at(i);
-            bool  mipmapping = i > 3;
-            auto  stride     = mipmapping ? i - 3 : i + 1;
+            auto& depth_pools = device_pools_.at(i);
+            for (size_t i = 0; i < depth_pools.size(); ++i) {
+                auto& pools      = depth_pools.at(i);
+                bool  mipmapping = i > 3;
+                auto  stride     = mipmapping ? i - 3 : i + 1;
 
-            for (auto& pool : pools) {
-                auto width  = pool.first >> 16;
-                auto height = pool.first & 0x0000FFFF;
-                auto size   = width * height * stride;
-                auto count  = pool.second.size();
+                for (auto& pool : pools) {
+                    auto width  = pool.first >> 16;
+                    auto height = pool.first & 0x0000FFFF;
+                    auto size   = width * height * stride;
+                    auto count  = pool.second.size();
 
-                if (count == 0)
-                    continue;
+                    if (count == 0)
+                        continue;
 
-                boost::property_tree::wptree pool_info;
+                    boost::property_tree::wptree pool_info;
 
-                pool_info.add(L"stride", stride);
-                pool_info.add(L"mipmapping", mipmapping);
-                pool_info.add(L"width", width);
-                pool_info.add(L"height", height);
-                pool_info.add(L"size", size);
-                pool_info.add(L"count", count);
+                    pool_info.add(L"stride", stride);
+                    pool_info.add(L"mipmapping", mipmapping);
+                    pool_info.add(L"width", width);
+                    pool_info.add(L"height", height);
+                    pool_info.add(L"size", size);
+                    pool_info.add(L"count", count);
 
-                total_pooled_device_buffer_size += size * count;
-                total_pooled_device_buffer_count += count;
+                    total_pooled_device_buffer_size += size * count;
+                    total_pooled_device_buffer_count += count;
 
-                pooled_device_buffers.add_child(L"device_buffer_pool", pool_info);
+                    pooled_device_buffers.add_child(L"device_buffer_pool", pool_info);
+                }
             }
         }
 
@@ -435,9 +440,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
             CASPAR_LOG(info) << " ogl: Running GC.";
 
             try {
-                for (auto& pools : device_pools_) {
-                    for (auto& pool : pools)
-                        pool.second.clear();
+                for (auto& depth_pools : device_pools_) {
+                    for (auto& pools : depth_pools) {
+                        for (auto& pool : pools)
+                            pool.second.clear();
+                    }
                 }
                 for (auto& pools : host_pools_) {
                     for (auto& pool : pools)
@@ -455,15 +462,15 @@ device::device()
 {
 }
 device::~device() {}
-std::shared_ptr<texture> device::create_texture(int width, int height, int stride)
+std::shared_ptr<texture> device::create_texture(int width, int height, int stride, common::bit_depth depth)
 {
-    return impl_->create_texture(width, height, stride, true);
+    return impl_->create_texture(width, height, stride, depth, true);
 }
 array<uint8_t> device::create_array(int size) { return impl_->create_array(size); }
 std::future<std::shared_ptr<texture>>
-device::copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+device::copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth)
 {
-    return impl_->copy_async(source, width, height, stride);
+    return impl_->copy_async(source, width, height, stride, depth);
 }
 std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source)
 {
