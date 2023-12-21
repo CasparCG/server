@@ -2,6 +2,6 @@
 
 source $(dirname "$0")/image-versions
 
-docker rmi $IMAGE_BASE $IMAGE_FFMPEG
+docker rmi $IMAGE_FFMPEG
 
 $(dirname "$0")/ensure-base-images

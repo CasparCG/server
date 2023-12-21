@@ -1,6 +1,10 @@
-ARG IMAGE_BASE
+FROM buildpack-deps:jammy as BUILD
+	ADD install-dependencies /
 
-FROM ${IMAGE_BASE} as BUILD
+	RUN apt-get update && \
+		/install-dependencies ; \
+		rm -rf /var/lib/apt/lists/*
+
 	ARG PROC_COUNT=8
 	ENV FFMPEG_COMMIT n5.1.3
 	ENV FFMPEG_NVCODEC_COMMIT n12.0.16.0

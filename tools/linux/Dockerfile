@@ -1,16 +1,17 @@
-ARG IMAGE_BASE
 ARG IMAGE_FFMPEG
 
 FROM ${IMAGE_FFMPEG} as ffmpeg
 
-FROM ${IMAGE_BASE} as build-casparcg
+FROM buildpack-deps:jammy as build-casparcg
 	COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
 
-	RUN mkdir /source && mkdir /build && mkdir /install
+	ADD tools/linux/install-dependencies /
 
 	RUN apt-get update && \
-		apt-get install -y libboost-all-dev ; \
+		/install-dependencies ; \
 		rm -rf /var/lib/apt/lists/*
+
+	RUN mkdir /source && mkdir /build && mkdir /install
 
 	COPY ./src /source
 
