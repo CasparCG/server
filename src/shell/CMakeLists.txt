@@ -81,7 +81,7 @@ else ()
 		${TBB_LIBRARIES}
 		${SFML_LIBRARIES}
 		${GLEW_LIBRARIES}
-		OpenGL::OpenGL
+		OpenGL::GL
 		${X11_LIBRARIES}
 		${FFMPEG_LIBRARIES}
 		dl

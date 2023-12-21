@@ -1,15 +1,7 @@
-ARG IMAGE_FFMPEG
-
-FROM ${IMAGE_FFMPEG} as ffmpeg
-
 FROM buildpack-deps:jammy as build-casparcg
-	COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
-
 	ADD tools/linux/install-dependencies /
 
-	RUN apt-get update && \
-		/install-dependencies ; \
-		rm -rf /var/lib/apt/lists/*
+	RUN apt-get update && /install-dependencies
 
 	RUN mkdir /source && mkdir /build && mkdir /install
 
@@ -17,13 +9,15 @@ FROM buildpack-deps:jammy as build-casparcg
 
 	WORKDIR /build
 
-	ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
-
 	ARG CC
 	ARG CXX
 	ARG GIT_HASH
 
 	RUN cmake -GNinja /source
+
+	# ensure ffmpeg dependencies are installed
+	RUN apt-get update && ./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies
+
 	RUN ninja
 
 	# Find a better way to copy deps
