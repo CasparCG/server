@@ -76,4 +76,5 @@ apt-get install -yq --no-install-recommends \
 	libvo-amrwbenc-dev \
 	libwavpack-dev \
 	libsdl2-dev \
-	libwebp-dev
+	libwebp-dev \
+	libboost-all-dev

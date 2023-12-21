@@ -2,6 +2,11 @@ cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
 
+
+set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
+set(USE_STATIC_BOOST ON CACHE BOOL "Use shared library version of Boost")
+set(USE_SYSTEM_FFMPEG OFF CACHE BOOL "Use the version of ffmpeg from your OS")
+
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
 
@@ -12,11 +17,7 @@ IF (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 ENDIF ()
 MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 
-if (NOT USE_SYSTEM_BOOST)
-	SET (BOOST_ROOT_PATH "/opt/boost" CACHE STRING "Path to Boost")
-	SET (ENV{BOOST_ROOT} "${BOOST_ROOT_PATH}")
-	SET (Boost_USE_DEBUG_LIBS OFF)
-	SET (Boost_USE_RELEASE_LIBS ON)
+if (USE_STATIC_BOOST)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
 FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
@@ -83,7 +84,7 @@ ADD_DEFINITIONS (-DNDEBUG) # Needed for precompiled headers to work
 ADD_DEFINITIONS (-DBOOST_LOCALE_HIDE_AUTO_PTR) # Needed for C++17 in boost 1.67+
 
 
-if (USE_SYSTEM_BOOST)
+if (NOT USE_STATIC_BOOST)
 	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
 endif()
 

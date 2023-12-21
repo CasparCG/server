@@ -41,7 +41,7 @@ jobs:
                   mkdir build
                   cd build
 
-                  cmake ../src -DUSE_SYSTEM_BOOST=ON -DUSE_SYSTEM_FFMPEG=ON
+                  cmake ../src -DUSE_STATIC_BOOST=OFF -DUSE_SYSTEM_FFMPEG=ON
                   make -j2
 
               env:
