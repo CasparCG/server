@@ -3,11 +3,9 @@
 source $(dirname "$0")/image-versions
 
 docker pull $IMAGE_BASE || docker build --pull -f tools/linux/base/Dockerfile -t $IMAGE_BASE tools/linux
-docker pull $IMAGE_BOOST || docker build -t $IMAGE_BOOST --build-arg PROC_COUNT --build-arg IMAGE_BASE tools/linux/boost
 docker pull $IMAGE_FFMPEG || docker build -t $IMAGE_FFMPEG --build-arg PROC_COUNT --build-arg IMAGE_BASE tools/linux/ffmpeg
 
 if [ "$CASPARCG_PUSH_IMAGES" = true ]; then
   docker push $IMAGE_BASE
-  docker push $IMAGE_BOOST
   docker push $IMAGE_FFMPEG
 fi

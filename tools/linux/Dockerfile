@@ -1,21 +1,21 @@
 ARG IMAGE_BASE
-ARG IMAGE_BOOST
 ARG IMAGE_FFMPEG
 
-FROM ${IMAGE_BOOST} as boost
 FROM ${IMAGE_FFMPEG} as ffmpeg
 
 FROM ${IMAGE_BASE} as build-casparcg
-	COPY --from=boost /opt/boost /opt/boost
 	COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
 
 	RUN mkdir /source && mkdir /build && mkdir /install
+
+	RUN apt-get update && \
+		apt-get install -y libboost-all-dev ; \
+		rm -rf /var/lib/apt/lists/*
 
 	COPY ./src /source
 
 	WORKDIR /build
 
-	ENV BOOST_ROOT=/opt/boost
 	ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
 
 	ARG CC

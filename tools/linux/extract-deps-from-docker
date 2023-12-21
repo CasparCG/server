@@ -8,10 +8,3 @@ rm -Rf /opt/ffmpeg
 tempContainer=$(docker create $IMAGE_FFMPEG sh)
 docker cp $tempContainer:/opt/ffmpeg /opt/ffmpeg
 docker rm -v $tempContainer
-
-# Boost
-echo "Extracting Boost"
-rm -Rf /opt/boost
-tempContainer=$(docker create $IMAGE_BOOST sh)
-docker cp $tempContainer:/opt/boost /opt/boost
-docker rm -v $tempContainer
