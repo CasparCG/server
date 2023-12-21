@@ -308,10 +308,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         auto fullMediaPath = find_case_insensitive(mediaPath.generic_wstring());
         if (fullMediaPath && is_valid_file(*fullMediaPath)) {
             path = *fullMediaPath;
-        } else if (mediaPath.has_extension()) {
-            // If there is an extension, then we don't need to probe to find a matching file
-            path = L"";
-            name = L"";
         } else {
             path = probe_stem(mediaPath).generic_wstring();
             name += boost::filesystem::path(path).extension().wstring();
