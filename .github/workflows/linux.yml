@@ -16,23 +16,6 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: Login to GitHub Container Registry
-              if: ${{ env.has_token == 'true' }}
-              uses: docker/login-action@v2
-              with:
-                  registry: ghcr.io
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
-              env:
-                  has_token: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' && github.event_name == 'push' }}
-
-            - name: Prepare dependencies
-              run: |
-                  ./tools/linux/ensure-base-images
-              env:
-                  CI: 1
-                  CASPARCG_PUSH_IMAGES: ${{ !!secrets.GITHUB_TOKEN && github.repository_owner == 'CasparCG' && github.event_name == 'push' }}
-
             - name: Run build
               run: |
                   ./tools/linux/build-in-docker

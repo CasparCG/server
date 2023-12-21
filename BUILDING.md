@@ -58,18 +58,17 @@ _Note: if you ran docker with sudo, CasparCG server will not be able to run with
 
 ## Development
 
-1. Install Docker by following installation instructions from [Docker Docs][1]
-2. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
-3. `cd casparcg-server-master`
-4. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-5. Extract Boost and FFmpeg from the docker images via `sudo ./tools/linux/extract-deps-from-docker`. Alternatively these can be prepared manually by following the steps laid out in each Dockerfile
-6. `mkdir build && cd build`
-7. `cmake ../src`
-8. `make -j8`
+Before beginning, check the build options section below, to decide if you want to use any to simplify or customise your build.
+
+1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+2. `cd casparcg-server-master`
+3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
+4. `mkdir build && cd build`
+5. `cmake ../src`
+6. If not using system ffmpeg, run `./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies` to install the dependencies needed by the ffmpeg build
+7. `make -j8`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
-
-[1]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
 
 ## Build options
 

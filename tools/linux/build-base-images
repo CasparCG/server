@@ -1,7 +1,0 @@
-#!/bin/bash
-
-source $(dirname "$0")/image-versions
-
-docker rmi $IMAGE_FFMPEG
-
-$(dirname "$0")/ensure-base-images

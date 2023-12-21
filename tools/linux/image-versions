@@ -1,5 +1,0 @@
-#!/bin/bash
-
-export IMAGE_PREFIX=ghcr.io/casparcg/server/
-
-export IMAGE_FFMPEG=${IMAGE_PREFIX}ffmpeg:5.1.3-1
