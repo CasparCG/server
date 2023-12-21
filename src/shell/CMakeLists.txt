@@ -157,7 +157,7 @@ else ()
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/run.sh ${CMAKE_BINARY_DIR}/staging/run.sh)
 
 # Disabled as HTML module is disabled
-  if (ENABLE_HTML)
+  if (ENABLE_HTML AND NOT USE_SYSTEM_CEF)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CEF_RESOURCE_PATH}/locales ${CMAKE_BINARY_DIR}/staging/lib/locales)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_100_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_100_percent.pak)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_200_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_200_percent.pak)

@@ -33,8 +33,6 @@ source_group(sources ./*)
 
 if(MSVC)
 	target_link_libraries(html
-		accelerator
-
 		libcef
 		optimized Release/libcef_dll_wrapper
 		debug Debug/libcef_dll_wrapper
