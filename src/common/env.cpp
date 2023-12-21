@@ -88,6 +88,11 @@ void configure(const std::wstring& filename)
     try {
         initial = clean_path(boost::filesystem::initial_path().wstring());
 
+        std::wstring fullpath = filename;
+        if (!boost::filesystem::exists(fullpath)) {
+            fullpath = initial + L"/" + filename;
+        }
+
         boost::filesystem::wifstream file(initial + L"/" + filename);
         boost::property_tree::read_xml(file,
                                        pt,
