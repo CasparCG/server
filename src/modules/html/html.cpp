@@ -163,8 +163,11 @@ class renderer_application
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
-            // This gives better performance on the gpu->cpu readback
-            command_line->AppendSwitchWithValue("use-angle", "gl");
+            // This gives better performance on the gpu->cpu readback, but can perform worse with intense templates
+            auto backend = env::properties().get(L"configuration.html.angle-backend", L"gl");
+            if (backend.size()  > 0) {
+                command_line->AppendSwitchWithValue("use-angle", backend);
+            }
         }
 
         command_line->AppendSwitch("disable-web-security");
