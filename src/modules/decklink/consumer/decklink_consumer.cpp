@@ -403,6 +403,8 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     const int           channel_index_;
     const configuration config_;
 
@@ -444,8 +446,9 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     std::atomic<bool> abort_request_{false};
 
   public:
-    decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
-        : channel_index_(channel_index)
+    decklink_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
+        : frame_converter_(frame_converter)
+        , channel_index_(channel_index)
         , config_(config)
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
@@ -849,14 +852,17 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     const configuration                config_;
     std::unique_ptr<decklink_consumer> consumer_;
     core::video_format_desc            format_desc_;
     executor                           executor_;
 
   public:
-    explicit decklink_consumer_proxy(const configuration& config)
-        : config_(config)
+    explicit decklink_consumer_proxy(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config)
+        : frame_converter_(frame_converter)
+        , config_(config)
         , executor_(L"decklink_consumer[" + std::to_wstring(config.primary.device_index) + L"]")
     {
         executor_.begin_invoke([=] { com_initialize(); });
@@ -876,7 +882,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_index);
+            consumer_ = std::make_unique<decklink_consumer>(frame_converter_, config_, format_desc, channel_index);
         });
     }
 
@@ -910,7 +916,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     configuration config = parse_amcp_config(params, format_repository);
 
-    return spl::make_shared<decklink_consumer_proxy>(config);
+    return spl::make_shared<decklink_consumer_proxy>(frame_converter, config);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -921,7 +927,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 {
     configuration config = parse_xml_config(ptree, format_repository);
 
-    return spl::make_shared<decklink_consumer_proxy>(config);
+    return spl::make_shared<decklink_consumer_proxy>(frame_converter, config);
 }
 
 }} // namespace caspar::decklink
