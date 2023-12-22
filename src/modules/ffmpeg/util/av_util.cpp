@@ -139,17 +139,13 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
         case AV_PIX_FMT_UYVY422:
             return core::pixel_format::uyvy;
         case AV_PIX_FMT_YUV444P10LE:
-            return core::pixel_format::ycbcr10_444;
         case AV_PIX_FMT_YUV422P10LE:
-            return core::pixel_format::ycbcr10_422;
         case AV_PIX_FMT_YUV420P10LE:
-            return core::pixel_format::ycbcr10_420;
+            return core::pixel_format::ycbcr10;
         case AV_PIX_FMT_YUVA444P10LE:
-            return core::pixel_format::ycbcra10_444;
         case AV_PIX_FMT_YUVA422P10LE:
-            return core::pixel_format::ycbcra10_422;
         case AV_PIX_FMT_YUVA420P10LE:
-            return core::pixel_format::ycbcra10_420;
+            return core::pixel_format::ycbcra10;
         default:
             return core::pixel_format::invalid;
     }
@@ -210,12 +206,8 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
 
             return desc;
         }
-        case core::pixel_format::ycbcr10_420:
-        case core::pixel_format::ycbcr10_422:
-        case core::pixel_format::ycbcr10_444:
-        case core::pixel_format::ycbcra10_420:
-        case core::pixel_format::ycbcra10_422:
-        case core::pixel_format::ycbcra10_444: {
+        case core::pixel_format::ycbcr10:
+        case core::pixel_format::ycbcra10: {
             size_t    sizes[4];
             ptrdiff_t linesizes1[4];
             for (int i = 0; i < 4; i++)
@@ -228,7 +220,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             desc.planes.emplace_back(linesizes[1] / 2, h2, 1, common::bit_depth::bit16);
             desc.planes.emplace_back(linesizes[2] / 2, h2, 1, common::bit_depth::bit16);
 
-            if (desc.format == core::pixel_format::ycbcra10_420||desc.format == core::pixel_format::ycbcra10_422||desc.format == core::pixel_format::ycbcra10_444)
+            if (desc.format == core::pixel_format::ycbcra10)
                 desc.planes.emplace_back(linesizes[3] / 2, height, 1, common::bit_depth::bit16);
 
             return desc;
