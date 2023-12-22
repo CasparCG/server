@@ -49,16 +49,13 @@ class frame_producer
     uint32_t         frame_number_ = 0;
     core::draw_frame last_frame_;
     core::draw_frame first_frame_;
+    bool             is_ready_ = false;
 
   public:
     static const spl::shared_ptr<frame_producer>& empty();
 
-    frame_producer(core::draw_frame frame)
-        : last_frame_(std::move(frame))
-    {
-    }
-    frame_producer() {}
-    virtual ~frame_producer() {}
+    frame_producer()          = default;
+    virtual ~frame_producer() = default;
 
     draw_frame receive(const video_field field, int nb_samples)
     {
@@ -110,6 +107,12 @@ class frame_producer
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
     virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
     virtual boost::optional<int64_t>        auto_play_delta() const { return boost::none; }
+
+    /**
+     * Some producers take a couple of frames before they produce frames.
+     * While this returns false, the previous producer will be left running for a limited number of frames.
+     */
+    virtual bool is_ready() { return !!first_frame_; };
 };
 
 class const_producer : public core::frame_producer
@@ -147,6 +150,8 @@ class const_producer : public core::frame_producer
         static const monitor::state empty;
         return empty;
     }
+
+    bool is_ready() override { return true; }
 };
 
 class frame_producer_registry;

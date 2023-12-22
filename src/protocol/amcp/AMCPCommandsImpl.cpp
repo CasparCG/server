@@ -282,26 +282,28 @@ std::wstring loadbg_command(command_context& ctx)
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
     try {
-        auto pFP = ctx.static_context->producer_registry->create_producer(get_producer_dependencies(channel, ctx),
-                                                                          ctx.parameters);
+        auto new_producer = ctx.static_context->producer_registry->create_producer(
+            get_producer_dependencies(channel, ctx), ctx.parameters);
 
-        if (pFP == frame_producer::empty())
-            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(ctx.parameters.size() > 0 ? ctx.parameters[0] : L""));
+        if (new_producer == frame_producer::empty())
+            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(!ctx.parameters.empty() ? ctx.parameters[0] : L""));
 
         spl::shared_ptr<frame_producer> transition_producer = frame_producer::empty();
         transition_info                 transitionInfo;
         sting_info                      stingInfo;
 
         if (try_match_sting(ctx.parameters, stingInfo)) {
-            transition_producer = create_sting_producer(get_producer_dependencies(channel, ctx), pFP, stingInfo);
+            transition_producer =
+                create_sting_producer(get_producer_dependencies(channel, ctx), new_producer, stingInfo);
         } else {
             std::wstring message;
-            for (size_t n = 0; n < ctx.parameters.size(); ++n)
-                message += boost::to_upper_copy(ctx.parameters[n]) + L" ";
+            for (std::wstring& parameter : ctx.parameters) {
+                message += boost::to_upper_copy(parameter) + L" ";
+            }
 
-            // Always fallback to transition
+            // Try other transitions
             try_match_transition(message, transitionInfo);
-            transition_producer = create_transition_producer(pFP, transitionInfo);
+            transition_producer = create_transition_producer(new_producer, transitionInfo);
         }
 
         // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
@@ -329,11 +331,11 @@ std::wstring load_command(command_context& ctx)
         ctx.channel.stage->preview(ctx.layer_index());
     } else {
         try {
-            auto pFP = ctx.static_context->producer_registry->create_producer(
+            auto new_producer = ctx.static_context->producer_registry->create_producer(
                 get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
-            auto pFP2 = create_transition_producer(pFP, transition_info{});
+            auto transition_producer = create_transition_producer(new_producer, transition_info{});
 
-            ctx.channel.stage->load(ctx.layer_index(), pFP2, true);
+            ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
         } catch (file_not_found&) {
             if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
                 ctx.channel.stage->load(

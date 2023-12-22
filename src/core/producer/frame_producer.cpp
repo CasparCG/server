@@ -185,6 +185,7 @@ class destroy_producer_proxy : public frame_producer
     draw_frame           last_frame(const core::video_field field) override { return producer_->last_frame(field); }
     draw_frame           first_frame(const core::video_field field) override { return producer_->first_frame(field); }
     core::monitor::state state() const override { return producer_->state(); }
+    bool                 is_ready() override { return producer_->is_ready(); }
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)

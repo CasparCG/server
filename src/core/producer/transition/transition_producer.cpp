@@ -43,20 +43,36 @@ class transition_producer : public frame_producer
 
     spl::shared_ptr<frame_producer> dst_producer_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> src_producer_ = frame_producer::empty();
+    bool                            dst_is_ready_ = false;
 
   public:
     transition_producer(const spl::shared_ptr<frame_producer>& dest, const transition_info& info)
         : info_(info)
         , dst_producer_(dest)
     {
+        dst_is_ready_ = dst_producer_->is_ready();
         update_state();
     }
 
     // frame_producer
 
+    void update_is_ready(const core::video_field field)
+    {
+        // Ensure a frame has been attempted
+        dst_producer_->first_frame(field);
+
+        dst_is_ready_ = dst_producer_->is_ready();
+    }
+
     core::draw_frame last_frame(const core::video_field field) override
     {
         CASPAR_SCOPE_EXIT { update_state(); };
+
+        update_is_ready(field);
+
+        if (!dst_is_ready_) {
+            return src_producer_->last_frame(field);
+        }
 
         auto src = src_producer_->last_frame(field);
         auto dst = dst_producer_->last_frame(field);
@@ -70,37 +86,47 @@ class transition_producer : public frame_producer
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        return current_frame_ >= info_.duration ? dst_producer_ : core::frame_producer::empty();
+        return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : core::frame_producer::empty();
     }
 
     boost::optional<int64_t> auto_play_delta() const override { return info_.duration; }
 
     void update_state()
     {
-        state_                        = dst_producer_->state();
-        state_["transition/producer"] = dst_producer_->name();
-        state_["transition/frame"]    = {current_frame_, info_.duration};
-        state_["transition/type"]     = [&]() -> std::string {
-            switch (info_.type) {
-                case transition_type::mix:
-                    return "mix";
-                case transition_type::wipe:
-                    return "wipe";
-                case transition_type::slide:
-                    return "slide";
-                case transition_type::push:
-                    return "push";
-                case transition_type::cut:
-                    return "cut";
-                default:
-                    return "n/a";
-            }
-        }();
+        if (!dst_is_ready_) {
+            state_ = src_producer_->state();
+        } else {
+            state_                        = dst_producer_->state();
+            state_["transition/producer"] = dst_producer_->name();
+            state_["transition/frame"]    = {current_frame_, info_.duration};
+            state_["transition/type"]     = [&]() -> std::string {
+                switch (info_.type) {
+                    case transition_type::mix:
+                        return "mix";
+                    case transition_type::wipe:
+                        return "wipe";
+                    case transition_type::slide:
+                        return "slide";
+                    case transition_type::push:
+                        return "push";
+                    case transition_type::cut:
+                        return "cut";
+                    default:
+                        return "n/a";
+                }
+            }();
+        }
     }
 
     draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         CASPAR_SCOPE_EXIT { update_state(); };
+
+        update_is_ready(field);
+
+        if (!dst_is_ready_) {
+            return src_producer_->receive(field, nb_samples);
+        }
 
         auto dst = dst_producer_->receive(field, nb_samples);
         if (!dst) {
@@ -193,11 +219,15 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
         return false;
     }
 
-    auto transition         = what["TRANSITION"].str();
     transitionInfo.duration = std::stoi(what["DURATION"].str());
-    auto direction          = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
-    auto tween              = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
-    transitionInfo.tweener  = tween;
+    if (transitionInfo.duration == 0) {
+        return false;
+    }
+
+    auto transition        = what["TRANSITION"].str();
+    auto direction         = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
+    auto tween             = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
+    transitionInfo.tweener = tween;
 
     if (transition == L"CUT")
         transitionInfo.type = transition_type::cut;
@@ -210,14 +240,10 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
     else if (transition == L"WIPE")
         transitionInfo.type = transition_type::wipe;
 
-    if (direction == L"FROMLEFT")
+    if (direction == L"FROMLEFT" || direction == L"RIGHT")
         transitionInfo.direction = transition_direction::from_left;
-    else if (direction == L"FROMRIGHT")
+    else if (direction == L"FROMRIGHT" || direction == L"LEFT")
         transitionInfo.direction = transition_direction::from_right;
-    else if (direction == L"LEFT")
-        transitionInfo.direction = transition_direction::from_right;
-    else if (direction == L"RIGHT")
-        transitionInfo.direction = transition_direction::from_left;
 
     return true;
 }

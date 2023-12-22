@@ -28,9 +28,7 @@
 #include "../../monitor/monitor.h"
 #include "../frame_producer.h"
 
-#include <common/param.h>
 #include <common/scope_exit.h>
-#include <protocol/amcp/amcp_args.h>
 
 #include <future>
 
