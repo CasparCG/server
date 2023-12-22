@@ -93,7 +93,7 @@ void configure(const std::wstring& filename)
             fullpath = initial + L"/" + filename;
         }
 
-        boost::filesystem::wifstream file(initial + L"/" + filename);
+        boost::filesystem::wifstream file(fullpath);
         boost::property_tree::read_xml(file,
                                        pt,
                                        boost::property_tree::xml_parser::trim_whitespace |
