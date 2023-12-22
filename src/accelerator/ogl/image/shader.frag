@@ -480,6 +480,8 @@ vec4 get_rgba_color()
     case 1:		//bgra,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra;
     case 2:		//rgba,
+    case 11: //ycbcr10,
+    case 12: //ycbcra10,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
     case 3:		//argb,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).argb;

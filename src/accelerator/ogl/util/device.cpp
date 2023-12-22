@@ -302,35 +302,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto tex = create_texture(width, height, 5, false);
 
-            tex->bind(0);
-            //compute_shader_->use();
             glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
             compute_shader_->use();
 
             glDispatchCompute((unsigned int)width, (unsigned int)height, 1);
 
             // make sure writing to image has finished before read
-//            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // TODO - this will probably block the main rendering loop
-            glMemoryBarrier(GL_ALL_BARRIER_BITS);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-            glFlush();
-
-                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-
-            /*
-std::shared_ptr<buffer> buf;
-            auto tmp = source.storage<std::shared_ptr<buffer>>();
-            if (tmp) {
-                buf = *tmp;
-            } else {
-                buf = create_buffer(static_cast<int>(source.size()), true);
-                // TODO (perf) Copy inside a TBB worker.
-                std::memcpy(buf->data(), source.data(), source.size());
-            }
-             */
-
-            // tex->copy_from(*buf);
             return tex;
         });
     }

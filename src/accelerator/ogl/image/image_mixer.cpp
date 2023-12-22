@@ -317,7 +317,15 @@ struct image_mixer::impl
 */
 
         textures.emplace_back(ogl_->convert_frame(
-            image_data, plane0.width, plane0.height, 1)); // TODO - what is this 'format' parameter?
+                image_data, plane0.width, plane0.height, 1)); // TODO - what is this 'format' parameter?
+//        textures.emplace_back(make_ready_future(t.get()));
+
+/*
+        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+            textures.emplace_back(ogl_->copy_async(
+                    image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
+        }
+*/
 
         return textures;
     }
