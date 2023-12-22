@@ -479,15 +479,16 @@ vec4 get_rgba_color()
         return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rrr, 1.0);
     case 1:		//bgra,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra;
-    case 2:		//rgba,
-    case 11: //ycbcr10,
-    case 12: //ycbcra10,
+    case 2:		//rgba
         return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
     case 3:		//argb,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).argb;
     case 4:		//abgr,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar;
     case 5:		//ycbcr,
+        case 11:    //ycbcr10_420
+        case 12:    //ycbcr10_422
+        case 13:    //ycbcr10_444
         {
             float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
@@ -495,6 +496,9 @@ vec4 get_rgba_color()
             return ycbcra_to_rgba(y, cb, cr, 1.0);
         }
     case 6:		//ycbcra
+        case 14:    //ycbcra10_420
+        case 15:    //ycbcra10_422
+        case 16:    //ycbcra10_444
         {
             float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
@@ -518,6 +522,15 @@ vec4 get_rgba_color()
 			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r;			
 			return ycbcra_to_rgba(y, cb, cr, 1.0);
 		}
+    // formats converted from packed formats
+//    case 11:    //ycbcr10_420
+//    case 12:    //ycbcr10_422
+//    case 13:    //ycbcr10_444
+//        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb, 1.0);
+//    case 14:    //ycbcra10_420
+//    case 15:    //ycbcra10_422
+//    case 16:    //ycbcra10_444
+//        return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }

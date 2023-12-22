@@ -28,9 +28,9 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA, GL_RGBA};
-static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, GL_RGBA32F};
-static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV, GL_UNSIGNED_BYTE};
+static GLenum FORMAT[]          = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA, GL_RGBA, GL_RED};
+static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, GL_RGBA32F, GL_R16F};
+static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE};
 
 struct texture::impl
 {
@@ -52,6 +52,9 @@ struct texture::impl
     {
         if (stride == 5) {
             size_ = width * height * 16;
+        }else
+        if (stride == 6) {
+            size_ = width * height * 2;
         }
 
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));

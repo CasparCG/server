@@ -182,7 +182,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear)
     {
-        CASPAR_VERIFY(stride > 0 && stride < 6);
+        CASPAR_VERIFY(stride > 0 && stride < 7);
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
@@ -293,7 +293,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 
     std::future<std::shared_ptr<texture>>
-    convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)
+    convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int width_samples)
     {
         return dispatch_async([=] {
 
@@ -303,9 +303,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
             auto tex = create_texture(width, height, 5, false);
 
             glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
             compute_shader_->use();
 
-            glDispatchCompute((unsigned int)width, (unsigned int)height, 1);
+            glDispatchCompute((unsigned int)width_samples, (unsigned int)height, 1);
 
             // make sure writing to image has finished before read
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

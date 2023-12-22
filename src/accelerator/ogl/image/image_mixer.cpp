@@ -307,25 +307,12 @@ struct image_mixer::impl
     {
         const auto& plane0 = desc.planes[0]; // TODO - this doesnt feel safe, or accurate
 
-        std::vector<future_texture> textures;
-        /*
-        const auto texture = ogl_->create_texture(plane0.width, plane0.height,
-                                                                   4); // TODO - don't clear
+        // TODO - desc is no longer 'correct' and should probably be changed to avoid the mixer shader being aware of these formats
 
-        // TODO - how to run and link shader?
-        textures.emplace_back(make_ready_future(texture));
-*/
+        std::vector<future_texture> textures;
 
         textures.emplace_back(ogl_->convert_frame(
-                image_data, plane0.width, plane0.height, 1)); // TODO - what is this 'format' parameter?
-//        textures.emplace_back(make_ready_future(t.get()));
-
-/*
-        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-            textures.emplace_back(ogl_->copy_async(
-                    image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
-        }
-*/
+                image_data, plane0.width, plane0.height, plane0.width / 2)); // TODO - what is this 'format' parameter?
 
         return textures;
     }
@@ -350,12 +337,16 @@ struct image_mixer::impl
                 }
 
                 switch (desc.format) {
-                    case core::pixel_format::ycbcr10:
-                    case core::pixel_format::ycbcra10: {
-                        std::vector<future_texture> textures = self->convert_frame(image_data, desc);
-
-                        return std::make_shared<decltype(textures)>(std::move(textures));
-                    }
+//                    case core::pixel_format::ycbcr10_420:
+//                    case core::pixel_format::ycbcr10_422:
+//                    case core::pixel_format::ycbcr10_444:
+//                    case core::pixel_format::ycbcra10_420:
+//                    case core::pixel_format::ycbcra10_422:
+//                    case core::pixel_format::ycbcra10_444: {
+//                        std::vector<future_texture> textures = self->convert_frame(image_data, desc);
+//
+//                        return std::make_shared<decltype(textures)>(std::move(textures));
+//                    }
                     default: {
                         std::vector<future_texture> textures;
                         for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
