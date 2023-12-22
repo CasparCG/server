@@ -89,7 +89,7 @@ class image_renderer
                                                       const core::video_format_desc& format_desc)
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(max_frame_size * 2, 0); // TODO better
+            static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true, depth_));
         }
 
@@ -324,15 +324,9 @@ struct image_mixer::impl
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
     {
-        return create_frame(tag, desc, depth_);
-    }
-
-    core::mutable_frame
-    create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth) override
-    {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            image_data.push_back(ogl_->create_array(plane.size, depth));
+            image_data.push_back(ogl_->create_array(plane.size, plane.depth));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
@@ -391,11 +385,6 @@ std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
     return impl_->create_frame(tag, desc);
-}
-core::mutable_frame
-image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth)
-{
-    return impl_->create_frame(tag, desc, depth);
 }
 std::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
 

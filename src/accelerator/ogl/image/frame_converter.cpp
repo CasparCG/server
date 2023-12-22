@@ -32,7 +32,7 @@ core::mutable_frame ogl_frame_converter::create_frame(const void* tag, const cor
 
     std::vector<array<std::uint8_t>> image_data;
     for (auto& plane : desc.planes) {
-        image_data.push_back(ogl_->create_array(plane.size));
+        image_data.push_back(ogl_->create_array(plane.size, common::bit_depth::bit16)); // TODO: Depth
     }
 
     using future_texture = std::shared_future<std::shared_ptr<texture>>;

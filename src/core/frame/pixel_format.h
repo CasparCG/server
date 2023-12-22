@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <common/bit_depth.h>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -57,15 +58,22 @@ struct pixel_format_desc final
         int height   = 0;
         int size     = 0;
         int stride   = 0;
+        common::bit_depth depth = common::bit_depth::bit8;
 
         plane() = default;
 
         plane(int width, int height, int stride)
-            : linesize(width * stride)
-            , width(width)
-            , height(height)
-            , size(width * height * stride)
-            , stride(stride)
+            : plane(width, height, stride, common::bit_depth::bit8)
+        {
+        }
+
+        plane(int width, int height, int stride, common::bit_depth depth)
+                : linesize(width * stride * (static_cast<int>(depth) + 1))
+                , width(width)
+                , height(height)
+                , size(width * height * stride)
+                , stride(stride)
+                , depth(depth)
         {
         }
     };

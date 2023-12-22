@@ -183,7 +183,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::shared_ptr<texture> create_texture(int width, int height, int stride, common::bit_depth depth, bool clear)
     {
-        CASPAR_VERIFY(stride > 0 && stride < 7);
+        CASPAR_VERIFY(stride > 0 && stride < 5);
         CASPAR_VERIFY(width > 0 && height > 0);
 
         // TODO (perf) Shared pool.
@@ -304,7 +304,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             if (!compute_shader_)
             compute_shader_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
 
-            auto tex = create_texture(width, height, 5, false);
+            auto tex = create_texture(width, height, 4, common::bit_depth::bit16, false);
 
             glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 

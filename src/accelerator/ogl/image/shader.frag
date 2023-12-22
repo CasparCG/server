@@ -486,13 +486,21 @@ vec4 get_rgba_color()
     case 4:		//abgr,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar;
     case 5:		//ycbcr,
-        case 11:    //ycbcr10_420
-        case 12:    //ycbcr10_422
-        case 13:    //ycbcr10_444
+    case 11:    //ycbcr10_420
+    case 12:    //ycbcr10_422
+    case 13:    //ycbcr10_444
         {
             float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
             float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
+
+            if (pixel_format >= 10){
+                // unpack 16bit to 10bit
+                y *= 64;
+                cb *= 64;
+                cr *= 64;
+            }
+
             return ycbcra_to_rgba(y, cb, cr, 1.0);
         }
     case 6:		//ycbcra
@@ -504,6 +512,14 @@ vec4 get_rgba_color()
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
             float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
             float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r;
+
+            if (pixel_format >= 10){
+                // unpack 16bit to 10bit
+                y *= 64;
+                cb *= 64;
+                cr *= 64;
+            }
+
             return ycbcra_to_rgba(y, cb, cr, a);
         }
     case 7:		//luma

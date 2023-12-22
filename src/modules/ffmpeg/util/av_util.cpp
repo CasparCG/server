@@ -216,30 +216,20 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
         case core::pixel_format::ycbcra10_420:
         case core::pixel_format::ycbcra10_422:
         case core::pixel_format::ycbcra10_444: {
-            // Find chroma height
-            // av_image_fill_plane_sizes is not available until ffmpeg 4.4, but we still need to support ffmpeg 4.2, so
-            // we fall back to calling av_image_fill_pointers with a NULL image buffer. We can't unconditionally use
-            // av_image_fill_pointers because it will not accept a NULL buffer on ffmpeg >= 5.0.
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 56, 100)
             size_t    sizes[4];
             ptrdiff_t linesizes1[4];
             for (int i = 0; i < 4; i++)
                 linesizes1[i] = linesizes[i];
             av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
-            auto size2 = static_cast<int>(sizes[1]);
-#else
-            uint8_t* dummy_pict_data[4];
-            av_image_fill_pointers(dummy_pict_data, pix_fmt, height, NULL, linesizes);
-            auto size2 = static_cast<int>(dummy_pict_data[2] - dummy_pict_data[1]);
-#endif
-            auto h2 = size2 / linesizes[1];
 
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 2, height, 6));
-//            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1] / 2, h2, 6));
-//            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2] / 2, h2, 6));
-//
-//            if (desc.format == core::pixel_format::ycbcra10_420||desc.format == core::pixel_format::ycbcra10_422||desc.format == core::pixel_format::ycbcra10_444)
-//                desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3] / 2, height, 6));
+            auto h2 = static_cast<int>(sizes[1]) / linesizes[1];
+
+            desc.planes.emplace_back(linesizes[0] / 2, height, 1, common::bit_depth::bit16);
+            desc.planes.emplace_back(linesizes[1] / 2, h2, 1, common::bit_depth::bit16);
+            desc.planes.emplace_back(linesizes[2] / 2, h2, 1, common::bit_depth::bit16);
+
+            if (desc.format == core::pixel_format::ycbcra10_420||desc.format == core::pixel_format::ycbcra10_422||desc.format == core::pixel_format::ycbcra10_444)
+                desc.planes.emplace_back(linesizes[3] / 2, height, 1, common::bit_depth::bit16);
 
             return desc;
         }
