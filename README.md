@@ -99,7 +99,7 @@ License
 ---------
 
 CasparCG Server is distributed under the GNU General Public License GPLv3 or
-higher, see [LICENSE](LICENSE.md) for details.
+higher, see [LICENSE](LICENSE) for details.
 
 CasparCG Server uses the following third party libraries:
 - FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence.
