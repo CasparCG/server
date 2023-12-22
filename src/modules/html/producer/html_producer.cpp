@@ -275,8 +275,8 @@ class html_client
         pixel_desc.planes.emplace_back(width, height, 4);
 
         core::mutable_frame frame = frame_factory_->create_frame(this, pixel_desc);
-        char* src   = (char*)buffer;
-        char* dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
+        char*               src   = (char*)buffer;
+        char*               dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
         test_timer_.restart();
 
 #ifdef WIN32
@@ -436,7 +436,7 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            const bool enable_gpu            = env::properties().get(L"configuration.html.enable-gpu", false);
+            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
 
             client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, url_);
 

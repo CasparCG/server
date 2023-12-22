@@ -165,7 +165,7 @@ class renderer_application
 
             // This gives better performance on the gpu->cpu readback, but can perform worse with intense templates
             auto backend = env::properties().get(L"configuration.html.angle-backend", L"gl");
-            if (backend.size()  > 0) {
+            if (backend.size() > 0) {
                 command_line->AppendSwitchWithValue("use-angle", backend);
             }
         }
