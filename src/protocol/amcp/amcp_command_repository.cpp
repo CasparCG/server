@@ -27,7 +27,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <map>
 
@@ -121,12 +120,12 @@ parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, in
 
 struct amcp_command_repository::impl
 {
-    const std::vector<channel_context> channels_;
+    const spl::shared_ptr<std::vector<channel_context>> channels_;
 
     std::map<std::wstring, std::pair<amcp_command_func, int>> commands{};
     std::map<std::wstring, std::pair<amcp_command_func, int>> channel_commands{};
 
-    impl(const std::vector<channel_context>& channels)
+    impl(const spl::shared_ptr<std::vector<channel_context>>& channels)
         : channels_(channels)
     {
     }
@@ -151,7 +150,7 @@ struct amcp_command_repository::impl
                                                  int                      layer_index,
                                                  std::list<std::wstring>& tokens) const
     {
-        if (channels_.size() <= channel_index)
+        if (channels_->size() <= channel_index)
             return nullptr;
 
         auto command = find_command(channel_commands, name, id, std::move(client), channel_index, layer_index, tokens);
@@ -197,20 +196,23 @@ struct amcp_command_repository::impl
 
     bool check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
     {
-        if (channel_index < 0 || channel_index >= channels_.size())
+        if (channel_index < 0 || channel_index >= channels_->size())
             return true;
 
-        auto lock = channels_.at(channel_index).lock;
+        auto lock = channels_->at(channel_index).lock;
         return !(lock && !lock->check_access(client));
     }
 };
 
-amcp_command_repository::amcp_command_repository(const std::vector<channel_context>& channels)
+amcp_command_repository::amcp_command_repository(const spl::shared_ptr<std::vector<channel_context>>& channels)
     : impl_(new impl(channels))
 {
 }
 
-const std::vector<channel_context>& amcp_command_repository::channels() const { return impl_->channels_; }
+const spl::shared_ptr<std::vector<channel_context>>& amcp_command_repository::channels() const
+{
+    return impl_->channels_;
+}
 
 std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientInfoPtr       client,
                                                                     std::list<std::wstring> tokens,

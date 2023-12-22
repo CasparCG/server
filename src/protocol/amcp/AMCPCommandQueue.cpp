@@ -30,7 +30,8 @@
 
 namespace caspar { namespace protocol { namespace amcp {
 
-AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name, const std::vector<channel_context>& channels)
+AMCPCommandQueue::AMCPCommandQueue(const std::wstring&                                  name,
+                                   const spl::shared_ptr<std::vector<channel_context>>& channels)
     : executor_(L"AMCPCommandQueue " + name)
     , channels_(channels)
 {
@@ -38,8 +39,9 @@ AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name, const std::vector<c
 
 AMCPCommandQueue::~AMCPCommandQueue() {}
 
-std::future<bool>
-exec_cmd(std::shared_ptr<AMCPCommand> cmd, const std::vector<channel_context>& channels, bool reply_without_req_id)
+std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         cmd,
+                           const spl::shared_ptr<std::vector<channel_context>>& channels,
+                           bool                                                 reply_without_req_id)
 {
     try {
         try {
@@ -124,16 +126,16 @@ void AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
     caspar::timer timer;
     CASPAR_LOG(warning) << "Executing batch: " << cmd->name() << L"(" << cmd->Commands().size() << L" commands)";
 
-    std::vector<channel_context>                      delayed_channels;
+    spl::shared_ptr<std::vector<channel_context>>     delayed_channels;
     std::vector<std::shared_ptr<core::stage_delayed>> delayed_stages;
     std::vector<std::future<bool>>                    results;
     std::vector<std::unique_lock<std::mutex>>         channel_locks;
 
     try {
-        for (auto& ch : channels_) {
+        for (auto& ch : *channels_) {
             auto st = std::make_shared<core::stage_delayed>(ch.raw_channel->stage(), ch.raw_channel->index());
             delayed_stages.push_back(st);
-            delayed_channels.emplace_back(ch.raw_channel, st, ch.lifecycle_key_);
+            delayed_channels->emplace_back(ch.raw_channel, st, ch.lifecycle_key_);
         }
 
         // 'execute' aka queue all comamnds

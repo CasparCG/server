@@ -189,8 +189,8 @@ std::wstring get_sub_directory(const std::wstring& base_folder, const std::wstri
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
     std::vector<spl::shared_ptr<core::video_channel>> result;
-    for (auto& cc : ctx.channels) {
-        result.push_back(spl::make_shared_ptr(cc.raw_channel));
+    for (auto& cc : *ctx.channels) {
+        result.emplace_back(cc.raw_channel);
     }
     return result;
 }
@@ -394,8 +394,9 @@ std::wstring clear_command(command_context& ctx)
 
 std::wstring clear_all_command(command_context& ctx)
 {
-    for (size_t n = 0; n < ctx.channels.size(); ++n)
-        ctx.channels.at(n).stage->clear();
+    for (auto& ch : *ctx.channels) {
+        ch.stage->clear();
+    }
 
     return L"202 CLEAR ALL OK\r\n";
 }
@@ -431,14 +432,14 @@ std::wstring swap_command(command_context& ctx)
         std::vector<std::wstring> strs;
         boost::split(strs, ctx.parameters[0], boost::is_any_of(L"-"));
 
-        auto ch2 = ctx.channels.at(std::stoi(strs.at(0)) - 1);
+        auto ch2 = ctx.channels->at(std::stoi(strs.at(0)) - 1);
 
         int l1 = ctx.layer_index();
         int l2 = std::stoi(strs.at(1));
 
         ctx.channel.stage->swap_layer(l1, l2, ch2.stage, swap_transforms);
     } else {
-        auto ch2 = ctx.channels.at(std::stoi(ctx.parameters[0]) - 1);
+        auto ch2 = ctx.channels->at(std::stoi(ctx.parameters[0]) - 1);
         ctx.channel.stage->swap_layers(ch2.stage, swap_transforms);
     }
 
@@ -1339,35 +1340,35 @@ std::wstring mixer_clear_command(command_context& ctx)
 
 std::wstring channel_grid_command(command_context& ctx)
 {
-    int  index = 1;
-    auto self  = ctx.channels.back();
+    int   index = 1;
+    auto& self  = ctx.channels->back();
 
     core::diagnostics::scoped_call_context save;
-    core::diagnostics::call_context::for_thread().video_channel = ctx.channels.size();
+    core::diagnostics::call_context::for_thread().video_channel = ctx.channels->size();
 
     std::vector<std::wstring> params;
-    params.push_back(L"SCREEN");
-    params.push_back(L"0");
-    params.push_back(L"NAME");
-    params.push_back(L"Channel Grid Window");
+    params.emplace_back(L"SCREEN");
+    params.emplace_back(L"0");
+    params.emplace_back(L"NAME");
+    params.emplace_back(L"Channel Grid Window");
     auto screen = ctx.static_context->consumer_registry->create_consumer(
         params, ctx.static_context->format_repository, get_channels(ctx));
 
     self.raw_channel->output().add(screen);
 
-    for (auto& channel : ctx.channels) {
-        if (channel.raw_channel != self.raw_channel) {
+    for (auto& ch : *ctx.channels) {
+        if (ch.raw_channel != self.raw_channel) {
             core::diagnostics::call_context::for_thread().layer = index;
             auto producer = ctx.static_context->producer_registry->create_producer(
                 get_producer_dependencies(self.raw_channel, ctx),
-                L"route://" + std::to_wstring(channel.raw_channel->index()));
+                L"route://" + std::to_wstring(ch.raw_channel->index()));
             self.stage->load(index, producer, false);
             self.stage->play(index);
             index++;
         }
     }
 
-    auto num_channels       = ctx.channels.size() - 1;
+    auto num_channels       = ctx.channels->size() - 1;
     int  square_side_length = std::ceil(std::sqrt(num_channels));
 
     auto ctx2 =
@@ -1494,8 +1495,8 @@ std::wstring info_command(command_context& ctx)
     // This is needed for backwards compatibility with old clients
     replyString << L"200 INFO OK\r\n";
 
-    for (size_t n = 0; n < ctx.channels.size(); ++n) {
-        replyString << n + 1 << L" " << ctx.channels.at(n).raw_channel->stage()->video_format_desc().name
+    for (auto& ch : *ctx.channels) {
+        replyString << ch.raw_channel->index() << L" " << ch.raw_channel->stage()->video_format_desc().name
                     << L" PLAYING\r\n";
     }
     replyString << L"\r\n";
@@ -1564,7 +1565,7 @@ std::wstring restart_command(command_context& ctx)
 std::wstring lock_command(command_context& ctx)
 {
     int  channel_index = std::stoi(ctx.parameters.at(0)) - 1;
-    auto lock          = ctx.channels.at(channel_index).lock;
+    auto lock          = ctx.channels->at(channel_index).lock;
     auto command       = boost::to_upper_copy(ctx.parameters.at(1));
 
     if (command == L"ACQUIRE") {

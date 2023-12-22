@@ -45,6 +45,7 @@
 #include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/amcp/amcp_command_repository.h>
+#include <protocol/amcp/amcp_shared.h>
 #include <protocol/osc/client.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
@@ -104,11 +105,11 @@ struct server::impl
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
     std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_service_);
     std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
-    std::vector<spl::shared_ptr<video_channel>>            channels_;
-    spl::shared_ptr<core::cg_producer_registry>            cg_registry_;
-    spl::shared_ptr<core::frame_producer_registry>         producer_registry_;
-    spl::shared_ptr<core::frame_consumer_registry>         consumer_registry_;
-    std::function<void(bool)>                              shutdown_server_now_;
+    spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
+    spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
+    spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
+    spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
+    std::function<void(bool)>                                     shutdown_server_now_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -153,15 +154,19 @@ struct server::impl
     {
         std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
         io_service_.reset();
+        predefined_osc_subscriptions_.clear();
         osc_client_.reset();
+
         amcp_command_repo_wrapper_.reset();
         amcp_command_repo_.reset();
         amcp_context_factory_.reset();
+
         primary_amcp_server_.reset();
         async_servers_.clear();
+
         destroy_producers_synchronously();
         destroy_consumers_synchronously();
-        channels_.clear();
+        channels_->clear();
 
         while (weak_io_service.lock())
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -254,7 +259,7 @@ struct server::impl
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
-            auto channel_id  = static_cast<int>(channels_.size() + 1);
+            auto channel_id  = static_cast<int>(channels_->size() + 1);
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
@@ -268,7 +273,8 @@ struct server::impl
                                                     }
                                                 });
 
-            channels_.push_back(channel);
+            const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
+            channels_->emplace_back(channel, channel->stage(), lifecycle_key);
         }
 
         return xml_channels;
@@ -312,30 +318,20 @@ struct server::impl
                 });
     }
 
-    static std::vector<amcp::channel_context>
-    build_channel_contexts(const std::vector<spl::shared_ptr<core::video_channel>>& channels)
-    {
-        std::vector<amcp::channel_context> res;
-
-        int index = 0;
-        for (const auto& channel : channels) {
-            const std::wstring lifecycle_key = L"lock" + std::to_wstring(index);
-            res.emplace_back(channel, channel->stage(), lifecycle_key);
-            ++index;
-        }
-
-        return res;
-    }
-
     void setup_channel_producers_and_consumers(const std::vector<boost::property_tree::wptree>& xml_channels)
     {
         auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-        for (auto& channel : channels_) {
-            core::diagnostics::scoped_call_context save;
-            core::diagnostics::call_context::for_thread().video_channel = channel->index();
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
+        for (auto& cc : *channels_) {
+            channels_vec.emplace_back(cc.raw_channel);
+        }
 
-            auto xml_channel = xml_channels.at(channel->index() - 1);
+        for (auto& channel : *channels_) {
+            core::diagnostics::scoped_call_context save;
+            core::diagnostics::call_context::for_thread().video_channel = channel.raw_channel->index();
+
+            auto xml_channel = xml_channels.at(channel.raw_channel->index() - 1);
 
             // Consumers
             if (xml_channel.get_child_optional(L"consumers")) {
@@ -344,8 +340,8 @@ struct server::impl
 
                     try {
                         if (name != L"<xmlcomment>")
-                            channel->output().add(consumer_registry_->create_consumer(
-                                name, xml_consumer.second, video_format_repository_, channels_));
+                            channel.raw_channel->output().add(consumer_registry_->create_consumer(
+                                name, xml_consumer.second, video_format_repository_, channels_vec));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }
@@ -362,13 +358,15 @@ struct server::impl
                     const int          id      = attrs.get(L"id", -1);
 
                     try {
-                        std::list<std::wstring> tokens{L"PLAY",
-                                                       (boost::wformat(L"%i-%i") % channel->index() % id).str()};
+                        std::list<std::wstring> tokens{
+                            L"PLAY", (boost::wformat(L"%i-%i") % channel.raw_channel->index() % id).str()};
                         IO::tokenize(command, tokens);
                         auto cmd = amcp_command_repo_->parse_command(console_client, tokens, L"");
 
-                        std::wstring res = cmd->Execute(amcp_command_repo_->channels()).get();
-                        console_client->send(std::move(res), false);
+                        if (cmd) {
+                            std::wstring res = cmd->Execute(channels_).get();
+                            console_client->send(std::move(res), false);
+                        }
                     } catch (const user_error&) {
                         CASPAR_LOG(error) << "Failed to parse command: " << command;
                     } catch (...) {
@@ -381,7 +379,7 @@ struct server::impl
 
     void setup_amcp_command_repo()
     {
-        amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(build_channel_contexts(channels_));
+        amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(channels_);
 
         auto ogl_device = accelerator_.get_device();
         auto ctx        = std::make_shared<amcp::amcp_command_static_context>(

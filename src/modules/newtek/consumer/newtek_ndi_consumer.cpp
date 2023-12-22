@@ -254,9 +254,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
 
-spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&     params,
-                                                          const core::video_format_repository& format_repository,
-                                                          std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer>
+create_ndi_consumer(const std::vector<std::wstring>&                         params,
+                    const core::video_format_repository&                     format_repository,
+                    const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
@@ -266,9 +267,9 @@ spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std:
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_ndi_consumer(const boost::property_tree::wptree&               ptree,
-                                  const core::video_format_repository&              format_repository,
-                                  std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_ndi_consumer(const boost::property_tree::wptree&                      ptree,
+                                  const core::video_format_repository&                     format_repository,
+                                  const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);

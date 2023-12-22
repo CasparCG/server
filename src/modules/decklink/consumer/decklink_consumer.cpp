@@ -901,7 +901,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
-                                                      std::vector<spl::shared_ptr<core::video_channel>> channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
@@ -913,9 +913,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&               ptree,
-                              const core::video_format_repository&              format_repository,
-                              std::vector<spl::shared_ptr<core::video_channel>> channels)
+create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
+                              const core::video_format_repository&                     format_repository,
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config = parse_xml_config(ptree, format_repository);
 
