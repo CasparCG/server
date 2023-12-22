@@ -49,7 +49,7 @@ class image_mixer
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
 
-    std::shared_ptr<frame_converter> create_frame_converter() override = 0;
+    spl::shared_ptr<frame_converter> create_frame_converter() override = 0;
 };
 
 }} // namespace caspar::core

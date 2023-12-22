@@ -364,9 +364,9 @@ struct image_mixer::impl
             });
     }
 
-    std::shared_ptr<core::frame_converter> create_frame_converter() override
+    spl::shared_ptr<core::frame_converter> create_frame_converter() override
     {
-        return std::make_shared<ogl_frame_converter>(ogl_);
+        return spl::make_shared<ogl_frame_converter>(ogl_);
     }
 };
 
@@ -386,6 +386,6 @@ core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel
 {
     return impl_->create_frame(tag, desc);
 }
-std::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
+spl::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
 
 }}} // namespace caspar::accelerator::ogl

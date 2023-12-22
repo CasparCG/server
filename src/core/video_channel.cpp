@@ -245,6 +245,10 @@ mixer&                              video_channel::mixer() { return impl_->mixer
 const output&                       video_channel::output() const { return impl_->output_; }
 output&                             video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
+spl::shared_ptr<frame_converter>      video_channel::frame_converter() {
+    // TODO - is this too expensive?
+    return impl_->image_mixer_->create_frame_converter();
+}
 int                                 video_channel::index() const { return impl_->index(); }
 core::monitor::state                video_channel::state() const { return impl_->state_; }
 

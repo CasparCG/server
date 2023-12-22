@@ -31,6 +31,7 @@ FORWARD2(caspar, core, class output);
 FORWARD2(caspar, core, class image_mixer);
 FORWARD2(caspar, core, struct video_format_desc);
 FORWARD2(caspar, core, class frame_factory);
+FORWARD2(caspar, core, class frame_converter);
 FORWARD2(caspar, core, class frame_producer);
 FORWARD2(caspar, core, class frame_consumer);
 FORWARD2(caspar, core, class draw_frame);
