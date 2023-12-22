@@ -487,6 +487,7 @@ vec4 get_rgba_color()
         return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar;
     case 5:		//ycbcr,
     case 11:    //ycbcr10
+    case 13:    //ycbcr16
         {
             float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
@@ -503,6 +504,7 @@ vec4 get_rgba_color()
         }
     case 6:		//ycbcra
     case 12:    //ycbcra10
+    case 14:    //ycbcra16
         {
             float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
             float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
@@ -534,15 +536,6 @@ vec4 get_rgba_color()
 			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r;			
 			return ycbcra_to_rgba(y, cb, cr, 1.0);
 		}
-    // formats converted from packed formats
-//    case 11:    //ycbcr10_420
-//    case 12:    //ycbcr10_422
-//    case 13:    //ycbcr10_444
-//        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb, 1.0);
-//    case 14:    //ycbcra10_420
-//    case 15:    //ycbcra10_422
-//    case 16:    //ycbcra10_444
-//        return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }

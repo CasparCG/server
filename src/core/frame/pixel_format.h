@@ -41,6 +41,8 @@ enum class pixel_format
     uyvy,
     ycbcr10,
     ycbcra10,
+    ycbcr16,
+    ycbcra16,
     count,
     invalid,
 };

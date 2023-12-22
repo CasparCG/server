@@ -142,10 +142,18 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
         case AV_PIX_FMT_YUV422P10LE:
         case AV_PIX_FMT_YUV420P10LE:
             return core::pixel_format::ycbcr10;
+        case AV_PIX_FMT_YUV444P16LE:
+        case AV_PIX_FMT_YUV422P16LE:
+        case AV_PIX_FMT_YUV420P16LE:
+            return core::pixel_format::ycbcr16;
         case AV_PIX_FMT_YUVA444P10LE:
         case AV_PIX_FMT_YUVA422P10LE:
         case AV_PIX_FMT_YUVA420P10LE:
             return core::pixel_format::ycbcra10;
+        case AV_PIX_FMT_YUVA444P16LE:
+        case AV_PIX_FMT_YUVA422P16LE:
+        case AV_PIX_FMT_YUVA420P16LE:
+            return core::pixel_format::ycbcra16;
         default:
             return core::pixel_format::invalid;
     }
@@ -207,7 +215,9 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             return desc;
         }
         case core::pixel_format::ycbcr10:
-        case core::pixel_format::ycbcra10: {
+        case core::pixel_format::ycbcra10:
+        case core::pixel_format::ycbcr16:
+        case core::pixel_format::ycbcra16: {
             size_t    sizes[4];
             ptrdiff_t linesizes1[4];
             for (int i = 0; i < 4; i++)
