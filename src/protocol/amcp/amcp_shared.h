@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../util/ClientInfo.h"
 #include "../util/lock_container.h"
 #include <core/producer/stage.h>
 #include <core/video_channel.h>
@@ -47,8 +48,8 @@ struct command_context_simple
     }
 };
 
-typedef std::function<std::future<std::wstring>(const command_context_simple&       args,
-                                                const std::vector<channel_context>& channels)>
+typedef std::function<std::future<std::wstring>(const command_context_simple&                        args,
+                                                const spl::shared_ptr<std::vector<channel_context>>& channels)>
     amcp_command_func;
 
 }}} // namespace caspar::protocol::amcp

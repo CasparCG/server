@@ -26,7 +26,7 @@
 
 namespace caspar { namespace protocol { namespace amcp {
 
-std::future<std::wstring> AMCPCommand::Execute(const std::vector<channel_context>& channels)
+std::future<std::wstring> AMCPCommand::Execute(const spl::shared_ptr<std::vector<channel_context>>& channels)
 {
     return command_(ctx_, channels);
 }

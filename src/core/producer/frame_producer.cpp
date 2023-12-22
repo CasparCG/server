@@ -24,8 +24,6 @@
 #include "cg_proxy.h"
 #include "frame_producer.h"
 
-#include "../frame/draw_frame.h"
-
 #include "color/color_producer.h"
 #include "route/route_producer.h"
 #include "separated/separated_producer.h"

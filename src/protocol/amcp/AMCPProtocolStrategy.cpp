@@ -99,13 +99,11 @@ class AMCPProtocolStrategy
     {
         commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"General Queue for " + name, repo_->channels()));
 
-        int i = 0;
-        for (const auto& ch : repo_->channels()) {
-            auto queue = spl::make_shared<AMCPCommandQueue>(L"Channel " + std::to_wstring(i + 1) + L" for " + name,
-                                                            repo_->channels());
+        for (auto& ch : *repo_->channels()) {
+            auto queue = spl::make_shared<AMCPCommandQueue>(
+                L"Channel " + std::to_wstring(ch.raw_channel->index()) + L" for " + name, repo_->channels());
             std::weak_ptr<AMCPCommandQueue> queue_weak = queue;
             commandQueues_.push_back(queue);
-            i++;
         }
     }
 

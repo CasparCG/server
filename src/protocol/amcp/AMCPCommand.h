@@ -49,7 +49,7 @@ class AMCPCommand
 
     using ptr_type = std::shared_ptr<AMCPCommand>;
 
-    std::future<std::wstring> Execute(const std::vector<channel_context>& channels);
+    std::future<std::wstring> Execute(const spl::shared_ptr<std::vector<channel_context>>& channels);
 
     void SendReply(const std::wstring& str, bool reply_without_req_id) const;
 

@@ -73,22 +73,22 @@ struct amcp_command_static_context
 
 struct command_context
 {
-    std::shared_ptr<amcp_command_static_context> static_context;
-    const std::vector<channel_context>           channels;
-    const IO::ClientInfoPtr                      client;
-    const channel_context                        channel;
-    const int                                    channel_index;
-    const int                                    layer_id;
-    std::vector<std::wstring>                    parameters;
+    std::shared_ptr<amcp_command_static_context>        static_context;
+    const spl::shared_ptr<std::vector<channel_context>> channels;
+    const IO::ClientInfoPtr                             client;
+    const channel_context                               channel;
+    const int                                           channel_index;
+    const int                                           layer_id;
+    std::vector<std::wstring>                           parameters;
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
-    command_context(std::shared_ptr<amcp_command_static_context> static_context,
-                    std::vector<channel_context>                 channels,
-                    const IO::ClientInfoPtr&                     client,
-                    channel_context                              channel,
-                    int                                          channel_index,
-                    int                                          layer_id)
+    command_context(std::shared_ptr<amcp_command_static_context>        static_context,
+                    const spl::shared_ptr<std::vector<channel_context>> channels,
+                    const IO::ClientInfoPtr&                            client,
+                    channel_context                                     channel,
+                    int                                                 channel_index,
+                    int                                                 layer_id)
         : static_context(std::move(static_context))
         , channels(std::move(channels))
         , client(client)
