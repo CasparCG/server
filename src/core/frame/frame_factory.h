@@ -23,13 +23,21 @@
 
 #include <common/bit_depth.h>
 
+#include <future>
+
 namespace caspar { namespace core {
 
-class frame_converter {
+enum encoded_frame_format
+{
+    decklink_v210 = 0,
+};
+
+class frame_converter
+{
   public:
-    frame_converter()                                = default;
+    frame_converter()                                  = default;
     frame_converter& operator=(const frame_converter&) = delete;
-    virtual ~frame_converter()                       = default;
+    virtual ~frame_converter()                         = default;
 
     frame_converter(const frame_converter&) = delete;
 
@@ -37,6 +45,8 @@ class frame_converter {
 
     virtual class draw_frame convert_frame(const class mutable_frame& frame) = 0;
 
+    virtual std::shared_future<std::vector<array<const std::uint8_t>>>
+    convert_from_rgba(const core::const_frame& frame, const encoded_frame_format format) = 0;
 };
 
 class frame_factory
@@ -52,6 +62,5 @@ class frame_factory
 
     virtual spl::shared_ptr<frame_converter> create_frame_converter() = 0;
 };
-
 
 }} // namespace caspar::core

@@ -56,6 +56,13 @@ class device final
     std::future<std::shared_ptr<texture>>
     convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format);
 
+    std::future<void> convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+                                           const std::vector<array<const uint8_t>>&     buffers,
+                                           int                                          width,
+                                           int                                          height,
+                                           int                                          x_count,
+                                           int                                          y_count);
+
     template <typename Func>
     auto dispatch_async(Func&& func)
     {

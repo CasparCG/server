@@ -24,7 +24,6 @@
 #include "compute_shader.h"
 #include "texture.h"
 
-
 #include <common/array.h>
 #include <common/assert.h>
 #include <common/env.h>
@@ -42,9 +41,9 @@
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
-#include <memory>
 #include <boost/asio/spawn.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <memory>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -53,6 +52,7 @@
 #include <future>
 #include <thread>
 
+#include "ogl_image_from_rgba.h"
 #include "ogl_image_to_rgba.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -73,7 +73,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     sync_queue_t sync_queue_;
 
-    std::unique_ptr<compute_shader> compute_shader_;
+    std::unique_ptr<compute_shader> compute_to_rgba_;
+    std::unique_ptr<compute_shader> compute_from_rgba_;
 
     GLuint fbo_;
 
@@ -118,7 +119,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
-
 
         device_.setActive(false);
 
@@ -231,8 +231,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         return array<uint8_t>(ptr, buf->size(), buf, depth);
     }
 
-
-
     std::future<std::shared_ptr<texture>>
     copy_async(const array<const uint8_t>& source, int width, int height, int stride)
     {
@@ -300,15 +298,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
     convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int width_samples)
     {
         return dispatch_async([=] {
-
-            if (!compute_shader_)
-            compute_shader_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
+            if (!compute_to_rgba_)
+                compute_to_rgba_ = std::make_unique<compute_shader>(std::string(compute_to_rgba_shader));
 
             auto tex = create_texture(width, height, 4, common::bit_depth::bit16, false);
 
             glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-            compute_shader_->use();
+            compute_to_rgba_->use();
 
             glDispatchCompute((unsigned int)width_samples, (unsigned int)height, 1);
 
@@ -316,6 +313,57 @@ struct device::impl : public std::enable_shared_from_this<impl>
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
             return tex;
+        });
+    }
+
+    std::future<void> convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+                                           const std::vector<array<const uint8_t>>&     buffers,
+                                           int                                          width,
+                                           int                                          height,
+                                           int                                          x_count,
+                                           int                                          y_count)
+    {
+        return spawn_async([=](yield_context yield) {
+            if (!compute_from_rgba_)
+                compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
+
+            // TODO: This probably only needs to handle one texture
+            for (size_t i = 0; i < textures.size(); i++) {
+                auto& tex = textures[i];
+                glBindImageTexture(i, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            }
+
+            for (size_t i = 0; i < buffers.size(); i++) {
+                auto& source = buffers[i];
+                auto  tmp    = source.storage<std::shared_ptr<buffer>>();
+                if (!tmp) {
+                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
+                }
+
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, tmp->get()->id());
+            }
+
+            compute_to_rgba_->use();
+
+            glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1);
+
+            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+            GL(glFlush());
+
+            deadline_timer timer(service_);
+            for (auto n = 0; true; ++n) {
+                // TODO (perf) Smarter non-polling solution?
+                timer.expires_from_now(boost::posix_time::milliseconds(2));
+                timer.async_wait(yield);
+
+                auto wait = glClientWaitSync(fence, 0, 1);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    break;
+                }
+            }
+
+            glDeleteSync(fence);
         });
     }
 
@@ -482,6 +530,15 @@ std::future<std::shared_ptr<texture>>
 device::convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)
 {
     return impl_->convert_frame(sources, width, height, format);
+}
+std::future<void> device::convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+                                               const std::vector<array<const uint8_t>>&     buffers,
+                                               int                                          width,
+                                               int                                          height,
+                                               int                                          x_count,
+                                               int                                          y_count)
+{
+    return impl_->convert_from_texture(textures, buffers, width, height, x_count, y_count);
 }
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }

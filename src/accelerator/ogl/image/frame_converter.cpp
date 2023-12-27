@@ -19,6 +19,12 @@
  * Author: Julian Waller, julian@superfly.tv
  */
 #include "frame_converter.h"
+#include "../util/texture.h"
+
+#include <core/frame/pixel_format.h>
+
+#include <common/except.h>
+#include <common/future.h>
 
 namespace caspar::accelerator::ogl {
 
@@ -29,7 +35,6 @@ ogl_frame_converter::ogl_frame_converter(const spl::shared_ptr<device>& ogl)
 
 core::mutable_frame ogl_frame_converter::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
-
     std::vector<array<std::uint8_t>> image_data;
     for (auto& plane : desc.planes) {
         image_data.push_back(ogl_->create_array(plane.size, common::bit_depth::bit16)); // TODO: Depth
@@ -62,6 +67,49 @@ core::draw_frame ogl_frame_converter::convert_frame(const core::mutable_frame& f
 {
     // TODO
     return core::draw_frame{};
+}
+
+std::shared_future<std::vector<array<const std::uint8_t>>>
+ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const core::encoded_frame_format format)
+{
+    std::vector<array<const std::uint8_t>> buffers;
+    int                                    x_count = 0;
+    int                                    y_count = 0;
+    switch (format) {
+        case core::encoded_frame_format::decklink_v210:
+            auto row_blocks = ((frame.width() + 47) / 48);
+            auto row_bytes  = row_blocks * 128;
+
+            // TODO - result must be 128byte aligned. can that be guaranteed here?
+            buffers.push_back(ogl_->create_array(row_bytes * frame.height(), common::bit_depth::bit8));
+            x_count = row_blocks;
+            y_count = frame.height();
+            break;
+    }
+
+    if (buffers.size() == 0 || x_count == 0 || y_count == 0) {
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
+    }
+
+    std::vector<std::shared_ptr<texture>> textures;
+
+    // TODO - avoid this extra copy
+    auto plane_count = frame.pixel_format_desc().planes.size();
+    for (size_t i = 0; i < plane_count; i++) {
+        auto plane   = frame.pixel_format_desc().planes[i];
+        auto texture = ogl_->copy_async(frame.image_data(i), plane.width, plane.height, plane.size);
+        textures.push_back(texture.get());
+    }
+
+    auto future_conversion =
+        ogl_->convert_from_texture(textures, buffers, frame.width(), frame.height(), x_count, y_count);
+
+    return std::async(std::launch::deferred,
+                      [buffers = std::move(buffers), future_conversion = std::move(future_conversion)]() mutable {
+                          future_conversion.get();
+
+                          return std::move(buffers);
+                      });
 }
 
 } // namespace caspar::accelerator::ogl

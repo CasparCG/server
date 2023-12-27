@@ -45,6 +45,9 @@ class ogl_frame_converter
 
     core::draw_frame convert_frame(const core::mutable_frame& frame) override;
 
+    std::shared_future<std::vector<array<const std::uint8_t>>>
+    convert_from_rgba(const core::const_frame& frame, const core::encoded_frame_format format) override;
+
   private:
     const spl::shared_ptr<device> ogl_;
 };

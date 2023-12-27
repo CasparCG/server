@@ -749,16 +749,17 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                         schedule_next_audio(std::move(audio_data), nb_samples);
                     }
                 } else {
-                    // Send frame to secondary ports
-                    auto& context = secondary_port_contexts_[i];
-                    context->schedule_frame(frame1, video_display_time);
-                    if (isInterlaced) {
-                        context->schedule_frame(frame2, video_display_time);
-                    }
+                    // TODO - reimplement this
+                    // // Send frame to secondary ports
+                    // auto& context = secondary_port_contexts_[i];
+                    // context->schedule_frame(frame1, video_display_time);
+                    // if (isInterlaced) {
+                    //     context->schedule_frame(frame2, video_display_time);
+                    // }
 
-                    if (config_.embedded_audio) {
-                        // TODO - audio for secondaries?
-                    }
+                    // if (config_.embedded_audio) {
+                    //     // TODO - audio for secondaries?
+                    // }
                 }
             });
 
