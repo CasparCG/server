@@ -100,6 +100,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
     }
 
     convert_from_texture_description description{};
+    description.is_16_bit = texture_ptr->depth() == common::bit_depth::bit16;
     description.width = frame.width();
     description.height = frame.height();
     description.words_per_line = words_per_line;

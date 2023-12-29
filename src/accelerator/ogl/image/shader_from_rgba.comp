@@ -2,20 +2,30 @@
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(rgba16f, binding = 0) uniform image2D imgInput; // Note: this needs to match what it is writing to
+layout(rgba16, binding = 0) uniform image2D imgInput16bit; // Note: this needs to match what it is writing to
+layout(rgba8, binding = 1) uniform image2D imgInput8bit; // Note: this needs to match what it is writing to
 
-layout(std430, binding = 1) buffer buffer_layout
+layout(std430, binding = 2) buffer buffer_layout
 {
     uint bufferOutput[];
 };
 
-layout(std430, binding = 2) buffer description_layout
+layout(std430, binding = 3) buffer description_layout
 {
     // This must match convert_from_texture_description in device.h
+    bool is_16_bit;
     uint frame_width;
     uint frame_height;
     uint words_per_line;
 };
+
+vec4 read_pixel(ivec2 coord) {
+    if (is_16_bit){
+        return imageLoad(imgInput16bit, coord);
+    } else {
+        return imageLoad(imgInput8bit, coord);
+    }
+}
 
 vec3 rgba_to_bt709(vec4 pixel) {
     float KR = 0.2126;
@@ -45,11 +55,9 @@ vec3 rgba_to_bt709(vec4 pixel) {
 
     float cb16 = -KRoKBi * pixel.r - KGoKBi * pixel.g + pixel.b;
     float cb = (CbCrOffset + cb16 * HalfCbCrRange);
-    cb = 0.5;
 
     float cr16 = pixel.r - KGoKRi * pixel.g - KBoKRi * pixel.b;
     float cr = (CbCrOffset + cr16 * HalfCbCrRange);
-    cr = 0.5;
 
     return vec3(y, cb, cr);
 }
@@ -63,37 +71,21 @@ void decklink_v210() {
     uint y_offset = gl_GlobalInvocationID.y * words_per_line;
     uint x_offset = gl_GlobalInvocationID.x * 4; // 4 bytes per op
     uint offset = y_offset + x_offset;
-
     uint image_x = gl_GlobalInvocationID.x * 6;
 
     // sample image
-    vec4 sample0 = imageLoad(imgInput, ivec2(image_x, gl_GlobalInvocationID.y));
-    vec4 sample1 = imageLoad(imgInput, ivec2(image_x+1, gl_GlobalInvocationID.y));
-    vec4 sample2 = imageLoad(imgInput, ivec2(image_x+2, gl_GlobalInvocationID.y));
-    vec4 sample3 = imageLoad(imgInput, ivec2(image_x+3, gl_GlobalInvocationID.y));
-    vec4 sample4 = imageLoad(imgInput, ivec2(image_x+4, gl_GlobalInvocationID.y));
-    vec4 sample5 = imageLoad(imgInput, ivec2(image_x+5, gl_GlobalInvocationID.y));
-    vec3 ycbcr0 = rgba_to_bt709(sample0);
-    vec3 ycbcr1 = rgba_to_bt709(sample1);
-    vec3 ycbcr2 = rgba_to_bt709(sample2);
-    vec3 ycbcr3 = rgba_to_bt709(sample3);
-    vec3 ycbcr4 = rgba_to_bt709(sample4);
-    vec3 ycbcr5 = rgba_to_bt709(sample5);
+    vec3 ycbcr0 = rgba_to_bt709(read_pixel(ivec2(image_x + 0, gl_GlobalInvocationID.y)));
+    vec3 ycbcr1 = rgba_to_bt709(read_pixel(ivec2(image_x + 1, gl_GlobalInvocationID.y)));
+    vec3 ycbcr2 = rgba_to_bt709(read_pixel(ivec2(image_x + 2, gl_GlobalInvocationID.y)));
+    vec3 ycbcr3 = rgba_to_bt709(read_pixel(ivec2(image_x + 3, gl_GlobalInvocationID.y)));
+    vec3 ycbcr4 = rgba_to_bt709(read_pixel(ivec2(image_x + 4, gl_GlobalInvocationID.y)));
+    vec3 ycbcr5 = rgba_to_bt709(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)));
 
     // compute words
-//    uint word0 = to_10bit(ycbcr0.t) + (to_10bit(ycbcr0.s) << 10) + (to_10bit(ycbcr0.p) << 20);
-//    uint word1 = to_10bit(ycbcr1.s) + (to_10bit(ycbcr2.t) << 10) + (to_10bit(ycbcr2.s) << 20);
-//    uint word2 = to_10bit(ycbcr2.p) + (to_10bit(ycbcr3.s) << 10) + (to_10bit(ycbcr4.t) << 20);
-//    uint word3 = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
-    uint word0 = 512 + (to_10bit(ycbcr0.s) << 10) + (512 << 20);
-    uint word1 = to_10bit(ycbcr1.s) + (512 << 10) + (to_10bit(ycbcr2.s) << 20);
-    uint word2 = 512 + (to_10bit(ycbcr3.s) << 10) + (512 << 20);
-    uint word3 = to_10bit(ycbcr4.s) + (512 << 10) + (to_10bit(ycbcr5.s) << 20);
-
-    bufferOutput[offset+0] = word0;
-    bufferOutput[offset+1] = word1;
-    bufferOutput[offset+2] = word2;
-    bufferOutput[offset+3] = word3;
+    bufferOutput[offset + 0] = to_10bit(ycbcr0.t) + (to_10bit(ycbcr0.s) << 10) + (to_10bit(ycbcr0.p) << 20);
+    bufferOutput[offset + 1] = to_10bit(ycbcr1.s) + (to_10bit(ycbcr2.t) << 10) + (to_10bit(ycbcr2.s) << 20);
+    bufferOutput[offset + 2] = to_10bit(ycbcr2.p) + (to_10bit(ycbcr3.s) << 10) + (to_10bit(ycbcr4.t) << 20);
+    bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
 
 void main() {

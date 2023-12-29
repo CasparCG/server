@@ -327,7 +327,20 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
 
             // single input texture
-            glBindImageTexture(0, texture->id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
+            GLuint texid_8bit = 0;
+            GLuint texid_16bit = 0;
+
+            switch(texture->depth()) {
+                case common::bit_depth::bit8:
+                    texid_8bit = texture->id();
+                    break;
+                case common::bit_depth::bit16:
+                    texid_16bit = texture->id();
+                    break;
+            }
+
+            GL(glBindImageTexture(0, texid_16bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16));
+            GL(glBindImageTexture(1, texid_8bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8));
 
             // TODO: only a single buffer?
 //            for (size_t i = 0; i < buffers.size(); i++) {
@@ -337,17 +350,17 @@ struct device::impl : public std::enable_shared_from_this<impl>
                     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
                 }
 
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, tmp->get()->id());
+            GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tmp->get()->id()));
 //            }
 
             // TODO - binding 2 description
             auto description_buffer = create_buffer(sizeof(convert_from_texture_description), false);
             std::memcpy(description_buffer->data(), &description, sizeof (convert_from_texture_description));
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, description_buffer->id());
+            GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, description_buffer->id()));
 
             compute_from_rgba_->use();
 
-            glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1);
+           GL(glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1));
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
