@@ -341,7 +341,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i + 1, tmp->get()->id());
             }
 
-            compute_to_rgba_->use();
+            compute_from_rgba_->use();
 
             glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1);
 
