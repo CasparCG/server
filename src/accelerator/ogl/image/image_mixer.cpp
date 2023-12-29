@@ -85,20 +85,25 @@ class image_renderer
     {
     }
 
-    std::future<array<const std::uint8_t>> operator()(std::vector<layer>             layers,
+    std::future<core::mixed_image> operator()(std::vector<layer>             layers,
                                                       const core::video_format_desc& format_desc)
     {
-        if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
-            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
-        }
+        // TODO - re-enable
+//        if (layers.empty()) { // Bypass GPU with empty frame.
+//            static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
+//            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
+//        }
 
-        return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
+        return flatten(ogl_->dispatch_async([=]() mutable {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
             draw(target_texture, std::move(layers), format_desc);
 
-            return ogl_->copy_async(target_texture);
+            auto bytes = ogl_->copy_async(target_texture).share();
+
+            return std::async(std::launch::deferred, [bytes = std::move(bytes), target_texture=std::move(target_texture)]() {
+                return core::mixed_image(bytes.get(), target_texture);
+            });
         }));
     }
 
@@ -303,7 +308,7 @@ struct image_mixer::impl
         layer_stack_.resize(transform_stack_.back().layer_depth);
     }
 
-    std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+    std::future<core::mixed_image> render(const core::video_format_desc& format_desc)
     {
         return renderer_(std::move(layers_), format_desc);
     }
@@ -379,7 +384,7 @@ image_mixer::~image_mixer() {}
 void image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
 void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
 void image_mixer::pop() { impl_->pop(); }
-std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc)
+std::future<core::mixed_image> image_mixer::operator()(const core::video_format_desc& format_desc)
 {
     return impl_->render(format_desc);
 }

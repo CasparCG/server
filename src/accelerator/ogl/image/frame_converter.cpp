@@ -93,12 +93,12 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
 
     std::vector<std::shared_ptr<texture>> textures;
 
-    // TODO - avoid this extra copy
-    size_t i = 0;
-    for (auto& plane : frame.pixel_format_desc().planes) {
-        // TODO - this is failing. is the buffer going the wrong direction causing it to fail?
-        auto texture = ogl_->copy_async(frame.image_data(i++), plane.width, plane.height, plane.stride, plane.depth);
-        textures.push_back(texture.get());
+    {
+        auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
+        if (!texture_ptr) {
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
+        }
+        textures.push_back(std::move(texture_ptr));
     }
 
     auto future_conversion =

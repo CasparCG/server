@@ -30,6 +30,13 @@
 
 namespace caspar { namespace core {
 
+struct mixed_image{
+    array<const uint8_t> rgba8;
+    boost::any texture;
+
+    mixed_image(array<const uint8_t> rgba8, boost::any texture):rgba8(rgba8),texture(texture){}
+};
+
 class image_mixer
     : public frame_visitor
     , public frame_factory
@@ -45,7 +52,7 @@ class image_mixer
     void visit(const class const_frame& frame) override     = 0;
     void pop() override                                     = 0;
 
-    virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
+    virtual std::future<mixed_image> operator()(const struct video_format_desc& format_desc) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
 
