@@ -34,6 +34,13 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
+// This must match description_layout in shader_from_rgba.comp
+struct convert_from_texture_description {
+    uint32_t width;
+    uint32_t height;
+    uint32_t words_per_line;
+};
+
 class device final
     : public std::enable_shared_from_this<device>
     , public accelerator_device
@@ -56,10 +63,9 @@ class device final
     std::future<std::shared_ptr<texture>>
     convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format);
 
-    std::future<void> convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+    std::future<void> convert_from_texture(const std::shared_ptr<texture>& texture,
                                            const std::vector<array<const uint8_t>>&     buffers,
-                                           int                                          width,
-                                           int                                          height,
+                                           const convert_from_texture_description& description,
                                            int                                          x_count,
                                            int                                          y_count);
 

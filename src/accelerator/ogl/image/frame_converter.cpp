@@ -75,15 +75,18 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
     std::vector<array<const std::uint8_t>> buffers;
     int                                    x_count = 0;
     int                                    y_count = 0;
+    int words_per_line = 0;
+
     switch (format) {
         case core::encoded_frame_format::decklink_v210:
             auto row_blocks = ((frame.width() + 47) / 48);
             auto row_bytes  = row_blocks * 128;
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
-            buffers.push_back(ogl_->create_array(row_bytes * frame.height()));
-            x_count = row_blocks;
+            buffers.emplace_back(ogl_->create_array(row_bytes * frame.height()));
+            x_count = row_blocks * 8;
             y_count = frame.height();
+            words_per_line = row_blocks * 32;
             break;
     }
 
@@ -91,18 +94,18 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
-    std::vector<std::shared_ptr<texture>> textures;
-
-    {
-        auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
-        if (!texture_ptr) {
-            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
-        }
-        textures.push_back(std::move(texture_ptr));
+    auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
+    if (!texture_ptr) {
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
     }
 
+    convert_from_texture_description description{};
+    description.width = frame.width();
+    description.height = frame.height();
+    description.words_per_line = words_per_line;
+
     auto future_conversion =
-        ogl_->convert_from_texture(textures, buffers, frame.width(), frame.height(), x_count, y_count);
+        ogl_->convert_from_texture(texture_ptr, buffers, description, x_count, y_count);
 
     return std::async(std::launch::deferred,
                       [buffers = std::move(buffers), future_conversion = std::move(future_conversion)]() mutable {

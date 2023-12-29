@@ -264,7 +264,7 @@ struct server::impl
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id, common::bit_depth::bit8),
+                                                accelerator_.create_image_mixer(channel_id, common::bit_depth::bit16),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;

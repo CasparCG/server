@@ -314,10 +314,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
-    std::future<void> convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+
+
+    std::future<void> convert_from_texture(const std::shared_ptr<texture>& texture,
                                            const std::vector<array<const uint8_t>>&     buffers,
-                                           int                                          width,
-                                           int                                          height,
+                                           const convert_from_texture_description& description,
                                            int                                          x_count,
                                            int                                          y_count)
     {
@@ -325,21 +326,24 @@ struct device::impl : public std::enable_shared_from_this<impl>
             if (!compute_from_rgba_)
                 compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
 
-            // TODO: This probably only needs to handle one texture
-            // for (size_t i = 0; i < textures.size(); i++) {
-            auto& tex = textures[0];
-            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
-            // }
+            // single input texture
+            glBindImageTexture(0, texture->id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
 
-            for (size_t i = 0; i < buffers.size(); i++) {
-                auto& source = buffers[i];
+            // TODO: only a single buffer?
+//            for (size_t i = 0; i < buffers.size(); i++) {
+                auto& source = buffers[0];
                 auto  tmp    = source.storage<std::shared_ptr<buffer>>();
                 if (!tmp) {
                     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
                 }
 
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i + 1, tmp->get()->id());
-            }
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, tmp->get()->id());
+//            }
+
+            // TODO - binding 2 description
+            auto description_buffer = create_buffer(sizeof(convert_from_texture_description), false);
+            std::memcpy(description_buffer->data(), &description, sizeof (convert_from_texture_description));
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, description_buffer->id());
 
             compute_from_rgba_->use();
 
@@ -529,14 +533,13 @@ device::convert_frame(const std::vector<array<const uint8_t>>& sources, int widt
 {
     return impl_->convert_frame(sources, width, height, format);
 }
-std::future<void> device::convert_from_texture(const std::vector<std::shared_ptr<texture>>& textures,
+std::future<void> device::convert_from_texture(const std::shared_ptr<texture>& texture,
                                                const std::vector<array<const uint8_t>>&     buffers,
-                                               int                                          width,
-                                               int                                          height,
+                                               const convert_from_texture_description& description,
                                                int                                          x_count,
                                                int                                          y_count)
 {
-    return impl_->convert_from_texture(textures, buffers, width, height, x_count, y_count);
+    return impl_->convert_from_texture(texture, buffers, description, x_count, y_count);
 }
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
