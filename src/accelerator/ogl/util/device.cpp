@@ -303,7 +303,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto tex = create_texture(width, height, 4, common::bit_depth::bit16, false);
 
-            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
 
             compute_to_rgba_->use();
 
@@ -328,10 +328,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
 
             // TODO: This probably only needs to handle one texture
-            for (size_t i = 0; i < textures.size(); i++) {
-                auto& tex = textures[i];
-                glBindImageTexture(i, tex->id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-            }
+            // for (size_t i = 0; i < textures.size(); i++) {
+            auto& tex = textures[0];
+            glBindImageTexture(0, tex->id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
+            // }
 
             for (size_t i = 0; i < buffers.size(); i++) {
                 auto& source = buffers[i];
@@ -340,7 +340,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
                     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
                 }
 
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, tmp->get()->id());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i + 1, tmp->get()->id());
             }
 
             compute_to_rgba_->use();

@@ -34,6 +34,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_factory.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
@@ -53,6 +54,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -193,13 +195,18 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
 class decklink_frame : public IDeckLinkVideoFrame
 {
     core::video_format_desc format_desc_;
+    BMDPixelFormat          pixel_format_;
     std::shared_ptr<void>   data_;
     std::atomic<int>        ref_count_{0};
     int                     nb_samples_;
 
   public:
-    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples)
+    decklink_frame(std::shared_ptr<void>   data,
+                   BMDPixelFormat          pixel_format,
+                   core::video_format_desc format_desc,
+                   int                     nb_samples)
         : format_desc_(std::move(format_desc))
+        , pixel_format_(pixel_format)
         , data_(std::move(data))
         , nb_samples_(nb_samples)
     {
@@ -224,10 +231,21 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IDecklinkVideoFrame
 
-    long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
-    long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width) * 4; }
-    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
+    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE GetRowBytes() override
+    {
+        switch (pixel_format_) {
+            case bmdFormat8BitARGB:
+            case bmdFormat8BitBGRA:
+                return static_cast<long>(format_desc_.width) * 4;
+            case bmdFormat10BitYUV:
+                return ((static_cast<long>(format_desc_.width) + 47) / 48) * 128;
+            default:
+                return 0;
+        }
+    }
+    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return pixel_format_; }
     BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
 
     HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
@@ -369,13 +387,16 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         auto image_data = convert_frame_for_port(
             channel_format_desc_, decklink_format_desc_, output_config_, frame1, frame2, mode_->GetFieldDominance());
 
-        schedule_next_video(image_data, 0, display_time);
+        schedule_next_video(image_data, bmdFormat8BitBGRA, 0, display_time);
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
+    void schedule_next_video(std::shared_ptr<void> image_data,
+                             BMDPixelFormat        pixel_format,
+                             int                   nb_samples,
+                             BMDTimeValue          display_time)
     {
         auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
+            new decklink_frame(std::move(image_data), pixel_format, decklink_format_desc_, nb_samples));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
                                                decklink_format_desc_.duration,
@@ -401,6 +422,18 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     }
 };
 
+struct converted_frame
+{
+    core::const_frame                                          raw_frame;
+    std::shared_future<std::vector<array<const std::uint8_t>>> frame;
+
+    converted_frame(core::const_frame raw_frame, std::shared_future<std::vector<array<const std::uint8_t>>> frame)
+        : raw_frame(raw_frame)
+        , frame(frame)
+    {
+    }
+};
+
 struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 {
     const spl::shared_ptr<core::frame_converter> frame_converter_;
@@ -421,10 +454,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     const core::video_format_desc channel_format_desc_;
     const core::video_format_desc decklink_format_desc_;
 
-    std::mutex                    buffer_mutex_;
-    std::condition_variable       buffer_cond_;
-    std::queue<core::const_frame> buffer_;
-    int                           buffer_capacity_ = channel_format_desc_.field_count;
+    std::mutex                  buffer_mutex_;
+    std::condition_variable     buffer_cond_;
+    std::queue<converted_frame> buffer_;
+    int                         buffer_capacity_ = channel_format_desc_.field_count;
 
     const int buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
@@ -446,7 +479,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     std::atomic<bool> abort_request_{false};
 
   public:
-    decklink_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
+    decklink_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                      const configuration&                          config,
+                      core::video_format_desc                       channel_format_desc,
+                      int                                           channel_index)
         : frame_converter_(frame_converter)
         , channel_index_(channel_index)
         , config_(config)
@@ -520,11 +556,11 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                     nb_samples);
             }
 
-            std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size);
+            std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size, 128);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_);
+            schedule_next_video(image_data, bmdFormat8BitBGRA, nb_samples, video_scheduled_);
             for (auto& context : secondary_port_contexts_) {
-                context->schedule_next_video(image_data, 0, video_scheduled_);
+                context->schedule_next_video(image_data, bmdFormat8BitBGRA, 0, video_scheduled_);
             }
 
             video_scheduled_ += decklink_format_desc_.duration;
@@ -707,8 +743,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 }
             }
 
-            core::const_frame frame1 = pop();
-            core::const_frame frame2;
+            std::optional<converted_frame> frame1 = pop();
+            std::optional<converted_frame> frame2;
 
             bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
@@ -719,14 +755,22 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             if (abort_request_)
                 return E_FAIL;
 
+            // Skip if frames are missing
+            if (!frame1.has_value() || (isInterlaced && !frame2.has_value()))
+                return S_OK;
+
             BMDTimeValue video_display_time = video_scheduled_;
             video_scheduled_ += decklink_format_desc_.duration;
 
             std::vector<std::int32_t> audio_data;
             if (config_.embedded_audio) {
-                audio_data.insert(audio_data.end(), frame1.audio_data().begin(), frame1.audio_data().end());
+                audio_data.insert(audio_data.end(),
+                                  frame1.value().raw_frame.audio_data().begin(),
+                                  frame1.value().raw_frame.audio_data().end());
                 if (isInterlaced) {
-                    audio_data.insert(audio_data.end(), frame2.audio_data().begin(), frame2.audio_data().end());
+                    audio_data.insert(audio_data.end(),
+                                      frame2.value().raw_frame.audio_data().begin(),
+                                      frame2.value().raw_frame.audio_data().end());
                 }
             }
             // TODO: is this reliable?
@@ -736,14 +780,19 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
                 if (i == -1) {
                     // Primary port
-                    std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
-                                                                              decklink_format_desc_,
-                                                                              config_.primary,
-                                                                              frame1,
-                                                                              frame2,
-                                                                              mode_->GetFieldDominance());
+                    // std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
+                    //                                                           decklink_format_desc_,
+                    //                                                           config_.primary,
+                    //                                                           frame1,
+                    //                                                           frame2,
+                    //                                                           mode_->GetFieldDominance());
 
-                    schedule_next_video(image_data, nb_samples, video_display_time);
+                    auto buffers = frame1.value().frame.get();
+
+                    std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size, 128);
+                    std::memcpy(image_data.get(), buffers.at(0).data(), buffers.at(0).size());
+
+                    schedule_next_video(image_data, bmdFormat10BitYUV, nb_samples, video_display_time);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -772,9 +821,9 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         return S_OK;
     }
 
-    core::const_frame pop()
+    std::optional<converted_frame> pop()
     {
-        core::const_frame frame;
+        std::optional<converted_frame> frame;
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
@@ -804,10 +853,13 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
+    void schedule_next_video(std::shared_ptr<void> image_data,
+                             BMDPixelFormat        pixel_format,
+                             int                   nb_samples,
+                             BMDTimeValue          display_time)
     {
         auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
+            new decklink_frame(std::move(image_data), pixel_format, decklink_format_desc_, nb_samples));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
@@ -824,12 +876,14 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         if (frame) {
+            auto frame_future = frame_converter_->convert_from_rgba(frame, core::encoded_frame_format::decklink_v210);
+
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             if (field != core::video_field::b) {
                 // Always push a field2, as we have supplied field1
                 buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             }
-            buffer_.push(std::move(frame));
+            buffer_.push(converted_frame(std::move(frame), frame_future));
         }
         buffer_cond_.notify_all();
 
@@ -861,7 +915,8 @@ struct decklink_consumer_proxy : public core::frame_consumer
     executor                           executor_;
 
   public:
-    explicit decklink_consumer_proxy(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config)
+    explicit decklink_consumer_proxy(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                     const configuration&                          config)
         : frame_converter_(frame_converter)
         , config_(config)
         , executor_(L"decklink_consumer[" + std::to_wstring(config.primary.device_index) + L"]")
@@ -906,8 +961,8 @@ struct decklink_consumer_proxy : public core::frame_consumer
     [[nodiscard]] core::monitor::state state() const override { return get_state_for_config(config_, format_desc_); }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
                                                       const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
@@ -923,7 +978,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const spl::shared_ptr<core::frame_converter>& frame_converter,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels)
 {
     configuration config = parse_xml_config(ptree, format_repository);

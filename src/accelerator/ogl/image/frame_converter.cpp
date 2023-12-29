@@ -94,10 +94,10 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
     std::vector<std::shared_ptr<texture>> textures;
 
     // TODO - avoid this extra copy
-    auto plane_count = frame.pixel_format_desc().planes.size();
-    for (size_t i = 0; i < plane_count; i++) {
-        auto plane   = frame.pixel_format_desc().planes[i];
-        auto texture = ogl_->copy_async(frame.image_data(i), plane.width, plane.height, plane.size);
+    size_t i = 0;
+    for (auto& plane : frame.pixel_format_desc().planes) {
+        // TODO - this is failing. is the buffer going the wrong direction causing it to fail?
+        auto texture = ogl_->copy_async(frame.image_data(i++), plane.width, plane.height, plane.stride);
         textures.push_back(texture.get());
     }
 
