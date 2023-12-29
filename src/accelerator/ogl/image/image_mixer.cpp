@@ -90,7 +90,7 @@ class image_renderer
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
             static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
-            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true, depth_));
+            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
 
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
@@ -289,7 +289,8 @@ struct image_mixer::impl
                 item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
                                                             item.pix_desc.planes[n].width,
                                                             item.pix_desc.planes[n].height,
-                                                            item.pix_desc.planes[n].stride));
+                                                            item.pix_desc.planes[n].stride,
+                                                            item.pix_desc.planes[n].depth));
             }
         }
 
@@ -326,7 +327,7 @@ struct image_mixer::impl
     {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            image_data.push_back(ogl_->create_array(plane.size, plane.depth));
+            image_data.push_back(ogl_->create_array(plane.size));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
@@ -356,7 +357,7 @@ struct image_mixer::impl
                         std::vector<future_texture> textures;
                         for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
                             textures.emplace_back(self->ogl_->copy_async(
-                                image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
+                                image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, desc.planes[n].depth));
                         }
                         return std::make_shared<decltype(textures)>(std::move(textures));
                     }

@@ -66,10 +66,10 @@ struct pixel_format_desc final
         }
 
         plane(int width, int height, int stride, common::bit_depth depth)
-                : linesize(width * stride * (static_cast<int>(depth) + 1))
+                : linesize(width * stride * common::bytes_per_pixel(depth))
                 , width(width)
                 , height(height)
-                , size(width * height * stride)
+                , size(width * height * stride * common::bytes_per_pixel(depth))
                 , stride(stride)
                 , depth(depth)
         {

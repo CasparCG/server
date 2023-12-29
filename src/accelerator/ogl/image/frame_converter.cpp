@@ -37,7 +37,7 @@ core::mutable_frame ogl_frame_converter::create_frame(const void* tag, const cor
 {
     std::vector<array<std::uint8_t>> image_data;
     for (auto& plane : desc.planes) {
-        image_data.push_back(ogl_->create_array(plane.size, common::bit_depth::bit16)); // TODO: Depth
+        image_data.push_back(ogl_->create_array(plane.size));
     }
 
     using future_texture = std::shared_future<std::shared_ptr<texture>>;
@@ -57,7 +57,7 @@ core::mutable_frame ogl_frame_converter::create_frame(const void* tag, const cor
             std::vector<future_texture> textures;
             for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
                 textures.emplace_back(self->ogl_->copy_async(
-                    image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
+                    image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, desc.planes[n].depth));
             }
             return std::make_shared<decltype(textures)>(std::move(textures));
         });
@@ -81,13 +81,13 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
             auto row_bytes  = row_blocks * 128;
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
-            buffers.push_back(ogl_->create_array(row_bytes * frame.height(), common::bit_depth::bit8));
+            buffers.push_back(ogl_->create_array(row_bytes * frame.height()));
             x_count = row_blocks;
             y_count = frame.height();
             break;
     }
 
-    if (buffers.size() == 0 || x_count == 0 || y_count == 0) {
+    if (buffers.empty() || x_count == 0 || y_count == 0) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
@@ -97,7 +97,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
     size_t i = 0;
     for (auto& plane : frame.pixel_format_desc().planes) {
         // TODO - this is failing. is the buffer going the wrong direction causing it to fail?
-        auto texture = ogl_->copy_async(frame.image_data(i++), plane.width, plane.height, plane.stride);
+        auto texture = ogl_->copy_async(frame.image_data(i++), plane.width, plane.height, plane.stride, plane.depth);
         textures.push_back(texture.get());
     }
 
