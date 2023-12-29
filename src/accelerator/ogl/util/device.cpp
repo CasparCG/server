@@ -252,11 +252,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
-    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source)
+    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source, bool as_rgba8)
     {
         return spawn_async([=](yield_context yield) {
             auto buf = create_buffer(source->size(), false);
-            source->copy_to(*buf);
+            source->copy_to(*buf, as_rgba8? common::bit_depth::bit8 : source->depth());
 
             sync_queue_.push(nullptr);
 
@@ -537,9 +537,9 @@ device::copy_async(const array<const uint8_t>& source, int width, int height, in
 {
     return impl_->copy_async(source, width, height, stride, depth);
 }
-std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source)
+std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source, bool as_rgba8)
 {
-    return impl_->copy_async(source);
+    return impl_->copy_async(source, as_rgba8);
 }
 std::future<std::shared_ptr<texture>>
 device::convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)

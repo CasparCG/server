@@ -109,10 +109,10 @@ struct texture::impl
         src.unbind();
     }
 
-    void copy_to(buffer& dst)
+    void copy_to(buffer& dst, common::bit_depth depth)
     {
         dst.bind();
-        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], size_, nullptr));
+        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth)][stride_], size_, nullptr));
         dst.unbind();
     }
 };
@@ -139,7 +139,8 @@ void texture::clear() { impl_->clear(); }
 void texture::copy_from(int source) { impl_->copy_from(source); }
 #endif
 void texture::copy_from(buffer& source) { impl_->copy_from(source); }
-void texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
+void texture::copy_to(class buffer& dest, common::bit_depth depth) { impl_->copy_to(dest, depth); }
+void texture::copy_to(buffer& dest) { impl_->copy_to(dest, impl_->depth_); }
 int  texture::width() const { return impl_->width_; }
 int  texture::height() const { return impl_->height_; }
 int  texture::stride() const { return impl_->stride_; }

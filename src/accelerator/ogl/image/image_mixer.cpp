@@ -99,7 +99,7 @@ class image_renderer
 
             draw(target_texture, std::move(layers), format_desc);
 
-            auto bytes = ogl_->copy_async(target_texture).share();
+            auto bytes = ogl_->copy_async(target_texture, true).share();
 
             return std::async(std::launch::deferred, [bytes = std::move(bytes), target_texture = std::move(target_texture)]() {
                 return core::mixed_image(bytes.get(), std::move(target_texture));
