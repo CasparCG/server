@@ -382,37 +382,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
-#ifdef WIN32
-    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride)
-    {
-        return spawn_async([=](yield_context yield) {
-            auto tex = create_texture(width, height, stride, false);
-
-            tex->copy_from(source);
-
-            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-            GL(glFlush());
-
-            deadline_timer timer(service_);
-            for (auto n = 0; true; ++n) {
-                // TODO (perf) Smarter non-polling solution?
-                timer.expires_from_now(boost::posix_time::milliseconds(2));
-                timer.async_wait(yield);
-
-                auto wait = glClientWaitSync(fence, 0, 1);
-                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                    break;
-                }
-            }
-
-            glDeleteSync(fence);
-
-            return tex;
-        });
-    }
-#endif
-
     boost::property_tree::wptree info() const
     {
         boost::property_tree::wptree info;
