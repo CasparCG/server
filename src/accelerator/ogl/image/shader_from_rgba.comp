@@ -63,7 +63,7 @@ vec3 rgba_to_bt709(vec4 pixel) {
 }
 
 uint to_10bit(float val) {
-    return uint(round(clamp(val, 0, 1) * 1023));
+    return uint(round(val * 1023));
 }
 
 void decklink_v210() {
@@ -73,18 +73,19 @@ void decklink_v210() {
     uint offset = y_offset + x_offset;
     uint image_x = gl_GlobalInvocationID.x * 6;
 
-    // sample image
+    // sample image and compute words
     vec3 ycbcr0 = rgba_to_bt709(read_pixel(ivec2(image_x + 0, gl_GlobalInvocationID.y)));
+    bufferOutput[offset + 0] = to_10bit(ycbcr0.t) + (to_10bit(ycbcr0.s) << 10) + (to_10bit(ycbcr0.p) << 20);
+
     vec3 ycbcr1 = rgba_to_bt709(read_pixel(ivec2(image_x + 1, gl_GlobalInvocationID.y)));
     vec3 ycbcr2 = rgba_to_bt709(read_pixel(ivec2(image_x + 2, gl_GlobalInvocationID.y)));
+    bufferOutput[offset + 1] = to_10bit(ycbcr1.s) + (to_10bit(ycbcr2.t) << 10) + (to_10bit(ycbcr2.s) << 20);
+
     vec3 ycbcr3 = rgba_to_bt709(read_pixel(ivec2(image_x + 3, gl_GlobalInvocationID.y)));
     vec3 ycbcr4 = rgba_to_bt709(read_pixel(ivec2(image_x + 4, gl_GlobalInvocationID.y)));
-    vec3 ycbcr5 = rgba_to_bt709(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)));
-
-    // compute words
-    bufferOutput[offset + 0] = to_10bit(ycbcr0.t) + (to_10bit(ycbcr0.s) << 10) + (to_10bit(ycbcr0.p) << 20);
-    bufferOutput[offset + 1] = to_10bit(ycbcr1.s) + (to_10bit(ycbcr2.t) << 10) + (to_10bit(ycbcr2.s) << 20);
     bufferOutput[offset + 2] = to_10bit(ycbcr2.p) + (to_10bit(ycbcr3.s) << 10) + (to_10bit(ycbcr4.t) << 20);
+
+    vec3 ycbcr5 = rgba_to_bt709(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)));
     bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
 
