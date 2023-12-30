@@ -313,21 +313,6 @@ struct image_mixer::impl
         return renderer_(std::move(layers_), format_desc);
     }
 
-    std::vector<future_texture> convert_frame(const std::vector<array<const std::uint8_t>>& image_data,
-                                              const core::pixel_format_desc&                desc) const
-    {
-        const auto& plane0 = desc.planes[0]; // TODO - this doesnt feel safe, or accurate
-
-        // TODO - desc is no longer 'correct' and should probably be changed to avoid the mixer shader being aware of these formats
-
-        std::vector<future_texture> textures;
-
-        textures.emplace_back(ogl_->convert_frame(
-                image_data, plane0.width, plane0.height, plane0.width / 2)); // TODO - what is this 'format' parameter?
-
-        return textures;
-    }
-
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
     {
         std::vector<array<std::uint8_t>> image_data;
@@ -347,26 +332,12 @@ struct image_mixer::impl
                     return boost::any{};
                 }
 
-                switch (desc.format) {
-//                    case core::pixel_format::ycbcr10_420:
-//                    case core::pixel_format::ycbcr10_422:
-//                    case core::pixel_format::ycbcr10_444:
-//                    case core::pixel_format::ycbcra10_420:
-//                    case core::pixel_format::ycbcra10_422:
-//                    case core::pixel_format::ycbcra10_444: {
-//                        std::vector<future_texture> textures = self->convert_frame(image_data, desc);
-//
-//                        return std::make_shared<decltype(textures)>(std::move(textures));
-//                    }
-                    default: {
-                        std::vector<future_texture> textures;
-                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                            textures.emplace_back(self->ogl_->copy_async(
-                                image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, desc.planes[n].depth));
-                        }
-                        return std::make_shared<decltype(textures)>(std::move(textures));
-                    }
+                std::vector<future_texture> textures;
+                for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+                    textures.emplace_back(self->ogl_->copy_async(
+                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, desc.planes[n].depth));
                 }
+                return std::make_shared<decltype(textures)>(std::move(textures));
             });
     }
 

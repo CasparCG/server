@@ -292,6 +292,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
+    /*
+     * In its current form, this is not useful/complete. But it will be needed in some form for a producer 'soon'
     std::future<std::shared_ptr<texture>>
     convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int width_samples)
     {
@@ -313,8 +315,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             return tex;
         });
     }
-
-
+    */
 
     std::future<void> convert_from_texture(const std::shared_ptr<texture>& texture,
                                            const std::vector<array<const uint8_t>>&     buffers,
@@ -509,11 +510,6 @@ device::copy_async(const array<const uint8_t>& source, int width, int height, in
 std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source, bool as_rgba8)
 {
     return impl_->copy_async(source, as_rgba8);
-}
-std::future<std::shared_ptr<texture>>
-device::convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format)
-{
-    return impl_->convert_frame(sources, width, height, format);
 }
 std::future<void> device::convert_from_texture(const std::shared_ptr<texture>& texture,
                                                const std::vector<array<const uint8_t>>&     buffers,

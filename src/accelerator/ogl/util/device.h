@@ -61,9 +61,6 @@ class device final
                                       copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source, bool as_rgba8);
 
-    std::future<std::shared_ptr<texture>>
-    convert_frame(const std::vector<array<const uint8_t>>& sources, int width, int height, int format);
-
     std::future<void> convert_from_texture(const std::shared_ptr<texture>& texture,
                                            const std::vector<array<const uint8_t>>&     buffers,
                                            const convert_from_texture_description& description,
