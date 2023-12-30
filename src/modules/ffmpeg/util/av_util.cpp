@@ -170,47 +170,38 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
     switch (desc.format) {
         case core::pixel_format::gray:
         case core::pixel_format::luma: {
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1));
+            desc.planes.emplace_back(linesizes[0], height, 1);
             return desc;
         }
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 3, height, 3));
+            desc.planes.emplace_back(linesizes[0] / 3, height, 3);
             return desc;
         }
         case core::pixel_format::bgra:
         case core::pixel_format::argb:
         case core::pixel_format::rgba:
         case core::pixel_format::abgr: {
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4));
+            desc.planes.emplace_back(linesizes[0] / 4, height, 4);
             return desc;
         }
         case core::pixel_format::ycbcr:
         case core::pixel_format::ycbcra: {
             // Find chroma height
-            // av_image_fill_plane_sizes is not available until ffmpeg 4.4, but we still need to support ffmpeg 4.2, so
-            // we fall back to calling av_image_fill_pointers with a NULL image buffer. We can't unconditionally use
-            // av_image_fill_pointers because it will not accept a NULL buffer on ffmpeg >= 5.0.
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 56, 100)
             size_t    sizes[4];
             ptrdiff_t linesizes1[4];
             for (int i = 0; i < 4; i++)
                 linesizes1[i] = linesizes[i];
             av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
-            auto size2 = static_cast<int>(sizes[1]);
-#else
-            uint8_t* dummy_pict_data[4];
-            av_image_fill_pointers(dummy_pict_data, pix_fmt, height, NULL, linesizes);
-            auto size2 = static_cast<int>(dummy_pict_data[2] - dummy_pict_data[1]);
-#endif
-            auto h2 = size2 / linesizes[1];
 
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1));
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1));
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], h2, 1));
+            auto h2 = static_cast<int>(sizes[1]) / linesizes[1];
+
+            desc.planes.emplace_back(linesizes[0], height, 1);
+            desc.planes.emplace_back(linesizes[1], h2, 1);
+            desc.planes.emplace_back(linesizes[2], h2, 1);
 
             if (desc.format == core::pixel_format::ycbcra)
-                desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1));
+                desc.planes.emplace_back(linesizes[3], height, 1);
 
             return desc;
         }
@@ -236,8 +227,8 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             return desc;
         }
         case core::pixel_format::uyvy: {
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 2, height, 2));
-            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4));
+            desc.planes.emplace_back(linesizes[0] / 2, height, 2);
+            desc.planes.emplace_back(linesizes[0] / 4, height, 4);
 
             data_map.clear();
             data_map.push_back(0);

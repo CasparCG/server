@@ -319,11 +319,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
     */
 
-    std::future<void> convert_from_texture(const std::shared_ptr<texture>&         texture,
-                                           const array<const uint8_t>&             source,
-                                           const convert_from_texture_description& description,
-                                           unsigned int                            x_count,
-                                           unsigned int                            y_count)
+    std::future<array<const uint8_t>> convert_from_texture(const std::shared_ptr<texture>&         texture,
+                                                           int                                     buffer_size,
+                                                           const convert_from_texture_description& description,
+                                                           unsigned int                            x_count,
+                                                           unsigned int                            y_count)
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
@@ -345,14 +345,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
             GL(glBindImageTexture(0, texid_16bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16));
             GL(glBindImageTexture(1, texid_8bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8));
 
-            auto tmp = source.storage<std::shared_ptr<buffer>>();
-            if (!tmp) {
+            array<const uint8_t> output_buffer = create_array(buffer_size); // TODO - tidy this?
+            auto                 buffer_ptr    = output_buffer.storage<std::shared_ptr<buffer>>();
+            if (!buffer_ptr) {
                 CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
             }
+            GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffer_ptr->get()->id()));
 
-            GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tmp->get()->id()));
-
-            // TODO - binding 2 description
             auto description_buffer = create_buffer(sizeof(convert_from_texture_description), false);
             std::memcpy(description_buffer->data(), &description, sizeof(convert_from_texture_description));
             GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, description_buffer->id()));
@@ -378,6 +377,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
             }
 
             glDeleteSync(fence);
+
+            return output_buffer;
         });
     }
 
@@ -508,13 +509,13 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source, as_rgba8);
 }
-std::future<void> device::convert_from_texture(const std::shared_ptr<texture>&         texture,
-                                               const array<const uint8_t>&             source,
-                                               const convert_from_texture_description& description,
-                                               unsigned int                            x_count,
-                                               unsigned int                            y_count)
+std::future<array<const uint8_t>> device::convert_from_texture(const std::shared_ptr<texture>&         texture,
+                                                               int                                     buffer_size,
+                                                               const convert_from_texture_description& description,
+                                                               unsigned int                            x_count,
+                                                               unsigned int                            y_count)
 {
-    return impl_->convert_from_texture(texture, source, description, x_count, y_count);
+    return impl_->convert_from_texture(texture, buffer_size, description, x_count, y_count);
 }
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }

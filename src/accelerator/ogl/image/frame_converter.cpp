@@ -77,17 +77,17 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
                                        bool                             key_only,
                                        bool                             straighten)
 {
-    array<const std::uint8_t> buffer;
-    unsigned int              x_count        = 0;
-    unsigned int              y_count        = 0;
-    int                       words_per_line = 0;
+    int          buffer_size    = 0;
+    unsigned int x_count        = 0;
+    unsigned int y_count        = 0;
+    int          words_per_line = 0;
 
     switch (format) {
         case core::encoded_frame_format::rgba16:
         case core::encoded_frame_format::bgra16:
             x_count        = frame.width();
             y_count        = frame.height();
-            buffer         = ogl_->create_array(frame.width() * frame.height() * 8);
+            buffer_size    = frame.width() * frame.height() * 8;
             words_per_line = frame.width() * 2;
 
             break;
@@ -96,14 +96,14 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
             auto row_bytes  = row_blocks * 128;
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
-            buffer         = ogl_->create_array(row_bytes * frame.height());
+            buffer_size    = row_bytes * frame.height();
             x_count        = row_blocks * 8;
             y_count        = frame.height();
             words_per_line = row_blocks * 32;
             break;
     }
 
-    if (buffer.size() == 0 || x_count == 0 || y_count == 0) {
+    if (buffer_size == 0 || x_count == 0 || y_count == 0) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
@@ -121,13 +121,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
     description.key_only       = key_only;
     description.straighten     = straighten;
 
-    auto future_conversion = ogl_->convert_from_texture(texture_ptr, buffer, description, x_count, y_count);
-
-    return std::async(std::launch::deferred, [buffer, future_conversion = std::move(future_conversion)]() mutable {
-        future_conversion.get();
-
-        return buffer;
-    });
+    return ogl_->convert_from_texture(texture_ptr, buffer_size, description, x_count, y_count);
 }
 
 common::bit_depth ogl_frame_converter::get_frame_bitdepth(const core::const_frame& frame)

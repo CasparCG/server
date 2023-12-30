@@ -54,12 +54,6 @@ struct texture::impl
         , depth_(depth)
         , size_(width * height * stride * common::bytes_per_pixel(depth))
     {
-        if (stride == 5) {
-            size_ = width * height * 16;
-        } else if (stride == 6) {
-            size_ = width * height * 2;
-        }
-
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
         GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
         GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
