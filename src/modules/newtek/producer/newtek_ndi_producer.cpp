@@ -180,6 +180,15 @@ struct newtek_ndi_producer : public core::frame_producer
                 av_frame->data[0]     = video_frame.p_data;
                 av_frame->linesize[0] = video_frame.line_stride_in_bytes;
                 switch (video_frame.FourCC) {
+                    case NDIlib_FourCC_type_UYVY:
+                        av_frame->format = AV_PIX_FMT_UYVY422;
+                        break;
+                    // case NDIlib_FourCC_type_UYVA:
+                    // case NDIlib_FourCC_type_P216:
+                    // case NDIlib_FourCC_type_PA16:
+                    // case NDIlib_FourCC_type_YV12:
+                    // case NDIlib_FourCC_type_I420:
+                    // case NDIlib_FourCC_type_NV12:
                     case NDIlib_FourCC_type_BGRA:
                         av_frame->format = AV_PIX_FMT_BGRA;
                         break;
@@ -191,9 +200,6 @@ struct newtek_ndi_producer : public core::frame_producer
                         break;
                     case NDIlib_FourCC_type_RGBX:
                         av_frame->format = AV_PIX_FMT_RGBA;
-                        break;
-                    case NDIlib_FourCC_type_UYVY:
-                        av_frame->format = AV_PIX_FMT_UYVY422;
                         break;
                     default: // should never happen because library handles the conversion for us
                         av_frame->format = AV_PIX_FMT_BGRA;
