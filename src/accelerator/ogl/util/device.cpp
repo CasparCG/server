@@ -255,8 +255,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source, bool as_rgba8)
     {
         return spawn_async([=](yield_context yield) {
-            auto buf = create_buffer(as_rgba8 ? source->size() / 2 : source->size(), false);
-            source->copy_to(*buf, as_rgba8 ? common::bit_depth::bit8 : source->depth());
+            auto bit_depth = as_rgba8 ? common::bit_depth::bit8 : source->depth();
+            auto buf       = create_buffer(
+                source->width() * source->height() * source->stride() * common::bytes_per_pixel(bit_depth), false);
+            source->copy_to(*buf, bit_depth);
 
             sync_queue_.push(nullptr);
 

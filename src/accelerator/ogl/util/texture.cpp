@@ -52,7 +52,7 @@ struct texture::impl
         , height_(height)
         , stride_(stride)
         , depth_(depth)
-        , size_(width * height * stride * (1 + static_cast<int>(depth)))
+        , size_(width * height * stride * common::bytes_per_pixel(depth))
     {
         if (stride == 5) {
             size_ = width * height * 16;
