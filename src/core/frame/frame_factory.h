@@ -43,10 +43,10 @@ class frame_converter
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
-    virtual class draw_frame convert_frame(const class mutable_frame& frame) = 0;
+    virtual class draw_frame convert_to_rgba(const class mutable_frame& frame) = 0;
 
-    virtual std::shared_future<std::vector<array<const std::uint8_t>>>
-    convert_from_rgba(const core::const_frame& frame, const encoded_frame_format format) = 0;
+    virtual std::shared_future<array<const std::uint8_t>> convert_from_rgba(const core::const_frame& frame,
+                                                                            encoded_frame_format     format) = 0;
 };
 
 class frame_factory

@@ -65,19 +65,19 @@ core::mutable_frame ogl_frame_converter::create_frame(const void* tag, const cor
                                });
 }
 
-core::draw_frame ogl_frame_converter::convert_frame(const core::mutable_frame& frame)
+core::draw_frame ogl_frame_converter::convert_to_rgba(const core::mutable_frame& frame)
 {
     // TODO
     return core::draw_frame{};
 }
 
-std::shared_future<std::vector<array<const std::uint8_t>>>
+std::shared_future<array<const std::uint8_t>>
 ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const core::encoded_frame_format format)
 {
-    std::vector<array<const std::uint8_t>> buffers;
-    int                                    x_count        = 0;
-    int                                    y_count        = 0;
-    int                                    words_per_line = 0;
+    array<const std::uint8_t> source;
+    int                       x_count        = 0;
+    int                       y_count        = 0;
+    int                       words_per_line = 0;
 
     switch (format) {
         case core::encoded_frame_format::decklink_v210:
@@ -85,14 +85,14 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
             auto row_bytes  = row_blocks * 128;
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
-            buffers.emplace_back(ogl_->create_array(row_bytes * frame.height()));
+            source         = ogl_->create_array(row_bytes * frame.height());
             x_count        = row_blocks * 8;
             y_count        = frame.height();
             words_per_line = row_blocks * 32;
             break;
     }
 
-    if (buffers.empty() || x_count == 0 || y_count == 0) {
+    if (source.size() == 0 || x_count == 0 || y_count == 0) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
@@ -107,13 +107,13 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame& frame, const cor
     description.height         = frame.height();
     description.words_per_line = words_per_line;
 
-    auto future_conversion = ogl_->convert_from_texture(texture_ptr, buffers, description, x_count, y_count);
+    auto future_conversion = ogl_->convert_from_texture(texture_ptr, source, description, x_count, y_count);
 
     return std::async(std::launch::deferred,
-                      [buffers = std::move(buffers), future_conversion = std::move(future_conversion)]() mutable {
+                      [source = std::move(source), future_conversion = std::move(future_conversion)]() mutable {
                           future_conversion.get();
 
-                          return std::move(buffers);
+                          return std::move(source);
                       });
 }
 

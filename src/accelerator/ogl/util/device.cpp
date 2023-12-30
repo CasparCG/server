@@ -317,11 +317,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
     */
 
-    std::future<void> convert_from_texture(const std::shared_ptr<texture>&          texture,
-                                           const std::vector<array<const uint8_t>>& buffers,
-                                           const convert_from_texture_description&  description,
-                                           int                                      x_count,
-                                           int                                      y_count)
+    std::future<void> convert_from_texture(const std::shared_ptr<texture>&         texture,
+                                           const array<const uint8_t>&             source,
+                                           const convert_from_texture_description& description,
+                                           int                                     x_count,
+                                           int                                     y_count)
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
@@ -343,16 +343,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
             GL(glBindImageTexture(0, texid_16bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16));
             GL(glBindImageTexture(1, texid_8bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8));
 
-            // TODO: only a single buffer?
-            //            for (size_t i = 0; i < buffers.size(); i++) {
-            auto& source = buffers[0];
-            auto  tmp    = source.storage<std::shared_ptr<buffer>>();
+            auto tmp = source.storage<std::shared_ptr<buffer>>();
             if (!tmp) {
                 CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
             }
 
             GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tmp->get()->id()));
-            //            }
 
             // TODO - binding 2 description
             auto description_buffer = create_buffer(sizeof(convert_from_texture_description), false);
@@ -391,8 +387,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         size_t                       total_pooled_device_buffer_size  = 0;
         size_t                       total_pooled_device_buffer_count = 0;
 
-        for (size_t i = 0; i < device_pools_.size(); ++i) {
-            auto& depth_pools = device_pools_.at(i);
+        for (const auto& depth_pools : device_pools_) {
             for (size_t i = 0; i < depth_pools.size(); ++i) {
                 auto& pools      = depth_pools.at(i);
                 bool  mipmapping = i > 3;
@@ -511,13 +506,13 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source, as_rgba8);
 }
-std::future<void> device::convert_from_texture(const std::shared_ptr<texture>&          texture,
-                                               const std::vector<array<const uint8_t>>& buffers,
-                                               const convert_from_texture_description&  description,
-                                               int                                      x_count,
-                                               int                                      y_count)
+std::future<void> device::convert_from_texture(const std::shared_ptr<texture>&         texture,
+                                               const array<const uint8_t>&             source,
+                                               const convert_from_texture_description& description,
+                                               int                                     x_count,
+                                               int                                     y_count)
 {
-    return impl_->convert_from_texture(texture, buffers, description, x_count, y_count);
+    return impl_->convert_from_texture(texture, source, description, x_count, y_count);
 }
 void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }

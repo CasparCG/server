@@ -62,11 +62,11 @@ class device final
     copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source, bool as_rgba8);
 
-    std::future<void> convert_from_texture(const std::shared_ptr<texture>&          texture,
-                                           const std::vector<array<const uint8_t>>& buffers,
-                                           const convert_from_texture_description&  description,
-                                           int                                      x_count,
-                                           int                                      y_count);
+    std::future<void> convert_from_texture(const std::shared_ptr<texture>&         texture,
+                                           const array<const uint8_t>&             source,
+                                           const convert_from_texture_description& description,
+                                           int                                     x_count,
+                                           int                                     y_count);
 
     template <typename Func>
     auto dispatch_async(Func&& func)

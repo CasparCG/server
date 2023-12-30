@@ -424,12 +424,12 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
 struct converted_frame
 {
-    core::const_frame                                          raw_frame;
-    std::shared_future<std::vector<array<const std::uint8_t>>> frame;
+    core::const_frame                             raw_frame;
+    std::shared_future<array<const std::uint8_t>> frame;
 
-    converted_frame(core::const_frame raw_frame, std::shared_future<std::vector<array<const std::uint8_t>>> frame)
+    converted_frame(const core::const_frame& raw_frame, std::shared_future<array<const std::uint8_t>> frame)
         : raw_frame(raw_frame)
-        , frame(frame)
+        , frame(std::move(frame))
     {
     }
 };
@@ -780,6 +780,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
                 if (i == -1) {
                     // Primary port
+                    // TODO - reimplement this
                     // std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
                     //                                                           decklink_format_desc_,
                     //                                                           config_.primary,
@@ -787,10 +788,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     //                                                           frame2,
                     //                                                           mode_->GetFieldDominance());
 
-                    auto buffers = frame1.value().frame.get();
+                    auto buffer = frame1.value().frame.get();
 
                     std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size, 128);
-                    std::memcpy(image_data.get(), buffers.at(0).data(), buffers.at(0).size());
+                    std::memcpy(image_data.get(), buffer.data(), buffer.size());
 
                     schedule_next_video(image_data, bmdFormat10BitYUV, nb_samples, video_display_time);
 
@@ -883,7 +884,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 // Always push a field2, as we have supplied field1
                 buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             }
-            buffer_.push(converted_frame(std::move(frame), frame_future));
+            buffer_.push(converted_frame(frame, frame_future));
         }
         buffer_cond_.notify_all();
 
