@@ -492,11 +492,12 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.raw_channel->output().add(
-        ctx.static_context->consumer_registry->create_consumer({L"IMAGE"},
-                                                               ctx.static_context->format_repository,
-                                                               ctx.channel.raw_channel->frame_converter(),
-                                                               get_channels(ctx)));
+    std::vector<std::wstring> params = {L"IMAGE"};
+    params.resize(ctx.parameters.size() + 1);
+    std::copy(std::cbegin(ctx.parameters), std::cend(ctx.parameters), params.begin() + 1);
+
+    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
+        params, ctx.static_context->format_repository, ctx.channel.raw_channel->frame_converter(), get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }
