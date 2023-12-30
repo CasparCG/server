@@ -17,6 +17,7 @@ layout(std430, binding = 3) buffer description_layout
     uint frame_width;
     uint frame_height;
     uint words_per_line;
+    bool key_only;
 };
 
 vec4 read_pixel(ivec2 coord) {
@@ -28,6 +29,11 @@ vec4 read_pixel(ivec2 coord) {
 }
 
 vec3 rgba_to_bt709(vec4 pixel) {
+    if (key_only) {
+        // TODO - verify everything about this
+        return vec3(pixel.a, 0.5, 0.5);
+    }
+
     float KR = 0.2126;
     float KB = 0.0722;
     float KG = 1.0 - KR - KB;
