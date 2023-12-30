@@ -878,7 +878,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
         if (frame) {
             auto frame_future = frame_converter_->convert_from_rgba(
-                frame, core::encoded_frame_format::decklink_v210, config_.primary.key_only);
+                frame, core::encoded_frame_format::decklink_v210, config_.primary.key_only, false);
 
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             if (field != core::video_field::b) {

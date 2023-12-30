@@ -43,6 +43,7 @@ struct convert_from_texture_description
     uint32_t height;
     uint32_t words_per_line;
     bool     key_only;
+    bool     straighten;
 };
 
 class device final

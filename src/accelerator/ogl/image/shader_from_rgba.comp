@@ -19,14 +19,21 @@ layout(std430, binding = 3) buffer description_layout
     uint frame_height;
     uint words_per_line;
     bool key_only;
+    bool straigthen;
 };
 
+vec4 straighten_pixel(vec4 pixel) {
+    return vec4(
+        pixel.r / pixel.a,
+        pixel.g / pixel.a,
+        pixel.b / pixel.a,
+        pixel.a
+    );
+}
+
 vec4 read_pixel(ivec2 coord) {
-    if (is_16_bit){
-        return imageLoad(imgInput16bit, coord);
-    } else {
-        return imageLoad(imgInput8bit, coord);
-    }
+    vec4 pixel = is_16_bit ? imageLoad(imgInput16bit, coord) : imageLoad(imgInput8bit, coord);
+    return straighten_pixel(pixel);
 }
 
 vec3 rgba_to_bt709(vec4 pixel) {
@@ -95,6 +102,7 @@ void decklink_v210() {
     vec3 ycbcr5 = rgba_to_bt709(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)));
     bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
+
 
 void rgba16() {
     // TODO: is this excessive to do in a shader?

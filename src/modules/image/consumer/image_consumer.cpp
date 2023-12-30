@@ -98,15 +98,11 @@ struct image_consumer : public core::frame_consumer
                                                        FreeImage_Unload);
 
                     array<const std::uint8_t> rgba16_bytes =
-                        frame_converter->convert_from_rgba(frame, IMAGE_ENCODED_FORMAT, false).get();
+                        frame_converter->convert_from_rgba(frame, IMAGE_ENCODED_FORMAT, false, true).get();
 
                     std::memcpy(FreeImage_GetBits(bitmap.get()), rgba16_bytes.data(), rgba16_bytes.size());
 
-                    // TODO - this doesnt work
-                    image_view<bgra16_pixel> original_view(FreeImage_GetBits(bitmap.get()),
-                                                         static_cast<int>(frame.width()),
-                                                         static_cast<int>(frame.height()));
-                    unmultiply(original_view, 65535);
+                    // Note: premultiplication is done on the gpu
                 } else {
                     bitmap = std::shared_ptr<FIBITMAP>(
                         FreeImage_AllocateT(
@@ -119,7 +115,7 @@ struct image_consumer : public core::frame_consumer
                     image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()),
                                                          static_cast<int>(frame.width()),
                                                          static_cast<int>(frame.height()));
-                    unmultiply(original_view, 255);
+                    unmultiply(original_view);
                 }
 
                 FreeImage_FlipVertical(bitmap.get());

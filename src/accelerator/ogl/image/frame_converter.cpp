@@ -74,7 +74,8 @@ core::draw_frame ogl_frame_converter::convert_to_rgba(const core::mutable_frame&
 std::shared_future<array<const std::uint8_t>>
 ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
                                        const core::encoded_frame_format format,
-                                       bool                             key_only)
+                                       bool                             key_only,
+                                       bool                             straighten)
 {
     array<const std::uint8_t> buffer;
     unsigned int              x_count        = 0;
@@ -118,6 +119,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
     description.height         = frame.height();
     description.words_per_line = words_per_line;
     description.key_only       = key_only;
+    description.straighten     = straighten;
 
     auto future_conversion = ogl_->convert_from_texture(texture_ptr, buffer, description, x_count, y_count);
 

@@ -59,40 +59,6 @@ class bgra_pixel
     uint8_t&       a() { return a_; }
 };
 
-/**
- * A POD pixel with a compatible memory layout as a 16bit BGRA pixel (32bits in
- * total).
- * <p>
- * Models the PackedPixel concept used by for example image_view. Also models
- * the RGBAPixel concept which does not care about the order between RGBA but
- * only requires that all 4 channel has accessors.
- */
-class bgra16_pixel
-{
-    uint16_t b_;
-    uint16_t g_;
-    uint16_t r_;
-    uint16_t a_;
-
-  public:
-    bgra16_pixel(uint16_t b = 0, uint16_t g = 0, uint16_t r = 0, uint16_t a = 0)
-        : b_(b)
-        , g_(g)
-        , r_(r)
-        , a_(a)
-    {
-    }
-
-    const uint16_t& b() const { return b_; }
-    uint16_t&       b() { return b_; }
-    const uint16_t& g() const { return g_; }
-    uint16_t&       g() { return g_; }
-    const uint16_t& r() const { return r_; }
-    uint16_t&       r() { return r_; }
-    const uint16_t& a() const { return a_; }
-    uint16_t&       a() { return a_; }
-};
-
 template <class PackedPixel>
 class image_sub_view;
 
