@@ -92,6 +92,8 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
             static const monitor::state empty;
             return empty;
         }
+
+        bool is_ready() override { return true; }
     };
 
     static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();

@@ -112,7 +112,7 @@ class frame_producer
      * Some producers take a couple of frames before they produce frames.
      * While this returns false, the previous producer will be left running for a limited number of frames.
      */
-    virtual bool is_ready() { return !!first_frame_; };
+    virtual bool is_ready() = 0;
 };
 
 class const_producer : public core::frame_producer

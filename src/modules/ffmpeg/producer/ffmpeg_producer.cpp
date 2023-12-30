@@ -121,6 +121,8 @@ struct ffmpeg_producer : public core::frame_producer
                                  : static_cast<std::uint32_t>(producer_->duration());
     }
 
+    bool is_ready() override { return producer_->is_ready(); }
+
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         std::wstring result;

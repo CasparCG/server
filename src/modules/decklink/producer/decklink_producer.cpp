@@ -728,6 +728,12 @@ class decklink_producer : public IDeckLinkInputCallback
         }
     }
 
+    bool is_ready()
+    {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
+        return !buffer_.empty() || last_frame_;
+    }
+
     std::wstring print() const
     {
         return model_name_ + L" [" + std::to_wstring(device_index_) + L"|" + input_format.name + L"]";
@@ -791,6 +797,8 @@ class decklink_producer_proxy : public core::frame_producer
     {
         return core::draw_frame::still(producer_->get_frame(field, true));
     }
+
+    bool is_ready() override { return producer_->is_ready(); }
 
     uint32_t nb_frames() const override { return length_; }
 

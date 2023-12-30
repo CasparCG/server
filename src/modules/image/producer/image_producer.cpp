@@ -102,6 +102,8 @@ struct image_producer : public core::frame_producer
 
     core::draw_frame first_frame(const core::video_field field) override { return frame_; }
 
+    bool is_ready() override { return true; }
+
     core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         state_["file/path"] = description_;

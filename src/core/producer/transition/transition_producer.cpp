@@ -202,6 +202,8 @@ class transition_producer : public frame_producer
     }
 
     core::monitor::state state() const override { return state_; }
+
+    bool is_ready() override { return dst_producer_->is_ready(); }
 };
 
 spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,

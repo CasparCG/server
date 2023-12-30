@@ -401,6 +401,8 @@ struct image_scroll_producer : public core::frame_producer
     }
 
     core::monitor::state state() const override { return state_; }
+
+    bool is_ready() override { return !frames_.empty(); }
 };
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies,

@@ -264,6 +264,8 @@ class sting_producer : public frame_producer
     }
 
     monitor::state state() const override { return state_; }
+
+    bool is_ready() override { return dst_producer_->is_ready(); }
 };
 
 spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,

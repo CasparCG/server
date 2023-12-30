@@ -920,6 +920,12 @@ struct AVProducer::Impl
         return core::draw_frame::still(frame_);
     }
 
+    bool is_ready()
+    {
+        boost::lock_guard<boost::mutex> lock(buffer_mutex_);
+        return !buffer_.empty() || frame_;
+    }
+
     core::draw_frame next_frame(const core::video_field field)
     {
         CASPAR_SCOPE_EXIT { update_state(); };
@@ -1196,6 +1202,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
 core::draw_frame AVProducer::next_frame(const core::video_field field) { return impl_->next_frame(field); }
 
 core::draw_frame AVProducer::prev_frame(const core::video_field field) { return impl_->prev_frame(field); }
+
+bool AVProducer::is_ready() { return impl_->is_ready(); }
 
 AVProducer& AVProducer::seek(int64_t time)
 {

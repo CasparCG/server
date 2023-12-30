@@ -108,6 +108,8 @@ class color_producer : public frame_producer
     std::wstring name() const override { return L"color"; }
 
     core::monitor::state state() const override { return state_; }
+
+    bool is_ready() override { return true; }
 };
 
 std::wstring get_hex_color(const std::wstring& str)

@@ -149,6 +149,8 @@ class route_producer
         }
     }
 
+    bool is_ready() override { return true; }
+
     std::wstring print() const override { return L"route[" + route_->name + L"]"; }
 
     std::wstring name() const override { return L"route"; }

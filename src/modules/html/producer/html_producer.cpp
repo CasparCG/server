@@ -198,6 +198,12 @@ class html_client
 
     core::draw_frame last_frame() const { return last_frame_; }
 
+    bool is_ready() const
+    {
+        std::lock_guard<std::mutex> lock(frames_mutex_);
+        return !frames_.empty() || last_frame_;
+    }
+
     void execute_javascript(const std::wstring& javascript)
     {
         if (!loaded_) {
@@ -473,6 +479,14 @@ class html_producer : public core::frame_producer
     }
 
     core::draw_frame first_frame(const core::video_field field) override { return receive_impl(field, 0); }
+
+    bool is_ready() override
+    {
+        if (client_ != nullptr) {
+            return client_->is_ready();
+        }
+        return false;
+    }
 
     core::draw_frame last_frame(const core::video_field field) override
     {

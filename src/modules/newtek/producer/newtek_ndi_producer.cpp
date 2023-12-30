@@ -139,13 +139,20 @@ struct newtek_ndi_producer : public core::frame_producer
         }
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
-            if (frames_.size() > 0) {
+            if (!frames_.empty()) {
                 last_frame_ = frames_.front();
                 frames_.pop();
             }
             return last_frame_;
         }
     }
+
+    bool is_ready() override
+    {
+        std::lock_guard<std::mutex> lock(frames_mutex_);
+        return !frames_.empty() || last_frame_;
+    }
+
     bool prepare_next_frame()
     {
         try {

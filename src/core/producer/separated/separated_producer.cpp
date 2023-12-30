@@ -134,6 +134,8 @@ class separated_producer : public frame_producer
     std::wstring name() const override { return L"separated"; }
 
     core::monitor::state state() const override { return state_; }
+
+    bool is_ready() override { return key_producer_->is_ready() && fill_producer_->is_ready(); }
 };
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill,

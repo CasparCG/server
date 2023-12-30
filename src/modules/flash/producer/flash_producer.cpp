@@ -433,6 +433,8 @@ struct flash_producer : public core::frame_producer
         return frame;
     }
 
+    bool is_ready() override { return !output_buffer_.empty() || last_frame_; }
+
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         auto param = boost::algorithm::join(params, L" ");
