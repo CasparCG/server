@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
@@ -24,7 +24,6 @@
 #include <GL/glew.h>
 #include <memory>
 #include <string>
-#include <type_traits>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -34,26 +33,12 @@ class compute_shader final
     compute_shader& operator=(const compute_shader&);
 
   public:
-    compute_shader(const std::string& compute_source_str);
+    explicit compute_shader(const std::string& compute_source_str);
     ~compute_shader();
-
-    void set(const std::string& name, bool value);
-    void set(const std::string& name, int value);
-    void set(const std::string& name, float value);
-    void set(const std::string& name, double value0, double value1);
-    void set(const std::string& name, double value);
-
-    GLint get_attrib_location(const char* name);
-
-    template <typename E>
-    typename std::enable_if<std::is_enum<E>::value, void>::type set(const std::string& name, E value)
-    {
-        set(name, static_cast<typename std::underlying_type<E>::type>(value));
-    }
 
     void use() const;
 
-    int id() const;
+    [[nodiscard]] GLuint id() const;
 
   private:
     struct impl;
