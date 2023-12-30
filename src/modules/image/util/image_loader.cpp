@@ -66,10 +66,12 @@ loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMA
         format = IMAGE_BGR_FORMAT;
         stride = 3;
     } else if (allow_all_formats && bpp == 64) {
+        // freeimage appears to ignore endianness
         format = core::pixel_format::rgba;
         stride = 4;
         depth  = common::bit_depth::bit16;
     } else if (allow_all_formats && bpp == 48) {
+        // freeimage appears to ignore endianness
         format = core::pixel_format::rgb;
         stride = 3;
         depth  = common::bit_depth::bit16;

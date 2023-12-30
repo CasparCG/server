@@ -50,12 +50,6 @@
 
 namespace caspar { namespace image {
 
-#if FREEIMAGE_COLORORDER == FREEIMAGE_COLORORDER_BGR
-#define IMAGE_ENCODED_FORMAT core::encoded_frame_format::bgra16
-#else
-#define IMAGE_ENCODED_FORMAT core::encoded_frame_format::rgba16
-#endif
-
 struct image_consumer : public core::frame_consumer
 {
     const spl::shared_ptr<core::frame_converter> frame_converter_;
@@ -97,8 +91,10 @@ struct image_consumer : public core::frame_consumer
                                                                            static_cast<int>(frame.height())),
                                                        FreeImage_Unload);
 
+                    // freeimage appears to ignore endianness
                     array<const std::uint8_t> rgba16_bytes =
-                        frame_converter->convert_from_rgba(frame, IMAGE_ENCODED_FORMAT, false, true).get();
+                        frame_converter->convert_from_rgba(frame, core::encoded_frame_format::rgba16, false, true)
+                            .get();
 
                     std::memcpy(FreeImage_GetBits(bitmap.get()), rgba16_bytes.data(), rgba16_bytes.size());
 

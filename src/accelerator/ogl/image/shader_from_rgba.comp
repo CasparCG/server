@@ -114,9 +114,8 @@ void rgba16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    // Note: the texture is stored in reverse order
-    bufferOutput[offset + 0] = uint(pixel.b * 65535) + (uint(pixel.g * 65535) << 16);
-    bufferOutput[offset + 1] = uint(pixel.r * 65535) + (uint(pixel.a * 65535) << 16);
+    bufferOutput[offset + 0] = uint(pixel.r * 65535) + (uint(pixel.g * 65535) << 16);
+    bufferOutput[offset + 1] = uint(pixel.b * 65535) + (uint(pixel.a * 65535) << 16);
 }
 
 void bgra16() {
@@ -129,9 +128,8 @@ void bgra16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    // Note: the texture is stored in reverse order
-    bufferOutput[offset + 0] = uint(pixel.r * 65535) + (uint(pixel.g * 65535) << 16);
-    bufferOutput[offset + 1] = uint(pixel.b * 65535) + (uint(pixel.a * 65535) << 16);
+    bufferOutput[offset + 0] = uint(pixel.b * 65535) + (uint(pixel.g * 65535) << 16);
+    bufferOutput[offset + 1] = uint(pixel.r * 65535) + (uint(pixel.a * 65535) << 16);
 }
 
 void main() {
