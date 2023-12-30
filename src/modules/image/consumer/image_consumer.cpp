@@ -32,7 +32,6 @@
 #include <common/env.h>
 #include <common/future.h>
 #include <common/log.h>
-#include <common/param.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
@@ -61,17 +60,13 @@ struct image_consumer : public core::frame_consumer
 {
     const spl::shared_ptr<core::frame_converter> frame_converter_;
     const std::wstring                           filename_;
-    const bool                                   depth16_;
 
   public:
     // frame_consumer
 
-    explicit image_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
-                            std::wstring                                  filename,
-                            bool                                          depth16)
+    explicit image_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, std::wstring filename)
         : frame_converter_(frame_converter)
         , filename_(std::move(filename))
-        , depth16_(depth16)
     {
     }
 
@@ -79,7 +74,9 @@ struct image_consumer : public core::frame_consumer
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        std::thread async([frame_converter = frame_converter_, depth16 = depth16_, frame, filename = filename_] {
+        auto filename = filename_;
+
+        std::thread async([frame_converter = frame_converter_, frame, filename] {
             try {
                 auto filename2 = filename;
 
@@ -90,10 +87,11 @@ struct image_consumer : public core::frame_consumer
                 else
                     filename2 = env::media_folder() + filename2 + L".png";
 
-                std::shared_ptr<FIBITMAP> bitmap;
-                common::bit_depth         frame_depth = frame_converter->get_frame_bitdepth(frame);
+                common::bit_depth frame_depth = frame_converter->get_frame_bitdepth(frame);
 
-                if (depth16 && frame_depth != common::bit_depth::bit8) {
+                std::shared_ptr<FIBITMAP> bitmap;
+
+                if (frame_depth != common::bit_depth::bit8) {
                     bitmap = std::shared_ptr<FIBITMAP>(FreeImage_AllocateT(FIT_RGBA16,
                                                                            static_cast<int>(frame.width()),
                                                                            static_cast<int>(frame.height())),
@@ -158,16 +156,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         return core::frame_consumer::empty();
 
     std::wstring filename;
-    bool         depth16 = false;
 
     if (params.size() > 1)
         filename = params.at(1);
-    if (params.size() > 2) {
-        depth16 =
-            contains_param(L"16BIT", params) || contains_param(L"16-BIT", params) || contains_param(L"16_BIT", params);
-    }
 
-    return spl::make_shared<image_consumer>(frame_converter, filename, depth16);
+    return spl::make_shared<image_consumer>(frame_converter, filename);
 }
 
 }} // namespace caspar::image
