@@ -53,6 +53,7 @@ vec4 straighten_pixel(vec4 pixel) {
 
 vec4 read_pixel(ivec2 coord) {
     vec4 pixel = is_16_bit ? imageLoad(imgInput16bit, coord) : imageLoad(imgInput8bit, coord);
+    if (key_only) return pixel.aaaa;
     return straighten_pixel(pixel);
 }
 
