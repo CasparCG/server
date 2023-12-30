@@ -63,17 +63,17 @@ class array final
 
     array& operator=(array&& other)
     {
-        ptr_          = std::move(other.ptr_);
-        size_         = std::move(other.size_);
-        storage_      = std::move(other.storage_);
+        ptr_     = std::move(other.ptr_);
+        size_    = std::move(other.size_);
+        storage_ = std::move(other.storage_);
 
         return *this;
     }
 
-    T*                begin() const { return ptr_; }
-    T*                data() const { return ptr_; }
-    T*                end() const { return ptr_ + size_; }
-    std::size_t       size() const { return size_; }
+    T*          begin() const { return ptr_; }
+    T*          data() const { return ptr_; }
+    T*          end() const { return ptr_ + size_; }
+    std::size_t size() const { return size_; }
 
     explicit operator bool() const { return size_ > 0; };
 
@@ -84,8 +84,8 @@ class array final
     }
 
   private:
-    T*                          ptr_          = nullptr;
-    std::size_t                 size_         = 0;
+    T*                          ptr_  = nullptr;
+    std::size_t                 size_ = 0;
     std::shared_ptr<boost::any> storage_;
 };
 
@@ -118,9 +118,7 @@ class array<const T> final
     }
 
     template <typename S>
-    explicit array(const T*          ptr,
-                   std::size_t       size,
-                   S&&               storage)
+    explicit array(const T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
         , size_(size)
         , storage_(std::make_shared<boost::any>(std::forward<S>(storage)))
@@ -152,10 +150,10 @@ class array<const T> final
         return *this;
     }
 
-    const T*          begin() const { return ptr_; }
-    const T*          data() const { return ptr_; }
-    const T*          end() const { return ptr_ + size_; }
-    std::size_t       size() const { return size_; }
+    const T*    begin() const { return ptr_; }
+    const T*    data() const { return ptr_; }
+    const T*    end() const { return ptr_ + size_; }
+    std::size_t size() const { return size_; }
 
     explicit operator bool() const { return size_ > 0; }
 

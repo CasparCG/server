@@ -455,8 +455,10 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer = ctx.static_context->consumer_registry->create_consumer(
-        ctx.parameters, ctx.static_context->format_repository, ctx.channel.raw_channel->frame_converter(), get_channels(ctx));
+    auto consumer = ctx.static_context->consumer_registry->create_consumer(ctx.parameters,
+                                                                           ctx.static_context->format_repository,
+                                                                           ctx.channel.raw_channel->frame_converter(),
+                                                                           get_channels(ctx));
     ctx.channel.raw_channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
@@ -474,7 +476,10 @@ std::wstring remove_command(command_context& ctx)
         }
 
         index = ctx.static_context->consumer_registry
-                    ->create_consumer(ctx.parameters, ctx.static_context->format_repository,ctx.channel.raw_channel->frame_converter(), get_channels(ctx))
+                    ->create_consumer(ctx.parameters,
+                                      ctx.static_context->format_repository,
+                                      ctx.channel.raw_channel->frame_converter(),
+                                      get_channels(ctx))
                     ->index();
     }
 
@@ -487,8 +492,11 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
-        {L"IMAGE"}, ctx.static_context->format_repository, ctx.channel.raw_channel->frame_converter(), get_channels(ctx)));
+    ctx.channel.raw_channel->output().add(
+        ctx.static_context->consumer_registry->create_consumer({L"IMAGE"},
+                                                               ctx.static_context->format_repository,
+                                                               ctx.channel.raw_channel->frame_converter(),
+                                                               get_channels(ctx)));
 
     return L"202 PRINT OK\r\n";
 }

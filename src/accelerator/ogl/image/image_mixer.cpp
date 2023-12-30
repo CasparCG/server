@@ -85,14 +85,13 @@ class image_renderer
     {
     }
 
-    std::future<core::mixed_image> operator()(std::vector<layer>             layers,
-                                                      const core::video_format_desc& format_desc)
+    std::future<core::mixed_image> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
     {
         // TODO - re-enable
-//        if (layers.empty()) { // Bypass GPU with empty frame.
-//            static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
-//            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
-//        }
+        //        if (layers.empty()) { // Bypass GPU with empty frame.
+        //            static const std::vector<uint8_t> buffer(max_frame_size_ * 2, 0); // TODO better
+        //            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
+        //        }
 
         return flatten(ogl_->dispatch_async([=]() mutable {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
@@ -101,9 +100,10 @@ class image_renderer
 
             auto bytes = ogl_->copy_async(target_texture, true).share();
 
-            return std::async(std::launch::deferred, [bytes = std::move(bytes), target_texture = std::move(target_texture)]() {
-                return core::mixed_image(bytes.get(), std::move(target_texture));
-            });
+            return std::async(std::launch::deferred,
+                              [bytes = std::move(bytes), target_texture = std::move(target_texture)]() {
+                                  return core::mixed_image(bytes.get(), std::move(target_texture));
+                              });
         }));
     }
 
@@ -321,24 +321,26 @@ struct image_mixer::impl
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
-        return core::mutable_frame(
-            tag,
-            std::move(image_data),
-            array<int32_t>{},
-            desc,
-            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
-                auto self = weak_self.lock();
-                if (!self) {
-                    return boost::any{};
-                }
+        return core::mutable_frame(tag,
+                                   std::move(image_data),
+                                   array<int32_t>{},
+                                   desc,
+                                   [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
+                                       auto self = weak_self.lock();
+                                       if (!self) {
+                                           return boost::any{};
+                                       }
 
-                std::vector<future_texture> textures;
-                for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                    textures.emplace_back(self->ogl_->copy_async(
-                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, desc.planes[n].depth));
-                }
-                return std::make_shared<decltype(textures)>(std::move(textures));
-            });
+                                       std::vector<future_texture> textures;
+                                       for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+                                           textures.emplace_back(self->ogl_->copy_async(image_data[n],
+                                                                                        desc.planes[n].width,
+                                                                                        desc.planes[n].height,
+                                                                                        desc.planes[n].stride,
+                                                                                        desc.planes[n].depth));
+                                       }
+                                       return std::make_shared<decltype(textures)>(std::move(textures));
+                                   });
     }
 
     spl::shared_ptr<core::frame_converter> create_frame_converter() override
@@ -347,14 +349,17 @@ struct image_mixer::impl
     }
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, int channel_id, common::bit_depth depth, const size_t max_frame_size)
-    : impl_(std::make_unique<impl>(ogl, channel_id, depth,max_frame_size))
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
+                         int                            channel_id,
+                         common::bit_depth              depth,
+                         const size_t                   max_frame_size)
+    : impl_(std::make_unique<impl>(ogl, channel_id, depth, max_frame_size))
 {
 }
 image_mixer::~image_mixer() {}
-void image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
-void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
-void image_mixer::pop() { impl_->pop(); }
+void                           image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
+void                           image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
+void                           image_mixer::pop() { impl_->pop(); }
 std::future<core::mixed_image> image_mixer::operator()(const core::video_format_desc& format_desc)
 {
     return impl_->render(format_desc);

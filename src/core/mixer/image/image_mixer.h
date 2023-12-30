@@ -30,11 +30,16 @@
 
 namespace caspar { namespace core {
 
-struct mixed_image{
+struct mixed_image
+{
     array<const uint8_t> rgba8;
-    boost::any texture;
+    boost::any           texture;
 
-    mixed_image(array<const uint8_t> rgba8, boost::any texture):rgba8(rgba8),texture(texture){}
+    mixed_image(array<const uint8_t> rgba8, boost::any texture)
+        : rgba8(rgba8)
+        , texture(texture)
+    {
+    }
 };
 
 class image_mixer

@@ -37,7 +37,10 @@ namespace caspar { namespace accelerator { namespace ogl {
 class image_mixer final : public core::image_mixer
 {
   public:
-    image_mixer(const spl::shared_ptr<class device>& ogl, int channel_id, common::bit_depth depth, const size_t max_frame_size);
+    image_mixer(const spl::shared_ptr<class device>& ogl,
+                int                                  channel_id,
+                common::bit_depth                    depth,
+                const size_t                         max_frame_size);
     image_mixer(const image_mixer&) = delete;
 
     ~image_mixer();
@@ -45,7 +48,7 @@ class image_mixer final : public core::image_mixer
     image_mixer& operator=(const image_mixer&) = delete;
 
     std::future<core::mixed_image> operator()(const core::video_format_desc& format_desc) override;
-    core::mutable_frame                    create_frame(const void* tag, const core::pixel_format_desc& desc) override;
+    core::mutable_frame            create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
     spl::shared_ptr<core::frame_converter> create_frame_converter() override;
 

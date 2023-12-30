@@ -225,8 +225,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     array<uint8_t> create_array(int count)
     {
-        auto buf             = create_buffer(count, true);
-        auto ptr             = reinterpret_cast<uint8_t*>(buf->data());
+        auto buf = create_buffer(count, true);
+        auto ptr = reinterpret_cast<uint8_t*>(buf->data());
         return array<uint8_t>(ptr, buf->size(), buf);
     }
 
@@ -256,7 +256,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         return spawn_async([=](yield_context yield) {
             auto buf = create_buffer(source->size(), false);
-            source->copy_to(*buf, as_rgba8? common::bit_depth::bit8 : source->depth());
+            source->copy_to(*buf, as_rgba8 ? common::bit_depth::bit8 : source->depth());
 
             sync_queue_.push(nullptr);
 
@@ -317,21 +317,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
     */
 
-    std::future<void> convert_from_texture(const std::shared_ptr<texture>& texture,
-                                           const std::vector<array<const uint8_t>>&     buffers,
-                                           const convert_from_texture_description& description,
-                                           int                                          x_count,
-                                           int                                          y_count)
+    std::future<void> convert_from_texture(const std::shared_ptr<texture>&          texture,
+                                           const std::vector<array<const uint8_t>>& buffers,
+                                           const convert_from_texture_description&  description,
+                                           int                                      x_count,
+                                           int                                      y_count)
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
                 compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
 
             // single input texture
-            GLuint texid_8bit = 0;
+            GLuint texid_8bit  = 0;
             GLuint texid_16bit = 0;
 
-            switch(texture->depth()) {
+            switch (texture->depth()) {
                 case common::bit_depth::bit8:
                     texid_8bit = texture->id();
                     break;
@@ -344,24 +344,24 @@ struct device::impl : public std::enable_shared_from_this<impl>
             GL(glBindImageTexture(1, texid_8bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8));
 
             // TODO: only a single buffer?
-//            for (size_t i = 0; i < buffers.size(); i++) {
-                auto& source = buffers[0];
-                auto  tmp    = source.storage<std::shared_ptr<buffer>>();
-                if (!tmp) {
-                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
-                }
+            //            for (size_t i = 0; i < buffers.size(); i++) {
+            auto& source = buffers[0];
+            auto  tmp    = source.storage<std::shared_ptr<buffer>>();
+            if (!tmp) {
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Buffer is not gpu backed"));
+            }
 
             GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tmp->get()->id()));
-//            }
+            //            }
 
             // TODO - binding 2 description
             auto description_buffer = create_buffer(sizeof(convert_from_texture_description), false);
-            std::memcpy(description_buffer->data(), &description, sizeof (convert_from_texture_description));
+            std::memcpy(description_buffer->data(), &description, sizeof(convert_from_texture_description));
             GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, description_buffer->id()));
 
             compute_from_rgba_->use();
 
-           GL(glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1));
+            GL(glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1));
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
@@ -511,11 +511,11 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source, as_rgba8);
 }
-std::future<void> device::convert_from_texture(const std::shared_ptr<texture>& texture,
-                                               const std::vector<array<const uint8_t>>&     buffers,
-                                               const convert_from_texture_description& description,
-                                               int                                          x_count,
-                                               int                                          y_count)
+std::future<void> device::convert_from_texture(const std::shared_ptr<texture>&          texture,
+                                               const std::vector<array<const uint8_t>>& buffers,
+                                               const convert_from_texture_description&  description,
+                                               int                                      x_count,
+                                               int                                      y_count)
 {
     return impl_->convert_from_texture(texture, buffers, description, x_count, y_count);
 }

@@ -64,7 +64,7 @@ class const_frame final
     explicit const_frame(std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc,
-                                 boost::any opaque);
+                         boost::any                             opaque);
     const_frame(const const_frame& other);
     const_frame(mutable_frame&& other);
 

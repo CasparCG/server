@@ -56,8 +56,7 @@ struct texture::impl
     {
         if (stride == 5) {
             size_ = width * height * 16;
-        }else
-        if (stride == 6) {
+        } else if (stride == 6) {
             size_ = width * height * 2;
         }
 
@@ -123,18 +122,18 @@ texture& texture::operator=(texture&& other)
     impl_ = std::move(other.impl_);
     return *this;
 }
-void texture::bind(int index) { impl_->bind(index); }
-void texture::unbind() { impl_->unbind(); }
-void texture::attach() { impl_->attach(); }
-void texture::clear() { impl_->clear(); }
-void texture::copy_from(buffer& source) { impl_->copy_from(source); }
-void texture::copy_to(class buffer& dest, common::bit_depth depth) { impl_->copy_to(dest, depth); }
-void texture::copy_to(buffer& dest) { impl_->copy_to(dest, impl_->depth_); }
-int  texture::width() const { return impl_->width_; }
-int  texture::height() const { return impl_->height_; }
-int  texture::stride() const { return impl_->stride_; }
+void              texture::bind(int index) { impl_->bind(index); }
+void              texture::unbind() { impl_->unbind(); }
+void              texture::attach() { impl_->attach(); }
+void              texture::clear() { impl_->clear(); }
+void              texture::copy_from(buffer& source) { impl_->copy_from(source); }
+void              texture::copy_to(class buffer& dest, common::bit_depth depth) { impl_->copy_to(dest, depth); }
+void              texture::copy_to(buffer& dest) { impl_->copy_to(dest, impl_->depth_); }
+int               texture::width() const { return impl_->width_; }
+int               texture::height() const { return impl_->height_; }
+int               texture::stride() const { return impl_->stride_; }
 common::bit_depth texture::depth() const { return impl_->depth_; }
-int  texture::size() const { return impl_->size_; }
-int  texture::id() const { return impl_->id_; }
+int               texture::size() const { return impl_->size_; }
+int               texture::id() const { return impl_->id_; }
 
 }}} // namespace caspar::accelerator::ogl

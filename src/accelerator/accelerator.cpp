@@ -27,7 +27,8 @@ struct accelerator::impl
 
     std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth)
     {
-        return std::make_unique<ogl::image_mixer>(spl::make_shared_ptr(get_device()), channel_id, depth, format_repository_.get_max_video_format_size());
+        return std::make_unique<ogl::image_mixer>(
+            spl::make_shared_ptr(get_device()), channel_id, depth, format_repository_.get_max_video_format_size());
     }
 
     std::shared_ptr<ogl::device> get_device()

@@ -76,7 +76,7 @@ struct mixer::impl
             std::launch::deferred,
             [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable {
                 auto image2 = image.get();
-                auto desc = pixel_format_desc(pixel_format::bgra);
+                auto desc   = pixel_format_desc(pixel_format::bgra);
                 desc.planes.emplace_back(format_desc.width, format_desc.height, 4);
                 std::vector<array<const uint8_t>> image_data;
                 image_data.emplace_back(std::move(image2.rgba8));

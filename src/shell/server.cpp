@@ -341,8 +341,12 @@ struct server::impl
 
                     try {
                         if (name != L"<xmlcomment>")
-                            channel.raw_channel->output().add(consumer_registry_->create_consumer(
-                                name, xml_consumer.second, video_format_repository_, channel.raw_channel->frame_converter(), channels_vec));
+                            channel.raw_channel->output().add(
+                                consumer_registry_->create_consumer(name,
+                                                                    xml_consumer.second,
+                                                                    video_format_repository_,
+                                                                    channel.raw_channel->frame_converter(),
+                                                                    channels_vec));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }

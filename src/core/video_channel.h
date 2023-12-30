@@ -84,7 +84,7 @@ class video_channel final
     const core::output&                 output() const;
     core::output&                       output();
 
-    spl::shared_ptr<core::frame_factory> frame_factory();
+    spl::shared_ptr<core::frame_factory>   frame_factory();
     spl::shared_ptr<core::frame_converter> frame_converter();
 
     int index() const;
