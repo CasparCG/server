@@ -22,6 +22,9 @@
 #pragma once
 
 #include <core/frame/pixel_format.h>
+
+#include <common/bit_depth.h>
+
 #include <memory>
 #include <set>
 #include <string>
@@ -35,6 +38,8 @@ struct loaded_image
     std::shared_ptr<FIBITMAP> bitmap;
     core::pixel_format        format;
     int                       stride;
+    common::bit_depth         depth;
+    bool                      is_straight;
 };
 
 loaded_image                  load_image(const std::wstring& filename, bool allow_all_formats);

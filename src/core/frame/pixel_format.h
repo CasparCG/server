@@ -83,7 +83,8 @@ struct pixel_format_desc final
     {
     }
 
-    pixel_format       format = pixel_format::invalid;
+    pixel_format       format      = pixel_format::invalid;
+    bool               is_straight = false;
     std::vector<plane> planes;
 };
 

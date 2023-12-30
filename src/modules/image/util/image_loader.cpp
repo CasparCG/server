@@ -55,19 +55,30 @@ loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMA
 {
     core::pixel_format format;
     int                stride;
+    common::bit_depth  depth = common::bit_depth::bit8;
 
     unsigned int bpp = FreeImage_GetBPP(bitmap.get());
+
     if (bpp == 32) {
         format = IMAGE_BGRA_FORMAT;
         stride = 4;
     } else if (allow_all_formats && bpp == 24) {
         format = IMAGE_BGR_FORMAT;
         stride = 3;
+    } else if (allow_all_formats && bpp == 64) {
+        format = core::pixel_format::rgba;
+        stride = 4;
+        depth  = common::bit_depth::bit16;
+    } else if (allow_all_formats && bpp == 48) {
+        format = core::pixel_format::rgb;
+        stride = 3;
+        depth  = common::bit_depth::bit16;
     } else if (allow_all_formats && !FreeImage_IsTransparent(bitmap.get())) {
         format = IMAGE_BGR_FORMAT;
         stride = 3;
 
         bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo24Bits(bitmap.get()), FreeImage_Unload);
+
     } else {
         format = IMAGE_BGRA_FORMAT;
         stride = 4;
@@ -79,13 +90,14 @@ loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMA
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 
     // PNG-images need to be premultiplied with their alpha
-    if (fif == FIF_PNG && format == IMAGE_BGRA_FORMAT) {
+    bool is_straight = fif == FIF_PNG && (format == core::pixel_format::bgra || format == core::pixel_format::rgba);
+    if (!allow_all_formats && is_straight) {
         image_view<bgra_pixel> original_view(
             FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
         premultiply(original_view);
     }
 
-    return {std::move(bitmap), format, stride};
+    return {std::move(bitmap), format, stride, depth, is_straight};
 }
 
 loaded_image load_image(const std::wstring& filename, bool allow_all_formats)

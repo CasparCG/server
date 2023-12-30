@@ -8,6 +8,8 @@ uniform sampler2D	plane[4];
 uniform sampler2D	local_key;
 uniform sampler2D	layer_key;
 
+uniform bool        is_straight_alpha;
+
 uniform bool		is_hd;
 uniform bool		has_local_key;
 uniform bool		has_layer_key;
@@ -543,6 +545,8 @@ vec4 get_rgba_color()
 void main()
 {
     vec4 color = get_rgba_color();
+    if (is_straight_alpha)
+        color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
     if(levels)
