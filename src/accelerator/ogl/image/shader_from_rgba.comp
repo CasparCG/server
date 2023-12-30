@@ -13,6 +13,7 @@ layout(std430, binding = 2) buffer buffer_layout
 layout(std430, binding = 3) buffer description_layout
 {
     // This must match convert_from_texture_description in device.h
+    uint target_format;
     bool is_16_bit;
     uint frame_width;
     uint frame_height;
@@ -75,7 +76,7 @@ uint to_10bit(float val) {
 void decklink_v210() {
     // basic coordinates
     uint y_offset = gl_GlobalInvocationID.y * words_per_line;
-    uint x_offset = gl_GlobalInvocationID.x * 4; // 4 bytes per op
+    uint x_offset = gl_GlobalInvocationID.x * 4; // 4 words per op
     uint offset = y_offset + x_offset;
     uint image_x = gl_GlobalInvocationID.x * 6;
 
@@ -95,8 +96,49 @@ void decklink_v210() {
     bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
 
+void rgba16() {
+    // TODO: is this excessive to do in a shader?
+    // basic coordinates
+    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
+    uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
+    uint offset = y_offset + x_offset;
+
+    // TODO - can this be done solely as integer?
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    // Note: the texture is stored in reverse order
+    bufferOutput[offset + 0] = uint(pixel.b * 65535) + (uint(pixel.g * 65535) << 16);
+    bufferOutput[offset + 1] = uint(pixel.r * 65535) + (uint(pixel.a * 65535) << 16);
+}
+
+void bgra16() {
+    // TODO: is this excessive to do in a shader?
+    // basic coordinates
+    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
+    uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
+    uint offset = y_offset + x_offset;
+
+    // TODO - can this be done solely as integer?
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    // Note: the texture is stored in reverse order
+    bufferOutput[offset + 0] = uint(pixel.r * 65535) + (uint(pixel.g * 65535) << 16);
+    bufferOutput[offset + 1] = uint(pixel.b * 65535) + (uint(pixel.a * 65535) << 16);
+}
+
 void main() {
     ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
-    decklink_v210();
+    switch(target_format){
+        case 0: // rgba16
+            rgba16();
+            break;
+        case 1: // bgra16
+            bgra16();
+            break;
+
+        case 2:
+            decklink_v210();
+            break;
+    }
 }

@@ -36,6 +36,7 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_factory.h>
 #include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
@@ -49,15 +50,23 @@
 
 namespace caspar { namespace image {
 
+#if FREEIMAGE_COLORORDER == FREEIMAGE_COLORORDER_BGR
+#define IMAGE_ENCODED_FORMAT core::encoded_frame_format::bgra16
+#else
+#define IMAGE_ENCODED_FORMAT core::encoded_frame_format::rgba16
+#endif
+
 struct image_consumer : public core::frame_consumer
 {
-    const std::wstring filename_;
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+    const std::wstring                           filename_;
 
   public:
     // frame_consumer
 
-    explicit image_consumer(std::wstring filename)
-        : filename_(std::move(filename))
+    explicit image_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, std::wstring filename)
+        : frame_converter_(frame_converter)
+        , filename_(std::move(filename))
     {
     }
 
@@ -67,7 +76,7 @@ struct image_consumer : public core::frame_consumer
     {
         auto filename = filename_;
 
-        std::thread async([frame, filename] {
+        std::thread async([frame_converter = frame_converter_, frame, filename] {
             try {
                 auto filename2 = filename;
 
@@ -78,14 +87,40 @@ struct image_consumer : public core::frame_consumer
                 else
                     filename2 = env::media_folder() + filename2 + L".png";
 
-                auto bitmap = std::shared_ptr<FIBITMAP>(
-                    FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32),
-                    FreeImage_Unload);
-                std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data(0).begin(), frame.image_data(0).size());
+                common::bit_depth frame_depth = frame_converter->get_frame_bitdepth(frame);
 
-                image_view<bgra_pixel> original_view(
-                    FreeImage_GetBits(bitmap.get()), static_cast<int>(frame.width()), static_cast<int>(frame.height()));
-                unmultiply(original_view);
+                std::shared_ptr<FIBITMAP> bitmap;
+
+                if (frame_depth != common::bit_depth::bit8) {
+                    bitmap = std::shared_ptr<FIBITMAP>(FreeImage_AllocateT(FIT_RGBA16,
+                                                                           static_cast<int>(frame.width()),
+                                                                           static_cast<int>(frame.height())),
+                                                       FreeImage_Unload);
+
+                    array<const std::uint8_t> rgba16_bytes =
+                        frame_converter->convert_from_rgba(frame, IMAGE_ENCODED_FORMAT, false).get();
+
+                    std::memcpy(FreeImage_GetBits(bitmap.get()), rgba16_bytes.data(), rgba16_bytes.size());
+
+                    // TODO - this doesnt work
+                    image_view<bgra16_pixel> original_view(FreeImage_GetBits(bitmap.get()),
+                                                         static_cast<int>(frame.width()),
+                                                         static_cast<int>(frame.height()));
+                    unmultiply(original_view, 65535);
+                } else {
+                    bitmap = std::shared_ptr<FIBITMAP>(
+                        FreeImage_AllocateT(
+                            FIT_BITMAP, static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32),
+                        FreeImage_Unload);
+
+                    std::memcpy(
+                        FreeImage_GetBits(bitmap.get()), frame.image_data(0).begin(), frame.image_data(0).size());
+
+                    image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()),
+                                                         static_cast<int>(frame.width()),
+                                                         static_cast<int>(frame.height()));
+                    unmultiply(original_view, 255);
+                }
 
                 FreeImage_FlipVertical(bitmap.get());
 #ifdef WIN32
@@ -129,7 +164,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() > 1)
         filename = params.at(1);
 
-    return spl::make_shared<image_consumer>(filename);
+    return spl::make_shared<image_consumer>(frame_converter, filename);
 }
 
 }} // namespace caspar::image

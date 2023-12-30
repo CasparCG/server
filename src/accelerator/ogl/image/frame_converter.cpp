@@ -76,25 +76,33 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
                                        const core::encoded_frame_format format,
                                        bool                             key_only)
 {
-    array<const std::uint8_t> source;
-    int                       x_count        = 0;
-    int                       y_count        = 0;
+    array<const std::uint8_t> buffer;
+    unsigned int              x_count        = 0;
+    unsigned int              y_count        = 0;
     int                       words_per_line = 0;
 
     switch (format) {
+        case core::encoded_frame_format::rgba16:
+        case core::encoded_frame_format::bgra16:
+            x_count        = frame.width();
+            y_count        = frame.height();
+            buffer         = ogl_->create_array(frame.width() * frame.height() * 8);
+            words_per_line = frame.width() * 2;
+
+            break;
         case core::encoded_frame_format::decklink_v210:
             auto row_blocks = ((frame.width() + 47) / 48);
             auto row_bytes  = row_blocks * 128;
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
-            source         = ogl_->create_array(row_bytes * frame.height());
+            buffer         = ogl_->create_array(row_bytes * frame.height());
             x_count        = row_blocks * 8;
             y_count        = frame.height();
             words_per_line = row_blocks * 32;
             break;
     }
 
-    if (source.size() == 0 || x_count == 0 || y_count == 0) {
+    if (buffer.size() == 0 || x_count == 0 || y_count == 0) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
@@ -104,20 +112,30 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
     }
 
     convert_from_texture_description description{};
+    description.target_format  = format;
     description.is_16_bit      = texture_ptr->depth() == common::bit_depth::bit16;
     description.width          = frame.width();
     description.height         = frame.height();
     description.words_per_line = words_per_line;
     description.key_only       = key_only;
 
-    auto future_conversion = ogl_->convert_from_texture(texture_ptr, source, description, x_count, y_count);
+    auto future_conversion = ogl_->convert_from_texture(texture_ptr, buffer, description, x_count, y_count);
 
-    return std::async(std::launch::deferred,
-                      [source = std::move(source), future_conversion = std::move(future_conversion)]() mutable {
-                          future_conversion.get();
+    return std::async(std::launch::deferred, [buffer, future_conversion = std::move(future_conversion)]() mutable {
+        future_conversion.get();
 
-                          return std::move(source);
-                      });
+        return buffer;
+    });
+}
+
+common::bit_depth ogl_frame_converter::get_frame_bitdepth(const core::const_frame& frame)
+{
+    auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
+    if (!texture_ptr) {
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
+    }
+
+    return texture_ptr->depth();
 }
 
 } // namespace caspar::accelerator::ogl

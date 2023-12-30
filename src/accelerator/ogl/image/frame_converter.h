@@ -48,6 +48,8 @@ class ogl_frame_converter
     std::shared_future<array<const std::uint8_t>>
     convert_from_rgba(const core::const_frame& frame, core::encoded_frame_format format, bool key_only) override;
 
+    common::bit_depth get_frame_bitdepth(const core::const_frame& frame) override;
+
   private:
     const spl::shared_ptr<device> ogl_;
 };

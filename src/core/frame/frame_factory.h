@@ -29,7 +29,9 @@ namespace caspar { namespace core {
 
 enum encoded_frame_format
 {
-    decklink_v210 = 0,
+    rgba16        = 0,
+    bgra16        = 1,
+    decklink_v210 = 2,
 };
 
 class frame_converter
@@ -47,6 +49,8 @@ class frame_converter
 
     virtual std::shared_future<array<const std::uint8_t>>
     convert_from_rgba(const core::const_frame& frame, encoded_frame_format format, bool key_only) = 0;
+
+    virtual common::bit_depth get_frame_bitdepth(const core::const_frame& frame) = 0;
 };
 
 class frame_factory

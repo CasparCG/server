@@ -206,21 +206,21 @@ void premultiply(SrcDstView& view_to_modify)
  *                       models RGBAPixel.
  */
 template <class SrcDstView>
-void unmultiply(SrcDstView& view_to_modify)
+void unmultiply(SrcDstView& view_to_modify, int max)
 {
     std::for_each(view_to_modify.begin(), view_to_modify.end(), [&](typename SrcDstView::pixel_type& pixel) {
         int alpha = static_cast<int>(pixel.a());
 
-        if (alpha != 0 && alpha != 255) {
+        if (alpha != 0 && alpha != max) {
             // We don't event try to premultiply 0 since it will be unaffected.
             if (pixel.r())
-                pixel.r() = static_cast<uint8_t>(static_cast<int>(pixel.r()) * 255 / alpha);
+                pixel.r() = static_cast<uint8_t>(static_cast<int>(pixel.r()) * max / alpha);
 
             if (pixel.g())
-                pixel.g() = static_cast<uint8_t>(static_cast<int>(pixel.g()) * 255 / alpha);
+                pixel.g() = static_cast<uint8_t>(static_cast<int>(pixel.g()) * max / alpha);
 
             if (pixel.b())
-                pixel.b() = static_cast<uint8_t>(static_cast<int>(pixel.b()) * 255 / alpha);
+                pixel.b() = static_cast<uint8_t>(static_cast<int>(pixel.b()) * max / alpha);
         }
     });
 }

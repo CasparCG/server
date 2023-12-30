@@ -37,6 +37,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 // This must match description_layout in shader_from_rgba.comp
 struct convert_from_texture_description
 {
+    uint     target_format;
     bool     is_16_bit;
     uint32_t width;
     uint32_t height;
@@ -66,8 +67,8 @@ class device final
     std::future<void> convert_from_texture(const std::shared_ptr<texture>&         texture,
                                            const array<const uint8_t>&             source,
                                            const convert_from_texture_description& description,
-                                           int                                     x_count,
-                                           int                                     y_count);
+                                           unsigned int                            x_count,
+                                           unsigned int                            y_count);
 
     template <typename Func>
     auto dispatch_async(Func&& func)

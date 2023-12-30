@@ -320,8 +320,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::future<void> convert_from_texture(const std::shared_ptr<texture>&         texture,
                                            const array<const uint8_t>&             source,
                                            const convert_from_texture_description& description,
-                                           int                                     x_count,
-                                           int                                     y_count)
+                                           unsigned int                            x_count,
+                                           unsigned int                            y_count)
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
@@ -357,7 +357,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             compute_from_rgba_->use();
 
-            GL(glDispatchCompute((unsigned int)x_count, (unsigned int)y_count, 1));
+            GL(glDispatchCompute(x_count, y_count, 1));
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
@@ -509,8 +509,8 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 std::future<void> device::convert_from_texture(const std::shared_ptr<texture>&         texture,
                                                const array<const uint8_t>&             source,
                                                const convert_from_texture_description& description,
-                                               int                                     x_count,
-                                               int                                     y_count)
+                                               unsigned int                            x_count,
+                                               unsigned int                            y_count)
 {
     return impl_->convert_from_texture(texture, source, description, x_count, y_count);
 }
