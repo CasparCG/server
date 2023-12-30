@@ -703,8 +703,10 @@ class bluefish_producer_proxy : public core::frame_producer
 
     core::draw_frame last_frame(const core::video_field field) override
     {
-        return core::draw_frame::still(producer_->get_frame(field, true));
+        return core::draw_frame::still(producer_->get_frame(field));
     }
+
+    bool is_ready() override { return producer_->is_ready(); }
 
     uint32_t nb_frames() const override { return length_; }
 
