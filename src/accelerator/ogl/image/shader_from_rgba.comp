@@ -34,12 +34,12 @@ layout(std430, binding = 3) buffer description_layout
 {
     // This must match convert_from_texture_description in device.h
     uint target_format;
-    bool is_16_bit;
+    uint is_16_bit;
     uint frame_width;
     uint frame_height;
     uint words_per_line;
-    bool key_only;
-    bool straigthen;
+    uint key_only;
+    uint straigthen;
 };
 
 vec4 straighten_pixel(vec4 pixel) {
@@ -52,13 +52,14 @@ vec4 straighten_pixel(vec4 pixel) {
 }
 
 vec4 read_pixel(ivec2 coord) {
-    vec4 pixel = is_16_bit ? imageLoad(imgInput16bit, coord) : imageLoad(imgInput8bit, coord);
-    if (key_only) return pixel.aaaa;
-    return straighten_pixel(pixel);
+    vec4 pixel = is_16_bit > 0 ? imageLoad(imgInput16bit, coord) : imageLoad(imgInput8bit, coord);
+    if (key_only > 0) return pixel.aaaa;
+    if (straigthen > 0) return straighten_pixel(pixel);
+    return pixel;
 }
 
 vec3 rgba_to_bt709(vec4 pixel) {
-    if (key_only) {
+    if (key_only > 0) {
         // TODO - verify everything about this
         return vec3(pixel.a, 0.5, 0.5);
     }

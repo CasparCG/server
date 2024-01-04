@@ -41,9 +41,9 @@ class ogl_frame_converter
 
     ogl_frame_converter& operator=(const ogl_frame_converter&) = delete;
 
-    core::mutable_frame create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc) override;
+    // core::mutable_frame create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc) override;
 
-    core::draw_frame convert_to_rgba(const core::mutable_frame& frame) override;
+    // core::draw_frame convert_to_rgba(const core::mutable_frame& frame) override;
 
     std::shared_future<array<const std::uint8_t>> convert_from_rgba(const core::const_frame&   frame,
                                                                     core::encoded_frame_format format,
