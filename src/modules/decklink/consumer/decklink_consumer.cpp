@@ -241,6 +241,9 @@ class decklink_frame : public IDeckLinkVideoFrame
                 return static_cast<long>(format_desc_.width) * 4;
             case bmdFormat10BitYUV:
                 return ((static_cast<long>(format_desc_.width) + 47) / 48) * 128;
+            case bmdFormat12BitRGBLE:
+            case bmdFormat12BitRGB:
+                return (static_cast<long>(format_desc_.width) * 36) / 8;
             default:
                 return 0;
         }
@@ -790,10 +793,18 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
                     auto buffer = frame1.value().frame.get();
 
-                    std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size, 128);
-                    std::memcpy(image_data.get(), buffer.data(), buffer.size());
 
-                    schedule_next_video(image_data, bmdFormat10BitYUV, nb_samples, video_display_time);
+                    // rgb12:
+//                    std::shared_ptr<void> image_data = create_aligned_buffer(((decklink_format_desc_.width * 36) / 8)*decklink_format_desc_.height, 128);
+//                    std::memcpy(image_data.get(), buffer.data(), buffer.size());
+//
+//                    schedule_next_video(image_data, bmdFormat12BitRGBLE, nb_samples, video_display_time);
+
+                    // yuv10:
+                     std::shared_ptr<void> image_data = create_aligned_buffer(buffer.size(), 128);
+                     std::memcpy(image_data.get(), buffer.data(), buffer.size());
+
+                     schedule_next_video(image_data, bmdFormat10BitYUV, nb_samples, video_display_time);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
