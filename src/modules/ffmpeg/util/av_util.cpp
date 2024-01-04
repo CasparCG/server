@@ -115,14 +115,18 @@ core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
         case AV_PIX_FMT_GRAY8:
             return core::pixel_format::gray;
         case AV_PIX_FMT_RGB24:
+        case AV_PIX_FMT_RGB48LE:
             return core::pixel_format::rgb;
         case AV_PIX_FMT_BGR24:
+        case AV_PIX_FMT_BGR48LE:
             return core::pixel_format::bgr;
         case AV_PIX_FMT_BGRA:
+        case AV_PIX_FMT_BGRA64LE:
             return core::pixel_format::bgra;
         case AV_PIX_FMT_ARGB:
             return core::pixel_format::argb;
         case AV_PIX_FMT_RGBA:
+        case AV_PIX_FMT_RGBA64LE:
             return core::pixel_format::rgba;
         case AV_PIX_FMT_ABGR:
             return core::pixel_format::abgr;
@@ -175,14 +179,18 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
         }
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
-            desc.planes.emplace_back(linesizes[0] / 3, height, 3);
+            auto depth =  (pix_fmt == AV_PIX_FMT_BGR48LE || pix_fmt==AV_PIX_FMT_RGB48LE) ? common::bit_depth::bit16:common::bit_depth::bit8;
+            auto scale = depth == common::bit_depth::bit16?6:3;
+            desc.planes.emplace_back(linesizes[0] / scale, height, 3, depth);
             return desc;
         }
         case core::pixel_format::bgra:
         case core::pixel_format::argb:
         case core::pixel_format::rgba:
         case core::pixel_format::abgr: {
-            desc.planes.emplace_back(linesizes[0] / 4, height, 4);
+            auto depth =  (pix_fmt == AV_PIX_FMT_BGRA64LE || pix_fmt==AV_PIX_FMT_RGBA64LE) ? common::bit_depth::bit16:common::bit_depth::bit8;
+            auto scale = depth == common::bit_depth::bit16?8:4;
+            desc.planes.emplace_back(linesizes[0] / scale, height, 4, depth);
             return desc;
         }
         case core::pixel_format::ycbcr:
