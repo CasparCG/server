@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/any.hpp>
-
+#include <any>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -28,7 +28,7 @@ class array final
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
             ptr_         = reinterpret_cast<T*>(storage.get());
             std::memset(ptr_, 0, size_);
-            storage_ = std::make_shared<boost::any>(std::move(storage));
+            storage_ = std::make_shared<std::any>(std::move(storage));
         }
     }
 
@@ -37,14 +37,14 @@ class array final
         auto storage = std::make_shared<std::vector<T>>(std::move(other));
         ptr_         = storage->data();
         size_        = storage->size();
-        storage_     = std::make_shared<boost::any>(std::move(storage));
+        storage_     = std::make_shared<std::any>(std::move(storage));
     }
 
     template <typename S>
     explicit array(T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
         , size_(size)
-        , storage_(std::make_shared<boost::any>(std::forward<S>(storage)))
+        , storage_(std::make_shared<std::any>(std::forward<S>(storage)))
     {
     }
 
@@ -80,13 +80,13 @@ class array final
     template <typename S>
     S* storage() const
     {
-        return boost::any_cast<S>(storage_.get());
+        return std::any_cast<S>(storage_.get());
     }
 
   private:
-    T*                          ptr_  = nullptr;
-    std::size_t                 size_ = 0;
-    std::shared_ptr<boost::any> storage_;
+    T*                        ptr_  = nullptr;
+    std::size_t               size_ = 0;
+    std::shared_ptr<std::any> storage_;
 };
 
 template <typename T>
@@ -105,7 +105,7 @@ class array<const T> final
             auto storage = std::shared_ptr<void>(std::malloc(size), std::free);
             ptr_         = reinterpret_cast<T*>(storage.get());
             std::memset(ptr_, 0, size_);
-            storage_ = std::make_shared<boost::any>(storage);
+            storage_ = std::make_shared<std::any>(storage);
         }
     }
 
@@ -114,14 +114,14 @@ class array<const T> final
         auto storage = std::make_shared<std::vector<T>>(std::move(other));
         ptr_         = storage->data();
         size_        = storage->size();
-        storage_     = std::make_shared<boost::any>(std::move(storage));
+        storage_     = std::make_shared<std::any>(std::move(storage));
     }
 
     template <typename S>
     explicit array(const T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
         , size_(size)
-        , storage_(std::make_shared<boost::any>(std::forward<S>(storage)))
+        , storage_(std::make_shared<std::any>(std::forward<S>(storage)))
     {
     }
 
@@ -160,13 +160,13 @@ class array<const T> final
     template <typename S>
     S* storage() const
     {
-        return boost::any_cast<S>(storage_.get());
+        return std::any_cast<S>(storage_.get());
     }
 
   private:
-    const T*                    ptr_  = nullptr;
-    std::size_t                 size_ = 0;
-    std::shared_ptr<boost::any> storage_;
+    const T*                  ptr_  = nullptr;
+    std::size_t               size_ = 0;
+    std::shared_ptr<std::any> storage_;
 };
 
 } // namespace caspar

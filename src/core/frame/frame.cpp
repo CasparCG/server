@@ -93,7 +93,7 @@ struct const_frame::impl
     array<const std::int32_t>              audio_data_;
     core::pixel_format_desc                desc_     = core::pixel_format_desc(pixel_format::invalid);
     frame_geometry                         geometry_ = frame_geometry::get_default();
-    boost::any                             opaque_;
+    std::any                               opaque_;
 
     impl(std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
@@ -175,6 +175,6 @@ std::size_t                      const_frame::width() const { return impl_->widt
 std::size_t                      const_frame::height() const { return impl_->height(); }
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
-const boost::any&                const_frame::opaque() const { return impl_->opaque_; }
+const std::any&                  const_frame::opaque() const { return impl_->opaque_; }
 const_frame::operator bool() const { return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
 }} // namespace caspar::core

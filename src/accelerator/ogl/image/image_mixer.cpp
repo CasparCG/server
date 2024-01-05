@@ -38,9 +38,7 @@
 
 #include <GL/glew.h>
 
-#include <boost/any.hpp>
-
-#include <algorithm>
+#include <any>
 #include <vector>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -274,7 +272,7 @@ struct image_mixer::impl
         item.transform = transform_stack_.back();
         item.geometry  = frame.geometry();
 
-        auto textures_ptr = boost::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
 
         if (textures_ptr) {
             item.textures = *textures_ptr;
@@ -314,10 +312,10 @@ struct image_mixer::impl
             std::move(image_data),
             array<int32_t>{},
             desc,
-            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
+            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
-                    return boost::any{};
+                    return std::any{};
                 }
                 std::vector<future_texture> textures;
                 for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
