@@ -80,8 +80,12 @@ struct presentation_frame
     bool has_video = false;
     bool has_audio = false;
 
-    explicit presentation_frame()
+    explicit presentation_frame(core::draw_frame video = {})
     {
+        if (video) {
+            frame = std::move(video);
+            has_video = true;
+        }
     }
 
     presentation_frame(presentation_frame&& other)
@@ -255,12 +259,13 @@ class html_client
     {
         if (!try_pop(field)) {
             graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
+            return core::draw_frame::still(last_frame_);
+        } else {
+            return last_frame_;
         }
-
-        return last_frame_;
     }
 
-    core::draw_frame last_frame() const { return last_frame_; }
+    core::draw_frame last_frame() const { return core::draw_frame::still(last_frame_); }
 
     bool is_ready() const
     {
@@ -365,10 +370,7 @@ class html_client
             core::draw_frame new_frame = core::draw_frame(std::move(frame));
             last_generated_frame_ = new_frame;
 
-            presentation_frame wrapped_frame;
-            wrapped_frame.add_video(std::move(new_frame));
-
-            frames_.push(std::move(wrapped_frame));
+            frames_.push(presentation_frame(std::move(new_frame)));
             while (frames_.size() > 4) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
@@ -483,31 +485,26 @@ class html_client
     {
         if (!audioResampler_) return;
 
-            auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
-            auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
+        auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
+        auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
 
-            {
-                std::lock_guard<std::mutex> lock(frames_mutex_);
-                if (frames_.empty()) {
-                    presentation_frame wrapped_frame;
+        {
+            std::lock_guard<std::mutex> lock(frames_mutex_);
+            if (frames_.empty()) {
+                presentation_frame wrapped_frame(last_generated_frame_);
+                wrapped_frame.add_audio(std::move(audio_frame));
 
-                    wrapped_frame.add_audio(std::move(audio_frame));
-                    if (last_generated_frame_) {
-                        wrapped_frame.add_video(last_generated_frame_);
-                    }
-
-                    frames_.push(std::move(wrapped_frame));
+                frames_.push(std::move(wrapped_frame));
+            } else {
+                if (!frames_.back().has_audio) {
+                    frames_.back().add_audio(std::move(audio_frame));
                 } else {
-                    if (!frames_.back().has_audio) {
-                        frames_.back().add_audio(std::move(audio_frame));
-                    } else {
-                        presentation_frame wrapped_frame;
-                        wrapped_frame.add_audio(std::move(audio_frame));
-                        frames_.push(std::move(wrapped_frame));
-                    }
+                    presentation_frame wrapped_frame(last_generated_frame_);
+                    wrapped_frame.add_audio(std::move(audio_frame));
+                    frames_.push(std::move(wrapped_frame));
                 }
-
             }
+        }
     }
     void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override { audioResampler_ = nullptr; }
     void OnAudioStreamError(CefRefPtr<CefBrowser> browser, const CefString& message) override
