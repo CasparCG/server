@@ -69,27 +69,28 @@ namespace caspar { namespace html {
 inline std::int_least64_t now()
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::high_resolution_clock::now().time_since_epoch())
-            .count();
+               std::chrono::high_resolution_clock::now().time_since_epoch())
+        .count();
 }
 
 struct presentation_frame
 {
     std::int_least64_t timestamp = now();
-    core::draw_frame frame = core::draw_frame::empty();
-    bool has_video = false;
-    bool has_audio = false;
+    core::draw_frame   frame     = core::draw_frame::empty();
+    bool               has_video = false;
+    bool               has_audio = false;
 
     explicit presentation_frame(core::draw_frame video = {})
     {
         if (video) {
-            frame = std::move(video);
+            frame     = std::move(video);
             has_video = true;
         }
     }
 
-    presentation_frame(presentation_frame&& other)
- noexcept             : timestamp(other.timestamp),frame(std::move(other.frame))
+    presentation_frame(presentation_frame&& other) noexcept
+        : timestamp(other.timestamp)
+        , frame(std::move(other.frame))
     {
     }
 
@@ -105,29 +106,32 @@ struct presentation_frame
 
     ~presentation_frame() {}
 
-    void add_audio(core::mutable_frame audio) {
-        if (has_audio) return;
+    void add_audio(core::mutable_frame audio)
+    {
+        if (has_audio)
+            return;
         has_audio = true;
 
         if (frame) {
-            frame = core::draw_frame::over(frame, core::draw_frame(std::move (audio)));
+            frame = core::draw_frame::over(frame, core::draw_frame(std::move(audio)));
         } else {
-            frame = core::draw_frame(std::move (audio));
+            frame = core::draw_frame(std::move(audio));
         }
     }
 
-    void add_video(core::draw_frame video) {
-        if (has_video) return;
+    void add_video(core::draw_frame video)
+    {
+        if (has_video)
+            return;
         has_video = true;
 
         if (frame) {
-            frame = core::draw_frame::over(frame, std::move (video));
+            frame = core::draw_frame::over(frame, std::move(video));
         } else {
-            frame = std::move (video);
+            frame = std::move(video);
         }
     }
 };
-
 
 class html_client
     : public CefClient
@@ -146,16 +150,16 @@ class html_client
     caspar::timer                       paint_timer_;
     caspar::timer                       test_timer_;
 
-    spl::shared_ptr<core::frame_factory>                        frame_factory_;
-    core::video_format_desc                                     format_desc_;
-    bool                                                        gpu_enabled_;
-    tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
-    std::atomic<bool>                                           loaded_;
-    std::queue<presentation_frame> frames_;
-    core::draw_frame last_generated_frame_;
-    mutable std::mutex                                          frames_mutex_;
-    const size_t                                                frames_max_size_ = 4;
-    std::atomic<bool>                                           closing_;
+    spl::shared_ptr<core::frame_factory> frame_factory_;
+    core::video_format_desc              format_desc_;
+    bool                                 gpu_enabled_;
+    tbb::concurrent_queue<std::wstring>  javascript_before_load_;
+    std::atomic<bool>                    loaded_;
+    std::queue<presentation_frame>       frames_;
+    core::draw_frame                     last_generated_frame_;
+    mutable std::mutex                   frames_mutex_;
+    const size_t                         frames_max_size_ = 4;
+    std::atomic<bool>                    closing_;
 
     std::unique_ptr<ffmpeg::AudioResampler> audioResampler_;
 
@@ -315,8 +319,6 @@ class html_client
     }
 
   private:
-
-
     void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
@@ -368,7 +370,7 @@ class html_client
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             core::draw_frame new_frame = core::draw_frame(std::move(frame));
-            last_generated_frame_ = new_frame;
+            last_generated_frame_      = new_frame;
 
             frames_.push(presentation_frame(std::move(new_frame)));
             while (frames_.size() > 4) {
@@ -421,7 +423,7 @@ class html_client
 
     CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
 
-    CefRefPtr<CefAudioHandler>    GetAudioHandler() override { return this; }
+    CefRefPtr<CefAudioHandler> GetAudioHandler() override { return this; }
 
     CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
 
@@ -483,9 +485,10 @@ class html_client
     }
     void OnAudioStreamPacket(CefRefPtr<CefBrowser> browser, const float** data, int samples, int64_t pts) override
     {
-        if (!audioResampler_) return;
+        if (!audioResampler_)
+            return;
 
-        auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
+        auto audio       = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
         auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
 
         {
