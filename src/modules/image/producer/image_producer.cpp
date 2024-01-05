@@ -41,6 +41,7 @@
 
 #include <common/array.h>
 #include <common/env.h>
+#include <common/filesystem.h>
 #include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/param.h>
@@ -199,31 +200,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     //    return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size(), length);
     //}
 
-    std::wstring filename = env::media_folder() + params.at(0);
-
-    auto resolvedFilename = caspar::find_case_insensitive(filename);
-    if (resolvedFilename && boost::filesystem::is_regular_file(*resolvedFilename)) {
-        auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
-        if (std::find(supported_extensions().begin(), supported_extensions().end(), ext) ==
-            supported_extensions().end()) {
-            return core::frame_producer::empty();
-        }
-    } else {
-        auto ext = std::find_if(
-            supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool {
-                auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
-
-                return static_cast<bool>(file);
-            });
-
-        if (ext == supported_extensions().end()) {
-            return core::frame_producer::empty();
-        }
-
-        filename = *caspar::find_case_insensitive(filename + *ext);
+    std::optional<boost::filesystem::path> filename =
+        find_file_within_dir_or_absolute(env::media_folder(), params.at(0), is_valid_file);
+    if (!filename) {
+        return core::frame_producer::empty();
     }
 
-    return spl::make_shared<image_producer>(dependencies.frame_factory, filename, length);
+    return spl::make_shared<image_producer>(dependencies.frame_factory, filename->wstring(), length);
 }
 
 }} // namespace caspar::image

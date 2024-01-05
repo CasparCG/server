@@ -45,6 +45,7 @@
 #include <common/array.h>
 #include <common/env.h>
 #include <common/except.h>
+#include <common/filesystem.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/os/filesystem.h>
@@ -60,6 +61,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace caspar { namespace image {
@@ -411,18 +413,11 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_p
         return core::frame_producer::empty();
     }
 
-    std::wstring filename = env::media_folder() + params.at(0);
-
-    auto ext =
-        std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool {
-            auto file =
-                caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
-
-            return static_cast<bool>(file);
-        });
-
-    if (ext == supported_extensions().end())
+    std::optional<boost::filesystem::path> filename =
+        find_file_within_dir_or_absolute(env::media_folder(), params.at(0), is_valid_file);
+    if (!filename) {
         return core::frame_producer::empty();
+    }
 
     double                                  duration = 0.0;
     double                                  speed    = get_param(L"SPEED", params, 0.0);
@@ -448,7 +443,7 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_p
 
     return spl::make_shared<image_scroll_producer>(dependencies.frame_factory,
                                                    dependencies.format_desc,
-                                                   *caspar::find_case_insensitive(filename + *ext),
+                                                   filename->wstring(),
                                                    -speed,
                                                    -duration,
                                                    end_time,

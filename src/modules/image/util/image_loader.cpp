@@ -35,6 +35,7 @@
 #pragma warning(disable : 4714) // marked as __forceinline not inlined
 #endif
 
+#include <boost/algorithm/string.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
@@ -109,12 +110,17 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
     return bitmap;
 }
 
-const std::set<std::wstring>& supported_extensions()
+bool is_valid_file(const boost::filesystem::path& filename)
 {
     static const std::set<std::wstring> extensions = {
         L".png", L".tga", L".bmp", L".jpg", L".jpeg", L".gif", L".tiff", L".tif", L".jp2", L".jpx", L".j2k", L".j2c"};
 
-    return extensions;
+    auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
+    if (extensions.find(ext) == extensions.end()) {
+        return false;
+    }
+
+    return true;
 }
 
 }} // namespace caspar::image

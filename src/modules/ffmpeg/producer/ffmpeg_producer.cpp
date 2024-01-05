@@ -38,6 +38,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/logic/tribool.hpp>
+#include <common/filesystem.h>
 
 #pragma warning(push, 1)
 
@@ -281,24 +282,6 @@ bool is_valid_file(const boost::filesystem::path& filename)
     return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
-boost::filesystem::path probe_stem(const boost::filesystem::path& stem)
-{
-    auto parent = find_case_insensitive(stem.parent_path().wstring());
-
-    if (!parent)
-        return L"";
-
-    auto dir = boost::filesystem::path(*parent);
-    auto loc = std::locale(""); // Use system locale
-
-    for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
-        if (boost::iequals(it->path().stem().wstring(), stem.filename().wstring(), loc) &&
-            is_valid_file(it->path().wstring()))
-            return it->path();
-    }
-    return L"";
-}
-
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
@@ -306,13 +289,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto path = name;
 
     if (!boost::contains(path, L"://")) {
-        auto mediaPath     = boost::filesystem::absolute(env::media_folder() + L"/" + path);
-        auto fullMediaPath = find_case_insensitive(mediaPath.generic_wstring());
-        if (fullMediaPath && is_valid_file(*fullMediaPath)) {
-            path = *fullMediaPath;
+        auto fullMediaPath = find_file_within_dir_or_absolute(env::media_folder(), path, is_valid_file);
+        if (fullMediaPath) {
+            path = fullMediaPath->wstring();
         } else {
-            path = probe_stem(mediaPath).generic_wstring();
-            name += boost::filesystem::path(path).extension().wstring();
+            return core::frame_producer::empty();
         }
     } else if (!has_valid_extension(path) || has_invalid_protocol(path)) {
         return core::frame_producer::empty();
