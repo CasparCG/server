@@ -552,7 +552,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 CASPAR_SCOPE_EXIT { avformat_free_context(oc); };
 
-                boost::optional<Stream> video_stream;
+                std::optional<Stream> video_stream;
                 if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
@@ -565,7 +565,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     }
                 }
 
-                boost::optional<Stream> audio_stream;
+                std::optional<Stream> audio_stream;
                 if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
                     audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, options);
                 }

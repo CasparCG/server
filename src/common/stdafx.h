@@ -57,7 +57,6 @@
 //#include <boost/log/utility/setup/common_attributes.hpp>
 #include <GL/glew.h>
 #include <boost/make_shared.hpp>
-#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -86,6 +85,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <ostream>
 #include <stdexcept>
 #include <string>

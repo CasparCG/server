@@ -630,8 +630,8 @@ struct AVProducer::Impl
     std::atomic<bool>         buffer_eof_{false};
     int                       buffer_capacity_ = static_cast<int>(format_desc_.fps) / 4;
 
-    boost::optional<caspar::executor> video_executor_;
-    boost::optional<caspar::executor> audio_executor_;
+    std::optional<caspar::executor> video_executor_;
+    std::optional<caspar::executor> audio_executor_;
 
     int latency_ = 0;
 
@@ -643,9 +643,9 @@ struct AVProducer::Impl
          std::string                          path,
          std::string                          vfilter,
          std::string                          afilter,
-         boost::optional<int64_t>             start,
-         boost::optional<int64_t>             seek,
-         boost::optional<int64_t>             duration,
+         std::optional<int64_t>               start,
+         std::optional<int64_t>               seek,
+         std::optional<int64_t>               duration,
          bool                                 loop,
          int                                  seekable)
         : frame_factory_(frame_factory)
@@ -653,7 +653,7 @@ struct AVProducer::Impl
         , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
         , name_(name)
         , path_(path)
-        , input_(path, graph_, seekable >= 0 && seekable < 2 ? boost::optional<bool>(false) : boost::optional<bool>())
+        , input_(path, graph_, seekable >= 0 && seekable < 2 ? std::optional<bool>(false) : std::optional<bool>())
         , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
@@ -713,7 +713,7 @@ struct AVProducer::Impl
         CASPAR_LOG(debug) << print() << " Joined";
     }
 
-    void run(boost::optional<int64_t> firstSeek)
+    void run(std::optional<int64_t> firstSeek)
     {
         std::vector<int> audio_cadence = format_desc_.audio_cadence;
 
@@ -1020,10 +1020,10 @@ struct AVProducer::Impl
         start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
     }
 
-    boost::optional<int64_t> start() const
+    std::optional<int64_t> start() const
     {
         auto start = start_.load();
-        return start != AV_NOPTS_VALUE ? av_rescale_q(start, TIME_BASE_Q, format_tb_) : boost::optional<int64_t>();
+        return start != AV_NOPTS_VALUE ? av_rescale_q(start, TIME_BASE_Q, format_tb_) : std::optional<int64_t>();
     }
 
     void duration(int64_t duration)
@@ -1033,19 +1033,22 @@ struct AVProducer::Impl
         duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
     }
 
-    boost::optional<int64_t> duration() const
+    std::optional<int64_t> duration() const
     {
         const auto duration = duration_.load();
-        return duration != AV_NOPTS_VALUE ? boost::optional<int64_t>(av_rescale_q(duration, TIME_BASE_Q, format_tb_))
-                                          : boost::none;
+        if (duration == AV_NOPTS_VALUE) {
+            return {};
+        }
+        return av_rescale_q(duration, TIME_BASE_Q, format_tb_);
     }
 
-    boost::optional<int64_t> file_duration() const
+    std::optional<int64_t> file_duration() const
     {
         const auto input_duration = input_duration_.load();
-        return input_duration != AV_NOPTS_VALUE
-                   ? boost::optional<int64_t>(av_rescale_q(input_duration, TIME_BASE_Q, format_tb_))
-                   : boost::none;
+        if (input_duration == AV_NOPTS_VALUE) {
+            return {};
+        }
+        return av_rescale_q(input_duration, TIME_BASE_Q, format_tb_);
     }
 
   private:
@@ -1179,23 +1182,23 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        core::video_format_desc              format_desc,
                        std::string                          name,
                        std::string                          path,
-                       boost::optional<std::string>         vfilter,
-                       boost::optional<std::string>         afilter,
-                       boost::optional<int64_t>             start,
-                       boost::optional<int64_t>             seek,
-                       boost::optional<int64_t>             duration,
-                       boost::optional<bool>                loop,
+                       std::optional<std::string>           vfilter,
+                       std::optional<std::string>           afilter,
+                       std::optional<int64_t>               start,
+                       std::optional<int64_t>               seek,
+                       std::optional<int64_t>               duration,
+                       std::optional<bool>                  loop,
                        int                                  seekable)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
                      std::move(name),
                      std::move(path),
-                     std::move(vfilter.get_value_or("")),
-                     std::move(afilter.get_value_or("")),
+                     std::move(vfilter.value_or("")),
+                     std::move(afilter.value_or("")),
                      std::move(start),
                      std::move(seek),
                      std::move(duration),
-                     std::move(loop.get_value_or(false)),
+                     std::move(loop.value_or(false)),
                      seekable))
 {
 }

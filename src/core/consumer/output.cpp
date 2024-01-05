@@ -28,10 +28,9 @@
 #include <common/except.h>
 #include <common/memory.h>
 
-#include <boost/optional.hpp>
-
 #include <chrono>
 #include <map>
+#include <optional>
 #include <thread>
 #include <utility>
 
@@ -49,7 +48,7 @@ struct output::impl
     std::mutex                                     consumers_mutex_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
 
-    boost::optional<time_point_t> time_;
+    std::optional<time_point_t> time_;
 
   public:
     impl(const spl::shared_ptr<diagnostics::graph>& graph, video_format_desc format_desc, int channel_index)
@@ -102,7 +101,7 @@ struct output::impl
                 }
             }
             format_desc_ = format_desc;
-            time_        = boost::none;
+            time_        = {};
             return;
         }
 

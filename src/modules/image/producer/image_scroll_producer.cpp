@@ -54,7 +54,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/scoped_array.hpp>
 
@@ -115,10 +114,10 @@ struct image_scroll_producer : public core::frame_producer
     int                           width_;
     int                           height_;
 
-    double                                    delta_ = 0.0;
-    speed_tweener                             speed_;
-    boost::optional<boost::posix_time::ptime> end_time_;
-    core::draw_frame                          frame_;
+    double                                  delta_ = 0.0;
+    speed_tweener                           speed_;
+    std::optional<boost::posix_time::ptime> end_time_;
+    core::draw_frame                        frame_;
 
     int start_offset_x_ = 0;
     int start_offset_y_ = 0;
@@ -128,7 +127,7 @@ struct image_scroll_producer : public core::frame_producer
                                    std::wstring                                filename,
                                    double                                      s,
                                    double                                      duration,
-                                   boost::optional<boost::posix_time::ptime>   end_time,
+                                   std::optional<boost::posix_time::ptime>     end_time,
                                    int                                         motion_blur_px         = 0,
                                    bool                                        premultiply_with_alpha = false)
         : filename_(std::move(filename))
@@ -372,7 +371,7 @@ struct image_scroll_producer : public core::frame_producer
             auto seconds = diff.total_seconds();
 
             set_speed(-speed_from_duration(static_cast<double>(seconds)));
-            end_time_ = boost::none;
+            end_time_ = {};
         } else
             delta_ += speed_.fetch_and_tick();
     }
@@ -425,9 +424,9 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_p
     if (ext == supported_extensions().end())
         return core::frame_producer::empty();
 
-    double                                    duration = 0.0;
-    double                                    speed    = get_param(L"SPEED", params, 0.0);
-    boost::optional<boost::posix_time::ptime> end_time;
+    double                                  duration = 0.0;
+    double                                  speed    = get_param(L"SPEED", params, 0.0);
+    std::optional<boost::posix_time::ptime> end_time;
 
     if (speed == 0)
         duration = get_param(L"DURATION", params, 0.0);

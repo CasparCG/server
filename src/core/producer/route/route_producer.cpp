@@ -29,11 +29,12 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_channel.h>
 
-#include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/signals2.hpp>
 
 #include <tbb/concurrent_queue.h>
+
+#include <optional>
 
 namespace caspar { namespace core {
 
@@ -51,9 +52,9 @@ class route_producer
     std::shared_ptr<route>             route_;
     boost::signals2::scoped_connection connection_;
 
-    boost::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
-    int                                                            source_channel_;
-    int                                                            source_layer_;
+    std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
+    int                                                          source_channel_;
+    int                                                          source_layer_;
 
     int get_source_channel() const override { return source_channel_; }
     int get_source_layer() const override { return source_layer_; }

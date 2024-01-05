@@ -31,13 +31,13 @@
 
 #include <common/env.h>
 #include <common/os/filesystem.h>
+#include <common/param.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/optional.hpp>
 
-#include "common/param.h"
 #include <future>
 #include <map>
+#include <optional>
 
 namespace caspar { namespace core {
 
@@ -173,7 +173,7 @@ struct cg_producer_registry::impl
     }
 
   private:
-    boost::optional<record> find_record(const std::wstring& filename) const
+    std::optional<record> find_record(const std::wstring& filename) const
     {
         using namespace boost::filesystem;
 
@@ -204,7 +204,7 @@ struct cg_producer_registry::impl
                 return rec.second;
         }
 
-        return boost::none;
+        return {};
     }
 };
 

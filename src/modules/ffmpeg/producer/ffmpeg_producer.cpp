@@ -68,10 +68,10 @@ struct ffmpeg_producer : public core::frame_producer
                              std::wstring                         filename,
                              std::wstring                         vfilter,
                              std::wstring                         afilter,
-                             boost::optional<int64_t>             start,
-                             boost::optional<int64_t>             seek,
-                             boost::optional<int64_t>             duration,
-                             boost::optional<bool>                loop,
+                             std::optional<int64_t>               start,
+                             std::optional<int64_t>               seek,
+                             std::optional<int64_t>               duration,
+                             std::optional<bool>                  loop,
                              int                                  seekable)
         : filename_(filename)
         , frame_factory_(frame_factory)
@@ -347,9 +347,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 
-    boost::optional<std::int64_t> start;
-    boost::optional<std::int64_t> seek2;
-    boost::optional<std::int64_t> duration;
+    std::optional<std::int64_t> start;
+    std::optional<std::int64_t> seek2;
+    std::optional<std::int64_t> duration;
 
     if (in != 0) {
         start = in;

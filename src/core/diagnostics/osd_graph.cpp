@@ -33,7 +33,6 @@
 #include <SFML/Graphics.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/optional.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -43,6 +42,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <tuple>
 
@@ -254,9 +254,9 @@ class context : public drawable
 
 class line : public drawable
 {
-    size_t                                                   res_{1024};
-    boost::circular_buffer<sf::Vertex>                       line_data_{res_};
-    boost::circular_buffer<boost::optional<sf::VertexArray>> line_tags_{res_};
+    size_t                                                 res_{1024};
+    boost::circular_buffer<sf::Vertex>                     line_data_{res_};
+    boost::circular_buffer<std::optional<sf::VertexArray>> line_tags_{res_};
 
     std::atomic<float> tick_data_;
     std::atomic<bool>  tick_tag_;
@@ -321,7 +321,7 @@ class line : public drawable
             vertical_dash.append(sf::Vertex(sf::Vector2f(get_insertion_xcoord() - x_delta_, 1.f), color));
             line_tags_.push_back(vertical_dash);
         } else
-            line_tags_.push_back(boost::none);
+            line_tags_.push_back({});
 
         tick_tag_ = false;
 

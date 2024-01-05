@@ -32,7 +32,6 @@
 #include <core/monitor/monitor.h>
 
 #include <boost/asio.hpp>
-#include <boost/optional.hpp>
 
 #include <condition_variable>
 #include <mutex>

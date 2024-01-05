@@ -53,6 +53,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -256,7 +257,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     com_iface_ptr<IDeckLinkProfileAttributes> attributes_    = iface_cast<IDeckLinkProfileAttributes>(decklink_);
     com_iface_ptr<IDeckLinkConfiguration>     configuration_ = iface_cast<IDeckLinkConfiguration>(decklink_);
     int                                       device_sync_group_;
-    boost::optional<core::const_frame>        first_field_;
+    std::optional<core::const_frame>          first_field_;
 
     const std::wstring model_name_ = get_model_name(decklink_);
 
@@ -349,7 +350,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     void schedule_frame(core::const_frame frame, BMDTimeValue display_time)
     {
         bool isInterlaced = decklink_format_desc_.field_count != 1;
-        if (isInterlaced && !first_field_.is_initialized()) {
+        if (isInterlaced && !first_field_.has_value()) {
             // If this is interlaced it needs a pair of frames at a time
             first_field_ = frame;
             return;
@@ -360,7 +361,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         core::const_frame frame2;
         if (isInterlaced) {
             frame1       = *first_field_;
-            first_field_ = boost::none;
+            first_field_ = {};
             frame2       = frame;
         } else {
             frame1 = frame;

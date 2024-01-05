@@ -40,14 +40,11 @@
 #include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/parallel_for.h>
 
 #include <mutex>
 
@@ -58,6 +55,7 @@
 #include <include/cef_render_handler.h>
 #pragma warning(pop)
 
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -541,8 +539,8 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
     const auto url = found_filename ? L"file://" + *found_filename : param_url;
 
-    boost::optional<int> width;
-    boost::optional<int> height;
+    std::optional<int> width;
+    std::optional<int> height;
     {
         auto u8_url = u8(url);
 

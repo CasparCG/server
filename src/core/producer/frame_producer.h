@@ -30,11 +30,10 @@
 #include <core/frame/draw_frame.h>
 #include <core/video_format.h>
 
-#include <boost/optional.hpp>
-
 #include <cstdint>
 #include <functional>
 #include <future>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -106,7 +105,7 @@ class frame_producer
     }
     virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
     virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
-    virtual boost::optional<int64_t>        auto_play_delta() const { return boost::none; }
+    virtual std::optional<int64_t>          auto_play_delta() const { return {}; }
 
     /**
      * Some producers take a couple of frames before they produce frames.

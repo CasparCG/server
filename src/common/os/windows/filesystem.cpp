@@ -28,11 +28,12 @@
 
 namespace caspar {
 
-boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
+std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
 {
     if (boost::filesystem::exists(case_insensitive))
         return case_insensitive;
-    return boost::none;
+
+    return {};
 }
 
 std::wstring clean_path(std::wstring path) { return path; }

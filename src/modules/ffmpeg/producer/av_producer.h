@@ -5,9 +5,8 @@
 #include <core/monitor/monitor.h>
 #include <core/video_format.h>
 
-#include <boost/optional.hpp>
-
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace caspar { namespace ffmpeg {
@@ -19,12 +18,12 @@ class AVProducer
                core::video_format_desc              format_desc,
                std::string                          name,
                std::string                          path,
-               boost::optional<std::string>         vfilter,
-               boost::optional<std::string>         afilter,
-               boost::optional<int64_t>             start,
-               boost::optional<int64_t>             seek,
-               boost::optional<int64_t>             duration,
-               boost::optional<bool>                loop,
+               std::optional<std::string>           vfilter,
+               std::optional<std::string>           afilter,
+               std::optional<int64_t>               start,
+               std::optional<int64_t>               seek,
+               std::optional<int64_t>               duration,
+               std::optional<bool>                  loop,
                int                                  seekable);
 
     core::draw_frame prev_frame(const core::video_field field);
