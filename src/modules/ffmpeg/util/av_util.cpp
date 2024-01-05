@@ -69,13 +69,22 @@ core::mutable_frame make_frame(void*                    tag,
         },
         [&]() {
             if (audio) {
-                // TODO This is a bit of a hack
-                frame.audio_data() = std::vector<int32_t>(audio->nb_samples * 8, 0);
-                auto dst           = frame.audio_data().data();
-                auto src           = reinterpret_cast<int32_t*>(audio->data[0]);
-                for (auto i = 0; i < audio->nb_samples; i++) {
-                    for (auto j = 0; j < std::min(8, audio->channels); ++j) {
-                        dst[i * 8 + j] = src[i * audio->channels + j];
+                const int channel_count = 16;
+                frame.audio_data()      = std::vector<int32_t>(audio->nb_samples * channel_count, 0);
+
+                if (audio->channels == channel_count) {
+                    std::memcpy(frame.audio_data().data(),
+                                reinterpret_cast<int32_t*>(audio->data[0]),
+                                sizeof(int32_t) * channel_count * audio->nb_samples);
+                } else {
+                    // This isn't pretty, but some callers may not provide 16 channels
+
+                    auto dst = frame.audio_data().data();
+                    auto src = reinterpret_cast<int32_t*>(audio->data[0]);
+                    for (auto i = 0; i < audio->nb_samples; i++) {
+                        for (auto j = 0; j < std::min(channel_count, audio->channels); ++j) {
+                            dst[i * channel_count + j] = src[i * audio->channels + j];
+                        }
                     }
                 }
             }

@@ -523,7 +523,8 @@ struct Filter
             const AVSampleFormat sample_fmts[] = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 
-            // TODO Always output 8 channels and remove hack in make_frame.
+            const int channel_counts[] = {16, -1};
+            FF(av_opt_set_int_list(sink, "channel_counts", channel_counts, -1, AV_OPT_SEARCH_CHILDREN));
 
             const int sample_rates[] = {format_desc.audio_sample_rate, -1};
             FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, -1, AV_OPT_SEARCH_CHILDREN));
