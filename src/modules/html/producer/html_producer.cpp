@@ -45,6 +45,7 @@
 #include <boost/regex.hpp>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for.h>
 
 #include <mutex>
 
