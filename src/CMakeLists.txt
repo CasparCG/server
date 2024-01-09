@@ -5,7 +5,7 @@ PROJECT ("CasparCG Server")
 SET (CONFIG_VERSION_MAJOR 2)
 SET (CONFIG_VERSION_MINOR 4)
 SET (CONFIG_VERSION_BUG 0)
-SET (CONFIG_VERSION_TAG "Dev")
+SET (CONFIG_VERSION_TAG "RC1")
 
 set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
