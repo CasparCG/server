@@ -1,0 +1,19 @@
+{
+    "name": "casparcg-server-node",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "main.js",
+    "license": "MIT",
+    "dependencies": {
+        "cmake-js": "^7.2.1",
+        "node-addon-api": "^7.0.0"
+    },
+    "scripts": {
+        "build": "cmake-js -d ../src build --prefer-clang=false"
+    },
+    "binary": {
+        "napi_versions": [
+            7
+        ]
+    }
+}

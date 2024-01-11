@@ -1,6 +1,11 @@
 cmake_minimum_required (VERSION 3.16)
 project (shell)
 
+add_definitions(-DNAPI_VERSION=4)
+
+include_directories(${CMAKE_JS_INC})
+
+
 join_list("${CASPARCG_MODULE_INCLUDE_STATEMENTS}" "\n" CASPARCG_MODULE_INCLUDE_STATEMENTS)
 join_list("${CASPARCG_MODULE_INIT_STATEMENTS}" "\n" CASPARCG_MODULE_INIT_STATEMENTS)
 join_list("${CASPARCG_MODULE_UNINIT_STATEMENTS}" "\n" CASPARCG_MODULE_UNINIT_STATEMENTS)
@@ -30,14 +35,19 @@ else ()
 endif ()
 
 
-add_executable(casparcg ${SOURCES} ${HEADERS})
+add_library(casparcg SHARED ${SOURCES} ${HEADERS} ${CMAKE_JS_SRC})
 target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
     ${TBB_INCLUDE_PATH}
+	${CMAKE_JS_INC}
+	# hack: these aren't being propogated correctly
+	/home/julus/Projects/casparcg-server-node/node/node_modules/node-api-headers/include
+	/home/julus/Projects/casparcg-server-node/node/node_modules/node-addon-api
     )
 casparcg_add_build_dependencies(casparcg)
+
 
 source_group(sources ./*)
 
@@ -49,6 +59,16 @@ target_link_libraries(casparcg
 
 		"${CASPARCG_MODULE_PROJECTS}"
 )
+
+
+# add_library(casparcg SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
+set_target_properties(casparcg PROPERTIES PREFIX "" SUFFIX ".node")
+target_link_libraries(casparcg ${CMAKE_JS_LIB})
+
+if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+  # Generate node.lib
+  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+endif()
 
 if (MSVC)
 	target_link_libraries(casparcg
@@ -151,7 +171,7 @@ if (MSVC)
 		)
 	endforeach(FILE_TO_COPY)
 else ()
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)
+	# ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/casparcg.config ${CMAKE_BINARY_DIR}/staging/casparcg.config)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/liberation-fonts/LiberationMono-Regular.ttf ${CMAKE_BINARY_DIR}/staging/LiberationMono-Regular.ttf)
 	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/run.sh ${CMAKE_BINARY_DIR}/staging/run.sh)

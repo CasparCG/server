@@ -51,6 +51,9 @@
 #include <clocale>
 #include <csignal>
 
+#include "napi.h"
+
+
 namespace caspar {
 
 void setup_global_locale()
@@ -175,7 +178,7 @@ void terminate_handler()
 
 } // namespace caspar
 
-int main(int argc, char** argv)
+int main2(int argc, char** argv)
 {
     using namespace caspar;
 
@@ -278,3 +281,20 @@ int main(int argc, char** argv)
 
     return return_code;
 }
+
+
+Napi::String Method(const Napi::CallbackInfo& info) {
+
+    main2(0, nullptr);
+
+  Napi::Env env = info.Env();
+  return Napi::String::New(env, "world");
+}
+
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  exports.Set(Napi::String::New(env, "hello"),
+              Napi::Function::New(env, Method));
+  return exports;
+}
+
+NODE_API_MODULE(casparcg, Init)
