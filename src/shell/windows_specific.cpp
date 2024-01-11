@@ -141,12 +141,6 @@ void setup_console_window()
 
 void increase_process_priority() { SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS); }
 
-void wait_for_keypress()
-{
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    std::system("pause");
-}
-
 std::shared_ptr<void> setup_debugging_environment()
 {
 #ifdef _DEBUG

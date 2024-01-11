@@ -52,11 +52,6 @@ void increase_process_priority()
     // TODO: implement.
 }
 
-void wait_for_keypress()
-{
-    // TODO: implement if desirable.
-}
-
 std::shared_ptr<void> setup_debugging_environment()
 {
     // TODO: implement if applicable.

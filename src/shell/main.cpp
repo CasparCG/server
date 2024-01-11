@@ -82,7 +82,7 @@ void print_info()
     CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 }
 
-auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
+auto run(const std::wstring& config_file_name)
 {
     auto promise  = std::make_shared<std::promise<bool>>();
     auto future   = promise->get_future();
@@ -142,7 +142,6 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
                 if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
                     boost::iequals(wcmd, L"BYE")) {
                     CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-                    should_wait_for_keypress = true;
                     shutdown(false); // false to not restart
                     break;
                 }
@@ -178,29 +177,15 @@ void terminate_handler()
 
 } // namespace caspar
 
-int main2(int argc, char** argv)
-{
-    using namespace caspar;
 
-    if (intercept_command_line_args(argc, argv))
-        return 0;
+void fake_shutdown(bool restart) {
+    // Ignore
+}
 
-    ::signal(SIGSEGV, signal_handler);
-    ::signal(SIGABRT, signal_handler);
-    std::set_terminate(caspar::terminate_handler);
+Napi::String Method(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
 
-    static auto backtrace = "./backtrace.dump";
-    if (boost::filesystem::exists(backtrace)) {
-        std::ifstream     ifs(backtrace);
-        std::stringstream str;
-        str << boost::stacktrace::stacktrace::from_dump(ifs);
-        CASPAR_LOG(error) << u16(str.str());
-        ifs.close();
-        boost::filesystem::remove(backtrace);
-    }
-
-    int return_code = 0;
-    setup_prerequisites();
+  using namespace caspar;
 
     setup_global_locale();
 
@@ -215,10 +200,6 @@ int main2(int argc, char** argv)
     std::wstring config_file_name(L"casparcg.config");
 
     try {
-        // Configure environment properties from configuration.
-        if (argc >= 2)
-            config_file_name = caspar::u16(argv[1]);
-
         log::add_cout_sink();
         env::configure(config_file_name);
 
@@ -249,45 +230,23 @@ int main2(int argc, char** argv)
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();
 
-        // Setup console window.
-        setup_console_window();
-
-        std::atomic<bool> should_wait_for_keypress;
-        should_wait_for_keypress = false;
-        auto should_restart      = run(config_file_name, should_wait_for_keypress);
-        return_code              = should_restart ? 5 : 0;
+        auto should_restart      = run(config_file_name);
+        // return_code              = should_restart ? 5 : 0;
 
         CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
-        if (should_wait_for_keypress)
-            wait_for_keypress();
     } catch (boost::property_tree::file_parser_error& e) {
-        CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message()
-                          << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
+        Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (user_error&) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
+        Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the GitHub project page "
-                             L"(www.github.com/casparcg/server/issues).";
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file "
-                      L"folder for more information.\n\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+        Napi::Error::New(env, "Unhandled exception").ThrowAsJavaScriptException();
     }
 
-    return return_code;
-}
+    // return return_code;
 
-
-Napi::String Method(const Napi::CallbackInfo& info) {
-
-    main2(0, nullptr);
-
-  Napi::Env env = info.Env();
   return Napi::String::New(env, "world");
 }
 
