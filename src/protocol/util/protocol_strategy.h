@@ -39,7 +39,6 @@ class client_connection
     virtual ~client_connection() {}
 
     virtual void         send(std::basic_string<CharT>&& data, bool skip_log = false) = 0;
-    virtual void         disconnect()                                                 = 0;
     virtual std::wstring address() const                                              = 0;
 
     virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) = 0;

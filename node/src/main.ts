@@ -33,6 +33,11 @@ const consoleClient: Client = {
 
 rl.on("line", function (line) {
     try {
+        if (line.toUpperCase() === "BYE") {
+            rl.close();
+            return;
+        }
+
         const answer = protocol.parse(consoleClient, line.trim());
         console.log(answer);
     } catch (e) {

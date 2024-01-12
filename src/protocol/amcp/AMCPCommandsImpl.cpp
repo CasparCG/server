@@ -1546,12 +1546,6 @@ std::wstring diag_command(command_context& ctx)
     return L"202 DIAG OK\r\n";
 }
 
-std::wstring bye_command(command_context& ctx)
-{
-    ctx.client->disconnect();
-    return L"";
-}
-
 std::wstring kill_command(command_context& ctx)
 {
     ctx.static_context->shutdown_server_now(false); // false for not attempting to restart
@@ -1696,7 +1690,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Query Commands", L"TLS", tls_command, 0);
     repo->register_command(L"Query Commands", L"VERSION", version_command, 0);
     repo->register_command(L"Query Commands", L"DIAG", diag_command, 0);
-    repo->register_command(L"Query Commands", L"BYE", bye_command, 0);
     repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
     repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);

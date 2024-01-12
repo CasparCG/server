@@ -25,9 +25,12 @@ export class AMCPServer {
     }
 
     #onClient(clientSocket: Socket): void {
+        let address: string = (clientSocket.address() as any)?.address;
+        if (address.startsWith("::ffff:")) address = address.slice(7);
+
         const client: Client = {
             id: "test",
-            address: (clientSocket.address() as any)?.address,
+            address: address,
             batch: new AMCPClientBatchInfo(),
         };
 
@@ -51,6 +54,12 @@ export class AMCPServer {
                 receiveBuffer = receiveBuffer.slice(
                     endIndex + LINE_DELIMITER.length
                 );
+
+                if (line.toUpperCase() === "BYE") {
+                    console.log(`Closing connection from ${client.address}`);
+                    clientSocket.destroy();
+                    return;
+                }
 
                 const response = this.#protocol.parse(client, line);
 
