@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "../util/ClientInfo.h"
 #include "amcp_command_repository.h"
 #include "amcp_shared.h"
 #include <accelerator/accelerator.h>
@@ -75,7 +74,7 @@ struct command_context
 {
     std::shared_ptr<amcp_command_static_context>        static_context;
     const spl::shared_ptr<std::vector<channel_context>> channels;
-    const IO::ClientInfoPtr                             client;
+    const std::wstring                                  client_address;
     const channel_context                               channel;
     const int                                           channel_index;
     const int                                           layer_id;
@@ -85,13 +84,13 @@ struct command_context
 
     command_context(std::shared_ptr<amcp_command_static_context>        static_context,
                     const spl::shared_ptr<std::vector<channel_context>> channels,
-                    const IO::ClientInfoPtr&                            client,
+                    const std::wstring&                                 client_address,
                     channel_context                                     channel,
                     int                                                 channel_index,
                     int                                                 layer_id)
         : static_context(std::move(static_context))
         , channels(std::move(channels))
-        , client(client)
+        , client_address(client_address)
         , channel(std::move(channel))
         , channel_index(channel_index)
         , layer_id(layer_id)

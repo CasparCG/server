@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "../util/ClientInfo.h"
 #include "AMCPCommand.h"
 
 #include <common/memory.h>
@@ -35,12 +34,11 @@ class amcp_command_repository
   public:
     amcp_command_repository(const spl::shared_ptr<std::vector<channel_context>>& channels);
 
-    std::shared_ptr<AMCPCommand> parse_command(IO::ClientInfoPtr       client,
+    std::shared_ptr<AMCPCommand> parse_command(const std::wstring&     client_address,
                                                const std::wstring&     command_name,
                                                int                     channel_index,
                                                int                     layer_index,
-                                               std::list<std::wstring> tokens,
-                                               const std::wstring&     request_id) const;
+                                               std::list<std::wstring> tokens) const;
 
     const spl::shared_ptr<std::vector<channel_context>>& channels() const;
 

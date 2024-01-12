@@ -24,9 +24,35 @@
 #include "AMCPCommand.h"
 
 #include <common/executor.h>
+#include <common/future.h>
 #include <common/memory.h>
 
 namespace caspar { namespace protocol { namespace amcp {
+
+struct CommandResult
+{
+    int          status = 0;
+    std::wstring message;
+
+    CommandResult(int status, std::wstring message)
+        : status(status)
+        , message(message)
+    {
+    }
+
+    static std::future<CommandResult> create(int status, std::wstring message)
+    {
+        return make_ready_future(CommandResult(status, message));
+    }
+
+    std::wstring to_string()
+    {
+        if (status == 0)
+            return message;
+        else
+            return std::to_wstring(status) + L" " + message;
+    }
+};
 
 class AMCPCommandQueue
 {
@@ -36,11 +62,11 @@ class AMCPCommandQueue
     AMCPCommandQueue(const std::wstring& name, const spl::shared_ptr<std::vector<channel_context>>& channels);
     ~AMCPCommandQueue();
 
-    void AddCommand(std::shared_ptr<AMCPGroupCommand> command);
+    std::future<std::vector<CommandResult>> AddCommand(std::shared_ptr<AMCPGroupCommand> command);
 
   private:
-    void Execute(std::shared_ptr<AMCPGroupCommand> cmd) const;
-    
+    std::vector<CommandResult> Execute(std::shared_ptr<AMCPGroupCommand> cmd) const;
+
     executor                                            executor_;
     const spl::shared_ptr<std::vector<channel_context>> channels_;
 };

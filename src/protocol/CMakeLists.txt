@@ -41,8 +41,6 @@ set(HEADERS
 
 		osc/client.h
 
-		util/ClientInfo.h
-		util/protocol_strategy.h
 		util/http_request.h
 		util/tokenize.h
 

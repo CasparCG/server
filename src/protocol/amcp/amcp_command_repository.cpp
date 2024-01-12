@@ -34,22 +34,20 @@ namespace caspar { namespace protocol { namespace amcp {
 
 AMCPCommand::ptr_type make_cmd(amcp_command_func        func,
                                const std::wstring&      name,
-                               const std::wstring&      id,
-                               IO::ClientInfoPtr        client,
+                               const std::wstring&      client_address,
                                unsigned int             channel_index,
                                int                      layer_index,
                                std::list<std::wstring>& tokens)
 {
     const std::vector<std::wstring> parameters(tokens.begin(), tokens.end());
-    const command_context_simple    ctx(std::move(client), channel_index, layer_index, std::move(parameters));
+    const command_context_simple    ctx(client_address, channel_index, layer_index, std::move(parameters));
 
-    return std::make_shared<AMCPCommand>(ctx, func, name, id);
+    return std::make_shared<AMCPCommand>(ctx, func, name);
 }
 
 AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_command_func, int>>& commands,
                                    const std::wstring&                                              name,
-                                   const std::wstring&                                              request_id,
-                                   IO::ClientInfoPtr                                                client,
+                                   const std::wstring&                                              client_address,
                                    int                                                              channel_index,
                                    int                                                              layer_index,
                                    std::list<std::wstring>&                                         tokens)
@@ -68,8 +66,7 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
             tokens.pop_front();
 
             if (tokens.size() >= subcmd->second.second) {
-                return make_cmd(
-                    subcmd->second.first, fullname, request_id, std::move(client), channel_index, layer_index, tokens);
+                return make_cmd(subcmd->second.first, fullname, client_address, channel_index, layer_index, tokens);
             }
         }
     }
@@ -78,7 +75,7 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
     const auto command = commands.find(name);
 
     if (command != commands.end() && tokens.size() >= command->second.second) {
-        return make_cmd(command->second.first, name, request_id, std::move(client), channel_index, layer_index, tokens);
+        return make_cmd(command->second.first, name, client_address, channel_index, layer_index, tokens);
     }
 
     return nullptr;
@@ -96,12 +93,10 @@ struct amcp_command_repository::impl
     {
     }
 
-    AMCPCommand::ptr_type create_command(const std::wstring&      name,
-                                         const std::wstring&      id,
-                                         IO::ClientInfoPtr        client,
-                                         std::list<std::wstring>& tokens) const
+    AMCPCommand::ptr_type
+    create_command(const std::wstring& name, const std::wstring& client_address, std::list<std::wstring>& tokens) const
     {
-        auto command = find_command(commands, name, id, std::move(client), -1, -1, tokens);
+        auto command = find_command(commands, name, client_address, -1, -1, tokens);
 
         if (command)
             return command;
@@ -110,8 +105,7 @@ struct amcp_command_repository::impl
     }
 
     AMCPCommand::ptr_type create_channel_command(const std::wstring&      name,
-                                                 const std::wstring&      id,
-                                                 IO::ClientInfoPtr        client,
+                                                 const std::wstring&      client_address,
                                                  unsigned int             channel_index,
                                                  int                      layer_index,
                                                  std::list<std::wstring>& tokens) const
@@ -119,7 +113,7 @@ struct amcp_command_repository::impl
         if (channels_->size() <= channel_index)
             return nullptr;
 
-        auto command = find_command(channel_commands, name, id, std::move(client), channel_index, layer_index, tokens);
+        auto command = find_command(channel_commands, name, client_address, channel_index, layer_index, tokens);
 
         if (command)
             return command;
@@ -127,20 +121,19 @@ struct amcp_command_repository::impl
         return nullptr;
     }
 
-    std::shared_ptr<AMCPCommand> parse_command(IO::ClientInfoPtr       client,
+    std::shared_ptr<AMCPCommand> parse_command(const std::wstring&     client_address,
                                                const std::wstring&     command_name,
                                                int                     channel_index,
                                                int                     layer_index,
-                                               std::list<std::wstring> tokens,
-                                               const std::wstring&     request_id) const
+                                               std::list<std::wstring> tokens) const
     {
         // Create command instance
         if (channel_index >= 0) {
-            return create_channel_command(command_name, request_id, client, channel_index, layer_index, tokens);
+            return create_channel_command(command_name, client_address, channel_index, layer_index, tokens);
 
         } else {
             // Create global instance
-            return create_command(command_name, request_id, client, tokens);
+            return create_command(command_name, client_address, tokens);
         }
     }
 };
@@ -155,14 +148,13 @@ const spl::shared_ptr<std::vector<channel_context>>& amcp_command_repository::ch
     return impl_->channels_;
 }
 
-std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientInfoPtr       client,
+std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(const std::wstring&     client_address,
                                                                     const std::wstring&     command_name,
                                                                     int                     channel_index,
                                                                     int                     layer_index,
-                                                                    std::list<std::wstring> tokens,
-                                                                    const std::wstring&     request_id) const
+                                                                    std::list<std::wstring> tokens) const
 {
-    return impl_->parse_command(client, command_name, channel_index, layer_index, tokens, request_id);
+    return impl_->parse_command(client_address, command_name, channel_index, layer_index, tokens);
 }
 
 void amcp_command_repository::register_command(std::wstring      category,

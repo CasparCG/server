@@ -41,8 +41,12 @@ class command_context_factory
     {
         const channel_context channel =
             simple_ctx.channel_index >= 0 ? channels->at(simple_ctx.channel_index) : channel_context();
-        auto ctx = command_context(
-            static_context_, channels, simple_ctx.client, channel, simple_ctx.channel_index, simple_ctx.layer_id);
+        auto ctx       = command_context(static_context_,
+                                   channels,
+                                   simple_ctx.client_address,
+                                   channel,
+                                   simple_ctx.channel_index,
+                                   simple_ctx.layer_id);
         ctx.parameters = std::move(simple_ctx.parameters);
         return ctx;
     }

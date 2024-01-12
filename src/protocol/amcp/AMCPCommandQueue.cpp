@@ -25,7 +25,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <common/except.h>
-#include <common/future.h>
 #include <common/timer.h>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -39,9 +38,9 @@ AMCPCommandQueue::AMCPCommandQueue(const std::wstring&                          
 
 AMCPCommandQueue::~AMCPCommandQueue() {}
 
-std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         cmd,
-                           const spl::shared_ptr<std::vector<channel_context>>& channels,
-                           bool                                                 reply_without_req_id)
+std::future<CommandResult> exec_cmd(std::shared_ptr<AMCPCommand>                         cmd,
+                                    const spl::shared_ptr<std::vector<channel_context>>& channels,
+                                    bool                                                 reply_without_req_id)
 {
     try {
         try {
@@ -51,76 +50,74 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
             CASPAR_LOG(debug) << "Executing command: " << name;
 
             auto res = cmd->Execute(channels).share();
-            return std::async(std::launch::async, [cmd, res, reply_without_req_id, timer, name]() -> bool {
-                cmd->SendReply(res.get(), reply_without_req_id);
+            return std::async(std::launch::async, [res, timer, name]() -> CommandResult {
+                auto result = res.get();
 
                 CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << name;
-                return true;
+
+                return CommandResult(0, result);
             });
 
         } catch (file_not_found&) {
             CASPAR_LOG(error) << " File not found.";
-            cmd->SendReply(L"404 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(404, cmd->name() + L" FAILED\r\n");
         } catch (expected_user_error&) {
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(403, cmd->name() + L" FAILED\r\n");
         } catch (user_error&) {
             CASPAR_LOG(error) << " Check syntax.";
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(403, cmd->name() + L" FAILED\r\n");
         } catch (std::out_of_range&) {
             CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
-            cmd->SendReply(L"402 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(402, cmd->name() + L" FAILED\r\n");
         } catch (boost::bad_lexical_cast&) {
             CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(403, cmd->name() + L" FAILED\r\n");
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             CASPAR_LOG(error) << "Failed to execute command: " << cmd->name();
-            cmd->SendReply(L"501 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            return CommandResult::create(501, cmd->name() + L" FAILED\r\n");
         }
 
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
+        return CommandResult::create(500, L"INTERNAL ERROR\r\n");
     }
-
-    return make_ready_future(false);
 }
 
-void AMCPCommandQueue::AddCommand(std::shared_ptr<AMCPGroupCommand> pCurrentCommand)
+std::future<std::vector<CommandResult>> AMCPCommandQueue::AddCommand(std::shared_ptr<AMCPGroupCommand> pCurrentCommand)
 {
     if (!pCurrentCommand)
-        return;
+        return {};
 
     if (executor_.size() > 128) {
-        try {
-            CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
-            CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->name();
-            pCurrentCommand->SendReply(L"504 QUEUE OVERFLOW\r\n");
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-        }
-        return;
+        CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
+        CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->name();
+
+        std::vector<CommandResult> res = {CommandResult(504, L"QUEUE OVERFLOW\r\n")};
+        return make_ready_future(std::move(res));
     }
 
-    executor_.begin_invoke([=] {
+    return executor_.begin_invoke([=] {
         try {
-            Execute(pCurrentCommand);
+            return Execute(pCurrentCommand);
 
-            CASPAR_LOG(trace) << "Ready for a new command";
+            // CASPAR_LOG(trace) << "Ready for a new command";
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
+            std::vector<CommandResult> res = {CommandResult(500, L"INTERNAL ERROR\r\n")};
+            return res;
         }
     });
-}
+} // namespace amcp
 
-void AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
+std::vector<CommandResult> AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
 {
     if (cmd->Commands().empty())
-        return;
+        return {};
 
     // Shortcut for commands which are either not a batch, or don't need to be
     if (cmd->Commands().size() == 1) {
-        exec_cmd(cmd->Commands().at(0), channels_, true);
-        return;
+        return {exec_cmd(cmd->Commands().at(0), channels_, true).get()};
     }
 
     caspar::timer timer;
@@ -128,7 +125,7 @@ void AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
 
     spl::shared_ptr<std::vector<channel_context>>     delayed_channels;
     std::vector<std::shared_ptr<core::stage_delayed>> delayed_stages;
-    std::vector<std::future<bool>>                    results;
+    std::vector<std::future<CommandResult>>           results;
     std::vector<std::unique_lock<std::mutex>>         channel_locks;
 
     try {
@@ -171,18 +168,27 @@ void AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
     }
     channel_locks.clear();
 
+    std::vector<CommandResult> results2;
+    results2.reserve(results.size());
+
     int failed = 0;
     for (auto& f : results) {
-        if (!f.get())
+        auto res = f.get();
+
+        if (res.status != 0)
             failed++;
+
+        results2.push_back(std::move(res));
     }
 
-    if (failed > 0)
-        cmd->SendReply(L"202 COMMIT PARTIAL\r\n");
-    else
-        cmd->SendReply(L"202 COMMIT OK\r\n");
+    // if (failed > 0)
+    //     cmd->SendReply(L"202 COMMIT PARTIAL\r\n");
+    // else
+    //     cmd->SendReply(L"202 COMMIT OK\r\n");
 
     CASPAR_LOG(debug) << "Executed batch (" << timer.elapsed() << "s): " << cmd->name();
+
+    return results2;
 }
 
 }}} // namespace caspar::protocol::amcp

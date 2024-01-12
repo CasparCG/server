@@ -175,11 +175,10 @@ class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
         }
 
         // Create a dummy client which prints amcp responses to console.
-        auto         console_client = caspar::spl::make_shared<caspar::IO::ConsoleClientInfo>();
-        std::wstring request_id     = L"";
+        auto console_client = L"console";
 
         auto cmd = instance_data->caspar_server->get_amcp_command_repository()->parse_command(
-            std::move(console_client), caspar::u16(command_name), channel_index, layer_index, tokens, request_id);
+            console_client, caspar::u16(command_name), channel_index, layer_index, tokens);
 
         if (!cmd) {
             Napi::Error::New(env, "Failed to parse command2").ThrowAsJavaScriptException();
@@ -267,9 +266,6 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
 
         instance_data->caspar_server->start();
 
-        // Create a dummy client which prints amcp responses to console.
-        auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
-
         instance_data->amcp_queue = std::make_shared<protocol::amcp::AMCPCommandQueue>(
             L"NodeJS Test", instance_data->caspar_server->get_amcp_command_repository()->channels());
 
@@ -348,14 +344,14 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
         }
     }
 
-    // Create a dummy client which prints amcp responses to console.
-    auto         console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
-    std::wstring request_id     = L"";
+    bool has_client = true;
 
-    auto group_command =
-        std::make_shared<caspar::protocol::amcp::AMCPGroupCommand>(commands, console_client, request_id);
+    auto group_command = std::make_shared<caspar::protocol::amcp::AMCPGroupCommand>(commands, has_client);
 
-    instance_data->amcp_queue->AddCommand(std::move(group_command));
+    auto result = instance_data->amcp_queue->AddCommand(std::move(group_command));
+
+    // TODO - make it so that the call above doesn't return a value, but dispatches some work which will post back to
+    // nodejs and resolve the promise
 
     return env.Null();
 }

@@ -53,6 +53,7 @@
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <iostream>
 #include <thread>
 #include <utility>
 
@@ -309,8 +310,6 @@ struct server::impl
 
     void setup_channel_producers_and_consumers(const std::vector<boost::property_tree::wptree>& xml_channels)
     {
-        auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
-
         std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
         for (auto& cc : *channels_) {
             channels_vec.emplace_back(cc.raw_channel);
@@ -350,11 +349,11 @@ struct server::impl
                         std::list<std::wstring> tokens{};
                         IO::tokenize(command, tokens);
                         auto cmd = amcp_command_repo_->parse_command(
-                            console_client, L"PLAY", channel.raw_channel->index() - 1, id, tokens, L"");
+                            L"config", L"PLAY", channel.raw_channel->index() - 1, id, tokens);
 
                         if (cmd) {
                             std::wstring res = cmd->Execute(channels_).get();
-                            console_client->send(std::move(res), false);
+                            std::wcout << L"#" + caspar::log::replace_nonprintable_copy(res, L'?') << std::flush;
                         }
                     } catch (const user_error&) {
                         CASPAR_LOG(error) << "Failed to parse command: " << command;

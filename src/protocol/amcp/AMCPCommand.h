@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "../util/ClientInfo.h"
 #include "amcp_shared.h"
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -32,18 +31,14 @@ class AMCPCommand
     const command_context_simple ctx_;
     const amcp_command_func      command_;
     const std::wstring           name_;
-    const std::wstring           request_id_;
+    const std::wstring           result_;
 
   public:
-    AMCPCommand(const command_context_simple& ctx,
-                const amcp_command_func&      command,
-                const std::wstring&           name,
-                const std::wstring&           request_id)
+    AMCPCommand(const command_context_simple& ctx, const amcp_command_func& command, const std::wstring& name)
 
         : ctx_(ctx)
         , command_(command)
         , name_(name)
-        , request_id_(request_id)
     {
     }
 
@@ -51,54 +46,56 @@ class AMCPCommand
 
     std::future<std::wstring> Execute(const spl::shared_ptr<std::vector<channel_context>>& channels);
 
-    void SendReply(const std::wstring& str, bool reply_without_req_id) const;
-
     const std::vector<std::wstring>& parameters() const { return ctx_.parameters; }
 
     int channel_index() const { return ctx_.channel_index; }
 
-    IO::ClientInfoPtr client() const { return ctx_.client; }
-
     const std::wstring& name() const { return name_; }
+
+    const std::wstring& result() const { return result_; }
 };
 
 class AMCPGroupCommand
 {
     const std::vector<std::shared_ptr<AMCPCommand>> commands_;
-    const IO::ClientInfoPtrStd                      client_;
-    const std::wstring                              request_id_;
+    const bool                                      has_client_;
     const bool                                      is_batch_;
 
   public:
-    AMCPGroupCommand(const std::vector<std::shared_ptr<AMCPCommand>> commands,
-                     IO::ClientInfoPtrStd                            client,
-                     const std::wstring&                             request_id)
+    AMCPGroupCommand(const std::vector<std::shared_ptr<AMCPCommand>> commands, bool has_client)
         : commands_(commands)
-        , client_(client)
-        , request_id_(request_id)
+        , has_client_(has_client)
         , is_batch_(true)
     {
     }
 
     AMCPGroupCommand(const std::vector<std::shared_ptr<AMCPCommand>> commands)
         : commands_(commands)
-        , client_(nullptr)
-        , request_id_(L"")
+        , has_client_(false)
         , is_batch_(true)
     {
     }
 
     AMCPGroupCommand(const std::shared_ptr<AMCPCommand> command)
         : commands_({command})
-        , client_(nullptr)
-        , request_id_(L"")
+        , has_client_(false)
         , is_batch_(false)
     {
     }
 
-    bool HasClient() const { return !!client_; }
+    bool HasClient() const { return has_client_; }
 
-    void SendReply(const std::wstring& str) const;
+    std::vector<std::wstring> GetResults()
+    {
+        std::vector<std::wstring> results;
+        results.reserve(commands_.size());
+
+        for (size_t i = 0; i < commands_.size(); i++) {
+            results.emplace_back(commands_[i]->result());
+        }
+
+        return results;
+    }
 
     std::wstring name() const;
 

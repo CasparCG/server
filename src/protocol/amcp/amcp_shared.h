@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../util/ClientInfo.h"
 #include <core/producer/stage.h>
 #include <core/video_channel.h>
 #include <utility>
@@ -26,18 +25,18 @@ class channel_context
 
 struct command_context_simple
 {
-    const IO::ClientInfoPtr         client;
+    const std::wstring              client_address;
     const int                       channel_index;
     const int                       layer_id;
     const std::vector<std::wstring> parameters;
 
     int layer_index(int default_ = 0) const { return layer_id == -1 ? default_ : layer_id; }
 
-    command_context_simple(IO::ClientInfoPtr                client,
+    command_context_simple(const std::wstring&              client_address,
                            int                              channel_index,
                            int                              layer_id,
                            const std::vector<std::wstring>& parameters)
-        : client(std::move(client))
+        : client_address(client_address)
         , channel_index(channel_index)
         , layer_id(layer_id)
         , parameters(parameters)

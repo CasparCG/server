@@ -450,7 +450,7 @@ std::wstring swap_command(command_context& ctx)
 
 std::wstring add_command(command_context& ctx)
 {
-    replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
+    replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
 
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
@@ -467,7 +467,7 @@ std::wstring remove_command(command_context& ctx)
     auto index = ctx.layer_index(std::numeric_limits<int>::min());
 
     if (index == std::numeric_limits<int>::min()) {
-        replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
+        replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
 
         if (ctx.parameters.size() == 0) {
             return L"402 REMOVE FAILED\r\n";
@@ -1373,8 +1373,8 @@ std::wstring channel_grid_command(command_context& ctx)
     auto num_channels       = ctx.channels->size() - 1;
     int  square_side_length = std::ceil(std::sqrt(num_channels));
 
-    auto ctx2 =
-        command_context(ctx.static_context, ctx.channels, ctx.client, self, self.raw_channel->index(), ctx.layer_id);
+    auto ctx2 = command_context(
+        ctx.static_context, ctx.channels, ctx.client_address, self, self.raw_channel->index(), ctx.layer_id);
     ctx2.parameters.push_back(std::to_wstring(square_side_length));
     mixer_grid_command(ctx2);
 
@@ -1594,35 +1594,37 @@ std::wstring get_osc_subscription_token(unsigned short port)
 
 std::wstring osc_subscribe_command(command_context& ctx)
 {
-    using namespace boost::asio::ip;
+    // using namespace boost::asio::ip;
 
-    unsigned short port = 0;
-    try {
-        port = std::stoi(ctx.parameters.at(0));
-    } catch (...) {
-        return L"403 OSC SUBSCRIBE BAD PORT\r\n";
-    }
+    // unsigned short port = 0;
+    // try {
+    //     port = std::stoi(ctx.parameters.at(0));
+    // } catch (...) {
+    //     return L"403 OSC SUBSCRIBE BAD PORT\r\n";
+    // }
 
-    auto subscription = ctx.static_context->osc_client->get_subscription_token(
-        udp::endpoint(address_v4::from_string(u8(ctx.client->address())), port));
+    // auto subscription = ctx.static_context->osc_client->get_subscription_token(
+    //     udp::endpoint(address_v4::from_string(u8(ctx.client_address)), port));
 
-    ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
+    // ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
 
-    return L"202 OSC SUBSCRIBE OK\r\n";
+    // return L"202 OSC SUBSCRIBE OK\r\n";
+    return L"500 NOT IMPLEMENTED\r\n";
 }
 
 std::wstring osc_unsubscribe_command(command_context& ctx)
 {
-    unsigned short port = 0;
-    try {
-        port = std::stoi(ctx.parameters.at(0));
-    } catch (...) {
-        return L"403 OSC UNSUBSCRIBE BAD PORT\r\n";
-    }
+    // unsigned short port = 0;
+    // try {
+    //     port = std::stoi(ctx.parameters.at(0));
+    // } catch (...) {
+    //     return L"403 OSC UNSUBSCRIBE BAD PORT\r\n";
+    // }
 
-    ctx.client->remove_lifecycle_bound_object(get_osc_subscription_token(port));
+    // ctx.client->remove_lifecycle_bound_object(get_osc_subscription_token(port));
 
-    return L"202 OSC UNSUBSCRIBE OK\r\n";
+    // return L"202 OSC UNSUBSCRIBE OK\r\n";
+    return L"500 NOT IMPLEMENTED\r\n";
 }
 
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
