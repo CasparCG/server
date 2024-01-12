@@ -143,15 +143,6 @@ struct amcp_command_repository::impl
             return create_command(command_name, request_id, client, tokens);
         }
     }
-
-    bool check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
-    {
-        if (channel_index < 0 || channel_index >= channels_->size())
-            return true;
-
-        auto lock = channels_->at(channel_index).lock;
-        return !(lock && !lock->check_access(client));
-    }
 };
 
 amcp_command_repository::amcp_command_repository(const spl::shared_ptr<std::vector<channel_context>>& channels)
@@ -172,11 +163,6 @@ std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientIn
                                                                     const std::wstring&     request_id) const
 {
     return impl_->parse_command(client, command_name, channel_index, layer_index, tokens, request_id);
-}
-
-bool amcp_command_repository::check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
-{
-    return impl_->check_channel_lock(client, channel_index);
 }
 
 void amcp_command_repository::register_command(std::wstring      category,

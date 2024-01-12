@@ -1,6 +1,8 @@
 import { createInterface } from "node:readline";
 import { Native } from "./native.js";
 import { AMCPClientBatchInfo, AMCPProtocolStrategy } from "./amcp.js";
+import { ChannelLocks } from "./channel_locks.js";
+import { Client } from "./client.js";
 
 const rl = createInterface({
     input: process.stdin,
@@ -17,12 +19,17 @@ Native.init();
 rl.setPrompt("");
 rl.prompt();
 
+const locks = new ChannelLocks("");
 const batch = new AMCPClientBatchInfo(); // Future: there should be one per connected client
-const protocol = new AMCPProtocolStrategy();
+const protocol = new AMCPProtocolStrategy(locks);
+
+const consoleClient: Client = {
+    id: "console",
+};
 
 rl.on("line", function (line) {
     try {
-        const answer = protocol.parse(line.trim(), batch);
+        const answer = protocol.parse(consoleClient, line.trim(), batch);
         console.log(answer);
     } catch (e) {
         console.error(e);

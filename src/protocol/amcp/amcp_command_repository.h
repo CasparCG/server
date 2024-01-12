@@ -41,7 +41,6 @@ class amcp_command_repository
                                                int                     layer_index,
                                                std::list<std::wstring> tokens,
                                                const std::wstring&     request_id) const;
-    bool                         check_channel_lock(IO::ClientInfoPtr client, int channel_index) const;
 
     const spl::shared_ptr<std::vector<channel_context>>& channels() const;
 

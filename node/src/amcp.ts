@@ -1,5 +1,7 @@
 import { Native } from "./native.js";
 import { tokenize } from "./tokenize.js";
+import type { ChannelLocks } from "./channel_locks.js";
+import type { Client } from "./client.js";
 
 export type AMCPCommand = unknown;
 
@@ -45,7 +47,17 @@ enum AMCPCommandError {
 }
 
 export class AMCPProtocolStrategy {
-    parse(message: string, batch: AMCPClientBatchInfo): string[] {
+    readonly #locks: ChannelLocks;
+
+    constructor(locks: ChannelLocks) {
+        this.#locks = locks;
+    }
+
+    parse(
+        client: Client,
+        message: string,
+        batch: AMCPClientBatchInfo
+    ): string[] {
         const tokens = tokenize(message);
 
         if (tokens.length !== 0 && tokens[0].toUpperCase() === "PING") {
@@ -58,8 +70,10 @@ export class AMCPProtocolStrategy {
 
         console.log(`Received message from TODO: ${message}`);
 
-        const result = this.#parse_command_string(batch, tokens);
-        if (result.status !== AMCPCommandError.no_error) {
+        const result = this.#parse_command_string(client, batch, tokens);
+        if (Array.isArray(result)) {
+            return result;
+        } else if (result.status !== AMCPCommandError.no_error) {
             switch (result.status) {
                 case AMCPCommandError.command_error:
                     return ["400 ERROR", message];
@@ -83,13 +97,16 @@ export class AMCPProtocolStrategy {
     }
 
     #parse_command_string(
+        client: Client,
         batch: AMCPClientBatchInfo,
         tokens: string[]
-    ): {
-        status: AMCPCommandError;
-        requestId: string | null;
-        commandName: string | undefined;
-    } {
+    ):
+        | {
+              status: AMCPCommandError;
+              requestId: string | null;
+              commandName: string | undefined;
+          }
+        | string[] {
         let requestId: string | null = null;
         let commandName: string | undefined;
 
@@ -128,6 +145,11 @@ export class AMCPProtocolStrategy {
             }
 
             commandName = tokens.shift()!.toLocaleUpperCase();
+
+            if (commandName === "LOCK") {
+                return this.#parse_lock_command(client, tokens);
+            }
+
             const channelIds = this.#parse_channel_id(tokens);
 
             let command: AMCPCommand | undefined;
@@ -157,10 +179,16 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            // auto channel_index = command.channel_index();
-            // if (!repo_->check_channel_lock(client, channel_index)) {
-            //     return error_state::access_error;
-            // }
+            if (
+                channelIds &&
+                this.#locks.isChannelLocked(client, channelIds.channelIndex)
+            ) {
+                return {
+                    status: AMCPCommandError.access_error,
+                    requestId,
+                    commandName,
+                };
+            }
 
             if (batch.inProgress) {
                 batch.addCommand(command);
@@ -294,5 +322,52 @@ export class AMCPProtocolStrategy {
         }
 
         return null;
+    }
+
+    #parse_lock_command(
+        client: Client,
+        tokens: string[]
+    ):
+        | {
+              status: AMCPCommandError;
+              requestId: string | null;
+              commandName: string | undefined;
+          }
+        | string[] {
+        const channelIndex = Number(tokens[0]) - 1;
+        if (isNaN(channelIndex)) {
+            throw new Error(`Invalid channel index`);
+        }
+
+        const command = tokens[1].toLocaleUpperCase();
+        const lockPhrase = tokens[2] as string | undefined;
+
+        if (command == "ACQUIRE") {
+            // TODO: read options
+
+            // just lock one channel
+            if (
+                !lockPhrase ||
+                !this.#locks.tryLock(client, channelIndex, lockPhrase)
+            )
+                return ["503 LOCK ACQUIRE FAILED"];
+
+            return ["202 LOCK ACQUIRE OK"];
+        }
+
+        if (command == "RELEASE") {
+            this.#locks.releaseLock(client, channelIndex);
+
+            return ["202 LOCK RELEASE OK"];
+        }
+
+        if (command == "CLEAR") {
+            if (!this.#locks.clearLocks(lockPhrase))
+                return ["503 LOCK CLEAR FAILED"];
+
+            return ["202 LOCK CLEAR OK"];
+        }
+
+        throw new Error(`Unknown LOCK command ${command}`);
     }
 }

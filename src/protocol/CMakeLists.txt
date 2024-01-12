@@ -16,7 +16,6 @@ set(SOURCES
 
 		osc/client.cpp
 
-		util/lock_container.cpp
 		util/http_request.cpp
 		util/tokenize.cpp
 )
@@ -43,7 +42,6 @@ set(HEADERS
 		osc/client.h
 
 		util/ClientInfo.h
-		util/lock_container.h
 		util/protocol_strategy.h
 		util/http_request.h
 		util/tokenize.h

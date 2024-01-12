@@ -1564,46 +1564,6 @@ std::wstring restart_command(command_context& ctx)
     return L"202 RESTART OK\r\n";
 }
 
-std::wstring lock_command(command_context& ctx)
-{
-    int  channel_index = std::stoi(ctx.parameters.at(0)) - 1;
-    auto lock          = ctx.channels->at(channel_index).lock;
-    auto command       = boost::to_upper_copy(ctx.parameters.at(1));
-
-    if (command == L"ACQUIRE") {
-        std::wstring lock_phrase = ctx.parameters.at(2);
-
-        // TODO: read options
-
-        // just lock one channel
-        if (!lock->try_lock(lock_phrase, ctx.client))
-            return L"503 LOCK ACQUIRE FAILED\r\n";
-
-        return L"202 LOCK ACQUIRE OK\r\n";
-    }
-    if (command == L"RELEASE") {
-        lock->release_lock(ctx.client);
-        return L"202 LOCK RELEASE OK\r\n";
-    }
-    if (command == L"CLEAR") {
-        std::wstring override_phrase = env::properties().get(L"configuration.lock-clear-phrase", L"");
-        std::wstring client_override_phrase;
-
-        if (!override_phrase.empty())
-            client_override_phrase = ctx.parameters.at(2);
-
-        // just clear one channel
-        if (client_override_phrase != override_phrase)
-            return L"503 LOCK CLEAR FAILED\r\n";
-
-        lock->clear_locks();
-
-        return L"202 LOCK CLEAR OK\r\n";
-    }
-
-    CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Unknown LOCK command " + command));
-}
-
 std::wstring gl_info_command(command_context& ctx)
 {
     auto device = ctx.static_context->ogl_device.lock();
@@ -1688,7 +1648,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo->register_channel_command(L"Basic Commands", L"SET", set_command, 2);
-    repo->register_command(L"Basic Commands", L"LOCK", lock_command, 2);
 
     repo->register_command(L"Data Commands", L"DATA STORE", data_store_command, 2);
     repo->register_command(L"Data Commands", L"DATA RETRIEVE", data_retrieve_command, 1);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../util/ClientInfo.h"
-#include "../util/lock_container.h"
 #include <core/producer/stage.h>
 #include <core/video_channel.h>
 #include <utility>
@@ -17,14 +16,12 @@ class channel_context
                              const std::wstring&                  lifecycle_key)
         : raw_channel(std::move(c))
         , stage(std::move(s))
-        , lock(std::make_shared<caspar::IO::lock_container>(lifecycle_key))
         , lifecycle_key_(lifecycle_key)
     {
     }
-    const std::shared_ptr<core::video_channel>        raw_channel;
-    const std::shared_ptr<core::stage_base>           stage;
-    const std::shared_ptr<caspar::IO::lock_container> lock;
-    const std::wstring                                lifecycle_key_;
+    const std::shared_ptr<core::video_channel> raw_channel;
+    const std::shared_ptr<core::stage_base>    stage;
+    const std::wstring                         lifecycle_key_;
 };
 
 struct command_context_simple
