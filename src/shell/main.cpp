@@ -176,9 +176,8 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         // Create a dummy client which prints amcp responses to console.
         auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-        instance_data->amcp = protocol::amcp::create_wchar_amcp_strategy_factory(
-                                  L"Console", instance_data->caspar_server->get_amcp_command_repository())
-                                  ->create(console_client);
+        instance_data->amcp = protocol::amcp::create_console_amcp_strategy(
+                                  L"Console", instance_data->caspar_server->get_amcp_command_repository(), console_client);
 
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();

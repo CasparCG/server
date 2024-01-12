@@ -34,7 +34,7 @@ namespace caspar { namespace protocol { namespace amcp {
 IO::protocol_strategy_factory<char>::ptr
 create_char_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo);
 
-IO::protocol_strategy_factory<wchar_t>::ptr
-create_wchar_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo);
+IO::protocol_strategy<wchar_t>::ptr
+create_console_amcp_strategy(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo, const IO::client_connection<wchar_t>::ptr& client_connection);
 
 }}} // namespace caspar::protocol::amcp

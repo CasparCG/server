@@ -20,7 +20,7 @@ rl.setPrompt("");
 rl.prompt();
 
 rl.on("line", function (line) {
-    lib.parseCommand(line.trim() + "\r\n");
+    lib.parseCommand(line.trim());
 
     rl.prompt();
 }).on("close", function () {

@@ -332,12 +332,11 @@ create_char_amcp_strategy_factory(const std::wstring& name, const spl::shared_pt
     return spl::make_shared<IO::delimiter_based_chunking_strategy_factory<char>>("\r\n", to_unicode);
 }
 
-IO::protocol_strategy_factory<wchar_t>::ptr
-create_wchar_amcp_strategy_factory(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
+IO::protocol_strategy<wchar_t>::ptr
+create_console_amcp_strategy(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo, const IO::client_connection<wchar_t>::ptr& client_connection)
 {
     auto amcp_strategy = spl::make_shared<AMCPProtocolStrategy>(name, repo);
-    auto amcp_client   = spl::make_shared<amcp_client_strategy_factory>(amcp_strategy);
-    return spl::make_shared<IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", amcp_client);
+    return spl::make_shared<AMCPClientStrategy>(amcp_strategy, client_connection);
 }
 
 }}} // namespace caspar::protocol::amcp
