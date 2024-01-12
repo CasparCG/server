@@ -2,7 +2,6 @@ cmake_minimum_required (VERSION 3.16)
 project (protocol)
 
 set(SOURCES
-		amcp/AMCPCommand.cpp
 		amcp/AMCPCommandQueue.cpp
 		amcp/AMCPCommandsImpl.cpp
 		amcp/amcp_command_repository.cpp

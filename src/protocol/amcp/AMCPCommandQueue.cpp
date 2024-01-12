@@ -84,14 +84,15 @@ std::future<CommandResult> exec_cmd(std::shared_ptr<AMCPCommand>                
     }
 }
 
-std::future<std::vector<CommandResult>> AMCPCommandQueue::AddCommand(std::shared_ptr<AMCPGroupCommand> pCurrentCommand)
+std::future<std::vector<CommandResult>>
+AMCPCommandQueue::QueueCommandBatch(std::vector<std::shared_ptr<AMCPCommand>> cmds, bool reply_without_req_id)
 {
-    if (!pCurrentCommand)
-        return {};
+    if (cmds.empty())
+        return make_ready_future<std::vector<CommandResult>>({});
 
     if (executor_.size() > 128) {
         CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
-        CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->name();
+        CASPAR_LOG(error) << "Failed to execute commands";
 
         std::vector<CommandResult> res = {CommandResult(504, L"QUEUE OVERFLOW\r\n")};
         return make_ready_future(std::move(res));
@@ -99,7 +100,7 @@ std::future<std::vector<CommandResult>> AMCPCommandQueue::AddCommand(std::shared
 
     return executor_.begin_invoke([=] {
         try {
-            return Execute(pCurrentCommand);
+            return Execute(cmds, reply_without_req_id);
 
             // CASPAR_LOG(trace) << "Ready for a new command";
         } catch (...) {
@@ -110,18 +111,19 @@ std::future<std::vector<CommandResult>> AMCPCommandQueue::AddCommand(std::shared
     });
 } // namespace amcp
 
-std::vector<CommandResult> AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
+std::vector<CommandResult> AMCPCommandQueue::Execute(std::vector<std::shared_ptr<AMCPCommand>> cmds,
+                                                     bool reply_without_req_id) const
 {
-    if (cmd->Commands().empty())
+    if (cmds.empty())
         return {};
 
     // Shortcut for commands which are either not a batch, or don't need to be
-    if (cmd->Commands().size() == 1) {
-        return {exec_cmd(cmd->Commands().at(0), channels_, true).get()};
+    if (cmds.size() == 1) {
+        return {exec_cmd(cmds.at(0), channels_, true).get()};
     }
 
     caspar::timer timer;
-    CASPAR_LOG(warning) << "Executing batch: " << cmd->name() << L"(" << cmd->Commands().size() << L" commands)";
+    CASPAR_LOG(warning) << "Executing batch: " << L"(" << cmds.size() << L" commands)";
 
     spl::shared_ptr<std::vector<channel_context>>     delayed_channels;
     std::vector<std::shared_ptr<core::stage_delayed>> delayed_stages;
@@ -136,8 +138,8 @@ std::vector<CommandResult> AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCo
         }
 
         // 'execute' aka queue all comamnds
-        for (auto& cmd2 : cmd->Commands()) {
-            results.push_back(exec_cmd(cmd2, delayed_channels, cmd->HasClient()));
+        for (auto& cmd2 : cmds) {
+            results.push_back(exec_cmd(cmd2, delayed_channels, reply_without_req_id));
         }
 
         // lock all the channels needed
@@ -181,12 +183,12 @@ std::vector<CommandResult> AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCo
         results2.push_back(std::move(res));
     }
 
-    // if (failed > 0)
-    //     cmd->SendReply(L"202 COMMIT PARTIAL\r\n");
-    // else
-    //     cmd->SendReply(L"202 COMMIT OK\r\n");
+    if (failed > 0)
+        results2.emplace_back(CommandResult(0, L"202 COMMIT PARTIAL\r\n"));
+    else
+        results2.emplace_back(CommandResult(0, L"202 COMMIT OK\r\n"));
 
-    CASPAR_LOG(debug) << "Executed batch (" << timer.elapsed() << "s): " << cmd->name();
+    CASPAR_LOG(debug) << "Executed batch (" << timer.elapsed() << "s)";
 
     return results2;
 }

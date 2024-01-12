@@ -344,11 +344,9 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
         }
     }
 
-    bool has_client = true;
+    bool reply_without_req_id = true;
 
-    auto group_command = std::make_shared<caspar::protocol::amcp::AMCPGroupCommand>(commands, has_client);
-
-    auto result = instance_data->amcp_queue->AddCommand(std::move(group_command));
+    auto result = instance_data->amcp_queue->QueueCommandBatch(std::move(commands), reply_without_req_id);
 
     // TODO - make it so that the call above doesn't return a value, but dispatches some work which will post back to
     // nodejs and resolve the promise

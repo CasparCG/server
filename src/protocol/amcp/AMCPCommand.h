@@ -44,7 +44,10 @@ class AMCPCommand
 
     using ptr_type = std::shared_ptr<AMCPCommand>;
 
-    std::future<std::wstring> Execute(const spl::shared_ptr<std::vector<channel_context>>& channels);
+    std::future<std::wstring> Execute(const spl::shared_ptr<std::vector<channel_context>>& channels)
+    {
+        return command_(ctx_, channels);
+    }
 
     const std::vector<std::wstring>& parameters() const { return ctx_.parameters; }
 
@@ -53,53 +56,6 @@ class AMCPCommand
     const std::wstring& name() const { return name_; }
 
     const std::wstring& result() const { return result_; }
-};
-
-class AMCPGroupCommand
-{
-    const std::vector<std::shared_ptr<AMCPCommand>> commands_;
-    const bool                                      has_client_;
-    const bool                                      is_batch_;
-
-  public:
-    AMCPGroupCommand(const std::vector<std::shared_ptr<AMCPCommand>> commands, bool has_client)
-        : commands_(commands)
-        , has_client_(has_client)
-        , is_batch_(true)
-    {
-    }
-
-    AMCPGroupCommand(const std::vector<std::shared_ptr<AMCPCommand>> commands)
-        : commands_(commands)
-        , has_client_(false)
-        , is_batch_(true)
-    {
-    }
-
-    AMCPGroupCommand(const std::shared_ptr<AMCPCommand> command)
-        : commands_({command})
-        , has_client_(false)
-        , is_batch_(false)
-    {
-    }
-
-    bool HasClient() const { return has_client_; }
-
-    std::vector<std::wstring> GetResults()
-    {
-        std::vector<std::wstring> results;
-        results.reserve(commands_.size());
-
-        for (size_t i = 0; i < commands_.size(); i++) {
-            results.emplace_back(commands_[i]->result());
-        }
-
-        return results;
-    }
-
-    std::wstring name() const;
-
-    std::vector<std::shared_ptr<AMCPCommand>> Commands() const { return commands_; }
 };
 
 }}} // namespace caspar::protocol::amcp
