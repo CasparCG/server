@@ -9,11 +9,18 @@
         "node-addon-api": "^7.0.0"
     },
     "scripts": {
+        "start": "yarn ts-node-esm src/main.ts",
         "build": "cmake-js -d ../src build --prefer-clang=false"
     },
     "binary": {
         "napi_versions": [
             7
         ]
+    },
+    "devDependencies": {
+        "@sofie-automation/code-standard-preset": "^2.5.2",
+        "@types/node": "^20.11.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
     }
 }

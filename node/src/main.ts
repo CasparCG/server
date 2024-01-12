@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
 
 const require = createRequire(import.meta.url);
-const lib = require("../src/build/Release/casparcg.node");
+const lib = require("../../src/build/Release/casparcg.node");
 
 const rl = createInterface({
     input: process.stdin,

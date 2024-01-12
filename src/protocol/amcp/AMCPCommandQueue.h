@@ -37,9 +37,10 @@ class AMCPCommandQueue
     ~AMCPCommandQueue();
 
     void AddCommand(std::shared_ptr<AMCPGroupCommand> command);
-    void Execute(std::shared_ptr<AMCPGroupCommand> cmd) const;
 
   private:
+    void Execute(std::shared_ptr<AMCPGroupCommand> cmd) const;
+    
     executor                                            executor_;
     const spl::shared_ptr<std::vector<channel_context>> channels_;
 };
