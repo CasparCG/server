@@ -177,56 +177,6 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
         protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", instance_data->caspar_server->get_amcp_command_repository())
             ->create(console_client));
 
-    // Use separate thread for the blocking console input, will be terminated
-    // anyway when the main thread terminates.
-
-//     std::thread([&]() mutable {
-//         std::wstring wcmd;
-//         while (true) {
-// #ifdef WIN32
-//             if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
-//                 std::wcin.clear();
-//                 continue;
-//             }
-// #else
-//             // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
-//             std::string cmd1;
-//             if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
-//                 if (std::cin.eof()) {
-//                     std::cin.clear();
-//                     break;
-//                 }
-//                 std::cin.clear();
-//                 continue;
-//             }
-//             wcmd = u16(cmd1);
-// #endif
-
-//             // If the cmd is empty, no point trying to parse it
-//             if (!wcmd.empty()) {
-//                 if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
-//                     boost::iequals(wcmd, L"BYE")) {
-//                     CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-//                     shutdown(false); // false to not restart
-//                     break;
-//                 }
-
-//                 wcmd += L"\r\n";
-//                 amcp->parse(wcmd);
-//             }
-//         }
-//     }).detach();
-
-
-    // future.wait();
-
-    // caspar_server.reset();
-
-    // auto should_restart      =  future.get();
-    //     // return_code              = should_restart ? 5 : 0;
-
-    //     CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (user_error&) {
@@ -236,8 +186,6 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
         CASPAR_LOG_CURRENT_EXCEPTION();
         Napi::Error::New(env, "Unhandled exception").ThrowAsJavaScriptException();
     }
-
-    // return return_code;
 
     return env.Null();
 }
