@@ -43,12 +43,9 @@
 #include <modules/image/consumer/image_consumer.h>
 
 #include <protocol/amcp/AMCPCommandsImpl.h>
-#include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/amcp_shared.h>
 #include <protocol/osc/client.h>
-#include <protocol/util/AsyncEventServer.h>
-#include <protocol/util/strategy_adapters.h>
 #include <protocol/util/tokenize.h>
 
 #include <boost/algorithm/string.hpp>
@@ -101,8 +98,6 @@ struct server::impl
     std::shared_ptr<amcp::amcp_command_repository>         amcp_command_repo_;
     std::shared_ptr<amcp::amcp_command_repository_wrapper> amcp_command_repo_wrapper_;
     std::shared_ptr<amcp::command_context_factory>         amcp_context_factory_;
-    std::vector<spl::shared_ptr<IO::AsyncEventServer>>     async_servers_;
-    std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
     std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_service_);
     std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
@@ -143,9 +138,6 @@ struct server::impl
         setup_channel_producers_and_consumers(xml_channels);
         CASPAR_LOG(info) << L"Initialized startup producers.";
 
-        setup_controllers(env::properties());
-        CASPAR_LOG(info) << L"Initialized controllers.";
-
         setup_osc(env::properties());
         CASPAR_LOG(info) << L"Initialized osc.";
     }
@@ -160,9 +152,6 @@ struct server::impl
         amcp_command_repo_wrapper_.reset();
         amcp_command_repo_.reset();
         amcp_context_factory_.reset();
-
-        primary_amcp_server_.reset();
-        async_servers_.clear();
 
         destroy_producers_synchronously();
         destroy_consumers_synchronously();
@@ -307,15 +296,15 @@ struct server::impl
             }
         }
 
-        if (!disable_send_to_amcp_clients && primary_amcp_server_)
-            primary_amcp_server_->add_client_lifecycle_object_factory(
-                [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
-                    using namespace boost::asio::ip;
+        // if (!disable_send_to_amcp_clients && primary_amcp_server_)
+        //     primary_amcp_server_->add_client_lifecycle_object_factory(
+        //         [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
+        //             using namespace boost::asio::ip;
 
-                    return std::make_pair(std::wstring(L"osc_subscribe"),
-                                          osc_client_->get_subscription_token(
-                                              udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
-                });
+        //             return std::make_pair(std::wstring(L"osc_subscribe"),
+        //                                   osc_client_->get_subscription_token(
+        //                                       udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
+        //         });
     }
 
     void setup_channel_producers_and_consumers(const std::vector<boost::property_tree::wptree>& xml_channels)
@@ -400,47 +389,6 @@ struct server::impl
             std::make_shared<amcp::amcp_command_repository_wrapper>(amcp_command_repo_, amcp_context_factory_);
 
         amcp::register_commands(amcp_command_repo_wrapper_);
-    }
-
-    void setup_controllers(const boost::property_tree::wptree& pt)
-    {
-        using boost::property_tree::wptree;
-        for (auto& xml_controller : pt | witerate_children(L"configuration.controllers") | welement_context_iteration) {
-            auto name     = xml_controller.first;
-            auto protocol = ptree_get<std::wstring>(xml_controller.second, L"protocol");
-
-            if (name == L"tcp") {
-                auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
-
-                try {
-                    auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                        io_service_,
-                        create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
-                        static_cast<short>(port));
-                    async_servers_.push_back(asyncbootstrapper);
-
-                    if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
-                        primary_amcp_server_ = asyncbootstrapper;
-                } catch (...) {
-                    CASPAR_LOG(fatal) << L"Failed to setup " << protocol << L" controller on port "
-                                      << boost::lexical_cast<std::wstring>(port) << L". It is likely already in use";
-                    throw;
-                    // CASPAR_LOG_CURRENT_EXCEPTION();
-                }
-            } else
-                CASPAR_LOG(warning) << "Invalid controller: " << name;
-        }
-    }
-
-    IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name,
-                                                             const std::wstring& port_description) const
-    {
-        using namespace IO;
-
-        if (boost::iequals(name, L"AMCP"))
-            return amcp::create_char_amcp_strategy_factory(port_description, spl::make_shared_ptr(amcp_command_repo_));
-
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
     }
 };
 
