@@ -1,7 +1,6 @@
 import { createInterface } from "node:readline";
 import { Native } from "./native.js";
-import { tokenize } from "./tokenize.js";
-import { AMCPCommand } from "./amcp.js";
+import { AMCPClientBatchInfo, AMCPProtocolStrategy } from "./amcp.js";
 
 const rl = createInterface({
     input: process.stdin,
@@ -18,13 +17,21 @@ Native.init();
 rl.setPrompt("");
 rl.prompt();
 
+const batch = new AMCPClientBatchInfo(); // Future: there should be one per connected client
+const protocol = new AMCPProtocolStrategy();
+
 rl.on("line", function (line) {
     try {
-        const tokens = tokenize(line.trim());
-        const cmd: AMCPCommand = new Native.AMCPCommand(tokens);
-        console.log(cmd);
+        const answer = protocol.parse(line.trim(), batch);
+        console.log(answer);
 
-        Native.executeCommandBatch([cmd]);
+        // const tokens = tokenize(line.trim());
+        // // TODO - handle PING
+
+        // const cmd: AMCPCommand = new Native.AMCPCommand(tokens);
+        // console.log(cmd);
+
+        // Native.executeCommandBatch([cmd]);
     } catch (e) {
         console.error(e);
     }
