@@ -82,16 +82,78 @@ void print_info()
     CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 }
 
-auto run(const std::wstring& config_file_name)
-{
-    auto promise  = std::make_shared<std::promise<bool>>();
-    auto future   = promise->get_future();
-    auto shutdown = [promise = std::move(promise)](bool restart) { promise->set_value(restart); };
+// void signal_handler(int signum)
+// {
+//     ::signal(signum, SIG_DFL);
+//     boost::stacktrace::safe_dump_to("./backtrace.dump");
+//     ::raise(SIGABRT);
+// }
+
+// void terminate_handler()
+// {
+//     try {
+//         std::rethrow_exception(std::current_exception());
+//     } catch (...) {
+//         CASPAR_LOG_CURRENT_EXCEPTION();
+//     }
+//     std::abort();
+// }
+
+} // namespace caspar
+
+
+void fake_shutdown(bool restart) {
+    // Ignore
+}
+
+struct CasparCgInstanceData {
+    std::unique_ptr<caspar::server> caspar_server;
+    // std::shared_ptr<caspar::> amcp;
+};
+
+Napi::Value InitServer(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+  if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+        return env.Null();
+  }
+
+  if (instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is already running, it must be stopped before you can call init again").ThrowAsJavaScriptException();
+        return env.Null();
+  }
+
+  using namespace caspar;
+
+    // setup_global_locale();
+
+    // Increase process priority.
+    increase_process_priority();
+
+    std::wstring config_file_name(L"casparcg.config");
+
+    try {
+        log::add_cout_sink();
+        env::configure(config_file_name);
+
+        {
+            std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");
+            if (!log::set_log_level(target_level)) {
+                log::set_log_level(L"info");
+                std::wcout << L"Failed to set log level [" << target_level << L"]" << std::endl;
+            }
+        }
+
+    auto shutdown = [=](bool restart) {
+        // TODO - this is probably not needed?
+     };
 
     print_info();
 
     // Create server object which initializes channels, protocols and controllers.
-    std::unique_ptr<server> caspar_server(new server(shutdown));
+    instance_data->caspar_server.reset(new server(shutdown));
 
     // For example CEF resets the global locale, so this is to reset it back to "our" preference.
     setup_global_locale();
@@ -103,137 +165,64 @@ auto run(const std::wstring& config_file_name)
                      << L":\n-----------------------------------------\n"
                      << str.str() << L"-----------------------------------------";
 
-    caspar_server->start();
+    instance_data->caspar_server->start();
 
     // Create a dummy client which prints amcp responses to console.
     auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
     auto amcp =
-        protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", caspar_server->get_amcp_command_repository())
+        protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", instance_data->caspar_server->get_amcp_command_repository())
             ->create(console_client);
 
     // Use separate thread for the blocking console input, will be terminated
     // anyway when the main thread terminates.
 
-    std::thread([&]() mutable {
-        std::wstring wcmd;
-        while (true) {
-#ifdef WIN32
-            if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
-                std::wcin.clear();
-                continue;
-            }
-#else
-            // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
-            std::string cmd1;
-            if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
-                if (std::cin.eof()) {
-                    std::cin.clear();
-                    break;
-                }
-                std::cin.clear();
-                continue;
-            }
-            wcmd = u16(cmd1);
-#endif
+//     std::thread([&]() mutable {
+//         std::wstring wcmd;
+//         while (true) {
+// #ifdef WIN32
+//             if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
+//                 std::wcin.clear();
+//                 continue;
+//             }
+// #else
+//             // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
+//             std::string cmd1;
+//             if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
+//                 if (std::cin.eof()) {
+//                     std::cin.clear();
+//                     break;
+//                 }
+//                 std::cin.clear();
+//                 continue;
+//             }
+//             wcmd = u16(cmd1);
+// #endif
 
-            // If the cmd is empty, no point trying to parse it
-            if (!wcmd.empty()) {
-                if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
-                    boost::iequals(wcmd, L"BYE")) {
-                    CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-                    shutdown(false); // false to not restart
-                    break;
-                }
+//             // If the cmd is empty, no point trying to parse it
+//             if (!wcmd.empty()) {
+//                 if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
+//                     boost::iequals(wcmd, L"BYE")) {
+//                     CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
+//                     shutdown(false); // false to not restart
+//                     break;
+//                 }
 
-                wcmd += L"\r\n";
-                amcp->parse(wcmd);
-            }
-        }
-    }).detach();
-    future.wait();
-
-    caspar_server.reset();
-
-    return future.get();
-}
-
-void signal_handler(int signum)
-{
-    ::signal(signum, SIG_DFL);
-    boost::stacktrace::safe_dump_to("./backtrace.dump");
-    ::raise(SIGABRT);
-}
-
-void terminate_handler()
-{
-    try {
-        std::rethrow_exception(std::current_exception());
-    } catch (...) {
-        CASPAR_LOG_CURRENT_EXCEPTION();
-    }
-    std::abort();
-}
-
-} // namespace caspar
+//                 wcmd += L"\r\n";
+//                 amcp->parse(wcmd);
+//             }
+//         }
+//     }).detach();
 
 
-void fake_shutdown(bool restart) {
-    // Ignore
-}
+    // future.wait();
 
-Napi::String Method(const Napi::CallbackInfo& info) {
-  Napi::Env env = info.Env();
+    // caspar_server.reset();
 
-  using namespace caspar;
+    // auto should_restart      =  future.get();
+    //     // return_code              = should_restart ? 5 : 0;
 
-    setup_global_locale();
-
-    std::wcout << L"Type \"q\" to close application." << std::endl;
-
-    // Set debug mode.
-    auto debugging_environment = setup_debugging_environment();
-
-    // Increase process priority.
-    increase_process_priority();
-
-    std::wstring config_file_name(L"casparcg.config");
-
-    try {
-        log::add_cout_sink();
-        env::configure(config_file_name);
-
-        log::set_log_column_alignment(env::properties().get(L"configuration.log-align-columns", true));
-
-        {
-            std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");
-            if (!log::set_log_level(target_level)) {
-                log::set_log_level(L"info");
-                std::wcout << L"Failed to set log level [" << target_level << L"]" << std::endl;
-            }
-        }
-
-        if (env::properties().get(L"configuration.debugging.remote", false))
-            wait_for_remote_debugging();
-
-        // Start logging to file.
-        if (env::log_to_file()) {
-            log::add_file_sink(env::log_folder() + L"caspar");
-            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
-                       << std::endl
-                       << std::endl;
-        } else {
-            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to console" << std::endl
-                       << std::endl;
-        }
-
-        // Once logging to file, log configuration warnings.
-        env::log_configuration_warnings();
-
-        auto should_restart      = run(config_file_name);
-        // return_code              = should_restart ? 5 : 0;
-
-        CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+    //     CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
@@ -247,12 +236,43 @@ Napi::String Method(const Napi::CallbackInfo& info) {
 
     // return return_code;
 
-  return Napi::String::New(env, "world");
+    return env.Null();
 }
 
+Napi::Value StopServer(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+  if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+        return env.Null();
+  }
+
+
+  if (!instance_data->caspar_server) {
+    // Nothing to do
+        return env.Null();
+  }
+
+//   instance_data->amcp.reset(nullptr);
+
+    instance_data->caspar_server = nullptr;
+
+    return env.Null();
+}
+
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-  exports.Set(Napi::String::New(env, "hello"),
-              Napi::Function::New(env, Method));
+
+    CasparCgInstanceData* instance_data = new CasparCgInstanceData;
+    env.SetInstanceData(instance_data); // TODO - cleanup
+
+
+  exports.Set(Napi::String::New(env, "init"),
+              Napi::Function::New(env, InitServer));
+  exports.Set(Napi::String::New(env, "stop"),
+              Napi::Function::New(env, StopServer));
+
   return exports;
 }
 

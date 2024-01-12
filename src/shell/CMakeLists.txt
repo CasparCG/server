@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.16)
 project (shell)
 
-add_definitions(-DNAPI_VERSION=4)
+add_definitions(-DNAPI_VERSION=6)
 
 include_directories(${CMAKE_JS_INC})
 
