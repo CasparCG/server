@@ -127,8 +127,28 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            commandName = tokens[0].toLocaleUpperCase();
-            const command = new Native.AMCPCommand(tokens);
+            commandName = tokens.shift()!.toLocaleUpperCase();
+            const channelIds = this.#parse_channel_id(tokens);
+
+            let command: AMCPCommand | undefined;
+
+            if (channelIds) {
+                command = new Native.AMCPCommand(
+                    commandName,
+                    channelIds.channelIndex ?? -1,
+                    channelIds.layerIndex ?? -1,
+                    tokens
+                );
+            }
+            if (!command) {
+                command = new Native.AMCPCommand(
+                    commandName,
+                    -1,
+                    -1,
+                    channelIds ? [channelIds.channelSpec, ...tokens] : tokens
+                );
+            }
+
             if (!command) {
                 return {
                     status: AMCPCommandError.command_error,
@@ -165,6 +185,34 @@ export class AMCPProtocolStrategy {
                 requestId,
                 commandName,
             };
+        }
+    }
+
+    #parse_channel_id(tokens: string[]): {
+        channelSpec: string;
+        channelIndex: number;
+        layerIndex: number | undefined;
+    } | null {
+        if (tokens.length === 0) return null;
+
+        const channelSpec = tokens[0];
+        const ids = channelSpec.split("-");
+
+        const channelIndex = Number(ids[0]) - 1;
+
+        if (!isNaN(channelIndex)) {
+            // Consume channel-spec
+            tokens.shift();
+
+            const layerIndex = ids.length > 1 ? Number(ids[1]) : undefined;
+
+            return {
+                channelSpec,
+                channelIndex,
+                layerIndex,
+            };
+        } else {
+            return null;
         }
     }
 

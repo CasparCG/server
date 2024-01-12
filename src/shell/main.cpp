@@ -156,17 +156,15 @@ class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
             return;
         }
 
-        if (info.Length() < 1 || !info[0].IsArray()) {
-            Napi::Error::New(env, "Expected tokens array").ThrowAsJavaScriptException();
+        if (info.Length() < 4) {
+            Napi::Error::New(env, "Not enough parameters").ThrowAsJavaScriptException();
             return;
         }
 
-        auto raw_tokens = info[0].As<Napi::Array>();
-
-        if (raw_tokens.Length() == 0) {
-            Napi::Error::New(env, "Failed to parse command2").ThrowAsJavaScriptException();
-            return;
-        }
+        auto command_name  = info[0].As<Napi::String>().Utf8Value();
+        int  channel_index = info[1].As<Napi::Number>().Int32Value();
+        int  layer_index   = info[2].As<Napi::Number>().Int32Value();
+        auto raw_tokens    = info[3].As<Napi::Array>();
 
         std::list<std::wstring> tokens;
         // tokens.resize(raw_tokens.Length());
@@ -181,7 +179,7 @@ class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
         std::wstring request_id     = L"";
 
         auto cmd = instance_data->caspar_server->get_amcp_command_repository()->parse_command(
-            std::move(console_client), tokens, request_id);
+            std::move(console_client), caspar::u16(command_name), channel_index, layer_index, tokens, request_id);
 
         if (!cmd) {
             Napi::Error::New(env, "Failed to parse command2").ThrowAsJavaScriptException();

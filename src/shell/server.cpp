@@ -347,10 +347,10 @@ struct server::impl
                     const int          id      = attrs.get(L"id", -1);
 
                     try {
-                        std::list<std::wstring> tokens{
-                            L"PLAY", (boost::wformat(L"%i-%i") % channel.raw_channel->index() % id).str()};
+                        std::list<std::wstring> tokens{};
                         IO::tokenize(command, tokens);
-                        auto cmd = amcp_command_repo_->parse_command(console_client, tokens, L"");
+                        auto cmd = amcp_command_repo_->parse_command(
+                            console_client, L"PLAY", channel.raw_channel->index() - 1, id, tokens, L"");
 
                         if (cmd) {
                             std::wstring res = cmd->Execute(channels_).get();

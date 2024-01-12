@@ -84,40 +84,6 @@ AMCPCommand::ptr_type find_command(const std::map<std::wstring, std::pair<amcp_c
     return nullptr;
 }
 
-template <typename Out, typename In>
-bool try_lexical_cast(const In& input, Out& result)
-{
-    Out        saved   = result;
-    const bool success = boost::conversion::detail::try_lexical_convert(input, result);
-
-    if (!success)
-        result = saved; // Needed because of how try_lexical_convert is implemented.
-
-    return success;
-}
-
-static void
-parse_channel_id(std::list<std::wstring>& tokens, std::wstring& channel_spec, int& channel_index, int& layer_index)
-{
-    if (!tokens.empty()) {
-        channel_spec                            = tokens.front();
-        std::wstring              channelid_str = boost::trim_copy(channel_spec);
-        std::vector<std::wstring> split;
-        boost::split(split, channelid_str, boost::is_any_of("-"));
-
-        // Use non_throwing lexical cast to not hit exception break point all the time.
-        if (try_lexical_cast(split[0], channel_index)) {
-            --channel_index;
-
-            if (split.size() > 1)
-                try_lexical_cast(split[1], layer_index);
-
-            // Consume channel-spec
-            tokens.pop_front();
-        }
-    }
-}
-
 struct amcp_command_repository::impl
 {
     const spl::shared_ptr<std::vector<channel_context>> channels_;
@@ -161,37 +127,21 @@ struct amcp_command_repository::impl
         return nullptr;
     }
 
-    std::shared_ptr<AMCPCommand>
-    parse_command(IO::ClientInfoPtr client, std::list<std::wstring> tokens, const std::wstring& request_id) const
+    std::shared_ptr<AMCPCommand> parse_command(IO::ClientInfoPtr       client,
+                                               const std::wstring&     command_name,
+                                               int                     channel_index,
+                                               int                     layer_index,
+                                               std::list<std::wstring> tokens,
+                                               const std::wstring&     request_id) const
     {
-        // Consume command name
-        const std::basic_string<wchar_t> command_name = boost::to_upper_copy(tokens.front());
-        tokens.pop_front();
-
-        // Determine whether the next parameter is a channel spec or not
-        int          channel_index = -1;
-        int          layer_index   = -1;
-        std::wstring channel_spec;
-        parse_channel_id(tokens, channel_spec, channel_index, layer_index);
-
         // Create command instance
-        std::shared_ptr<AMCPCommand> command;
         if (channel_index >= 0) {
-            command = create_channel_command(command_name, request_id, client, channel_index, layer_index, tokens);
+            return create_channel_command(command_name, request_id, client, channel_index, layer_index, tokens);
 
-            if (!command) // Might be a non channel command, although the first argument is numeric
-            {
-                // Restore backed up channel spec string.
-                tokens.push_front(channel_spec);
-            }
+        } else {
+            // Create global instance
+            return create_command(command_name, request_id, client, tokens);
         }
-
-        // Create global instance
-        if (!command) {
-            command = create_command(command_name, request_id, client, tokens);
-        }
-
-        return std::move(command);
     }
 
     bool check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
@@ -215,10 +165,13 @@ const spl::shared_ptr<std::vector<channel_context>>& amcp_command_repository::ch
 }
 
 std::shared_ptr<AMCPCommand> amcp_command_repository::parse_command(IO::ClientInfoPtr       client,
+                                                                    const std::wstring&     command_name,
+                                                                    int                     channel_index,
+                                                                    int                     layer_index,
                                                                     std::list<std::wstring> tokens,
                                                                     const std::wstring&     request_id) const
 {
-    return impl_->parse_command(client, tokens, request_id);
+    return impl_->parse_command(client, command_name, channel_index, layer_index, tokens, request_id);
 }
 
 bool amcp_command_repository::check_channel_lock(IO::ClientInfoPtr client, int channel_index) const
