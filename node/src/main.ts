@@ -1,16 +1,15 @@
-import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
-
-const require = createRequire(import.meta.url);
-const lib = require("../../src/build/Release/casparcg.node");
+import { Native } from "./native.js";
+import { tokenize } from "./tokenize.js";
+import { AMCPCommand } from "./amcp.js";
 
 const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
-console.log(lib);
-lib.init();
+console.log(Native);
+Native.init();
 
 // setInterval(() => {
 //     // Keep the app alive
@@ -20,11 +19,19 @@ rl.setPrompt("");
 rl.prompt();
 
 rl.on("line", function (line) {
-    lib.parseCommand(line.trim());
+    try {
+        const tokens = tokenize(line.trim());
+        const cmd: AMCPCommand = new Native.AMCPCommand(tokens);
+        console.log(cmd);
+
+        Native.executeCommandBatch([cmd]);
+    } catch (e) {
+        console.error(e);
+    }
 
     rl.prompt();
 }).on("close", function () {
-    lib.stop();
+    Native.stop();
 
     console.log("Successfully shutdown CasparCG Server.");
 

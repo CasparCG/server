@@ -1,7 +1,9 @@
-export function tokenize(message: string, pTokenVector: string[]): number {
+export function tokenize(message: string): string[] {
     // split on whitespace but keep strings within quotationmarks
     // treat \ as the start of an escape-sequence: the following char will indicate what to actually put in the
     // string
+
+    const result: string[] = [];
 
     let currentToken: string = "";
 
@@ -36,7 +38,7 @@ export function tokenize(message: string, pTokenVector: string[]): number {
 
         if (messageChar == " " && !inQuote && inParamList == 0) {
             if (currentToken.length > 0) {
-                pTokenVector.push(currentToken);
+                result.push(currentToken);
                 currentToken = "";
             }
             continue;
@@ -47,7 +49,7 @@ export function tokenize(message: string, pTokenVector: string[]): number {
             inParamList--;
             if (inParamList == 0) {
                 currentToken += messageChar;
-                pTokenVector.push(currentToken);
+                result.push(currentToken);
                 currentToken = "";
                 continue;
             }
@@ -57,7 +59,7 @@ export function tokenize(message: string, pTokenVector: string[]): number {
 
             if (inParamList == 0) {
                 if (!inQuote) {
-                    pTokenVector.push(currentToken);
+                    result.push(currentToken);
                     currentToken = "";
                 }
                 continue;
@@ -68,9 +70,9 @@ export function tokenize(message: string, pTokenVector: string[]): number {
     }
 
     if (currentToken.length > 0) {
-        pTokenVector.push(currentToken);
+        result.push(currentToken);
         // currentToken = "";
     }
 
-    return pTokenVector.length;
+    return result;
 }

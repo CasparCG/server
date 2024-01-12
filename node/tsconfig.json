@@ -17,6 +17,7 @@
         "types": ["node"],
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "module": "ES2022"
+        "module": "ES2022",
+        "importHelpers": false
     }
 }

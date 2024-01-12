@@ -29,6 +29,7 @@
 #include "platform_specific.h"
 #include "server.h"
 
+#include <protocol/amcp/AMCPCommandQueue.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/util/strategy_adapters.h>
 
@@ -107,9 +108,108 @@ void fake_shutdown(bool restart)
 
 struct CasparCgInstanceData
 {
-    std::unique_ptr<caspar::server> caspar_server;
-    // std::shared_ptr<caspar::> amcp;
+    Napi::FunctionReference* amcp_command;
+
     std::shared_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp;
+
+    std::shared_ptr<caspar::protocol::amcp::AMCPCommandQueue>
+        amcp_queue; // HACK: This needs to be more than just the one
+
+    std::unique_ptr<caspar::server> caspar_server;
+};
+
+class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
+{
+  public:
+    static Napi::FunctionReference* Init(Napi::Env env, Napi::Object exports)
+    {
+        // This method is used to hook the accessor and method callbacks
+        Napi::Function func =
+            DefineClass(env,
+                        "AMCPCommand",
+                        {
+                            // StaticMethod<&NodeAMCPCommand::CreateNewItem>(
+                            //     "Create", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+                        });
+
+        Napi::FunctionReference* constructor = new Napi::FunctionReference();
+
+        // Create a persistent reference to the class constructor. This will allow
+        // a function called on a class prototype and a function
+        // called on instance of a class to be distinguished from each other.
+        *constructor = Napi::Persistent(func);
+        exports.Set("AMCPCommand", func);
+
+        return constructor;
+    }
+
+    NodeAMCPCommand(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<NodeAMCPCommand>(info)
+    {
+        Napi::Env env = info.Env();
+
+        CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+        if (!instance_data) {
+            Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+                .ThrowAsJavaScriptException();
+            return;
+        }
+
+        if (!instance_data->caspar_server) {
+            Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+            return;
+        }
+
+        if (info.Length() < 1 || !info[0].IsArray()) {
+            Napi::Error::New(env, "Expected tokens array").ThrowAsJavaScriptException();
+            return;
+        }
+
+        auto raw_tokens = info[0].As<Napi::Array>();
+
+        if (raw_tokens.Length() == 0) {
+            Napi::Error::New(env, "Failed to parse command2").ThrowAsJavaScriptException();
+            return;
+        }
+
+        std::list<std::wstring> tokens;
+        // tokens.resize(raw_tokens.Length());
+
+        for (size_t i = 0; i < raw_tokens.Length(); i++) {
+            auto str = static_cast<Napi::Value>(raw_tokens[i]).ToString();
+            tokens.emplace_back(caspar::u16(str.Utf8Value()));
+        }
+
+        // Create a dummy client which prints amcp responses to console.
+        auto         console_client = caspar::spl::make_shared<caspar::IO::ConsoleClientInfo>();
+        std::wstring request_id     = L"";
+
+        auto cmd = instance_data->caspar_server->get_amcp_command_repository()->parse_command(
+            std::move(console_client), tokens, request_id);
+
+        if (!cmd) {
+            Napi::Error::New(env, "Failed to parse command2").ThrowAsJavaScriptException();
+            return;
+        }
+
+        this->_cmd = std::move(cmd);
+    }
+
+    // static Napi::Value CreateNewItem(const Napi::CallbackInfo& info)
+    // {
+    //     Napi::Env env = info.Env();
+
+    //     CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    //     if (!instance_data) {
+    //         Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+    //             .ThrowAsJavaScriptException();
+    //         return env.Null();
+    //     }
+
+    //     return instance_data->amcp_command->New({Napi::Number::New(info.Env(), 42)});
+    // }
+
+    std::shared_ptr<caspar::protocol::amcp::AMCPCommand> _cmd;
 };
 
 Napi::Value InitServer(const Napi::CallbackInfo& info)
@@ -176,8 +276,11 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         // Create a dummy client which prints amcp responses to console.
         auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
+        instance_data->amcp_queue = std::make_shared<protocol::amcp::AMCPCommandQueue>(
+            L"NodeJS Test", instance_data->caspar_server->get_amcp_command_repository()->channels());
+
         instance_data->amcp = protocol::amcp::create_console_amcp_strategy(
-                                  L"Console", instance_data->caspar_server->get_amcp_command_repository(), console_client);
+            L"Console", instance_data->caspar_server->get_amcp_command_repository(), console_client);
 
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
@@ -208,6 +311,8 @@ Napi::Value StopServer(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
+    instance_data->amcp_queue.reset();
+
     instance_data->amcp.reset();
 
     instance_data->caspar_server = nullptr;
@@ -231,7 +336,7 @@ Napi::Value ParseCommand(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
-    if (info.Length() < 1) {
+    if (info.Length() < 1 || !info[0].IsString()) {
         Napi::Error::New(env, "Expected command string").ThrowAsJavaScriptException();
         return env.Null();
     }
@@ -242,15 +347,71 @@ Napi::Value ParseCommand(const Napi::CallbackInfo& info)
     return env.Null();
 }
 
+Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server || !instance_data->amcp_queue) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsArray()) {
+        Napi::Error::New(env, "Expected array of commands").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto raw_commands = info[0].As<Napi::Array>();
+
+    if (raw_commands.Length() == 0) {
+        // TODO - is this ok?
+        return env.Null();
+    }
+
+    std::vector<std::shared_ptr<caspar::protocol::amcp::AMCPCommand>> commands;
+    commands.reserve(raw_commands.Length());
+
+    for (size_t i = 0; i < raw_commands.Length(); i++) {
+        auto raw_cmd = static_cast<Napi::Value>(raw_commands[i]).As<Napi::Object>();
+        if (raw_cmd.InstanceOf(instance_data->amcp_command->Value())) {
+            auto cmd_wrapper = NodeAMCPCommand::Unwrap(raw_cmd);
+            commands.emplace_back(cmd_wrapper->_cmd);
+        }
+    }
+
+    // Create a dummy client which prints amcp responses to console.
+    auto         console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
+    std::wstring request_id     = L"";
+
+    auto group_command =
+        std::make_shared<caspar::protocol::amcp::AMCPGroupCommand>(commands, console_client, request_id);
+
+    instance_data->amcp_queue->AddCommand(std::move(group_command));
+
+    return env.Null();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
     env.SetInstanceData(instance_data); // TODO - cleanup
 
+    instance_data->amcp_command = NodeAMCPCommand::Init(env, exports);
+
     exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
     exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
 
     exports.Set(Napi::String::New(env, "parseCommand"), Napi::Function::New(env, ParseCommand));
+    exports.Set(Napi::String::New(env, "executeCommandBatch"), Napi::Function::New(env, ExecuteCommandBatch));
+
+    // exports.Set(Napi::String::New(env, "parseCommand2"), Napi::Function::New(env, ParseCommand2));
 
     return exports;
 }
