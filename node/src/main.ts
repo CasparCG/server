@@ -24,14 +24,6 @@ rl.on("line", function (line) {
     try {
         const answer = protocol.parse(line.trim(), batch);
         console.log(answer);
-
-        // const tokens = tokenize(line.trim());
-        // // TODO - handle PING
-
-        // const cmd: AMCPCommand = new Native.AMCPCommand(tokens);
-        // console.log(cmd);
-
-        // Native.executeCommandBatch([cmd]);
     } catch (e) {
         console.error(e);
     }

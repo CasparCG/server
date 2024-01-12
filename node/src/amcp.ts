@@ -3,11 +3,6 @@ import { tokenize } from "./tokenize.js";
 
 export type AMCPCommand = unknown;
 
-export interface AMCPGroupCommand {
-    readonly requestId: string | null;
-    readonly commands: AMCPCommand[];
-}
-
 export class AMCPClientBatchInfo {
     readonly #commands: AMCPCommand[] = [];
     #inProgress = false;
@@ -31,15 +26,12 @@ export class AMCPClientBatchInfo {
         this.#commands.length = 0;
     }
 
-    finish(): AMCPGroupCommand {
+    finish(): AMCPCommand[] {
         this.#inProgress = false;
 
         // commands_.clear();
 
-        return {
-            requestId: this.#requestId,
-            commands: this.#commands,
-        };
+        return this.#commands;
     }
 }
 
@@ -53,7 +45,7 @@ enum AMCPCommandError {
 }
 
 export class AMCPProtocolStrategy {
-    parse(message: string, batch: AMCPClientBatchInfo): string {
+    parse(message: string, batch: AMCPClientBatchInfo): string[] {
         const tokens = tokenize(message);
 
         if (tokens.length !== 0 && tokens[0].toUpperCase() === "PING") {
@@ -61,50 +53,33 @@ export class AMCPProtocolStrategy {
 
             const answer = ["PONG", ...tokens];
 
-            return answer.join(" ");
+            return [answer.join(" ")];
         }
 
         console.log(`Received message from TODO: ${message}`);
 
         const result = this.#parse_command_string(batch, tokens);
         if (result.status !== AMCPCommandError.no_error) {
-            //
+            switch (result.status) {
+                case AMCPCommandError.command_error:
+                    return ["400 ERROR", message];
+                case AMCPCommandError.channel_error:
+                    return [`401 ${result.commandName} ERROR`];
+                case AMCPCommandError.parameters_error:
+                    return [`402 ${result.commandName} ERROR`];
+                case AMCPCommandError.access_error:
+                    return [`503 ${result.commandName} FAILED`];
+                case AMCPCommandError.unknown_error:
+                    return ["500 FAILED"];
+                default:
+                    throw new Error(
+                        `Unhandled error_state enum constant ${result.status}`
+                    );
+            }
         } else {
             // TODO: this needs porting
-            return "";
+            return [];
         }
-        // std::wstring request_id;
-        // std::wstring command_name;
-        // error_state  err = parse_command_string(client, batch, tokens, request_id, command_name);
-        // if (err != error_state::no_error) {
-        //     std::wstringstream answer;
-
-        //     if (!request_id.empty())
-        //         answer << L"RES " << request_id << L" ";
-
-        //     switch (err) {
-        //         case error_state::command_error:
-        //             answer << L"400 ERROR\r\n" << message << "\r\n";
-        //             break;
-        //         case error_state::channel_error:
-        //             answer << L"401 " << command_name << " ERROR\r\n";
-        //             break;
-        //         case error_state::parameters_error:
-        //             answer << L"402 " << command_name << " ERROR\r\n";
-        //             break;
-        //         case error_state::access_error:
-        //             answer << L"503 " << command_name << " FAILED\r\n";
-        //             break;
-        //         case error_state::unknown_error:
-        //             answer << L"500 FAILED\r\n";
-        //             break;
-        //         default:
-        //             CASPAR_THROW_EXCEPTION(programming_error() << msg_info(L"Unhandled error_state enum constant " +
-        //                                                                    std::to_wstring(static_cast<int>(err))));
-        //     }
-        //     client->send(answer.str());
-        // }
-        return "";
     }
 
     #parse_command_string(
