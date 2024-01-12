@@ -5,7 +5,6 @@ set(SOURCES
 		amcp/AMCPCommand.cpp
 		amcp/AMCPCommandQueue.cpp
 		amcp/AMCPCommandsImpl.cpp
-		amcp/AMCPProtocolStrategy.cpp
 		amcp/amcp_command_repository.cpp
 		amcp/amcp_args.cpp
 		amcp/amcp_command_repository_wrapper.cpp
@@ -17,9 +16,7 @@ set(SOURCES
 
 		osc/client.cpp
 
-		util/AsyncEventServer.cpp
 		util/lock_container.cpp
-		util/strategy_adapters.cpp
 		util/http_request.cpp
 		util/tokenize.cpp
 )
@@ -28,7 +25,6 @@ set(HEADERS
 		amcp/AMCPCommand.h
 		amcp/AMCPCommandQueue.h
 		amcp/AMCPCommandsImpl.h
-		amcp/AMCPProtocolStrategy.h
 		amcp/amcp_command_repository.h
 		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
@@ -46,12 +42,9 @@ set(HEADERS
 
 		osc/client.h
 
-		util/AsyncEventServer.h
 		util/ClientInfo.h
 		util/lock_container.h
-		util/ProtocolStrategy.h
 		util/protocol_strategy.h
-		util/strategy_adapters.h
 		util/http_request.h
 		util/tokenize.h
 

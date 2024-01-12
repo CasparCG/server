@@ -30,8 +30,6 @@
 #include "server.h"
 
 #include <protocol/amcp/AMCPCommandQueue.h>
-#include <protocol/amcp/AMCPProtocolStrategy.h>
-#include <protocol/util/strategy_adapters.h>
 
 #include <common/env.h>
 #include <common/except.h>
@@ -109,8 +107,6 @@ void fake_shutdown(bool restart)
 struct CasparCgInstanceData
 {
     Napi::FunctionReference* amcp_command;
-
-    std::shared_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp;
 
     std::shared_ptr<caspar::protocol::amcp::AMCPCommandQueue>
         amcp_queue; // HACK: This needs to be more than just the one
@@ -279,9 +275,6 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         instance_data->amcp_queue = std::make_shared<protocol::amcp::AMCPCommandQueue>(
             L"NodeJS Test", instance_data->caspar_server->get_amcp_command_repository()->channels());
 
-        instance_data->amcp = protocol::amcp::create_console_amcp_strategy(
-            L"Console", instance_data->caspar_server->get_amcp_command_repository(), console_client);
-
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (user_error&) {
@@ -313,36 +306,7 @@ Napi::Value StopServer(const Napi::CallbackInfo& info)
 
     instance_data->amcp_queue.reset();
 
-    instance_data->amcp.reset();
-
     instance_data->caspar_server = nullptr;
-
-    return env.Null();
-}
-
-Napi::Value ParseCommand(const Napi::CallbackInfo& info)
-{
-    Napi::Env env = info.Env();
-
-    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
-    if (!instance_data) {
-        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    if (!instance_data->caspar_server || !instance_data->amcp) {
-        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    if (info.Length() < 1 || !info[0].IsString()) {
-        Napi::Error::New(env, "Expected command string").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    std::string cmd = info[0].As<Napi::String>().Utf8Value();
-    instance_data->amcp->parse(caspar::u16(cmd));
 
     return env.Null();
 }
@@ -408,10 +372,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
     exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
 
-    exports.Set(Napi::String::New(env, "parseCommand"), Napi::Function::New(env, ParseCommand));
     exports.Set(Napi::String::New(env, "executeCommandBatch"), Napi::Function::New(env, ExecuteCommandBatch));
-
-    // exports.Set(Napi::String::New(env, "parseCommand2"), Napi::Function::New(env, ParseCommand2));
 
     return exports;
 }
