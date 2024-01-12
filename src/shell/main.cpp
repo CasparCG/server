@@ -53,7 +53,6 @@
 
 #include "napi.h"
 
-
 namespace caspar {
 
 void setup_global_locale()
@@ -101,32 +100,36 @@ void print_info()
 
 } // namespace caspar
 
-
-void fake_shutdown(bool restart) {
+void fake_shutdown(bool restart)
+{
     // Ignore
 }
 
-struct CasparCgInstanceData {
+struct CasparCgInstanceData
+{
     std::unique_ptr<caspar::server> caspar_server;
     // std::shared_ptr<caspar::> amcp;
     std::shared_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp;
 };
 
-Napi::Value InitServer(const Napi::CallbackInfo& info) {
-  Napi::Env env = info.Env();
+Napi::Value InitServer(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
 
-  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
-  if (!instance_data) {
-        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
         return env.Null();
-  }
+    }
 
-  if (instance_data->caspar_server) {
-        Napi::Error::New(env, "Server is already running, it must be stopped before you can call init again").ThrowAsJavaScriptException();
+    if (instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is already running, it must be stopped before you can call init again")
+            .ThrowAsJavaScriptException();
         return env.Null();
-  }
+    }
 
-  using namespace caspar;
+    using namespace caspar;
 
     // setup_global_locale();
 
@@ -149,33 +152,33 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
             }
         }
 
-    auto shutdown = [=](bool restart) {
-        // TODO - this is probably not needed?
-     };
+        auto shutdown = [=](bool restart) {
+            // TODO - this is probably not needed?
+        };
 
-    print_info();
+        print_info();
 
-    // Create server object which initializes channels, protocols and controllers.
-    instance_data->caspar_server.reset(new server(shutdown));
+        // Create server object which initializes channels, protocols and controllers.
+        instance_data->caspar_server.reset(new server(shutdown));
 
-    // For example CEF resets the global locale, so this is to reset it back to "our" preference.
-    setup_global_locale();
+        // For example CEF resets the global locale, so this is to reset it back to "our" preference.
+        setup_global_locale();
 
-    std::wstringstream                                      str;
-    boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-    boost::property_tree::write_xml(str, env::properties(), w);
-    CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
-                     << L":\n-----------------------------------------\n"
-                     << str.str() << L"-----------------------------------------";
+        std::wstringstream                                      str;
+        boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+        boost::property_tree::write_xml(str, env::properties(), w);
+        CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
+                         << L":\n-----------------------------------------\n"
+                         << str.str() << L"-----------------------------------------";
 
-    instance_data->caspar_server->start();
+        instance_data->caspar_server->start();
 
-    // Create a dummy client which prints amcp responses to console.
-    auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
+        // Create a dummy client which prints amcp responses to console.
+        auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-    instance_data->amcp =(
-        protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", instance_data->caspar_server->get_amcp_command_repository())
-            ->create(console_client));
+        instance_data->amcp = protocol::amcp::create_wchar_amcp_strategy_factory(
+                                  L"Console", instance_data->caspar_server->get_amcp_command_repository())
+                                  ->create(console_client);
 
     } catch (boost::property_tree::file_parser_error& e) {
         Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
@@ -190,69 +193,67 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
     return env.Null();
 }
 
-Napi::Value StopServer(const Napi::CallbackInfo& info) {
-  Napi::Env env = info.Env();
+Napi::Value StopServer(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
 
-  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
-  if (!instance_data) {
-        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
         return env.Null();
-  }
+    }
 
-
-  if (!instance_data->caspar_server) {
-    // Nothing to do
+    if (!instance_data->caspar_server) {
+        // Nothing to do
         return env.Null();
-  }
+    }
 
-  instance_data->amcp.reset();
+    instance_data->amcp.reset();
 
     instance_data->caspar_server = nullptr;
 
     return env.Null();
 }
 
+Napi::Value ParseCommand(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
 
-Napi::Value ParseCommand(const Napi::CallbackInfo& info) {
-  Napi::Env env = info.Env();
-
-  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
-  if (!instance_data) {
-        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
         return env.Null();
-  }
+    }
 
-  if (!instance_data->caspar_server || !instance_data->amcp) {
+    if (!instance_data->caspar_server || !instance_data->amcp) {
         Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
         return env.Null();
-  }
+    }
 
     if (info.Length() < 1) {
         Napi::Error::New(env, "Expected command string").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-      std::string cmd = info[0].As<Napi::String>().Utf8Value();
-      instance_data->amcp->parse(caspar::u16(cmd));
+    std::string cmd = info[0].As<Napi::String>().Utf8Value();
+    instance_data->amcp->parse(caspar::u16(cmd));
 
     return env.Null();
 }
 
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
-
+Napi::Object Init(Napi::Env env, Napi::Object exports)
+{
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
     env.SetInstanceData(instance_data); // TODO - cleanup
 
+    exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
+    exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
 
-  exports.Set(Napi::String::New(env, "init"),
-              Napi::Function::New(env, InitServer));
-  exports.Set(Napi::String::New(env, "stop"),
-              Napi::Function::New(env, StopServer));
+    exports.Set(Napi::String::New(env, "parseCommand"), Napi::Function::New(env, ParseCommand));
 
-  exports.Set(Napi::String::New(env, "parseCommand"),
-              Napi::Function::New(env, ParseCommand));
-
-  return exports;
+    return exports;
 }
 
 NODE_API_MODULE(casparcg, Init)
