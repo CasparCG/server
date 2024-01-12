@@ -32,10 +32,10 @@ namespace caspar {
 
 void setup_prerequisites()
 {
-    // Enable utf8 console input and output
-    std::wcout.sync_with_stdio(false);
-    std::wcout.imbue(std::locale(""));
-    std::wcin.imbue(std::locale(""));
+    // // Enable utf8 console input and output
+    // std::wcout.sync_with_stdio(false);
+    // std::wcout.imbue(std::locale(""));
+    // std::wcin.imbue(std::locale(""));
 
     XInitThreads();
 

@@ -109,6 +109,7 @@ void fake_shutdown(bool restart) {
 struct CasparCgInstanceData {
     std::unique_ptr<caspar::server> caspar_server;
     // std::shared_ptr<caspar::> amcp;
+    std::shared_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp;
 };
 
 Napi::Value InitServer(const Napi::CallbackInfo& info) {
@@ -128,6 +129,8 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
   using namespace caspar;
 
     // setup_global_locale();
+
+    setup_prerequisites();
 
     // Increase process priority.
     increase_process_priority();
@@ -170,9 +173,9 @@ Napi::Value InitServer(const Napi::CallbackInfo& info) {
     // Create a dummy client which prints amcp responses to console.
     auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-    auto amcp =
+    instance_data->amcp =(
         protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", instance_data->caspar_server->get_amcp_command_repository())
-            ->create(console_client);
+            ->create(console_client));
 
     // Use separate thread for the blocking console input, will be terminated
     // anyway when the main thread terminates.
@@ -254,13 +257,38 @@ Napi::Value StopServer(const Napi::CallbackInfo& info) {
         return env.Null();
   }
 
-//   instance_data->amcp.reset(nullptr);
+  instance_data->amcp.reset();
 
     instance_data->caspar_server = nullptr;
 
     return env.Null();
 }
 
+
+Napi::Value ParseCommand(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+  if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!").ThrowAsJavaScriptException();
+        return env.Null();
+  }
+
+  if (!instance_data->caspar_server || !instance_data->amcp) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+  }
+
+    if (info.Length() < 1) {
+        Napi::Error::New(env, "Expected command string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+      std::string cmd = info[0].As<Napi::String>().Utf8Value();
+      instance_data->amcp->parse(caspar::u16(cmd));
+
+    return env.Null();
+}
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
@@ -272,6 +300,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, InitServer));
   exports.Set(Napi::String::New(env, "stop"),
               Napi::Function::New(env, StopServer));
+
+  exports.Set(Napi::String::New(env, "parseCommand"),
+              Napi::Function::New(env, ParseCommand));
 
   return exports;
 }

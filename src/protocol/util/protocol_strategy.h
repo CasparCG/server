@@ -35,7 +35,7 @@ template <class CharT>
 class protocol_strategy
 {
   public:
-    using ptr = spl::shared_ptr<protocol_strategy<CharT>>;
+    using ptr = std::shared_ptr<protocol_strategy<CharT>>;
 
     virtual ~protocol_strategy() {}
 

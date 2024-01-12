@@ -4,7 +4,9 @@ const require = createRequire(import.meta.url);
 const lib = require("../src/build/Release/casparcg.node");
 
 console.log(lib);
-console.log(lib.init());
+lib.init();
+
+lib.parseCommand("INFO\r\n");
 
 setInterval(() => {
     // Keep the app alive
