@@ -1,4 +1,4 @@
-import { Native } from "./native.js";
+import { Native } from "../native.js";
 import { tokenize } from "./tokenize.js";
 import type { ChannelLocks } from "./channel_locks.js";
 import type { Client } from "./client.js";
@@ -53,14 +53,15 @@ export class AMCPProtocolStrategy {
         this.#locks = locks;
     }
 
-    parse(
-        client: Client,
-        message: string,
-        batch: AMCPClientBatchInfo
-    ): string[] {
+    parse(client: Client, message: string): string[] {
         const tokens = tokenize(message);
 
-        if (tokens.length !== 0 && tokens[0].toUpperCase() === "PING") {
+        if (tokens.length === 0) {
+            // Ignore empty
+            return [];
+        }
+
+        if (tokens[0].toUpperCase() === "PING") {
             tokens.pop();
 
             const answer = ["PONG", ...tokens];
@@ -68,9 +69,9 @@ export class AMCPProtocolStrategy {
             return [answer.join(" ")];
         }
 
-        console.log(`Received message from TODO: ${message}`);
+        console.log(`Received message from ${client.address}: ${message}`);
 
-        const result = this.#parse_command_string(client, batch, tokens);
+        const result = this.#parse_command_string(client, tokens);
         if (Array.isArray(result)) {
             return result;
         } else if (result.status !== AMCPCommandError.no_error) {
@@ -98,7 +99,6 @@ export class AMCPProtocolStrategy {
 
     #parse_command_string(
         client: Client,
-        batch: AMCPClientBatchInfo,
         tokens: string[]
     ):
         | {
@@ -127,7 +127,7 @@ export class AMCPProtocolStrategy {
             }
 
             const batchCommand = this.#parse_batch_commands(
-                batch,
+                client.batch,
                 tokens,
                 requestId
             );
@@ -190,8 +190,8 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            if (batch.inProgress) {
-                batch.addCommand(command);
+            if (client.batch.inProgress) {
+                client.batch.addCommand(command);
             } else {
                 // TODO: correct queue
                 Native.executeCommandBatch([command]);
