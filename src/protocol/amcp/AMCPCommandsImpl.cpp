@@ -173,19 +173,6 @@ std::wstring read_file(const boost::filesystem::path& file)
     return read_latin1_file(file);
 }
 
-std::wstring get_sub_directory(const std::wstring& base_folder, const std::wstring& sub_directory)
-{
-    if (sub_directory.empty())
-        return base_folder;
-
-    auto found = find_case_insensitive(base_folder + L"/" + sub_directory);
-
-    if (!found)
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Sub directory " + sub_directory + L" not found."));
-
-    return *found;
-}
-
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
     std::vector<spl::shared_ptr<core::video_channel>> result;
@@ -592,38 +579,6 @@ std::wstring data_retrieve_command(command_context& ctx)
 
     reply << "\r\n";
     return reply.str();
-}
-
-std::wstring data_list_command(command_context& ctx)
-{
-    std::wstring sub_directory;
-
-    if (!ctx.parameters.empty())
-        sub_directory = ctx.parameters.at(0);
-
-    std::wstringstream replyString;
-    replyString << L"200 DATA LIST OK\r\n";
-
-    for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::data_folder(), sub_directory)), end;
-         itr != end;
-         ++itr) {
-        if (boost::filesystem::is_regular_file(itr->path())) {
-            if (!boost::iequals(itr->path().extension().wstring(), L".ftd"))
-                continue;
-
-            auto relativePath = get_relative_without_extension(itr->path(), env::data_folder());
-            auto str          = relativePath.generic_wstring();
-
-            if (str[0] == L'\\' || str[0] == L'/')
-                str = std::wstring(str.begin() + 1, str.end());
-
-            replyString << str << L"\r\n";
-        }
-    }
-
-    replyString << L"\r\n";
-
-    return boost::to_upper_copy(replyString.str());
 }
 
 std::wstring data_remove_command(command_context& ctx)
@@ -1428,8 +1383,6 @@ std::wstring fls_command(command_context& ctx) { return make_request(ctx, "/fls"
 
 std::wstring tls_command(command_context& ctx) { return make_request(ctx, "/tls", L"501 TLS FAILED\r\n"); }
 
-std::wstring version_command(command_context& ctx) { return L"201 VERSION OK\r\n" + env::version() + L"\r\n"; }
-
 struct param_visitor : public boost::static_visitor<void>
 {
     std::wstring path;
@@ -1539,13 +1492,6 @@ std::wstring info_paths_command(command_context& ctx)
     return replyString.str();
 }
 
-std::wstring diag_command(command_context& ctx)
-{
-    core::diagnostics::osd::show_graphs(true);
-
-    return L"202 DIAG OK\r\n";
-}
-
 std::wstring kill_command(command_context& ctx)
 {
     ctx.static_context->shutdown_server_now(false); // false for not attempting to restart
@@ -1647,8 +1593,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 
     repo->register_command(L"Data Commands", L"DATA STORE", data_store_command, 2);
     repo->register_command(L"Data Commands", L"DATA RETRIEVE", data_retrieve_command, 1);
-    repo->register_command(L"Data Commands", L"DATA LIST", data_list_command, 0);
-    repo->register_command(L"Data Commands", L"DATA REMOVE", data_remove_command, 1);
 
     repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
     repo->register_channel_command(L"Template Commands", L"CG PLAY", cg_play_command, 1);
@@ -1690,8 +1634,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Query Commands", L"CLS", cls_command, 0);
     repo->register_command(L"Query Commands", L"FLS", fls_command, 0);
     repo->register_command(L"Query Commands", L"TLS", tls_command, 0);
-    repo->register_command(L"Query Commands", L"VERSION", version_command, 0);
-    repo->register_command(L"Query Commands", L"DIAG", diag_command, 0);
     repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
     repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);

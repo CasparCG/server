@@ -5,6 +5,11 @@ import { ChannelLocks } from "./amcp/channel_locks.js";
 import { Client } from "./amcp/client.js";
 import { AMCPServer } from "./amcp/server.js";
 import { CasparCGConfiguration, VideoMode } from "./config/type.js";
+import {
+    AMCPCommandContext,
+    AMCPCommandRepository,
+} from "./amcp/command_repository.js";
+import path from "node:path";
 // import { parseXmlConfigFile } from "./config/parse.js";
 
 const rl = createInterface({
@@ -18,10 +23,10 @@ const config: CasparCGConfiguration = {
     logAlignColumns: true,
 
     paths: {
-        mediaPath: "media/",
-        logPath: "log/",
+        mediaPath: "/home/julus/Projects/caspar_media/",
+        logPath: null,
         dataPath: "data/",
-        templatePath: "template/",
+        templatePath: "/home/julus/Projects/caspar_templates/",
     },
     lockClearPhrase: "",
 
@@ -107,8 +112,28 @@ if (!Native.ConfigAddOscPredefinedClient("127.0.0.1", 6250)) {
     console.log("failed to add osc client");
 }
 
+function makeAbsolute(myPath: string) {
+    if (path.isAbsolute(myPath)) {
+        return myPath;
+    } else {
+        return path.join(process.cwd(), myPath);
+    }
+}
+config.paths.mediaPath = makeAbsolute(config.paths.mediaPath);
+if (config.paths.logPath !== null)
+    config.paths.logPath = makeAbsolute(config.paths.logPath);
+config.paths.dataPath = makeAbsolute(config.paths.dataPath);
+config.paths.templatePath = makeAbsolute(config.paths.templatePath);
+
+console.log("config", JSON.stringify(config, undefined, 4));
+
+const context: AMCPCommandContext = {
+    configuration: config,
+};
+
 const locks = new ChannelLocks("");
-const protocol = new AMCPProtocolStrategy(locks);
+const commandRepository = new AMCPCommandRepository();
+const protocol = new AMCPProtocolStrategy(commandRepository, locks, context);
 
 const startupClient: Client = {
     id: "init",

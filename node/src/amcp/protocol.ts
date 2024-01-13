@@ -2,6 +2,11 @@ import { Native } from "../native.js";
 import { tokenize } from "./tokenize.js";
 import type { ChannelLocks } from "./channel_locks.js";
 import type { Client } from "./client.js";
+import type {
+    AMCPCommand2,
+    AMCPCommandContext,
+    AMCPCommandRepository,
+} from "./command_repository.js";
 
 export type AMCPCommand = unknown;
 
@@ -47,10 +52,18 @@ enum AMCPCommandError {
 }
 
 export class AMCPProtocolStrategy {
+    readonly #commandRepository: AMCPCommandRepository;
     readonly #locks: ChannelLocks;
+    readonly #context: AMCPCommandContext;
 
-    constructor(locks: ChannelLocks) {
+    constructor(
+        commandRepository: AMCPCommandRepository,
+        locks: ChannelLocks,
+        context: AMCPCommandContext
+    ) {
+        this.#commandRepository = commandRepository;
         this.#locks = locks;
+        this.#context = context;
     }
 
     async parse(client: Client, message: string): Promise<string[]> {
@@ -85,7 +98,11 @@ export class AMCPProtocolStrategy {
                 case AMCPCommandError.access_error:
                     return [`503 ${result.commandName} FAILED`];
                 case AMCPCommandError.unknown_error:
-                    return ["500 FAILED"];
+                    return [
+                        result.commandName
+                            ? `500 ${result.commandName} FAILED`
+                            : "500 FAILED",
+                    ];
                 default:
                     throw new Error(
                         `Unhandled error_state enum constant ${result.status}`
@@ -152,6 +169,37 @@ export class AMCPProtocolStrategy {
             }
 
             const channelIds = this.#parse_channel_id(tokens);
+
+            let jsCommand: AMCPCommand2 | null | undefined;
+            if (channelIds) {
+                jsCommand = this.#commandRepository.createChannelCommand(
+                    commandName,
+                    client.address,
+                    channelIds.channelIndex,
+                    channelIds.layerIndex ?? null,
+                    tokens
+                );
+            }
+            if (!jsCommand) {
+                jsCommand = this.#commandRepository.createCommand(
+                    commandName,
+                    client.address,
+                    channelIds ? [channelIds.channelSpec, ...tokens] : tokens
+                );
+            }
+
+            if (jsCommand) {
+                // TODO - this is ignoring batches, and other things
+
+                const line = await jsCommand.command(this.#context, jsCommand);
+
+                return {
+                    status: AMCPCommandError.no_error,
+                    requestId,
+                    commandName,
+                    lines: [line],
+                };
+            }
 
             let command: AMCPCommand | undefined;
 
