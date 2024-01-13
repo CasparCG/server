@@ -35,6 +35,9 @@ class server final
     void                                                     start();
     spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 
+    bool add_osc_predefined_client(std::string address, unsigned short port);
+    int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
+
   private:
     struct impl;
     std::shared_ptr<impl> impl_;

@@ -384,6 +384,113 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
     return response;
 }
 
+Napi::Value ConfigAddOscPredefinedClient(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 2 || !info[0].IsString() || !info[1].IsNumber()) {
+        Napi::Error::New(env, "Expected address and port").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto address = info[0].As<Napi::String>();
+    auto port    = info[1].As<Napi::Number>();
+
+    bool success = instance_data->caspar_server->add_osc_predefined_client(address.Utf8Value(), port.Int32Value());
+
+    return Napi::Boolean::New(env, success);
+}
+
+bool NapiObjectToBoostPropertyTree(const Napi::Env& env, const Napi::Object& object, boost::property_tree::wptree& tree)
+{
+    auto property_names = object.GetPropertyNames();
+    for (size_t i = 0; i < property_names.Length(); i++) {
+        auto name = property_names.Get(i);
+        if (!name.IsString()) {
+            Napi::Error::New(env, "Expected keys to be strings").ThrowAsJavaScriptException();
+            return false;
+        }
+        auto nameStr = caspar::u16(name.As<Napi::String>().Utf8Value());
+
+        auto value = object.Get(name);
+        if (value.IsNumber()) {
+            auto valueNumber = value.As<Napi::Number>();
+            tree.put(nameStr, valueNumber.Int32Value());
+            // TODO - floats?
+        } else if (value.IsString()) {
+            auto valueStr = value.As<Napi::String>();
+            tree.put(nameStr, caspar::u16(valueStr.Utf8Value()));
+        } else if (value.IsBoolean()) {
+            auto valueBool = value.As<Napi::Boolean>();
+            tree.put(nameStr, valueBool.Value());
+        } else if (value.IsObject()) {
+            auto valueObj = value.As<Napi::Object>();
+
+            boost::property_tree::wptree child_tree;
+            if (!NapiObjectToBoostPropertyTree(env, valueObj, child_tree)) {
+                return false;
+            }
+
+            tree.put_child(nameStr, child_tree);
+        } else {
+            Napi::Error::New(env, "Unsupported value type").ThrowAsJavaScriptException();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Napi::Value AddChannelConsumer(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsObject()) {
+        Napi::Error::New(env, "Expected channel and config").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channel_index = info[0].As<Napi::Number>();
+    auto config        = info[1].As<Napi::Object>();
+
+    boost::property_tree::wptree boost_config;
+    if (!NapiObjectToBoostPropertyTree(env, config, boost_config)) {
+        return env.Null();
+    }
+
+    int port = instance_data->caspar_server->add_consumer_from_xml(channel_index.Int32Value(), boost_config);
+    if (port == -1) {
+        Napi::Error::New(env, "Invalid consumer config").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    return Napi::Number::New(env, port);
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
@@ -393,6 +500,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
     exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
+
+    exports.Set(Napi::String::New(env, "ConfigAddOscPredefinedClient"),
+                Napi::Function::New(env, ConfigAddOscPredefinedClient));
+    exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
 
     exports.Set(Napi::String::New(env, "executeCommandBatch"), Napi::Function::New(env, ExecuteCommandBatch));
 

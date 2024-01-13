@@ -135,12 +135,6 @@ struct server::impl
             cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_wrapper_);
         initialize_modules(dependencies);
         CASPAR_LOG(info) << L"Initialized modules.";
-
-        setup_channel_producers_and_consumers(xml_channels);
-        CASPAR_LOG(info) << L"Initialized startup producers.";
-
-        setup_osc(env::properties());
-        CASPAR_LOG(info) << L"Initialized osc.";
     }
 
     ~impl()
@@ -277,25 +271,6 @@ struct server::impl
 
         auto default_port                 = pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
         auto disable_send_to_amcp_clients = pt.get(L"configuration.osc.disable-send-to-amcp-clients", false);
-        auto predefined_clients           = pt.get_child_optional(L"configuration.osc.predefined-clients");
-
-        if (predefined_clients) {
-            for (auto& predefined_client :
-                 pt | witerate_children(L"configuration.osc.predefined-clients") | welement_context_iteration) {
-                ptree_verify_element_name(predefined_client, L"predefined-client");
-
-                const auto address = ptree_get<std::wstring>(predefined_client.second, L"address");
-                const auto port    = ptree_get<unsigned short>(predefined_client.second, L"port");
-
-                boost::system::error_code ec;
-                auto                      ipaddr = address_v4::from_string(u8(address), ec);
-                if (!ec)
-                    predefined_osc_subscriptions_.push_back(
-                        osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
-                else
-                    CASPAR_LOG(warning) << "Invalid OSC client. Must be valid ipv4 address: " << address;
-            }
-        }
 
         // if (!disable_send_to_amcp_clients && primary_amcp_server_)
         //     primary_amcp_server_->add_client_lifecycle_object_factory(
@@ -308,61 +283,44 @@ struct server::impl
         //         });
     }
 
-    void setup_channel_producers_and_consumers(const std::vector<boost::property_tree::wptree>& xml_channels)
+    bool add_osc_predefined_client(std::string address, unsigned short port)
     {
+        using namespace boost::asio::ip;
+
+        boost::system::error_code ec;
+        auto                      ipaddr = address_v4::from_string(address, ec);
+        if (!ec) {
+            predefined_osc_subscriptions_.push_back(osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    int add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
+    {
+        auto type = config.get(L"type", L"");
+        if (type.empty())
+            return -1;
+
+        auto channel = channels_->at(channel_index);
+
+        core::diagnostics::scoped_call_context save;
+        core::diagnostics::call_context::for_thread().video_channel = channel.raw_channel->index();
+
         std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
         for (auto& cc : *channels_) {
             channels_vec.emplace_back(cc.raw_channel);
         }
 
-        for (auto& channel : *channels_) {
-            core::diagnostics::scoped_call_context save;
-            core::diagnostics::call_context::for_thread().video_channel = channel.raw_channel->index();
-
-            auto xml_channel = xml_channels.at(channel.raw_channel->index() - 1);
-
-            // Consumers
-            if (xml_channel.get_child_optional(L"consumers")) {
-                for (auto& xml_consumer : xml_channel | witerate_children(L"consumers") | welement_context_iteration) {
-                    auto name = xml_consumer.first;
-
-                    try {
-                        if (name != L"<xmlcomment>")
-                            channel.raw_channel->output().add(consumer_registry_->create_consumer(
-                                name, xml_consumer.second, video_format_repository_, channels_vec));
-                    } catch (...) {
-                        CASPAR_LOG_CURRENT_EXCEPTION();
-                    }
-                }
-            }
-
-            // Producers
-            if (xml_channel.get_child_optional(L"producers")) {
-                for (auto& xml_producer : xml_channel | witerate_children(L"producers") | welement_context_iteration) {
-                    ptree_verify_element_name(xml_producer, L"producer");
-
-                    const std::wstring command = xml_producer.second.get_value(L"");
-                    const auto         attrs   = xml_producer.second.get_child(L"<xmlattr>");
-                    const int          id      = attrs.get(L"id", -1);
-
-                    try {
-                        std::list<std::wstring> tokens{};
-                        IO::tokenize(command, tokens);
-                        auto cmd = amcp_command_repo_->parse_command(
-                            L"config", L"PLAY", channel.raw_channel->index() - 1, id, tokens);
-
-                        if (cmd) {
-                            std::wstring res = cmd->Execute(channels_).get();
-                            std::wcout << L"#" + caspar::log::replace_nonprintable_copy(res, L'?') << std::flush;
-                        }
-                    } catch (const user_error&) {
-                        CASPAR_LOG(error) << "Failed to parse command: " << command;
-                    } catch (...) {
-                        CASPAR_LOG_CURRENT_EXCEPTION();
-                    }
-                }
-            }
+        auto consumer = consumer_registry_->create_consumer(type, config, video_format_repository_, channels_vec);
+        if (consumer == core::frame_consumer::empty()) {
+            return -1;
         }
+
+        channel.raw_channel->output().add(consumer);
+
+        return consumer->index();
     }
 
     void setup_amcp_command_repo()
@@ -399,6 +357,16 @@ void                                                     server::start() { impl_
 spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const
 {
     return spl::make_shared_ptr(impl_->amcp_command_repo_);
+}
+
+bool server::add_osc_predefined_client(std::string address, unsigned short port)
+{
+    return impl_->add_osc_predefined_client(address, port);
+}
+
+int server::add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
+{
+    return impl_->add_consumer_from_xml(channel_index, config);
 }
 
 } // namespace caspar
