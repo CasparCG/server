@@ -3,4 +3,5 @@ node_modules
 /log/
 /media/
 /template/
+/data/
 /casparcg.config

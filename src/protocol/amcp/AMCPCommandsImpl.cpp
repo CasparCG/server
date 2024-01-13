@@ -514,88 +514,6 @@ std::wstring set_command(command_context& ctx)
     CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid channel variable"));
 }
 
-std::wstring data_store_command(command_context& ctx)
-{
-    std::wstring filename = env::data_folder();
-    filename.append(ctx.parameters[0]);
-    filename.append(L".ftd");
-
-    auto data_path       = boost::filesystem::path(filename).parent_path().wstring();
-    auto found_data_path = find_case_insensitive(data_path);
-
-    if (found_data_path)
-        data_path = *found_data_path;
-
-    if (!boost::filesystem::exists(data_path))
-        boost::filesystem::create_directories(data_path);
-
-    auto found_filename = find_case_insensitive(filename);
-
-    if (found_filename)
-        filename = *found_filename; // Overwrite case insensitive.
-
-    boost::filesystem::wofstream datafile(filename);
-    if (!datafile)
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Could not open file " + filename));
-
-    datafile << static_cast<wchar_t>(65279); // UTF-8 BOM character
-    datafile << ctx.parameters[1] << std::flush;
-    datafile.close();
-
-    return L"202 DATA STORE OK\r\n";
-}
-
-std::wstring data_retrieve_command(command_context& ctx)
-{
-    std::wstring filename = env::data_folder();
-    filename.append(ctx.parameters[0]);
-    filename.append(L".ftd");
-
-    std::wstring file_contents;
-
-    auto found_file = find_case_insensitive(filename);
-
-    if (found_file)
-        file_contents = read_file(boost::filesystem::path(*found_file));
-
-    if (file_contents.empty())
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(filename + L" not found"));
-
-    std::wstringstream reply;
-    reply << L"201 DATA RETRIEVE OK\r\n";
-
-    std::wstringstream file_contents_stream(file_contents);
-    std::wstring       line;
-
-    bool firstLine = true;
-    while (std::getline(file_contents_stream, line)) {
-        if (firstLine)
-            firstLine = false;
-        else
-            reply << "\n";
-
-        reply << line;
-    }
-
-    reply << "\r\n";
-    return reply.str();
-}
-
-std::wstring data_remove_command(command_context& ctx)
-{
-    std::wstring filename = env::data_folder();
-    filename.append(ctx.parameters[0]);
-    filename.append(L".ftd");
-
-    if (!boost::filesystem::exists(filename))
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(filename + L" not found"));
-
-    if (!boost::filesystem::remove(filename))
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(filename + L" could not be removed"));
-
-    return L"202 DATA REMOVE OK\r\n";
-}
-
 // Template Graphics Commands
 
 std::wstring cg_add_command(command_context& ctx)
@@ -1590,9 +1508,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo->register_channel_command(L"Basic Commands", L"SET", set_command, 2);
-
-    repo->register_command(L"Data Commands", L"DATA STORE", data_store_command, 2);
-    repo->register_command(L"Data Commands", L"DATA RETRIEVE", data_retrieve_command, 1);
 
     repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
     repo->register_channel_command(L"Template Commands", L"CG PLAY", cg_play_command, 1);
