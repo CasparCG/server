@@ -31,11 +31,11 @@ class AMCPCommand
     const command_context_simple ctx_;
     const amcp_command_func      command_;
     const std::wstring           name_;
-    const std::wstring           result_;
+
+    std::wstring result_;
 
   public:
     AMCPCommand(const command_context_simple& ctx, const amcp_command_func& command, const std::wstring& name)
-
         : ctx_(ctx)
         , command_(command)
         , name_(name)
@@ -56,6 +56,8 @@ class AMCPCommand
     const std::wstring& name() const { return name_; }
 
     const std::wstring& result() const { return result_; }
+
+    void SetResult(std::wstring result) { result_ = std::move(result); }
 };
 
 }}} // namespace caspar::protocol::amcp

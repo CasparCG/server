@@ -62,11 +62,10 @@ class AMCPCommandQueue
     AMCPCommandQueue(const std::wstring& name, const spl::shared_ptr<std::vector<channel_context>>& channels);
     ~AMCPCommandQueue();
 
-    std::future<std::vector<CommandResult>> QueueCommandBatch(std::vector<std::shared_ptr<AMCPCommand>> cmds,
-                                                              bool reply_without_req_id);
+    std::future<std::wstring> QueueCommandBatch(std::vector<std::shared_ptr<AMCPCommand>> cmds);
 
   private:
-    std::vector<CommandResult> Execute(std::vector<std::shared_ptr<AMCPCommand>> cmds, bool reply_without_req_id) const;
+    std::wstring Execute(std::vector<std::shared_ptr<AMCPCommand>> cmds) const;
 
     executor                                            executor_;
     const spl::shared_ptr<std::vector<channel_context>> channels_;

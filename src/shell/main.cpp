@@ -202,6 +202,7 @@ class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
     //     return instance_data->amcp_command->New({Napi::Number::New(info.Env(), 42)});
     // }
 
+    bool                                                 _executed = false;
     std::shared_ptr<caspar::protocol::amcp::AMCPCommand> _cmd;
 };
 
@@ -340,13 +341,18 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
         auto raw_cmd = static_cast<Napi::Value>(raw_commands[i]).As<Napi::Object>();
         if (raw_cmd.InstanceOf(instance_data->amcp_command->Value())) {
             auto cmd_wrapper = NodeAMCPCommand::Unwrap(raw_cmd);
+
+            if (cmd_wrapper->_executed) {
+                // TODO - this guard
+            }
+
             commands.emplace_back(cmd_wrapper->_cmd);
         }
     }
 
-    bool reply_without_req_id = true;
+    // TODO - the commands get mutated. they should be blocked from being executed multiple times
 
-    auto result = instance_data->amcp_queue->QueueCommandBatch(std::move(commands), reply_without_req_id);
+    auto error_response = instance_data->amcp_queue->QueueCommandBatch(std::move(commands));
 
     // TODO - make it so that the call above doesn't return a value, but dispatches some work which will post back to
     // nodejs and resolve the promise
