@@ -129,6 +129,10 @@ console.log("config", JSON.stringify(config, undefined, 4));
 
 const context: AMCPCommandContext = {
     configuration: config,
+    shutdown: (restart) => {
+        Native.stop();
+        process.exit(restart ? 5 : 0);
+    },
 };
 
 const locks = new ChannelLocks("");

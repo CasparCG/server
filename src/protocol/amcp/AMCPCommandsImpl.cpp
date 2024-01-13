@@ -1364,18 +1364,6 @@ std::wstring info_paths_command(command_context& ctx)
     return replyString.str();
 }
 
-std::wstring kill_command(command_context& ctx)
-{
-    ctx.static_context->shutdown_server_now(false); // false for not attempting to restart
-    return L"202 KILL OK\r\n";
-}
-
-std::wstring restart_command(command_context& ctx)
-{
-    ctx.static_context->shutdown_server_now(true); // true for attempting to restart
-    return L"202 RESTART OK\r\n";
-}
-
 std::wstring gl_info_command(command_context& ctx)
 {
     auto device = ctx.static_context->ogl_device.lock();
@@ -1494,8 +1482,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
-    repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
-    repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
     repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);

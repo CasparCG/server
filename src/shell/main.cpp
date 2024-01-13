@@ -306,14 +306,10 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
             }
         }
 
-        auto shutdown = [=](bool restart) {
-            // TODO - this is probably not needed?
-        };
-
         print_info();
 
         // Create server object which initializes channels, protocols and controllers.
-        instance_data->caspar_server.reset(new server(shutdown));
+        instance_data->caspar_server.reset(new server());
 
         // For example CEF resets the global locale, so this is to reset it back to "our" preference.
         setup_global_locale();

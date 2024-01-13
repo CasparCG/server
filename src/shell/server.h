@@ -33,7 +33,7 @@ namespace caspar {
 class server final
 {
   public:
-    explicit server(std::function<void(bool)> shutdown_server_now);
+    explicit server();
     void                                                     start();
     spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 

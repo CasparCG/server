@@ -40,7 +40,6 @@ struct amcp_command_static_context
     const spl::shared_ptr<const core::frame_producer_registry> producer_registry;
     const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     const std::shared_ptr<amcp_command_repository>             parser;
-    std::function<void(bool)>                                  shutdown_server_now;
     std::weak_ptr<accelerator::accelerator_device>             ogl_device;
     const spl::shared_ptr<osc::client>                         osc_client;
 
@@ -49,7 +48,6 @@ struct amcp_command_static_context
                                 const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                                 const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
                                 std::shared_ptr<amcp_command_repository>                    parser,
-                                std::function<void(bool)>                                   shutdown_server_now,
                                 std::weak_ptr<accelerator::accelerator_device>              ogl_device,
                                 const spl::shared_ptr<osc::client>&                         osc_client)
         : format_repository(std::move(format_repository))
@@ -57,7 +55,6 @@ struct amcp_command_static_context
         , producer_registry(producer_registry)
         , consumer_registry(consumer_registry)
         , parser(std::move(parser))
-        , shutdown_server_now(std::move(shutdown_server_now))
         , ogl_device(std::move(ogl_device))
         , osc_client(osc_client)
     {

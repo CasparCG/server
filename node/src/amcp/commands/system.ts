@@ -21,8 +21,23 @@ export function registerSystemCommands(
         minNumParams: 0,
     });
 
-    // repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
-    // repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
+    commands.set("KILL", {
+        func: async (context) => {
+            setImmediate(() => context.shutdown(false));
+
+            return "202 KILL OK\r\n";
+        },
+        minNumParams: 0,
+    });
+    commands.set("RESTART", {
+        func: async (context) => {
+            setImmediate(() => context.shutdown(true));
+
+            return "202 RESTART OK\r\n";
+        },
+        minNumParams: 0,
+    });
+
     // repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     // repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     // repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);

@@ -105,17 +105,15 @@ struct server::impl
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
-    std::function<void(bool)>                                     shutdown_server_now_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
 
-    explicit impl(std::function<void(bool)> shutdown_server_now)
+    explicit impl()
         : video_format_repository_()
         , accelerator_(video_format_repository_)
         , producer_registry_(spl::make_shared<core::frame_producer_registry>())
         , consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
-        , shutdown_server_now_(std::move(shutdown_server_now))
     {
         caspar::core::diagnostics::osd::register_sink();
     }
@@ -276,7 +274,6 @@ struct server::impl
                                                                        producer_registry_,
                                                                        consumer_registry_,
                                                                        amcp_command_repo_,
-                                                                       shutdown_server_now_,
                                                                        ogl_device,
                                                                        spl::make_shared_ptr(osc_client_));
 
@@ -289,8 +286,8 @@ struct server::impl
     }
 };
 
-server::server(std::function<void(bool)> shutdown_server_now)
-    : impl_(new impl(std::move(shutdown_server_now)))
+server::server()
+    : impl_(new impl())
 {
 }
 void                                                     server::start() { impl_->start(); }
