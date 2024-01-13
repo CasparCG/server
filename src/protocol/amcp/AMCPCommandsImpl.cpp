@@ -27,7 +27,6 @@
 
 #include "AMCPCommandsImpl.h"
 
-#include "../util/http_request.h"
 #include "AMCPCommandQueue.h"
 #include "amcp_args.h"
 #include "amcp_command_repository.h"
@@ -1254,52 +1253,7 @@ std::wstring channel_grid_command(command_context& ctx)
     return L"202 CHANNEL_GRID OK\r\n";
 }
 
-// Thumbnail Commands
-
-std::wstring make_request(command_context& ctx, const std::string& path, const std::wstring& default_response)
-{
-    auto res = http::request(ctx.static_context->proxy_host, ctx.static_context->proxy_port, path);
-    if (res.status_code >= 500 || res.body.size() == 0) {
-        CASPAR_LOG(error) << "Failed to connect to media-scanner. Is it running? \nReason: " << res.status_message;
-        return default_response;
-    }
-    return u16(res.body);
-}
-
-std::wstring thumbnail_list_command(command_context& ctx)
-{
-    return make_request(ctx, "/thumbnail", L"501 THUMBNAIL LIST FAILED\r\n");
-}
-
-std::wstring thumbnail_retrieve_command(command_context& ctx)
-{
-    return make_request(
-        ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
-}
-
-std::wstring thumbnail_generate_command(command_context& ctx)
-{
-    return make_request(
-        ctx, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
-}
-
-std::wstring thumbnail_generateall_command(command_context& ctx)
-{
-    return make_request(ctx, "/thumbnail/generate", L"501 THUMBNAIL GENERATE_ALL FAILED\r\n");
-}
-
 // Query Commands
-
-std::wstring cinf_command(command_context& ctx)
-{
-    return make_request(ctx, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
-}
-
-std::wstring cls_command(command_context& ctx) { return make_request(ctx, "/cls", L"501 CLS FAILED\r\n"); }
-
-std::wstring fls_command(command_context& ctx) { return make_request(ctx, "/fls", L"501 FLS FAILED\r\n"); }
-
-std::wstring tls_command(command_context& ctx) { return make_request(ctx, "/tls", L"501 TLS FAILED\r\n"); }
 
 struct param_visitor : public boost::static_visitor<void>
 {
@@ -1540,15 +1494,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
-    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);
-    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL RETRIEVE", thumbnail_retrieve_command, 1);
-    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE", thumbnail_generate_command, 1);
-    repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE_ALL", thumbnail_generateall_command, 0);
-
-    repo->register_command(L"Query Commands", L"CINF", cinf_command, 1);
-    repo->register_command(L"Query Commands", L"CLS", cls_command, 0);
-    repo->register_command(L"Query Commands", L"FLS", fls_command, 0);
-    repo->register_command(L"Query Commands", L"TLS", tls_command, 0);
     repo->register_command(L"Query Commands", L"KILL", kill_command, 0);
     repo->register_command(L"Query Commands", L"RESTART", restart_command, 0);
     repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);

@@ -15,7 +15,6 @@ set(SOURCES
 
 		osc/client.cpp
 
-		util/http_request.cpp
 		util/tokenize.cpp
 )
 
@@ -40,7 +39,6 @@ set(HEADERS
 
 		osc/client.h
 
-		util/http_request.h
 		util/tokenize.h
 
 		StdAfx.h

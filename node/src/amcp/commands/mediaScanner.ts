@@ -1,15 +1,109 @@
-import type { AMCPCommandEntry } from "../command_repository.js";
+import type {
+    AMCPCommandContext,
+    AMCPCommandEntry,
+} from "../command_repository.js";
+
+async function makeRequest(
+    context: AMCPCommandContext,
+    path: string,
+    errorResponse: string
+): Promise<string> {
+    const { mediaScanner } = context.configuration;
+    try {
+        const req = await fetch(
+            `http://${mediaScanner.host}:${mediaScanner.port}${path}`,
+            {
+                signal: AbortSignal.timeout(5000),
+            }
+        );
+
+        const text = await req.text();
+        return text || errorResponse;
+    } catch (e) {
+        console.log("Media scanner failed", e);
+        return errorResponse;
+    }
+}
 
 export function registerMediaScannerCommands(
-    _commands: Map<string, AMCPCommandEntry>,
+    commands: Map<string, AMCPCommandEntry>,
     _channelCommands: Map<string, AMCPCommandEntry>
 ): void {
-    // repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);
-    // repo->register_command(L"Thumbnail Commands", L"THUMBNAIL RETRIEVE", thumbnail_retrieve_command, 1);
-    // repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE", thumbnail_generate_command, 1);
-    // repo->register_command(L"Thumbnail Commands", L"THUMBNAIL GENERATE_ALL", thumbnail_generateall_command, 0);
-    // repo->register_command(L"Query Commands", L"CINF", cinf_command, 1);
-    // repo->register_command(L"Query Commands", L"CLS", cls_command, 0);
-    // repo->register_command(L"Query Commands", L"FLS", fls_command, 0);
-    // repo->register_command(L"Query Commands", L"TLS", tls_command, 0);
+    commands.set("THUMBNAIL LIST", {
+        func: async (context) => {
+            return makeRequest(
+                context,
+                "/thumbnail",
+                "501 THUMBNAIL LIST FAILED\r\n"
+            );
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("THUMBNAIL RETRIEVE", {
+        func: async (context, command) => {
+            return makeRequest(
+                context,
+                `/thumbnail/${encodeURIComponent(command.parameters[0])}`,
+                "501 THUMBNAIL RETRIEVE FAILED\r\n"
+            );
+        },
+        minNumParams: 1,
+    });
+
+    commands.set("THUMBNAIL GENERATE", {
+        func: async (context, command) => {
+            return makeRequest(
+                context,
+                `/thumbnail/generate/${encodeURIComponent(
+                    command.parameters[0]
+                )}`,
+                "501 THUMBNAIL GENERATE FAILED\r\n"
+            );
+        },
+        minNumParams: 1,
+    });
+
+    commands.set("THUMBNAIL GENERATE_ALL", {
+        func: async (context) => {
+            return makeRequest(
+                context,
+                `/thumbnail/generate`,
+                "501 THUMBNAIL GENERATE_ALL FAILED\r\n"
+            );
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("CINF", {
+        func: async (context, command) => {
+            return makeRequest(
+                context,
+                `/cinf/${encodeURIComponent(command.parameters[0])}`,
+                "501 CINF FAILED\r\n"
+            );
+        },
+        minNumParams: 1,
+    });
+
+    commands.set("CLS", {
+        func: async (context) => {
+            return makeRequest(context, `/cls`, "501 CLS FAILED\r\n");
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("FLS", {
+        func: async (context) => {
+            return makeRequest(context, `/fls`, "501 FLS FAILED\r\n");
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("TLS", {
+        func: async (context) => {
+            return makeRequest(context, `/tls`, "501 TLS FAILED\r\n");
+        },
+        minNumParams: 0,
+    });
 }

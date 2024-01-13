@@ -271,17 +271,14 @@ struct server::impl
         amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(channels_);
 
         auto ogl_device = accelerator_.get_device();
-        auto ctx        = std::make_shared<amcp::amcp_command_static_context>(
-            video_format_repository_,
-            cg_registry_,
-            producer_registry_,
-            consumer_registry_,
-            amcp_command_repo_,
-            shutdown_server_now_,
-            u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1")),
-            u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000")),
-            ogl_device,
-            spl::make_shared_ptr(osc_client_));
+        auto ctx        = std::make_shared<amcp::amcp_command_static_context>(video_format_repository_,
+                                                                       cg_registry_,
+                                                                       producer_registry_,
+                                                                       consumer_registry_,
+                                                                       amcp_command_repo_,
+                                                                       shutdown_server_now_,
+                                                                       ogl_device,
+                                                                       spl::make_shared_ptr(osc_client_));
 
         amcp_context_factory_ = std::make_shared<amcp::command_context_factory>(ctx);
 
