@@ -53,7 +53,7 @@ export class AMCPProtocolStrategy {
         this.#locks = locks;
     }
 
-    parse(client: Client, message: string): string[] {
+    async parse(client: Client, message: string): Promise<string[]> {
         const tokens = tokenize(message);
 
         if (tokens.length === 0) {
@@ -71,7 +71,7 @@ export class AMCPProtocolStrategy {
 
         console.log(`Received message from ${client.address}: ${message}`);
 
-        const result = this.#parse_command_string(client, tokens);
+        const result = await this.#parse_command_string(client, tokens);
         if (Array.isArray(result)) {
             return result;
         } else if (result.status !== AMCPCommandError.no_error) {
@@ -92,21 +92,22 @@ export class AMCPProtocolStrategy {
                     );
             }
         } else {
-            // TODO: this needs porting
-            return [];
+            return result.lines ?? [];
         }
     }
 
-    #parse_command_string(
+    async #parse_command_string(
         client: Client,
         tokens: string[]
-    ):
+    ): Promise<
         | {
               status: AMCPCommandError;
               requestId: string | null;
               commandName: string | undefined;
+              lines?: string[];
           }
-        | string[] {
+        | string[]
+    > {
         let requestId: string | null = null;
         let commandName: string | undefined;
 
@@ -190,17 +191,20 @@ export class AMCPProtocolStrategy {
                 };
             }
 
+            let lines: string[] | undefined;
+
             if (client.batch.inProgress) {
                 client.batch.addCommand(command);
             } else {
                 // TODO: correct queue
-                Native.executeCommandBatch([command]);
+                lines = Native.executeCommandBatch([command]);
             }
 
             return {
                 status: AMCPCommandError.no_error,
                 requestId,
                 commandName,
+                lines,
             };
             // } catch (std::out_of_range&) {
             //     CASPAR_LOG(error) << "Invalid channel specified.";

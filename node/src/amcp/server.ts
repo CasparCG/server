@@ -61,23 +61,29 @@ export class AMCPServer {
                     return;
                 }
 
-                const response = this.#protocol.parse(client, line);
+                // TODO - does this need to go via a queue to limit concurrency?
+                this.#protocol
+                    .parse(client, line)
+                    .then((response) => {
+                        let responseStr =
+                            response.join(LINE_DELIMITER) + LINE_DELIMITER;
+                        if (responseStr.length == 2) return;
 
-                let responseStr =
-                    response.join(LINE_DELIMITER) + LINE_DELIMITER;
-                if (responseStr.length == 2) continue;
+                        clientSocket.write(responseStr);
 
-                clientSocket.write(responseStr);
-
-                if (responseStr.length > 512) {
-                    console.log(
-                        `Sent ${responseStr.length} bytes to ${client.address}`
-                    );
-                } else {
-                    console.log(
-                        `Sent message to ${client.address}: ${responseStr}`
-                    );
-                }
+                        if (responseStr.length > 512) {
+                            console.log(
+                                `Sent ${responseStr.length} bytes to ${client.address}`
+                            );
+                        } else {
+                            console.log(
+                                `Sent message to ${client.address}: ${responseStr}`
+                            );
+                        }
+                    })
+                    .catch((e) => {
+                        console.error(`AMCP error:`, e);
+                    });
             }
         });
     }

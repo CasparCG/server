@@ -352,12 +352,27 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
 
     // TODO - the commands get mutated. they should be blocked from being executed multiple times
 
-    auto error_response = instance_data->amcp_queue->QueueCommandBatch(std::move(commands));
+    // TODO - avoid this blocking...
+    std::wstring error_response = instance_data->amcp_queue->QueueCommandBatch(commands).get();
 
-    // TODO - make it so that the call above doesn't return a value, but dispatches some work which will post back to
-    // nodejs and resolve the promise
+    size_t count = commands.size();
+    if (!error_response.empty()) {
+        count++;
+    }
 
-    return env.Null();
+    auto response = Napi::Array::New(env, count);
+    for (size_t i = 0; i < commands.size(); i++) {
+        response.Set(i, caspar::u8(commands[i]->result()));
+    }
+    if (!error_response.empty()) {
+        response.Set(count - 1, caspar::u8(error_response));
+    }
+
+    // TODO - make it so that the call above doesn't return a value, but dispatches some work which will post back
+    // to nodejs and resolve the promise
+
+    // return Napi::String::New(env, caspar::u8(error_response));
+    return response;
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)

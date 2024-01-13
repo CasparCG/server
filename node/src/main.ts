@@ -38,8 +38,15 @@ rl.on("line", function (line) {
             return;
         }
 
-        const answer = protocol.parse(consoleClient, line.trim());
-        console.log(answer);
+        protocol
+            .parse(consoleClient, line.trim())
+            .then((answer) => {
+                const str = answer.join("\n");
+                console.log(str);
+            })
+            .catch((e) => {
+                console.error(e);
+            });
     } catch (e) {
         console.error(e);
     }
