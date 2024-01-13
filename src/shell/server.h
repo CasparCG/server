@@ -26,6 +26,8 @@
 #include <functional>
 #include <memory>
 
+#include <core/video_format.h>
+
 namespace caspar {
 
 class server final
@@ -38,6 +40,7 @@ class server final
     bool add_osc_predefined_client(std::string address, unsigned short port);
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
     int  add_channel(std::wstring format_desc_str);
+    void add_video_format_desc(std::wstring id, core::video_format_desc format);
 
   private:
     struct impl;

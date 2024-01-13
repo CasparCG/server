@@ -35,6 +35,7 @@
 #include <common/except.h>
 #include <common/log.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
@@ -525,6 +526,72 @@ Napi::Value AddChannel(const Napi::CallbackInfo& info)
     return Napi::Number::New(env, channel_index);
 }
 
+Napi::Value ConfigAddCustomVideoFormat(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::Error::New(env, "Expected video format definition").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto obj = info[0].As<Napi::Object>();
+
+    auto id          = obj.Get("id").As<Napi::String>().Utf8Value();
+    auto width       = obj.Get("width").As<Napi::Number>().Int32Value();
+    auto height      = obj.Get("height").As<Napi::Number>().Int32Value();
+    auto fieldCount  = obj.Get("fieldCount").As<Napi::Number>().Int32Value();
+    auto timeScale   = obj.Get("timeScale").As<Napi::Number>().Int32Value();
+    auto duration    = obj.Get("duration").As<Napi::Number>().Int32Value();
+    auto cadence_str = obj.Get("cadence").As<Napi::String>().Utf8Value();
+
+    std::set<std::wstring> cadence_parts;
+    boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
+
+    std::vector<int> cadence;
+    for (auto& cad : cadence_parts) {
+        if (cad == L"")
+            continue;
+
+        const int c = std::stoi(cad);
+        cadence.push_back(c);
+    }
+
+    if (cadence.size() == 0) {
+        const int c = static_cast<int>(48000 / (static_cast<double>(timeScale) / duration) + 0.5);
+        cadence.push_back(c);
+    }
+
+    const auto new_format = caspar::core::video_format_desc(caspar::core::video_format::custom,
+                                                            fieldCount,
+                                                            width,
+                                                            height,
+                                                            width,
+                                                            height,
+                                                            timeScale,
+                                                            duration,
+                                                            caspar::u16(id),
+                                                            cadence);
+
+    instance_data->caspar_server->add_video_format_desc(caspar::u16(id), new_format);
+
+    // TODO - calling this once amcp has begun may not be safe
+
+    return env.Null();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
@@ -537,6 +604,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "ConfigAddOscPredefinedClient"),
                 Napi::Function::New(env, ConfigAddOscPredefinedClient));
+    exports.Set(Napi::String::New(env, "ConfigAddCustomVideoFormat"),
+                Napi::Function::New(env, ConfigAddCustomVideoFormat));
+
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
     exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));
 

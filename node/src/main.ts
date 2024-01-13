@@ -98,6 +98,11 @@ const config: CasparCGConfiguration = {
 console.log(Native);
 Native.init(config);
 
+for (const videoMode of config.videoModes) {
+    Native.ConfigAddCustomVideoFormat(videoMode);
+}
+console.log("Initialized video modes.");
+
 if (!Native.ConfigAddOscPredefinedClient("127.0.0.1", 6250)) {
     console.log("failed to add osc client");
 }

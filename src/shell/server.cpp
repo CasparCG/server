@@ -122,9 +122,6 @@ struct server::impl
 
     void start()
     {
-        setup_video_modes(env::properties());
-        CASPAR_LOG(info) << L"Initialized video modes.";
-
         setup_amcp_command_repo();
         CASPAR_LOG(info) << L"Initialized command repository.";
 
@@ -156,72 +153,32 @@ struct server::impl
         core::diagnostics::osd::shutdown();
     }
 
-    void setup_video_modes(const boost::property_tree::wptree& pt)
+    void add_video_format_desc(std::wstring id, core::video_format_desc format)
     {
-        using boost::property_tree::wptree;
+        if (id == L"")
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode id: " + id));
 
-        auto videomodes_config = pt.get_child_optional(L"configuration.video-modes");
-        if (videomodes_config) {
-            for (auto& xml_channel :
-                 pt | witerate_children(L"configuration.video-modes") | welement_context_iteration) {
-                ptree_verify_element_name(xml_channel, L"video-mode");
+        if (format.width == 0 || format.height == 0)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid dimensions: " +
+                                                            boost::lexical_cast<std::wstring>(format.width) + L"x" +
+                                                            boost::lexical_cast<std::wstring>(format.height)));
 
-                const std::wstring id = xml_channel.second.get(L"id", L"");
-                if (id == L"")
-                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode id: " + id));
+        if (format.field_count != 1 && format.field_count != 2)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid field-count: " +
+                                                            boost::lexical_cast<std::wstring>(format.field_count)));
 
-                const int width  = xml_channel.second.get<int>(L"width", 0);
-                const int height = xml_channel.second.get<int>(L"height", 0);
-                if (width == 0 || height == 0)
-                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid dimensions: " +
-                                                                    boost::lexical_cast<std::wstring>(width) + L"x" +
-                                                                    boost::lexical_cast<std::wstring>(height)));
+        if (format.time_scale == 0 || format.duration == 0)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid framerate: " +
+                                                            boost::lexical_cast<std::wstring>(format.time_scale) +
+                                                            L"/" + boost::lexical_cast<std::wstring>(format.duration)));
 
-                const int field_count = xml_channel.second.get<int>(L"field-count", 1);
-                if (field_count != 1 && field_count != 2)
-                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid field-count: " +
-                                                                    boost::lexical_cast<std::wstring>(field_count)));
+        // TODO: sum and verify cadence looks correct
 
-                const int timescale = xml_channel.second.get<int>(L"time-scale", 60000);
-                const int duration  = xml_channel.second.get<int>(L"duration", 1000);
-                if (timescale == 0 || duration == 0)
-                    CASPAR_THROW_EXCEPTION(
-                        user_error() << msg_info(L"Invalid framerate: " + boost::lexical_cast<std::wstring>(timescale) +
-                                                 L"/" + boost::lexical_cast<std::wstring>(duration)));
+        const auto existing = video_format_repository_.find(id);
+        if (existing.format != video_format::invalid)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Video-mode already exists: " + id));
 
-                std::vector<int> cadence;
-                int              cadence_sum = 0;
-
-                const std::wstring     cadence_str = xml_channel.second.get(L"cadence", L"");
-                std::set<std::wstring> cadence_parts;
-                boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
-
-                for (auto& cad : cadence_parts) {
-                    if (cad == L"")
-                        continue;
-
-                    const int c = std::stoi(cad);
-                    cadence.push_back(c);
-                    cadence_sum += c;
-                }
-
-                if (cadence.size() == 0) {
-                    const int c = static_cast<int>(48000 / (static_cast<double>(timescale) / duration) + 0.5);
-                    cadence.push_back(c);
-                    cadence_sum += c;
-                }
-
-                const auto new_format = video_format_desc(
-                    video_format::custom, field_count, width, height, width, height, timescale, duration, id, cadence);
-                // TODO: verify cadence_sum to look correct
-
-                const auto existing = video_format_repository_.find(id);
-                if (existing.format != video_format::invalid)
-                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Video-mode already exists: " + id));
-
-                video_format_repository_.store(new_format);
-            }
-        }
+        video_format_repository_.store(format);
     }
 
     int add_channel(std::wstring format_desc_str)
@@ -355,5 +312,10 @@ int server::add_consumer_from_xml(int channel_index, const boost::property_tree:
     return impl_->add_consumer_from_xml(channel_index, config);
 }
 int server::add_channel(std::wstring format_desc_str) { return impl_->add_channel(format_desc_str); }
+
+void server::add_video_format_desc(std::wstring id, core::video_format_desc format)
+{
+    impl_->add_video_format_desc(id, format);
+}
 
 } // namespace caspar

@@ -109,9 +109,10 @@ export interface CustomVideoMode {
     id: string;
     width: number;
     height: number;
+    fieldCount: number;
     timeScale: number;
     duration: number;
-    cadence: number;
+    cadence: string;
 }
 
 export interface ChannelConfiguration {
