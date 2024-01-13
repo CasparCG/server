@@ -242,6 +242,7 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
     // Increase process priority.
     increase_process_priority();
 
+    // TODO: remove the use of this config file. everything needs to be passed from node
     std::wstring config_file_name(L"casparcg.config");
 
     try {

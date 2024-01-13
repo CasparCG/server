@@ -121,6 +121,7 @@ export interface ChannelConfiguration {
     producers: Record<number, string>; // AMCP command string
 }
 
+// Danger: these get passed directly into the consumers, so casing needs to match what they expect
 export type ChannelConsumerConfiguration =
     | DecklinkConsumerConfiguration
     | BluefishConsumerConfiguration
@@ -133,33 +134,33 @@ export type ChannelConsumerConfiguration =
 export interface DecklinkConsumerConfiguration {
     type: "decklink";
     device: number;
-    keyDevice: number;
-    embeddedAudio: boolean;
+    "key-device": number;
+    "embedded-audio": boolean;
     latency: "normal" | "low" | "default";
     keyer: "external" | "external_separate_device" | "internal" | "default";
-    keyOnly: boolean;
-    bufferDepth: number;
-    videoMode: VideoMode;
-    subRegion: DecklinkConsumerSubregion;
+    "key-only": boolean;
+    "buffer-depth": number;
+    "video-mode": VideoMode;
+    subregion: DecklinkConsumerSubregion;
 
-    waitForReference: "auto" | "enable" | "disable";
-    waitForReferenceDuration: number; // Seconds
+    "wait-for-reference": "auto" | "enable" | "disable";
+    "wait-for-reference-duration": number; // Seconds
 
     ports: DecklinkConsumerPort[];
 }
 
 export interface DecklinkConsumerPort {
     device: number;
-    keyOnly: boolean;
-    videoMode: VideoMode;
-    subRegion: DecklinkConsumerSubregion;
+    "key-only": boolean;
+    "video-mode": VideoMode;
+    subregion: DecklinkConsumerSubregion;
 }
 
 export interface DecklinkConsumerSubregion {
-    srcX: number;
-    srcY: number;
-    destX: number;
-    destY: number;
+    "src-x": number;
+    "src-y": number;
+    "dest-x": number;
+    "dest-y": number;
     width: number;
     height: number;
 }
@@ -167,44 +168,44 @@ export interface DecklinkConsumerSubregion {
 export interface BluefishConsumerConfiguration {
     type: "bluefish";
     device: number;
-    sdiStream: number;
-    embeddedAudio: boolean;
+    "sdi-stream": number;
+    "embedded-audio": boolean;
     keyer: "external" | "internal" | "disabled";
-    internalKeyerAudioSource: "videooutputchannel" | "sdivideoinput";
+    "internal-keyer-audio-source": "videooutputchannel" | "sdivideoinput";
     watchdog: number;
-    uhdMode: 0 | 1 | 2 | 3;
+    "uhd-mode": 0 | 1 | 2 | 3;
 }
 
 export interface SystemAudioConsumerConfiguration {
     type: "system-audio";
-    channelLayout: "stereo" | "mono" | "matrix";
+    "channel-layout": "stereo" | "mono" | "matrix";
     latency: number;
 }
 
 export interface ScreenConsumerConfiguration {
     type: "screen";
     device: number;
-    aspectRatio: "default" | "4:3" | "16:9";
+    "aspect-ratio": "default" | "4:3" | "16:9";
     stretch: "none" | "fill" | "uniform" | "uniform_to_fill";
     windowed: boolean;
-    keyOnly: boolean;
+    "key-only": boolean;
     vsync: boolean;
     borderless: boolean;
-    alwaysOnTop: boolean;
+    "always-on-top": boolean;
 
     x: number;
     y: number;
     width: number;
     height: number;
 
-    sbsKey: boolean;
-    colourSpace: "RGB" | "datavideo-full" | "datavideo-limited";
+    "sbs-key": boolean;
+    "colour-space": "RGB" | "datavideo-full" | "datavideo-limited";
 }
 
 export interface NDIConsumerConfiguration {
     type: "ndi";
     name: string;
-    allowFields: boolean;
+    "allow-fields": boolean;
 }
 
 export interface FFmpegConsumerConfiguration {
@@ -219,16 +220,16 @@ export interface ArtnetConsumerConfiguration {
     host: string;
     port: number;
 
-    refreshRate: number;
+    "refresh-rate": number;
 
     fixtures: ArtnetConsumerFixture[];
 }
 
 export interface ArtnetConsumerFixture {
     type: "RGBW";
-    startAddress: number;
-    fixtureCount: number;
-    fixtureChannels: number;
+    "start-address": number;
+    "fixture-count": number;
+    "fixture-channels": number;
 
     x: number;
     y: number;

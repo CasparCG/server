@@ -59,21 +59,21 @@ const config: CasparCGConfiguration = {
                 {
                     type: "screen",
                     device: 1,
-                    aspectRatio: "default",
+                    "aspect-ratio": "default",
                     stretch: "none",
                     windowed: true,
-                    keyOnly: false,
+                    "key-only": false,
                     vsync: false,
                     borderless: false,
-                    alwaysOnTop: false,
+                    "always-on-top": false,
 
                     x: 0,
                     y: 0,
                     width: 0,
                     height: 0,
 
-                    sbsKey: false,
-                    colourSpace: "RGB",
+                    "sbs-key": false,
+                    "colour-space": "RGB",
                 },
             ],
             producers: {
