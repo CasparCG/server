@@ -125,9 +125,6 @@ struct server::impl
         setup_video_modes(env::properties());
         CASPAR_LOG(info) << L"Initialized video modes.";
 
-        auto xml_channels = setup_channels(env::properties());
-        CASPAR_LOG(info) << L"Initialized channels.";
-
         setup_amcp_command_repo();
         CASPAR_LOG(info) << L"Initialized command repository.";
 
@@ -227,41 +224,30 @@ struct server::impl
         }
     }
 
-    std::vector<boost::property_tree::wptree> setup_channels(const boost::property_tree::wptree& pt)
+    int add_channel(std::wstring format_desc_str)
     {
-        using boost::property_tree::wptree;
+        auto format_desc = video_format_repository_.find(format_desc_str);
+        if (format_desc.format == video_format::invalid)
+            return -1;
 
-        std::vector<wptree> xml_channels;
+        auto weak_client = std::weak_ptr<osc::client>(osc_client_);
+        auto channel_id  = static_cast<int>(channels_->size() + 1);
+        auto channel     = spl::make_shared<video_channel>(channel_id,
+                                                       format_desc,
+                                                       accelerator_.create_image_mixer(channel_id),
+                                                       [channel_id, weak_client](core::monitor::state channel_state) {
+                                                           monitor::state state;
+                                                           state[""]["channel"][channel_id] = channel_state;
+                                                           auto client                      = weak_client.lock();
+                                                           if (client) {
+                                                               client->send(std::move(state));
+                                                           }
+                                                       });
 
-        for (auto& xml_channel : pt | witerate_children(L"configuration.channels") | welement_context_iteration) {
-            xml_channels.push_back(xml_channel.second);
-            ptree_verify_element_name(xml_channel, L"channel");
+        const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
+        channels_->emplace_back(channel, channel->stage(), lifecycle_key);
 
-            auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
-            auto format_desc     = video_format_repository_.find(format_desc_str);
-            if (format_desc.format == video_format::invalid)
-                CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
-
-            auto weak_client = std::weak_ptr<osc::client>(osc_client_);
-            auto channel_id  = static_cast<int>(channels_->size() + 1);
-            auto channel =
-                spl::make_shared<video_channel>(channel_id,
-                                                format_desc,
-                                                accelerator_.create_image_mixer(channel_id),
-                                                [channel_id, weak_client](core::monitor::state channel_state) {
-                                                    monitor::state state;
-                                                    state[""]["channel"][channel_id] = channel_state;
-                                                    auto client                      = weak_client.lock();
-                                                    if (client) {
-                                                        client->send(std::move(state));
-                                                    }
-                                                });
-
-            const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
-            channels_->emplace_back(channel, channel->stage(), lifecycle_key);
-        }
-
-        return xml_channels;
+        return channel_id;
     }
 
     void setup_osc(const boost::property_tree::wptree& pt)
@@ -368,5 +354,6 @@ int server::add_consumer_from_xml(int channel_index, const boost::property_tree:
 {
     return impl_->add_consumer_from_xml(channel_index, config);
 }
+int server::add_channel(std::wstring format_desc_str) { return impl_->add_channel(format_desc_str); }
 
 } // namespace caspar

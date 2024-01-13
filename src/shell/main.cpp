@@ -267,12 +267,12 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         // For example CEF resets the global locale, so this is to reset it back to "our" preference.
         setup_global_locale();
 
-        std::wstringstream                                      str;
-        boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-        boost::property_tree::write_xml(str, env::properties(), w);
-        CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
-                         << L":\n-----------------------------------------\n"
-                         << str.str() << L"-----------------------------------------";
+        // std::wstringstream                                      str;
+        // boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+        // boost::property_tree::write_xml(str, env::properties(), w);
+        // CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
+        //                  << L":\n-----------------------------------------\n"
+        //                  << str.str() << L"-----------------------------------------";
 
         instance_data->caspar_server->start();
 
@@ -482,13 +482,47 @@ Napi::Value AddChannelConsumer(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
-    int port = instance_data->caspar_server->add_consumer_from_xml(channel_index.Int32Value(), boost_config);
+    int port = instance_data->caspar_server->add_consumer_from_xml(channel_index.Int32Value() - 1, boost_config);
     if (port == -1) {
         Napi::Error::New(env, "Invalid consumer config").ThrowAsJavaScriptException();
         return env.Null();
     }
 
     return Napi::Number::New(env, port);
+}
+
+Napi::Value AddChannel(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected video mode").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto video_mode = info[0].As<Napi::String>();
+
+    // TODO - calling this once amcp has begun is not safe
+
+    int channel_index = instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()));
+    if (channel_index == -1) {
+        Napi::Error::New(env, "Failed to add channel").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    return Napi::Number::New(env, channel_index);
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
@@ -504,6 +538,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "ConfigAddOscPredefinedClient"),
                 Napi::Function::New(env, ConfigAddOscPredefinedClient));
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
+    exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));
 
     exports.Set(Napi::String::New(env, "executeCommandBatch"), Napi::Function::New(env, ExecuteCommandBatch));
 

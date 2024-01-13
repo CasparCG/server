@@ -37,6 +37,7 @@ class server final
 
     bool add_osc_predefined_client(std::string address, unsigned short port);
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
+    int  add_channel(std::wstring format_desc_str);
 
   private:
     struct impl;

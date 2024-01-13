@@ -114,12 +114,8 @@ const startupClient: Client = {
 if (config.channels.length === 0) {
     throw new Error("There must be at least one channel defined");
 }
-for (
-    let channelIndex = 0;
-    channelIndex < config.channels.length;
-    channelIndex++
-) {
-    const channel = config.channels[channelIndex];
+for (const channel of config.channels) {
+    const channelIndex = Native.AddChannel(channel.videoMode);
 
     // Consumers
     for (const consumer of channel.consumers) {
@@ -138,14 +134,12 @@ for (
         const layerIndex = Number(layerStr);
         if (isNaN(layerIndex)) {
             console.log(
-                `Invalid producer layer index ${layerStr} for channel ${
-                    channelIndex + 1
-                }`
+                `Invalid producer layer index ${layerStr} for channel ${channelIndex}`
             );
             continue;
         }
 
-        const amcpStr = `PLAY ${channelIndex + 1}-${layerIndex} ${amcp}`;
+        const amcpStr = `PLAY ${channelIndex}-${layerIndex} ${amcp}`;
 
         try {
             const res = await protocol.parse(startupClient, amcpStr);
