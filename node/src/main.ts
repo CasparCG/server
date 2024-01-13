@@ -4,14 +4,17 @@ import { AMCPClientBatchInfo, AMCPProtocolStrategy } from "./amcp/protocol.js";
 import { ChannelLocks } from "./amcp/channel_locks.js";
 import { Client } from "./amcp/client.js";
 import { AMCPServer } from "./amcp/server.js";
+import { parseXmlConfigFile } from "./config/parse.js";
 
 const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
+const config = await parseXmlConfigFile("casparcg.config");
+
 console.log(Native);
-Native.init();
+Native.init(config);
 
 // setInterval(() => {
 //     // Keep the app alive

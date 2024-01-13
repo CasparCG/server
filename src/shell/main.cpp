@@ -223,6 +223,15 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
+    // TODO - ensure not in a worker, or that multiple servers arent run in the same process
+
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::Error::New(env, "Expected configuration object").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto configuration = info[0].As<Napi::Object>();
+
     using namespace caspar;
 
     // setup_global_locale();

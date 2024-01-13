@@ -6,6 +6,7 @@
     "license": "MIT",
     "dependencies": {
         "cmake-js": "^7.2.1",
+        "fast-xml-parser": "^4.3.3",
         "node-addon-api": "^7.0.0"
     },
     "scripts": {
