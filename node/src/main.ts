@@ -133,6 +133,7 @@ const context: AMCPCommandContext = {
         Native.stop();
         process.exit(restart ? 5 : 0);
     },
+    channelCount: config.channels.length,
 };
 
 const locks = new ChannelLocks("");

@@ -369,26 +369,6 @@ std::wstring stop_command(command_context& ctx)
     return L"202 STOP OK\r\n";
 }
 
-std::wstring clear_command(command_context& ctx)
-{
-    int index = ctx.layer_index(std::numeric_limits<int>::min());
-    if (index != std::numeric_limits<int>::min())
-        ctx.channel.stage->clear(index);
-    else
-        ctx.channel.stage->clear();
-
-    return L"202 CLEAR OK\r\n";
-}
-
-std::wstring clear_all_command(command_context& ctx)
-{
-    for (auto& ch : *ctx.channels) {
-        ch.stage->clear();
-    }
-
-    return L"202 CLEAR ALL OK\r\n";
-}
-
 std::wstring add_command(command_context& ctx)
 {
     replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
@@ -1396,8 +1376,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
     repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
     repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"CLEAR", clear_command, 0);
-    repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
 
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);

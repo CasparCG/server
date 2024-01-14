@@ -7,6 +7,7 @@ import { registerSystemCommands } from "./commands/system.js";
 export interface AMCPCommandContext {
     configuration: CasparCGConfiguration;
     shutdown: (restart: boolean) => void;
+    channelCount: number;
 }
 
 export type AMCPCommandFunction = (

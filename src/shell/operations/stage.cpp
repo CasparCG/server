@@ -3,6 +3,77 @@
 
 #include "../server.h"
 
+Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 2 || !info[1].IsNumber()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channelIndex = info[1].As<Napi::Number>().Int32Value();
+    auto layerIndex   = info.Length() > 2 && !info[2].IsNull() ? info[2].As<Napi::Number>().Int32Value() : -1;
+
+    auto& channels = instance_data->caspar_server->get_channels();
+
+    if (channelIndex < 1 || channelIndex > channels->size()) {
+        Napi::Error::New(env, "Channel index is out of bounds").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto ch1 = channels->at(channelIndex - 1);
+
+    auto prom    = promiseFuncWrapper(env);
+    auto resolve = std::get<1>(prom);
+    auto reject  = std::get<2>(prom);
+
+    ch1.tmp_executor_->begin_invoke([=] {
+        try {
+            if (layerIndex < 0) {
+                ch1.stage->clear().get();
+            } else {
+                ch1.stage->clear(layerIndex).get();
+            }
+
+            resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            reject("Internal error");
+        }
+    });
+
+    return std::get<0>(prom);
+}
+
+// Napi::Value StageClearAll(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+// {
+//     Napi::Env env = info.Env();
+
+//     auto prom    = promiseFuncWrapper(env);
+//     auto resolve = std::get<1>(prom);
+//     auto reject  = std::get<2>(prom);
+
+//     auto& channels = instance_data->caspar_server->get_channels();
+
+//     // TODO - reimplement this
+
+//     // ch1.tmp_executor_->begin_invoke([channels] {
+//     //     try {
+//     //         for (auto& ch : *channels) {
+//     //             ch.stage->clear().get();
+//     //         }
+
+//     //         resolve("");
+//     //     } catch (...) {
+//     //         CASPAR_LOG_CURRENT_EXCEPTION();
+//     //         reject("Internal error");
+//     //     }
+//     // });
+
+//     return std::get<0>(prom);
+// }
+
 Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
 {
     Napi::Env env = info.Env();

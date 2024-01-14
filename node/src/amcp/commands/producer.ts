@@ -30,7 +30,7 @@ function discardError(val: any) {
 }
 
 export function registerProducerCommands(
-    _commands: Map<string, AMCPCommandEntry>,
+    commands: Map<string, AMCPCommandEntry>,
     channelCommands: Map<string, AMCPCommandEntry>
 ): void {
     // repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
@@ -39,8 +39,35 @@ export function registerProducerCommands(
     // repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
     // repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
     // repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
-    // repo->register_channel_command(L"Basic Commands", L"CLEAR", clear_command, 0);
-    // repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
+
+    channelCommands.set("CLEAR", {
+        func: async (context, command) => {
+            if (!isChannelIndexValid(context, command.channelIndex)) {
+                return "401 CLEAR ERROR\r\n";
+            }
+
+            discardError(
+                Native.CallStageMethod(
+                    "clear",
+                    command.channelIndex + 1,
+                    command.layerIndex
+                )
+            );
+            return "202 CLEAR OK\r\n";
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("CLEAR ALL", {
+        func: async (context) => {
+            for (let i = 0; i < context.channelCount; i++) {
+                discardError(Native.CallStageMethod("clear", i + 1));
+            }
+
+            return "202 CLEAR ALL OK\r\n";
+        },
+        minNumParams: 0,
+    });
 
     channelCommands.set("CALL", {
         func: async (context, command) => {

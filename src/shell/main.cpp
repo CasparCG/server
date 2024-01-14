@@ -630,7 +630,9 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
 
     auto command = info[0].As<Napi::String>().Utf8Value();
 
-    if (command == "call") {
+    if (command == "clear") {
+        return StageClear(info, instance_data);
+    } else if (command == "call") {
         return StageCall(info, instance_data);
     } else if (command == "swapChannel") {
         return StageSwapChannel(info, instance_data);
