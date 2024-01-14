@@ -28,14 +28,17 @@
 
 #include <core/video_format.h>
 
+#include <boost/property_tree/ptree_fwd.hpp>
+
 namespace caspar {
 
 class server final
 {
   public:
     explicit server();
-    void                                                     start();
-    spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
+    void                                                           start();
+    spl::shared_ptr<protocol::amcp::amcp_command_repository>       get_amcp_command_repository() const;
+    spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& get_channels() const;
 
     bool add_osc_predefined_client(std::string address, unsigned short port);
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);

@@ -34,7 +34,6 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/log.h>
-#include <common/os/filesystem.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -56,6 +55,10 @@
 #include <csignal>
 
 #include "napi.h"
+
+#include "./operations/base.h"
+#include "./operations/stage.h"
+#include "./operations/util.h"
 
 namespace caspar {
 
@@ -108,61 +111,6 @@ void fake_shutdown(bool restart)
 {
     // Ignore
 }
-
-class PromiseAsyncWorker : public Napi::AsyncWorker
-{
-  public:
-    PromiseAsyncWorker(const Napi::Env& env)
-        : Napi::AsyncWorker(env)
-        , deferred(Napi::Promise::Deferred::New(env))
-    {
-    }
-
-    // This code will be executed on the worker thread. Note: Napi types cannot be used
-    virtual void Execute() override = 0;
-
-    virtual Napi::Value GetPromiseResult(const Napi::Env& env) = 0;
-
-    void OnOK() override
-    {
-        Napi::Env env = Env();
-
-        // Collect the result before finishing the job, in case the result relies on the hid object
-        Napi::Value result = GetPromiseResult(env);
-
-        // context->JobFinished(env);
-
-        deferred.Resolve(result);
-    }
-    void OnError(Napi::Error const& error) override
-    {
-        // context->JobFinished(Env());
-        deferred.Reject(error.Value());
-    }
-
-    Napi::Promise QueueAndRun()
-    {
-        auto promise = deferred.Promise();
-
-        this->Queue();
-        // context->QueueJob(Env(), this);
-
-        return promise;
-    }
-
-  private:
-    Napi::Promise::Deferred deferred;
-};
-
-struct CasparCgInstanceData
-{
-    Napi::FunctionReference* amcp_command;
-
-    std::shared_ptr<caspar::protocol::amcp::AMCPCommandQueue>
-        amcp_queue; // HACK: This needs to be more than just the one
-
-    std::unique_ptr<caspar::server> caspar_server;
-};
 
 class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
 {
@@ -659,48 +607,39 @@ Napi::Value OpenDiag(const Napi::CallbackInfo& info)
     return env.Null();
 }
 
-class FindCaseInsensitiveWorker : public PromiseAsyncWorker
-{
-  public:
-    FindCaseInsensitiveWorker(const Napi::Env& env, const std::string& filepath)
-        : PromiseAsyncWorker(env)
-        , filepath(filepath)
-    {
-    }
-
-    ~FindCaseInsensitiveWorker() {}
-
-    // This code will be executed on the worker thread
-    void Execute() override { result = caspar::find_case_insensitive(caspar::u16(filepath)); }
-
-    Napi::Value GetPromiseResult(const Napi::Env& env) override
-    {
-        if (result.has_value()) {
-            return Napi::String::New(env, caspar::u8(result.value()));
-        } else {
-            return env.Null();
-        }
-    }
-
-  private:
-    const std::string           filepath;
-    std::optional<std::wstring> result;
-};
-
-Napi::Value FindCaseInsensitive(const Napi::CallbackInfo& info)
+Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
 {
     Napi::Env env = info.Env();
 
-    if (info.Length() < 1 || !info[0].IsString()) {
-        Napi::Error::New(env, "Expected file path").ThrowAsJavaScriptException();
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    auto filepath = info[0].As<Napi::String>();
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 
-    auto result = (new FindCaseInsensitiveWorker(env, filepath.Utf8Value()))->QueueAndRun();
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 
-    return result;
+    auto command = info[0].As<Napi::String>().Utf8Value();
+
+    if (command == "call") {
+        return StageCall(info, instance_data);
+    } else if (command == "swapChannel") {
+        return StageSwapChannel(info, instance_data);
+    } else if (command == "swapLayer") {
+        return StageSwapLayer(info, instance_data);
+    } else {
+        Napi::Error::New(env, "Unknown command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
@@ -722,6 +661,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
     exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));
+    exports.Set(Napi::String::New(env, "CallStageMethod"), Napi::Function::New(env, CallStageMethod));
 
     exports.Set(Napi::String::New(env, "OpenDiag"), Napi::Function::New(env, OpenDiag));
     exports.Set(Napi::String::New(env, "FindCaseInsensitive"), Napi::Function::New(env, FindCaseInsensitive));

@@ -389,51 +389,6 @@ std::wstring clear_all_command(command_context& ctx)
     return L"202 CLEAR ALL OK\r\n";
 }
 
-std::future<std::wstring> call_command(command_context& ctx)
-{
-    const auto result = ctx.channel.stage->call(ctx.layer_index(), ctx.parameters).share();
-
-    // TODO: because of std::async deferred timed waiting does not work
-
-    /*auto wait_res = result.wait_for(std::chrono::seconds(2));
-    if (wait_res == std::future_status::timeout)
-    CASPAR_THROW_EXCEPTION(timed_out());*/
-
-    return std::async(std::launch::deferred, [result]() -> std::wstring {
-        std::wstring res = result.get();
-
-        std::wstringstream replyString;
-        if (res.empty())
-            replyString << L"202 CALL OK\r\n";
-        else
-            replyString << L"201 CALL OK\r\n" << res << L"\r\n";
-
-        return replyString.str();
-    });
-}
-
-std::wstring swap_command(command_context& ctx)
-{
-    bool swap_transforms = ctx.parameters.size() > 1 && boost::iequals(ctx.parameters.at(1), L"TRANSFORMS");
-
-    if (ctx.layer_index(-1) != -1) {
-        std::vector<std::wstring> strs;
-        boost::split(strs, ctx.parameters[0], boost::is_any_of(L"-"));
-
-        auto ch2 = ctx.channels->at(std::stoi(strs.at(0)) - 1);
-
-        int l1 = ctx.layer_index();
-        int l2 = std::stoi(strs.at(1));
-
-        ctx.channel.stage->swap_layer(l1, l2, ch2.stage, swap_transforms);
-    } else {
-        auto ch2 = ctx.channels->at(std::stoi(ctx.parameters[0]) - 1);
-        ctx.channel.stage->swap_layers(ch2.stage, swap_transforms);
-    }
-
-    return L"202 SWAP OK\r\n";
-}
-
 std::wstring add_command(command_context& ctx)
 {
     replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
@@ -1442,12 +1397,11 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
     repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
     repo->register_channel_command(L"Basic Commands", L"CLEAR", clear_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"CALL", call_command, 1);
-    repo->register_channel_command(L"Basic Commands", L"SWAP", swap_command, 1);
+    repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
+
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
-    repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo->register_channel_command(L"Basic Commands", L"SET", set_command, 2);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/executor.h>
+
 #include <core/producer/stage.h>
 #include <core/video_channel.h>
 #include <utility>
@@ -16,11 +18,13 @@ class channel_context
         : raw_channel(std::move(c))
         , stage(std::move(s))
         , lifecycle_key_(lifecycle_key)
+        , tmp_executor_(new executor(L"Tmp Stage " + std::to_wstring(raw_channel->index())))
     {
     }
     const std::shared_ptr<core::video_channel> raw_channel;
     const std::shared_ptr<core::stage_base>    stage;
     const std::wstring                         lifecycle_key_;
+    const std::shared_ptr<executor>            tmp_executor_;
 };
 
 struct command_context_simple

@@ -16,10 +16,18 @@ set(SOURCES
 		casparcg.config
 		main.cpp
 		server.cpp
+
+		operations/stage.cpp
+		operations/util.cpp
 )
 set(HEADERS
 		platform_specific.h
 		server.h
+
+		operations/base.h
+		operations/stage.h
+		operations/promiseWrapper.h
+		operations/util.h
 )
 
 if (MSVC)

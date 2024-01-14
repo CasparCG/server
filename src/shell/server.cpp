@@ -295,6 +295,7 @@ spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_comman
 {
     return spl::make_shared_ptr(impl_->amcp_command_repo_);
 }
+spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& server::get_channels() const { return impl_->channels_; }
 
 bool server::add_osc_predefined_client(std::string address, unsigned short port)
 {
