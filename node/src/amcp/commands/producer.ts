@@ -36,9 +36,69 @@ export function registerProducerCommands(
     // repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
     // repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
     // repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
-    // repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
-    // repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
-    // repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
+
+    channelCommands.set("PAUSE", {
+        func: async (context, command) => {
+            if (
+                !isChannelIndexValid(context, command.channelIndex) ||
+                !isLayerIndexValid(context, command.layerIndex)
+            ) {
+                return "401 PAUSE ERROR\r\n";
+            }
+
+            discardError(
+                Native.CallStageMethod(
+                    "pause",
+                    command.channelIndex + 1,
+                    command.layerIndex
+                )
+            );
+            return "202 PAUSE OK\r\n";
+        },
+        minNumParams: 0,
+    });
+
+    channelCommands.set("RESUME", {
+        func: async (context, command) => {
+            if (
+                !isChannelIndexValid(context, command.channelIndex) ||
+                !isLayerIndexValid(context, command.layerIndex)
+            ) {
+                return "401 RESUME ERROR\r\n";
+            }
+
+            discardError(
+                Native.CallStageMethod(
+                    "resume",
+                    command.channelIndex + 1,
+                    command.layerIndex
+                )
+            );
+            return "202 RESUME OK\r\n";
+        },
+        minNumParams: 0,
+    });
+
+    channelCommands.set("STOP", {
+        func: async (context, command) => {
+            if (
+                !isChannelIndexValid(context, command.channelIndex) ||
+                !isLayerIndexValid(context, command.layerIndex)
+            ) {
+                return "401 STOP ERROR\r\n";
+            }
+
+            discardError(
+                Native.CallStageMethod(
+                    "stop",
+                    command.channelIndex + 1,
+                    command.layerIndex
+                )
+            );
+            return "202 STOP OK\r\n";
+        },
+        minNumParams: 0,
+    });
 
     channelCommands.set("CLEAR", {
         func: async (context, command) => {

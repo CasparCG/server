@@ -351,24 +351,6 @@ std::wstring play_command(command_context& ctx)
     return L"202 PLAY OK\r\n";
 }
 
-std::wstring pause_command(command_context& ctx)
-{
-    ctx.channel.stage->pause(ctx.layer_index());
-    return L"202 PAUSE OK\r\n";
-}
-
-std::wstring resume_command(command_context& ctx)
-{
-    ctx.channel.stage->resume(ctx.layer_index());
-    return L"202 RESUME OK\r\n";
-}
-
-std::wstring stop_command(command_context& ctx)
-{
-    ctx.channel.stage->stop(ctx.layer_index());
-    return L"202 STOP OK\r\n";
-}
-
 std::wstring add_command(command_context& ctx)
 {
     replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
@@ -1373,9 +1355,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
     repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
     repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"RESUME", resume_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"STOP", stop_command, 0);
 
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);

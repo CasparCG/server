@@ -3,6 +3,123 @@
 
 #include "../server.h"
 
+Napi::Value StagePause(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 3 || !info[1].IsNumber() || !info[2].IsNumber()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channelIndex = info[1].As<Napi::Number>().Int32Value();
+    auto layerIndex   = info[2].As<Napi::Number>().Int32Value();
+
+    auto& channels = instance_data->caspar_server->get_channels();
+
+    if (channelIndex < 1 || channelIndex > channels->size()) {
+        Napi::Error::New(env, "Channel index is out of bounds").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto ch1 = channels->at(channelIndex - 1);
+
+    auto prom    = promiseFuncWrapper(env);
+    auto resolve = std::get<1>(prom);
+    auto reject  = std::get<2>(prom);
+
+    ch1.tmp_executor_->begin_invoke([=] {
+        try {
+            ch1.stage->pause(layerIndex).get();
+
+            resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            reject("Internal error");
+        }
+    });
+
+    return std::get<0>(prom);
+}
+
+Napi::Value StageResume(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 3 || !info[1].IsNumber() || !info[2].IsNumber()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channelIndex = info[1].As<Napi::Number>().Int32Value();
+    auto layerIndex   = info[2].As<Napi::Number>().Int32Value();
+
+    auto& channels = instance_data->caspar_server->get_channels();
+
+    if (channelIndex < 1 || channelIndex > channels->size()) {
+        Napi::Error::New(env, "Channel index is out of bounds").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto ch1 = channels->at(channelIndex - 1);
+
+    auto prom    = promiseFuncWrapper(env);
+    auto resolve = std::get<1>(prom);
+    auto reject  = std::get<2>(prom);
+
+    ch1.tmp_executor_->begin_invoke([=] {
+        try {
+            ch1.stage->resume(layerIndex).get();
+
+            resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            reject("Internal error");
+        }
+    });
+
+    return std::get<0>(prom);
+}
+
+Napi::Value StageStop(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 3 || !info[1].IsNumber() || !info[2].IsNumber()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channelIndex = info[1].As<Napi::Number>().Int32Value();
+    auto layerIndex   = info[2].As<Napi::Number>().Int32Value();
+
+    auto& channels = instance_data->caspar_server->get_channels();
+
+    if (channelIndex < 1 || channelIndex > channels->size()) {
+        Napi::Error::New(env, "Channel index is out of bounds").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto ch1 = channels->at(channelIndex - 1);
+
+    auto prom    = promiseFuncWrapper(env);
+    auto resolve = std::get<1>(prom);
+    auto reject  = std::get<2>(prom);
+
+    ch1.tmp_executor_->begin_invoke([=] {
+        try {
+            ch1.stage->stop(layerIndex).get();
+
+            resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            reject("Internal error");
+        }
+    });
+
+    return std::get<0>(prom);
+}
+
 Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
 {
     Napi::Env env = info.Env();

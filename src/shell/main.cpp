@@ -630,7 +630,13 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
 
     auto command = info[0].As<Napi::String>().Utf8Value();
 
-    if (command == "clear") {
+    if (command == "pause") {
+        return StagePause(info, instance_data);
+    } else if (command == "resume") {
+        return StageResume(info, instance_data);
+    } else if (command == "stop") {
+        return StageStop(info, instance_data);
+    } else if (command == "clear") {
         return StageClear(info, instance_data);
     } else if (command == "call") {
         return StageCall(info, instance_data);
