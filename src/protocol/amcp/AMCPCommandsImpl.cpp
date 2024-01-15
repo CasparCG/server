@@ -188,8 +188,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
                                              get_channels(ctx),
                                              ctx.static_context->format_repository,
                                              channel->stage()->video_format_desc(),
-                                             ctx.static_context->producer_registry,
-                                             ctx.static_context->cg_registry);
+                                             ctx.static_context->producer_registry);
 }
 
 bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo)
