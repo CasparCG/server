@@ -12,6 +12,14 @@ set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "D
 
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 
+set(DIAG_FONT_PATH "LiberationMono-Regular.ttf" CACHE STRING
+    "Path to font that will be used to load diag font at runtime. By default
+    this loads the font distribtued with the application from the working
+    directory. It can be set to an absolute path to instead load a font from
+    the system."
+)
+add_compile_definitions("DIAG_FONT_PATH=\"${DIAG_FONT_PATH}\"")
+
 # Add custom cmake modules path
 SET (CASPARCG_PATCH_DIR ${CMAKE_SOURCE_DIR}/CMakeModules/patches)
 LIST (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
