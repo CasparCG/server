@@ -108,8 +108,12 @@ for (const videoMode of config.videoModes) {
 }
 console.log("Initialized video modes.");
 
-if (!Native.ConfigAddOscPredefinedClient("127.0.0.1", 6250)) {
-    console.log("failed to add osc client");
+for (const client of config.osc.predefinedClients) {
+    if (!Native.ConfigAddOscPredefinedClient(client.address, client.port)) {
+        console.log(
+            `failed to add osc client: ${client.address}:${client.port}`
+        );
+    }
 }
 
 function makeAbsolute(myPath: string) {
@@ -185,10 +189,6 @@ for (const channel of config.channels) {
     }
 }
 console.log("Initialized startup producers.");
-
-// setInterval(() => {
-//     // Keep the app alive
-// }, 10000);
 
 rl.setPrompt("");
 rl.prompt();

@@ -107,11 +107,6 @@ void print_info()
 
 } // namespace caspar
 
-void fake_shutdown(bool restart)
-{
-    // Ignore
-}
-
 class NodeAMCPCommand : public Napi::ObjectWrap<NodeAMCPCommand>
 {
   public:
