@@ -1,10 +1,12 @@
 import type {
+    AMCPCommandBase,
     AMCPCommandContext,
     AMCPCommandEntry,
 } from "../command_repository.js";
 import { Native } from "../../native.js";
 import {
     containsParam,
+    defaultBasicTransition,
     tryMatchBasicTransition,
     tryMatchStingTransition,
 } from "./util.js";
@@ -37,91 +39,187 @@ export function registerProducerCommands(
     commands: Map<string, AMCPCommandEntry>,
     channelCommands: Map<string, AMCPCommandEntry>
 ): void {
+    async function loadBgCommand(
+        context: AMCPCommandContext,
+        command: AMCPCommandBase
+    ): Promise<string> {
+        if (
+            !isChannelIndexValid(context, command.channelIndex) ||
+            !isLayerIndexValid(context, command.layerIndex)
+        ) {
+            return "401 LOADBG ERROR\r\n";
+        }
+
+        const autoPlay = containsParam(command.parameters, "AUTO");
+
+        const producer = await Native.CreateProducer(
+            command.channelIndex + 1,
+            command.layerIndex,
+            command.parameters
+        );
+        if (!producer || !producer.IsValid()) {
+            if (containsParam(command.parameters, "CLEAR_ON_404")) {
+                discardError(
+                    Native.CallStageMethod(
+                        "load",
+                        command.channelIndex + 1,
+                        command.layerIndex,
+                        null, // aka 'EMPTY'
+                        false,
+                        autoPlay
+                    )
+                );
+            }
+
+            const filename = command.parameters[0] ?? "";
+            throw new Error(`${filename} not found`); // TODO file_not_found
+        }
+
+        let transitionProducer: any = null;
+
+        const stingProps = tryMatchStingTransition(command.parameters);
+        if (stingProps && !transitionProducer) {
+            transitionProducer = await Native.CreateStingTransition(
+                command.channelIndex + 1,
+                command.layerIndex,
+                producer,
+                stingProps
+            );
+        }
+
+        if (!transitionProducer) {
+            const transitionProps = tryMatchBasicTransition(command.parameters);
+            console.log("props", transitionProps);
+            transitionProducer = await Native.CreateBasicTransition(
+                command.channelIndex + 1,
+                command.layerIndex,
+                producer,
+                transitionProps
+            );
+        }
+
+        if (!transitionProducer) {
+            const filename = command.parameters[0] ?? "";
+            throw new Error(`${filename} failed`); // TODO file_not_found
+        }
+
+        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
+        // initialised
+        discardError(
+            Native.CallStageMethod(
+                "load",
+                command.channelIndex + 1,
+                command.layerIndex,
+                transitionProducer,
+                false,
+                autoPlay
+            ) // TODO: LOOP
+        );
+        return "202 LOADBG OK\r\n";
+    }
+
     channelCommands.set("LOADBG", {
+        func: async (context, command) => {
+            return loadBgCommand(context, command);
+        },
+        minNumParams: 1,
+    });
+
+    channelCommands.set("LOAD", {
         func: async (context, command) => {
             if (
                 !isChannelIndexValid(context, command.channelIndex) ||
                 !isLayerIndexValid(context, command.layerIndex)
             ) {
-                return "401 PAUSE ERROR\r\n";
+                return "401 LOAD ERROR\r\n";
             }
 
-            const autoPlay = containsParam(command.parameters, "AUTO");
+            if (command.parameters.length === 0) {
+                // TODO
+                discardError(
+                    Native.CallStageMethod(
+                        "preview",
+                        command.channelIndex + 1,
+                        command.layerIndex
+                    )
+                );
 
-            console.log("parame", command.parameters);
-
-            const producer = await Native.CreateProducer(
-                command.channelIndex + 1,
-                command.layerIndex,
-                command.parameters
-            );
-            if (!producer || !producer.IsValid()) {
-                if (containsParam(command.parameters, "CLEAR_ON_404")) {
-                    discardError(
-                        Native.CallStageMethod(
-                            "load",
-                            command.channelIndex + 1,
-                            command.layerIndex,
-                            null, // aka 'EMPTY'
-                            false,
-                            autoPlay
-                        )
-                    );
-                }
-
-                const filename = command.parameters[0] ?? "";
-                throw new Error(`${filename} not found`); // TODO file_not_found
-            }
-
-            let transitionProducer: any = null;
-
-            const stingProps = tryMatchStingTransition(command.parameters);
-            if (stingProps && !transitionProducer) {
-                transitionProducer = await Native.CreateStingTransition(
+                return "202 LOAD OK\r\n";
+            } else {
+                // TODO
+                const producer = await Native.CreateProducer(
                     command.channelIndex + 1,
                     command.layerIndex,
-                    producer,
-                    stingProps
-                );
-            }
-
-            if (!transitionProducer) {
-                const transitionProps = tryMatchBasicTransition(
                     command.parameters
                 );
-                console.log("props", transitionProps);
-                transitionProducer = await Native.CreateBasicTransition(
+                if (!producer || !producer.IsValid()) {
+                    if (containsParam(command.parameters, "CLEAR_ON_404")) {
+                        discardError(
+                            Native.CallStageMethod(
+                                "load",
+                                command.channelIndex + 1,
+                                command.layerIndex,
+                                null, // aka 'EMPTY'
+                                true,
+                                false
+                            )
+                        );
+                    }
+
+                    const filename = command.parameters[0] ?? "";
+                    throw new Error(`${filename} not found`); // TODO file_not_found
+                }
+
+                const transitionProps = defaultBasicTransition();
+                const transitionProducer = await Native.CreateBasicTransition(
                     command.channelIndex + 1,
                     command.layerIndex,
                     producer,
                     transitionProps
                 );
+
+                discardError(
+                    Native.CallStageMethod(
+                        "load",
+                        command.channelIndex + 1,
+                        command.layerIndex,
+                        transitionProducer,
+                        true,
+                        false
+                    )
+                );
+
+                return "202 LOAD OK\r\n";
+            }
+        },
+        minNumParams: 0,
+    });
+
+    channelCommands.set("PLAY", {
+        func: async (context, command) => {
+            if (
+                !isChannelIndexValid(context, command.channelIndex) ||
+                !isLayerIndexValid(context, command.layerIndex)
+            ) {
+                return "401 PLAY ERROR\r\n";
             }
 
-            if (!transitionProducer) {
-                const filename = command.parameters[0] ?? "";
-                throw new Error(`${filename} failed`); // TODO file_not_found
+            if (command.parameters.length > 0) {
+                await loadBgCommand(context, command);
             }
 
-            // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
-            // initialised
             discardError(
                 Native.CallStageMethod(
-                    "load",
+                    "play",
                     command.channelIndex + 1,
-                    command.layerIndex,
-                    transitionProducer,
-                    false,
-                    autoPlay
-                ) // TODO: LOOP
+                    command.layerIndex
+                )
             );
-            return "202 LOADBG OK\r\n";
+
+            return "202 PLAY OK\r\n";
         },
-        minNumParams: 1,
+        minNumParams: 0,
     });
-    // repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
-    // repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
-    // repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
 
     channelCommands.set("PAUSE", {
         func: async (context, command) => {

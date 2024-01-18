@@ -192,53 +192,6 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 
 // Basic Commands
 
-std::wstring loadbg_command(command_context& ctx) { return L"600 REMOVED\r\n"; }
-
-std::wstring load_command(command_context& ctx)
-{
-    core::diagnostics::scoped_call_context save;
-    core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-    core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
-
-    if (ctx.parameters.empty()) {
-        // Must be a promoting load
-        ctx.channel.stage->preview(ctx.layer_index());
-    } else {
-        try {
-            auto new_producer = ctx.static_context->producer_registry->create_producer(
-                get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
-            auto transition_producer = create_transition_producer(new_producer, transition_info{});
-
-            ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
-        } catch (file_not_found&) {
-            if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-                ctx.channel.stage->load(
-                    ctx.layer_index(), core::create_color_producer(ctx.channel.raw_channel->frame_factory(), 0), true);
-            }
-            throw;
-        }
-    }
-
-    return L"202 LOAD OK\r\n";
-}
-
-std::wstring play_command(command_context& ctx)
-{
-    try {
-        if (!ctx.parameters.empty())
-            loadbg_command(ctx);
-    } catch (file_not_found&) {
-        if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-            ctx.channel.stage->play(ctx.layer_index());
-        }
-        throw;
-    }
-
-    ctx.channel.stage->play(ctx.layer_index());
-
-    return L"202 PLAY OK\r\n";
-}
-
 std::wstring add_command(command_context& ctx)
 {
     replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
@@ -1240,10 +1193,6 @@ std::wstring osc_unsubscribe_command(command_context& ctx)
 
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
-    repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
-    repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
-
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
     repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);

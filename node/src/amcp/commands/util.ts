@@ -172,15 +172,20 @@ export function tryMatchStingTransition(
     }
 }
 
-export function tryMatchBasicTransition(
-    params: readonly string[]
-): BasicTransitionInfo {
+export function defaultBasicTransition() {
     const result: BasicTransitionInfo = {
         duration: 0,
         direction: "from_left",
         type: "cut",
         tweener: "linear",
     };
+    return result;
+}
+
+export function tryMatchBasicTransition(
+    params: readonly string[]
+): BasicTransitionInfo {
+    const result = defaultBasicTransition();
 
     const message = params.join(" ");
 
