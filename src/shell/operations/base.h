@@ -10,6 +10,7 @@ FORWARD1(caspar, class server);
 struct CasparCgInstanceData
 {
     Napi::FunctionReference* amcp_command;
+    Napi::FunctionReference* unused_producer;
 
     std::shared_ptr<caspar::protocol::amcp::AMCPCommandQueue>
         amcp_queue; // HACK: This needs to be more than just the one

@@ -1,7 +1,11 @@
 #include "./stage.h"
+#include "./producer.h"
 #include "./promiseWrapper.h"
 
+#include "../conv.h"
 #include "../server.h"
+
+#include <core/producer/frame_producer.h>
 
 #include <optional>
 
@@ -63,6 +67,43 @@ parseChannelLayerArguments(const Napi::CallbackInfo& info, CasparCgInstanceData*
 
     return ParsedChannelLayerArguments(
         channels, channelIndex, layerIndex, channel, std::get<0>(prom), std::get<1>(prom), std::get<2>(prom));
+}
+
+Napi::Value StageLoad(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArguments(info, instance_data, 3);
+    if (!parsedArgs)
+        return env.Null();
+
+    if (!info[3].IsObject() || !info[4].IsBoolean() || !info[5].IsBoolean()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto producer_obj = info[3].As<Napi::Object>();
+    auto preview      = info[4].As<Napi::Boolean>().Value();
+    auto autoPlay     = info[5].As<Napi::Boolean>().Value();
+
+    auto producer = NodeUnusedProducer::TakeProducer(producer_obj);
+    if (producer == caspar::core::frame_producer::empty()) {
+        Napi::Error::New(env, "Missing producer").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs, producer, preview, autoPlay] {
+        try {
+            parsedArgs->channel.stage->load(parsedArgs->layerIndex, producer, preview, autoPlay);
+
+            parsedArgs->resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
 }
 
 Napi::Value StagePause(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
@@ -228,11 +269,7 @@ Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
     }
 
     std::vector<std::wstring> parameters;
-    parameters.reserve(raw_parameters.Length());
-    for (size_t i = 0; i < raw_parameters.Length(); i++) {
-        auto str = static_cast<Napi::Value>(raw_parameters[i]).ToString();
-        parameters.emplace_back(caspar::u16(str.Utf8Value()));
-    }
+    NapiArrayToStringVector(env, raw_parameters, parameters);
 
     parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs, parameters] {
         try {

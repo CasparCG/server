@@ -5,7 +5,6 @@ set(SOURCES
 		amcp/AMCPCommandQueue.cpp
 		amcp/AMCPCommandsImpl.cpp
 		amcp/amcp_command_repository.cpp
-		amcp/amcp_args.cpp
 		amcp/amcp_command_repository_wrapper.cpp
 
 		osc/oscpack/OscOutboundPacketStream.cpp
@@ -25,7 +24,6 @@ set(HEADERS
 		amcp/amcp_command_repository.h
 		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
-		amcp/amcp_args.h
 		amcp/amcp_command_context.h
 
 		osc/oscpack/MessageMappingOscPacketListener.h

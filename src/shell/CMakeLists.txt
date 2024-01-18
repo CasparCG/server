@@ -17,17 +17,22 @@ set(SOURCES
 		main.cpp
 		server.cpp
 
+		operations/producer.cpp
 		operations/stage.cpp
 		operations/util.cpp
+		conv.cpp
 )
 set(HEADERS
 		platform_specific.h
 		server.h
 
 		operations/base.h
+		operations/producer.h
 		operations/stage.h
 		operations/promiseWrapper.h
 		operations/util.h
+
+		conv.h
 )
 
 if (MSVC)

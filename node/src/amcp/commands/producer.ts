@@ -3,6 +3,11 @@ import type {
     AMCPCommandEntry,
 } from "../command_repository.js";
 import { Native } from "../../native.js";
+import {
+    containsParam,
+    tryMatchBasicTransition,
+    tryMatchStingTransition,
+} from "./util.js";
 
 function isChannelIndexValid(
     _context: AMCPCommandContext,
@@ -28,11 +33,92 @@ function discardError(val: any) {
         val.catch(() => null);
     }
 }
-
 export function registerProducerCommands(
     commands: Map<string, AMCPCommandEntry>,
     channelCommands: Map<string, AMCPCommandEntry>
 ): void {
+    channelCommands.set("LOADBG", {
+        func: async (context, command) => {
+            if (
+                !isChannelIndexValid(context, command.channelIndex) ||
+                !isLayerIndexValid(context, command.layerIndex)
+            ) {
+                return "401 PAUSE ERROR\r\n";
+            }
+
+            const autoPlay = containsParam(command.parameters, "AUTO");
+
+            console.log("parame", command.parameters);
+
+            const producer = await Native.CreateProducer(
+                command.channelIndex + 1,
+                command.layerIndex,
+                command.parameters
+            );
+            if (!producer || !producer.IsValid()) {
+                if (containsParam(command.parameters, "CLEAR_ON_404")) {
+                    discardError(
+                        Native.CallStageMethod(
+                            "load",
+                            command.channelIndex + 1,
+                            command.layerIndex,
+                            null, // aka 'EMPTY'
+                            false,
+                            autoPlay
+                        )
+                    );
+                }
+
+                const filename = command.parameters[0] ?? "";
+                throw new Error(`${filename} not found`); // TODO file_not_found
+            }
+
+            let transitionProducer: any = null;
+
+            const stingProps = tryMatchStingTransition(command.parameters);
+            if (stingProps && !transitionProducer) {
+                transitionProducer = await Native.CreateStingTransition(
+                    command.channelIndex + 1,
+                    command.layerIndex,
+                    producer,
+                    stingProps
+                );
+            }
+
+            if (!transitionProducer) {
+                const transitionProps = tryMatchBasicTransition(
+                    command.parameters
+                );
+                console.log("props", transitionProps);
+                transitionProducer = await Native.CreateBasicTransition(
+                    command.channelIndex + 1,
+                    command.layerIndex,
+                    producer,
+                    transitionProps
+                );
+            }
+
+            if (!transitionProducer) {
+                const filename = command.parameters[0] ?? "";
+                throw new Error(`${filename} failed`); // TODO file_not_found
+            }
+
+            // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
+            // initialised
+            discardError(
+                Native.CallStageMethod(
+                    "load",
+                    command.channelIndex + 1,
+                    command.layerIndex,
+                    transitionProducer,
+                    false,
+                    autoPlay
+                ) // TODO: LOOP
+            );
+            return "202 LOADBG OK\r\n";
+        },
+        minNumParams: 1,
+    });
     // repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
     // repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
     // repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);

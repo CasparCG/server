@@ -37,6 +37,8 @@
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/transition/sting_producer.h>
+#include <core/producer/transition/transition_producer.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 
@@ -264,6 +266,58 @@ struct server::impl
         return consumer->index();
     }
 
+    inline core::frame_producer_dependencies
+    get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel)
+    {
+        std::vector<spl::shared_ptr<core::video_channel>> channels;
+        for (auto& cc : *channels_) {
+            channels.emplace_back(cc.raw_channel);
+        }
+
+        return core::frame_producer_dependencies(channel->frame_factory(),
+                                                 channels,
+                                                 video_format_repository_,
+                                                 channel->stage()->video_format_desc(),
+                                                 producer_registry_);
+    }
+
+    spl::shared_ptr<core::frame_producer> create_producer(const std::shared_ptr<core::video_channel>& channel,
+                                                          int                                         layer_index,
+                                                          std::vector<std::wstring>                   amcp_params)
+    {
+        core::diagnostics::scoped_call_context save;
+        core::diagnostics::call_context::for_thread().video_channel = channel->index();
+        core::diagnostics::call_context::for_thread().layer         = layer_index;
+
+        return producer_registry_->create_producer(get_producer_dependencies(channel), amcp_params);
+    }
+
+    spl::shared_ptr<core::frame_producer>
+    create_sting_transition(const std::shared_ptr<core::video_channel>&  channel,
+                            int                                          layer_index,
+                            const spl::shared_ptr<core::frame_producer>& destination,
+                            core::sting_info&                            info)
+    {
+        core::diagnostics::scoped_call_context save;
+        core::diagnostics::call_context::for_thread().video_channel = channel->index();
+        core::diagnostics::call_context::for_thread().layer         = layer_index;
+
+        return core::create_sting_producer(get_producer_dependencies(channel), destination, info);
+    }
+
+    spl::shared_ptr<core::frame_producer>
+    create_basic_transition(const std::shared_ptr<core::video_channel>&  channel,
+                            int                                          layer_index,
+                            const spl::shared_ptr<core::frame_producer>& destination,
+                            core::transition_info&                       info)
+    {
+        core::diagnostics::scoped_call_context save;
+        core::diagnostics::call_context::for_thread().video_channel = channel->index();
+        core::diagnostics::call_context::for_thread().layer         = layer_index;
+
+        return core::create_transition_producer(destination, info);
+    }
+
     void setup_amcp_command_repo()
     {
         amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(channels_);
@@ -311,6 +365,31 @@ int server::add_channel(std::wstring format_desc_str) { return impl_->add_channe
 void server::add_video_format_desc(std::wstring id, core::video_format_desc format)
 {
     impl_->add_video_format_desc(id, format);
+}
+
+spl::shared_ptr<core::frame_producer> server::create_producer(const std::shared_ptr<core::video_channel>& channel,
+                                                              int                                         layer_index,
+                                                              std::vector<std::wstring>                   amcp_params)
+{
+    return impl_->create_producer(channel, layer_index, amcp_params);
+}
+
+spl::shared_ptr<core::frame_producer>
+server::create_sting_transition(const std::shared_ptr<core::video_channel>&  channel,
+                                int                                          layer_index,
+                                const spl::shared_ptr<core::frame_producer>& destination,
+                                core::sting_info&                            info)
+{
+    return impl_->create_sting_transition(channel, layer_index, destination, info);
+}
+
+spl::shared_ptr<core::frame_producer>
+server::create_basic_transition(const std::shared_ptr<core::video_channel>&  channel,
+                                int                                          layer_index,
+                                const spl::shared_ptr<core::frame_producer>& destination,
+                                core::transition_info&                       info)
+{
+    return impl_->create_basic_transition(channel, layer_index, destination, info);
 }
 
 } // namespace caspar

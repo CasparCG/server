@@ -56,7 +56,9 @@
 
 #include "napi.h"
 
+#include "./conv.h"
 #include "./operations/base.h"
+#include "./operations/producer.h"
 #include "./operations/stage.h"
 #include "./operations/util.h"
 
@@ -403,46 +405,6 @@ Napi::Value ConfigAddOscPredefinedClient(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(env, success);
 }
 
-bool NapiObjectToBoostPropertyTree(const Napi::Env& env, const Napi::Object& object, boost::property_tree::wptree& tree)
-{
-    auto property_names = object.GetPropertyNames();
-    for (size_t i = 0; i < property_names.Length(); i++) {
-        auto name = property_names.Get(i);
-        if (!name.IsString()) {
-            Napi::Error::New(env, "Expected keys to be strings").ThrowAsJavaScriptException();
-            return false;
-        }
-        auto nameStr = caspar::u16(name.As<Napi::String>().Utf8Value());
-
-        auto value = object.Get(name);
-        if (value.IsNumber()) {
-            auto valueNumber = value.As<Napi::Number>();
-            tree.put(nameStr, valueNumber.Int32Value());
-            // TODO - floats?
-        } else if (value.IsString()) {
-            auto valueStr = value.As<Napi::String>();
-            tree.put(nameStr, caspar::u16(valueStr.Utf8Value()));
-        } else if (value.IsBoolean()) {
-            auto valueBool = value.As<Napi::Boolean>();
-            tree.put(nameStr, valueBool.Value());
-        } else if (value.IsObject()) {
-            auto valueObj = value.As<Napi::Object>();
-
-            boost::property_tree::wptree child_tree;
-            if (!NapiObjectToBoostPropertyTree(env, valueObj, child_tree)) {
-                return false;
-            }
-
-            tree.put_child(nameStr, child_tree);
-        } else {
-            Napi::Error::New(env, "Unsupported value type").ThrowAsJavaScriptException();
-            return false;
-        }
-    }
-
-    return true;
-}
-
 Napi::Value AddChannelConsumer(const Napi::CallbackInfo& info)
 {
     Napi::Env env = info.Env();
@@ -625,7 +587,9 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
 
     auto command = info[0].As<Napi::String>().Utf8Value();
 
-    if (command == "pause") {
+    if (command == "load") {
+        return StageLoad(info, instance_data);
+    } else if (command == "pause") {
         return StagePause(info, instance_data);
     } else if (command == "resume") {
         return StageResume(info, instance_data);
@@ -650,7 +614,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
     env.SetInstanceData(instance_data); // TODO - cleanup
 
-    instance_data->amcp_command = NodeAMCPCommand::Init(env, exports);
+    instance_data->amcp_command    = NodeAMCPCommand::Init(env, exports);
+    instance_data->unused_producer = NodeUnusedProducer::Init(env, exports);
 
     exports.Set(Napi::String::New(env, "version"), Napi::String::New(env, caspar::u8(caspar::env::version())));
 
@@ -661,6 +626,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
                 Napi::Function::New(env, ConfigAddOscPredefinedClient));
     exports.Set(Napi::String::New(env, "ConfigAddCustomVideoFormat"),
                 Napi::Function::New(env, ConfigAddCustomVideoFormat));
+
+    exports.Set(Napi::String::New(env, "CreateProducer"), Napi::Function::New(env, CreateProducer));
+    exports.Set(Napi::String::New(env, "CreateStingTransition"), Napi::Function::New(env, CreateStingTransition));
+    exports.Set(Napi::String::New(env, "CreateBasicTransition"), Napi::Function::New(env, CreateBasicTransition));
 
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
     exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));

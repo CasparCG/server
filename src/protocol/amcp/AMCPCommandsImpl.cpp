@@ -28,7 +28,6 @@
 #include "AMCPCommandsImpl.h"
 
 #include "AMCPCommandQueue.h"
-#include "amcp_args.h"
 #include "amcp_command_repository.h"
 
 #include <common/env.h>
@@ -191,119 +190,9 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
                                              ctx.static_context->producer_registry);
 }
 
-bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo)
-{
-    auto match = std::find_if(params.begin(), params.end(), param_comparer(L"STING"));
-    if (match == params.end())
-        return false;
-
-    auto start_ind = static_cast<int>(match - params.begin());
-
-    if (params.size() <= start_ind + 1) {
-        // No mask filename
-        return false;
-    }
-
-    auto params_token = params.at(start_ind + 1);
-    if (is_args_token(params_token)) {
-        auto args = tokenize_args(params_token);
-
-        std::wstring val;
-        if (!get_arg_value(args, L"MASK", val)) {
-            // TODO - throw error?
-            // No mask filename
-            return false;
-        }
-        stingInfo.mask_filename = val;
-
-        if (get_arg_value(args, L"trigger_point", val)) {
-            int val2 = boost::lexical_cast<int>(val);
-            if (val2 > 0) {
-                stingInfo.trigger_point = val2;
-            }
-        }
-        if (get_arg_value(args, L"overlay", val)) {
-            stingInfo.overlay_filename = val;
-        }
-
-        if (get_arg_value(args, L"audio_fade_start", val)) {
-            int val2 = boost::lexical_cast<int>(val);
-            if (val2 > 0) {
-                stingInfo.audio_fade_start = val2;
-            }
-        }
-        if (get_arg_value(args, L"audio_fade_duration", val)) {
-            int val2 = boost::lexical_cast<int>(val);
-            if (val2 > 0) {
-                stingInfo.audio_fade_duration = val2;
-            }
-        }
-
-    } else {
-        stingInfo.mask_filename = params.at(start_ind + 1);
-
-        if (params.size() > start_ind + 2) {
-            stingInfo.trigger_point = boost::lexical_cast<int>(params.at(start_ind + 2));
-        }
-
-        if (params.size() > start_ind + 3) {
-            stingInfo.overlay_filename = params.at(start_ind + 3);
-        }
-    }
-
-    return true;
-}
-
 // Basic Commands
 
-std::wstring loadbg_command(command_context& ctx)
-{
-    // Perform loading of the clip
-    core::diagnostics::scoped_call_context save;
-    core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-    core::diagnostics::call_context::for_thread().layer         = ctx.layer_index();
-
-    auto channel   = ctx.channel.raw_channel;
-    bool auto_play = contains_param(L"AUTO", ctx.parameters);
-
-    try {
-        auto new_producer = ctx.static_context->producer_registry->create_producer(
-            get_producer_dependencies(channel, ctx), ctx.parameters);
-
-        if (new_producer == frame_producer::empty())
-            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(!ctx.parameters.empty() ? ctx.parameters[0] : L""));
-
-        spl::shared_ptr<frame_producer> transition_producer = frame_producer::empty();
-        transition_info                 transitionInfo;
-        sting_info                      stingInfo;
-
-        if (try_match_sting(ctx.parameters, stingInfo)) {
-            transition_producer =
-                create_sting_producer(get_producer_dependencies(channel, ctx), new_producer, stingInfo);
-        } else {
-            std::wstring message;
-            for (std::wstring& parameter : ctx.parameters) {
-                message += boost::to_upper_copy(parameter) + L" ";
-            }
-
-            // Try other transitions
-            try_match_transition(message, transitionInfo);
-            transition_producer = create_transition_producer(new_producer, transitionInfo);
-        }
-
-        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
-        // initialised
-        ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
-    } catch (file_not_found&) {
-        if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
-            ctx.channel.stage->load(
-                ctx.layer_index(), core::create_color_producer(channel->frame_factory(), 0), false, auto_play);
-        }
-        throw;
-    }
-
-    return L"202 LOADBG OK\r\n";
-}
+std::wstring loadbg_command(command_context& ctx) { return L"600 REMOVED\r\n"; }
 
 std::wstring load_command(command_context& ctx)
 {

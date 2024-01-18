@@ -24,7 +24,8 @@ class channel_context
     const std::shared_ptr<core::video_channel> raw_channel;
     const std::shared_ptr<core::stage_base>    stage;
     const std::wstring                         lifecycle_key_;
-    const std::shared_ptr<executor>            tmp_executor_;
+    // Hack: temporary executor to allow nodejs to queue tasks to the stage along with a custom response handler
+    const std::shared_ptr<executor> tmp_executor_;
 };
 
 struct command_context_simple
