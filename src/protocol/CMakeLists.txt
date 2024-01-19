@@ -6,8 +6,6 @@ set(SOURCES
 		amcp/AMCPCommandsImpl.cpp
 		amcp/amcp_command_repository.cpp
 		amcp/amcp_command_repository_wrapper.cpp
-
-		util/tokenize.cpp
 )
 
 set(HEADERS
@@ -18,8 +16,6 @@ set(HEADERS
 		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
 		amcp/amcp_command_context.h
-
-		util/tokenize.h
 
 		StdAfx.h
 )

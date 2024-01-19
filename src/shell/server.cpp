@@ -47,7 +47,6 @@
 #include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/amcp_shared.h>
-#include <protocol/util/tokenize.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
