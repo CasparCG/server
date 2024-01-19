@@ -47,11 +47,9 @@
 #include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/amcp_shared.h>
-#include <protocol/osc/client.h>
 #include <protocol/util/tokenize.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -63,46 +61,13 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-std::shared_ptr<boost::asio::io_service> create_running_io_service()
-{
-    auto service = std::make_shared<boost::asio::io_service>();
-    // To keep the io_service::run() running although no pending async
-    // operations are posted.
-    auto work      = std::make_shared<boost::asio::io_service::work>(*service);
-    auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
-    auto thread    = std::make_shared<std::thread>([service, weak_work] {
-        while (auto strong = weak_work.lock()) {
-            try {
-                service->run();
-            } catch (...) {
-                CASPAR_LOG_CURRENT_EXCEPTION();
-            }
-        }
-
-        CASPAR_LOG(info) << "[asio] Global io_service uninitialized.";
-    });
-
-    return std::shared_ptr<boost::asio::io_service>(service.get(), [service, work, thread](void*) mutable {
-        CASPAR_LOG(info) << "[asio] Shutting down global io_service.";
-        work.reset();
-        service->stop();
-        if (thread->get_id() != std::this_thread::get_id())
-            thread->join();
-        else
-            thread->detach();
-    });
-}
-
 struct server::impl
 {
-    std::shared_ptr<boost::asio::io_service>               io_service_ = create_running_io_service();
-    video_format_repository                                video_format_repository_;
-    accelerator::accelerator                               accelerator_;
-    std::shared_ptr<amcp::amcp_command_repository>         amcp_command_repo_;
-    std::shared_ptr<amcp::amcp_command_repository_wrapper> amcp_command_repo_wrapper_;
-    std::shared_ptr<amcp::command_context_factory>         amcp_context_factory_;
-    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_service_);
-    std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
+    video_format_repository                                       video_format_repository_;
+    accelerator::accelerator                                      accelerator_;
+    std::shared_ptr<amcp::amcp_command_repository>                amcp_command_repo_;
+    std::shared_ptr<amcp::amcp_command_repository_wrapper>        amcp_command_repo_wrapper_;
+    std::shared_ptr<amcp::command_context_factory>                amcp_context_factory_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
@@ -133,11 +98,6 @@ struct server::impl
 
     ~impl()
     {
-        std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
-        io_service_.reset();
-        predefined_osc_subscriptions_.clear();
-        osc_client_.reset();
-
         amcp_command_repo_wrapper_.reset();
         amcp_command_repo_.reset();
         amcp_context_factory_.reset();
@@ -145,9 +105,6 @@ struct server::impl
         destroy_producers_synchronously();
         destroy_consumers_synchronously();
         channels_->clear();
-
-        while (weak_io_service.lock())
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         uninitialize_modules();
         core::diagnostics::osd::shutdown();
@@ -181,25 +138,23 @@ struct server::impl
         video_format_repository_.store(format);
     }
 
-    int add_channel(std::wstring format_desc_str)
+    int add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
     {
         auto format_desc = video_format_repository_.find(format_desc_str);
         if (format_desc.format == video_format::invalid)
             return -1;
 
-        auto weak_client = std::weak_ptr<osc::client>(osc_client_);
-        auto channel_id  = static_cast<int>(channels_->size() + 1);
-        auto channel     = spl::make_shared<video_channel>(channel_id,
-                                                       format_desc,
-                                                       accelerator_.create_image_mixer(channel_id),
-                                                       [channel_id, weak_client](core::monitor::state channel_state) {
-                                                           monitor::state state;
-                                                           state[""]["channel"][channel_id] = channel_state;
-                                                           auto client                      = weak_client.lock();
-                                                           if (client) {
-                                                               client->send(std::move(state));
-                                                           }
-                                                       });
+        auto channel_id = static_cast<int>(channels_->size() + 1);
+        auto channel =
+            spl::make_shared<video_channel>(channel_id,
+                                            format_desc,
+                                            accelerator_.create_image_mixer(channel_id),
+                                            [channel_id, weak_osc_sender](core::monitor::state channel_state) {
+                                                auto osc_sender = weak_osc_sender.lock();
+                                                if (osc_sender) {
+                                                    osc_sender->send_state(channel_id, channel_state);
+                                                }
+                                            });
 
         const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
         channels_->emplace_back(channel, channel->stage(), lifecycle_key);
@@ -210,7 +165,6 @@ struct server::impl
     void setup_osc(const boost::property_tree::wptree& pt)
     {
         using boost::property_tree::wptree;
-        using namespace boost::asio::ip;
 
         auto default_port                 = pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
         auto disable_send_to_amcp_clients = pt.get(L"configuration.osc.disable-send-to-amcp-clients", false);
@@ -226,19 +180,19 @@ struct server::impl
         //         });
     }
 
-    bool add_osc_predefined_client(std::string address, unsigned short port)
-    {
-        using namespace boost::asio::ip;
+    // bool add_osc_predefined_client(std::string address, unsigned short port)
+    // {
+    //     using namespace boost::asio::ip;
 
-        boost::system::error_code ec;
-        auto                      ipaddr = address_v4::from_string(address, ec);
-        if (!ec) {
-            predefined_osc_subscriptions_.push_back(osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
-            return true;
-        } else {
-            return false;
-        }
-    }
+    //     boost::system::error_code ec;
+    //     auto                      ipaddr = address_v4::from_string(address, ec);
+    //     if (!ec) {
+    //         predefined_osc_subscriptions_.push_back(osc_client_->get_subscription_token(udp::endpoint(ipaddr,
+    //         port))); return true;
+    //     } else {
+    //         return false;
+    //     }
+    // }
 
     int add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
     {
@@ -328,8 +282,7 @@ struct server::impl
                                                                        producer_registry_,
                                                                        consumer_registry_,
                                                                        amcp_command_repo_,
-                                                                       ogl_device,
-                                                                       spl::make_shared_ptr(osc_client_));
+                                                                       ogl_device);
 
         amcp_context_factory_ = std::make_shared<amcp::command_context_factory>(ctx);
 
@@ -351,16 +304,14 @@ spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_comman
 }
 spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& server::get_channels() const { return impl_->channels_; }
 
-bool server::add_osc_predefined_client(std::string address, unsigned short port)
-{
-    return impl_->add_osc_predefined_client(address, port);
-}
-
 int server::add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
 {
     return impl_->add_consumer_from_xml(channel_index, config);
 }
-int server::add_channel(std::wstring format_desc_str) { return impl_->add_channel(format_desc_str); }
+int server::add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
+{
+    return impl_->add_channel(format_desc_str, weak_osc_sender);
+}
 
 void server::add_video_format_desc(std::wstring id, core::video_format_desc format)
 {

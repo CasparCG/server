@@ -41,22 +41,19 @@ struct amcp_command_static_context
     const spl::shared_ptr<const core::frame_consumer_registry> consumer_registry;
     const std::shared_ptr<amcp_command_repository>             parser;
     std::weak_ptr<accelerator::accelerator_device>             ogl_device;
-    const spl::shared_ptr<osc::client>                         osc_client;
 
     amcp_command_static_context(core::video_format_repository                               format_repository,
                                 const spl::shared_ptr<core::cg_producer_registry>&          cg_registry,
                                 const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
                                 const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
                                 std::shared_ptr<amcp_command_repository>                    parser,
-                                std::weak_ptr<accelerator::accelerator_device>              ogl_device,
-                                const spl::shared_ptr<osc::client>&                         osc_client)
+                                std::weak_ptr<accelerator::accelerator_device>              ogl_device)
         : format_repository(std::move(format_repository))
         , cg_registry(cg_registry)
         , producer_registry(producer_registry)
         , consumer_registry(consumer_registry)
         , parser(std::move(parser))
         , ogl_device(std::move(ogl_device))
-        , osc_client(osc_client)
     {
     }
 };

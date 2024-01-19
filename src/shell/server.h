@@ -35,6 +35,12 @@
 
 namespace caspar {
 
+class channel_osc_sender
+{
+  public:
+    virtual void send_state(int channel_index, const core::monitor::state& state) = 0;
+};
+
 class server final
 {
   public:
@@ -43,9 +49,8 @@ class server final
     spl::shared_ptr<protocol::amcp::amcp_command_repository>       get_amcp_command_repository() const;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& get_channels() const;
 
-    bool add_osc_predefined_client(std::string address, unsigned short port);
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
-    int  add_channel(std::wstring format_desc_str);
+    int  add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender);
     void add_video_format_desc(std::wstring id, core::video_format_desc format);
     spl::shared_ptr<core::frame_producer> create_producer(const std::shared_ptr<core::video_channel>& channel,
                                                           int                                         layer_index,

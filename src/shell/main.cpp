@@ -376,35 +376,6 @@ Napi::Value ExecuteCommandBatch(const Napi::CallbackInfo& info)
     return response;
 }
 
-Napi::Value ConfigAddOscPredefinedClient(const Napi::CallbackInfo& info)
-{
-    Napi::Env env = info.Env();
-
-    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
-    if (!instance_data) {
-        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    if (!instance_data->caspar_server) {
-        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    if (info.Length() < 2 || !info[0].IsString() || !info[1].IsNumber()) {
-        Napi::Error::New(env, "Expected address and port").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    auto address = info[0].As<Napi::String>();
-    auto port    = info[1].As<Napi::Number>();
-
-    bool success = instance_data->caspar_server->add_osc_predefined_client(address.Utf8Value(), port.Int32Value());
-
-    return Napi::Boolean::New(env, success);
-}
-
 Napi::Value AddChannelConsumer(const Napi::CallbackInfo& info)
 {
     Napi::Env env = info.Env();
@@ -468,7 +439,9 @@ Napi::Value AddChannel(const Napi::CallbackInfo& info)
 
     // TODO - calling this once amcp has begun is not safe
 
-    int channel_index = instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()));
+    std::weak_ptr<caspar::channel_osc_sender> osc_sender; // TODO
+
+    int channel_index = instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()), osc_sender);
     if (channel_index == -1) {
         Napi::Error::New(env, "Failed to add channel").ThrowAsJavaScriptException();
         return env.Null();
@@ -622,8 +595,6 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
     exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
 
-    exports.Set(Napi::String::New(env, "ConfigAddOscPredefinedClient"),
-                Napi::Function::New(env, ConfigAddOscPredefinedClient));
     exports.Set(Napi::String::New(env, "ConfigAddCustomVideoFormat"),
                 Napi::Function::New(env, ConfigAddCustomVideoFormat));
 

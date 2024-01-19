@@ -7,13 +7,6 @@ set(SOURCES
 		amcp/amcp_command_repository.cpp
 		amcp/amcp_command_repository_wrapper.cpp
 
-		osc/oscpack/OscOutboundPacketStream.cpp
-		osc/oscpack/OscPrintReceivedElements.cpp
-		osc/oscpack/OscReceivedElements.cpp
-		osc/oscpack/OscTypes.cpp
-
-		osc/client.cpp
-
 		util/tokenize.cpp
 )
 
@@ -25,17 +18,6 @@ set(HEADERS
 		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
 		amcp/amcp_command_context.h
-
-		osc/oscpack/MessageMappingOscPacketListener.h
-		osc/oscpack/OscException.h
-		osc/oscpack/OscHostEndianness.h
-		osc/oscpack/OscOutboundPacketStream.h
-		osc/oscpack/OscPacketListener.h
-		osc/oscpack/OscPrintReceivedElements.h
-		osc/oscpack/OscReceivedElements.h
-		osc/oscpack/OscTypes.h
-
-		osc/client.h
 
 		util/tokenize.h
 
@@ -52,8 +34,6 @@ source_group(sources\\amcp amcp/*)
 source_group(sources\\cii cii/*)
 source_group(sources\\clk clk/*)
 source_group(sources\\log log/*)
-source_group(sources\\osc\\oscpack osc/oscpack/*)
-source_group(sources\\osc osc/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
