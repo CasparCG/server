@@ -162,38 +162,6 @@ struct server::impl
         return channel_id;
     }
 
-    void setup_osc(const boost::property_tree::wptree& pt)
-    {
-        using boost::property_tree::wptree;
-
-        auto default_port                 = pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
-        auto disable_send_to_amcp_clients = pt.get(L"configuration.osc.disable-send-to-amcp-clients", false);
-
-        // if (!disable_send_to_amcp_clients && primary_amcp_server_)
-        //     primary_amcp_server_->add_client_lifecycle_object_factory(
-        //         [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
-        //             using namespace boost::asio::ip;
-
-        //             return std::make_pair(std::wstring(L"osc_subscribe"),
-        //                                   osc_client_->get_subscription_token(
-        //                                       udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
-        //         });
-    }
-
-    // bool add_osc_predefined_client(std::string address, unsigned short port)
-    // {
-    //     using namespace boost::asio::ip;
-
-    //     boost::system::error_code ec;
-    //     auto                      ipaddr = address_v4::from_string(address, ec);
-    //     if (!ec) {
-    //         predefined_osc_subscriptions_.push_back(osc_client_->get_subscription_token(udp::endpoint(ipaddr,
-    //         port))); return true;
-    //     } else {
-    //         return false;
-    //     }
-    // }
-
     int add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
     {
         auto type = config.get(L"type", L"");

@@ -10,6 +10,7 @@ import {
     AMCPCommandRepository,
 } from "./amcp/command_repository.js";
 import path from "node:path";
+import { OscSender } from "./osc.js";
 // import { parseXmlConfigFile } from "./config/parse.js";
 
 const rl = createInterface({
@@ -108,14 +109,6 @@ for (const videoMode of config.videoModes) {
 }
 console.log("Initialized video modes.");
 
-for (const client of config.osc.predefinedClients) {
-    if (!Native.ConfigAddOscPredefinedClient(client.address, client.port)) {
-        console.log(
-            `failed to add osc client: ${client.address}:${client.port}`
-        );
-    }
-}
-
 function makeAbsolute(myPath: string) {
     if (path.isAbsolute(myPath)) {
         return myPath;
@@ -143,6 +136,16 @@ const context: AMCPCommandContext = {
 const locks = new ChannelLocks("");
 const commandRepository = new AMCPCommandRepository();
 const protocol = new AMCPProtocolStrategy(commandRepository, locks, context);
+
+const oscSender = new OscSender();
+
+for (const client of config.osc.predefinedClients) {
+    if (!oscSender.addOscPredefinedClient(client.address, client.port)) {
+        console.log(
+            `failed to add osc client: ${client.address}:${client.port}`
+        );
+    }
+}
 
 const startupClient: Client = {
     id: "init",
@@ -193,7 +196,13 @@ console.log("Initialized startup producers.");
 rl.setPrompt("");
 rl.prompt();
 
-const server = new AMCPServer(5250, protocol, locks);
+const server = new AMCPServer(
+    5250,
+    protocol,
+    locks,
+    oscSender,
+    !config.osc.disableSendToAMCPClients ? config.osc.defaultPort : null
+);
 console.log(server);
 
 const consoleClient: Client = {

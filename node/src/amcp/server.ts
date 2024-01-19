@@ -2,6 +2,7 @@ import { Server, Socket, createServer } from "net";
 import { AMCPClientBatchInfo, type AMCPProtocolStrategy } from "./protocol.js";
 import type { Client } from "./client.js";
 import type { ChannelLocks } from "./channel_locks.js";
+import type { OscSender } from "../osc.js";
 
 const LINE_DELIMITER = "\r\n";
 
@@ -9,14 +10,20 @@ export class AMCPServer {
     readonly #socket: Server;
     readonly #protocol: AMCPProtocolStrategy;
     readonly #locks: ChannelLocks;
+    readonly #osc: OscSender;
+    readonly #autoSendToAmcpClientsPort: number | null;
 
     constructor(
         port: number,
         protocol: AMCPProtocolStrategy,
-        locks: ChannelLocks
+        locks: ChannelLocks,
+        osc: OscSender,
+        autoSendToAmcpClientsPort: number | null
     ) {
         this.#protocol = protocol;
         this.#locks = locks;
+        this.#osc = osc;
+        this.#autoSendToAmcpClientsPort = autoSendToAmcpClientsPort;
 
         this.#socket = createServer(this.#onClient.bind(this));
         this.#socket.listen(port, () => {
@@ -35,11 +42,19 @@ export class AMCPServer {
         };
 
         console.log(`new client from ${client.address}`);
+        if (this.#autoSendToAmcpClientsPort) {
+            this.#osc.addDestinationForOwner(
+                client.id,
+                client.address,
+                this.#autoSendToAmcpClientsPort
+            );
+        }
 
         clientSocket.on("close", () => {
             console.log(`lost client ${client.address}`);
 
             this.#locks.forgetClient(client);
+            this.#osc.removeDestinationsForOwner(client.id);
         });
 
         let receiveBuffer = "";
