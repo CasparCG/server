@@ -45,6 +45,39 @@ export function registerSystemCommands(
     // repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
     // repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 
-    // repo->register_command(L"Query Commands", L"OSC SUBSCRIBE", osc_subscribe_command, 1);
-    // repo->register_command(L"Query Commands", L"OSC UNSUBSCRIBE", osc_unsubscribe_command, 1);
+    commands.set("OSC SUBSCRIBE", {
+        func: async (context, command) => {
+            const port = Number(command.parameters[0]);
+            if (isNaN(port)) {
+                return "403 OSC SUBSCRIBE BAD PORT\r\n";
+            }
+
+            context.osc.addDestinationForOwner(
+                command.clientId,
+                command.clientAddress,
+                port
+            );
+
+            return "202 OSC SUBSCRIBE OK\r\n";
+        },
+        minNumParams: 1,
+    });
+
+    commands.set("OSC UNSUBSCRIBE", {
+        func: async (context, command) => {
+            const port = Number(command.parameters[0]);
+            if (isNaN(port)) {
+                return "403 OSC UNSUBSCRIBE BAD PORT\r\n";
+            }
+
+            context.osc.removeDestinationForOwner(
+                command.clientId,
+                command.clientAddress,
+                port
+            );
+
+            return "202 OSC UNSUBSCRIBE OK\r\n";
+        },
+        minNumParams: 1,
+    });
 }

@@ -124,20 +124,21 @@ config.paths.templatePath = makeAbsolute(config.paths.templatePath);
 
 console.log("config", JSON.stringify(config, undefined, 4));
 
+const oscSender = new OscSender();
+
 const context: AMCPCommandContext = {
     configuration: config,
     shutdown: (restart) => {
         Native.stop();
         process.exit(restart ? 5 : 0);
     },
+    osc: oscSender,
     channelCount: config.channels.length,
 };
 
 const locks = new ChannelLocks("");
 const commandRepository = new AMCPCommandRepository();
 const protocol = new AMCPProtocolStrategy(commandRepository, locks, context);
-
-const oscSender = new OscSender();
 
 for (const client of config.osc.predefinedClients) {
     if (!oscSender.addOscPredefinedClient(client.address, client.port)) {

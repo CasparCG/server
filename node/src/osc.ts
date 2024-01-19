@@ -51,6 +51,22 @@ export class OscSender {
         return true;
     }
 
+    removeDestinationForOwner(
+        ownerId: string,
+        address: string,
+        port: number
+    ): boolean {
+        const ownedClients = this.#ownedClients.get(ownerId);
+        if (!ownedClients) return false;
+
+        const filtered = ownedClients.filter(
+            (cl) => !(cl.address === address && cl.port === port)
+        );
+        this.#ownedClients.set(ownerId, filtered);
+
+        return filtered.length !== ownedClients.length;
+    }
+
     removeDestinationsForOwner(ownerId: string): boolean {
         return this.#ownedClients.delete(ownerId);
     }

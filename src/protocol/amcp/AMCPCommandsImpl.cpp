@@ -52,8 +52,6 @@
 #include <core/producer/transition/transition_producer.h>
 #include <core/video_format.h>
 
-#include <protocol/osc/client.h>
-
 #include <algorithm>
 #include <fstream>
 #include <future>
@@ -1149,48 +1147,6 @@ std::wstring gl_gc_command(command_context& ctx)
     return L"202 GL GC OK\r\n";
 }
 
-std::wstring get_osc_subscription_token(unsigned short port)
-{
-    std::wstringstream token;
-    token << "osc-sub-" << port;
-    return token.str();
-}
-
-std::wstring osc_subscribe_command(command_context& ctx)
-{
-    // using namespace boost::asio::ip;
-
-    // unsigned short port = 0;
-    // try {
-    //     port = std::stoi(ctx.parameters.at(0));
-    // } catch (...) {
-    //     return L"403 OSC SUBSCRIBE BAD PORT\r\n";
-    // }
-
-    // auto subscription = ctx.static_context->osc_client->get_subscription_token(
-    //     udp::endpoint(address_v4::from_string(u8(ctx.client_address)), port));
-
-    // ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
-
-    // return L"202 OSC SUBSCRIBE OK\r\n";
-    return L"500 NOT IMPLEMENTED\r\n";
-}
-
-std::wstring osc_unsubscribe_command(command_context& ctx)
-{
-    // unsigned short port = 0;
-    // try {
-    //     port = std::stoi(ctx.parameters.at(0));
-    // } catch (...) {
-    //     return L"403 OSC UNSUBSCRIBE BAD PORT\r\n";
-    // }
-
-    // ctx.client->remove_lifecycle_bound_object(get_osc_subscription_token(port));
-
-    // return L"202 OSC UNSUBSCRIBE OK\r\n";
-    return L"500 NOT IMPLEMENTED\r\n";
-}
-
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
@@ -1236,8 +1192,5 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
     repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
     repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
-
-    repo->register_command(L"Query Commands", L"OSC SUBSCRIBE", osc_subscribe_command, 1);
-    repo->register_command(L"Query Commands", L"OSC UNSUBSCRIBE", osc_unsubscribe_command, 1);
 }
 }}} // namespace caspar::protocol::amcp

@@ -1,4 +1,6 @@
+import type { OscSender } from "../osc.js";
 import type { CasparCGConfiguration } from "../config/type.js";
+import type { Client } from "./client.js";
 import { registerDataCommands } from "./commands/data.js";
 import { registerMediaScannerCommands } from "./commands/mediaScanner.js";
 import { registerProducerCommands } from "./commands/producer.js";
@@ -7,6 +9,7 @@ import { registerSystemCommands } from "./commands/system.js";
 export interface AMCPCommandContext {
     configuration: CasparCGConfiguration;
     shutdown: (restart: boolean) => void;
+    osc: OscSender;
     channelCount: number;
 }
 
@@ -23,6 +26,7 @@ export interface AMCPCommandEntry {
 export interface AMCPCommandBase {
     name: string;
 
+    clientId: string;
     clientAddress: string;
     channelIndex: number | null;
     layerIndex: number | null;
@@ -36,7 +40,7 @@ export interface AMCPCommand2 extends AMCPCommandBase {
 function make_cmd(
     cmd: AMCPCommandEntry,
     name: string,
-    clientAddress: string,
+    client: Client,
     channelIndex: number | null,
     layerIndex: number | null,
     tokens: string[]
@@ -46,7 +50,8 @@ function make_cmd(
     return {
         name,
         command: cmd.func,
-        clientAddress,
+        clientId: client.id,
+        clientAddress: client.address,
         channelIndex,
         layerIndex,
         parameters: tokens,
@@ -54,7 +59,6 @@ function make_cmd(
 }
 
 export class AMCPCommandRepository {
-    //
     readonly #commands = new Map<string, AMCPCommandEntry>();
     readonly #channelCommands = new Map<string, AMCPCommandEntry>();
 
@@ -68,8 +72,8 @@ export class AMCPCommandRepository {
     }
 
     createChannelCommand(
+        client: Client,
         name: string,
-        clientAddress: string,
         channelIndex: number,
         layerIndex: number | null,
         tokens: string[]
@@ -78,8 +82,8 @@ export class AMCPCommandRepository {
 
         return this.#findCommand(
             this.#channelCommands,
+            client,
             name,
-            clientAddress,
             channelIndex,
             layerIndex,
             tokens
@@ -87,14 +91,14 @@ export class AMCPCommandRepository {
     }
 
     createCommand(
+        client: Client,
         name: string,
-        clientAddress: string,
         tokens: string[]
     ): AMCPCommand2 | null {
         return this.#findCommand(
             this.#commands,
+            client,
             name,
-            clientAddress,
             null,
             null,
             tokens
@@ -103,8 +107,8 @@ export class AMCPCommandRepository {
 
     #findCommand(
         commands: ReadonlyMap<string, AMCPCommandEntry>,
+        client: Client,
         name: string,
-        clientAddress: string,
         channelIndex: number | null,
         layerIndex: number | null,
         tokens: string[]
@@ -119,7 +123,7 @@ export class AMCPCommandRepository {
                 return make_cmd(
                     subcmd,
                     fullname,
-                    clientAddress,
+                    client,
                     channelIndex,
                     layerIndex,
                     tokens
@@ -134,7 +138,7 @@ export class AMCPCommandRepository {
             return make_cmd(
                 command,
                 name,
-                clientAddress,
+                client,
                 channelIndex,
                 layerIndex,
                 tokens
