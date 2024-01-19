@@ -190,51 +190,6 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 
 // Basic Commands
 
-std::wstring add_command(command_context& ctx)
-{
-    replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
-
-    core::diagnostics::scoped_call_context save;
-    core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-
-    auto consumer = ctx.static_context->consumer_registry->create_consumer(
-        ctx.parameters, ctx.static_context->format_repository, get_channels(ctx));
-    ctx.channel.raw_channel->output().add(ctx.layer_index(consumer->index()), consumer);
-
-    return L"202 ADD OK\r\n";
-}
-
-std::wstring remove_command(command_context& ctx)
-{
-    auto index = ctx.layer_index(std::numeric_limits<int>::min());
-
-    if (index == std::numeric_limits<int>::min()) {
-        replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client_address, ctx.parameters);
-
-        if (ctx.parameters.size() == 0) {
-            return L"402 REMOVE FAILED\r\n";
-        }
-
-        index = ctx.static_context->consumer_registry
-                    ->create_consumer(ctx.parameters, ctx.static_context->format_repository, get_channels(ctx))
-                    ->index();
-    }
-
-    if (!ctx.channel.raw_channel->output().remove(index)) {
-        return L"404 REMOVE FAILED\r\n";
-    }
-
-    return L"202 REMOVE OK\r\n";
-}
-
-std::wstring print_command(command_context& ctx)
-{
-    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
-        {L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
-
-    return L"202 PRINT OK\r\n";
-}
-
 std::wstring log_level_command(command_context& ctx)
 {
     if (ctx.parameters.size() == 0) {
@@ -1149,9 +1104,6 @@ std::wstring gl_gc_command(command_context& ctx)
 
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
-    repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
-    repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
-    repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
     repo->register_channel_command(L"Basic Commands", L"SET", set_command, 2);
 

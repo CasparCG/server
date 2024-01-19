@@ -7,6 +7,7 @@ import { Native } from "../../native.js";
 import {
     containsParam,
     defaultBasicTransition,
+    discardError,
     tryMatchBasicTransition,
     tryMatchStingTransition,
 } from "./util.js";
@@ -27,14 +28,6 @@ function isLayerIndexValid(
     return index !== null && index >= 0;
 }
 
-function discardError(val: any) {
-    if (
-        val instanceof Promise ||
-        Object.prototype.hasOwnProperty.call(val, "catch")
-    ) {
-        val.catch(() => null);
-    }
-}
 export function registerProducerCommands(
     commands: Map<string, AMCPCommandEntry>,
     channelCommands: Map<string, AMCPCommandEntry>

@@ -1,3 +1,12 @@
+export function discardError(val: any) {
+    if (
+        val instanceof Promise ||
+        Object.prototype.hasOwnProperty.call(val, "catch")
+    ) {
+        val.catch(() => null);
+    }
+}
+
 export function containsParam(params: string[], check: string): boolean {
     check = check.toUpperCase();
 

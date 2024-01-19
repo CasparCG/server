@@ -50,6 +50,12 @@ class server final
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& get_channels() const;
 
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
+    int  add_consumer_from_tokens(const std::shared_ptr<core::video_channel>& channel,
+                                  int                                         layer_index,
+                                  std::vector<std::wstring>                   amcp_params);
+    bool remove_consumer_by_port(int channel_index, int layer_index);
+    bool remove_consumer_by_params(int channel_index, std::vector<std::wstring> amcp_params);
+
     int  add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender);
     void add_video_format_desc(std::wstring id, core::video_format_desc format);
     spl::shared_ptr<core::frame_producer> create_producer(const std::shared_ptr<core::video_channel>& channel,

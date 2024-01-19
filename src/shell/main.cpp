@@ -58,6 +58,7 @@
 
 #include "./conv.h"
 #include "./operations/base.h"
+#include "./operations/consumer.h"
 #include "./operations/producer.h"
 #include "./operations/stage.h"
 #include "./operations/util.h"
@@ -601,6 +602,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "CreateProducer"), Napi::Function::New(env, CreateProducer));
     exports.Set(Napi::String::New(env, "CreateStingTransition"), Napi::Function::New(env, CreateStingTransition));
     exports.Set(Napi::String::New(env, "CreateBasicTransition"), Napi::Function::New(env, CreateBasicTransition));
+
+    exports.Set(Napi::String::New(env, "AddConsumer"), Napi::Function::New(env, AddConsumer));
+    exports.Set(Napi::String::New(env, "RemoveConsumerByPort"), Napi::Function::New(env, RemoveConsumerByPort));
+    exports.Set(Napi::String::New(env, "RemoveConsumerByParams"), Napi::Function::New(env, RemoveConsumerByParams));
 
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
     exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));

@@ -18,9 +18,9 @@ struct ParsedChannelLayerArguments
 
     const caspar::protocol::amcp::channel_context& channel;
 
-    Napi::Promise promise;
-    resolveFunc   resolve;
-    rejectFunc    reject;
+    Napi::Promise            promise;
+    resolveFunc<std::string> resolve;
+    rejectFunc               reject;
 
     ParsedChannelLayerArguments(
         const caspar::spl::shared_ptr<std::vector<caspar::protocol::amcp::channel_context>> channels,
@@ -28,7 +28,7 @@ struct ParsedChannelLayerArguments
         const int                                                                           layerIndex,
         const caspar::protocol::amcp::channel_context&                                      channel,
         Napi::Promise                                                                       promise,
-        resolveFunc                                                                         resolve,
+        resolveFunc<std::string>                                                            resolve,
         rejectFunc                                                                          reject)
         : channels(std::move(channels))
         , channelIndex(channelIndex)
@@ -63,7 +63,7 @@ parseChannelLayerArguments(const Napi::CallbackInfo& info, CasparCgInstanceData*
 
     auto& channel = channels->at(channelIndex - 1);
 
-    auto prom = promiseFuncWrapper(env);
+    auto prom = promiseFuncWrapper<std::string>(env);
 
     return ParsedChannelLayerArguments(
         channels, channelIndex, layerIndex, channel, std::get<0>(prom), std::get<1>(prom), std::get<2>(prom));
@@ -193,7 +193,7 @@ Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* ins
 
     auto ch1 = channels->at(channelIndex - 1);
 
-    auto prom    = promiseFuncWrapper(env);
+    auto prom    = promiseFuncWrapper<std::string>(env);
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
@@ -309,7 +309,7 @@ Napi::Value StageSwapChannel(const Napi::CallbackInfo& info, CasparCgInstanceDat
     auto ch1 = channels->at(channelIndex1 - 1);
     auto ch2 = channels->at(channelIndex2 - 1);
 
-    auto prom    = promiseFuncWrapper(env);
+    auto prom    = promiseFuncWrapper<std::string>(env);
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
@@ -353,7 +353,7 @@ Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData*
     auto ch1 = channels->at(channelIndex1 - 1);
     auto ch2 = channels->at(channelIndex2 - 1);
 
-    auto prom    = promiseFuncWrapper(env);
+    auto prom    = promiseFuncWrapper<std::string>(env);
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 

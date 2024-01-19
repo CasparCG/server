@@ -17,6 +17,7 @@ set(SOURCES
 		main.cpp
 		server.cpp
 
+		operations/consumer.cpp
 		operations/producer.cpp
 		operations/stage.cpp
 		operations/util.cpp
@@ -27,6 +28,7 @@ set(HEADERS
 		server.h
 
 		operations/base.h
+		operations/consumer.h
 		operations/producer.h
 		operations/stage.h
 		operations/promiseWrapper.h

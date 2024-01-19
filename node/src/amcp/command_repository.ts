@@ -5,6 +5,7 @@ import { registerDataCommands } from "./commands/data.js";
 import { registerMediaScannerCommands } from "./commands/mediaScanner.js";
 import { registerProducerCommands } from "./commands/producer.js";
 import { registerSystemCommands } from "./commands/system.js";
+import { registerConsumerCommands } from "./commands/consumer.js";
 
 export interface AMCPCommandContext {
     configuration: CasparCGConfiguration;
@@ -64,6 +65,7 @@ export class AMCPCommandRepository {
 
     constructor() {
         registerProducerCommands(this.#commands, this.#channelCommands);
+        registerConsumerCommands(this.#commands, this.#channelCommands);
         // TODO
 
         registerDataCommands(this.#commands, this.#channelCommands);

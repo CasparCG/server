@@ -187,6 +187,54 @@ struct server::impl
         return consumer->index();
     }
 
+    int add_consumer_from_tokens(const std::shared_ptr<core::video_channel>& channel,
+                                 int                                         layer_index,
+                                 std::vector<std::wstring>                   amcp_params)
+    {
+        core::diagnostics::scoped_call_context save;
+        core::diagnostics::call_context::for_thread().video_channel = channel->index();
+
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
+        for (auto& cc : *channels_) {
+            channels_vec.emplace_back(cc.raw_channel);
+        }
+
+        auto consumer = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec);
+        if (consumer == core::frame_consumer::empty()) {
+            return -1;
+        }
+
+        channel->output().add(consumer);
+
+        return consumer->index();
+    }
+
+    bool remove_consumer_by_port(int channel_index, int layer_index)
+    {
+        if (channel_index < 0 || channel_index >= channels_->size()) {
+            return false;
+        }
+        auto channel = channels_->at(channel_index);
+
+        return channel.raw_channel->output().remove(layer_index);
+    }
+    bool remove_consumer_by_params(int channel_index, std::vector<std::wstring> amcp_params)
+    {
+        if (channel_index < 0 || channel_index >= channels_->size()) {
+            return false;
+        }
+        auto channel = channels_->at(channel_index);
+
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
+        for (auto& cc : *channels_) {
+            channels_vec.emplace_back(cc.raw_channel);
+        }
+
+        auto index = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec)->index();
+
+        return channel.raw_channel->output().remove(index);
+    }
+
     inline core::frame_producer_dependencies
     get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel)
     {
@@ -275,6 +323,22 @@ int server::add_consumer_from_xml(int channel_index, const boost::property_tree:
 {
     return impl_->add_consumer_from_xml(channel_index, config);
 }
+
+int server::add_consumer_from_tokens(const std::shared_ptr<core::video_channel>& channel,
+                                     int                                         layer_index,
+                                     std::vector<std::wstring>                   amcp_params)
+{
+    return impl_->add_consumer_from_tokens(channel, layer_index, amcp_params);
+}
+bool server::remove_consumer_by_port(int channel_index, int layer_index)
+{
+    return impl_->remove_consumer_by_port(channel_index, layer_index);
+}
+bool server::remove_consumer_by_params(int channel_index, std::vector<std::wstring> amcp_params)
+{
+    return impl_->remove_consumer_by_params(channel_index, amcp_params);
+}
+
 int server::add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
 {
     return impl_->add_channel(format_desc_str, weak_osc_sender);
