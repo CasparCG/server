@@ -6,12 +6,24 @@ import { registerMediaScannerCommands } from "./commands/mediaScanner.js";
 import { registerProducerCommands } from "./commands/producer.js";
 import { registerSystemCommands } from "./commands/system.js";
 import { registerConsumerCommands } from "./commands/consumer.js";
+import { registerChannelCommands } from "./commands/channel.js";
+import { registerMixerCommands } from "./commands/mixer.js";
+import type { NativeTransform } from "../native.js";
+import type { PartialDeep } from "type-fest";
 
 export interface AMCPCommandContext {
     configuration: CasparCGConfiguration;
     shutdown: (restart: boolean) => void;
     osc: OscSender;
     channelCount: number;
+    deferedTransforms: Map<number, TransformTuple[]>;
+}
+
+export interface TransformTuple {
+    layerIndex: number;
+    fragment: PartialDeep<NativeTransform>;
+    duration: number;
+    tween: string;
 }
 
 export type AMCPCommandFunction = (
@@ -64,9 +76,11 @@ export class AMCPCommandRepository {
     readonly #channelCommands = new Map<string, AMCPCommandEntry>();
 
     constructor() {
+        registerChannelCommands(this.#commands, this.#channelCommands);
         registerProducerCommands(this.#commands, this.#channelCommands);
         registerConsumerCommands(this.#commands, this.#channelCommands);
         // TODO
+        registerMixerCommands(this.#commands, this.#channelCommands);
 
         registerDataCommands(this.#commands, this.#channelCommands);
         registerMediaScannerCommands(this.#commands, this.#channelCommands);

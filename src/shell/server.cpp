@@ -137,6 +137,8 @@ struct server::impl
         video_format_repository_.store(format);
     }
 
+    core::video_format_desc get_video_format_desc(std::wstring id) { return video_format_repository_.find(id); }
+
     int add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
     {
         auto format_desc = video_format_repository_.find(format_desc_str);
@@ -348,6 +350,7 @@ void server::add_video_format_desc(std::wstring id, core::video_format_desc form
 {
     impl_->add_video_format_desc(id, format);
 }
+core::video_format_desc server::get_video_format_desc(std::wstring id) { return impl_->get_video_format_desc(id); }
 
 spl::shared_ptr<core::frame_producer> server::create_producer(const std::shared_ptr<core::video_channel>& channel,
                                                               int                                         layer_index,

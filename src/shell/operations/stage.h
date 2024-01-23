@@ -12,3 +12,5 @@ Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
 
 Napi::Value StageSwapChannel(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
 Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
+
+Napi::Value GetLayerMixerProperties(const Napi::CallbackInfo& info);

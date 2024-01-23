@@ -17,6 +17,7 @@ set(SOURCES
 		main.cpp
 		server.cpp
 
+		operations/channel.cpp
 		operations/consumer.cpp
 		operations/producer.cpp
 		operations/stage.cpp
@@ -28,6 +29,7 @@ set(HEADERS
 		server.h
 
 		operations/base.h
+		operations/channel.h
 		operations/consumer.h
 		operations/producer.h
 		operations/stage.h

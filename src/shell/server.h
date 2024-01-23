@@ -58,6 +58,8 @@ class server final
 
     int  add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender);
     void add_video_format_desc(std::wstring id, core::video_format_desc format);
+    core::video_format_desc get_video_format_desc(std::wstring id);
+
     spl::shared_ptr<core::frame_producer> create_producer(const std::shared_ptr<core::video_channel>& channel,
                                                           int                                         layer_index,
                                                           std::vector<std::wstring>                   amcp_params);

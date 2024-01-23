@@ -173,8 +173,8 @@ export class AMCPProtocolStrategy {
             let jsCommand: AMCPCommand2 | null | undefined;
             if (channelIds) {
                 jsCommand = this.#commandRepository.createChannelCommand(
+                    client,
                     commandName,
-                    client.address,
                     channelIds.channelIndex,
                     channelIds.layerIndex ?? null,
                     tokens
@@ -182,8 +182,8 @@ export class AMCPProtocolStrategy {
             }
             if (!jsCommand) {
                 jsCommand = this.#commandRepository.createCommand(
+                    client,
                     commandName,
-                    client.address,
                     channelIds ? [channelIds.channelSpec, ...tokens] : tokens
                 );
             }

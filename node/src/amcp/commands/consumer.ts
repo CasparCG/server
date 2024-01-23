@@ -18,10 +18,9 @@ function replacePlaceholders(
     placeholder: string,
     replacement: string
 ): string[] {
-    // TODO
-    // return params.map(param => {
-    //     // param.replace()
-    // })
+    if (!placeholder) return params;
+
+    return params.map((param) => param.replace(placeholder, replacement));
 }
 
 export function registerConsumerCommands(

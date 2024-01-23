@@ -134,6 +134,7 @@ const context: AMCPCommandContext = {
     },
     osc: oscSender,
     channelCount: config.channels.length,
+    deferedTransforms: new Map(),
 };
 
 const locks = new ChannelLocks("");

@@ -25,8 +25,8 @@ struct tfsnContext
 
 // this will give the promise function (promFunc) the resolve and reject
 // functions the promise function can then be used to do the main work
-template <typename T>
-std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper(const Napi::Env env)
+template <typename T, typename Fn>
+std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper2(const Napi::Env env, const Fn func)
 {
     std::shared_ptr<tfsnContext<T>> context = std::make_shared<tfsnContext<T>>(env);
     std::shared_ptr<std::mutex>     mu      = std::make_shared<std::mutex>();
@@ -36,16 +36,10 @@ std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper(const N
                                       "TSFN",
                                       0,
                                       1,
-                                      [context, mu](Napi::Env env) {
+                                      [context, mu, func](Napi::Env env) {
                                           std::lock_guard<std::mutex> lock(*mu);
                                           if (context->resolve) {
-                                              Napi::Value value;
-                                              if constexpr (std::is_same<int, T>::value)
-                                                  value = Napi::Number::New(env, context->data);
-                                              else
-                                                  value = Napi::String::New(env, context->data);
-
-                                              context->deferred.Resolve(value);
+                                              context->deferred.Resolve(func(env, context->data));
                                           } else {
                                               context->deferred.Reject(Napi::Error::New(env, context->error).Value());
                                           }
@@ -73,4 +67,19 @@ std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper(const N
     };
 
     return std::make_tuple(context->deferred.Promise(), resolve, reject);
+}
+
+// this will give the promise function (promFunc) the resolve and reject
+// functions the promise function can then be used to do the main work
+template <typename T>
+std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper(const Napi::Env env)
+{
+    auto convert = [](const Napi::Env& env, const T& data) {
+        if constexpr (std::is_same<int, T>::value)
+            return Napi::Number::New(env, data);
+        else
+            return Napi::String::New(env, data);
+    };
+
+    return promiseFuncWrapper2<T, decltype(convert)>(env, convert);
 }
