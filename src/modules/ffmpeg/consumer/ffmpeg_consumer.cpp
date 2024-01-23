@@ -509,7 +509,7 @@ struct ffmpeg_consumer : public core::frame_consumer
             try {
                 std::map<std::string, std::string> options;
                 {
-                    static boost::regex opt_exp("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+                    static boost::regex opt_exp("-(?<NAME>[^\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
                     for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
                          it != boost::sregex_iterator();
                          ++it) {
