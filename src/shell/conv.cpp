@@ -1,5 +1,7 @@
 #include "./conv.h"
 
+#include <iostream>
+
 bool NapiObjectToBoostPropertyTree(const Napi::Env& env, const Napi::Object& object, boost::property_tree::wptree& tree)
 {
     auto property_names = object.GetPropertyNames();
@@ -47,4 +49,43 @@ void NapiArrayToStringVector(const Napi::Env& env, const Napi::Array& array, std
         auto str = static_cast<Napi::Value>(array[i]).ToString();
         result.emplace_back(caspar::u16(str.Utf8Value()));
     }
+}
+
+struct param_visitor : public boost::static_visitor<void>
+{
+    const Napi::Env& env;
+    Napi::Array&     o;
+    uint32_t         index;
+
+    param_visitor(const Napi::Env& env, Napi::Array& o)
+        : env(env)
+        , o(o)
+        , index(0)
+    {
+    }
+
+    void operator()(const bool value) { o.Set(index++, Napi::Boolean::New(env, value)); }
+    void operator()(const int32_t value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const uint32_t value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const int64_t value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const uint64_t value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const float value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const double value) { o.Set(index++, Napi::Number::New(env, value)); }
+    void operator()(const std::string& value) { o.Set(index++, Napi::String::New(env, value)); }
+    void operator()(const std::wstring& value) { o.Set(index++, Napi::String::New(env, caspar::u8(value))); }
+};
+
+bool MonitorStateToNapiObject(const Napi::Env& env, const caspar::core::monitor::state& state, Napi::Object& object)
+{
+    for (auto&& item : state) {
+        Napi::Array val = Napi::Array::New(env, item.second.size());
+
+        param_visitor param_visitor(env, val);
+        for (const auto& element : item.second) {
+            boost::apply_visitor(param_visitor, element);
+        }
+
+        object.Set(item.first, val);
+    }
+    return true;
 }

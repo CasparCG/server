@@ -5,12 +5,15 @@
 #include <common/forward.h>
 
 FORWARD1(caspar, class server);
+FORWARD1(caspar, class channel_state_emitter);
 
 struct CasparCgInstanceData
 {
     Napi::FunctionReference* unused_producer;
 
     std::unique_ptr<caspar::server> caspar_server;
+
+    std::shared_ptr<caspar::channel_state_emitter> osc_sender;
 };
 
 class PromiseAsyncWorker : public Napi::AsyncWorker

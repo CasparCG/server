@@ -535,40 +535,6 @@ std::wstring info_command(command_context& ctx)
     return replyString.str();
 }
 
-std::wstring info_config_command(command_context& ctx)
-{
-    std::wstringstream replyString;
-    // This is needed for backwards compatibility with old clients
-    replyString << L"201 INFO CONFIG OK\r\n";
-
-    pt::xml_writer_settings<std::wstring> w(' ', 3);
-    pt::xml_parser::write_xml(replyString, caspar::env::properties(), w);
-
-    replyString << L"\r\n";
-    return replyString.str();
-}
-
-std::wstring info_paths_command(command_context& ctx)
-{
-    boost::property_tree::wptree info;
-
-    info.add(L"paths.media-path", caspar::env::media_folder());
-    info.add(L"paths.log-path", caspar::env::log_folder());
-    info.add(L"paths.data-path", caspar::env::data_folder());
-    info.add(L"paths.template-path", caspar::env::template_folder());
-    info.add(L"paths.initial-path", caspar::env::initial_folder() + L"/");
-
-    std::wstringstream replyString;
-    // This is needed for backwards compatibility with old clients
-    replyString << L"201 INFO PATHS OK\r\n";
-
-    pt::xml_writer_settings<std::wstring> w(' ', 3);
-    pt::xml_parser::write_xml(replyString, info, w);
-
-    replyString << L"\r\n";
-    return replyString.str();
-}
-
 std::wstring gl_info_command(command_context& ctx)
 {
     auto device = ctx.static_context->ogl_device.lock();
@@ -616,7 +582,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
     repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
-    repo->register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
+
     repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
     repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 }

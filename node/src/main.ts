@@ -102,7 +102,10 @@ const config: CasparCGConfiguration = {
 };
 
 console.log(Native);
-Native.init(config);
+Native.init(config, (channelId: number, newState: any) => {
+    // TODO
+    console.log("state", Date.now(), channelId, newState);
+});
 
 for (const videoMode of config.videoModes) {
     Native.ConfigAddCustomVideoFormat(videoMode);

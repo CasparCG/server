@@ -124,7 +124,7 @@ struct server::impl
 
     core::video_format_desc get_video_format_desc(std::wstring id) { return video_format_repository_.find(id); }
 
-    int add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
+    int add_channel(std::wstring format_desc_str, std::weak_ptr<channel_state_emitter> weak_osc_sender)
     {
         auto format_desc = video_format_repository_.find(format_desc_str);
         if (format_desc.format == video_format::invalid)
@@ -292,7 +292,7 @@ bool server::remove_consumer_by_params(int channel_index, std::vector<std::wstri
     return impl_->remove_consumer_by_params(channel_index, amcp_params);
 }
 
-int server::add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender)
+int server::add_channel(std::wstring format_desc_str, std::weak_ptr<channel_state_emitter> weak_osc_sender)
 {
     return impl_->add_channel(format_desc_str, weak_osc_sender);
 }

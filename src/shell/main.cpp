@@ -54,6 +54,7 @@
 
 #include "napi.h"
 
+#include "./channel_state.h"
 #include "./conv.h"
 #include "./operations/base.h"
 #include "./operations/channel.h"
@@ -133,6 +134,19 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
+    if (info.Length() >= 2) {
+        if (!info[1].IsFunction()) {
+            Napi::Error::New(env, "Expected callback for state updates").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+
+        auto callback = info[1].As<Napi::Function>();
+
+        // TODO - cleanup if something throws
+        instance_data->osc_sender = create_channel_state_emitter(env, callback);
+        CASPAR_LOG(info) << "has sender " << !!instance_data->osc_sender;
+    }
+
     auto configuration = info[0].As<Napi::Object>();
 
     using namespace caspar;
@@ -206,6 +220,7 @@ Napi::Value StopServer(const Napi::CallbackInfo& info)
     }
 
     instance_data->caspar_server = nullptr;
+    instance_data->osc_sender    = nullptr;
 
     return env.Null();
 }
@@ -273,9 +288,8 @@ Napi::Value AddChannel(const Napi::CallbackInfo& info)
 
     // TODO - calling this once amcp has begun is not safe
 
-    std::weak_ptr<caspar::channel_osc_sender> osc_sender; // TODO
-
-    int channel_index = instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()), osc_sender);
+    int channel_index =
+        instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()), instance_data->osc_sender);
     if (channel_index == -1) {
         Napi::Error::New(env, "Failed to add channel").ThrowAsJavaScriptException();
         return env.Null();

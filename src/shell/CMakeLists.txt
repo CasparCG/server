@@ -23,6 +23,7 @@ set(SOURCES
 		operations/stage.cpp
 		operations/util.cpp
 		conv.cpp
+		channel_state.cpp
 )
 set(HEADERS
 		platform_specific.h
@@ -37,6 +38,7 @@ set(HEADERS
 		operations/util.h
 
 		conv.h
+		channel_state.h
 )
 
 if (MSVC)

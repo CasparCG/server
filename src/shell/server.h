@@ -34,7 +34,7 @@
 
 namespace caspar {
 
-class channel_osc_sender
+class channel_state_emitter
 {
   public:
     virtual void send_state(int channel_index, const core::monitor::state& state) = 0;
@@ -54,7 +54,7 @@ class server final
     bool remove_consumer_by_port(int channel_index, int layer_index);
     bool remove_consumer_by_params(int channel_index, std::vector<std::wstring> amcp_params);
 
-    int  add_channel(std::wstring format_desc_str, std::weak_ptr<channel_osc_sender> weak_osc_sender);
+    int  add_channel(std::wstring format_desc_str, std::weak_ptr<channel_state_emitter> weak_osc_sender);
     void add_video_format_desc(std::wstring id, core::video_format_desc format);
     core::video_format_desc get_video_format_desc(std::wstring id);
 
