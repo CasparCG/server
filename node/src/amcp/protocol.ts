@@ -1,17 +1,14 @@
-import { Native } from "../native.js";
 import { tokenize } from "./tokenize.js";
 import type { ChannelLocks } from "./channel_locks.js";
 import type { Client } from "./client.js";
 import type {
-    AMCPCommand2,
+    NodeAMCPCommand,
     AMCPCommandContext,
     AMCPCommandRepository,
 } from "./command_repository.js";
 
-export type AMCPCommand = unknown;
-
 export class AMCPClientBatchInfo {
-    readonly #commands: AMCPCommand[] = [];
+    readonly #commands: NodeAMCPCommand[] = [];
     #inProgress = false;
     #requestId: string | null = null;
 
@@ -23,7 +20,7 @@ export class AMCPClientBatchInfo {
         return this.#inProgress;
     }
 
-    addCommand(cmd: AMCPCommand): void {
+    addCommand(cmd: NodeAMCPCommand): void {
         this.#commands.push(cmd);
     }
 
@@ -33,7 +30,7 @@ export class AMCPClientBatchInfo {
         this.#commands.length = 0;
     }
 
-    finish(): AMCPCommand[] {
+    finish(): NodeAMCPCommand[] {
         this.#inProgress = false;
 
         // commands_.clear();
@@ -144,13 +141,13 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            const batchCommand = this.#parse_batch_commands(
+            const batchResponse = await this.#parse_batch_commands(
                 client.batch,
                 tokens,
                 requestId
             );
-            if (batchCommand !== null) {
-                return batchCommand;
+            if (batchResponse !== null) {
+                return batchResponse;
             }
 
             // Fail if no more tokens.
@@ -170,9 +167,9 @@ export class AMCPProtocolStrategy {
 
             const channelIds = this.#parse_channel_id(tokens);
 
-            let jsCommand: AMCPCommand2 | null | undefined;
+            let command: NodeAMCPCommand | null | undefined;
             if (channelIds) {
-                jsCommand = this.#commandRepository.createChannelCommand(
+                command = this.#commandRepository.createChannelCommand(
                     client,
                     commandName,
                     channelIds.channelIndex,
@@ -180,42 +177,10 @@ export class AMCPProtocolStrategy {
                     tokens
                 );
             }
-            if (!jsCommand) {
-                jsCommand = this.#commandRepository.createCommand(
+            if (!command) {
+                command = this.#commandRepository.createCommand(
                     client,
                     commandName,
-                    channelIds ? [channelIds.channelSpec, ...tokens] : tokens
-                );
-            }
-
-            if (jsCommand) {
-                // TODO - this is ignoring batches, and other things
-
-                const line = await jsCommand.command(this.#context, jsCommand);
-
-                return {
-                    status: AMCPCommandError.no_error,
-                    requestId,
-                    commandName,
-                    lines: [line],
-                };
-            }
-
-            let command: AMCPCommand | undefined;
-
-            if (channelIds) {
-                command = new Native.AMCPCommand(
-                    commandName,
-                    channelIds.channelIndex ?? -1,
-                    channelIds.layerIndex ?? -1,
-                    tokens
-                );
-            }
-            if (!command) {
-                command = new Native.AMCPCommand(
-                    commandName,
-                    -1,
-                    -1,
                     channelIds ? [channelIds.channelSpec, ...tokens] : tokens
                 );
             }
@@ -244,8 +209,8 @@ export class AMCPProtocolStrategy {
             if (client.batch.inProgress) {
                 client.batch.addCommand(command);
             } else {
-                // TODO: what should go here?
-                // lines = Native.executeCommandBatch([command]);
+                const line = await command.command(this.#context, command);
+                lines = [line];
             }
 
             return {
@@ -308,15 +273,16 @@ export class AMCPProtocolStrategy {
         return request_id;
     }
 
-    #parse_batch_commands(
+    async #parse_batch_commands(
         batch: AMCPClientBatchInfo,
         tokens: string[],
         requestId: string | null
-    ): {
+    ): Promise<{
         status: AMCPCommandError;
         requestId: string | null;
         commandName: string | undefined;
-    } | null {
+        lines?: string[];
+    } | null> {
         const commandName = tokens[0].toLocaleUpperCase();
         if (commandName == "COMMIT") {
             if (!batch.inProgress) {
@@ -327,13 +293,18 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            // TODO: todo what should go here?
-            // Native.executeCommandBatch(batch.finish(), batch.requestId);
+            let lines: string[] = [];
+
+            // TODO: this is probably not atomic enough, and could have the wrong order?
+            for (const command of batch.finish()) {
+                lines.push(await command.command(this.#context, command));
+            }
 
             return {
                 status: AMCPCommandError.no_error,
                 requestId,
                 commandName,
+                lines,
             };
         }
 

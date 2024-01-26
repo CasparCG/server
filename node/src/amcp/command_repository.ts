@@ -46,7 +46,7 @@ export interface AMCPCommandBase {
     parameters: string[];
 }
 
-export interface AMCPCommand2 extends AMCPCommandBase {
+export interface NodeAMCPCommand extends AMCPCommandBase {
     command: AMCPCommandFunction;
 }
 
@@ -57,7 +57,7 @@ function make_cmd(
     channelIndex: number | null,
     layerIndex: number | null,
     tokens: string[]
-): AMCPCommand2 | null {
+): NodeAMCPCommand | null {
     if (tokens.length < cmd.minNumParams) return null;
 
     return {
@@ -93,7 +93,7 @@ export class AMCPCommandRepository {
         channelIndex: number,
         layerIndex: number | null,
         tokens: string[]
-    ): AMCPCommand2 | null {
+    ): NodeAMCPCommand | null {
         // TODO - verify channel index
 
         return this.#findCommand(
@@ -110,7 +110,7 @@ export class AMCPCommandRepository {
         client: Client,
         name: string,
         tokens: string[]
-    ): AMCPCommand2 | null {
+    ): NodeAMCPCommand | null {
         return this.#findCommand(
             this.#commands,
             client,
@@ -128,7 +128,7 @@ export class AMCPCommandRepository {
         channelIndex: number | null,
         layerIndex: number | null,
         tokens: string[]
-    ): AMCPCommand2 | null {
+    ): NodeAMCPCommand | null {
         const subcommand = tokens[0];
         if (subcommand) {
             const fullname = `${name} ${subcommand}`;
