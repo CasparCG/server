@@ -496,7 +496,11 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
 
     auto command = info[0].As<Napi::String>().Utf8Value();
 
-    if (command == "load") {
+    if (command == "play") {
+        return StagePlay(info, instance_data);
+    } else if (command == "preview") {
+        return StagePreview(info, instance_data);
+    } else if (command == "load") {
         return StageLoad(info, instance_data);
     } else if (command == "pause") {
         return StagePause(info, instance_data);

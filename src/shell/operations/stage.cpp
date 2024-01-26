@@ -70,6 +70,49 @@ parseChannelLayerArguments(const Napi::CallbackInfo& info, CasparCgInstanceData*
         channels, channelIndex, layerIndex, channel, std::get<0>(prom), std::get<1>(prom), std::get<2>(prom));
 }
 
+Napi::Value StagePlay(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArguments(info, instance_data, 0);
+    if (!parsedArgs)
+        return env.Null();
+
+    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+        try {
+            parsedArgs->channel.stage->play(parsedArgs->layerIndex).get();
+
+            parsedArgs->resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
+}
+Napi::Value StagePreview(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArguments(info, instance_data, 0);
+    if (!parsedArgs)
+        return env.Null();
+
+    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+        try {
+            parsedArgs->channel.stage->preview(parsedArgs->layerIndex).get();
+
+            parsedArgs->resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
+}
+
 Napi::Value StageLoad(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
 {
     Napi::Env env = info.Env();
