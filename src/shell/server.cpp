@@ -44,8 +44,6 @@
 
 #include <modules/image/consumer/image_consumer.h>
 
-#include <protocol/amcp/AMCPCommandsImpl.h>
-#include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/amcp_shared.h>
 
 #include <boost/algorithm/string.hpp>
@@ -64,9 +62,6 @@ struct server::impl
 {
     video_format_repository                                       video_format_repository_;
     accelerator::accelerator                                      accelerator_;
-    std::shared_ptr<amcp::amcp_command_repository>                amcp_command_repo_;
-    std::shared_ptr<amcp::amcp_command_repository_wrapper>        amcp_command_repo_wrapper_;
-    std::shared_ptr<amcp::command_context_factory>                amcp_context_factory_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
@@ -86,21 +81,13 @@ struct server::impl
 
     void start()
     {
-        setup_amcp_command_repo();
-        CASPAR_LOG(info) << L"Initialized command repository.";
-
-        module_dependencies dependencies(
-            cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_wrapper_);
+        module_dependencies dependencies(cg_registry_, producer_registry_, consumer_registry_);
         initialize_modules(dependencies);
         CASPAR_LOG(info) << L"Initialized modules.";
     }
 
     ~impl()
     {
-        amcp_command_repo_wrapper_.reset();
-        amcp_command_repo_.reset();
-        amcp_context_factory_.reset();
-
         destroy_producers_synchronously();
         destroy_consumers_synchronously();
         channels_->clear();
@@ -288,37 +275,13 @@ struct server::impl
 
         return core::create_transition_producer(destination, info);
     }
-
-    void setup_amcp_command_repo()
-    {
-        amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(channels_);
-
-        auto ogl_device = accelerator_.get_device();
-        auto ctx        = std::make_shared<amcp::amcp_command_static_context>(video_format_repository_,
-                                                                       cg_registry_,
-                                                                       producer_registry_,
-                                                                       consumer_registry_,
-                                                                       amcp_command_repo_,
-                                                                       ogl_device);
-
-        amcp_context_factory_ = std::make_shared<amcp::command_context_factory>(ctx);
-
-        amcp_command_repo_wrapper_ =
-            std::make_shared<amcp::amcp_command_repository_wrapper>(amcp_command_repo_, amcp_context_factory_);
-
-        amcp::register_commands(amcp_command_repo_wrapper_);
-    }
 };
 
 server::server()
     : impl_(new impl())
 {
 }
-void                                                     server::start() { impl_->start(); }
-spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const
-{
-    return spl::make_shared_ptr(impl_->amcp_command_repo_);
-}
+void                                                           server::start() { impl_->start(); }
 spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& server::get_channels() const { return impl_->channels_; }
 
 int server::add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)

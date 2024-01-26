@@ -21,7 +21,6 @@
 #pragma once
 
 #include "../interop/Processing.NDI.Lib.h"
-#include "protocol/amcp/amcp_command_context.h"
 #include <string>
 
 namespace caspar { namespace newtek { namespace ndi {
@@ -32,6 +31,6 @@ std::map<std::string, NDIlib_source_t> get_current_sources();
 void                                   not_initialized();
 void                                   not_installed();
 
-std::wstring list_command(protocol::amcp::command_context& ctx);
+// std::wstring list_command(protocol::amcp::command_context& ctx);
 
 }}} // namespace caspar::newtek::ndi

@@ -244,8 +244,8 @@ export class AMCPProtocolStrategy {
             if (client.batch.inProgress) {
                 client.batch.addCommand(command);
             } else {
-                // TODO: correct queue
-                lines = Native.executeCommandBatch([command]);
+                // TODO: what should go here?
+                // lines = Native.executeCommandBatch([command]);
             }
 
             return {
@@ -327,8 +327,8 @@ export class AMCPProtocolStrategy {
                 };
             }
 
-            // TODO: correct queue
-            Native.executeCommandBatch(batch.finish(), batch.requestId);
+            // TODO: todo what should go here?
+            // Native.executeCommandBatch(batch.finish(), batch.requestId);
 
             return {
                 status: AMCPCommandError.no_error,

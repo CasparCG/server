@@ -138,21 +138,21 @@ void not_initialized()
     CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unable to initialize NDI on this system."));
 }
 
-std::wstring list_command(protocol::amcp::command_context& ctx)
-{
-    auto ndi_lib = load_library();
-    if (!ndi_lib) {
-        return L"501 NDI LIST FAILED\r\n";
-    }
-    std::wstringstream replyString;
-    replyString << L"200 NDI LIST OK\r\n";
-    uint32_t               no_sources;
-    const NDIlib_source_t* sources = ndi_lib->NDIlib_find_get_current_sources(*(find_instance.get()), &no_sources);
-    for (uint32_t i = 0; i < no_sources; i++) {
-        replyString << i + 1 << L" \"" << sources[i].p_ndi_name << L"\" " << sources[i].p_url_address << L"\r\n";
-    }
-    replyString << L"\r\n";
-    return replyString.str();
-}
+// std::wstring list_command(protocol::amcp::command_context& ctx)
+// {
+//     auto ndi_lib = load_library();
+//     if (!ndi_lib) {
+//         return L"501 NDI LIST FAILED\r\n";
+//     }
+//     std::wstringstream replyString;
+//     replyString << L"200 NDI LIST OK\r\n";
+//     uint32_t               no_sources;
+//     const NDIlib_source_t* sources = ndi_lib->NDIlib_find_get_current_sources(*(find_instance.get()), &no_sources);
+//     for (uint32_t i = 0; i < no_sources; i++) {
+//         replyString << i + 1 << L" \"" << sources[i].p_ndi_name << L"\" " << sources[i].p_url_address << L"\r\n";
+//     }
+//     replyString << L"\r\n";
+//     return replyString.str();
+// }
 
 }}} // namespace caspar::newtek::ndi

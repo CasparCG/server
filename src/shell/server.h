@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include <protocol/amcp/amcp_command_repository.h>
-
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
+
+#include <protocol/amcp/amcp_shared.h>
 
 #include <functional>
 #include <memory>
@@ -46,7 +46,6 @@ class server final
   public:
     explicit server();
     void                                                           start();
-    spl::shared_ptr<protocol::amcp::amcp_command_repository>       get_amcp_command_repository() const;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& get_channels() const;
 
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);

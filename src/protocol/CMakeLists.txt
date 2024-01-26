@@ -2,20 +2,10 @@ cmake_minimum_required (VERSION 3.16)
 project (protocol)
 
 set(SOURCES
-		amcp/AMCPCommandQueue.cpp
-		amcp/AMCPCommandsImpl.cpp
-		amcp/amcp_command_repository.cpp
-		amcp/amcp_command_repository_wrapper.cpp
 )
 
 set(HEADERS
-		amcp/AMCPCommand.h
-		amcp/AMCPCommandQueue.h
-		amcp/AMCPCommandsImpl.h
-		amcp/amcp_command_repository.h
-		amcp/amcp_command_repository_wrapper.h
 		amcp/amcp_shared.h
-		amcp/amcp_command_context.h
 
 		StdAfx.h
 )
