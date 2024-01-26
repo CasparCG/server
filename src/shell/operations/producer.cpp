@@ -116,7 +116,7 @@ Napi::Value CreateProducer(const Napi::CallbackInfo& info)
     // TODO - in thread?
 
     try {
-        auto new_producer = instance_data->caspar_server->create_producer(channel.raw_channel, layer_index, parameters);
+        auto new_producer = instance_data->caspar_server->create_producer(channel, layer_index, parameters);
 
         return WrapProducer(env, instance_data, new_producer);
     } catch (...) {
@@ -177,8 +177,8 @@ Napi::Value CreateStingTransition(const Napi::CallbackInfo& info)
     }
 
     try {
-        auto transition = instance_data->caspar_server->create_sting_transition(
-            channel.raw_channel, layer_index, new_producer, parsed_props);
+        auto transition =
+            instance_data->caspar_server->create_sting_transition(channel, layer_index, new_producer, parsed_props);
 
         return WrapProducer(env, instance_data, transition);
 
@@ -265,8 +265,8 @@ Napi::Value CreateBasicTransition(const Napi::CallbackInfo& info)
     }
 
     try {
-        auto transition = instance_data->caspar_server->create_basic_transition(
-            channel.raw_channel, layer_index, new_producer, parsed_props);
+        auto transition =
+            instance_data->caspar_server->create_basic_transition(channel, layer_index, new_producer, parsed_props);
 
         return WrapProducer(env, instance_data, transition);
 

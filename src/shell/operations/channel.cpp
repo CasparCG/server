@@ -6,6 +6,9 @@
 
 #include <common/utf.h>
 
+#include <core/producer/stage.h>
+#include <core/video_channel.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -122,9 +125,9 @@ Napi::Value SetChannelFormat(const Napi::CallbackInfo& info)
     auto reject  = std::get<2>(prom);
 
     // TODO - is this the correct thread?
-    channel.tmp_executor_->begin_invoke([instance_data, channel, format_desc, resolve, reject] {
+    channel->tmp_executor_->begin_invoke([instance_data, channel, format_desc, resolve, reject] {
         try {
-            channel.raw_channel->stage()->video_format_desc(format_desc);
+            channel->stage().video_format_desc(format_desc);
 
             resolve("");
         } catch (...) {

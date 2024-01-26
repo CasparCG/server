@@ -304,9 +304,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { layers_.clear(); });
     }
 
-    std::future<void> swap_layers(const std::shared_ptr<stage>& other, bool swap_transforms)
+    std::future<void> swap_layers(const stage& other, bool swap_transforms)
     {
-        auto other_impl = other->impl_;
+        auto& other_impl = other.impl_;
 
         if (other_impl.get() == this) {
             return make_ready_future();
@@ -335,9 +335,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         });
     }
 
-    std::future<void> swap_layer(int index, int other_index, const std::shared_ptr<stage>& other, bool swap_transforms)
+    std::future<void> swap_layer(int index, int other_index, const stage& other, bool swap_transforms)
     {
-        auto other_impl = other->impl_;
+        auto& other_impl = other.impl_;
 
         if (other_impl.get() == this)
             return swap_layer(index, other_index, swap_transforms);
@@ -357,9 +357,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return invoke_both(other, func);
     }
 
-    std::future<void> invoke_both(const std::shared_ptr<stage>& other, std::function<void()> func)
+    std::future<void> invoke_both(const stage& other, std::function<void()> func)
     {
-        auto other_impl = other->impl_;
+        auto& other_impl = other.impl_;
 
         if (other_impl->channel_index_ < channel_index_) {
             return other_impl->executor_.begin_invoke([=] { executor_.invoke(func); });
@@ -439,7 +439,7 @@ std::future<void> stage::play(int index) { return impl_->play(index); }
 std::future<void> stage::stop(int index) { return impl_->stop(index); }
 std::future<void> stage::clear(int index) { return impl_->clear(index); }
 std::future<void> stage::clear() { return impl_->clear(); }
-std::future<void> stage::swap_layers(const std::shared_ptr<stage>& other, bool swap_transforms)
+std::future<void> stage::swap_layers(const stage& other, bool swap_transforms)
 {
     return impl_->swap_layers(other, swap_transforms);
 }
@@ -447,8 +447,7 @@ std::future<void> stage::swap_layer(int index, int other_index, bool swap_transf
 {
     return impl_->swap_layer(index, other_index, swap_transforms);
 }
-std::future<void>
-stage::swap_layer(int index, int other_index, const std::shared_ptr<stage>& other, bool swap_transforms)
+std::future<void> stage::swap_layer(int index, int other_index, const stage& other, bool swap_transforms)
 {
     return impl_->swap_layer(index, other_index, other, swap_transforms);
 }

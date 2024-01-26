@@ -9,6 +9,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/video_channel.h>
 
 Napi::Value AddConsumer(const Napi::CallbackInfo& info)
 {
@@ -52,10 +53,9 @@ Napi::Value AddConsumer(const Napi::CallbackInfo& info)
     auto reject  = std::get<2>(prom);
 
     // TODO - is this the correct thread?
-    channel.tmp_executor_->begin_invoke([instance_data, channel, layer_index, parameters, resolve, reject] {
+    channel->tmp_executor_->begin_invoke([instance_data, channel, layer_index, parameters, resolve, reject] {
         try {
-            auto index =
-                instance_data->caspar_server->add_consumer_from_tokens(channel.raw_channel, layer_index, parameters);
+            auto index = instance_data->caspar_server->add_consumer_from_tokens(channel, layer_index, parameters);
 
             resolve(index);
         } catch (...) {

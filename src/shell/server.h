@@ -24,11 +24,10 @@
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
 
-#include <protocol/amcp/amcp_shared.h>
-
 #include <functional>
 #include <memory>
 
+#include <core/monitor/monitor.h>
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -45,8 +44,8 @@ class server final
 {
   public:
     explicit server();
-    void                                                           start();
-    spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& get_channels() const;
+    void                                                                start();
+    spl::shared_ptr<std::vector<spl::shared_ptr<core::video_channel>>>& get_channels() const;
 
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
     int  add_consumer_from_tokens(const std::shared_ptr<core::video_channel>& channel,

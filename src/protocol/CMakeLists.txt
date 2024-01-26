@@ -5,8 +5,6 @@ set(SOURCES
 )
 
 set(HEADERS
-		amcp/amcp_shared.h
-
 		StdAfx.h
 )
 

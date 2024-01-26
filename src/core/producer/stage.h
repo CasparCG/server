@@ -94,9 +94,9 @@ class stage final
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params);
     std::future<void>         clear(int index);
     std::future<void>         clear();
-    std::future<void>         swap_layers(const std::shared_ptr<stage>& other, bool swap_transforms);
+    std::future<void>         swap_layers(const stage& other, bool swap_transforms);
     std::future<void>         swap_layer(int index, int other_index, bool swap_transforms);
-    std::future<void> swap_layer(int index, int other_index, const std::shared_ptr<stage>& other, bool swap_transforms);
+    std::future<void>         swap_layer(int index, int other_index, const stage& other, bool swap_transforms);
 
     core::monitor::state state() const;
 

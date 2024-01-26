@@ -37,14 +37,13 @@
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/stage.h>
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 
 #include <modules/image/consumer/image_consumer.h>
-
-#include <protocol/amcp/amcp_shared.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
@@ -56,16 +55,15 @@
 
 namespace caspar {
 using namespace core;
-using namespace protocol;
 
 struct server::impl
 {
-    video_format_repository                                       video_format_repository_;
-    accelerator::accelerator                                      accelerator_;
-    spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
-    spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
-    spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
-    spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
+    video_format_repository                                            video_format_repository_;
+    accelerator::accelerator                                           accelerator_;
+    spl::shared_ptr<std::vector<spl::shared_ptr<core::video_channel>>> channels_;
+    spl::shared_ptr<core::cg_producer_registry>                        cg_registry_;
+    spl::shared_ptr<core::frame_producer_registry>                     producer_registry_;
+    spl::shared_ptr<core::frame_consumer_registry>                     consumer_registry_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -144,8 +142,7 @@ struct server::impl
                                                 }
                                             });
 
-        const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
-        channels_->emplace_back(channel, channel->stage(), lifecycle_key);
+        channels_->push_back(std::move(channel));
 
         return channel_id;
     }
@@ -159,19 +156,16 @@ struct server::impl
         auto channel = channels_->at(channel_index);
 
         core::diagnostics::scoped_call_context save;
-        core::diagnostics::call_context::for_thread().video_channel = channel.raw_channel->index();
+        core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
-        for (auto& cc : *channels_) {
-            channels_vec.emplace_back(cc.raw_channel);
-        }
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
 
         auto consumer = consumer_registry_->create_consumer(type, config, video_format_repository_, channels_vec);
         if (consumer == core::frame_consumer::empty()) {
             return -1;
         }
 
-        channel.raw_channel->output().add(consumer);
+        channel->output().add(consumer);
 
         return consumer->index();
     }
@@ -183,10 +177,7 @@ struct server::impl
         core::diagnostics::scoped_call_context save;
         core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
-        for (auto& cc : *channels_) {
-            channels_vec.emplace_back(cc.raw_channel);
-        }
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
 
         auto consumer = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec);
         if (consumer == core::frame_consumer::empty()) {
@@ -205,7 +196,7 @@ struct server::impl
         }
         auto channel = channels_->at(channel_index);
 
-        return channel.raw_channel->output().remove(layer_index);
+        return channel->output().remove(layer_index);
     }
     bool remove_consumer_by_params(int channel_index, std::vector<std::wstring> amcp_params)
     {
@@ -214,28 +205,22 @@ struct server::impl
         }
         auto channel = channels_->at(channel_index);
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
-        for (auto& cc : *channels_) {
-            channels_vec.emplace_back(cc.raw_channel);
-        }
+        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
 
         auto index = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec)->index();
 
-        return channel.raw_channel->output().remove(index);
+        return channel->output().remove(index);
     }
 
     inline core::frame_producer_dependencies
     get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel)
     {
-        std::vector<spl::shared_ptr<core::video_channel>> channels;
-        for (auto& cc : *channels_) {
-            channels.emplace_back(cc.raw_channel);
-        }
+        std::vector<spl::shared_ptr<core::video_channel>> channels = *channels_;
 
         return core::frame_producer_dependencies(channel->frame_factory(),
                                                  channels,
                                                  video_format_repository_,
-                                                 channel->stage()->video_format_desc(),
+                                                 channel->stage().video_format_desc(),
                                                  producer_registry_);
     }
 
@@ -281,8 +266,11 @@ server::server()
     : impl_(new impl())
 {
 }
-void                                                           server::start() { impl_->start(); }
-spl::shared_ptr<std::vector<protocol::amcp::channel_context>>& server::get_channels() const { return impl_->channels_; }
+void                                                                server::start() { impl_->start(); }
+spl::shared_ptr<std::vector<spl::shared_ptr<core::video_channel>>>& server::get_channels() const
+{
+    return impl_->channels_;
+}
 
 int server::add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)
 {

@@ -7,30 +7,32 @@
 
 #include <core/frame/frame_transform.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/stage.h>
+#include <core/video_channel.h>
 
 #include <optional>
 
 struct ParsedChannelLayerArguments
 {
-    const caspar::spl::shared_ptr<std::vector<caspar::protocol::amcp::channel_context>> channels;
+    const caspar::spl::shared_ptr<std::vector<caspar::spl::shared_ptr<caspar::core::video_channel>>> channels;
 
     const int channelIndex;
     const int layerIndex;
 
-    const caspar::protocol::amcp::channel_context& channel;
+    const caspar::spl::shared_ptr<caspar::core::video_channel>& channel;
 
     Napi::Promise            promise;
     resolveFunc<std::string> resolve;
     rejectFunc               reject;
 
     ParsedChannelLayerArguments(
-        const caspar::spl::shared_ptr<std::vector<caspar::protocol::amcp::channel_context>> channels,
-        const int                                                                           channelIndex,
-        const int                                                                           layerIndex,
-        const caspar::protocol::amcp::channel_context&                                      channel,
-        Napi::Promise                                                                       promise,
-        resolveFunc<std::string>                                                            resolve,
-        rejectFunc                                                                          reject)
+        const caspar::spl::shared_ptr<std::vector<caspar::spl::shared_ptr<caspar::core::video_channel>>> channels,
+        const int                                                                                        channelIndex,
+        const int                                                                                        layerIndex,
+        const caspar::spl::shared_ptr<caspar::core::video_channel>&                                      channel,
+        Napi::Promise                                                                                    promise,
+        resolveFunc<std::string>                                                                         resolve,
+        rejectFunc                                                                                       reject)
         : channels(std::move(channels))
         , channelIndex(channelIndex)
         , layerIndex(layerIndex)
@@ -78,9 +80,9 @@ Napi::Value StagePlay(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
     if (!parsedArgs)
         return env.Null();
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs] {
         try {
-            parsedArgs->channel.stage->play(parsedArgs->layerIndex).get();
+            parsedArgs->channel->stage().play(parsedArgs->layerIndex).get();
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -99,9 +101,9 @@ Napi::Value StagePreview(const Napi::CallbackInfo& info, CasparCgInstanceData* i
     if (!parsedArgs)
         return env.Null();
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs] {
         try {
-            parsedArgs->channel.stage->preview(parsedArgs->layerIndex).get();
+            parsedArgs->channel->stage().preview(parsedArgs->layerIndex).get();
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -136,9 +138,9 @@ Napi::Value StageLoad(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
         return env.Null();
     }
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs, producer, preview, autoPlay] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs, producer, preview, autoPlay] {
         try {
-            parsedArgs->channel.stage->load(parsedArgs->layerIndex, producer, preview, autoPlay);
+            parsedArgs->channel->stage().load(parsedArgs->layerIndex, producer, preview, autoPlay);
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -158,9 +160,9 @@ Napi::Value StagePause(const Napi::CallbackInfo& info, CasparCgInstanceData* ins
     if (!parsedArgs)
         return env.Null();
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs] {
         try {
-            parsedArgs->channel.stage->pause(parsedArgs->layerIndex).get();
+            parsedArgs->channel->stage().pause(parsedArgs->layerIndex).get();
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -180,9 +182,9 @@ Napi::Value StageResume(const Napi::CallbackInfo& info, CasparCgInstanceData* in
     if (!parsedArgs)
         return env.Null();
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs] {
         try {
-            parsedArgs->channel.stage->resume(parsedArgs->layerIndex).get();
+            parsedArgs->channel->stage().resume(parsedArgs->layerIndex).get();
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -202,9 +204,9 @@ Napi::Value StageStop(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
     if (!parsedArgs)
         return env.Null();
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs] {
         try {
-            parsedArgs->channel.stage->stop(parsedArgs->layerIndex).get();
+            parsedArgs->channel->stage().stop(parsedArgs->layerIndex).get();
 
             parsedArgs->resolve("");
         } catch (...) {
@@ -241,12 +243,12 @@ Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* ins
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
-    ch1.tmp_executor_->begin_invoke([=] {
+    ch1->tmp_executor_->begin_invoke([=] {
         try {
             if (layerIndex < 0) {
-                ch1.stage->clear().get();
+                ch1->stage().clear().get();
             } else {
-                ch1.stage->clear(layerIndex).get();
+                ch1->stage().clear(layerIndex).get();
             }
 
             resolve("");
@@ -271,10 +273,10 @@ Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* ins
 
 //     // TODO - reimplement this
 
-//     // ch1.tmp_executor_->begin_invoke([channels] {
+//     // ch1->tmp_executor_->begin_invoke([channels] {
 //     //     try {
 //     //         for (auto& ch : *channels) {
-//     //             ch.stage->clear().get();
+//     //             ch.stage().clear().get();
 //     //         }
 
 //     //         resolve("");
@@ -315,9 +317,9 @@ Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
     std::vector<std::wstring> parameters;
     NapiArrayToStringVector(env, raw_parameters, parameters);
 
-    parsedArgs->channel.tmp_executor_->begin_invoke([parsedArgs, parameters] {
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs, parameters] {
         try {
-            const auto result = parsedArgs->channel.stage->call(parsedArgs->layerIndex, parameters).get();
+            const auto result = parsedArgs->channel->stage().call(parsedArgs->layerIndex, parameters).get();
 
             parsedArgs->resolve(caspar::u8(result));
         } catch (...) {
@@ -357,9 +359,9 @@ Napi::Value StageSwapChannel(const Napi::CallbackInfo& info, CasparCgInstanceDat
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
-    ch1.tmp_executor_->begin_invoke([=] {
+    ch1->tmp_executor_->begin_invoke([=] {
         try {
-            ch1.stage->swap_layers(ch2.stage, swap_transforms).get();
+            ch1->stage().swap_layers(ch2->stage(), swap_transforms).get();
 
             resolve("");
         } catch (...) {
@@ -401,9 +403,9 @@ Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData*
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
-    ch1.tmp_executor_->begin_invoke([=] {
+    ch1->tmp_executor_->begin_invoke([=] {
         try {
-            ch1.stage->swap_layer(layerIndex1, layerIndex2, ch2.stage, swap_transforms);
+            ch1->stage().swap_layer(layerIndex1, layerIndex2, ch2->stage(), swap_transforms);
 
             resolve("");
         } catch (...) {
@@ -525,9 +527,9 @@ Napi::Value GetLayerMixerProperties(const Napi::CallbackInfo& info)
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
-    ch.tmp_executor_->begin_invoke([=] {
+    ch->tmp_executor_->begin_invoke([=] {
         try {
-            auto transform = ch.stage->get_current_transform(layerIndex).get();
+            auto transform = ch->stage().get_current_transform(layerIndex).get();
 
             resolve(transform);
         } catch (...) {
