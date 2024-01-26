@@ -101,10 +101,13 @@ const config: CasparCGConfiguration = {
     },
 };
 
+const channelStateStore = new Map<number, Record<string, any[]>>();
+
 console.log(Native);
-Native.init(config, (channelId: number, newState: any) => {
+Native.init(config, (channelId: number, newState: Record<string, any[]>) => {
+    newState["_generated"] = [Date.now()];
     // TODO
-    console.log("state", Date.now(), channelId, newState);
+    channelStateStore.set(channelId, newState);
 });
 
 for (const videoMode of config.videoModes) {
@@ -137,6 +140,7 @@ const context: AMCPCommandContext = {
     },
     osc: oscSender,
     channelCount: config.channels.length,
+    channelStateStore,
     deferedTransforms: new Map(),
 };
 

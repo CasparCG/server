@@ -460,81 +460,6 @@ std::wstring channel_grid_command(command_context& ctx)
 
 // Query Commands
 
-struct param_visitor : public boost::static_visitor<void>
-{
-    std::wstring path;
-    pt::wptree&  o;
-
-    template <typename T>
-    param_visitor(std::string path, T& o)
-        : path(u16(path))
-        , o(o)
-    {
-    }
-
-    void operator()(const bool value) { o.add(path, value); }
-
-    void operator()(const int32_t value) { o.add(path, value); }
-
-    void operator()(const uint32_t value) { o.add(path, value); }
-
-    void operator()(const int64_t value) { o.add(path, value); }
-
-    void operator()(const uint64_t value) { o.add(path, value); }
-
-    void operator()(const float value) { o.add(path, value); }
-
-    void operator()(const double value) { o.add(path, value); }
-
-    void operator()(const std::string& value) { o.add(path, u16(value)); }
-
-    void operator()(const std::wstring& value) { o.add(path, value); }
-};
-
-std::wstring info_channel_command(command_context& ctx)
-{
-    pt::wptree info;
-    pt::wptree channel_info;
-
-    auto state = ctx.channel.raw_channel->state();
-    for (const auto& p : state) {
-        const auto replaced = boost::algorithm::replace_all_copy(p.first, "/", ".");
-        // avoid digit-only nodes in XML
-        const auto path = boost::algorithm::replace_all_regex_copy(
-            replaced, boost::regex("\\.(.*?)\\.([0-9]*?)\\."), std::string(".$1.$1_$2."));
-        param_visitor param_visitor(path, channel_info);
-        for (const auto& element : p.second) {
-            boost::apply_visitor(param_visitor, element);
-        }
-    }
-
-    info.add_child(L"channel", channel_info);
-
-    std::wstringstream replyString;
-    // This is needed for backwards compatibility with old clients
-    replyString << L"201 INFO OK\r\n";
-
-    pt::xml_writer_settings<std::wstring> w(' ', 3);
-    pt::xml_parser::write_xml(replyString, info, w);
-
-    replyString << L"\r\n";
-    return replyString.str();
-}
-
-std::wstring info_command(command_context& ctx)
-{
-    std::wstringstream replyString;
-    // This is needed for backwards compatibility with old clients
-    replyString << L"200 INFO OK\r\n";
-
-    for (auto& ch : *ctx.channels) {
-        replyString << ch.raw_channel->index() << L" " << ch.raw_channel->stage()->video_format_desc().name
-                    << L" PLAYING\r\n";
-    }
-    replyString << L"\r\n";
-    return replyString.str();
-}
-
 std::wstring gl_info_command(command_context& ctx)
 {
     auto device = ctx.static_context->ogl_device.lock();
@@ -579,8 +504,6 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
-    repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
-    repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
 
     repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);

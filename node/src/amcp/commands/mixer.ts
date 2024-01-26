@@ -12,23 +12,11 @@ import {
     NativeTransform,
 } from "../../native.js";
 import type { PartialDeep } from "type-fest";
-import { discardError } from "./util.js";
-
-function isChannelIndexValid(
-    _context: AMCPCommandContext,
-    index: number | null
-): index is number {
-    // TODO - check if in range
-    return index !== null && index >= 0;
-}
-
-function isLayerIndexValid(
-    _context: AMCPCommandContext,
-    index: number | null
-): index is number {
-    // TODO - check if in range
-    return index !== null && index >= 0;
-}
+import {
+    discardError,
+    isChannelIndexValid,
+    isLayerIndexValid,
+} from "./util.js";
 
 export class TransformsApplier {
     readonly #context: AMCPCommandContext;

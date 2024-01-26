@@ -1,17 +1,6 @@
-import type {
-    AMCPCommandContext,
-    AMCPCommandEntry,
-} from "../command_repository.js";
+import type { AMCPCommandEntry } from "../command_repository.js";
 import { Native } from "../../native.js";
-import { discardError } from "./util.js";
-
-function isChannelIndexValid(
-    _context: AMCPCommandContext,
-    index: number | null
-): index is number {
-    // TODO - check if in range
-    return index !== null && index >= 0;
-}
+import { discardError, isChannelIndexValid } from "./util.js";
 
 function replacePlaceholders(
     params: string[],

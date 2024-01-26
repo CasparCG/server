@@ -8,25 +8,11 @@ import {
     containsParam,
     defaultBasicTransition,
     discardError,
+    isChannelIndexValid,
+    isLayerIndexValid,
     tryMatchBasicTransition,
     tryMatchStingTransition,
 } from "./util.js";
-
-function isChannelIndexValid(
-    _context: AMCPCommandContext,
-    index: number | null
-): index is number {
-    // TODO - check if in range
-    return index !== null && index >= 0;
-}
-
-function isLayerIndexValid(
-    _context: AMCPCommandContext,
-    index: number | null
-): index is number {
-    // TODO - check if in range
-    return index !== null && index >= 0;
-}
 
 export function registerProducerCommands(
     commands: Map<string, AMCPCommandEntry>,

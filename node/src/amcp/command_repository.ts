@@ -16,6 +16,7 @@ export interface AMCPCommandContext {
     shutdown: (restart: boolean) => void;
     osc: OscSender;
     channelCount: number;
+    channelStateStore: Map<number, Record<string, any[]>>;
     deferedTransforms: Map<number, TransformTuple[]>;
 }
 

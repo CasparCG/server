@@ -1,3 +1,5 @@
+import { AMCPCommandContext } from "../command_repository";
+
 export function discardError(val: any) {
     if (
         val instanceof Promise ||
@@ -225,4 +227,19 @@ export function tryMatchBasicTransition(
     }
 
     return result;
+}
+
+export function isChannelIndexValid(
+    context: AMCPCommandContext,
+    index: number | null
+): index is number {
+    return index !== null && index >= 0 && index < context.channelCount;
+}
+
+export function isLayerIndexValid(
+    _context: AMCPCommandContext,
+    index: number | null
+): index is number {
+    // TODO - check if in range
+    return index !== null && index >= 0;
 }

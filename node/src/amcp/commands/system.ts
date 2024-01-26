@@ -1,10 +1,12 @@
 import type { AMCPCommandEntry } from "../command_repository.js";
 import { Native } from "../../native.js";
 import { XMLBuilder } from "fast-xml-parser";
+import { isChannelIndexValid } from "./util.js";
+import ObjectPath from "object-path";
 
 export function registerSystemCommands(
     commands: Map<string, AMCPCommandEntry>,
-    _channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPCommandEntry>
 ): void {
     commands.set("VERSION", {
         func: async () => {
@@ -39,8 +41,58 @@ export function registerSystemCommands(
         minNumParams: 0,
     });
 
-    // repo->register_channel_command(L"Query Commands", L"INFO", info_channel_command, 0);
-    // repo->register_command(L"Query Commands", L"INFO", info_command, 0);
+    channelCommands.set("INFO", {
+        func: async (context, command) => {
+            if (!isChannelIndexValid(context, command.channelIndex)) {
+                return "401 INFO ERROR\r\n";
+            }
+
+            const channelState = context.channelStateStore.get(
+                command.channelIndex + 1
+            );
+            if (!channelState) {
+                return "401 INFO ERROR\r\n";
+            }
+
+            const channelObj: any = {};
+            for (const [key, values] of Object.entries(channelState)) {
+                const replaced = key.replace(/\//g, ".");
+                // avoid digit-only nodes in XML
+                const path = replaced.replace(
+                    /\.([^.]+)\.(\d+)\./g,
+                    ".$1.$1_$2."
+                );
+                // TODO - does this work, and it needs path cleanup
+                ObjectPath.set(channelObj, path, values);
+            }
+
+            const xmlBuilder = new XMLBuilder({
+                format: true,
+            });
+
+            const xmlStr = xmlBuilder.build({ channel: channelObj });
+
+            return `201 INFO OK\r\n${xmlStr}\r\n`;
+        },
+        minNumParams: 0,
+    });
+
+    commands.set("INFO", {
+        func: async (context) => {
+            const lines: string[] = ["200 INFO OK"];
+
+            for (let index = 1; index <= context.channelCount; index++) {
+                const state = context.channelStateStore.get(index);
+                const formatStr = state?.["format"]?.[0] ?? "UNKNOWN";
+
+                lines.push(`${index} ${formatStr} PLAYING`);
+            }
+
+            return lines.join("\r\n") + `\r\n`;
+        },
+        minNumParams: 0,
+    });
+
     // repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
 
     commands.set("INFO PATHS", {
