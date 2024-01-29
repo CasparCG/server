@@ -60,6 +60,7 @@
 #include "./operations/cg.h"
 #include "./operations/channel.h"
 #include "./operations/consumer.h"
+#include "./operations/mixer.h"
 #include "./operations/producer.h"
 #include "./operations/stage.h"
 #include "./operations/util.h"
@@ -442,6 +443,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "SetChannelFormat"), Napi::Function::New(env, SetChannelFormat));
     exports.Set(Napi::String::New(env, "GetLayerMixerProperties"), Napi::Function::New(env, GetLayerMixerProperties));
+    exports.Set(Napi::String::New(env, "ApplyTransforms"), Napi::Function::New(env, ApplyTransforms));
 
     exports.Set(Napi::String::New(env, "OpenDiag"), Napi::Function::New(env, OpenDiag));
     exports.Set(Napi::String::New(env, "FindCaseInsensitive"), Napi::Function::New(env, FindCaseInsensitive));

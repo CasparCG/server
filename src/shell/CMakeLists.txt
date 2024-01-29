@@ -20,6 +20,7 @@ set(SOURCES
 		operations/channel.cpp
 		operations/cg.cpp
 		operations/consumer.cpp
+		operations/mixer.cpp
 		operations/producer.cpp
 		operations/stage.cpp
 		operations/util.cpp
@@ -34,6 +35,7 @@ set(HEADERS
 		operations/channel.h
 		operations/cg.h
 		operations/consumer.h
+		operations/mixer.h
 		operations/producer.h
 		operations/stage.h
 		operations/promiseWrapper.h

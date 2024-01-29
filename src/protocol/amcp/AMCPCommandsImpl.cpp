@@ -142,43 +142,6 @@ std::wstring log_level_command(command_context& ctx)
 
 // Mixer Commands
 
-std::future<core::frame_transform> get_current_transform(command_context& ctx)
-{
-    return ctx.channel.stage->get_current_transform(ctx.layer_index());
-}
-
-template <typename Func>
-std::future<std::wstring> reply_value(command_context& ctx, const Func& extractor)
-{
-    auto transform = get_current_transform(ctx).share();
-
-    return std::async(std::launch::deferred, [transform, extractor]() -> std::wstring {
-        auto value = extractor(transform.get());
-        return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(value) + L"\r\n";
-    });
-}
-
-class transforms_applier
-{
-    std::vector<stage::transform_tuple_t> transforms_;
-    command_context&                      ctx_;
-    bool                                  defer_;
-
-  public:
-    explicit transforms_applier(command_context& ctx)
-        : ctx_(ctx)
-    {
-        defer_ = !ctx.parameters.empty() && boost::iequals(ctx.parameters.back(), L"DEFER");
-
-        if (defer_)
-            ctx.parameters.pop_back();
-    }
-
-    void add(stage::transform_tuple_t&& transform) { transforms_.push_back(std::move(transform)); }
-
-    void apply() {}
-};
-
 std::wstring mixer_mastervolume_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {

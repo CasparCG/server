@@ -65,7 +65,6 @@ export function registerProducerCommands(
 
         if (!transitionProducer) {
             const transitionProps = tryMatchBasicTransition(command.parameters);
-            console.log("props", transitionProps);
             transitionProducer = await Native.CreateBasicTransition(
                 channelIndex,
                 layerIndex,
