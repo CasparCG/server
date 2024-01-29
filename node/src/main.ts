@@ -106,8 +106,8 @@ const channelStateStore = new Map<number, Record<string, any[]>>();
 console.log(Native);
 Native.init(config, (channelId: number, newState: Record<string, any[]>) => {
     newState["_generated"] = [Date.now()];
-    // TODO
     channelStateStore.set(channelId, newState);
+    // TODO send osc
 });
 
 for (const videoMode of config.videoModes) {
@@ -144,7 +144,7 @@ const context: AMCPCommandContext = {
     deferedTransforms: new Map(),
 };
 
-const locks = new ChannelLocks("");
+const locks = new ChannelLocks(config.lockClearPhrase);
 const commandRepository = new AMCPCommandRepository();
 const protocol = new AMCPProtocolStrategy(commandRepository, locks, context);
 

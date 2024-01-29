@@ -103,71 +103,7 @@ namespace caspar { namespace protocol { namespace amcp {
 using namespace core;
 namespace pt = boost::property_tree;
 
-std::wstring read_utf8_file(const boost::filesystem::path& file)
-{
-    std::wstringstream           result;
-    boost::filesystem::wifstream filestream(file);
-
-    if (filestream) {
-        // Consume BOM first
-        filestream.get();
-        // read all data
-        result << filestream.rdbuf();
-    }
-
-    return result.str();
-}
-
-std::wstring read_latin1_file(const boost::filesystem::path& file)
-{
-    boost::locale::generator gen;
-    gen.locale_cache_enabled(true);
-#if BOOST_VERSION >= 108100
-    gen.categories(boost::locale::category_t::codepage);
-#else
-    gen.categories(boost::locale::codepage_facet);
-#endif
-
-    std::stringstream           result_stream;
-    boost::filesystem::ifstream filestream(file);
-    filestream.imbue(gen("en_US.ISO8859-1"));
-
-    if (filestream) {
-        // read all data
-        result_stream << filestream.rdbuf();
-    }
-
-    std::string  result = result_stream.str();
-    std::wstring widened_result;
-
-    // The first 255 codepoints in unicode is the same as in latin1
-    boost::copy(result | boost::adaptors::transformed([](char c) { return static_cast<unsigned char>(c); }),
-                std::back_inserter(widened_result));
-
-    return widened_result;
-}
-
-std::wstring read_file(const boost::filesystem::path& file)
-{
-    static const uint8_t BOM[] = {0xef, 0xbb, 0xbf};
-
-    if (!boost::filesystem::exists(file)) {
-        return L"";
-    }
-
-    if (boost::filesystem::file_size(file) >= 3) {
-        boost::filesystem::ifstream bom_stream(file);
-
-        char header[3];
-        bom_stream.read(header, 3);
-        bom_stream.close();
-
-        if (std::memcmp(BOM, header, 3) == 0)
-            return read_utf8_file(file);
-    }
-
-    return read_latin1_file(file);
-}
+std::wstring read_file(const boost::filesystem::path& file) {}
 
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
@@ -264,16 +200,6 @@ std::wstring cg_add_command(command_context& ctx)
     return L"202 CG OK\r\n";
 }
 
-std::wstring cg_play_command(command_context& ctx)
-{
-    int layer = std::stoi(ctx.parameters.at(0));
-    ctx.static_context->cg_registry
-        ->get_proxy(spl::make_shared_ptr(ctx.channel.raw_channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
-        ->play(layer);
-
-    return L"202 CG OK\r\n";
-}
-
 spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 {
     auto proxy = ctx.static_context->cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
@@ -283,37 +209,6 @@ spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
         CASPAR_THROW_EXCEPTION(expected_user_error() << msg_info(L"No CG proxy running on layer"));
 
     return proxy;
-}
-
-std::wstring cg_stop_command(command_context& ctx)
-{
-    int layer = std::stoi(ctx.parameters.at(0));
-    get_expected_cg_proxy(ctx)->stop(layer);
-
-    return L"202 CG OK\r\n";
-}
-
-std::wstring cg_next_command(command_context& ctx)
-{
-    int layer = std::stoi(ctx.parameters.at(0));
-    get_expected_cg_proxy(ctx)->next(layer);
-
-    return L"202 CG OK\r\n";
-}
-
-std::wstring cg_remove_command(command_context& ctx)
-{
-    int layer = std::stoi(ctx.parameters.at(0));
-    get_expected_cg_proxy(ctx)->remove(layer);
-
-    return L"202 CG OK\r\n";
-}
-
-std::wstring cg_clear_command(command_context& ctx)
-{
-    ctx.channel.stage->clear(ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
-
-    return L"202 CG OK\r\n";
 }
 
 std::wstring cg_update_command(command_context& ctx)
@@ -490,15 +385,6 @@ std::wstring gl_gc_command(command_context& ctx)
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);
-
-    repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
-    repo->register_channel_command(L"Template Commands", L"CG PLAY", cg_play_command, 1);
-    repo->register_channel_command(L"Template Commands", L"CG STOP", cg_stop_command, 1);
-    repo->register_channel_command(L"Template Commands", L"CG NEXT", cg_next_command, 1);
-    repo->register_channel_command(L"Template Commands", L"CG REMOVE", cg_remove_command, 1);
-    repo->register_channel_command(L"Template Commands", L"CG CLEAR", cg_clear_command, 0);
-    repo->register_channel_command(L"Template Commands", L"CG UPDATE", cg_update_command, 2);
-    repo->register_channel_command(L"Template Commands", L"CG INVOKE", cg_invoke_command, 2);
 
     repo->register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);

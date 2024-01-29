@@ -57,6 +57,7 @@
 #include "./channel_state.h"
 #include "./conv.h"
 #include "./operations/base.h"
+#include "./operations/cg.h"
 #include "./operations/channel.h"
 #include "./operations/consumer.h"
 #include "./operations/producer.h"
@@ -368,6 +369,43 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
     }
 }
 
+Napi::Value CallCgMethod(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto command = info[0].As<Napi::String>().Utf8Value();
+
+    if (command == "play") {
+        return CgPlay(info, instance_data);
+    } else if (command == "stop") {
+        return CgStop(info, instance_data);
+    } else if (command == "next") {
+        return CgNext(info, instance_data);
+    } else if (command == "remove") {
+        return CgRemove(info, instance_data);
+    } else {
+        Napi::Error::New(env, "Unknown command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     CasparCgInstanceData* instance_data = new CasparCgInstanceData;
@@ -394,6 +432,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
     exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));
     exports.Set(Napi::String::New(env, "CallStageMethod"), Napi::Function::New(env, CallStageMethod));
+    exports.Set(Napi::String::New(env, "CallCgMethod"), Napi::Function::New(env, CallCgMethod));
 
     exports.Set(Napi::String::New(env, "SetChannelFormat"), Napi::Function::New(env, SetChannelFormat));
     exports.Set(Napi::String::New(env, "GetLayerMixerProperties"), Napi::Function::New(env, GetLayerMixerProperties));

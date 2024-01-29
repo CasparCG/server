@@ -34,10 +34,6 @@ namespace caspar { namespace core {
 class cg_proxy
 {
   public:
-    static const unsigned int DEFAULT_LAYER = 9999;
-
-    virtual ~cg_proxy() {}
-
     virtual void         add(int                 layer,
                              const std::wstring& template_name,
                              bool                play_on_load,

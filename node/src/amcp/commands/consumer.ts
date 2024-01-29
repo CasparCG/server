@@ -16,8 +16,6 @@ export function registerConsumerCommands(
     _commands: Map<string, AMCPCommandEntry>,
     channelCommands: Map<string, AMCPCommandEntry>
 ): void {
-    // repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
-
     channelCommands.set("ADD", {
         func: async (context, command) => {
             if (!isChannelIndexValid(context, command.channelIndex)) {
