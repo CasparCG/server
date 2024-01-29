@@ -69,7 +69,7 @@ function runSimpleNonTweenValue(
     getValue: (transform: NativeTransform) => string,
     setValue: (valueStr: string) => PartialDeep<NativeTransform>
 ): AMCPChannelCommandFunction {
-    return async (context, command, channelIndex, layerIndex) => {
+    return async (context, command, channelIndex, layerIndex) => async () => {
         layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
         if (command.parameters.length === 0) {
@@ -113,7 +113,7 @@ function runComplexTweenable(
     setValue: (params: string[]) => PartialDeep<NativeTransform>,
     durationIndex: number
 ): AMCPChannelCommandFunction {
-    return async (context, command, channelIndex, layerIndex) => {
+    return async (context, command, channelIndex, layerIndex) => async () => {
         layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
         if (command.parameters.length === 0) {
@@ -193,102 +193,104 @@ export function registerMixerCommands(
     });
 
     channelCommands.set("MIXER CHROMA", {
-        func: async (context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
+        func:
+            async (context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
-            if (command.parameters.length === 0) {
-                const transform: NativeTransform =
-                    await Native.GetLayerMixerProperties(
-                        channelIndex,
-                        layerIndex
-                    );
+                if (command.parameters.length === 0) {
+                    const transform: NativeTransform =
+                        await Native.GetLayerMixerProperties(
+                            channelIndex,
+                            layerIndex
+                        );
 
-                const chroma = transform.image.chroma;
+                    const chroma = transform.image.chroma;
 
-                return `201 MIXER OK\r\n${chroma.enable ? 1 : 0} ${
-                    chroma.target_hue
-                } ${chroma.hue_width} ${chroma.min_saturation} ${
-                    chroma.min_brightness
-                } ${chroma.softness} ${chroma.spill_suppress} ${
-                    chroma.spill_suppress_saturation
-                } ${chroma.show_mask ? 1 : 0}\r\n`;
-            }
+                    return `201 MIXER OK\r\n${chroma.enable ? 1 : 0} ${
+                        chroma.target_hue
+                    } ${chroma.hue_width} ${chroma.min_saturation} ${
+                        chroma.min_brightness
+                    } ${chroma.softness} ${chroma.spill_suppress} ${
+                        chroma.spill_suppress_saturation
+                    } ${chroma.show_mask ? 1 : 0}\r\n`;
+                }
 
-            let duration = 0;
-            let tween = "linear";
-            let chroma: Partial<NativeImageChroma> = {};
+                let duration = 0;
+                let tween = "linear";
+                let chroma: Partial<NativeImageChroma> = {};
 
-            const legacy_mode = command.parameters[0];
-            if (legacy_mode === "none") {
-                chroma.enable = false;
-            } else if (legacy_mode === "green" || legacy_mode === "blue") {
-                chroma.enable = true;
-                chroma.hue_width = 0.5 - Number(command.parameters[1]) * 0.5;
-                chroma.min_brightness = Number(command.parameters[1]);
-                chroma.min_saturation = Number(command.parameters[1]);
-                chroma.softness =
-                    Number(command.parameters[2]) -
-                    Number(command.parameters[1]);
-                chroma.spill_suppress =
-                    180 - Number(command.parameters[3]) * 180;
-                chroma.spill_suppress_saturation = 1;
+                const legacy_mode = command.parameters[0];
+                if (legacy_mode === "none") {
+                    chroma.enable = false;
+                } else if (legacy_mode === "green" || legacy_mode === "blue") {
+                    chroma.enable = true;
+                    chroma.hue_width =
+                        0.5 - Number(command.parameters[1]) * 0.5;
+                    chroma.min_brightness = Number(command.parameters[1]);
+                    chroma.min_saturation = Number(command.parameters[1]);
+                    chroma.softness =
+                        Number(command.parameters[2]) -
+                        Number(command.parameters[1]);
+                    chroma.spill_suppress =
+                        180 - Number(command.parameters[3]) * 180;
+                    chroma.spill_suppress_saturation = 1;
 
-                chroma.target_hue = legacy_mode === "green" ? 120 : 240;
+                    chroma.target_hue = legacy_mode === "green" ? 120 : 240;
 
-                if (command.parameters.length > 4) {
-                    duration = Number(command.parameters[4]);
+                    if (command.parameters.length > 4) {
+                        duration = Number(command.parameters[4]);
 
-                    if (command.parameters.length > 5) {
-                        tween = command.parameters[5];
+                        if (command.parameters.length > 5) {
+                            tween = command.parameters[5];
+                        }
+                    }
+                } else {
+                    chroma.enable = command.parameters[0] == "1";
+
+                    if (chroma.enable) {
+                        chroma.target_hue = Number(command.parameters[1]);
+                        chroma.hue_width = Number(command.parameters[2]);
+                        chroma.min_saturation = Number(command.parameters[3]);
+                        chroma.min_brightness = Number(command.parameters[4]);
+                        chroma.softness = Number(command.parameters[5]);
+                        chroma.spill_suppress = Number(command.parameters[6]);
+                        chroma.spill_suppress_saturation = Number(
+                            command.parameters[7]
+                        );
+                        chroma.show_mask = command.parameters[8] == "1";
+                    }
+
+                    if (command.parameters.length > 9) {
+                        duration = Number(command.parameters[9]);
+
+                        if (command.parameters.length > 10) {
+                            tween = command.parameters[10];
+                        }
                     }
                 }
-            } else {
-                chroma.enable = command.parameters[0] == "1";
 
-                if (chroma.enable) {
-                    chroma.target_hue = Number(command.parameters[1]);
-                    chroma.hue_width = Number(command.parameters[2]);
-                    chroma.min_saturation = Number(command.parameters[3]);
-                    chroma.min_brightness = Number(command.parameters[4]);
-                    chroma.softness = Number(command.parameters[5]);
-                    chroma.spill_suppress = Number(command.parameters[6]);
-                    chroma.spill_suppress_saturation = Number(
-                        command.parameters[7]
-                    );
-                    chroma.show_mask = command.parameters[8] == "1";
-                }
+                const transforms = new TransformsApplier(
+                    context,
+                    channelIndex,
+                    command.parameters
+                );
+                const value = Number(command.parameters[0]);
+                if (isNaN(value)) throw new Error(`Invalid value`);
 
-                if (command.parameters.length > 9) {
-                    duration = Number(command.parameters[9]);
-
-                    if (command.parameters.length > 10) {
-                        tween = command.parameters[10];
-                    }
-                }
-            }
-
-            const transforms = new TransformsApplier(
-                context,
-                channelIndex,
-                command.parameters
-            );
-            const value = Number(command.parameters[0]);
-            if (isNaN(value)) throw new Error(`Invalid value`);
-
-            transforms.add(
-                layerIndex,
-                {
-                    image: {
-                        chroma,
+                transforms.add(
+                    layerIndex,
+                    {
+                        image: {
+                            chroma,
+                        },
                     },
-                },
-                duration,
-                tween
-            );
-            transforms.apply();
+                    duration,
+                    tween
+                );
+                transforms.apply();
 
-            return "202 MIXER OK\r\n";
-        },
+                return "202 MIXER OK\r\n";
+            },
         minNumParams: 0,
     });
 

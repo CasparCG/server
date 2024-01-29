@@ -28,17 +28,19 @@ export interface TransformTuple {
     tween: string;
 }
 
+export type AMCPCommandCommitFunction = () => Promise<string>;
+
 export type AMCPCommandFunction = (
     context: AMCPCommandContext,
     command: AMCPCommandBase
-) => Promise<string>;
+) => Promise<AMCPCommandCommitFunction | string>;
 
 export type AMCPChannelCommandFunction = (
     context: AMCPCommandContext,
     command: AMCPCommandBase,
     channel: number,
     layer: number | null
-) => Promise<string>;
+) => Promise<AMCPCommandCommitFunction | string>;
 
 export interface AMCPCommandEntry {
     func: AMCPCommandFunction;
@@ -58,7 +60,9 @@ export interface AMCPCommandBase {
 }
 
 export interface NodeAMCPCommand extends AMCPCommandBase {
-    execute: (context: AMCPCommandContext) => Promise<string>;
+    execute: (
+        context: AMCPCommandContext
+    ) => Promise<AMCPCommandCommitFunction | string>;
 }
 
 export class AMCPCommandRepository {

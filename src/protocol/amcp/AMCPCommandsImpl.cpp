@@ -103,25 +103,6 @@ namespace caspar { namespace protocol { namespace amcp {
 using namespace core;
 namespace pt = boost::property_tree;
 
-std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
-{
-    std::vector<spl::shared_ptr<core::video_channel>> result;
-    for (auto& cc : *ctx.channels) {
-        result.emplace_back(cc.raw_channel);
-    }
-    return result;
-}
-
-core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel,
-                                                            const command_context&                      ctx)
-{
-    return core::frame_producer_dependencies(channel->frame_factory(),
-                                             get_channels(ctx),
-                                             ctx.static_context->format_repository,
-                                             channel->stage()->video_format_desc(),
-                                             ctx.static_context->producer_registry);
-}
-
 // Basic Commands
 
 std::wstring log_level_command(command_context& ctx)

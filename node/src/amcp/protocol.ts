@@ -209,7 +209,8 @@ export class AMCPProtocolStrategy {
             if (client.batch.inProgress) {
                 client.batch.addCommand(command);
             } else {
-                const line = await command.execute(this.#context);
+                let line = await command.execute(this.#context);
+                if (typeof line === "function") line = await line(); // Perform the commit
                 lines = [line];
             }
 
@@ -297,7 +298,9 @@ export class AMCPProtocolStrategy {
 
             // TODO: this is probably not atomic enough, and could have the wrong order?
             for (const command of batch.finish()) {
-                lines.push(await command.execute(this.#context));
+                let line = await command.execute(this.#context);
+                if (typeof line === "function") line = await line(); // TODO - batch this correctly
+                lines.push();
             }
 
             return {

@@ -16,8 +16,8 @@ export function registerProducerCommands(
     // repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
 
     channelCommands.set("CG ADD", {
-        func: async (context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func: async (context, command, channelIndex, layerIndex0) => {
+            const layerIndex = layerIndex0 ?? CG_DEFAULT_LAYER;
 
             // CG 1 ADD 0 "template_folder/templatename" [STARTLABEL] 0/1 [DATA]
 
@@ -73,101 +73,128 @@ export function registerProducerCommands(
             //     CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not find template " + filename));
             // else
             //     proxy->add(layer, filename, bDoStart, label, pDataString != nullptr ? pDataString : L"");
+            return async () => {
+                discardError(
+                    Native.CallCgMethod(
+                        "add",
+                        channelIndex,
+                        layerIndex,
+                        layer,
+                        filename,
+                        bDoStart,
+                        label,
+                        pDataString ?? ""
+                    )
+                );
 
-            discardError(
-                Native.CallCgMethod(
-                    "add",
-                    channelIndex,
-                    layerIndex,
-                    layer,
-                    filename,
-                    bDoStart,
-                    label,
-                    pDataString ?? ""
-                )
-            );
-
-            return "202 CG OK\r\n";
+                return "202 CG OK\r\n";
+            };
         },
         minNumParams: 3,
     });
 
     channelCommands.set("CG PLAY", {
-        func: async (_context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            const cgLayer = Number(command.parameters[0]);
+                const cgLayer = Number(command.parameters[0]);
 
-            discardError(
-                Native.CallCgMethod("play", channelIndex, layerIndex, cgLayer)
-            );
+                discardError(
+                    Native.CallCgMethod(
+                        "play",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer
+                    )
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 1,
     });
 
     channelCommands.set("CG STOP", {
-        func: async (_context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            const cgLayer = Number(command.parameters[0]);
+                const cgLayer = Number(command.parameters[0]);
 
-            discardError(
-                Native.CallCgMethod("stop", channelIndex, layerIndex, cgLayer)
-            );
+                discardError(
+                    Native.CallCgMethod(
+                        "stop",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer
+                    )
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 1,
     });
 
     channelCommands.set("CG NEXT", {
-        func: async (_context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            const cgLayer = Number(command.parameters[0]);
+                const cgLayer = Number(command.parameters[0]);
 
-            discardError(
-                Native.CallCgMethod("next", channelIndex, layerIndex, cgLayer)
-            );
+                discardError(
+                    Native.CallCgMethod(
+                        "next",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer
+                    )
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 1,
     });
 
     channelCommands.set("CG REMOVE", {
-        func: async (_context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            const cgLayer = Number(command.parameters[0]);
+                const cgLayer = Number(command.parameters[0]);
 
-            discardError(
-                Native.CallCgMethod("remove", channelIndex, layerIndex, cgLayer)
-            );
+                discardError(
+                    Native.CallCgMethod(
+                        "remove",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer
+                    )
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 1,
     });
 
     channelCommands.set("CG CLEAR", {
-        func: async (_context, _command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, _command, channelIndex, layerIndex) =>
+            async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            discardError(
-                Native.CallStageMethod("clear", channelIndex, layerIndex)
-            );
+                discardError(
+                    Native.CallStageMethod("clear", channelIndex, layerIndex)
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 0,
     });
 
     channelCommands.set("CG UPDATE", {
-        func: async (context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func: async (context, command, channelIndex, layerIndex0) => {
+            const layerIndex = layerIndex0 ?? CG_DEFAULT_LAYER;
 
             const cgLayer = Number(command.parameters[0]);
             let payload = command.parameters[1];
@@ -186,40 +213,43 @@ export function registerProducerCommands(
                 payload = await read_data_file(filepath);
             }
 
-            discardError(
-                Native.CallCgMethod(
-                    "update",
-                    channelIndex,
-                    layerIndex,
-                    cgLayer,
-                    payload
-                )
-            );
+            return async () => {
+                discardError(
+                    Native.CallCgMethod(
+                        "update",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer,
+                        payload
+                    )
+                );
 
-            return "202 CG OK\r\n";
+                return "202 CG OK\r\n";
+            };
         },
         minNumParams: 2,
     });
 
     channelCommands.set("CG INVOKE", {
-        func: async (_context, command, channelIndex, layerIndex) => {
-            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
-            const cgLayer = Number(command.parameters[0]);
-            const invoke = command.parameters[1];
+                const cgLayer = Number(command.parameters[0]);
+                const invoke = command.parameters[1];
 
-            discardError(
-                Native.CallCgMethod(
-                    "invoke",
-                    channelIndex,
-                    layerIndex,
-                    cgLayer,
-                    invoke
-                )
-            );
+                discardError(
+                    Native.CallCgMethod(
+                        "invoke",
+                        channelIndex,
+                        layerIndex,
+                        cgLayer,
+                        invoke
+                    )
+                );
 
-            return "202 CG OK\r\n";
-        },
+                return "202 CG OK\r\n";
+            },
         minNumParams: 2,
     });
 }
