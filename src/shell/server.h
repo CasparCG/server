@@ -51,7 +51,7 @@ class server final
     void                                                                start();
     spl::shared_ptr<std::vector<spl::shared_ptr<core::video_channel>>>& get_channels() const;
 
-    spl::shared_ptr<core::cg_proxy> get_cg_proxy(int channel_index, int layer_index);
+    spl::shared_ptr<core::cg_proxy> get_cg_proxy(int channel_index, int layer_index, std::wstring filename);
 
     int  add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config);
     int  add_consumer_from_tokens(const std::shared_ptr<core::video_channel>& channel,

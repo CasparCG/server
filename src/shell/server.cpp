@@ -94,11 +94,16 @@ struct server::impl
         core::diagnostics::osd::shutdown();
     }
 
-    spl::shared_ptr<core::cg_proxy> get_cg_proxy(int channel_index, int layer_index)
+    spl::shared_ptr<core::cg_proxy> get_cg_proxy(int channel_index, int layer_index, std::wstring filename)
     {
         auto channel = channels_->at(channel_index);
 
-        return cg_registry_->get_proxy(channel, layer_index);
+        if (filename.empty()) {
+            return cg_registry_->get_proxy(channel, layer_index);
+        } else {
+            return cg_registry_->get_or_create_proxy(
+                channel, get_producer_dependencies(channel), layer_index, filename);
+        }
     }
 
     void add_video_format_desc(std::wstring id, core::video_format_desc format)
@@ -278,9 +283,9 @@ spl::shared_ptr<std::vector<spl::shared_ptr<core::video_channel>>>& server::get_
 {
     return impl_->channels_;
 }
-spl::shared_ptr<core::cg_proxy> server::get_cg_proxy(int channel_index, int layer_index)
+spl::shared_ptr<core::cg_proxy> server::get_cg_proxy(int channel_index, int layer_index, std::wstring filename)
 {
-    return impl_->get_cg_proxy(channel_index, layer_index);
+    return impl_->get_cg_proxy(channel_index, layer_index, filename);
 }
 
 int server::add_consumer_from_xml(int channel_index, const boost::property_tree::wptree& config)

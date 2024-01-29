@@ -74,17 +74,60 @@ parseChannelLayerArgumentsForCg(const Napi::CallbackInfo& info, CasparCgInstance
         channels, channelIndex, layerIndex, cgLayer, channel, std::get<0>(prom), std::get<1>(prom), std::get<2>(prom));
 }
 
+Napi::Value CgAdd(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 4);
+    if (!parsedArgs)
+        return env.Null();
+
+    if (!info[4].IsString() || !info[4].IsBoolean() || !info[4].IsString() || !info[4].IsString()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto filename   = info[4].As<Napi::String>().Utf8Value();
+    auto bDoStart   = info[5].As<Napi::Boolean>().Value();
+    auto label      = info[6].As<Napi::String>().Utf8Value();
+    auto dataString = info[7].As<Napi::String>().Utf8Value();
+
+    parsedArgs->channel->tmp_executor_->begin_invoke(
+        [instance_data, parsedArgs, filename, bDoStart, label, dataString] {
+            try {
+                auto proxy = instance_data->caspar_server->get_cg_proxy(
+                    parsedArgs->channelIndex, parsedArgs->layerIndex, caspar::u16(filename));
+
+                if (proxy == caspar::core::cg_proxy::empty()) {
+                    parsedArgs->reject("Could not find template");
+                    return;
+                }
+
+                proxy->add(
+                    parsedArgs->cgLayer, caspar::u16(filename), bDoStart, caspar::u16(label), caspar::u16(dataString));
+
+                parsedArgs->resolve("");
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                parsedArgs->reject("Internal error");
+            }
+        });
+
+    return parsedArgs->promise;
+}
+
 Napi::Value CgPlay(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
 {
     Napi::Env env = info.Env();
 
-    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 0);
     if (!parsedArgs)
         return env.Null();
 
     parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs] {
         try {
-            auto proxy = instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex);
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
 
             // if (proxy == caspar::core::cg_proxy::empty()) {
             //     parsedArgs->reject("No CG proxy running on layer");
@@ -107,13 +150,14 @@ Napi::Value CgStop(const Napi::CallbackInfo& info, CasparCgInstanceData* instanc
 {
     Napi::Env env = info.Env();
 
-    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 0);
     if (!parsedArgs)
         return env.Null();
 
     parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs] {
         try {
-            auto proxy = instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex);
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
 
             if (proxy == caspar::core::cg_proxy::empty()) {
                 parsedArgs->reject("No CG proxy running on layer");
@@ -129,6 +173,7 @@ Napi::Value CgStop(const Napi::CallbackInfo& info, CasparCgInstanceData* instanc
         }
     });
 
+    Napi::Value CgAdd(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
     return parsedArgs->promise;
 }
 
@@ -136,13 +181,14 @@ Napi::Value CgNext(const Napi::CallbackInfo& info, CasparCgInstanceData* instanc
 {
     Napi::Env env = info.Env();
 
-    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 0);
     if (!parsedArgs)
         return env.Null();
 
     parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs] {
         try {
-            auto proxy = instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex);
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
 
             if (proxy == caspar::core::cg_proxy::empty()) {
                 parsedArgs->reject("No CG proxy running on layer");
@@ -165,13 +211,14 @@ Napi::Value CgRemove(const Napi::CallbackInfo& info, CasparCgInstanceData* insta
 {
     Napi::Env env = info.Env();
 
-    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 0);
     if (!parsedArgs)
         return env.Null();
 
     parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs] {
         try {
-            auto proxy = instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex);
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
 
             if (proxy == caspar::core::cg_proxy::empty()) {
                 parsedArgs->reject("No CG proxy running on layer");
@@ -181,6 +228,80 @@ Napi::Value CgRemove(const Napi::CallbackInfo& info, CasparCgInstanceData* insta
             proxy->remove(parsedArgs->cgLayer);
 
             parsedArgs->resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
+}
+
+Napi::Value CgUpdate(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    if (!parsedArgs)
+        return env.Null();
+
+    if (!info[4].IsString()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto payload = info[4].As<Napi::String>().Utf8Value();
+
+    parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs, payload] {
+        try {
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
+
+            if (proxy == caspar::core::cg_proxy::empty()) {
+                parsedArgs->reject("No CG proxy running on layer");
+                return;
+            }
+
+            proxy->update(parsedArgs->cgLayer, caspar::u16(payload));
+
+            parsedArgs->resolve("");
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
+}
+
+Napi::Value CgInvoke(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArgumentsForCg(info, instance_data, 1);
+    if (!parsedArgs)
+        return env.Null();
+
+    if (!info[4].IsString()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto invoke = info[4].As<Napi::String>().Utf8Value();
+
+    parsedArgs->channel->tmp_executor_->begin_invoke([instance_data, parsedArgs, invoke] {
+        try {
+            auto proxy =
+                instance_data->caspar_server->get_cg_proxy(parsedArgs->channelIndex, parsedArgs->layerIndex, L"");
+
+            if (proxy == caspar::core::cg_proxy::empty()) {
+                parsedArgs->reject("No CG proxy running on layer");
+                return;
+            }
+
+            auto res = proxy->invoke(parsedArgs->cgLayer, caspar::u16(invoke));
+
+            parsedArgs->resolve(caspar::u8(res));
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             parsedArgs->reject("Internal error");

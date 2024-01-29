@@ -392,7 +392,9 @@ Napi::Value CallCgMethod(const Napi::CallbackInfo& info)
 
     auto command = info[0].As<Napi::String>().Utf8Value();
 
-    if (command == "play") {
+    if (command == "add") {
+        return CgAdd(info, instance_data);
+    } else if (command == "play") {
         return CgPlay(info, instance_data);
     } else if (command == "stop") {
         return CgStop(info, instance_data);
@@ -400,6 +402,10 @@ Napi::Value CallCgMethod(const Napi::CallbackInfo& info)
         return CgNext(info, instance_data);
     } else if (command == "remove") {
         return CgRemove(info, instance_data);
+    } else if (command == "invoke") {
+        return CgInvoke(info, instance_data);
+    } else if (command == "update") {
+        return CgUpdate(info, instance_data);
     } else {
         Napi::Error::New(env, "Unknown command").ThrowAsJavaScriptException();
         return env.Null();

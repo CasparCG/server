@@ -103,8 +103,6 @@ namespace caspar { namespace protocol { namespace amcp {
 using namespace core;
 namespace pt = boost::property_tree;
 
-std::wstring read_file(const boost::filesystem::path& file) {}
-
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
     std::vector<spl::shared_ptr<core::video_channel>> result;
@@ -140,105 +138,6 @@ std::wstring log_level_command(command_context& ctx)
     }
 
     return L"202 LOG OK\r\n";
-}
-
-// Template Graphics Commands
-
-std::wstring cg_add_command(command_context& ctx)
-{
-    // CG 1 ADD 0 "template_folder/templatename" [STARTLABEL] 0/1 [DATA]
-
-    int          layer = std::stoi(ctx.parameters.at(0));
-    std::wstring label;             //_parameters[2]
-    bool         bDoStart  = false; //_parameters[2] alt. _parameters[3]
-    unsigned int dataIndex = 3;
-
-    if (ctx.parameters.at(2).length() > 1) { // read label
-        label = ctx.parameters.at(2);
-        ++dataIndex;
-
-        if (ctx.parameters.at(3).length() > 0) // read play-on-load-flag
-            bDoStart = ctx.parameters.at(3).at(0) == L'1' ? true : false;
-    } else { // read play-on-load-flag
-        bDoStart = ctx.parameters.at(2).at(0) == L'1' ? true : false;
-    }
-
-    const wchar_t* pDataString = nullptr;
-    std::wstring   dataFromFile;
-    if (ctx.parameters.size() > dataIndex) { // read data
-        const std::wstring& dataString = ctx.parameters.at(dataIndex);
-
-        if (dataString.at(0) == L'<' || dataString.at(0) == L'{') // the data is XML or Json
-            pDataString = dataString.c_str();
-        else {
-            // The data is not an XML-string, it must be a filename
-            std::wstring filename = env::data_folder();
-            filename.append(dataString);
-            filename.append(L".ftd");
-
-            auto found_file = find_case_insensitive(filename);
-
-            if (found_file) {
-                dataFromFile = read_file(boost::filesystem::path(*found_file));
-                pDataString  = dataFromFile.c_str();
-            }
-        }
-    }
-
-    auto filename = ctx.parameters.at(1);
-    auto proxy =
-        ctx.static_context->cg_registry->get_or_create_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
-                                                             get_producer_dependencies(ctx.channel.raw_channel, ctx),
-                                                             ctx.layer_index(core::cg_proxy::DEFAULT_LAYER),
-                                                             filename);
-
-    if (proxy == core::cg_proxy::empty())
-        CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not find template " + filename));
-    else
-        proxy->add(layer, filename, bDoStart, label, pDataString != nullptr ? pDataString : L"");
-
-    return L"202 CG OK\r\n";
-}
-
-spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
-{
-    auto proxy = ctx.static_context->cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
-                                                            ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
-
-    if (proxy == cg_proxy::empty())
-        CASPAR_THROW_EXCEPTION(expected_user_error() << msg_info(L"No CG proxy running on layer"));
-
-    return proxy;
-}
-
-std::wstring cg_update_command(command_context& ctx)
-{
-    int layer = std::stoi(ctx.parameters.at(0));
-
-    std::wstring dataString = ctx.parameters.at(1);
-    if (dataString.at(0) != L'<' && dataString.at(0) != L'{') {
-        // The data is not XML or Json, it must be a filename
-        std::wstring filename = env::data_folder();
-        filename.append(dataString);
-        filename.append(L".ftd");
-
-        dataString = read_file(boost::filesystem::path(filename));
-    }
-
-    get_expected_cg_proxy(ctx)->update(layer, dataString);
-
-    return L"202 CG OK\r\n";
-}
-
-std::wstring cg_invoke_command(command_context& ctx)
-{
-    std::wstringstream replyString;
-    replyString << L"201 CG OK\r\n";
-    int  layer  = std::stoi(ctx.parameters.at(0));
-    auto result = get_expected_cg_proxy(ctx)->invoke(layer, ctx.parameters.at(1));
-    replyString << result << L"\r\n";
-
-    return replyString.str();
 }
 
 // Mixer Commands

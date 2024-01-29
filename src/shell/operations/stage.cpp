@@ -293,11 +293,6 @@ Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
 {
     Napi::Env env = info.Env();
 
-    if (info.Length() < 4 || !info[1].IsNumber() || !info[2].IsNumber() || !info[3].IsArray()) {
-        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
     auto parsedArgs = parseChannelLayerArguments(info, instance_data, 1);
     if (!parsedArgs)
         return env.Null();
