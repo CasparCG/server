@@ -1,42 +1,26 @@
 import type {
-    AMCPCommandBase,
-    AMCPCommandContext,
+    AMCPChannelCommandEntry,
     AMCPCommandEntry,
 } from "../command_repository.js";
 import { Native } from "../../native.js";
-import {
-    discardError,
-    isChannelIndexValid,
-    isLayerIndexValid,
-} from "./util.js";
+import { discardError } from "./util.js";
 
 const CG_DEFAULT_LAYER = 9999;
 
 export function registerProducerCommands(
     _commands: Map<string, AMCPCommandEntry>,
-    channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     // repo->register_channel_command(L"Template Commands", L"CG ADD", cg_add_command, 3);
 
     channelCommands.set("CG PLAY", {
-        func: async (context, command) => {
-            const layerIndex = command.layerIndex ?? CG_DEFAULT_LAYER;
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CG ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
             const cgLayer = Number(command.parameters[0]);
 
             discardError(
-                Native.CallCgMethod(
-                    "play",
-                    command.channelIndex + 1,
-                    layerIndex,
-                    cgLayer
-                )
+                Native.CallCgMethod("play", channelIndex, layerIndex, cgLayer)
             );
 
             return "202 CG OK\r\n";
@@ -45,24 +29,13 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CG STOP", {
-        func: async (context, command) => {
-            const layerIndex = command.layerIndex ?? CG_DEFAULT_LAYER;
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CG ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
             const cgLayer = Number(command.parameters[0]);
 
             discardError(
-                Native.CallCgMethod(
-                    "stop",
-                    command.channelIndex + 1,
-                    layerIndex,
-                    cgLayer
-                )
+                Native.CallCgMethod("stop", channelIndex, layerIndex, cgLayer)
             );
 
             return "202 CG OK\r\n";
@@ -71,24 +44,13 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CG NEXT", {
-        func: async (context, command) => {
-            const layerIndex = command.layerIndex ?? CG_DEFAULT_LAYER;
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CG ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
             const cgLayer = Number(command.parameters[0]);
 
             discardError(
-                Native.CallCgMethod(
-                    "next",
-                    command.channelIndex + 1,
-                    layerIndex,
-                    cgLayer
-                )
+                Native.CallCgMethod("next", channelIndex, layerIndex, cgLayer)
             );
 
             return "202 CG OK\r\n";
@@ -97,24 +59,13 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CG REMOVE", {
-        func: async (context, command) => {
-            const layerIndex = command.layerIndex ?? CG_DEFAULT_LAYER;
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CG ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
             const cgLayer = Number(command.parameters[0]);
 
             discardError(
-                Native.CallCgMethod(
-                    "remove",
-                    command.channelIndex + 1,
-                    layerIndex,
-                    cgLayer
-                )
+                Native.CallCgMethod("remove", channelIndex, layerIndex, cgLayer)
             );
 
             return "202 CG OK\r\n";
@@ -123,21 +74,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CG CLEAR", {
-        func: async (context, command) => {
-            const layerIndex = command.layerIndex ?? CG_DEFAULT_LAYER;
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CG ERROR\r\n";
-            }
+        func: async (_context, _command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? CG_DEFAULT_LAYER;
 
             discardError(
-                Native.CallStageMethod(
-                    "clear",
-                    command.channelIndex + 1,
-                    layerIndex
-                )
+                Native.CallStageMethod("clear", channelIndex, layerIndex)
             );
 
             return "202 CG OK\r\n";

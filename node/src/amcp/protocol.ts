@@ -209,7 +209,7 @@ export class AMCPProtocolStrategy {
             if (client.batch.inProgress) {
                 client.batch.addCommand(command);
             } else {
-                const line = await command.command(this.#context, command);
+                const line = await command.execute(this.#context);
                 lines = [line];
             }
 
@@ -297,7 +297,7 @@ export class AMCPProtocolStrategy {
 
             // TODO: this is probably not atomic enough, and could have the wrong order?
             for (const command of batch.finish()) {
-                lines.push(await command.command(this.#context, command));
+                lines.push(await command.execute(this.#context));
             }
 
             return {

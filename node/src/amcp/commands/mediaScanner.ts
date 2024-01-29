@@ -1,4 +1,5 @@
 import type {
+    AMCPChannelCommandEntry,
     AMCPCommandContext,
     AMCPCommandEntry,
 } from "../command_repository.js";
@@ -27,7 +28,7 @@ async function makeRequest(
 
 export function registerMediaScannerCommands(
     commands: Map<string, AMCPCommandEntry>,
-    _channelCommands: Map<string, AMCPCommandEntry>
+    _channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     commands.set("THUMBNAIL LIST", {
         func: async (context) => {

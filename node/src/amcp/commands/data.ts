@@ -1,6 +1,9 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import type { AMCPCommandEntry } from "../command_repository.js";
+import type {
+    AMCPChannelCommandEntry,
+    AMCPCommandEntry,
+} from "../command_repository.js";
 import { Native } from "../../native.js";
 
 export async function read_data_file(filepath: string): Promise<string> {
@@ -20,7 +23,7 @@ export async function read_data_file(filepath: string): Promise<string> {
 
 export function registerDataCommands(
     commands: Map<string, AMCPCommandEntry>,
-    _channelCommands: Map<string, AMCPCommandEntry>
+    _channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     commands.set("DATA STORE", {
         func: async (context, command) => {

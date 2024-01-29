@@ -1,12 +1,14 @@
-import type { AMCPCommandEntry } from "../command_repository.js";
+import type {
+    AMCPChannelCommandEntry,
+    AMCPCommandEntry,
+} from "../command_repository.js";
 import { Native } from "../../native.js";
 import { XMLBuilder } from "fast-xml-parser";
-import { isChannelIndexValid } from "./util.js";
 import ObjectPath from "object-path";
 
 export function registerSystemCommands(
     commands: Map<string, AMCPCommandEntry>,
-    channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     commands.set("VERSION", {
         func: async () => {
@@ -42,14 +44,8 @@ export function registerSystemCommands(
     });
 
     channelCommands.set("INFO", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 INFO ERROR\r\n";
-            }
-
-            const channelState = context.channelStateStore.get(
-                command.channelIndex + 1
-            );
+        func: async (context, _command, channelIndex) => {
+            const channelState = context.channelStateStore.get(channelIndex);
             if (!channelState) {
                 return "401 INFO ERROR\r\n";
             }

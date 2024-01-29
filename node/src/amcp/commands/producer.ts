@@ -1,39 +1,36 @@
 import type {
+    AMCPChannelCommandEntry,
     AMCPCommandBase,
     AMCPCommandContext,
     AMCPCommandEntry,
 } from "../command_repository.js";
 import { Native } from "../../native.js";
 import {
+    DEFAULT_LAYER_INDEX,
     containsParam,
     defaultBasicTransition,
     discardError,
-    isChannelIndexValid,
-    isLayerIndexValid,
     tryMatchBasicTransition,
     tryMatchStingTransition,
 } from "./util.js";
 
 export function registerProducerCommands(
     commands: Map<string, AMCPCommandEntry>,
-    channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     async function loadBgCommand(
-        context: AMCPCommandContext,
-        command: AMCPCommandBase
+        _context: AMCPCommandContext,
+        command: AMCPCommandBase,
+        channelIndex: number,
+        layerIndex: number | null
     ): Promise<string> {
-        if (
-            !isChannelIndexValid(context, command.channelIndex) ||
-            !isLayerIndexValid(context, command.layerIndex)
-        ) {
-            return "401 LOADBG ERROR\r\n";
-        }
+        layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
         const autoPlay = containsParam(command.parameters, "AUTO");
 
         const producer = await Native.CreateProducer(
-            command.channelIndex + 1,
-            command.layerIndex,
+            channelIndex,
+            layerIndex,
             command.parameters
         );
         if (!producer || !producer.IsValid()) {
@@ -41,8 +38,8 @@ export function registerProducerCommands(
                 discardError(
                     Native.CallStageMethod(
                         "load",
-                        command.channelIndex + 1,
-                        command.layerIndex,
+                        channelIndex,
+                        layerIndex,
                         null, // aka 'EMPTY'
                         false,
                         autoPlay
@@ -59,8 +56,8 @@ export function registerProducerCommands(
         const stingProps = tryMatchStingTransition(command.parameters);
         if (stingProps && !transitionProducer) {
             transitionProducer = await Native.CreateStingTransition(
-                command.channelIndex + 1,
-                command.layerIndex,
+                channelIndex,
+                layerIndex,
                 producer,
                 stingProps
             );
@@ -70,8 +67,8 @@ export function registerProducerCommands(
             const transitionProps = tryMatchBasicTransition(command.parameters);
             console.log("props", transitionProps);
             transitionProducer = await Native.CreateBasicTransition(
-                command.channelIndex + 1,
-                command.layerIndex,
+                channelIndex,
+                layerIndex,
                 producer,
                 transitionProps
             );
@@ -87,8 +84,8 @@ export function registerProducerCommands(
         discardError(
             Native.CallStageMethod(
                 "load",
-                command.channelIndex + 1,
-                command.layerIndex,
+                channelIndex,
+                layerIndex,
                 transitionProducer,
                 false,
                 autoPlay
@@ -98,37 +95,28 @@ export function registerProducerCommands(
     }
 
     channelCommands.set("LOADBG", {
-        func: async (context, command) => {
-            return loadBgCommand(context, command);
+        func: async (context, command, channelIndex, layerIndex) => {
+            return loadBgCommand(context, command, channelIndex, layerIndex);
         },
         minNumParams: 1,
     });
 
     channelCommands.set("LOAD", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 LOAD ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             if (command.parameters.length === 0) {
                 // TODO
                 discardError(
-                    Native.CallStageMethod(
-                        "preview",
-                        command.channelIndex + 1,
-                        command.layerIndex
-                    )
+                    Native.CallStageMethod("preview", channelIndex, layerIndex)
                 );
 
                 return "202 LOAD OK\r\n";
             } else {
                 // TODO
                 const producer = await Native.CreateProducer(
-                    command.channelIndex + 1,
-                    command.layerIndex,
+                    channelIndex,
+                    layerIndex,
                     command.parameters
                 );
                 if (!producer || !producer.IsValid()) {
@@ -136,8 +124,8 @@ export function registerProducerCommands(
                         discardError(
                             Native.CallStageMethod(
                                 "load",
-                                command.channelIndex + 1,
-                                command.layerIndex,
+                                channelIndex,
+                                layerIndex,
                                 null, // aka 'EMPTY'
                                 true,
                                 false
@@ -151,8 +139,8 @@ export function registerProducerCommands(
 
                 const transitionProps = defaultBasicTransition();
                 const transitionProducer = await Native.CreateBasicTransition(
-                    command.channelIndex + 1,
-                    command.layerIndex,
+                    channelIndex,
+                    layerIndex,
                     producer,
                     transitionProps
                 );
@@ -160,8 +148,8 @@ export function registerProducerCommands(
                 discardError(
                     Native.CallStageMethod(
                         "load",
-                        command.channelIndex + 1,
-                        command.layerIndex,
+                        channelIndex,
+                        layerIndex,
                         transitionProducer,
                         true,
                         false
@@ -175,24 +163,15 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("PLAY", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 PLAY ERROR\r\n";
-            }
+        func: async (context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             if (command.parameters.length > 0) {
-                await loadBgCommand(context, command);
+                await loadBgCommand(context, command, channelIndex, layerIndex);
             }
 
             discardError(
-                Native.CallStageMethod(
-                    "play",
-                    command.channelIndex + 1,
-                    command.layerIndex
-                )
+                Native.CallStageMethod("play", channelIndex, layerIndex)
             );
 
             return "202 PLAY OK\r\n";
@@ -201,20 +180,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("PAUSE", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 PAUSE ERROR\r\n";
-            }
+        func: async (_context, _command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             discardError(
-                Native.CallStageMethod(
-                    "pause",
-                    command.channelIndex + 1,
-                    command.layerIndex
-                )
+                Native.CallStageMethod("pause", channelIndex, layerIndex)
             );
             return "202 PAUSE OK\r\n";
         },
@@ -222,20 +192,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("RESUME", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 RESUME ERROR\r\n";
-            }
+        func: async (_context, _command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             discardError(
-                Native.CallStageMethod(
-                    "resume",
-                    command.channelIndex + 1,
-                    command.layerIndex
-                )
+                Native.CallStageMethod("resume", channelIndex, layerIndex)
             );
             return "202 RESUME OK\r\n";
         },
@@ -243,20 +204,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("STOP", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 STOP ERROR\r\n";
-            }
+        func: async (_context, _command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             discardError(
-                Native.CallStageMethod(
-                    "stop",
-                    command.channelIndex + 1,
-                    command.layerIndex
-                )
+                Native.CallStageMethod("stop", channelIndex, layerIndex)
             );
             return "202 STOP OK\r\n";
         },
@@ -264,17 +216,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CLEAR", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 CLEAR ERROR\r\n";
-            }
+        func: async (_context, _command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             discardError(
-                Native.CallStageMethod(
-                    "clear",
-                    command.channelIndex + 1,
-                    command.layerIndex
-                )
+                Native.CallStageMethod("clear", channelIndex, layerIndex)
             );
             return "202 CLEAR OK\r\n";
         },
@@ -293,19 +239,14 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("CALL", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 CALL ERROR\r\n";
-            }
+        func: async (_context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             try {
                 const result = await Native.CallStageMethod(
                     "call",
-                    command.channelIndex + 1,
-                    command.layerIndex,
+                    channelIndex,
+                    layerIndex,
                     command.parameters
                 );
                 if (result) {
@@ -321,15 +262,11 @@ export function registerProducerCommands(
     });
 
     channelCommands.set("SWAP", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 SWAP ERROR\r\n";
-            }
-
+        func: async (_context, command, channelIndex, layerIndex) => {
             const swapTransforms =
                 command.parameters[1]?.toUpperCase() === "TRANSFORMS";
 
-            if (command.layerIndex !== null) {
+            if (layerIndex !== null) {
                 const strs = command.parameters[0]
                     .split("-")
                     .map((v) => Number(v));
@@ -343,8 +280,8 @@ export function registerProducerCommands(
                 discardError(
                     Native.CallStageMethod(
                         "swapLayer",
-                        command.channelIndex + 1,
-                        command.layerIndex,
+                        channelIndex,
+                        layerIndex,
                         strs[0],
                         strs[1],
                         swapTransforms
@@ -363,7 +300,7 @@ export function registerProducerCommands(
                 discardError(
                     Native.CallStageMethod(
                         "swapChannel",
-                        command.channelIndex + 1,
+                        channelIndex,
                         otherChannelIndex,
                         swapTransforms
                     )

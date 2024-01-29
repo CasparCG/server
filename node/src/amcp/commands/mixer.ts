@@ -1,5 +1,6 @@
 import type {
-    AMCPCommandBase,
+    AMCPChannelCommandEntry,
+    AMCPChannelCommandFunction,
     AMCPCommandContext,
     AMCPCommandEntry,
     TransformTuple,
@@ -12,11 +13,7 @@ import {
     NativeTransform,
 } from "../../native.js";
 import type { PartialDeep } from "type-fest";
-import {
-    discardError,
-    isChannelIndexValid,
-    isLayerIndexValid,
-} from "./util.js";
+import { DEFAULT_LAYER_INDEX, discardError } from "./util.js";
 
 export class TransformsApplier {
     readonly #context: AMCPCommandContext;
@@ -68,169 +65,142 @@ export class TransformsApplier {
     }
 }
 
-async function runSimpleNonTweenValue(
-    context: AMCPCommandContext,
-    command: AMCPCommandBase,
+function runSimpleNonTweenValue(
     getValue: (transform: NativeTransform) => string,
     setValue: (valueStr: string) => PartialDeep<NativeTransform>
-): Promise<string> {
-    if (
-        !isChannelIndexValid(context, command.channelIndex) ||
-        !isLayerIndexValid(context, command.layerIndex)
-    ) {
-        return `401 ${command.name} ERROR\r\n`;
-    }
+): AMCPChannelCommandFunction {
+    return async (context, command, channelIndex, layerIndex) => {
+        layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
-    if (command.parameters.length === 0) {
-        const transform: NativeTransform = await Native.GetLayerMixerProperties(
-            command.channelIndex + 1,
-            command.layerIndex
+        if (command.parameters.length === 0) {
+            const transform: NativeTransform =
+                await Native.GetLayerMixerProperties(channelIndex, layerIndex);
+
+            const value = getValue(transform);
+
+            return `201 MIXER OK\r\n${value}\r\n`;
+        }
+
+        const transforms = new TransformsApplier(
+            context,
+            channelIndex,
+            command.parameters
         );
 
-        const value = getValue(transform);
+        if (command.parameters.length === 0)
+            throw new Error("Not enough arguments");
 
-        return `201 MIXER OK\r\n${value}\r\n`;
-    }
+        const transform = setValue(command.parameters[0]);
 
-    const transforms = new TransformsApplier(
-        context,
-        command.channelIndex,
-        command.parameters
-    );
+        transforms.add(layerIndex, transform);
+        transforms.apply();
 
-    if (command.parameters.length === 0)
-        throw new Error("Not enough arguments");
-
-    const transform = setValue(command.parameters[0]);
-
-    transforms.add(command.layerIndex, transform);
-    transforms.apply();
-
-    return "202 MIXER OK\r\n";
+        return "202 MIXER OK\r\n";
+    };
 }
 
-async function runSimpleTweenableValue(
-    context: AMCPCommandContext,
-    command: AMCPCommandBase,
+function runSimpleTweenableValue(
     getValue: (transform: NativeTransform) => string,
     setValue: (valueStr: string) => PartialDeep<NativeTransform>
-): Promise<string> {
+): AMCPChannelCommandFunction {
     const setValue2 = (params: string[]) => setValue(params[0]);
 
-    return runComplexTweenable(context, command, getValue, setValue2, 1);
+    return runComplexTweenable(getValue, setValue2, 1);
 }
 
-async function runComplexTweenable(
-    context: AMCPCommandContext,
-    command: AMCPCommandBase,
+function runComplexTweenable(
     getValue: (transform: NativeTransform) => string,
     setValue: (params: string[]) => PartialDeep<NativeTransform>,
     durationIndex: number
-): Promise<string> {
-    if (
-        !isChannelIndexValid(context, command.channelIndex) ||
-        !isLayerIndexValid(context, command.layerIndex)
-    ) {
-        return `401 ${command.name} ERROR\r\n`;
-    }
+): AMCPChannelCommandFunction {
+    return async (context, command, channelIndex, layerIndex) => {
+        layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
-    if (command.parameters.length === 0) {
-        const transform: NativeTransform = await Native.GetLayerMixerProperties(
-            command.channelIndex + 1,
-            command.layerIndex
+        if (command.parameters.length === 0) {
+            const transform: NativeTransform =
+                await Native.GetLayerMixerProperties(channelIndex, layerIndex);
+
+            const value = getValue(transform);
+
+            return `201 MIXER OK\r\n${value}\r\n`;
+        }
+
+        const transforms = new TransformsApplier(
+            context,
+            channelIndex,
+            command.parameters
         );
 
-        const value = getValue(transform);
+        if (command.parameters.length === 0)
+            throw new Error("Not enough arguments");
 
-        return `201 MIXER OK\r\n${value}\r\n`;
-    }
+        const transform = setValue(command.parameters);
 
-    const transforms = new TransformsApplier(
-        context,
-        command.channelIndex,
-        command.parameters
-    );
+        const duration =
+            command.parameters.length > durationIndex
+                ? Number(command.parameters[durationIndex])
+                : 0;
+        const tween =
+            command.parameters.length > durationIndex + 1
+                ? command.parameters[durationIndex + 1]
+                : "linear";
 
-    if (command.parameters.length === 0)
-        throw new Error("Not enough arguments");
+        transforms.add(layerIndex, transform, duration, tween);
+        transforms.apply();
 
-    const transform = setValue(command.parameters);
-
-    const duration =
-        command.parameters.length > durationIndex
-            ? Number(command.parameters[durationIndex])
-            : 0;
-    const tween =
-        command.parameters.length > durationIndex + 1
-            ? command.parameters[durationIndex + 1]
-            : "linear";
-
-    transforms.add(command.layerIndex, transform, duration, tween);
-    transforms.apply();
-
-    return "202 MIXER OK\r\n";
+        return "202 MIXER OK\r\n";
+    };
 }
 
 export function registerMixerCommands(
     _commands: Map<string, AMCPCommandEntry>,
-    channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     channelCommands.set("MIXER KEYER", {
-        func: async (context, command) =>
-            runSimpleNonTweenValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.is_key ? "1" : "0";
-                },
-                (valueStr) => {
-                    const value = Number(valueStr);
-                    if (isNaN(value)) throw new Error(`Invalid value`);
-                    return {
-                        image: {
-                            is_key: value >= 1,
-                        },
-                    };
-                }
-            ),
+        func: runSimpleNonTweenValue(
+            (transform) => {
+                return transform.image.is_key ? "1" : "0";
+            },
+            (valueStr) => {
+                const value = Number(valueStr);
+                if (isNaN(value)) throw new Error(`Invalid value`);
+                return {
+                    image: {
+                        is_key: value >= 1,
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER INVERT", {
-        func: async (context, command) =>
-            runSimpleNonTweenValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.invert ? "1" : "0";
-                },
-                (valueStr) => {
-                    const value = Number(valueStr);
-                    if (isNaN(value)) throw new Error(`Invalid value`);
-                    return {
-                        image: {
-                            invert: value >= 1,
-                        },
-                    };
-                }
-            ),
+        func: runSimpleNonTweenValue(
+            (transform) => {
+                return transform.image.invert ? "1" : "0";
+            },
+            (valueStr) => {
+                const value = Number(valueStr);
+                if (isNaN(value)) throw new Error(`Invalid value`);
+                return {
+                    image: {
+                        invert: value >= 1,
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER CHROMA", {
-        func: async (context, command) => {
-            if (
-                !isChannelIndexValid(context, command.channelIndex) ||
-                !isLayerIndexValid(context, command.layerIndex)
-            ) {
-                return "401 MIXER CHROMA ERROR\r\n";
-            }
+        func: async (context, command, channelIndex, layerIndex) => {
+            layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
 
             if (command.parameters.length === 0) {
                 const transform: NativeTransform =
                     await Native.GetLayerMixerProperties(
-                        command.channelIndex + 1,
-                        command.layerIndex
+                        channelIndex,
+                        layerIndex
                     );
 
                 const chroma = transform.image.chroma;
@@ -299,14 +269,14 @@ export function registerMixerCommands(
 
             const transforms = new TransformsApplier(
                 context,
-                command.channelIndex,
+                channelIndex,
                 command.parameters
             );
             const value = Number(command.parameters[0]);
             if (isNaN(value)) throw new Error(`Invalid value`);
 
             transforms.add(
-                command.layerIndex,
+                layerIndex,
                 {
                     image: {
                         chroma,
@@ -323,331 +293,288 @@ export function registerMixerCommands(
     });
 
     channelCommands.set("MIXER BLEND", {
-        func: async (context, command) =>
-            runSimpleNonTweenValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.blend_mode;
-                },
-                (valueStr) => {
-                    // TODO - validate value
-                    return {
-                        image: {
-                            blend_mode: valueStr as NativeImageBlendMode,
-                        },
-                    };
-                }
-            ),
+        func: runSimpleNonTweenValue(
+            (transform) => {
+                return transform.image.blend_mode;
+            },
+            (valueStr) => {
+                // TODO - validate value
+                return {
+                    image: {
+                        blend_mode: valueStr as NativeImageBlendMode,
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER OPACITY", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.opacity + "";
-                },
-                (valueStr) => {
-                    return {
-                        image: {
-                            opacity: Number(valueStr),
-                        },
-                    };
-                }
-            ),
+        func: runSimpleTweenableValue(
+            (transform) => {
+                return transform.image.opacity + "";
+            },
+            (valueStr) => {
+                return {
+                    image: {
+                        opacity: Number(valueStr),
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER BRIGHTNESS", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.brightness + "";
-                },
-                (valueStr) => {
-                    return {
-                        image: {
-                            brightness: Number(valueStr),
-                        },
-                    };
-                }
-            ),
+        func: runSimpleTweenableValue(
+            (transform) => {
+                return transform.image.brightness + "";
+            },
+            (valueStr) => {
+                return {
+                    image: {
+                        brightness: Number(valueStr),
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER SATURATION", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.saturation + "";
-                },
-                (valueStr) => {
-                    return {
-                        image: {
-                            saturation: Number(valueStr),
-                        },
-                    };
-                }
-            ),
+        func: runSimpleTweenableValue(
+            (transform) => {
+                return transform.image.saturation + "";
+            },
+            (valueStr) => {
+                return {
+                    image: {
+                        saturation: Number(valueStr),
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER CONTRAST", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    return transform.image.contrast + "";
-                },
-                (valueStr) => {
-                    return {
-                        image: {
-                            contrast: Number(valueStr),
-                        },
-                    };
-                }
-            ),
+        func: runSimpleTweenableValue(
+            (transform) => {
+                return transform.image.contrast + "";
+            },
+            (valueStr) => {
+                return {
+                    image: {
+                        contrast: Number(valueStr),
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER LEVELS", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const levels = transform.image.levels;
+        func: runComplexTweenable(
+            (transform) => {
+                const levels = transform.image.levels;
 
-                    return `${levels.min_input} ${levels.max_input} ${levels.gamma} ${levels.min_output} ${levels.max_output}`;
-                },
-                (params) => {
-                    const value: NativeImageLevels = {
-                        min_input: Number(params[0]),
-                        max_input: Number(params[1]),
-                        gamma: Number(params[2]),
-                        min_output: Number(params[3]),
-                        max_output: Number(params[4]),
-                    };
+                return `${levels.min_input} ${levels.max_input} ${levels.gamma} ${levels.min_output} ${levels.max_output}`;
+            },
+            (params) => {
+                const value: NativeImageLevels = {
+                    min_input: Number(params[0]),
+                    max_input: Number(params[1]),
+                    gamma: Number(params[2]),
+                    min_output: Number(params[3]),
+                    max_output: Number(params[4]),
+                };
 
-                    return {
-                        image: {
-                            levels: value,
-                        },
-                    };
-                },
-                5
-            ),
+                return {
+                    image: {
+                        levels: value,
+                    },
+                };
+            },
+            5
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER FILL", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const translation = transform.image.fill_translation;
-                    const scale = transform.image.fill_scale;
+        func: runComplexTweenable(
+            (transform) => {
+                const translation = transform.image.fill_translation;
+                const scale = transform.image.fill_scale;
 
-                    return `${translation[0]} ${translation[1]} ${scale[0]} ${scale[1]}`;
-                },
-                (params) => {
-                    const x = Number(params[0]);
-                    const y = Number(params[1]);
-                    const x_s = Number(params[2]);
-                    const y_s = Number(params[3]);
+                return `${translation[0]} ${translation[1]} ${scale[0]} ${scale[1]}`;
+            },
+            (params) => {
+                const x = Number(params[0]);
+                const y = Number(params[1]);
+                const x_s = Number(params[2]);
+                const y_s = Number(params[3]);
 
-                    return {
-                        image: {
-                            fill_translation: [x, y],
-                            fill_scale: [x_s, y_s],
-                        },
-                    };
-                },
-                4
-            ),
+                return {
+                    image: {
+                        fill_translation: [x, y],
+                        fill_scale: [x_s, y_s],
+                    },
+                };
+            },
+            4
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER CLIP", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const translation = transform.image.clip_translation;
-                    const scale = transform.image.clip_scale;
+        func: runComplexTweenable(
+            (transform) => {
+                const translation = transform.image.clip_translation;
+                const scale = transform.image.clip_scale;
 
-                    return `${translation[0]} ${translation[1]} ${scale[0]} ${scale[1]}`;
-                },
-                (params) => {
-                    const x = Number(params[0]);
-                    const y = Number(params[1]);
-                    const x_s = Number(params[2]);
-                    const y_s = Number(params[3]);
+                return `${translation[0]} ${translation[1]} ${scale[0]} ${scale[1]}`;
+            },
+            (params) => {
+                const x = Number(params[0]);
+                const y = Number(params[1]);
+                const x_s = Number(params[2]);
+                const y_s = Number(params[3]);
 
-                    return {
-                        image: {
-                            clip_translation: [x, y],
-                            clip_scale: [x_s, y_s],
-                        },
-                    };
-                },
-                4
-            ),
+                return {
+                    image: {
+                        clip_translation: [x, y],
+                        clip_scale: [x_s, y_s],
+                    },
+                };
+            },
+            4
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER ANCHOR", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const anchor = transform.image.anchor;
+        func: runComplexTweenable(
+            (transform) => {
+                const anchor = transform.image.anchor;
 
-                    return `${anchor[0]} ${anchor[1]}`;
-                },
-                (params) => {
-                    const x = Number(params[0]);
-                    const y = Number(params[1]);
+                return `${anchor[0]} ${anchor[1]}`;
+            },
+            (params) => {
+                const x = Number(params[0]);
+                const y = Number(params[1]);
 
-                    return {
-                        image: {
-                            anchor: [x, y],
-                        },
-                    };
-                },
-                2
-            ),
+                return {
+                    image: {
+                        anchor: [x, y],
+                    },
+                };
+            },
+            2
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER CROP", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const crop = transform.image.crop;
+        func: runComplexTweenable(
+            (transform) => {
+                const crop = transform.image.crop;
 
-                    return `${crop.ul[0]} ${crop.ul[1]} ${crop.lr[0]} ${crop.lr[1]}`;
-                },
-                (params) => {
-                    const ul_x = Number(params[0]);
-                    const ul_y = Number(params[1]);
-                    const lr_x = Number(params[2]);
-                    const lr_y = Number(params[3]);
+                return `${crop.ul[0]} ${crop.ul[1]} ${crop.lr[0]} ${crop.lr[1]}`;
+            },
+            (params) => {
+                const ul_x = Number(params[0]);
+                const ul_y = Number(params[1]);
+                const lr_x = Number(params[2]);
+                const lr_y = Number(params[3]);
 
-                    return {
-                        image: {
-                            crop: {
-                                ul: [ul_x, ul_y],
-                                lr: [lr_x, lr_y],
-                            },
+                return {
+                    image: {
+                        crop: {
+                            ul: [ul_x, ul_y],
+                            lr: [lr_x, lr_y],
                         },
-                    };
-                },
-                2
-            ),
+                    },
+                };
+            },
+            2
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER ROTATION", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    const value = (transform.image.angle / Math.PI) * 180;
+        func: runSimpleTweenableValue(
+            (transform) => {
+                const value = (transform.image.angle / Math.PI) * 180;
 
-                    return `${value}`;
-                },
-                (valueStr) => {
-                    const value = (Number(valueStr) * Math.PI) / 180;
+                return `${value}`;
+            },
+            (valueStr) => {
+                const value = (Number(valueStr) * Math.PI) / 180;
 
-                    return {
-                        image: {
-                            angle: value,
-                        },
-                    };
-                }
-            ),
+                return {
+                    image: {
+                        angle: value,
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER PERSPECTIVE", {
-        func: async (context, command) =>
-            runComplexTweenable(
-                context,
-                command,
-                (transform) => {
-                    const perspective = transform.image.perspective;
+        func: runComplexTweenable(
+            (transform) => {
+                const perspective = transform.image.perspective;
 
-                    return `${perspective.ul[0]} ${perspective.ul[1]} ${perspective.ur[0]} ${perspective.ur[1]} ${perspective.lr[0]} ${perspective.lr[1]} ${perspective.ll[0]} ${perspective.ll[1]}`;
-                },
-                (params) => {
-                    const ul_x = Number(params[0]);
-                    const ul_y = Number(params[1]);
-                    const ur_x = Number(params[2]);
-                    const ur_y = Number(params[3]);
-                    const lr_x = Number(params[4]);
-                    const lr_y = Number(params[5]);
-                    const ll_x = Number(params[6]);
-                    const ll_y = Number(params[7]);
+                return `${perspective.ul[0]} ${perspective.ul[1]} ${perspective.ur[0]} ${perspective.ur[1]} ${perspective.lr[0]} ${perspective.lr[1]} ${perspective.ll[0]} ${perspective.ll[1]}`;
+            },
+            (params) => {
+                const ul_x = Number(params[0]);
+                const ul_y = Number(params[1]);
+                const ur_x = Number(params[2]);
+                const ur_y = Number(params[3]);
+                const lr_x = Number(params[4]);
+                const lr_y = Number(params[5]);
+                const ll_x = Number(params[6]);
+                const ll_y = Number(params[7]);
 
-                    return {
-                        image: {
-                            perspective: {
-                                ul: [ul_x, ul_y],
-                                ur: [ur_x, ur_y],
-                                lr: [lr_x, lr_y],
-                                ll: [ll_x, ll_y],
-                            },
+                return {
+                    image: {
+                        perspective: {
+                            ul: [ul_x, ul_y],
+                            ur: [ur_x, ur_y],
+                            lr: [lr_x, lr_y],
+                            ll: [ll_x, ll_y],
                         },
-                    };
-                },
-                2
-            ),
+                    },
+                };
+            },
+            2
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER VOLUME", {
-        func: async (context, command) =>
-            runSimpleTweenableValue(
-                context,
-                command,
-                (transform) => {
-                    return `${transform.audio.volume}`;
-                },
-                (valueStr) => {
-                    return {
-                        audio: {
-                            volume: Number(valueStr),
-                        },
-                    };
-                }
-            ),
+        func: runSimpleTweenableValue(
+            (transform) => {
+                return `${transform.audio.volume}`;
+            },
+            (valueStr) => {
+                return {
+                    audio: {
+                        volume: Number(valueStr),
+                    },
+                };
+            }
+        ),
         minNumParams: 0,
     });
 
     channelCommands.set("MIXER GRID", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return `401 MIXER GRID ERROR\r\n`;
-            }
-
+        func: async (context, command, channelIndex) => {
             const transforms = new TransformsApplier(
                 context,
-                command.channelIndex,
+                channelIndex,
                 command.parameters
             );
 
@@ -708,18 +635,14 @@ export function registerMixerCommands(
     // });
 
     channelCommands.set("MIXER COMMIT", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return `401 MIXER COMMIT ERROR\r\n`;
-            }
-
+        func: async (context, _command, channelIndex) => {
             const transforms =
-                context.deferedTransforms.get(command.channelIndex) ?? [];
-            context.deferedTransforms.delete(command.channelIndex);
+                context.deferedTransforms.get(channelIndex) ?? [];
+            context.deferedTransforms.delete(channelIndex);
 
             if (transforms.length > 0) {
                 // TODO - implement server
-                await Native.ApplyTransforms(command.channelIndex, transforms);
+                await Native.ApplyTransforms(channelIndex, transforms);
             }
 
             return "202 MIXER OK\r\n";

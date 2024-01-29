@@ -1,5 +1,7 @@
 import { AMCPCommandContext } from "../command_repository";
 
+export const DEFAULT_LAYER_INDEX = 0;
+
 export function discardError(val: any) {
     if (
         val instanceof Promise ||
@@ -233,7 +235,9 @@ export function isChannelIndexValid(
     context: AMCPCommandContext,
     index: number | null
 ): index is number {
-    return index !== null && index >= 0 && index < context.channelCount;
+    return (
+        typeof index === "number" && index >= 0 && index < context.channelCount
+    );
 }
 
 export function isLayerIndexValid(

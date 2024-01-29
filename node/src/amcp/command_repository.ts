@@ -10,6 +10,7 @@ import { registerChannelCommands } from "./commands/channel.js";
 import { registerMixerCommands } from "./commands/mixer.js";
 import type { NativeTransform } from "../native.js";
 import type { PartialDeep } from "type-fest";
+import { isChannelIndexValid } from "./commands/util.js";
 
 export interface AMCPCommandContext {
     configuration: CasparCGConfiguration;
@@ -32,8 +33,19 @@ export type AMCPCommandFunction = (
     command: AMCPCommandBase
 ) => Promise<string>;
 
+export type AMCPChannelCommandFunction = (
+    context: AMCPCommandContext,
+    command: AMCPCommandBase,
+    channel: number,
+    layer: number | null
+) => Promise<string>;
+
 export interface AMCPCommandEntry {
     func: AMCPCommandFunction;
+    minNumParams: number;
+}
+export interface AMCPChannelCommandEntry {
+    func: AMCPChannelCommandFunction;
     minNumParams: number;
 }
 
@@ -42,39 +54,16 @@ export interface AMCPCommandBase {
 
     clientId: string;
     clientAddress: string;
-    channelIndex: number | null;
-    layerIndex: number | null;
     parameters: string[];
 }
 
 export interface NodeAMCPCommand extends AMCPCommandBase {
-    command: AMCPCommandFunction;
-}
-
-function make_cmd(
-    cmd: AMCPCommandEntry,
-    name: string,
-    client: Client,
-    channelIndex: number | null,
-    layerIndex: number | null,
-    tokens: string[]
-): NodeAMCPCommand | null {
-    if (tokens.length < cmd.minNumParams) return null;
-
-    return {
-        name,
-        command: cmd.func,
-        clientId: client.id,
-        clientAddress: client.address,
-        channelIndex,
-        layerIndex,
-        parameters: tokens,
-    };
+    execute: (context: AMCPCommandContext) => Promise<string>;
 }
 
 export class AMCPCommandRepository {
     readonly #commands = new Map<string, AMCPCommandEntry>();
-    readonly #channelCommands = new Map<string, AMCPCommandEntry>();
+    readonly #channelCommands = new Map<string, AMCPChannelCommandEntry>();
 
     constructor() {
         registerChannelCommands(this.#commands, this.#channelCommands);
@@ -88,6 +77,40 @@ export class AMCPCommandRepository {
         registerSystemCommands(this.#commands, this.#channelCommands);
     }
 
+    #wrapChannelCommand(
+        client: Client,
+        name: string,
+        channelIndex: number,
+        layerIndex: number | null,
+        tokens: string[],
+        cmd: AMCPChannelCommandEntry
+    ): NodeAMCPCommand | null {
+        if (tokens.length < cmd.minNumParams) return null;
+
+        const command: NodeAMCPCommand = {
+            name,
+            execute: async (context) => {
+                if (!isChannelIndexValid(context, channelIndex)) {
+                    // Ensure channel id is valid
+                    return `401 ${name} ERROR\r\n`;
+                }
+                if (layerIndex !== null && layerIndex < 0) {
+                    // Basic layer validation, but it can intentionally be null
+                    return `401 ${name} ERROR\r\n`;
+                }
+
+                return cmd.func(context, command, channelIndex + 1, layerIndex);
+            },
+            clientId: client.id,
+            clientAddress: client.address,
+            parameters: tokens,
+            // channelIndex,
+            // layerIndex,
+        };
+
+        return command;
+    }
+
     createChannelCommand(
         client: Client,
         name: string,
@@ -97,14 +120,58 @@ export class AMCPCommandRepository {
     ): NodeAMCPCommand | null {
         // TODO - verify channel index
 
-        return this.#findCommand(
-            this.#channelCommands,
-            client,
+        const subcommand = tokens[0];
+        if (subcommand) {
+            const fullname = `${name} ${subcommand}`;
+            const subcmd = this.#channelCommands.get(fullname.toUpperCase());
+            if (subcmd) {
+                tokens.shift();
+
+                return this.#wrapChannelCommand(
+                    client,
+                    name,
+                    channelIndex,
+                    layerIndex,
+                    tokens,
+                    subcmd
+                );
+            }
+        }
+
+        // Resort to ordinary command
+        const command = this.#channelCommands.get(name.toUpperCase());
+
+        if (command) {
+            return this.#wrapChannelCommand(
+                client,
+                name,
+                channelIndex,
+                layerIndex,
+                tokens,
+                command
+            );
+        }
+
+        return null;
+    }
+
+    #wrapBareCommand(
+        client: Client,
+        name: string,
+        tokens: string[],
+        cmd: AMCPCommandEntry
+    ): NodeAMCPCommand | null {
+        if (tokens.length < cmd.minNumParams) return null;
+
+        const command: NodeAMCPCommand = {
             name,
-            channelIndex,
-            layerIndex,
-            tokens
-        );
+            execute: (context) => cmd.func(context, command),
+            clientId: client.id,
+            clientAddress: client.address,
+            parameters: tokens,
+        };
+
+        return command;
     }
 
     createCommand(
@@ -112,54 +179,22 @@ export class AMCPCommandRepository {
         name: string,
         tokens: string[]
     ): NodeAMCPCommand | null {
-        return this.#findCommand(
-            this.#commands,
-            client,
-            name,
-            null,
-            null,
-            tokens
-        );
-    }
-
-    #findCommand(
-        commands: ReadonlyMap<string, AMCPCommandEntry>,
-        client: Client,
-        name: string,
-        channelIndex: number | null,
-        layerIndex: number | null,
-        tokens: string[]
-    ): NodeAMCPCommand | null {
         const subcommand = tokens[0];
         if (subcommand) {
             const fullname = `${name} ${subcommand}`;
-            const subcmd = commands.get(fullname.toUpperCase());
+            const subcmd = this.#commands.get(fullname.toUpperCase());
             if (subcmd) {
                 tokens.shift();
 
-                return make_cmd(
-                    subcmd,
-                    fullname,
-                    client,
-                    channelIndex,
-                    layerIndex,
-                    tokens
-                );
+                return this.#wrapBareCommand(client, name, tokens, subcmd);
             }
         }
 
         // Resort to ordinary command
-        const command = commands.get(name.toUpperCase());
+        const command = this.#commands.get(name.toUpperCase());
 
         if (command) {
-            return make_cmd(
-                command,
-                name,
-                client,
-                channelIndex,
-                layerIndex,
-                tokens
-            );
+            return this.#wrapBareCommand(client, name, tokens, command);
         }
 
         return null;

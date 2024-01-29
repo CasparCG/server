@@ -1,6 +1,9 @@
-import type { AMCPCommandEntry } from "../command_repository.js";
+import type {
+    AMCPChannelCommandEntry,
+    AMCPCommandEntry,
+} from "../command_repository.js";
 import { Native } from "../../native.js";
-import { discardError, isChannelIndexValid } from "./util.js";
+import { discardError } from "./util.js";
 
 function replacePlaceholders(
     params: string[],
@@ -14,27 +17,17 @@ function replacePlaceholders(
 
 export function registerConsumerCommands(
     _commands: Map<string, AMCPCommandEntry>,
-    channelCommands: Map<string, AMCPCommandEntry>
+    channelCommands: Map<string, AMCPChannelCommandEntry>
 ): void {
     channelCommands.set("ADD", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 ADD ERROR\r\n";
-            }
-
+        func: async (_context, command, channelIndex, layerIndex) => {
             const params = replacePlaceholders(
                 command.parameters,
                 "<CLIENT_IP_ADDRESS>",
                 command.clientAddress
             );
 
-            discardError(
-                Native.AddConsumer(
-                    command.channelIndex + 1,
-                    command.layerIndex,
-                    params
-                )
-            );
+            discardError(Native.AddConsumer(channelIndex, layerIndex, params));
 
             return "202 ADD OK\r\n";
         },
@@ -42,17 +35,10 @@ export function registerConsumerCommands(
     });
 
     channelCommands.set("REMOVE", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 ADD ERROR\r\n";
-            }
-
-            if (command.layerIndex !== null) {
+        func: async (_context, command, channelIndex, layerIndex) => {
+            if (layerIndex !== null) {
                 discardError(
-                    Native.RemoveConsumerByPort(
-                        command.channelIndex + 1,
-                        command.layerIndex
-                    )
+                    Native.RemoveConsumerByPort(channelIndex, layerIndex)
                 );
 
                 return "202 REMOVE OK\r\n";
@@ -64,10 +50,7 @@ export function registerConsumerCommands(
                 );
 
                 discardError(
-                    Native.RemoveConsumerByParams(
-                        command.channelIndex + 1,
-                        params
-                    )
+                    Native.RemoveConsumerByParams(channelIndex, params)
                 );
 
                 return "202 REMOVE OK\r\n";
@@ -77,17 +60,9 @@ export function registerConsumerCommands(
     });
 
     channelCommands.set("PRINT", {
-        func: async (context, command) => {
-            if (!isChannelIndexValid(context, command.channelIndex)) {
-                return "401 ADD ERROR\r\n";
-            }
-
+        func: async (_context, _command, channelIndex, layerIndex) => {
             discardError(
-                Native.AddConsumer(
-                    command.channelIndex + 1,
-                    command.layerIndex,
-                    ["IMAGE"]
-                )
+                Native.AddConsumer(channelIndex, layerIndex, ["IMAGE"])
             );
 
             return "202 PRINT OK\r\n";
