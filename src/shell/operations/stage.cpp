@@ -394,7 +394,7 @@ Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData*
     auto ch1 = channels->at(channelIndex1 - 1);
     auto ch2 = channels->at(channelIndex2 - 1);
 
-    auto prom    = promiseFuncWrapper<std::string>(env);
+    auto prom    = promiseFuncWrapper<void*>(env);
     auto resolve = std::get<1>(prom);
     auto reject  = std::get<2>(prom);
 
@@ -402,7 +402,7 @@ Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData*
         try {
             ch1->stage().swap_layer(layerIndex1, layerIndex2, ch2->stage(), swap_transforms);
 
-            resolve("");
+            resolve(nullptr);
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
             reject("Internal error");

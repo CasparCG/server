@@ -229,7 +229,7 @@ export function registerProducerCommands(
     commands.set("CLEAR ALL", {
         func: async (context) => {
             for (let i = 0; i < context.channelCount; i++) {
-                discardError(Native.CallStageMethod("clear", i + 1));
+                discardError(Native.CallStageMethod("clear", i + 1, null));
             }
 
             return "202 CLEAR ALL OK\r\n";

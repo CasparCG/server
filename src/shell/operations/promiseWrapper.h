@@ -75,7 +75,9 @@ template <typename T>
 std::tuple<Napi::Promise, resolveFunc<T>, rejectFunc> promiseFuncWrapper(const Napi::Env env)
 {
     auto convert = [](const Napi::Env& env, const T& data) {
-        if constexpr (std::is_same<int, T>::value)
+        if constexpr (std::is_same<void*, T>::value)
+            return env.Null();
+        else if constexpr (std::is_same<int, T>::value)
             return Napi::Number::New(env, data);
         else
             return Napi::String::New(env, data);

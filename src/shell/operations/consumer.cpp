@@ -40,7 +40,7 @@ Napi::Value AddConsumer(const Napi::CallbackInfo& info)
 
     if (channel_index < 1 || channel_index > channels->size()) {
         Napi::Error::New(env, "Channel index is out of bounds").ThrowAsJavaScriptException();
-        return {};
+        return env.Null();
     }
 
     auto& channel = channels->at(channel_index - 1);
