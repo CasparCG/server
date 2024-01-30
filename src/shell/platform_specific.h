@@ -25,7 +25,7 @@
 
 namespace caspar {
 
-void                  setup_prerequisites();
+void setup_prerequisites();
 // void                  setup_console_window();
 void                  increase_process_priority();
 std::shared_ptr<void> setup_debugging_environment();

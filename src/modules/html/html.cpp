@@ -113,7 +113,8 @@ class renderer_application
     void
     OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
     {
-        if (!frame->IsMain()) return;
+        if (!frame->IsMain())
+            return;
 
         caspar_log(browser,
                    boost::log::trivial::trace,
@@ -144,7 +145,8 @@ class renderer_application
                            CefRefPtr<CefFrame>     frame,
                            CefRefPtr<CefV8Context> context) override
     {
-        if (!frame->IsMain()) return;
+        if (!frame->IsMain())
+            return;
 
         auto removed =
             boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c) { return c->IsSame(context); });

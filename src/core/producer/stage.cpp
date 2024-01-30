@@ -453,7 +453,7 @@ std::future<void> stage::swap_layer(int index, int other_index, const stage& oth
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-const stage_frames                           stage::operator()(uint64_t                                     frame_number,
+const stage_frames stage::operator()(uint64_t                                     frame_number,
                                      std::vector<int>&                            fetch_background,
                                      std::function<void(int, const layer_frame&)> routesCb)
 {
