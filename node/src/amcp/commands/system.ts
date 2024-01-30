@@ -58,7 +58,6 @@ export function registerSystemCommands(
                     /\.([^.]+)\.(\d+)\./g,
                     ".$1.$1_$2."
                 );
-                // TODO - does this work, and it needs path cleanup
                 ObjectPath.set(channelObj, path, values);
             }
 

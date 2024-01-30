@@ -72,7 +72,7 @@ export class OscSender {
     }
 
     sendState(channelId: number, state: unknown): void {
-        // TODO
+        // TODO implement
         console.log("send osc state", channelId, state, !!this.#osc);
     }
 }

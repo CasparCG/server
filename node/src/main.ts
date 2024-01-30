@@ -102,12 +102,14 @@ const config: CasparCGConfiguration = {
 };
 
 const channelStateStore = new Map<number, Record<string, any[]>>();
+const oscSender = new OscSender();
 
 console.log(Native);
 Native.init(config, (channelId: number, newState: Record<string, any[]>) => {
     newState["_generated"] = [Date.now()];
     channelStateStore.set(channelId, newState);
-    // TODO send osc
+
+    oscSender.sendState(channelId, newState);
 });
 
 for (const videoMode of config.videoModes) {
@@ -129,8 +131,6 @@ config.paths.dataPath = makeAbsolute(config.paths.dataPath);
 config.paths.templatePath = makeAbsolute(config.paths.templatePath);
 
 console.log("config", JSON.stringify(config, undefined, 4));
-
-const oscSender = new OscSender();
 
 const context: AMCPCommandContext = {
     configuration: config,

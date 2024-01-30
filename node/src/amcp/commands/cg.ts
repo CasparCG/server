@@ -63,16 +63,6 @@ export function registerProducerCommands(
             }
 
             const filename = command.parameters[1];
-            // auto proxy =
-            //     ctx.static_context->cg_registry->get_or_create_proxy(spl::make_shared_ptr(ctx.channel.raw_channel),
-            //                                                         get_producer_dependencies(ctx.channel.raw_channel, ctx),
-            //                                                         ctx.layer_index(core::cg_proxy::DEFAULT_LAYER),
-            //                                                         filename);
-
-            // if (proxy == core::cg_proxy::empty())
-            //     CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not find template " + filename));
-            // else
-            //     proxy->add(layer, filename, bDoStart, label, pDataString != nullptr ? pDataString : L"");
             return async () => {
                 discardError(
                     Native.CallCgMethod(
