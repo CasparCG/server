@@ -170,9 +170,7 @@ struct server::impl
         core::diagnostics::scoped_call_context save;
         core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
-
-        auto consumer = consumer_registry_->create_consumer(type, config, video_format_repository_, channels_vec);
+        auto consumer = consumer_registry_->create_consumer(type, config, video_format_repository_);
         if (consumer == core::frame_consumer::empty()) {
             return -1;
         }
@@ -189,9 +187,7 @@ struct server::impl
         core::diagnostics::scoped_call_context save;
         core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
-
-        auto consumer = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec);
+        auto consumer = consumer_registry_->create_consumer(amcp_params, video_format_repository_);
         if (consumer == core::frame_consumer::empty()) {
             return -1;
         }
@@ -217,9 +213,7 @@ struct server::impl
         }
         auto channel = channels_->at(channel_index);
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec = *channels_;
-
-        auto index = consumer_registry_->create_consumer(amcp_params, video_format_repository_, channels_vec)->index();
+        auto index = consumer_registry_->create_consumer(amcp_params, video_format_repository_)->index();
 
         return channel->output().remove(index);
     }
