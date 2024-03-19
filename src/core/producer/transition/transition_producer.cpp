@@ -31,8 +31,9 @@
 #include <common/scope_exit.h>
 
 #include <future>
+#include <utility>
 
-namespace caspar { namespace core {
+namespace caspar::core {
 
 class transition_producer : public frame_producer
 {
@@ -46,8 +47,8 @@ class transition_producer : public frame_producer
     bool                            dst_is_ready_ = false;
 
   public:
-    transition_producer(const spl::shared_ptr<frame_producer>& dest, const transition_info& info)
-        : info_(info)
+    transition_producer(const spl::shared_ptr<frame_producer>& dest, transition_info  info)
+        : info_(std::move(info))
         , dst_producer_(dest)
     {
         dst_is_ready_ = dst_producer_->is_ready();
@@ -77,45 +78,45 @@ class transition_producer : public frame_producer
         auto src = src_producer_->last_frame(field);
         auto dst = dst_producer_->last_frame(field);
 
-        return dst && current_frame_ >= info_.duration ? dst : src;
+        if (dst && current_frame_ >= info_.duration) {
+            return dst;
+        } else {
+            return src;
+        }
     }
 
     core::draw_frame first_frame(const core::video_field field) override { return dst_producer_->first_frame(field); }
 
     void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
 
-    spl::shared_ptr<frame_producer> following_producer() const override
+    [[nodiscard]] spl::shared_ptr<frame_producer> following_producer() const override
     {
         return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : core::frame_producer::empty();
     }
 
-    std::optional<int64_t> auto_play_delta() const override { return info_.duration; }
+    [[nodiscard]] std::optional<int64_t> auto_play_delta() const override { return info_.duration; }
 
     void update_state()
     {
-        if (!dst_is_ready_) {
-            state_ = src_producer_->state();
-        } else {
-            state_                        = dst_producer_->state();
-            state_["transition/producer"] = dst_producer_->name();
-            state_["transition/frame"]    = {current_frame_, info_.duration};
-            state_["transition/type"]     = [&]() -> std::string {
-                switch (info_.type) {
-                    case transition_type::mix:
-                        return "mix";
-                    case transition_type::wipe:
-                        return "wipe";
-                    case transition_type::slide:
-                        return "slide";
-                    case transition_type::push:
-                        return "push";
-                    case transition_type::cut:
-                        return "cut";
-                    default:
-                        return "n/a";
-                }
-            }();
-        }
+        state_                        = dst_producer_->state();
+        state_["transition/producer"] = dst_producer_->name();
+        state_["transition/frame"]    = {current_frame_, info_.duration};
+        state_["transition/type"]     = [&]() -> std::string {
+            switch (info_.type) {
+                case transition_type::mix:
+                    return "mix";
+                case transition_type::wipe:
+                    return "wipe";
+                case transition_type::slide:
+                    return "slide";
+                case transition_type::push:
+                    return "push";
+                case transition_type::cut:
+                    return "cut";
+                default:
+                    return "n/a";
+            }
+        }();
     }
 
     draw_frame receive_impl(const core::video_field field, int nb_samples) override
@@ -151,23 +152,23 @@ class transition_producer : public frame_producer
         return compose(dst, src);
     }
 
-    uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
+    [[nodiscard]] uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
 
-    uint32_t frame_number() const override { return dst_producer_->frame_number(); }
+    [[nodiscard]] uint32_t frame_number() const override { return dst_producer_->frame_number(); }
 
-    std::wstring print() const override
+    [[nodiscard]] std::wstring print() const override
     {
         return L"transition[" + src_producer_->print() + L"=>" + dst_producer_->print() + L"]";
     }
 
-    std::wstring name() const override { return L"transition"; }
+    [[nodiscard]] std::wstring name() const override { return L"transition"; }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         return dst_producer_->call(params);
     }
 
-    draw_frame compose(draw_frame dst_frame, draw_frame src_frame) const
+    [[nodiscard]] draw_frame compose(draw_frame dst_frame, draw_frame src_frame) const
     {
         if (info_.type == transition_type::cut) {
             return src_frame;
@@ -201,7 +202,7 @@ class transition_producer : public frame_producer
         return draw_frame::over(src_frame, dst_frame);
     }
 
-    core::monitor::state state() const override { return state_; }
+    [[nodiscard]] core::monitor::state state() const override { return state_; }
 
     bool is_ready() override { return dst_producer_->is_ready(); }
 };
@@ -250,4 +251,4 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
     return true;
 }
 
-}} // namespace caspar::core
+} // namespace caspar::core
