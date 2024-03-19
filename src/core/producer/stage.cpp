@@ -384,6 +384,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
     }
+    std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)
+    {
+        return flatten(executor_.begin_invoke([=] { return get_layer(index).background()->call(params).share(); }));
+    }
 
     std::unique_lock<std::mutex> get_lock() { return std::move(std::unique_lock<std::mutex>(lock_)); }
 
@@ -413,6 +417,10 @@ stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph, const
 std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params)
 {
     return impl_->call(index, params);
+}
+std::future<std::wstring> stage::callbg(int index, const std::vector<std::wstring>& params)
+{
+    return impl_->callbg(index, params);
 }
 std::future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms)
 {
@@ -487,6 +495,10 @@ stage_delayed::stage_delayed(std::shared_ptr<stage>& st, int index)
 std::future<std::wstring> stage_delayed::call(int index, const std::vector<std::wstring>& params)
 {
     return executor_.begin_invoke([=]() -> std::wstring { return stage_->call(index, params).get(); });
+}
+std::future<std::wstring> stage_delayed::callbg(int index, const std::vector<std::wstring>& params)
+{
+    return executor_.begin_invoke([=]() -> std::wstring { return stage_->callbg(index, params).get(); });
 }
 std::future<void> stage_delayed::apply_transforms(const std::vector<stage_delayed::transform_tuple_t>& transforms)
 {

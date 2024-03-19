@@ -403,6 +403,29 @@ std::wstring clear_all_command(command_context& ctx)
     return L"202 CLEAR ALL OK\r\n";
 }
 
+std::future<std::wstring> callbg_command(command_context& ctx)
+{
+    const auto result = ctx.channel.stage->callbg(ctx.layer_index(), ctx.parameters).share();
+
+    // TODO: because of std::async deferred timed waiting does not work
+
+    /*auto wait_res = result.wait_for(std::chrono::seconds(2));
+    if (wait_res == std::future_status::timeout)
+    CASPAR_THROW_EXCEPTION(timed_out());*/
+
+    return std::async(std::launch::deferred, [result]() -> std::wstring {
+        std::wstring res = result.get();
+
+        std::wstringstream replyString;
+        if (res.empty())
+            replyString << L"202 CALLBG OK\r\n";
+        else
+            replyString << L"201 CALLBG OK\r\n" << res << L"\r\n";
+
+        return replyString.str();
+    });
+}
+
 std::future<std::wstring> call_command(command_context& ctx)
 {
     const auto result = ctx.channel.stage->call(ctx.layer_index(), ctx.parameters).share();
@@ -1674,6 +1697,7 @@ std::wstring osc_unsubscribe_command(command_context& ctx)
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
     repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
+    repo->register_channel_command(L"Basic Commands", L"CALLBG", callbg_command, 1);
     repo->register_channel_command(L"Basic Commands", L"LOAD", load_command, 0);
     repo->register_channel_command(L"Basic Commands", L"PLAY", play_command, 0);
     repo->register_channel_command(L"Basic Commands", L"PAUSE", pause_command, 0);
