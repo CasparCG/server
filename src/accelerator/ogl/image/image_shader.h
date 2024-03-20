@@ -40,5 +40,6 @@ enum class texture_id
 };
 
 std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl);
+std::shared_ptr<shader> get_fast_image_shader(const spl::shared_ptr<device>& ogl);
 
 }}} // namespace caspar::accelerator::ogl

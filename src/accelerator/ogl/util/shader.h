@@ -24,6 +24,7 @@
 #include <GL/glew.h>
 #include <memory>
 #include <string>
+#include <vector>
 #include <type_traits>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -35,6 +36,7 @@ class shader final
 
   public:
     shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
+    shader(const std::string& vertex_source_str, const std::vector<std::string>& fragment_source_strs);
     ~shader();
 
     void set(const std::string& name, bool value);

@@ -25,10 +25,13 @@
 
 #include "ogl_image_fragment.h"
 #include "ogl_image_vertex.h"
+#include <string>
+#include <vector>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader> g_shader;
+std::weak_ptr<shader> g_shader_fast;
 std::mutex            g_shader_mutex;
 
 std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
@@ -51,8 +54,50 @@ std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
             ogl->dispatch_async([=] { delete p; });
         }
     };
+    std::vector<std::string> fragment_shader_sources;
 
-    existing_shader.reset(new shader(std::string(vertex_shader), std::string(fragment_shader)), deleter);
+    std::string prepend = "#version 450\n";
+
+    fragment_shader_sources.push_back(prepend);
+    fragment_shader_sources.push_back(std::string(fragment_shader));
+
+    existing_shader.reset(new shader(std::string(vertex_shader), fragment_shader_sources), deleter);
+
+    g_shader = existing_shader;
+
+    return existing_shader;
+}
+
+std::shared_ptr<shader> get_fast_image_shader(const spl::shared_ptr<device>& ogl)
+{
+    std::lock_guard<std::mutex> lock(g_shader_mutex);
+    auto                        existing_shader = g_shader_fast.lock();
+
+    if (existing_shader) {
+        return existing_shader;
+    }
+
+    // The deleter is alive until the weak pointer is destroyed, so we have
+    // to weakly reference ogl, to not keep it alive until atexit
+    std::weak_ptr<device> weak_ogl = ogl;
+
+    auto deleter = [weak_ogl](shader* p) {
+        auto ogl = weak_ogl.lock();
+
+        if (ogl) {
+            ogl->dispatch_async([=] { delete p; });
+        }
+    };
+
+    std::vector<std::string> fragment_shader_sources;
+
+
+    std::string prepend = "#version 450\n#define FRAGMENT_FAST\n";
+
+    fragment_shader_sources.push_back(prepend);
+    fragment_shader_sources.push_back(std::string(fragment_shader));
+
+    existing_shader.reset(new shader(std::string(vertex_shader), fragment_shader_sources), deleter);
 
     g_shader = existing_shader;
 
