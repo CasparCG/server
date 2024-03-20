@@ -83,6 +83,7 @@ class Decoder
     AVStream*         st       = nullptr;
     int64_t           next_pts = AV_NOPTS_VALUE;
     std::atomic<bool> eof      = {false};
+    std::atomic<bool>& err;
 
     std::queue<std::shared_ptr<AVPacket>> input;
     mutable boost::mutex                  input_mutex;
@@ -101,10 +102,11 @@ class Decoder
 
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream)
-        : st(stream)
+    explicit Decoder(std::pair<AVStream*, std::atomic<bool>&> in_par)
+        : st(in_par.first)
+        , err(in_par.second)
     {
-        const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
+        const auto codec = avcodec_find_decoder(st->codecpar->codec_id);
         if (!codec) {
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
         }
@@ -116,16 +118,16 @@ class Decoder
             FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
         }
 
-        FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
+        FF(avcodec_parameters_to_context(ctx.get(), st->codecpar));
 
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
 
-        ctx->pkt_timebase = stream->time_base;
+        ctx->pkt_timebase = st->time_base;
 
         if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-            ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
-            ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
+            ctx->framerate           = av_guess_frame_rate(nullptr, st, nullptr);
+            ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, st, nullptr);
         } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
             if (!ctx->channel_layout && ctx->channels) {
                 ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
@@ -142,6 +144,11 @@ class Decoder
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
         thread = boost::thread([=]() {
+            if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+                set_thread_name(L"[ffmpeg::av_producer::decoder::video]");
+            } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+                set_thread_name(L"[ffmpeg::av_producer::decoder::audio]");
+            }
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
@@ -156,7 +163,9 @@ class Decoder
                             input.pop();
                         }
                         FF(avcodec_send_packet(ctx.get(), packet.get()));
-                    } else if (ret == AVERROR_EOF) {
+                    } else if (ret == AVERROR_EOF || err) {
+                        // If you change any of this please change the catch block below
+                        // TODO: Pull this out to a seperate function
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
                         next_pts      = AV_NOPTS_VALUE;
@@ -206,6 +215,20 @@ class Decoder
                 }
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                auto av_frame = alloc_frame();
+                avcodec_flush_buffers(ctx.get());
+                av_frame->pts = next_pts;
+                next_pts      = AV_NOPTS_VALUE;
+                eof           = true;
+                err           = true;
+
+                {
+                    boost::unique_lock<boost::mutex> lock(output_mutex);
+                    output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
+                    output.push(std::move(av_frame));
+                }
             }
         });
     }
@@ -286,7 +309,8 @@ struct Filter
            std::map<int, Decoder>&        streams,
            int64_t                        start_time,
            AVMediaType                    media_type,
-           const core::video_format_desc& format_desc)
+           const core::video_format_desc& format_desc,
+           std::atomic<bool>&             err)
     {
         if (media_type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
@@ -441,7 +465,8 @@ struct Filter
 
                 auto it = streams.find(index);
                 if (it == streams.end()) {
-                    it = streams.emplace(index, input->streams[index]).first;
+                    auto in_par = std::make_pair(input->streams[index], std::ref(err));
+                    it = streams.emplace(index, in_par).first;
                 }
 
                 auto st = it->second.ctx;
@@ -613,6 +638,7 @@ struct AVProducer::Impl
     std::atomic<int64_t> input_duration_{AV_NOPTS_VALUE};
     std::atomic<int64_t> seek_{AV_NOPTS_VALUE};
     std::atomic<bool>    loop_{false};
+    std::atomic<bool>    err{false};
 
     std::string afilter_;
     std::string vfilter_;
@@ -1143,8 +1169,8 @@ struct AVProducer::Impl
 
     void reset(int64_t start_time)
     {
-        video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
+        video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_, err);
+        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_, err);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
