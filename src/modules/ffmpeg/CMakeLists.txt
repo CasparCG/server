@@ -5,6 +5,7 @@ set(SOURCES
 	producer/av_producer.cpp
 	producer/av_input.cpp
 	util/av_util.cpp
+	util/audio_resampler.cpp
 	producer/ffmpeg_producer.cpp
 	consumer/ffmpeg_consumer.cpp
 
@@ -15,6 +16,7 @@ set(HEADERS
 	producer/av_producer.h
 	producer/av_input.h
 	util/av_util.h
+	util/audio_resampler.h
 	producer/ffmpeg_producer.h
 	consumer/ffmpeg_consumer.h
 
