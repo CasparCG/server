@@ -222,9 +222,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 
     std::future<std::shared_ptr<texture>>
-    copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+    copy_async(const array<const uint8_t>& source, int width, int height, int stride, std::shared_ptr<void> drop_hook)
     {
-        return dispatch_async([=] {
+        return dispatch_async([=, drop_hook = std::move(drop_hook)] {
             std::shared_ptr<buffer> buf;
 
             auto tmp = source.storage<std::shared_ptr<buffer>>();
@@ -427,11 +427,14 @@ std::shared_ptr<texture> device::create_texture(int width, int height, int strid
 {
     return impl_->create_texture(width, height, stride, true);
 }
-array<uint8_t> device::create_array(int size) { return impl_->create_array(size); }
-std::future<std::shared_ptr<texture>>
-device::copy_async(const array<const uint8_t>& source, int width, int height, int stride)
+array<uint8_t>                        device::create_array(int size) { return impl_->create_array(size); }
+std::future<std::shared_ptr<texture>> device::copy_async(const array<const uint8_t>& source,
+                                                         int                         width,
+                                                         int                         height,
+                                                         int                         stride,
+                                                         std::shared_ptr<void>       drop_hook)
 {
-    return impl_->copy_async(source, width, height, stride);
+    return impl_->copy_async(source, width, height, stride, drop_hook);
 }
 std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<texture>& source)
 {

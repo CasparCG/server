@@ -48,6 +48,8 @@ class image_mixer
     virtual std::future<array<const uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
+
+    std::unique_ptr<frame_pool> create_frame_pool(const void* video_stream_tag, const struct pixel_format_desc& desc) override = 0;
 };
 
 }} // namespace caspar::core

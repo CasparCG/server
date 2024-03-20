@@ -49,7 +49,7 @@ class device final
     array<uint8_t>                 create_array(int size);
 
     std::future<std::shared_ptr<class texture>>
-                                      copy_async(const array<const uint8_t>& source, int width, int height, int stride);
+    copy_async(const array<const uint8_t>& source, int width, int height, int stride, std::shared_ptr<void> drop_hook);
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
     template <typename Func>
     auto dispatch_async(Func&& func)

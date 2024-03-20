@@ -5,6 +5,7 @@ set(SOURCES
 	ogl/image/image_kernel.cpp
 	ogl/image/image_mixer.cpp
 	ogl/image/image_shader.cpp
+	ogl/image/frame_pool.cpp
 
 	ogl/util/buffer.cpp
 	ogl/util/device.cpp
@@ -17,6 +18,7 @@ set(HEADERS
 	ogl/image/image_kernel.h
 	ogl/image/image_mixer.h
 	ogl/image/image_shader.h
+	ogl/image/frame_pool.h
 
 	ogl/util/buffer.h
 	ogl/util/device.h
