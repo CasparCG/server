@@ -902,12 +902,16 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      common::bit_depth                                        depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
     }
 
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink consumer only supports 8-bit color depth."));
+        
     configuration config = parse_amcp_config(params, format_repository);
 
     return spl::make_shared<decklink_consumer_proxy>(config);
@@ -916,8 +920,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              common::bit_depth                                        depth)
 {
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink consumer only supports 8-bit color depth."));
+
     configuration config = parse_xml_config(ptree, format_repository);
 
     return spl::make_shared<decklink_consumer_proxy>(config);

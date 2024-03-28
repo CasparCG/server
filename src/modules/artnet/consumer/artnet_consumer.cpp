@@ -311,9 +311,13 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              common::bit_depth                                        depth)
 {
     configuration config;
+
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Artnet consumer only supports 8-bit color depth."));
 
     config.universe    = ptree.get(L"universe", config.universe);
     config.host        = ptree.get(L"host", config.host);

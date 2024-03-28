@@ -26,6 +26,7 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
+#include <common/except.h>
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/memory.h>
@@ -715,10 +716,14 @@ struct ffmpeg_consumer : public core::frame_consumer
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      common::bit_depth                                        depth)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
+
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Ffmpeg consumer only supports 8-bit color depth."));
 
     auto                     path = u8(params.at(1));
     std::vector<std::string> args;
@@ -731,8 +736,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              common::bit_depth                                        depth)
 {
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Ffmpeg consumer only supports 8-bit color depth."));
+
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
                                              u8(ptree.get<std::wstring>(L"args", L"")),
                                              ptree.get(L"realtime", false));
