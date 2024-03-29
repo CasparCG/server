@@ -256,15 +256,21 @@ struct server::impl
 
             auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
             auto format_desc     = video_format_repository_.find(format_desc_str);
+            auto color_depth     = xml_channel.second.get<unsigned char>(L"color-depth", 8);
+            if (color_depth != 8 && color_depth != 16)
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Invalid color-depth: " + std::to_wstring(color_depth)));
+
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_->size() + 1);
+            auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id, common::bit_depth::bit8),
+                                                accelerator_.create_image_mixer(channel_id, depth),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;
