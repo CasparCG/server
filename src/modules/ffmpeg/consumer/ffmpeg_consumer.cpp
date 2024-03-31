@@ -24,9 +24,9 @@
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
 
+#include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/except.h>
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/memory.h>
@@ -100,6 +100,7 @@ struct Stream
            AVCodecID                           codec_id,
            const core::video_format_desc&      format_desc,
            bool                                realtime,
+           common::bit_depth                   depth,
            std::map<std::string, std::string>& options)
     {
         std::map<std::string, std::string> stream_options;
@@ -178,8 +179,10 @@ struct Stream
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
+                const auto pix_fmt = (depth == common::bit_depth::bit8) ? AV_PIX_FMT_YUVA422P : AV_PIX_FMT_YUVA422P10;
+
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                             format_desc.width % format_desc.height % AV_PIX_FMT_YUVA422P % format_desc.duration %
+                             format_desc.width % format_desc.height % pix_fmt % format_desc.duration %
                              (format_desc.time_scale * format_desc.field_count) % sar.numerator() % sar.denominator() %
                              (format_desc.framerate.numerator() * format_desc.field_count) %
                              format_desc.framerate.denominator())
@@ -464,8 +467,10 @@ struct ffmpeg_consumer : public core::frame_consumer
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
     std::thread                                      frame_thread_;
 
+    common::bit_depth depth_;
+
   public:
-    ffmpeg_consumer(std::string path, std::string args, bool realtime)
+    ffmpeg_consumer(std::string path, std::string args, bool realtime, common::bit_depth depth)
         : channel_index_([&] {
             boost::crc_16_type result;
             result.process_bytes(path.data(), path.length());
@@ -474,6 +479,7 @@ struct ffmpeg_consumer : public core::frame_consumer
         , realtime_(realtime)
         , path_(std::move(path))
         , args_(std::move(args))
+        , depth_(depth)
     {
         state_["file/path"] = u8(path_);
 
@@ -558,7 +564,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
-                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, options);
+                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
 
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
@@ -568,7 +574,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 std::optional<Stream> audio_stream;
                 if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
-                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, options);
+                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, depth_, options);
                 }
 
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
@@ -722,15 +728,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
 
-    if (depth != common::bit_depth::bit8)
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Ffmpeg consumer only supports 8-bit color depth."));
-
     auto                     path = u8(params.at(1));
     std::vector<std::string> args;
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));
     }
-    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"));
+    return spl::make_shared<ffmpeg_consumer>(
+        path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"), depth);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -739,11 +743,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               common::bit_depth                                        depth)
 {
-    if (depth != common::bit_depth::bit8)
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Ffmpeg consumer only supports 8-bit color depth."));
-
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
                                              u8(ptree.get<std::wstring>(L"args", L"")),
-                                             ptree.get(L"realtime", false));
+                                             ptree.get(L"realtime", false),
+                                             depth);
 }
 }} // namespace caspar::ffmpeg
