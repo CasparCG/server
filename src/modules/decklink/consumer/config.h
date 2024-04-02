@@ -82,6 +82,7 @@ struct configuration
     wait_for_reference_t wait_for_reference          = wait_for_reference_t::automatic;
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
+    bool                 hdr                         = false;
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
