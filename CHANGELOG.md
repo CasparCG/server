@@ -1,4 +1,4 @@
-CasparCG 2.4.0 (Unreleased) 
+CasparCG 2.4.0 Stable
 ==========================================
 
 ### Core
