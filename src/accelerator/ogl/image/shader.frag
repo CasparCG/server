@@ -39,6 +39,15 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
+uniform bool        edgeblend;
+uniform float       edgeblend_left;
+uniform float       edgeblend_right;
+uniform float       edgeblend_top;
+uniform float       edgeblend_bottom;
+uniform float       edgeblend_g;
+uniform float       edgeblend_p;
+uniform float       edgeblend_a;
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -520,6 +529,36 @@ vec4 get_rgba_color()
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
+float edgeblend_value(float pos, float boundary, float G, float P, float A)
+{
+    if (pos > boundary)
+        return 1.0;
+    float x = pos / boundary;
+    bool flipped = x >= 0.5;
+    if (flipped)
+        x = 1.0 - x;
+    float a = A;
+    if (flipped)
+        a = 1.0 - a;
+    float v = a * pow(2.0 * x, P);
+    if (flipped)
+        v = 1.0 - v;
+    return pow(v, 1.0 / G);
+}
+
+vec3 Edgeblend(vec3 color, float left, float right, float top, float bottom, float G, float P, float A)
+{
+    vec2 pos = TexCoord2.st;
+    vec2 size = vec2(1.0, 1.0);
+    vec2 edge = vec2(0.0, 0.0);
+    float blend = 1.0;
+    blend *= edgeblend_value(pos.x, left, G, P, A);
+    blend *= edgeblend_value(1.0 - pos.x, right, G, P, A);
+    blend *= edgeblend_value(pos.y, top, G, P, A);
+    blend *= edgeblend_value(1.0 - pos.y, bottom, G, P, A);
+    return color * blend;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -538,5 +577,8 @@ void main()
         color = 1.0 - color;
     if (blend_mode >= 0)
         color = blend(color);
+    if (edgeblend)
+        color.rgb = Edgeblend(color.rgb, edgeblend_left, edgeblend_right, edgeblend_top, edgeblend_bottom, edgeblend_g, edgeblend_p, edgeblend_a);
+
     fragColor = color.bgra;
 }

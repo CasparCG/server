@@ -979,6 +979,45 @@ std::future<std::wstring> mixer_chroma_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+std::future<std::wstring> mixer_edgeblend_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto edgeblend2 = get_current_transform(ctx).share();
+
+        return std::async(std::launch::deferred, [edgeblend2]() -> std::wstring {
+            auto edgeblend = edgeblend2.get().image_transform.edgeblend;
+            return L"201 MIXER OK\r\n" +
+                   std::to_wstring(edgeblend.left) + L" " + std::to_wstring(edgeblend.right)  + L" " +
+                   std::to_wstring(edgeblend.top)  + L" " + std::to_wstring(edgeblend.bottom) + L" " +
+                   std::to_wstring(edgeblend.g)    + L" " + std::to_wstring(edgeblend.p)      + L" " +
+                   std::to_wstring(edgeblend.a)    + L"\r\n";
+        });
+    }
+
+    transforms_applier transforms(ctx);
+    core::edgeblend       edgeblend;
+
+    edgeblend.left              = std::stod(ctx.parameters.at(0));
+    edgeblend.right             = std::stod(ctx.parameters.at(1));
+    edgeblend.top               = std::stod(ctx.parameters.at(2));
+    edgeblend.bottom            = std::stod(ctx.parameters.at(3));
+    edgeblend.g                 = std::stod(ctx.parameters.at(4));
+    edgeblend.p                 = std::stod(ctx.parameters.at(5));
+    edgeblend.a                 = std::stod(ctx.parameters.at(6));
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.edgeblend = edgeblend;
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_blend_command(command_context& ctx)
 {
     if (ctx.parameters.empty())
@@ -1731,6 +1770,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER KEYER", mixer_keyer_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER INVERT", mixer_invert_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CHROMA", mixer_chroma_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER EDGEBLEND", mixer_edgeblend_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER BLEND", mixer_blend_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER OPACITY", mixer_opacity_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER BRIGHTNESS", mixer_brightness_command, 0);
