@@ -9,7 +9,7 @@ export interface NativeApi {
     readonly version: string;
 
     init(
-        config: object,
+        config: ServerInitConfig,
         updatedState?: (
             channelId: number,
             newState: Record<string, any[]>
@@ -165,6 +165,41 @@ export interface NativeApi {
 
     OpenDiag(): void;
     FindCaseInsensitive(filepath: string): Promise<string | null>;
+}
+
+export interface ServerInitConfig {
+    paths: null;
+    moduleConfig?: {
+        ffmpeg?: {
+            producer?: {
+                threads?: number;
+                "auto-deinterlace"?: "interlaced" | "none" | "all";
+            };
+        };
+        flash?: {
+            enabled?: boolean;
+            "buffer-depth"?: number;
+            templateHosts?: {
+                "video-mode": string;
+                filename: string;
+                width: number;
+                height: number;
+            }[];
+        };
+        html?: {
+            "enable-gpu"?: boolean;
+            "angle-backend"?: "gl" | "d3d11";
+            "remote-debugging-port"?: number;
+        };
+        ndi?: {
+            "auto-load"?: boolean;
+        };
+        "system-audio"?: {
+            producer?: {
+                "default-device-name"?: string;
+            };
+        };
+    };
 }
 
 export interface NativeUnusedProducer {

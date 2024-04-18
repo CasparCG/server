@@ -29,7 +29,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <fstream>
@@ -38,10 +37,7 @@ namespace caspar { namespace env {
 
 std::wstring                 initial;
 std::wstring                 media;
-std::wstring                 log;
-bool                         log_enabled = true;
 std::wstring                 ftemplate;
-std::wstring                 data;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -83,50 +79,21 @@ void ensure_writable(const std::wstring& folder)
     boost::filesystem::remove(test_file, ec);
 }
 
-void configure(const std::wstring& filename)
+void configure(const std::wstring&          initial_path,
+               const std::wstring&          media_path,
+               const std::wstring&          template_path,
+               boost::property_tree::wptree pt_)
 {
-    try {
-        initial = clean_path(boost::filesystem::initial_path().wstring());
-
-        std::wstring fullpath = filename;
-        if (!boost::filesystem::exists(fullpath)) {
-            fullpath = initial + L"/" + filename;
-        }
-
-        boost::filesystem::wifstream file(fullpath);
-        boost::property_tree::read_xml(file,
-                                       pt,
-                                       boost::property_tree::xml_parser::trim_whitespace |
-                                           boost::property_tree::xml_parser::no_comments);
-
-        auto paths = pt.get_child(L"configuration.paths");
-        media      = clean_path(paths.get(L"media-path", initial + L"/media/"));
-
-        auto log_path_node = paths.get_child(L"log-path");
-        log_enabled        = !log_path_node.get(L"<xmlattr>.disabled", false);
-        if (log_enabled) {
-            log = clean_path(log_path_node.get_value(initial + L"/log/"));
-        }
-
-        ftemplate =
-            clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
-        data = clean_path(paths.get(L"data-path", initial + L"/data/"));
-    } catch (...) {
-        CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
-        throw;
-    }
+    initial   = initial_path;
+    media     = media_path;
+    ftemplate = template_path;
+    pt        = pt_;
 
     media     = ensure_trailing_slash(resolve_or_create(media));
     ftemplate = ensure_trailing_slash(resolve_or_create(ftemplate));
-    data      = ensure_trailing_slash(resolve_or_create(data));
 
-    if (log_enabled) {
-        log = ensure_trailing_slash(resolve_or_create(log));
-        ensure_writable(log);
-    }
-
+    ensure_writable(media);
     ensure_writable(ftemplate);
-    ensure_writable(data);
 }
 
 const std::wstring& initial_folder()
@@ -141,28 +108,10 @@ const std::wstring& media_folder()
     return media;
 }
 
-const std::wstring& log_folder()
-{
-    check_is_configured();
-    return log;
-}
-
-bool log_to_file()
-{
-    check_is_configured();
-    return log_enabled;
-}
-
 const std::wstring& template_folder()
 {
     check_is_configured();
     return ftemplate;
-}
-
-const std::wstring& data_folder()
-{
-    check_is_configured();
-    return data;
 }
 
 #define QUOTE(str) #str
@@ -179,12 +128,6 @@ const boost::property_tree::wptree& properties()
 {
     check_is_configured();
     return pt;
-}
-
-void log_configuration_warnings()
-{
-    if (pt.empty())
-        return;
 }
 
 }} // namespace caspar::env

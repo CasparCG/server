@@ -17,7 +17,8 @@ bool NapiObjectToBoostPropertyTree(const Napi::Env& env, const Napi::Object& obj
         if (value.IsNumber()) {
             auto valueNumber = value.As<Napi::Number>();
             tree.put(nameStr, valueNumber.Int32Value());
-            // TODO - floats?
+            // auto valueDouble = valueNumber.DoubleValue();
+            //  TODO - floats? https://github.com/nodejs/node-addon-api/issues/578
         } else if (value.IsString()) {
             auto valueStr = value.As<Napi::String>();
             tree.put(nameStr, caspar::u16(valueStr.Utf8Value()));
