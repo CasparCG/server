@@ -42,25 +42,9 @@ void setup_prerequisites()
     std::set_terminate([] { CASPAR_LOG_CURRENT_EXCEPTION(); });
 }
 
-void setup_console_window()
-{
-    // TODO: implement.
-}
-
 void increase_process_priority()
 {
     // TODO: implement.
-}
-
-std::shared_ptr<void> setup_debugging_environment()
-{
-    // TODO: implement if applicable.
-    return nullptr;
-}
-
-void wait_for_remote_debugging()
-{
-    // TODO: implement if applicable.
 }
 
 } // namespace caspar
