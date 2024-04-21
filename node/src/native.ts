@@ -168,7 +168,11 @@ export interface NativeApi {
 }
 
 export interface ServerInitConfig {
-    paths: null;
+    paths: {
+        initial: string;
+        media: string;
+        template: string;
+    };
     moduleConfig?: {
         ffmpeg?: {
             producer?: {
@@ -188,7 +192,7 @@ export interface ServerInitConfig {
         };
         html?: {
             "enable-gpu"?: boolean;
-            "angle-backend"?: "gl" | "d3d11";
+            "angle-backend"?: "gl" | "d3d11" | "d3d9";
             "remote-debugging-port"?: number;
         };
         ndi?: {

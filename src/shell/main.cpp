@@ -65,6 +65,8 @@
 #include "./operations/stage.h"
 #include "./operations/util.h"
 
+#include <iostream>
+
 namespace caspar {
 
 void setup_global_locale()
@@ -160,12 +162,25 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
     // Increase process priority.
     increase_process_priority();
 
-    // TODO: remove the use of this config file. everything needs to be passed from node
-    std::wstring config_file_name(L"casparcg.config");
-
     try {
+        boost::property_tree::wptree config_tree;
+        if (!NapiObjectToBoostPropertyTree(env, configuration, config_tree)) {
+            return env.Null();
+        }
+
+        auto paths_config = configuration.Get("paths");
+        if (!paths_config.IsObject()) {
+            Napi::Error::New(env, "Expected paths to be an object").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        auto paths_object = paths_config.As<Napi::Object>();
+
+        std::wstring initial_path  = u16(paths_object.Get("initial").As<Napi::String>().Utf8Value());
+        std::wstring media_path    = u16(paths_object.Get("media").As<Napi::String>().Utf8Value());
+        std::wstring template_path = u16(paths_object.Get("template").As<Napi::String>().Utf8Value());
+
         log::add_cout_sink();
-        env::configure(config_file_name);
+        env::configure(initial_path, media_path, template_path, config_tree);
 
         {
             std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");

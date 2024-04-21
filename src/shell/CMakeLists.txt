@@ -66,8 +66,8 @@ target_include_directories(casparcg PRIVATE
     ${TBB_INCLUDE_PATH}
 	${CMAKE_JS_INC}
 	# hack: these aren't being propogated correctly
-	/home/julus/Projects/casparcg-server-node/node/node_modules/node-api-headers/include
-	/home/julus/Projects/casparcg-server-node/node/node_modules/node-addon-api
+	../../node/node_modules/node-api-headers/include
+	../../node/node_modules/node-addon-api
     )
 casparcg_add_build_dependencies(casparcg)
 

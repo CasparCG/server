@@ -105,12 +105,50 @@ const channelStateStore = new Map<number, Record<string, any[]>>();
 const oscSender = new OscSender();
 
 console.log(Native);
-Native.init(config, (channelId: number, newState: Record<string, any[]>) => {
-    newState["_generated"] = [Date.now()];
-    channelStateStore.set(channelId, newState);
+Native.init(
+    {
+        paths: {
+            initial: process.cwd(),
+            media: config.paths.mediaPath,
+            template: config.paths.templatePath,
+        },
+        moduleConfig: {
+            ffmpeg: {
+                producer: {
+                    threads: config.ffmpeg.producer.threads,
+                    "auto-deinterlace": config.ffmpeg.producer.autoDeinterlace,
+                },
+            },
+            flash: {
+                enabled: config.flash.enabled,
+                // TODO - fix these
+                // "buffer-depth": config.flash.bufferDepth,
+                // templateHosts: config.flash.templateHosts,
+            },
+            html: {
+                "enable-gpu": config.html.enableGpu,
+                "angle-backend": config.html.angleBackend,
+                "remote-debugging-port": config.html.remoteDebuggingPort,
+            },
+            ndi: {
+                "auto-load": config.ndi.autoLoad,
+            },
+            "system-audio": {
+                producer: {
+                    "default-device-name":
+                        config.systemAudio.producer.defaultDeviceName ??
+                        undefined,
+                },
+            },
+        },
+    },
+    (channelId: number, newState: Record<string, any[]>) => {
+        newState["_generated"] = [Date.now()];
+        channelStateStore.set(channelId, newState);
 
-    oscSender.sendState(channelId, newState);
-});
+        oscSender.sendState(channelId, newState);
+    }
+);
 
 for (const videoMode of config.videoModes) {
     Native.ConfigAddCustomVideoFormat(videoMode);
