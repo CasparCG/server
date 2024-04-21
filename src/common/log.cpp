@@ -22,6 +22,7 @@
 
 #include "except.h"
 
+#include "boost/date_time/gregorian/gregorian.hpp"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -31,6 +32,7 @@
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks/async_frontend.hpp>
+#include <boost/log/sinks/basic_sink_backend.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
 #include <boost/log/sinks/text_ostream_backend.hpp>
@@ -42,7 +44,6 @@
 #include <boost/smart_ptr/shared_ptr.hpp>
 
 #include <atomic>
-#include <iostream>
 
 namespace logging  = boost::log;
 namespace src      = boost::log::sources;
@@ -53,7 +54,7 @@ using namespace boost::placeholders;
 
 namespace caspar { namespace log {
 
-logging_config current_config;
+std::wstring current_level;
 
 std::string current_exception_diagnostic_information()
 {
@@ -85,113 +86,42 @@ std::string current_exception_diagnostic_information()
     return boost::current_exception_diagnostic_information(true);
 }
 
-template <typename Stream>
-void append_timestamp(Stream& stream, boost::posix_time::ptime timestamp)
+void remove_all_sinks()
 {
-    auto date         = timestamp.date();
-    auto time         = timestamp.time_of_day();
-    auto milliseconds = time.fractional_seconds() / 1000; // microseconds to milliseconds
-
-    std::wstringstream buffer;
-
-    buffer << std::setfill(L'0') << L"[" << std::setw(4) << date.year() << L"-" << std::setw(2)
-           << date.month().as_number() << "-" << std::setw(2) << date.day().as_number() << L" " << std::setw(2)
-           << time.hours() << L":" << std::setw(2) << time.minutes() << L":" << std::setw(2) << time.seconds() << L"."
-           << std::setw(3) << milliseconds << L"] ";
-
-    stream << buffer.str();
+    boost::log::core::get()->flush();
+    boost::log::core::get()->remove_all_sinks();
 }
 
-class column_writer
+struct node_sink_backend
+    : public boost::log::sinks::basic_sink_backend<sinks::combine_requirements<sinks::concurrent_feeding>::type>
 {
-    std::atomic<int> column_width_;
-
-  public:
-    explicit column_writer(int initial_width = 0)
-        : column_width_(initial_width)
+    node_sink_backend(std::shared_ptr<log_receiver_emitter> sink)
+        : sink_(std::move(sink))
+        , myEpoch(boost::posix_time::from_time_t(0))
     {
     }
 
-    template <typename Stream, typename Val>
-    void write(Stream& out, const Val& value)
+    void consume(logging::record_view const& rec)
     {
-        std::wstring to_string = boost::lexical_cast<std::wstring>(value);
+        std::string level = boost::log::trivial::to_string(
+            boost::log::extract<boost::log::trivial::severity_level>("Severity", rec).get());
 
-        if (!current_config.align_columns) {
-            out << L"[" << to_string << L"] ";
-        } else {
-            int length = static_cast<int>(to_string.size());
-            int read_width;
+        boost::posix_time::ptime timestamp_ns =
+            boost::log::extract<boost::posix_time::ptime>("TimestampMillis", rec).get();
+        std::int64_t timestamp_millis = (timestamp_ns - myEpoch).ticks() / 1000;
 
-            while (true) {
-                read_width = column_width_;
-                if (read_width >= length || column_width_.compare_exchange_strong(length, read_width)) {
-                    break;
-                }
-            }
+        std::string message = u8(rec[boost::log::expressions::message].get<std::wstring>());
 
-            read_width = column_width_;
-
-            out << L"[" << to_string << L"] ";
-
-            for (int n = 0; n < read_width - length; ++n) {
-                out << L" ";
-            }
-        }
+        sink_->send_log(timestamp_millis, message, level);
     }
+
+  private:
+    boost::posix_time::ptime myEpoch;
+
+    std::shared_ptr<log_receiver_emitter> sink_;
 };
 
-template <typename Stream>
-void my_formatter(bool print_all_characters, const boost::log::record_view& rec, Stream& strm)
-{
-    // static column_writer thread_id_column;
-    static column_writer severity_column(7);
-    namespace expr = boost::log::expressions;
-
-    std::wstringstream pre_message_stream;
-    append_timestamp(pre_message_stream, boost::log::extract<boost::posix_time::ptime>("TimestampMillis", rec).get());
-    // thread_id_column.write(pre_message_stream, boost::log::extract<std::int64_t>("NativeThreadId", rec));
-    severity_column.write(pre_message_stream,
-                          boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
-
-    auto pre_message = pre_message_stream.str();
-
-    strm << pre_message;
-
-    auto line_break_replacement = L"\n" + pre_message;
-
-    if (print_all_characters) {
-        strm << boost::replace_all_copy(rec[expr::message].get<std::wstring>(), "\n", line_break_replacement);
-    } else {
-        strm << boost::replace_all_copy(
-            replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?'), L"\n", line_break_replacement);
-    }
-}
-
-void add_file_sink(const std::wstring& file)
-{
-    using file_sink_type = boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>;
-
-    try {
-        if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path())) {
-            CASPAR_THROW_EXCEPTION(directory_not_found());
-        }
-
-        auto file_sink = boost::make_shared<file_sink_type>(
-            boost::log::keywords::file_name           = file + L"_%Y-%m-%d.log",
-            boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-            boost::log::keywords::auto_flush          = true,
-            boost::log::keywords::open_mode           = std::ios::app);
-
-        file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, true, _1, _2));
-
-        boost::log::core::get()->add_sink(file_sink);
-    } catch (...) {
-        std::wcerr << L"Failed to Setup File Logging Sink" << std::endl << std::endl;
-    }
-}
-
-void add_cout_sink()
+void add_nodejs_sink(std::shared_ptr<log_receiver_emitter> sink)
 {
     boost::log::add_common_attributes();
     // boost::log::core::get()->add_global_attribute("NativeThreadId",
@@ -200,17 +130,10 @@ void add_cout_sink()
                                                       return boost::posix_time::microsec_clock::local_time();
                                                   }));
 
-    using stream_sink_type = sinks::asynchronous_sink<sinks::wtext_ostream_backend>;
+    auto node_sink  = boost::make_shared<node_sink_backend>(sink);
+    auto boost_sink = boost::make_shared<sinks::asynchronous_sink<node_sink_backend>>(node_sink);
 
-    auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
-    stream_backend->add_stream(boost::shared_ptr<std::wostream>(&std::wcout, boost::null_deleter()));
-    stream_backend->auto_flush(true);
-
-    auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
-
-    stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, false, _1, _2));
-
-    logging::core::get()->add_sink(stream_sink);
+    logging::core::get()->add_sink(boost_sink);
 }
 
 bool set_log_level(const std::wstring& lvl)
@@ -231,12 +154,10 @@ bool set_log_level(const std::wstring& lvl)
         return false;
 
     // TODO is this a race condition?
-    current_config.current_level = lvl;
+    current_level = lvl;
     return true;
 }
 
-std::wstring& get_log_level() { return current_config.current_level; }
-
-void set_log_column_alignment(bool align_columns) { current_config.align_columns = align_columns; }
+std::wstring& get_log_level() { return current_level; }
 
 }} // namespace caspar::log

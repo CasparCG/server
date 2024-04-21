@@ -10,6 +10,11 @@ export interface NativeApi {
 
     init(
         config: ServerInitConfig,
+        logReceiver: (
+            timestamp: number,
+            message: string,
+            level: string
+        ) => void,
         updatedState?: (
             channelId: number,
             newState: Record<string, any[]>

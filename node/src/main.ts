@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { format as formatDateTime } from "date-fns";
 import { Native } from "./native.js";
 import { AMCPClientBatchInfo, AMCPProtocolStrategy } from "./amcp/protocol.js";
 import { ChannelLocks } from "./amcp/channel_locks.js";
@@ -11,6 +12,7 @@ import {
 } from "./amcp/command_repository.js";
 import path from "node:path";
 import { OscSender } from "./osc.js";
+
 // import { parseXmlConfigFile } from "./config/parse.js";
 
 const rl = createInterface({
@@ -113,34 +115,42 @@ Native.init(
             template: config.paths.templatePath,
         },
         moduleConfig: {
-            ffmpeg: {
-                producer: {
-                    threads: config.ffmpeg.producer.threads,
-                    "auto-deinterlace": config.ffmpeg.producer.autoDeinterlace,
-                },
-            },
-            flash: {
-                enabled: config.flash.enabled,
-                // TODO - fix these
-                // "buffer-depth": config.flash.bufferDepth,
-                // templateHosts: config.flash.templateHosts,
-            },
-            html: {
-                "enable-gpu": config.html.enableGpu,
-                "angle-backend": config.html.angleBackend,
-                "remote-debugging-port": config.html.remoteDebuggingPort,
-            },
-            ndi: {
-                "auto-load": config.ndi.autoLoad,
-            },
-            "system-audio": {
-                producer: {
-                    "default-device-name":
-                        config.systemAudio.producer.defaultDeviceName ??
-                        undefined,
-                },
-            },
+            //     ffmpeg: {
+            //         producer: {
+            //             threads: config.ffmpeg.producer.threads,
+            //             "auto-deinterlace": config.ffmpeg.producer.autoDeinterlace,
+            //         },
+            //     },
+            //     flash: {
+            //         enabled: config.flash.enabled,
+            //         // TODO - fix these
+            //         // "buffer-depth": config.flash.bufferDepth,
+            //         // templateHosts: config.flash.templateHosts,
+            //     },
+            //     html: {
+            //         "enable-gpu": config.html.enableGpu,
+            //         "angle-backend": config.html.angleBackend,
+            //         "remote-debugging-port": config.html.remoteDebuggingPort,
+            //     },
+            //     ndi: {
+            //         "auto-load": config.ndi.autoLoad,
+            //     },
+            //     "system-audio": {
+            //         producer: {
+            //             "default-device-name":
+            //                 config.systemAudio.producer.defaultDeviceName ??
+            //                 undefined,
+            //         },
+            //     },
         },
+    },
+    (timestamp, message, level) => {
+        const timestampStr = formatDateTime(
+            timestamp,
+            "yyyy-MM-dd HH:mm:ss.SSS"
+        );
+
+        console.log("LOG: ", `${timestampStr} ${level} ${message}`);
     },
     (channelId: number, newState: Record<string, any[]>) => {
         newState["_generated"] = [Date.now()];
@@ -244,7 +254,7 @@ rl.setPrompt("");
 rl.prompt();
 
 const server = new AMCPServer(
-    5250,
+    5252,
     protocol,
     locks,
     oscSender,

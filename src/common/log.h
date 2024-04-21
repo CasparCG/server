@@ -36,6 +36,12 @@
 
 namespace caspar { namespace log {
 
+class log_receiver_emitter
+{
+  public:
+    virtual void send_log(int64_t timestamp, const std::string& message, const std::string& level) = 0;
+};
+
 template <typename T>
 void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
@@ -58,17 +64,10 @@ using caspar_logger = boost::log::sources::wseverity_logger<boost::log::trivial:
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, caspar_logger)
 #define CASPAR_LOG(lvl) BOOST_LOG_SEV(::caspar::log::logger::get(), boost::log::trivial::severity_level::lvl)
 
-struct logging_config
-{
-    std::atomic<bool> align_columns = {false};
-    std::wstring      current_level;
-};
-
-void          add_file_sink(const std::wstring& file);
-void          add_cout_sink();
+void          remove_all_sinks();
+void          add_nodejs_sink(std::shared_ptr<log_receiver_emitter> sink);
 bool          set_log_level(const std::wstring& lvl);
 std::wstring& get_log_level();
-void          set_log_column_alignment(bool align_columns);
 
 inline std::wstring get_stack_trace()
 {

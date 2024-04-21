@@ -56,6 +56,7 @@
 
 #include "./channel_state.h"
 #include "./conv.h"
+#include "./log_receiver.h"
 #include "./operations/base.h"
 #include "./operations/cg.h"
 #include "./operations/channel.h"
@@ -138,13 +139,18 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
-    if (info.Length() >= 2) {
-        if (!info[1].IsFunction()) {
+    if (info.Length() < 2 || !info[1].IsFunction()) {
+        Napi::Error::New(env, "Expected log receiver").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() >= 3) {
+        if (!info[2].IsFunction()) {
             Napi::Error::New(env, "Expected callback for state updates").ThrowAsJavaScriptException();
             return env.Null();
         }
 
-        auto callback = info[1].As<Napi::Function>();
+        auto callback = info[2].As<Napi::Function>();
 
         // TODO - cleanup if something throws
         instance_data->osc_sender = create_channel_state_emitter(env, callback);
@@ -152,6 +158,7 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
     }
 
     auto configuration = info[0].As<Napi::Object>();
+    auto logReceiver   = info[1].As<Napi::Function>();
 
     using namespace caspar;
 
@@ -179,7 +186,9 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
         std::wstring media_path    = u16(paths_object.Get("media").As<Napi::String>().Utf8Value());
         std::wstring template_path = u16(paths_object.Get("template").As<Napi::String>().Utf8Value());
 
-        log::add_cout_sink();
+        log::remove_all_sinks(); // Ensure there isn't an existing logger
+        log::add_nodejs_sink(create_log_receiver_emitter(env, logReceiver));
+
         env::configure(initial_path, media_path, template_path, config_tree);
 
         {
@@ -197,13 +206,6 @@ Napi::Value InitServer(const Napi::CallbackInfo& info)
 
         // For example CEF resets the global locale, so this is to reset it back to "our" preference.
         setup_global_locale();
-
-        // std::wstringstream                                      str;
-        // boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-        // boost::property_tree::write_xml(str, env::properties(), w);
-        // CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
-        //                  << L":\n-----------------------------------------\n"
-        //                  << str.str() << L"-----------------------------------------";
 
         instance_data->caspar_server->start();
 
@@ -238,6 +240,11 @@ Napi::Value StopServer(const Napi::CallbackInfo& info)
 
     instance_data->caspar_server = nullptr;
     instance_data->osc_sender    = nullptr;
+
+    // TODO: some log lines can be lost at exit for some reason
+
+    // Ensure references to log callback are disposed
+    caspar::log::remove_all_sinks();
 
     return env.Null();
 }

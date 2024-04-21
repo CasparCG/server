@@ -26,6 +26,7 @@ set(SOURCES
 		operations/util.cpp
 		conv.cpp
 		channel_state.cpp
+		log_receiver.cpp
 )
 set(HEADERS
 		platform_specific.h
@@ -43,6 +44,7 @@ set(HEADERS
 
 		conv.h
 		channel_state.h
+		log_receiver.h
 )
 
 if (MSVC)

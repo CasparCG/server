@@ -4,6 +4,8 @@
 
 #include <core/monitor/monitor.h>
 
+namespace channel_state {
+
 struct channel_osc_state
 {
     const int                          channel_index;
@@ -81,10 +83,12 @@ class channel_state_emitter_impl
     TSFN tsfn;
 };
 
+} // namespace channel_state
+
 std::shared_ptr<caspar::channel_state_emitter> create_channel_state_emitter(const Napi::Env& env,
                                                                             Napi::Function   callback)
 {
-    auto sender = std::make_shared<channel_state_emitter_impl>();
+    auto sender = std::make_shared<channel_state::channel_state_emitter_impl>();
     sender->init(env, callback);
 
     // Re-wrap the pointer to call release instead of destructor upon release
