@@ -8,7 +8,8 @@ uniform sampler2D	plane[4];
 uniform sampler2D	local_key;
 uniform sampler2D	layer_key;
 
-uniform bool		is_hd;
+uniform mat3		color_matrix;
+uniform vec3		luma_coeff;
 uniform bool		has_local_key;
 uniform bool		has_layer_key;
 uniform int			blend_mode;
@@ -52,9 +53,7 @@ vec3 ContrastSaturationBrightness(vec4 color, float brt, float sat, float con)
     const float AvgLumG = 0.5;
     const float AvgLumB = 0.5;
 
-    vec3 LumCoeff = is_hd
-            ? vec3(0.0722, 0.7152, 0.2126)
-            : vec3(0.114, 0.587, 0.299);
+    vec3 LumCoeff = luma_coeff.bgr;
 
     if (color.a > 0.0)
         color.rgb /= color.a;
@@ -290,9 +289,7 @@ vec3 BlendLuminosity(vec3 base, vec3 blend)
 //      by F. van den Bergh & V. Lalioti
 // but as a pixel shader algorithm.
 //
-vec4  grey_xfer  = is_hd
-        ? vec4(0.2126, 0.7152, 0.0722, 0)
-        : vec4(0.299,  0.587,  0.114, 0);
+vec4  grey_xfer  = vec4(luma_coeff, 0);
 
 // This allows us to implement the paper's alphaMap curve in software
 // rather than a largeish array
@@ -439,32 +436,16 @@ vec4 chroma_key(vec4 c)
     return ChromaOnCustomColor(c.bgra).bgra;
 }
 
-vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)
+vec4 ycbcra_to_rgba(float Y, float Cb, float Cr, float A)
 {
-    vec4 rgba;
-    rgba.b = (1.164*(Y*255 - 16) + 1.596*(Cr*255 - 128))/255;
-    rgba.g = (1.164*(Y*255 - 16) - 0.813*(Cr*255 - 128) - 0.391*(Cb*255 - 128))/255;
-    rgba.r = (1.164*(Y*255 - 16) + 2.018*(Cb*255 - 128))/255;
-    rgba.a = A;
-    return rgba;
-}
+    const float luma_coefficient = 255.0/219.0;
+    const float chroma_coefficient = 255.0/224.0;
 
-vec4 ycbcra_to_rgba_hd(float Y, float Cb, float Cr, float A)
-{
-    vec4 rgba;
-    rgba.b = (1.164*(Y*255 - 16) + 1.793*(Cr*255 - 128))/255;
-    rgba.g = (1.164*(Y*255 - 16) - 0.534*(Cr*255 - 128) - 0.213*(Cb*255 - 128))/255;
-    rgba.r = (1.164*(Y*255 - 16) + 2.115*(Cb*255 - 128))/255;
-    rgba.a = A;
-    return rgba;
-}
+    vec3 YCbCr = vec3(Y, Cb, Cr) * 255;
+    YCbCr -= vec3(16.0, 128.0, 128.0);
+    YCbCr *= vec3(luma_coefficient, chroma_coefficient, chroma_coefficient);
 
-vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)
-{
-    if(is_hd)
-        return ycbcra_to_rgba_hd(y, cb, cr, a);
-    else
-        return ycbcra_to_rgba_sd(y, cb, cr, a);
+    return vec4(color_matrix * YCbCr / 255, A).bgra;
 }
 
 vec4 get_sample(sampler2D sampler, vec2 coords)

@@ -254,6 +254,11 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
+        const auto is_hd = params.pix_desc.planes.at(0).height > 700;
+
+        const float color_matrix_sd[9] = {1.0, 0.0, 1.402, 1.0, -0.344, -0.509, 1.0, 1.772, 0.0};
+        const float color_matrix_hd[9] = {1.0, 0.0, 1.5748, 1.0, -0.1873, -0.4681, 1.0, 1.8556, 0.0};
+
         // Setup shader
 
         shader_->use();
@@ -268,7 +273,12 @@ struct image_kernel::impl
         shader_->set("precision_factor[3]", precision_factor[3]);
         shader_->set("local_key", texture_id::local_key);
         shader_->set("layer_key", texture_id::layer_key);
-        shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+        shader_->set_matrix3("color_matrix", is_hd ? color_matrix_hd : color_matrix_sd);
+        if (is_hd) {
+            shader_->set("luma_coeff", 0.2126, 0.7152, 0.0722);
+        } else {
+            shader_->set("luma_coeff", 0.299, 0.587, 0.114);
+        }
         shader_->set("has_local_key", static_cast<bool>(params.local_key));
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);

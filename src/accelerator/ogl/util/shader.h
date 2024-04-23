@@ -41,7 +41,9 @@ class shader final
     void set(const std::string& name, int value);
     void set(const std::string& name, float value);
     void set(const std::string& name, double value0, double value1);
+    void set(const std::string& name, double value0, double value1, double value2);
     void set(const std::string& name, double value);
+    void set_matrix3(const std::string& name, const float* value);
 
     GLint get_attrib_location(const char* name);
 
