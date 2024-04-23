@@ -46,12 +46,14 @@ std::shared_ptr<AVPacket> alloc_packet()
 core::mutable_frame make_frame(void*                    tag,
                                core::frame_factory&     frame_factory,
                                std::shared_ptr<AVFrame> video,
-                               std::shared_ptr<AVFrame> audio)
+                               std::shared_ptr<AVFrame> audio,
+                               core::color_space        color_space)
 {
     std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
 
     const auto pix_desc =
-        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
+        video ? pixel_format_desc(
+                    static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map, color_space)
               : core::pixel_format_desc(core::pixel_format::invalid);
 
     auto frame = frame_factory.create_frame(tag, pix_desc);
@@ -144,14 +146,18 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
     }
 }
 
-core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height, std::vector<int>& data_map)
+core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
+                                          int               width,
+                                          int               height,
+                                          std::vector<int>& data_map,
+                                          core::color_space color_space)
 {
     // Get linesizes
     int linesizes[4];
     av_image_fill_linesizes(linesizes, pix_fmt, width);
 
     const auto fmt   = get_pixel_format(pix_fmt);
-    auto       desc  = core::pixel_format_desc(std::get<0>(fmt));
+    auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
     auto       depth = std::get<1>(fmt);
 
     switch (desc.format) {

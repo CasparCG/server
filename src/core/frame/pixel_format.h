@@ -44,6 +44,13 @@ enum class pixel_format
     invalid,
 };
 
+enum class color_space
+{
+    bt601,
+    bt709,
+    bt2020,
+};
+
 struct pixel_format_desc final
 {
     struct plane
@@ -70,13 +77,15 @@ struct pixel_format_desc final
 
     pixel_format_desc() = default;
 
-    explicit pixel_format_desc(pixel_format format)
+    explicit pixel_format_desc(pixel_format format, core::color_space color_space = core::color_space::bt709)
         : format(format)
+        , color_space(color_space)
     {
     }
 
     pixel_format       format = pixel_format::invalid;
     std::vector<plane> planes;
+    core::color_space  color_space = core::color_space::bt709;
 };
 
 }} // namespace caspar::core
