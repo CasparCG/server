@@ -87,7 +87,8 @@ struct Filter
     Filter(std::string                          filter_spec,
            AVMediaType                          type,
            const core::video_format_desc&       format_desc,
-           const com_ptr<IDeckLinkDisplayMode>& dm)
+           const com_ptr<IDeckLinkDisplayMode>& dm,
+           bool                                 hdr)
     {
         BMDTimeScale timeScale;
         BMDTimeValue frameDuration;
@@ -174,6 +175,7 @@ struct Filter
 
         FF(avfilter_graph_parse2(graph.get(), filter_spec.c_str(), &inputs, &outputs));
 
+        auto pix_fmt = (hdr ? AV_PIX_FMT_YUV422P10 : AV_PIX_FMT_UYVY422);
         for (auto cur = inputs; cur; cur = cur->next) {
             const auto filter_type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
 
@@ -187,7 +189,7 @@ struct Filter
 
                 auto args =
                     (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
-                     dm->GetWidth() % dm->GetHeight() % AV_PIX_FMT_UYVY422 % 1 % AV_TIME_BASE % sar.numerator() %
+                     dm->GetWidth() % dm->GetHeight() % pix_fmt % 1 % AV_TIME_BASE % sar.numerator() %
                      sar.denominator() % (timeScale / 1000 * (dm->GetFieldDominance() == bmdProgressiveFrame ? 1 : 2)) %
                      (frameDuration / 1000))
                         .str();
@@ -225,7 +227,7 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            AVPixelFormat pix_fmts[] = {AV_PIX_FMT_UYVY422, AV_PIX_FMT_NONE};
+            AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE };
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -273,6 +275,88 @@ struct Filter
     }
 };
 
+struct Decoder
+{
+    Decoder(const Decoder&) = delete;
+
+    bool hdr_ = false;
+
+  public:
+    std::shared_ptr<AVCodecContext> ctx;
+
+    Decoder() = default;
+
+    explicit Decoder(bool hdr, const com_ptr<IDeckLinkDisplayMode>& mode)
+        : hdr_(hdr)
+    {
+        const auto codec = avcodec_find_decoder(AV_CODEC_ID_V210);
+        if (!codec) {
+            FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
+        }
+
+        ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                              [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+        if (!ctx) {
+            FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
+        }
+
+        auto params = std::shared_ptr<AVCodecParameters>(avcodec_parameters_alloc(),
+                                                         [](AVCodecParameters* ptr) { avcodec_parameters_free(&ptr); });
+        if (!params) {
+            FF_RET(AVERROR(ENOMEM), "avcodec_parameters_alloc");
+        }
+        params->width      = mode->GetWidth();
+        params->height     = mode->GetHeight();
+        params->codec_type = AVMEDIA_TYPE_VIDEO;
+        params->codec_id   = AV_CODEC_ID_V210;
+        params->format     = AV_PIX_FMT_YUV422P10;
+
+        FF(avcodec_parameters_to_context(ctx.get(), params.get()));
+
+        // int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
+        FF(av_opt_set_image_size(ctx.get(), "video_size", mode->GetWidth(), mode->GetHeight(), 0));
+        FF(avcodec_open2(ctx.get(), codec, nullptr));
+    }
+
+    std::shared_ptr<AVFrame> decode(IDeckLinkVideoInputFrame* video, const com_ptr<IDeckLinkDisplayMode>& mode)
+    {
+        void* video_bytes = nullptr;
+        if (SUCCEEDED(video->GetBytes(&video_bytes)) && video_bytes) {
+            video->AddRef();
+
+            auto frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [video](AVFrame* ptr) {
+                video->Release();
+                av_frame_free(&ptr);
+            });
+            if (!frame)
+                FF_RET(AVERROR(ENOMEM), "av_frame_alloc");
+
+            if (hdr_) {
+                const auto size = video->GetRowBytes() * video->GetHeight();
+                AVPacket   packet;
+                av_init_packet(&packet);
+                packet.data = reinterpret_cast<uint8_t*>(video_bytes);
+                packet.size = size;
+                FF(avcodec_send_packet(ctx.get(), &packet));
+                FF(avcodec_receive_frame(ctx.get(), frame.get()));
+            } else {
+                frame->format      = AV_PIX_FMT_UYVY422;
+                frame->width       = video->GetWidth();
+                frame->height      = video->GetHeight();
+                frame->data[0]     = reinterpret_cast<uint8_t*>(video_bytes);
+                frame->linesize[0] = video->GetRowBytes();
+                frame->key_frame   = 1;
+            }
+
+            frame->interlaced_frame = mode->GetFieldDominance() != bmdProgressiveFrame;
+            frame->top_field_first  = mode->GetFieldDominance() == bmdUpperFieldFirst ? 1 : 0;
+
+            return frame;
+        }
+        return nullptr;
+    }
+};
+
 com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInput>& device,
                                                BMDDisplayMode                       format,
                                                BMDPixelFormat                       pix_fmt,
@@ -316,6 +400,8 @@ static com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckL
     return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }
 
+BMDPixelFormat get_pixel_format2(bool hdr) { return hdr ? bmdFormat10BitYUV : bmdFormat8BitYUV; }
+
 class decklink_producer : public IDeckLinkInputCallback
 {
     const int                           device_index_;
@@ -342,6 +428,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
     bool freeze_on_lost_;
     bool has_signal_;
+    bool hdr_;
 
     core::draw_frame last_frame_;
 
@@ -361,6 +448,8 @@ class decklink_producer : public IDeckLinkInputCallback
     Filter video_filter_;
     Filter audio_filter_;
 
+    Decoder video_decoder_;
+
   public:
     decklink_producer(core::video_format_desc                     format_desc,
                       int                                         device_index,
@@ -369,12 +458,14 @@ class decklink_producer : public IDeckLinkInputCallback
                       std::string                                 vfilter,
                       std::string                                 afilter,
                       const std::wstring&                         format,
-                      bool                                        freeze_on_lost)
+                      bool                                        freeze_on_lost,
+                      bool                                        hdr)
         : device_index_(device_index)
         , format_desc_(std::move(format_desc))
         , frame_factory_(frame_factory)
         , format_repository_(format_repository)
         , freeze_on_lost_(freeze_on_lost)
+        , hdr_(hdr)
         , input_format(format_desc_)
         , vfilter_(std::move(vfilter))
         , afilter_(std::move(afilter))
@@ -384,9 +475,10 @@ class decklink_producer : public IDeckLinkInputCallback
             input_format = format_repository.find(format);
         }
 
-        mode_         = get_display_mode(input_, input_format.format, bmdFormat8BitYUV, bmdSupportedVideoModeDefault);
-        video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
-        audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+        mode_ = get_display_mode(input_, input_format.format, get_pixel_format2(hdr_), bmdSupportedVideoModeDefault);
+        video_filter_  = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_, hdr_);
+        audio_filter_  = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_, hdr_);
+        video_decoder_ = Decoder(hdr_, mode_);
 
         boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
@@ -411,7 +503,7 @@ class decklink_producer : public IDeckLinkInputCallback
             flags = 0;
         }
 
-        if (FAILED(input_->EnableVideoInput(mode_->GetDisplayMode(), bmdFormat8BitYUV, flags))) {
+        if (FAILED(input_->EnableVideoInput(mode_->GetDisplayMode(), get_pixel_format2(hdr_), flags))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable video input.")
                                                       << boost::errinfo_api_function("EnableVideoInput"));
         }
@@ -465,15 +557,16 @@ class decklink_producer : public IDeckLinkInputCallback
 
             // reinitializing filters because not all filters can handle on-the-fly format changes
             input_format = new_fmt;
-            mode_        = get_display_mode(input_, newMode, bmdFormat8BitYUV, bmdSupportedVideoModeDefault);
+            mode_        = get_display_mode(input_, newMode, get_pixel_format2(hdr_), bmdSupportedVideoModeDefault);
 
             graph_->set_text(print());
 
-            video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
-            audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+            video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_, hdr_);
+            audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_, hdr_);
 
             // reinitializing video input with the new display mode
-            if (FAILED(input_->EnableVideoInput(newMode, bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection))) {
+            if (FAILED(
+                    input_->EnableVideoInput(newMode, get_pixel_format2(hdr_), bmdVideoInputEnableFormatDetection))) {
                 CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Unable to enable video input.")
                                                           << boost::errinfo_api_function("EnableVideoInput"));
             }
@@ -552,27 +645,14 @@ class decklink_producer : public IDeckLinkInputCallback
                     return S_OK;
                 }
 
-                auto src    = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-                src->format = AV_PIX_FMT_UYVY422;
-                src->width  = video->GetWidth();
-                src->height = video->GetHeight();
-                src->interlaced_frame = mode_->GetFieldDominance() != bmdProgressiveFrame;
-                src->top_field_first  = mode_->GetFieldDominance() == bmdUpperFieldFirst ? 1 : 0;
-                src->key_frame        = 1;
+                auto src = video_decoder_.decode(video, mode_);
 
-                void* video_bytes = nullptr;
-                if (SUCCEEDED(video->GetBytes(&video_bytes)) && video_bytes) {
-                    video->AddRef();
-                    src = std::shared_ptr<AVFrame>(src.get(), [src, video](AVFrame* ptr) { video->Release(); });
+                BMDTimeValue duration;
+                if (SUCCEEDED(video->GetStreamTime(&in_video_pts, &duration, AV_TIME_BASE))) {
+                    src->pts = in_video_pts;
+                }
 
-                    src->data[0]     = reinterpret_cast<uint8_t*>(video_bytes);
-                    src->linesize[0] = video->GetRowBytes();
-
-                    BMDTimeValue duration;
-                    if (SUCCEEDED(video->GetStreamTime(&in_video_pts, &duration, AV_TIME_BASE))) {
-                        src->pts = in_video_pts;
-                    }
-
+                if (src) {
                     if (video_filter_.video_source) {
                         FF(av_buffersrc_write_frame(video_filter_.video_source, src.get()));
                     }
@@ -761,7 +841,8 @@ class decklink_producer_proxy : public core::frame_producer
                                      const std::string&                          afilter,
                                      uint32_t                                    length,
                                      const std::wstring&                         format,
-                                     bool                                        freeze_on_lost)
+                                     bool                                        freeze_on_lost,
+                                     bool                                        hdr)
         : length_(length)
         , executor_(L"decklink_producer[" + std::to_wstring(device_index) + L"]")
     {
@@ -769,8 +850,15 @@ class decklink_producer_proxy : public core::frame_producer
         executor_.invoke([=] {
             core::diagnostics::call_context::for_thread() = ctx;
             com_initialize();
-            producer_.reset(new decklink_producer(
-                format_desc, device_index, frame_factory, format_repository, vfilter, afilter, format, freeze_on_lost));
+            producer_.reset(new decklink_producer(format_desc,
+                                                  device_index,
+                                                  frame_factory,
+                                                  format_repository,
+                                                  vfilter,
+                                                  afilter,
+                                                  format,
+                                                  freeze_on_lost,
+                                                  hdr));
         });
     }
 
@@ -819,6 +907,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto freeze_on_lost = contains_param(L"FREEZE_ON_LOST", params);
 
+    auto hdr = contains_param(L"HDR", params);
+
     auto format_str = get_param(L"FORMAT", params);
 
     auto filter_str = get_param(L"FILTER", params);
@@ -839,7 +929,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                               u8(afilter),
                                                               length,
                                                               format_str,
-                                                              freeze_on_lost);
+                                                              freeze_on_lost,
+                                                              hdr);
     return core::create_destroy_proxy(producer);
 }
 }} // namespace caspar::decklink
