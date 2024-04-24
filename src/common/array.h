@@ -70,6 +70,15 @@ class array final
         return *this;
     }
 
+    // Explicitly make a copy of the array, with shared backing storage
+    array<T> clone() const {
+        caspar::array<T> cloned;
+        cloned.ptr_ = ptr_;
+        cloned.size_ = size_;
+        cloned.storage_ = storage_;
+        return cloned;
+    }
+
     T*          begin() const { return ptr_; }
     T*          data() const { return ptr_; }
     T*          end() const { return ptr_ + size_; }

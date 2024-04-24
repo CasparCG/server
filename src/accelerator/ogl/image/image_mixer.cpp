@@ -20,6 +20,7 @@
  */
 #include "image_mixer.h"
 
+#include "frame_pool.h"
 #include "image_kernel.h"
 
 #include "../util/buffer.h"
@@ -222,7 +223,7 @@ class image_renderer
 };
 
 struct image_mixer::impl
-    : public core::frame_factory
+    : public frame_factory_gl
     , public std::enable_shared_from_this<impl>
 {
     spl::shared_ptr<device>            ogl_;
@@ -281,7 +282,8 @@ struct image_mixer::impl
                 item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
                                                             item.pix_desc.planes[n].width,
                                                             item.pix_desc.planes[n].height,
-                                                            item.pix_desc.planes[n].stride));
+                                                            item.pix_desc.planes[n].stride,
+                                                            nullptr));
             }
         }
 
@@ -299,20 +301,25 @@ struct image_mixer::impl
         return renderer_(std::move(layers_), format_desc);
     }
 
-    core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
+    caspar::array<std::uint8_t> create_buffer(int size) override { return ogl_->create_array(size); }
+
+    core::mutable_frame import_buffers(const void*                              tag,
+                                       const core::pixel_format_desc&           desc,
+                                       std::vector<caspar::array<std::uint8_t>> buffers,
+                                       std::shared_ptr<void>                    drop_hook) override
     {
-        std::vector<array<std::uint8_t>> image_data;
-        for (auto& plane : desc.planes) {
-            image_data.push_back(ogl_->create_array(plane.size));
+        if (desc.planes.size() != buffers.size()) {
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Mismatch in number of buffers and planes"));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
         return core::mutable_frame(
             tag,
-            std::move(image_data),
+            std::move(buffers),
             array<int32_t>{},
             desc,
-            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
+            [weak_self, desc, drop_hook = std::move(drop_hook)](
+                std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
                     return std::any{};
@@ -320,10 +327,25 @@ struct image_mixer::impl
                 std::vector<future_texture> textures;
                 for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
                     textures.emplace_back(self->ogl_->copy_async(
-                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride));
+                        image_data[n], desc.planes[n].width, desc.planes[n].height, desc.planes[n].stride, drop_hook));
                 }
                 return std::make_shared<decltype(textures)>(std::move(textures));
             });
+    }
+
+    core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
+    {
+        std::vector<array<std::uint8_t>> image_data;
+        for (auto& plane : desc.planes) {
+            image_data.push_back(ogl_->create_array(plane.size));
+        }
+
+        return import_buffers(tag, desc, std::move(image_data), nullptr);
+    }
+
+    std::unique_ptr<core::frame_pool> create_frame_pool(const void* tag, const core::pixel_format_desc& desc) override
+    {
+        return std::make_unique<frame_pool>(shared_from_this(), tag, desc);
     }
 };
 
@@ -342,6 +364,10 @@ std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
     return impl_->create_frame(tag, desc);
+}
+std::unique_ptr<core::frame_pool> image_mixer::create_frame_pool(const void* tag, const core::pixel_format_desc& desc)
+{
+    return impl_->create_frame_pool(tag, desc);
 }
 
 }}} // namespace caspar::accelerator::ogl

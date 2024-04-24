@@ -4,12 +4,14 @@ project (html)
 set(SOURCES
 		producer/html_cg_proxy.cpp
 		producer/html_producer.cpp
+		producer/rectangles.cpp
 
 		html.cpp
 )
 set(HEADERS
 		producer/html_cg_proxy.h
 		producer/html_producer.h
+		producer/rectangles.h
 
 		html.h
 )

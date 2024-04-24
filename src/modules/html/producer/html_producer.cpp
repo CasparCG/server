@@ -56,11 +56,14 @@
 #include <include/cef_render_handler.h>
 #pragma warning(pop)
 
+#include <atomic>
 #include <optional>
 #include <queue>
 #include <utility>
+#include <vector>
 
 #include "../html.h"
+#include "rectangles.h"
 
 namespace caspar { namespace html {
 
@@ -83,12 +86,15 @@ class html_client
     spl::shared_ptr<core::frame_factory>                        frame_factory_;
     core::video_format_desc                                     format_desc_;
     bool                                                        gpu_enabled_;
+    const bool                                                  use_dirty_regions_;
     tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
     std::atomic<bool>                                           loaded_;
     std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
     mutable std::mutex                                          frames_mutex_;
     const size_t                                                frames_max_size_ = 4;
     std::atomic<bool>                                           closing_;
+
+    std::unique_ptr<core::frame_pool> frame_pool_;
 
     core::draw_frame   last_frame_;
     std::int_least64_t last_frame_time_;
@@ -100,12 +106,14 @@ class html_client
                 const spl::shared_ptr<diagnostics::graph>& graph,
                 core::video_format_desc                    format_desc,
                 bool                                       gpu_enabled,
+                bool                                       use_dirty_regions,
                 std::wstring                               url)
         : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
         , gpu_enabled_(gpu_enabled)
+        , use_dirty_regions_(use_dirty_regions)
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -115,6 +123,10 @@ class html_client
         graph_->set_color("buffered-frames", diagnostics::color(0.2f, 0.9f, 0.9f));
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
+
+        core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
+        pixel_desc.planes.emplace_back(format_desc_.square_width, format_desc_.square_height, 4);
+        frame_pool_ = frame_factory_->create_frame_pool(this, pixel_desc);
 
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -259,6 +271,22 @@ class html_client
         rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
     }
 
+    inline void copy_whole_frame(char* src, char* dst, int width, int height)
+    {
+#ifdef WIN32
+        if (gpu_enabled_) {
+            int chunksize = height * width;
+            tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
+        } else {
+            std::memcpy(dst, src, width * height * 4);
+        }
+#else
+        // In my linux tests, doing a single memcpy doesn't have the same cost as windows,
+        // making using tbb excessive
+        std::memcpy(dst, src, width * height * 4);
+#endif
+    }
+
     void OnPaint(CefRefPtr<CefBrowser> browser,
                  PaintElementType      type,
                  const RectList&       dirtyRects,
@@ -276,34 +304,76 @@ class html_client
         if (type != PET_VIEW)
             return;
 
-        core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
-        pixel_desc.planes.emplace_back(width, height, 4);
+        if (use_dirty_regions_) {
+            // Update the dirty rectangles for each frame in the pool
+            frame_pool_->for_each([&](std::any& data) {
+                if (!data.has_value()) {
+                    std::vector<Rectangle> rects;
+                    for (const auto& rect : dirtyRects) {
+                        rects.emplace_back(rect);
+                    }
+                    data.emplace<std::vector<Rectangle>>(std::move(rects));
+                } else {
+                    auto& rects = std::any_cast<std::vector<Rectangle>&>(data);
+                    for (const auto& rect : dirtyRects) {
+                        rects.emplace_back(rect);
+                    }
+                    merge_rectangles(rects, width, height);
+                }
+            });
+        }
 
-        core::mutable_frame frame = frame_factory_->create_frame(this, pixel_desc);
-        char*               src   = (char*)buffer;
-        char*               dst   = reinterpret_cast<char*>(frame.image_data(0).begin());
+        // Ensure the pool is using the correct format
+        auto pool_pixel_format = frame_pool_->pixel_format();
+        if (pool_pixel_format.planes.empty() || pool_pixel_format.planes[0].height != height ||
+            pool_pixel_format.planes[0].width != width) {
+            core::pixel_format_desc pixel_desc(core::pixel_format::bgra);
+            pixel_desc.planes.emplace_back(width, height, 4);
+            frame_pool_->pixel_format(pixel_desc);
+        }
+
+        std::pair<core::mutable_frame, std::any&> frame = frame_pool_->create_frame();
+        char*                                     src   = (char*)buffer;
+        char*                                     dst   = reinterpret_cast<char*>(frame.first.image_data(0).begin());
         test_timer_.restart();
 
-#ifdef WIN32
-        if (gpu_enabled_) {
-            int chunksize = height * width;
-            tbb::parallel_for(0, 4, [&](int y) { std::memcpy(dst + y * chunksize, src + y * chunksize, chunksize); });
+        if (use_dirty_regions_ && frame.second.has_value()) {
+            // The frame has dirty rectangles, so selectively copy those portions
+            auto& rects = std::any_cast<std::vector<Rectangle>&>(frame.second);
+
+            if (rects.empty() || (rects.size() == 1 && is_full_frame(rects[0], width, height))) {
+                copy_whole_frame(src, dst, width, height);
+            } else {
+                int linesize = width * 4;
+                tbb::parallel_for(static_cast<std::size_t>(0), rects.size(), [&](std::size_t index) {
+                    const Rectangle& rect     = rects[index];
+                    int              rowcount = rect.r_y - rect.l_y;
+                    if (rect.r_x <= rect.l_x || rowcount <= 0)
+                        return; // Sanity check
+
+                    int start_offset = rect.l_y * linesize + rect.l_x * 4;
+                    int chunksize    = (rect.r_x - rect.l_x) * 4;
+
+                    // TODO - parallel?
+                    for (int y = 0; y < rowcount; ++y) {
+                        std::memcpy(dst + start_offset + y * linesize, src + start_offset + y * linesize, chunksize);
+                    }
+                });
+            }
+
+            rects.clear();
         } else {
-            std::memcpy(dst, src, width * height * 4);
+            // Either a new frame, or dirty rectangles are disabled
+            copy_whole_frame(src, dst, width, height);
         }
-#else
-        // On my one test linux machine, doing a single memcpy doesn't have the same cost as windows,
-        // making using tbb excessive
-        std::memcpy(dst, src, width * height * 4);
-#endif
 
         graph_->set_value("memcpy", test_timer_.elapsed() * format_desc_.fps * 0.5 * 5);
 
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
-            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame))));
-            while (frames_.size() > 4) {
+            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame.first))));
+            while (frames_.size() > frames_max_size_) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -441,9 +511,10 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+            const bool enable_gpu        = env::properties().get(L"configuration.html.enable-gpu", false);
+            const bool use_dirty_regions = env::properties().get(L"configuration.html.use-dirty-regions", false);
 
-            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, use_dirty_regions, url_);
 
             CefWindowInfo window_info;
             window_info.bounds.width                 = format_desc.square_width;
