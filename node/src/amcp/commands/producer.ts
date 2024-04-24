@@ -282,6 +282,30 @@ export function registerProducerCommands(
         minNumParams: 1,
     });
 
+    channelCommands.set("CALLBG", {
+        func:
+            async (_context, command, channelIndex, layerIndex) => async () => {
+                layerIndex = layerIndex ?? DEFAULT_LAYER_INDEX;
+
+                try {
+                    const result = await Native.CallStageMethod(
+                        "callbg",
+                        channelIndex,
+                        layerIndex,
+                        command.parameters
+                    );
+                    if (result) {
+                        return "202 CALL OK\r\n" + result + "\r\n";
+                    } else {
+                        return "202 CALL OK\r\n";
+                    }
+                } catch (e) {
+                    return "501 CALL FAILED\r\n";
+                }
+            },
+        minNumParams: 1,
+    });
+
     channelCommands.set("SWAP", {
         func:
             async (_context, command, channelIndex, layerIndex) => async () => {

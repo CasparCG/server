@@ -50,7 +50,8 @@ probe_path(const boost::filesystem::path&                             full_path,
             auto it_path = it->path().filename().wstring();
             if (boost::iequals(it_path, leaf_filename, loc) && is_valid_file(it->path().wstring()))
                 return it->path();
-        } else if (boost::iequals(it->path().stem().wstring(), leaf_name, loc) && is_valid_file(it->path().wstring()))
+        }
+        if (boost::iequals(it->path().stem().wstring(), leaf_filename, loc) && is_valid_file(it->path().wstring()))
             return it->path();
     }
 

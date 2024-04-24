@@ -20,7 +20,8 @@ System Requirements
 
 ### Linux
 
- - Ubuntu 20.04 and 22.04 are supported
+ - Ubuntu 22.04 is recommended
+ - Other distributions and releases will work but have not been tested
 
 Getting Started
 ---------------
@@ -57,38 +58,6 @@ The most up-to-date documentation is always available at
 https://github.com/CasparCG/help/wiki
 
 Ask questions in the forum: https://casparcgforum.org/
-
-Resolving Common Issues On Linux
---------------------------------
-
-Common problems you may encounter when running on newer and unsupported
-Ubuntu editions:
-
-1. HTML producer freezes and/or throws "Fontconfig error" message
-Add below line to run.sh script:
-export FONTCONFIG_PATH=/etc/fonts
-
-2. HTML producer throws "GTK theme error" message
-Install gnome-themes-standard package:
-sudo apt install gnome-themes-standard
-
-3. Error while loading libgcrypt.so.11
-Extract libgcrypt.so.11 and libgcrypt.so.11.8.2 to CasparCG lib/ directory.
-You can get it from:
-https://launchpad.net/ubuntu/+archive/primary/+files/libgcrypt11_1.5.3-2ubuntu4.2_amd64.deb
-
-4. Error while loading libcgmanager.so.0
-Install central cgroup manager daemon (client library):
-sudo apt install libcgmanager0
-
-5. Error while loading shared libraries: libgconf-2.so.4
-Install GNOME configuration database system:
-sudo apt -y install libgconf2-4
-
-6. lib/libz.so.1: version `ZLIB_1.2.9' not found
-cd your_casparcg_directory/lib/
-sudo mv libz.so.1 libz.so.1.old
-sudo ln -s /lib/x86_64-linux-gnu/libz.so.1
 
 Development
 -----------

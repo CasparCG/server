@@ -382,6 +382,8 @@ Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
         return StageClear(info, instance_data);
     } else if (command == "call") {
         return StageCall(info, instance_data);
+    } else if (command == "callbg") {
+        return StageCallBg(info, instance_data);
     } else if (command == "swapChannel") {
         return StageSwapChannel(info, instance_data);
     } else if (command == "swapLayer") {

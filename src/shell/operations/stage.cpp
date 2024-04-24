@@ -326,6 +326,43 @@ Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
     return parsedArgs->promise;
 }
 
+Napi::Value StageCallBg(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
+{
+    Napi::Env env = info.Env();
+
+    auto parsedArgs = parseChannelLayerArguments(info, instance_data, 1);
+    if (!parsedArgs)
+        return env.Null();
+
+    if (!info[3].IsArray()) {
+        Napi::Error::New(env, "Not enough arguments").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto raw_parameters = info[3].As<Napi::Array>();
+
+    if (raw_parameters.Length() == 0) {
+        Napi::Error::New(env, "No parameters").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::vector<std::wstring> parameters;
+    NapiArrayToStringVector(env, raw_parameters, parameters);
+
+    parsedArgs->channel->tmp_executor_->begin_invoke([parsedArgs, parameters] {
+        try {
+            const auto result = parsedArgs->channel->stage().callbg(parsedArgs->layerIndex, parameters).get();
+
+            parsedArgs->resolve(caspar::u8(result));
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            parsedArgs->reject("Internal error");
+        }
+    });
+
+    return parsedArgs->promise;
+}
+
 Napi::Value StageSwapChannel(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data)
 {
     Napi::Env env = info.Env();

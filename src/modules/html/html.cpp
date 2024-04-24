@@ -224,6 +224,12 @@ void init(const core::module_dependencies& dependencies)
         settings.no_sandbox                   = true;
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
+
+        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"");
+        if (!cache_path.empty()) {
+            CefString(&settings.cache_path).FromWString(cache_path);
+        }
+
         CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
     });
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });

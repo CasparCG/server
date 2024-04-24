@@ -92,6 +92,7 @@ class stage final
     std::future<void>         play(int index);
     std::future<void>         stop(int index);
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params);
+    std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params);
     std::future<void>         clear(int index);
     std::future<void>         clear();
     std::future<void>         swap_layers(const stage& other, bool swap_transforms);

@@ -384,6 +384,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
         return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
     }
+    std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)
+    {
+        return flatten(executor_.begin_invoke([=] { return get_layer(index).background()->call(params).share(); }));
+    }
 
     std::unique_lock<std::mutex> get_lock() { return std::move(std::unique_lock<std::mutex>(lock_)); }
 
@@ -413,6 +417,10 @@ stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph, const
 std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params)
 {
     return impl_->call(index, params);
+}
+std::future<std::wstring> stage::callbg(int index, const std::vector<std::wstring>& params)
+{
+    return impl_->callbg(index, params);
 }
 std::future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms)
 {
@@ -453,7 +461,7 @@ std::future<void> stage::swap_layer(int index, int other_index, const stage& oth
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-const stage_frames stage::operator()(uint64_t                                     frame_number,
+const stage_frames                           stage::operator()(uint64_t                                     frame_number,
                                      std::vector<int>&                            fetch_background,
                                      std::function<void(int, const layer_frame&)> routesCb)
 {

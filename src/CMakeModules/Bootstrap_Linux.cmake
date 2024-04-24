@@ -24,7 +24,7 @@ MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 # if (USE_STATIC_BOOST)
 # 	SET (Boost_USE_STATIC_LIBS ON)
 # endif()
-FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log locale regex date_time coroutine REQUIRED)
+FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log_setup log locale regex date_time coroutine REQUIRED)
 
 if (NOT USE_SYSTEM_FFMPEG)
 	FetchContent_Declare(
@@ -119,10 +119,6 @@ ADD_DEFINITIONS (-DBOOST_LOCALE_HIDE_AUTO_PTR) # Needed for C++17 in boost 1.67+
 if (NOT USE_STATIC_BOOST)
 	ADD_DEFINITIONS (-DBOOST_ALL_DYN_LINK)
 endif()
-
-# if (USE_SYSTEM_DIAG_FONT)
-    ADD_DEFINITIONS(-DUSE_SYSTEM_DIAG_FONT)
-# endif()
 
 IF (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 	ADD_COMPILE_OPTIONS (-O3) # Needed for precompiled headers to work

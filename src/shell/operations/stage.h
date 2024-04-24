@@ -11,6 +11,7 @@ Napi::Value StageStop(const Napi::CallbackInfo& info, CasparCgInstanceData* inst
 Napi::Value StageClear(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
 
 Napi::Value StageCall(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
+Napi::Value StageCallBg(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
 
 Napi::Value StageSwapChannel(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);
 Napi::Value StageSwapLayer(const Napi::CallbackInfo& info, CasparCgInstanceData* instance_data);

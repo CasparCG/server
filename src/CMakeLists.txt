@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.16)
 # Project settings
 PROJECT ("CasparCG Server")
 SET (CONFIG_VERSION_MAJOR 2)
-SET (CONFIG_VERSION_MINOR 4)
+SET (CONFIG_VERSION_MINOR 5)
 SET (CONFIG_VERSION_BUG 0)
 SET (CONFIG_VERSION_TAG "Dev")
 
@@ -11,6 +11,14 @@ set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/d
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
+
+set(DIAG_FONT_PATH "/usr/share/fonts/liberation-mono/LiberationMono-Regular.ttf" CACHE STRING
+    "Path to font that will be used to load diag font at runtime. By default
+    this loads the font distributed with the application from the working
+    directory. It can be set to an absolute path to instead load a font from
+    the system."
+)
+add_compile_definitions("DIAG_FONT_PATH=\"${DIAG_FONT_PATH}\"")
 
 # Add custom cmake modules path
 SET (CASPARCG_PATCH_DIR ${CMAKE_SOURCE_DIR}/CMakeModules/patches)

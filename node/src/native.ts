@@ -101,6 +101,12 @@ export interface NativeApi {
         parameters: string[]
     ): Promise<string>;
     CallStageMethod(
+        operation: "callbg",
+        channelIndex: number,
+        layerIndex: number,
+        parameters: string[]
+    ): Promise<string>;
+    CallStageMethod(
         operation: "swapChannel",
         channelIndex1: number,
         channelIndex2: number,
