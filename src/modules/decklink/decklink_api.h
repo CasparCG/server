@@ -119,6 +119,7 @@ using BOOL   = bool;
 #define TRUE true
 #define FALSE false
 using UINT32 = uint32_t;
+using LONGLONG = int64_t;
 
 static std::wstring to_string(String utf16_string) { return u16(utf16_string); }
 
