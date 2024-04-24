@@ -176,11 +176,18 @@ export function registerProducerCommands(
         func: async (context, command, channelIndex, layerIndex0) => {
             const layerIndex = layerIndex0 ?? DEFAULT_LAYER_INDEX;
 
+            let commit: AMCPCommandCommitFunction | null = null;
             if (command.parameters.length > 0) {
-                await loadBgCommand(context, command, channelIndex, layerIndex);
+                commit = await loadBgCommand(
+                    context,
+                    command,
+                    channelIndex,
+                    layerIndex
+                );
             }
 
             return async () => {
+                if (commit) await commit().catch(() => null);
                 discardError(
                     Native.CallStageMethod("play", channelIndex, layerIndex)
                 );
