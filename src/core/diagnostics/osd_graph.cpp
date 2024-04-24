@@ -67,11 +67,11 @@ sf::Font& get_default_font()
     static sf::Font DEFAULT_FONT = []() {
         sf::Font font;
 #ifdef USE_SYSTEM_DIAG_FONT
-        if (!font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf"))
+        if (!font.loadFromFile("/usr/share/fonts/liberation-mono/LiberationMono-Regular.ttf"))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(
                                        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf not found"));
 #else
-        if (!font.loadFromFile("LiberationMono-Regular.ttf"))
+        if (!font.loadFromFile("/usr/share/fonts/liberation-mono/LiberationMono-Regular.ttf"))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("LiberationMono-Regular.ttf not found"));
 #endif
         return font;

@@ -26,7 +26,7 @@ const config: CasparCGConfiguration = {
     logAlignColumns: true,
 
     paths: {
-        mediaPath: "/home/julus/Projects/caspar_media/",
+        mediaPath: "/home/julus/Projects/casparcg/_media/",
         logPath: null,
         dataPath: "data/",
         templatePath: "/home/julus/Projects/caspar_templates/",
@@ -86,7 +86,7 @@ const config: CasparCGConfiguration = {
             ],
             producers: {
                 10: "AMB LOOP",
-                100: "/home/julus/Projects/caspar_media/test",
+                // 100: "/home/julus/Projects/caspar_media/test",
             },
         },
     ],
