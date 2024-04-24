@@ -24,6 +24,7 @@
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_visitor.h>
+#include <core/frame/pixel_format.h>
 
 #include <cstdint>
 #include <future>
@@ -53,6 +54,7 @@ class image_mixer
                                      common::bit_depth               depth) override                               = 0;
 
     virtual common::bit_depth depth() const = 0;
+    virtual core::color_space color_space() const = 0;
 };
 
 }} // namespace caspar::core

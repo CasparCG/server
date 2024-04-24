@@ -34,6 +34,7 @@
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
@@ -267,10 +268,11 @@ struct server::impl
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_->size() + 1);
             auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
+            auto color_space = depth == common::bit_depth::bit16 ? core::color_space::bt2020 : core::color_space::bt709;
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id, depth),
+                                                accelerator_.create_image_mixer(channel_id, depth, color_space),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;

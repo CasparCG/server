@@ -40,7 +40,8 @@ class image_mixer final : public core::image_mixer
     image_mixer(const spl::shared_ptr<class device>& ogl,
                 int                                  channel_id,
                 const size_t                         max_frame_size,
-                common::bit_depth                    depth);
+                common::bit_depth                    depth,
+                core::color_space                    color_space);
     image_mixer(const image_mixer&) = delete;
 
     ~image_mixer();
@@ -58,6 +59,7 @@ class image_mixer final : public core::image_mixer
     void              visit(const core::const_frame& frame) override;
     void              pop() override;
     common::bit_depth depth() const override;
+    core::color_space color_space() const override;
 
   private:
     struct impl;
