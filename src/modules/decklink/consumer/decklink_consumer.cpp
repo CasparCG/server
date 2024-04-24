@@ -34,6 +34,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
@@ -213,15 +214,6 @@ struct ChromaticityCoordinates
     double WhiteY;
 };
 
-struct HDRMetadata
-{
-    int64_t EOTF;
-    double  maxDisplayMasteringLuminance;
-    double  minDisplayMasteringLuminance;
-    double  maxCLL;
-    double  maxFALL;
-};
-
 const auto REC_709  = ChromaticityCoordinates{0.640, 0.330, 0.300, 0.600, 0.150, 0.060, 0.3127, 0.3290};
 const auto REC_2020 = ChromaticityCoordinates{0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290};
 
@@ -234,15 +226,19 @@ class decklink_frame
     std::atomic<int>        ref_count_{0};
     int                     nb_samples_;
     const bool              hdr_;
+    core::color_space       color_space_;
+    hdr_meta_configuration  hdr_metadata_;
     BMDFrameFlags           flags_;
     BMDPixelFormat          pix_fmt_;
 
   public:
-    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples, bool hdr)
+    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples, bool hdr, core::color_space color_space, const hdr_meta_configuration& hdr_metadata)
         : format_desc_(std::move(format_desc))
         , data_(std::move(data))
         , nb_samples_(nb_samples)
         , hdr_(hdr)
+        , color_space_(color_space)
+        , hdr_metadata_(hdr_metadata)
         , flags_(hdr ? bmdFrameFlagDefault | bmdFrameContainsHDRMetadata : bmdFrameFlagDefault)
         , pix_fmt_(get_pixel_format(hdr))
     {
@@ -324,11 +320,11 @@ class decklink_frame
 
         switch (metadataID) {
             case bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc:
-                *value = EOTF::PQ;
+                *value = EOTF::HLG;
                 break;
 
             case bmdDeckLinkFrameMetadataColorspace:
-                *value = bmdColorspaceRec709;
+                *value = (color_space_ == core::color_space::bt2020) ? bmdColorspaceRec2020 : bmdColorspaceRec709;
                 break;
 
             default:
@@ -341,55 +337,56 @@ class decklink_frame
 
     HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value)
     {
+        const auto color_space = (color_space_ == core::color_space::bt2020) ? &REC_2020 : &REC_709;
         HRESULT result = S_OK;
 
         switch (metadataID) {
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX:
-                *value = REC_709.RedX;
+                *value = color_space->RedX;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY:
-                *value = REC_709.RedY;
+                *value = color_space->RedY;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX:
-                *value = REC_709.GreenX;
+                *value = color_space->GreenX;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY:
-                *value = REC_709.GreenY;
+                *value = color_space->GreenY;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX:
-                *value = REC_709.BlueX;
+                *value = color_space->BlueX;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY:
-                *value = REC_709.BlueY;
+                *value = color_space->BlueY;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRWhitePointX:
-                *value = REC_709.WhiteX;
+                *value = color_space->WhiteX;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRWhitePointY:
-                *value = REC_709.WhiteY;
+                *value = color_space->WhiteY;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance:
-                *value = 1000.0;
+                *value = hdr_metadata_.max_dml;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance:
-                *value = 0.005;
+                *value = hdr_metadata_.min_dml;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel:
-                *value = 1000.0;
+                *value = hdr_metadata_.max_cll;
                 break;
 
             case bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel:
-                *value = 50.0;
+                *value = hdr_metadata_.max_fall;
                 break;
 
             default:
@@ -558,7 +555,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
         auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr));
+            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, core::color_space::bt709, config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
                                                decklink_format_desc_.duration,
@@ -713,7 +710,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc_, config_.hdr);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_);
+            schedule_next_video(image_data, nb_samples, video_scheduled_, core::color_space::bt2020);
             for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }
@@ -935,7 +932,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                               mode_->GetFieldDominance(),
                                                                               config_.hdr);
 
-                    schedule_next_video(image_data, nb_samples, video_display_time);
+                    schedule_next_video(image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -995,10 +992,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
+    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time, core::color_space color_space)
     {
         auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr));
+            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, color_space, config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";

@@ -117,6 +117,15 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         }
     }
 
+    auto hdr_metadata = ptree.get_child_optional(L"hdr-metadata");
+    if(hdr_metadata)
+    {
+        config.hdr_meta.min_dml  = hdr_metadata->get(L"min-dml", config.hdr_meta.min_dml);
+        config.hdr_meta.max_dml  = hdr_metadata->get(L"max-dml", config.hdr_meta.max_dml);
+        config.hdr_meta.max_fall = hdr_metadata->get(L"max-fall", config.hdr_meta.max_fall);
+        config.hdr_meta.max_cll  = hdr_metadata->get(L"max-cll", config.hdr_meta.max_cll);
+    }
+
     return config;
 }
 

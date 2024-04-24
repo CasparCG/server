@@ -44,6 +44,14 @@ struct port_configuration
     }
 };
 
+struct hdr_meta_configuration
+{
+    float min_dml  = 0.005f;
+    float max_dml  = 1000.0f;
+    float max_fall = 100.0f;
+    float max_cll  = 1000.0f;
+};
+
 struct configuration
 {
     enum class keyer_t
@@ -86,6 +94,8 @@ struct configuration
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
+
+    hdr_meta_configuration               hdr_meta;
 
     [[nodiscard]] int buffer_depth() const
     {
