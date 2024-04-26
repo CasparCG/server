@@ -261,6 +261,11 @@ struct server::impl
             if (color_depth != 8 && color_depth != 16)
                 CASPAR_THROW_EXCEPTION(user_error()
                                        << msg_info(L"Invalid color-depth: " + std::to_wstring(color_depth)));
+            
+            auto color_space_str     = boost::to_lower_copy(xml_channel.second.get(L"color-space", L"bt709"));
+            if (color_space_str != L"bt709" && color_space_str != L"bt2020")
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Invalid color-space, must be bt709 or bt2020"));
 
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
@@ -268,7 +273,7 @@ struct server::impl
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_->size() + 1);
             auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
-            auto color_space = depth == common::bit_depth::bit16 ? core::color_space::bt2020 : core::color_space::bt709;
+            auto color_space = color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
