@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/bit_depth.h>
+
 #include <core/mixer/mixer.h>
 #include <core/video_format.h>
 
@@ -27,7 +29,7 @@ class accelerator
 
     accelerator& operator=(accelerator&) = delete;
 
-    std::unique_ptr<caspar::core::image_mixer> create_image_mixer(int channel_id);
+    std::unique_ptr<caspar::core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth);
 
     std::shared_ptr<accelerator_device> get_device() const;
 

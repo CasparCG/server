@@ -168,7 +168,8 @@ struct video_format_repository::impl
                 max = f.second.size;
         }
 
-        return max;
+        const size_t MaxBytesPerColor = 2;
+        return max * MaxBytesPerColor;
     }
 };
 

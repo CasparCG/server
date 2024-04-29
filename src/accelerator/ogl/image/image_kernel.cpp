@@ -81,6 +81,22 @@ double hypotenuse(double x1, double y1, double x2, double y2)
     return std::sqrt(x * x + y * y);
 }
 
+double get_precision_factor(common::bit_depth depth)
+{
+    switch (depth) {
+        case common::bit_depth::bit8:
+            return 1.0;
+        case common::bit_depth::bit10:
+            return 64.0;
+        case common::bit_depth::bit12:
+            return 16.0;
+        case common::bit_depth::bit16:
+            return 1.0;
+        default:
+            return 1.0;
+    }
+}
+
 double calc_q(double close_diagonal, double distant_diagonal)
 {
     return (close_diagonal + distant_diagonal) / distant_diagonal;
@@ -221,10 +237,13 @@ struct image_kernel::impl
             return;
         }
 
+        double precision_factor[4] = {1, 1, 1, 1};
+
         // Bind textures
 
         for (int n = 0; n < params.textures.size(); ++n) {
             params.textures[n]->bind(n);
+            precision_factor[n] = get_precision_factor(params.textures[n]->depth());
         }
 
         if (params.local_key) {
@@ -243,6 +262,10 @@ struct image_kernel::impl
         shader_->set("plane[1]", texture_id::plane1);
         shader_->set("plane[2]", texture_id::plane2);
         shader_->set("plane[3]", texture_id::plane3);
+        shader_->set("precision_factor[0]", precision_factor[0]);
+        shader_->set("precision_factor[1]", precision_factor[1]);
+        shader_->set("precision_factor[2]", precision_factor[2]);
+        shader_->set("precision_factor[3]", precision_factor[3]);
         shader_->set("local_key", texture_id::local_key);
         shader_->set("layer_key", texture_id::layer_key);
         shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);

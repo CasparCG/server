@@ -23,6 +23,8 @@
 
 #include <vector>
 
+#include <common/bit_depth.h>
+
 namespace caspar { namespace core {
 
 enum class pixel_format
@@ -46,20 +48,22 @@ struct pixel_format_desc final
 {
     struct plane
     {
-        int linesize = 0;
-        int width    = 0;
-        int height   = 0;
-        int size     = 0;
-        int stride   = 0;
+        int               linesize = 0;
+        int               width    = 0;
+        int               height   = 0;
+        int               size     = 0;
+        int               stride   = 0;
+        common::bit_depth depth    = common::bit_depth::bit8;
 
         plane() = default;
 
-        plane(int width, int height, int stride)
-            : linesize(width * stride)
+        plane(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8)
+            : linesize(width * stride * (depth == common::bit_depth::bit8 ? 1 : 2))
             , width(width)
             , height(height)
-            , size(width * height * stride)
+            , size(width * height * stride * (depth == common::bit_depth::bit8 ? 1 : 2))
             , stride(stride)
+            , depth(depth)
         {
         }
     };

@@ -23,7 +23,9 @@
 #include "frame_consumer.h"
 
 #include "../frame/frame.h"
+#include "../frame/pixel_format.h"
 
+#include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memory.h>
@@ -105,14 +107,21 @@ struct output::impl
             return;
         }
 
-        if (input_frame1.size() != format_desc_.size) {
+        const auto bytesPerComponent1 =
+            input_frame1.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+        if (input_frame1.size() != format_desc_.size * bytesPerComponent1) {
             CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
 
-        if (input_frame2 && input_frame2.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
-            return;
+        if (input_frame2) {
+            const auto bytesPerComponent2 =
+                input_frame2.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+
+            if(input_frame2.size() != format_desc_.size * bytesPerComponent2) {
+                CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
+                return;
+            }
         }
 
         decltype(consumers_) consumers;

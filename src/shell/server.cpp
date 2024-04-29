@@ -24,6 +24,7 @@
 
 #include <accelerator/accelerator.h>
 
+#include <common/bit_depth.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/memory.h>
@@ -111,7 +112,7 @@ struct server::impl
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
     std::function<void(bool)>                                     shutdown_server_now_;
 
-    impl(const impl&)            = delete;
+    impl(const impl&) = delete;
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
@@ -263,7 +264,7 @@ struct server::impl
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id),
+                                                accelerator_.create_image_mixer(channel_id, common::bit_depth::bit8),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;
