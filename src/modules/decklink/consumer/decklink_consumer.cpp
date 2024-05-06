@@ -710,7 +710,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc_, config_.hdr);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_, core::color_space::bt2020);
+            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.hdr_meta.default_color_space);
             for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }

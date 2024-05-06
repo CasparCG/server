@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 namespace caspar { namespace decklink {
@@ -50,6 +51,7 @@ struct hdr_meta_configuration
     float max_dml  = 1000.0f;
     float max_fall = 100.0f;
     float max_cll  = 1000.0f;
+    core::color_space default_color_space = core::color_space::bt709;
 };
 
 struct configuration
