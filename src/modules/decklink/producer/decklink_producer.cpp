@@ -367,6 +367,8 @@ core::color_space get_color_space(IDeckLinkVideoInputFrame* video)
         if (SUCCEEDED(md->GetInt(bmdDeckLinkFrameMetadataColorspace, &color_space))) {
             if (color_space == bmdColorspaceRec2020) {
                 return core::color_space::bt2020;
+            } else if (color_space == bmdColorspaceRec601) {
+                return core::color_space::bt601;
             }
         }
     }
