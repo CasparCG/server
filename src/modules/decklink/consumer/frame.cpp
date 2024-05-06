@@ -71,6 +71,7 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         // Fast path
 
         if (hdr) {
+            // Pack eight byte R16G16B16A16 pixels as four byte 10bit RGB R10G10B10XX
             const int NUM_THREADS     = 4;
             auto      rows_per_thread = decklink_format_desc.height / NUM_THREADS;
             size_t    byte_count_line = get_row_bytes(decklink_format_desc, hdr);
@@ -99,6 +100,8 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         }
     } else {
         // Take a sub-region
+
+        // TODO: Add support for hdr frames
 
         // Some repetetive numbers
         size_t byte_count_dest_line  = (size_t)decklink_format_desc.width * 4;
