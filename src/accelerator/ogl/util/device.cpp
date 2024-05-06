@@ -217,10 +217,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         });
     }
 
-    array<uint8_t> create_array(int count, common::bit_depth depth)
+    array<uint8_t> create_array(int size)
     {
-        auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
-        auto buf             = create_buffer(count * bytes_per_pixel, true);
+        auto buf             = create_buffer(size, true);
         auto ptr             = reinterpret_cast<uint8_t*>(buf->data());
         return array<uint8_t>(ptr, buf->size(), buf);
     }
@@ -437,7 +436,7 @@ std::shared_ptr<texture> device::create_texture(int width, int height, int strid
 {
     return impl_->create_texture(width, height, stride, depth, true);
 }
-array<uint8_t> device::create_array(int size, common::bit_depth depth) { return impl_->create_array(size, depth); }
+array<uint8_t> device::create_array(int size) { return impl_->create_array(size); }
 std::future<std::shared_ptr<texture>>
 device::copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth)
 {
