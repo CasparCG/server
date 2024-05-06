@@ -926,7 +926,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto freeze_on_lost = contains_param(L"FREEZE_ON_LOST", params);
 
-    auto hdr = contains_param(L"HDR", params);
+    auto hdr = contains_param(L"10BIT", params);
 
     auto format_str = get_param(L"FORMAT", params);
 
