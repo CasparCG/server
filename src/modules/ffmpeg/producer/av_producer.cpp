@@ -72,6 +72,33 @@ struct Frame
     int64_t                  frame_count = 0;
 };
 
+AVPixelFormat get_pix_fmt_with_alpha(AVPixelFormat fmt)
+{
+    switch (fmt) {
+        case AV_PIX_FMT_YUV420P:
+            return AV_PIX_FMT_YUVA420P;
+        case AV_PIX_FMT_YUV422P:
+            return AV_PIX_FMT_YUVA422P;
+        case AV_PIX_FMT_YUV444P:
+            return AV_PIX_FMT_YUVA444P;
+        default:
+            break;
+    }
+    return fmt;
+}
+
+const AVCodec* get_decoder(AVCodecID codec_id)
+{
+    // enforce use of libvpx for vp8 and vp9 codecs to be able
+    // to decode webm files with alpha channel
+    const AVCodec* result = nullptr;
+    if (codec_id == AV_CODEC_ID_VP9)
+        result = avcodec_find_decoder_by_name("libvpx-vp9");
+    else if (codec_id == AV_CODEC_ID_VP8)
+        result = avcodec_find_decoder_by_name("libvpx");
+    return result != nullptr ? result : avcodec_find_decoder(codec_id);
+}
+
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
@@ -125,7 +152,8 @@ class Decoder
     explicit Decoder(AVStream* stream)
         : st(stream)
     {
-        const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
+        const auto codec = get_decoder(stream->codecpar->codec_id);
+
         if (!codec) {
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
         }
@@ -138,6 +166,12 @@ class Decoder
         }
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
+
+        if (stream->metadata != NULL) {
+            auto entry = av_dict_get(stream->metadata, "alpha_mode", NULL, AV_DICT_MATCH_CASE);
+            if (entry != NULL && entry->value != NULL && *entry->value == '1')
+                ctx->pix_fmt = get_pix_fmt_with_alpha(ctx->pix_fmt);
+        }
 
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
