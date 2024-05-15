@@ -1,0 +1,8 @@
+node_modules
+*.lock
+/log/
+/media/
+/template/
+/data/
+/casparcg.config
+/_media/

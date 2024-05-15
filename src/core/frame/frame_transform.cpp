@@ -322,19 +322,4 @@ frame_transform tweened_transform::fetch()
 
 void tweened_transform::tick(int num) { time_ = std::min(time_ + num, duration_); }
 
-std::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
-{
-    if (boost::iequals(str, L"none")) {
-        return chroma::legacy_type::none;
-    }
-    if (boost::iequals(str, L"green")) {
-        return chroma::legacy_type::green;
-    }
-    if (boost::iequals(str, L"blue")) {
-        return chroma::legacy_type::blue;
-    } else {
-        return {};
-    }
-}
-
 }} // namespace caspar::core

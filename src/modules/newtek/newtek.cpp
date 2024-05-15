@@ -42,7 +42,7 @@ void init(const core::module_dependencies& dependencies)
 
         dependencies.producer_registry->register_producer_factory(L"NDI Producer", create_ndi_producer);
 
-        dependencies.command_repository->register_command(L"Query Commands", L"NDI LIST", ndi::list_command, 0);
+        // dependencies.command_repository->register_command(L"Query Commands", L"NDI LIST", ndi::list_command, 0);
 
         bool autoload = caspar::env::properties().get(L"configuration.ndi.auto-load", false);
         if (autoload)

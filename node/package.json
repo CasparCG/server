@@ -1,0 +1,32 @@
+{
+    "name": "casparcg-server-node",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "main.js",
+    "license": "MIT",
+    "dependencies": {
+        "cmake-js": "^7.2.1",
+        "date-fns": "^3.6.0",
+        "fast-xml-parser": "^4.3.3",
+        "node-addon-api": "^7.0.0",
+        "object-path": "^0.11.8",
+        "osc": "^2.4.4",
+        "type-fest": "^4.10.0"
+    },
+    "scripts": {
+        "start": "yarn ts-node-esm src/main.ts",
+        "build": "cmake-js -d ../src build --prefer-clang=false"
+    },
+    "binary": {
+        "napi_versions": [
+            7
+        ]
+    },
+    "devDependencies": {
+        "@sofie-automation/code-standard-preset": "^2.5.2",
+        "@types/node": "^20.11.0",
+        "@types/object-path": "^0.11.4",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    }
+}

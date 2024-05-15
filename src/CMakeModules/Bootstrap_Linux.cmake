@@ -3,9 +3,13 @@ cmake_minimum_required (VERSION 3.16)
 include(ExternalProject)
 include(FetchContent)
 
-set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
-set(USE_STATIC_BOOST ON CACHE BOOL "Use shared library version of Boost")
-set(USE_SYSTEM_FFMPEG OFF CACHE BOOL "Use the version of ffmpeg from your OS")
+set(ENABLE_HTML OFF) # TODO: this fails horribly due to paths and the subprocess launching
+set(USE_STATIC_BOOST OFF)
+set(USE_SYSTEM_FFMPEG ON)
+
+# set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
+# set(USE_STATIC_BOOST ON CACHE BOOL "Use shared library version of Boost")
+# set(USE_SYSTEM_FFMPEG OFF CACHE BOOL "Use the version of ffmpeg from your OS")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
@@ -17,9 +21,9 @@ IF (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 ENDIF ()
 MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 
-if (USE_STATIC_BOOST)
-	SET (Boost_USE_STATIC_LIBS ON)
-endif()
+# if (USE_STATIC_BOOST)
+# 	SET (Boost_USE_STATIC_LIBS ON)
+# endif()
 FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log_setup log locale regex date_time coroutine REQUIRED)
 
 if (NOT USE_SYSTEM_FFMPEG)
@@ -98,6 +102,8 @@ SET (SFML_INCLUDE_PATH "${SFML_INCLUDE_DIR}")
 SET (FREEIMAGE_INCLUDE_PATH "${FreeImage_INCLUDE_DIRS}")
 
 SET_PROPERTY (GLOBAL PROPERTY USE_FOLDERS ON)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ADD_DEFINITIONS (-DSFML_STATIC)
 ADD_DEFINITIONS (-DUNICODE)

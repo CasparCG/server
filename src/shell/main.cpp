@@ -29,13 +29,11 @@
 #include "platform_specific.h"
 #include "server.h"
 
-#include <protocol/amcp/AMCPProtocolStrategy.h>
-#include <protocol/util/strategy_adapters.h>
-
 #include <common/env.h>
 #include <common/except.h>
 #include <common/log.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
@@ -44,12 +42,31 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/stacktrace.hpp>
 
+#include <core/diagnostics/call_context.h>
+#include <core/diagnostics/osd_graph.h>
+
 #include <atomic>
 #include <future>
 #include <thread>
 
 #include <clocale>
 #include <csignal>
+
+#include "napi.h"
+
+#include "./channel_state.h"
+#include "./conv.h"
+#include "./log_receiver.h"
+#include "./operations/base.h"
+#include "./operations/cg.h"
+#include "./operations/channel.h"
+#include "./operations/consumer.h"
+#include "./operations/mixer.h"
+#include "./operations/producer.h"
+#include "./operations/stage.h"
+#include "./operations/util.h"
+
+#include <iostream>
 
 namespace caspar {
 
@@ -79,147 +96,100 @@ void print_info()
     CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 }
 
-auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
-{
-    auto promise  = std::make_shared<std::promise<bool>>();
-    auto future   = promise->get_future();
-    auto shutdown = [promise = std::move(promise)](bool restart) { promise->set_value(restart); };
+// void signal_handler(int signum)
+// {
+//     ::signal(signum, SIG_DFL);
+//     boost::stacktrace::safe_dump_to("./backtrace.dump");
+//     ::raise(SIGABRT);
+// }
 
-    print_info();
-
-    // Create server object which initializes channels, protocols and controllers.
-    std::unique_ptr<server> caspar_server(new server(shutdown));
-
-    // For example CEF resets the global locale, so this is to reset it back to "our" preference.
-    setup_global_locale();
-
-    std::wstringstream                                      str;
-    boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-    boost::property_tree::write_xml(str, env::properties(), w);
-    CASPAR_LOG(info) << boost::filesystem::absolute(config_file_name).lexically_normal()
-                     << L":\n-----------------------------------------\n"
-                     << str.str() << L"-----------------------------------------";
-
-    caspar_server->start();
-
-    // Create a dummy client which prints amcp responses to console.
-    auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
-
-    auto amcp =
-        protocol::amcp::create_wchar_amcp_strategy_factory(L"Console", caspar_server->get_amcp_command_repository())
-            ->create(console_client);
-
-    // Use separate thread for the blocking console input, will be terminated
-    // anyway when the main thread terminates.
-
-    std::thread([&]() mutable {
-        std::wstring wcmd;
-        while (true) {
-#ifdef WIN32
-            if (!std::getline(std::wcin, wcmd)) { // TODO: It's blocking...
-                std::wcin.clear();
-                continue;
-            }
-#else
-            // Linux gets stuck in an endless loop if wcin gets a multibyte utf8 char
-            std::string cmd1;
-            if (!std::getline(std::cin, cmd1)) { // TODO: It's blocking...
-                if (std::cin.eof()) {
-                    std::cin.clear();
-                    break;
-                }
-                std::cin.clear();
-                continue;
-            }
-            wcmd = u16(cmd1);
-#endif
-
-            // If the cmd is empty, no point trying to parse it
-            if (!wcmd.empty()) {
-                if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") ||
-                    boost::iequals(wcmd, L"BYE")) {
-                    CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-                    should_wait_for_keypress = true;
-                    shutdown(false); // false to not restart
-                    break;
-                }
-
-                wcmd += L"\r\n";
-                amcp->parse(wcmd);
-            }
-        }
-    }).detach();
-    future.wait();
-
-    caspar_server.reset();
-
-    return future.get();
-}
-
-void signal_handler(int signum)
-{
-    ::signal(signum, SIG_DFL);
-    boost::stacktrace::safe_dump_to("./backtrace.dump");
-    ::raise(SIGABRT);
-}
-
-void terminate_handler()
-{
-    try {
-        std::rethrow_exception(std::current_exception());
-    } catch (...) {
-        CASPAR_LOG_CURRENT_EXCEPTION();
-    }
-    std::abort();
-}
+// void terminate_handler()
+// {
+//     try {
+//         std::rethrow_exception(std::current_exception());
+//     } catch (...) {
+//         CASPAR_LOG_CURRENT_EXCEPTION();
+//     }
+//     std::abort();
+// }
 
 } // namespace caspar
 
-int main(int argc, char** argv)
+Napi::Value InitServer(const Napi::CallbackInfo& info)
 {
-    using namespace caspar;
+    Napi::Env env = info.Env();
 
-    if (intercept_command_line_args(argc, argv))
-        return 0;
-
-    ::signal(SIGSEGV, signal_handler);
-    ::signal(SIGABRT, signal_handler);
-    std::set_terminate(caspar::terminate_handler);
-
-    static auto backtrace = "./backtrace.dump";
-    if (boost::filesystem::exists(backtrace)) {
-        std::ifstream     ifs(backtrace);
-        std::stringstream str;
-        str << boost::stacktrace::stacktrace::from_dump(ifs);
-        CASPAR_LOG(error) << u16(str.str());
-        ifs.close();
-        boost::filesystem::remove(backtrace);
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
     }
 
-    int return_code = 0;
+    if (instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is already running, it must be stopped before you can call init again")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // TODO - ensure not in a worker, or that multiple servers arent run in the same process
+
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::Error::New(env, "Expected configuration object").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 2 || !info[1].IsFunction()) {
+        Napi::Error::New(env, "Expected log receiver").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() >= 3) {
+        if (!info[2].IsFunction()) {
+            Napi::Error::New(env, "Expected callback for state updates").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+
+        auto callback = info[2].As<Napi::Function>();
+
+        // TODO - cleanup if something throws
+        instance_data->osc_sender = create_channel_state_emitter(env, callback);
+        CASPAR_LOG(info) << "has sender " << !!instance_data->osc_sender;
+    }
+
+    auto configuration = info[0].As<Napi::Object>();
+    auto logReceiver   = info[1].As<Napi::Function>();
+
+    using namespace caspar;
+
+    // setup_global_locale();
+
     setup_prerequisites();
-
-    setup_global_locale();
-
-    std::wcout << L"Type \"q\" to close application." << std::endl;
-
-    // Set debug mode.
-    auto debugging_environment = setup_debugging_environment();
 
     // Increase process priority.
     increase_process_priority();
 
-    std::wstring config_file_name(L"casparcg.config");
-
     try {
-        // Configure environment properties from configuration.
-        if (argc >= 2)
-            config_file_name = caspar::u16(argv[1]);
+        boost::property_tree::wptree config_tree;
+        if (!NapiObjectToBoostPropertyTree(env, configuration, config_tree)) {
+            return env.Null();
+        }
 
-        log::add_cout_sink();
-        env::configure(config_file_name);
+        auto paths_config = configuration.Get("paths");
+        if (!paths_config.IsObject()) {
+            Napi::Error::New(env, "Expected paths to be an object").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        auto paths_object = paths_config.As<Napi::Object>();
 
-        log::set_log_column_alignment(env::properties().get(L"configuration.log-align-columns", true));
+        std::wstring initial_path  = u16(paths_object.Get("initial").As<Napi::String>().Utf8Value());
+        std::wstring media_path    = u16(paths_object.Get("media").As<Napi::String>().Utf8Value());
+        std::wstring template_path = u16(paths_object.Get("template").As<Napi::String>().Utf8Value());
+
+        log::remove_all_sinks(); // Ensure there isn't an existing logger
+        log::add_nodejs_sink(create_log_receiver_emitter(env, logReceiver));
+
+        env::configure(initial_path, media_path, template_path, config_tree);
 
         {
             std::wstring target_level = env::properties().get(L"configuration.log-level", L"info");
@@ -229,52 +199,280 @@ int main(int argc, char** argv)
             }
         }
 
-        if (env::properties().get(L"configuration.debugging.remote", false))
-            wait_for_remote_debugging();
+        print_info();
 
-        // Start logging to file.
-        if (env::log_to_file()) {
-            log::add_file_sink(env::log_folder() + L"caspar");
-            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to " << env::log_folder()
-                       << std::endl
-                       << std::endl;
-        } else {
-            std::wcout << L"Logging [" << log::get_log_level() << L"] or higher severity to console" << std::endl
-                       << std::endl;
-        }
+        // Create server object which initializes channels, protocols and controllers.
+        instance_data->caspar_server.reset(new server());
 
-        // Once logging to file, log configuration warnings.
-        env::log_configuration_warnings();
+        // For example CEF resets the global locale, so this is to reset it back to "our" preference.
+        setup_global_locale();
 
-        // Setup console window.
-        setup_console_window();
+        instance_data->caspar_server->start();
 
-        std::atomic<bool> should_wait_for_keypress;
-        should_wait_for_keypress = false;
-        auto should_restart      = run(config_file_name, should_wait_for_keypress);
-        return_code              = should_restart ? 5 : 0;
-
-        CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-
-        if (should_wait_for_keypress)
-            wait_for_keypress();
     } catch (boost::property_tree::file_parser_error& e) {
-        CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message()
-                          << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
+        Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (user_error&) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
-        wait_for_keypress();
+        Napi::Error::New(env, "Please check the configuration for errors").ThrowAsJavaScriptException();
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
-        CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the GitHub project page "
-                             L"(www.github.com/casparcg/server/issues).";
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file "
-                      L"folder for more information.\n\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+        Napi::Error::New(env, "Unhandled exception").ThrowAsJavaScriptException();
     }
 
-    return return_code;
+    return env.Null();
 }
+
+Napi::Value StopServer(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        // Nothing to do
+        return env.Null();
+    }
+
+    instance_data->caspar_server = nullptr;
+    instance_data->osc_sender    = nullptr;
+
+    // TODO: some log lines can be lost at exit for some reason
+
+    // Ensure references to log callback are disposed
+    caspar::log::remove_all_sinks();
+
+    return env.Null();
+}
+
+Napi::Value AddChannelConsumer(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsObject()) {
+        Napi::Error::New(env, "Expected channel and config").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto channel_index = info[0].As<Napi::Number>();
+    auto config        = info[1].As<Napi::Object>();
+
+    boost::property_tree::wptree boost_config;
+    if (!NapiObjectToBoostPropertyTree(env, config, boost_config)) {
+        return env.Null();
+    }
+
+    int port = instance_data->caspar_server->add_consumer_from_xml(channel_index.Int32Value() - 1, boost_config);
+    if (port == -1) {
+        Napi::Error::New(env, "Invalid consumer config").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    return Napi::Number::New(env, port);
+}
+
+Napi::Value AddChannel(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected video mode").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto video_mode = info[0].As<Napi::String>();
+
+    // TODO - calling this once amcp has begun is not safe
+
+    int channel_index =
+        instance_data->caspar_server->add_channel(caspar::u16(video_mode.Utf8Value()), instance_data->osc_sender);
+    if (channel_index == -1) {
+        Napi::Error::New(env, "Failed to add channel").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    return Napi::Number::New(env, channel_index);
+}
+
+Napi::Value OpenDiag(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    caspar::core::diagnostics::osd::show_graphs(true);
+
+    return env.Null();
+}
+
+Napi::Value CallStageMethod(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto command = info[0].As<Napi::String>().Utf8Value();
+
+    if (command == "play") {
+        return StagePlay(info, instance_data);
+    } else if (command == "preview") {
+        return StagePreview(info, instance_data);
+    } else if (command == "load") {
+        return StageLoad(info, instance_data);
+    } else if (command == "pause") {
+        return StagePause(info, instance_data);
+    } else if (command == "resume") {
+        return StageResume(info, instance_data);
+    } else if (command == "stop") {
+        return StageStop(info, instance_data);
+    } else if (command == "clear") {
+        return StageClear(info, instance_data);
+    } else if (command == "call") {
+        return StageCall(info, instance_data);
+    } else if (command == "callbg") {
+        return StageCallBg(info, instance_data);
+    } else if (command == "swapChannel") {
+        return StageSwapChannel(info, instance_data);
+    } else if (command == "swapLayer") {
+        return StageSwapLayer(info, instance_data);
+    } else {
+        Napi::Error::New(env, "Unknown command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value CallCgMethod(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+
+    CasparCgInstanceData* instance_data = env.GetInstanceData<CasparCgInstanceData>();
+    if (!instance_data) {
+        Napi::Error::New(env, "Module is not initialised correctly. This is likely a bug!")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (!instance_data->caspar_server) {
+        Napi::Error::New(env, "Server is not running").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::Error::New(env, "Expected command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    auto command = info[0].As<Napi::String>().Utf8Value();
+
+    if (command == "add") {
+        return CgAdd(info, instance_data);
+    } else if (command == "play") {
+        return CgPlay(info, instance_data);
+    } else if (command == "stop") {
+        return CgStop(info, instance_data);
+    } else if (command == "next") {
+        return CgNext(info, instance_data);
+    } else if (command == "remove") {
+        return CgRemove(info, instance_data);
+    } else if (command == "invoke") {
+        return CgInvoke(info, instance_data);
+    } else if (command == "update") {
+        return CgUpdate(info, instance_data);
+    } else {
+        Napi::Error::New(env, "Unknown command").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Object Init(Napi::Env env, Napi::Object exports)
+{
+    CasparCgInstanceData* instance_data = new CasparCgInstanceData;
+    env.SetInstanceData(instance_data); // TODO - cleanup
+
+    instance_data->unused_producer = NodeUnusedProducer::Init(env, exports);
+
+    exports.Set(Napi::String::New(env, "version"), Napi::String::New(env, caspar::u8(caspar::env::version())));
+
+    exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, InitServer));
+    exports.Set(Napi::String::New(env, "stop"), Napi::Function::New(env, StopServer));
+
+    exports.Set(Napi::String::New(env, "ConfigAddCustomVideoFormat"),
+                Napi::Function::New(env, ConfigAddCustomVideoFormat));
+
+    exports.Set(Napi::String::New(env, "CreateProducer"), Napi::Function::New(env, CreateProducer));
+    exports.Set(Napi::String::New(env, "CreateStingTransition"), Napi::Function::New(env, CreateStingTransition));
+    exports.Set(Napi::String::New(env, "CreateBasicTransition"), Napi::Function::New(env, CreateBasicTransition));
+
+    exports.Set(Napi::String::New(env, "AddConsumer"), Napi::Function::New(env, AddConsumer));
+    exports.Set(Napi::String::New(env, "RemoveConsumerByPort"), Napi::Function::New(env, RemoveConsumerByPort));
+    exports.Set(Napi::String::New(env, "RemoveConsumerByParams"), Napi::Function::New(env, RemoveConsumerByParams));
+
+    exports.Set(Napi::String::New(env, "AddChannelConsumer"), Napi::Function::New(env, AddChannelConsumer));
+    exports.Set(Napi::String::New(env, "AddChannel"), Napi::Function::New(env, AddChannel));
+    exports.Set(Napi::String::New(env, "CallStageMethod"), Napi::Function::New(env, CallStageMethod));
+    exports.Set(Napi::String::New(env, "CallCgMethod"), Napi::Function::New(env, CallCgMethod));
+
+    exports.Set(Napi::String::New(env, "SetChannelFormat"), Napi::Function::New(env, SetChannelFormat));
+    exports.Set(Napi::String::New(env, "GetLayerMixerProperties"), Napi::Function::New(env, GetLayerMixerProperties));
+    exports.Set(Napi::String::New(env, "ApplyTransforms"), Napi::Function::New(env, ApplyTransforms));
+
+    exports.Set(Napi::String::New(env, "OpenDiag"), Napi::Function::New(env, OpenDiag));
+    exports.Set(Napi::String::New(env, "FindCaseInsensitive"), Napi::Function::New(env, FindCaseInsensitive));
+
+    return exports;
+}
+
+NODE_API_MODULE(casparcg, Init)

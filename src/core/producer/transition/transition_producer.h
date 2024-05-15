@@ -26,6 +26,7 @@
 #include <common/memory.h>
 #include <common/tweener.h>
 
+#include <optional>
 #include <string>
 
 namespace caspar { namespace core {
@@ -55,9 +56,11 @@ struct transition_info
     caspar::tweener      tweener{L"linear"};
 };
 
-bool try_match_transition(const std::wstring& message, transition_info& transitionInfo);
-
 spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
                                                            const transition_info&                 info);
+
+std::optional<transition_type> parse_transition_type(const std::string& transition);
+
+std::optional<transition_direction> parse_transition_direction(const std::string& direction);
 
 }} // namespace caspar::core

@@ -26,6 +26,7 @@
 
 #include "monitor/monitor.h"
 
+#include <common/executor.h>
 #include <common/memory.h>
 
 #include <boost/signals2.hpp>
@@ -77,18 +78,21 @@ class video_channel final
 
     core::monitor::state state() const;
 
-    const std::shared_ptr<core::stage>& stage() const;
-    std::shared_ptr<core::stage>&       stage();
-    const core::mixer&                  mixer() const;
-    core::mixer&                        mixer();
-    const core::output&                 output() const;
-    core::output&                       output();
+    const core::stage&  stage() const;
+    core::stage&        stage();
+    const core::mixer&  mixer() const;
+    core::mixer&        mixer();
+    const core::output& output() const;
+    core::output&       output();
 
     spl::shared_ptr<core::frame_factory> frame_factory();
 
     int index() const;
 
     std::shared_ptr<core::route> route(int index = -1, route_mode mode = route_mode::foreground);
+
+    // Hack: temporary executor to allow nodejs to queue tasks to the stage along with a custom response handler
+    const std::shared_ptr<executor> tmp_executor_;
 
   private:
     struct impl;

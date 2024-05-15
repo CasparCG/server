@@ -32,13 +32,6 @@ namespace caspar { namespace core {
 
 struct chroma
 {
-    enum class legacy_type
-    {
-        none,
-        green,
-        blue
-    };
-
     bool   enable                    = false;
     bool   show_mask                 = false;
     double target_hue                = 0.0;
@@ -166,7 +159,5 @@ class tweened_transform
     frame_transform fetch();
     void            tick(int num);
 };
-
-std::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str);
 
 }} // namespace caspar::core

@@ -33,7 +33,6 @@
 namespace caspar { namespace artnet {
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
-                              const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels);
+create_preconfigured_consumer(const boost::property_tree::wptree&  ptree,
+                              const core::video_format_repository& format_repository);
 }} // namespace caspar::artnet

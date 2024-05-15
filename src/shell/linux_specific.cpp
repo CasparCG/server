@@ -32,40 +32,19 @@ namespace caspar {
 
 void setup_prerequisites()
 {
-    // Enable utf8 console input and output
-    std::wcout.sync_with_stdio(false);
-    std::wcout.imbue(std::locale(""));
-    std::wcin.imbue(std::locale(""));
+    // // Enable utf8 console input and output
+    // std::wcout.sync_with_stdio(false);
+    // std::wcout.imbue(std::locale(""));
+    // std::wcin.imbue(std::locale(""));
 
     XInitThreads();
 
     std::set_terminate([] { CASPAR_LOG_CURRENT_EXCEPTION(); });
 }
 
-void setup_console_window()
-{
-    // TODO: implement.
-}
-
 void increase_process_priority()
 {
     // TODO: implement.
-}
-
-void wait_for_keypress()
-{
-    // TODO: implement if desirable.
-}
-
-std::shared_ptr<void> setup_debugging_environment()
-{
-    // TODO: implement if applicable.
-    return nullptr;
-}
-
-void wait_for_remote_debugging()
-{
-    // TODO: implement if applicable.
 }
 
 } // namespace caspar

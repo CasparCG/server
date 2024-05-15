@@ -25,11 +25,7 @@
 
 namespace caspar {
 
-void                  setup_prerequisites();
-void                  setup_console_window();
-void                  increase_process_priority();
-void                  wait_for_keypress();
-std::shared_ptr<void> setup_debugging_environment();
-void                  wait_for_remote_debugging();
+void setup_prerequisites();
+void increase_process_priority();
 
 } // namespace caspar

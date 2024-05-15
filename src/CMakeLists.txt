@@ -12,7 +12,7 @@ set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "D
 
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
 
-set(DIAG_FONT_PATH "LiberationMono-Regular.ttf" CACHE STRING
+set(DIAG_FONT_PATH "/usr/share/fonts/liberation-mono/LiberationMono-Regular.ttf" CACHE STRING
     "Path to font that will be used to load diag font at runtime. By default
     this loads the font distributed with the application from the working
     directory. It can be set to an absolute path to instead load a font from

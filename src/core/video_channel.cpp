@@ -64,7 +64,7 @@ struct video_channel::impl final
     caspar::core::output         output_;
     spl::shared_ptr<image_mixer> image_mixer_;
     caspar::core::mixer          mixer_;
-    std::shared_ptr<core::stage> stage_;
+    caspar::core::stage          stage_;
 
     uint64_t frame_counter_ = 0;
 
@@ -106,7 +106,7 @@ struct video_channel::impl final
         , output_(graph_, format_desc, index)
         , image_mixer_(std::move(image_mixer))
         , mixer_(index, graph_, image_mixer_)
-        , stage_(std::make_shared<core::stage>(index, graph_, format_desc))
+        , stage_(index, graph_, format_desc)
         , tick_(std::move(tick))
     {
         graph_->set_color("produce-time", caspar::diagnostics::color(0.0f, 1.0f, 0.0f));
@@ -149,7 +149,7 @@ struct video_channel::impl final
 
                     // Produce
                     caspar::timer produce_timer;
-                    auto          stage_frames = (*stage_)(frame_counter_, background_routes, routesCb);
+                    auto          stage_frames = stage_(frame_counter_, background_routes, routesCb);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.hz * 0.5);
 
                     // Mix
@@ -169,7 +169,7 @@ struct video_channel::impl final
                     graph_->set_value("frame-time", frame_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     monitor::state state = {};
-                    state["stage"]       = stage_->state();
+                    state["stage"]       = stage_.state();
                     state["mixer"]       = mixer_.state();
                     state["output"]      = output_.state();
                     state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
@@ -206,7 +206,7 @@ struct video_channel::impl final
         auto route = routes_[id].lock();
         if (!route) {
             route              = std::make_shared<core::route>();
-            route->format_desc = stage_->video_format_desc(); // TODO this needs updating whenever the videomode changes
+            route->format_desc = stage_.video_format_desc(); // TODO this needs updating whenever the videomode changes
             route->name        = std::to_wstring(index_);
             if (index != -1) {
                 route->name += L"/" + std::to_wstring(index);
@@ -224,7 +224,7 @@ struct video_channel::impl final
 
     std::wstring print() const
     {
-        return L"video_channel[" + std::to_wstring(index_) + L"|" + stage_->video_format_desc().name + L"]";
+        return L"video_channel[" + std::to_wstring(index_) + L"|" + stage_.video_format_desc().name + L"]";
     }
 
     int index() const { return index_; }
@@ -235,18 +235,19 @@ video_channel::video_channel(int                                       index,
                              std::unique_ptr<image_mixer>              image_mixer,
                              std::function<void(core::monitor::state)> tick)
     : impl_(new impl(index, format_desc, std::move(image_mixer), std::move(tick)))
+    , tmp_executor_(new executor(L"Tmp Stage " + std::to_wstring(index)))
 {
 }
 video_channel::~video_channel() {}
-const std::shared_ptr<core::stage>& video_channel::stage() const { return impl_->stage_; }
-std::shared_ptr<core::stage>&       video_channel::stage() { return impl_->stage_; }
-const mixer&                        video_channel::mixer() const { return impl_->mixer_; }
-mixer&                              video_channel::mixer() { return impl_->mixer_; }
-const output&                       video_channel::output() const { return impl_->output_; }
-output&                             video_channel::output() { return impl_->output_; }
-spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
-int                                 video_channel::index() const { return impl_->index(); }
-core::monitor::state                video_channel::state() const { return impl_->state_; }
+const stage&                   video_channel::stage() const { return impl_->stage_; }
+stage&                         video_channel::stage() { return impl_->stage_; }
+const mixer&                   video_channel::mixer() const { return impl_->mixer_; }
+mixer&                         video_channel::mixer() { return impl_->mixer_; }
+const output&                  video_channel::output() const { return impl_->output_; }
+output&                        video_channel::output() { return impl_->output_; }
+spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->image_mixer_; }
+int                            video_channel::index() const { return impl_->index(); }
+core::monitor::state           video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 
