@@ -1,9 +1,7 @@
 @Echo off
 
 IF EXIST scanner.exe (
-    IF EXIST leveldown.node (
-        start scanner.exe
-    )
+    start scanner.exe
 )
 
 :Start
