@@ -84,6 +84,8 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         if (config.region_h > 0) // If the user chose a height, respect that
             copy_line_count = std::min(copy_line_count, config.region_h);
 
+        int max_y_content = std::min(y_skip_dest_lines + copy_line_count, channel_format_desc.height);
+
         for (int y = firstLine; y < y_skip_dest_lines; y += decklink_format_desc.field_count) {
             // Fill the line with black
             std::memset(
@@ -93,7 +95,7 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         int firstFillLine = y_skip_dest_lines;
         if (decklink_format_desc.field_count != 1 && firstFillLine % 2 != firstLine)
             firstFillLine += 1;
-        for (int y = firstFillLine; y < y_skip_dest_lines + copy_line_count; y += decklink_format_desc.field_count) {
+        for (int y = firstFillLine; y < max_y_content; y += decklink_format_desc.field_count) {
             auto line_start_ptr   = reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_dest_line;
             auto line_content_ptr = line_start_ptr + byte_offset_dest_line; // Future
 
@@ -115,10 +117,9 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         }
 
         // Calculate the first line number to fill with black
-        int firstPadEndLine = y_skip_dest_lines + copy_line_count;
-        if (decklink_format_desc.field_count != 1 && firstPadEndLine % 2 != firstLine)
-            firstPadEndLine += 1;
-        for (int y = firstPadEndLine; y < decklink_format_desc.height; y += decklink_format_desc.field_count) {
+        if (decklink_format_desc.field_count != 1 && max_y_content % 2 != firstLine)
+            max_y_content += 1;
+        for (int y = max_y_content; y < decklink_format_desc.height; y += decklink_format_desc.field_count) {
             // Fill the line with black
             std::memset(
                 reinterpret_cast<char*>(image_data.get()) + (byte_count_dest_line * y), 0, byte_count_dest_line);
