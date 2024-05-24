@@ -109,6 +109,10 @@ set(TBB_BIN_PATH "${SOURCE_DIR}/redist/intel64/vc14")
 link_directories("${SOURCE_DIR}/lib/intel64/vc14")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll" "Release")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll" "Debug")
+casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll" "Release")
+casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll" "Debug")
+casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll" "Release")
+casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll" "Debug")
 
 # GLEW
 casparcg_add_external_project(glew)

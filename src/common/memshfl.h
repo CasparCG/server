@@ -26,6 +26,7 @@
 #include <simde/x86/ssse3.h>
 #else
 #ifdef _MSC_VER
+#include <tbb/scalable_allocator.h>
 #include <intrin.h>
 #else
 #include <tmmintrin.h>
@@ -37,7 +38,7 @@ namespace caspar {
 #ifdef _MSC_VER
 static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
 {
-    return std::shared_ptr<void>(_aligned_malloc(size, alignment), _aligned_free);
+    return std::shared_ptr<void>(scalable_aligned_malloc(size, alignment), scalable_aligned_free);
 }
 #else
 static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)

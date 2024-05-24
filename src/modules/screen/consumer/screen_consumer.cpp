@@ -637,6 +637,19 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
+    if (contains_param(L"X", params)) {
+        config.screen_x = get_param(L"X", params, 0);
+    }
+    if (contains_param(L"Y", params)) {
+        config.screen_y = get_param(L"Y", params, 0);
+    }
+    if (contains_param(L"WIDTH", params)) {
+        config.screen_width = get_param(L"WIDTH", params, 0);
+    }
+    if (contains_param(L"HEIGHT", params)) {
+        config.screen_height = get_param(L"HEIGHT", params, 0);
+    }
+
     if (config.sbs_key && config.key_only) {
         CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
         config.key_only = false;

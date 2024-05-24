@@ -47,7 +47,7 @@ class transition_producer : public frame_producer
     bool                            dst_is_ready_ = false;
 
   public:
-    transition_producer(const spl::shared_ptr<frame_producer>& dest, transition_info  info)
+    transition_producer(const spl::shared_ptr<frame_producer>& dest, transition_info info)
         : info_(std::move(info))
         , dst_producer_(dest)
     {
