@@ -55,7 +55,9 @@ if (MSVC)
 		Winmm.lib
 		Ws2_32.lib
 		optimized tbb.lib
+		optimized tbbmalloc.lib
 		debug tbb_debug.lib
+		debug tbbmalloc_debug.lib
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
