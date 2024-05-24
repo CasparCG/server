@@ -24,6 +24,7 @@
 
 #include <accelerator/accelerator.h>
 
+#include <common/bit_depth.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/memory.h>
@@ -33,6 +34,7 @@
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
@@ -111,7 +113,7 @@ struct server::impl
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
     std::function<void(bool)>                                     shutdown_server_now_;
 
-    impl(const impl&)            = delete;
+    impl(const impl&) = delete;
     impl& operator=(const impl&) = delete;
 
     explicit impl(std::function<void(bool)> shutdown_server_now)
@@ -255,15 +257,27 @@ struct server::impl
 
             auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
             auto format_desc     = video_format_repository_.find(format_desc_str);
+            auto color_depth     = xml_channel.second.get<unsigned char>(L"color-depth", 8);
+            if (color_depth != 8 && color_depth != 16)
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Invalid color-depth: " + std::to_wstring(color_depth)));
+            
+            auto color_space_str     = boost::to_lower_copy(xml_channel.second.get(L"color-space", L"bt709"));
+            if (color_space_str != L"bt709" && color_space_str != L"bt2020")
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Invalid color-space, must be bt709 or bt2020"));
+
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_->size() + 1);
+            auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
+            auto color_space = color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id),
+                                                accelerator_.create_image_mixer(channel_id, depth, color_space),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;
@@ -340,8 +354,12 @@ struct server::impl
 
                     try {
                         if (name != L"<xmlcomment>")
-                            channel.raw_channel->output().add(consumer_registry_->create_consumer(
-                                name, xml_consumer.second, video_format_repository_, channels_vec));
+                            channel.raw_channel->output().add(
+                                consumer_registry_->create_consumer(name,
+                                                                    xml_consumer.second,
+                                                                    video_format_repository_,
+                                                                    channels_vec,
+                                                                    channel.raw_channel->mixer().depth()));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }

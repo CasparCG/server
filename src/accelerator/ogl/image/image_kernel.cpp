@@ -81,6 +81,22 @@ double hypotenuse(double x1, double y1, double x2, double y2)
     return std::sqrt(x * x + y * y);
 }
 
+double get_precision_factor(common::bit_depth depth)
+{
+    switch (depth) {
+        case common::bit_depth::bit8:
+            return 1.0;
+        case common::bit_depth::bit10:
+            return 64.0;
+        case common::bit_depth::bit12:
+            return 16.0;
+        case common::bit_depth::bit16:
+            return 1.0;
+        default:
+            return 1.0;
+    }
+}
+
 double calc_q(double close_diagonal, double distant_diagonal)
 {
     return (close_diagonal + distant_diagonal) / distant_diagonal;
@@ -221,10 +237,13 @@ struct image_kernel::impl
             return;
         }
 
+        double precision_factor[4] = {1, 1, 1, 1};
+
         // Bind textures
 
         for (int n = 0; n < params.textures.size(); ++n) {
             params.textures[n]->bind(n);
+            precision_factor[n] = get_precision_factor(params.textures[n]->depth());
         }
 
         if (params.local_key) {
@@ -234,18 +253,35 @@ struct image_kernel::impl
         if (params.layer_key) {
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
+        
+        const auto is_hd = params.pix_desc.planes.at(0).height > 700;
+        const auto color_space = is_hd ? params.pix_desc.color_space : core::color_space::bt601;
+
+        const float color_matrices[3][9] = {{1.0, 0.0, 1.402, 1.0, -0.344, -0.509, 1.0, 1.772, 0.0},            //bt.601
+                                            {1.0, 0.0, 1.5748, 1.0, -0.1873, -0.4681, 1.0, 1.8556, 0.0},        //bt.709
+                                            {1.0, 0.0, 1.4746, 1.0, -0.16455312684366, -0.57135312684366, 1.0, 1.8814, 0.0}};   //bt.2020
+        const auto color_matrix = color_matrices[static_cast<int>(color_space)];
+
+        const float luma_coefficients[3][3] = {{0.299, 0.587, 0.114},       //bt.601
+                                               {0.2126, 0.7152, 0.0722},    //bt.709
+                                               {0.2627, 0.6780, 0.0593}};   //bt.2020
+        const auto luma_coeff = luma_coefficients[static_cast<int>(color_space)];
 
         // Setup shader
-
         shader_->use();
 
         shader_->set("plane[0]", texture_id::plane0);
         shader_->set("plane[1]", texture_id::plane1);
         shader_->set("plane[2]", texture_id::plane2);
         shader_->set("plane[3]", texture_id::plane3);
+        shader_->set("precision_factor[0]", precision_factor[0]);
+        shader_->set("precision_factor[1]", precision_factor[1]);
+        shader_->set("precision_factor[2]", precision_factor[2]);
+        shader_->set("precision_factor[3]", precision_factor[3]);
         shader_->set("local_key", texture_id::local_key);
         shader_->set("layer_key", texture_id::layer_key);
-        shader_->set("is_hd", params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+        shader_->set_matrix3("color_matrix", color_matrix);
+        shader_->set("luma_coeff", luma_coeff[0], luma_coeff[1], luma_coeff[2]);
         shader_->set("has_local_key", static_cast<bool>(params.local_key));
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <common/bit_depth.h>
 #include <common/forward.h>
 #include <common/memory.h>
 
@@ -49,6 +50,8 @@ class mixer final
     mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
     core::monitor::state state() const;
+
+    common::bit_depth depth() const;
 
   private:
     struct impl;

@@ -75,6 +75,24 @@ struct Frame
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
+core::color_space get_color_space(const std::shared_ptr<AVFrame>& video) {
+    auto result = core::color_space::bt709;
+    switch (video->colorspace) {
+        case AVColorSpace::AVCOL_SPC_BT2020_NCL:
+            result = core::color_space::bt2020;
+            break;
+        case AVColorSpace::AVCOL_SPC_BT470BG:
+        case AVColorSpace::AVCOL_SPC_SMPTE170M:
+        case AVColorSpace::AVCOL_SPC_SMPTE240M:
+            result = core::color_space::bt601;
+            break;
+        default:
+            break;
+    }
+
+    return result;
+}
+
 class Decoder
 {
     Decoder(const Decoder&)            = delete;
@@ -502,7 +520,11 @@ struct Filter
                                               AV_PIX_FMT_ABGR,
                                               AV_PIX_FMT_YUV444P,
                                               AV_PIX_FMT_YUV422P,
+                                              AV_PIX_FMT_YUV422P10,
+                                              AV_PIX_FMT_YUV422P12,
                                               AV_PIX_FMT_YUV420P,
+                                              AV_PIX_FMT_YUV420P10,
+                                              AV_PIX_FMT_YUV420P12,
                                               AV_PIX_FMT_YUV410P,
                                               AV_PIX_FMT_YUVA444P,
                                               AV_PIX_FMT_YUVA422P,
@@ -864,7 +886,7 @@ struct AVProducer::Impl
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
             }
 
-            frame.frame       = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
+            frame.frame       = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video)));
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);
