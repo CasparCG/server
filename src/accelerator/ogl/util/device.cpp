@@ -50,6 +50,7 @@
 #include <array>
 #include <future>
 #include <thread>
+#include <chrono>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -112,6 +113,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
+        GL(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 
         device_.setActive(false);
 
@@ -253,20 +255,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-            GL(glFlush());
-
             deadline_timer timer(service_);
-            for (auto n = 0; true; ++n) {
-                // TODO (perf) Smarter non-polling solution?
+            auto wait = glClientWaitSync(fence, 0, 0);
+            while (wait != GL_CONDITION_SATISFIED && wait != GL_ALREADY_SIGNALED) {
                 timer.expires_from_now(boost::posix_time::milliseconds(2));
                 timer.async_wait(yield);
-
-                auto wait = glClientWaitSync(fence, 0, 1);
-                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                    break;
-                }
+                wait = glClientWaitSync(fence, 0, 0);
             }
-
             glDeleteSync(fence);
 
             {

@@ -29,6 +29,7 @@
 #include <common/array.h>
 #include <common/future.h>
 #include <common/log.h>
+#include <common/gl/gl_check.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
@@ -86,7 +87,14 @@ class image_renderer
             static const std::vector<uint8_t> buffer(max_frame_size_, 0);
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
-
+        ogl_->dispatch_async([=]() {
+            GL(glClear(GL_COLOR_BUFFER_BIT));
+#ifdef _DEBUG
+            if (glFrameTerminatorGREMEDY != nullptr) {
+                GL(glFrameTerminatorGREMEDY());
+            }
+#endif
+        }).wait();
         return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 

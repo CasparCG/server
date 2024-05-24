@@ -1,4 +1,3 @@
-#version 450
 in vec4 TexCoord;
 in vec4 TexCoord2;
 out vec4 fragColor;
@@ -513,7 +512,7 @@ vec4 get_rgba_color()
 		{
 			float y = get_sample(plane[0], TexCoord.st / TexCoord.q).g;
 			float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).b;
-			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r;			
+			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
 			return ycbcra_to_rgba(y, cb, cr, 1.0);
 		}
     }
@@ -523,20 +522,28 @@ vec4 get_rgba_color()
 void main()
 {
     vec4 color = get_rgba_color();
+#ifndef FRAGMENT_FAST
+    if (color.a < 0.01)
+        discard;
     if (chroma)
         color = chroma_key(color);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)
         color.rgb = ContrastSaturationBrightness(color, brt, sat, con);
-    if(has_local_key)
-        color *= texture(local_key, TexCoord2.st).r;
-    if(has_layer_key)
-        color *= texture(layer_key, TexCoord2.st).r;
+    float local_key = texture(local_key, TexCoord2.st).r;
+    if (has_local_key)
+        color *= local_key;
+    float layer_key = texture(layer_key, TexCoord2.st).r;
+    if (has_layer_key)
+        color *= layer_key;
+#endif
     color *= opacity;
+#ifndef FRAGMENT_FAST
     if (invert)
         color = 1.0 - color;
     if (blend_mode >= 0)
         color = blend(color);
+#endif
     fragColor = color.bgra;
 }
