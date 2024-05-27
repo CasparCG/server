@@ -3,6 +3,10 @@ cmake_minimum_required (VERSION 3.16)
 include(ExternalProject)
 include(FetchContent)
 
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST ON CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_FFMPEG OFF CACHE BOOL "Use the version of ffmpeg from your OS")
