@@ -227,7 +227,7 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE };
+            AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -645,9 +645,9 @@ class decklink_producer : public IDeckLinkInputCallback
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.hz * 0.5);
             tick_timer_.restart();
 
-            BMDTimeValue in_video_pts = 0LL;
-            BMDTimeValue in_audio_pts = 0LL;
-            core::color_space color_space = core::color_space::bt709;
+            BMDTimeValue      in_video_pts = 0LL;
+            BMDTimeValue      in_audio_pts = 0LL;
+            core::color_space color_space  = core::color_space::bt709;
 
             // If the video is delayed too much, audio only will be delivered
             // we don't want audio only since the buffer is small and we keep avcodec
@@ -666,7 +666,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 }
 
                 color_space = get_color_space(video);
-                auto src = video_decoder_.decode(video, mode_);
+                auto src    = video_decoder_.decode(video, mode_);
 
                 BMDTimeValue duration;
                 if (SUCCEEDED(video->GetStreamTime(&in_video_pts, &duration, AV_TIME_BASE))) {

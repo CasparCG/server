@@ -131,8 +131,7 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
     }
 
     auto hdr_metadata = ptree.get_child_optional(L"hdr-metadata");
-    if(hdr_metadata)
-    {
+    if (hdr_metadata) {
         auto color_space = get_color_space(hdr_metadata->get(L"default-color-space", L"bt709"));
 
         config.hdr_meta.min_dml  = hdr_metadata->get(L"min-dml", config.hdr_meta.min_dml);

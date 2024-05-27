@@ -26,8 +26,8 @@
 #include <simde/x86/ssse3.h>
 #else
 #ifdef _MSC_VER
-#include <tbb/scalable_allocator.h>
 #include <intrin.h>
+#include <tbb/scalable_allocator.h>
 #else
 #include <tmmintrin.h>
 #endif

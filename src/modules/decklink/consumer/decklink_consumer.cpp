@@ -232,7 +232,12 @@ class decklink_frame
     BMDPixelFormat          pix_fmt_;
 
   public:
-    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples, bool hdr, core::color_space color_space, const hdr_meta_configuration& hdr_metadata)
+    decklink_frame(std::shared_ptr<void>         data,
+                   core::video_format_desc       format_desc,
+                   int                           nb_samples,
+                   bool                          hdr,
+                   core::color_space             color_space,
+                   const hdr_meta_configuration& hdr_metadata)
         : format_desc_(std::move(format_desc))
         , data_(std::move(data))
         , nb_samples_(nb_samples)
@@ -255,7 +260,7 @@ class decklink_frame
 #else
         REFIID iunknown = IID_IUnknown;
 #endif
-        HRESULT result   = E_NOINTERFACE;
+        HRESULT result = E_NOINTERFACE;
 
         if (ppv == nullptr)
             return E_INVALIDARG;
@@ -292,8 +297,8 @@ class decklink_frame
 
     // IDecklinkVideoFrame
 
-    long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
-    long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
     long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(get_row_bytes(format_desc_, hdr_)); }
     BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return pix_fmt_; }
     BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return flags_; }
@@ -338,7 +343,7 @@ class decklink_frame
     HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value)
     {
         const auto color_space = (color_space_ == core::color_space::bt2020) ? &REC_2020 : &REC_709;
-        HRESULT result = S_OK;
+        HRESULT    result      = S_OK;
 
         switch (metadataID) {
             case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX:
@@ -554,8 +559,12 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
     void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
-        auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, core::color_space::bt709, config_.hdr_meta));
+        auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(std::move(image_data),
+                                                                                      decklink_format_desc_,
+                                                                                      nb_samples,
+                                                                                      config_.hdr,
+                                                                                      core::color_space::bt709,
+                                                                                      config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
                                                decklink_format_desc_.duration,
@@ -932,7 +941,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                               mode_->GetFieldDominance(),
                                                                               config_.hdr);
 
-                    schedule_next_video(image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
+                    schedule_next_video(
+                        image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -992,10 +1002,13 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time, core::color_space color_space)
+    void schedule_next_video(std::shared_ptr<void> image_data,
+                             int                   nb_samples,
+                             BMDTimeValue          display_time,
+                             core::color_space     color_space)
     {
-        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, color_space, config_.hdr_meta));
+        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(
+            std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, color_space, config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";

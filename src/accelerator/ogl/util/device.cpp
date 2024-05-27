@@ -219,8 +219,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     array<uint8_t> create_array(int size)
     {
-        auto buf             = create_buffer(size, true);
-        auto ptr             = reinterpret_cast<uint8_t*>(buf->data());
+        auto buf = create_buffer(size, true);
+        auto ptr = reinterpret_cast<uint8_t*>(buf->data());
         return array<uint8_t>(ptr, buf->size(), buf);
     }
 
@@ -288,7 +288,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 #ifdef WIN32
     /* Unused? */
-    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
+    std::future<std::shared_ptr<texture>>
+    copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
     {
         return spawn_async([=](yield_context yield) {
             auto tex = create_texture(width, height, stride, depth, false);

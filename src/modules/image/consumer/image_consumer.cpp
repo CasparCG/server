@@ -124,7 +124,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 {
     if (params.empty() || !boost::iequals(params.at(0), L"IMAGE"))
         return core::frame_consumer::empty();
-        
+
     if (depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Image consumer only supports 8-bit color depth."));
 

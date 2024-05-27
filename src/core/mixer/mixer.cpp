@@ -73,7 +73,7 @@ struct mixer::impl
 
         state_["audio"] = audio_mixer_.state();
 
-        auto depth = image_mixer_->depth();
+        auto depth       = image_mixer_->depth();
         auto color_space = image_mixer_->color_space();
 
         buffer_.push(std::async(std::launch::deferred,

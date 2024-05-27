@@ -143,13 +143,13 @@ void texture::clear() { impl_->clear(); }
 #ifdef WIN32
 void texture::copy_from(int source) { impl_->copy_from(source); }
 #endif
-void texture::copy_from(buffer& source) { impl_->copy_from(source); }
-void texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
-int  texture::width() const { return impl_->width_; }
-int  texture::height() const { return impl_->height_; }
-int  texture::stride() const { return impl_->stride_; }
+void              texture::copy_from(buffer& source) { impl_->copy_from(source); }
+void              texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
+int               texture::width() const { return impl_->width_; }
+int               texture::height() const { return impl_->height_; }
+int               texture::stride() const { return impl_->stride_; }
 common::bit_depth texture::depth() const { return impl_->depth_; }
-int  texture::size() const { return impl_->size_; }
-int  texture::id() const { return impl_->id_; }
+int               texture::size() const { return impl_->size_; }
+int               texture::id() const { return impl_->id_; }
 
 }}} // namespace caspar::accelerator::ogl

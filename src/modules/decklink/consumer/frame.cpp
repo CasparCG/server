@@ -175,7 +175,7 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& chan
                                              BMDFieldDominance              field_dominance,
                                              bool                           hdr)
 {
-        std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc, hdr);
+    std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc, hdr);
 
     if (field_dominance != bmdProgressiveFrame) {
         convert_frame(channel_format_desc,

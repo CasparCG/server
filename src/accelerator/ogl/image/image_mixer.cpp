@@ -168,7 +168,7 @@ class image_renderer
               const core::video_format_desc& format_desc)
     {
         draw_params draw_params;
-        // TODO: Pass the target color_space 
+        // TODO: Pass the target color_space
 
         draw_params.pix_desc  = std::move(item.pix_desc);
         draw_params.transform = std::move(item.transform);
@@ -332,26 +332,25 @@ struct image_mixer::impl
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
-        return core::mutable_frame(
-            tag,
-            std::move(image_data),
-            array<int32_t>{},
-            desc,
-            [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
-                auto self = weak_self.lock();
-                if (!self) {
-                    return std::any{};
-                }
-                std::vector<future_texture> textures;
-                for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                    textures.emplace_back(self->ogl_->copy_async(image_data[n],
-                                                                 desc.planes[n].width,
-                                                                 desc.planes[n].height,
-                                                                 desc.planes[n].stride,
-                                                                 desc.planes[n].depth));
-                }
-                return std::make_shared<decltype(textures)>(std::move(textures));
-            });
+        return core::mutable_frame(tag,
+                                   std::move(image_data),
+                                   array<int32_t>{},
+                                   desc,
+                                   [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
+                                       auto self = weak_self.lock();
+                                       if (!self) {
+                                           return std::any{};
+                                       }
+                                       std::vector<future_texture> textures;
+                                       for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+                                           textures.emplace_back(self->ogl_->copy_async(image_data[n],
+                                                                                        desc.planes[n].width,
+                                                                                        desc.planes[n].height,
+                                                                                        desc.planes[n].stride,
+                                                                                        desc.planes[n].depth));
+                                       }
+                                       return std::make_shared<decltype(textures)>(std::move(textures));
+                                   });
     }
 
     common::bit_depth depth() const { return renderer_.depth(); }

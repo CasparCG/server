@@ -114,11 +114,11 @@ T* get_raw(const CComPtr<T>& ptr)
 
 namespace caspar { namespace decklink {
 
-using String = const char*;
-using BOOL   = bool;
+using String   = const char*;
+using BOOL     = bool;
 #define TRUE true
 #define FALSE false
-using UINT32 = uint32_t;
+using UINT32   = uint32_t;
 using LONGLONG = int64_t;
 
 static std::wstring to_string(String utf16_string) { return u16(utf16_string); }

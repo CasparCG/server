@@ -164,11 +164,11 @@ const_frame& const_frame::operator=(const const_frame& other)
     impl_ = other.impl_;
     return *this;
 }
-bool const_frame::operator==(const const_frame& other) const { return impl_ == other.impl_; }
-bool const_frame::operator!=(const const_frame& other) const { return !(*this == other); }
-bool const_frame::operator<(const const_frame& other) const { return impl_ < other.impl_; }
-bool const_frame::               operator>(const const_frame& other) const { return impl_ > other.impl_; }
-const pixel_format_desc&         const_frame::pixel_format_desc() const { return impl_->desc_; }
+bool                     const_frame::operator==(const const_frame& other) const { return impl_ == other.impl_; }
+bool                     const_frame::operator!=(const const_frame& other) const { return !(*this == other); }
+bool                     const_frame::operator<(const const_frame& other) const { return impl_ < other.impl_; }
+bool                     const_frame::operator>(const const_frame& other) const { return impl_ > other.impl_; }
+const pixel_format_desc& const_frame::pixel_format_desc() const { return impl_->desc_; }
 const array<const std::uint8_t>& const_frame::image_data(std::size_t index) const { return impl_->image_data(index); }
 const array<const std::int32_t>& const_frame::audio_data() const { return impl_->audio_data_; }
 std::size_t                      const_frame::width() const { return impl_->width(); }
