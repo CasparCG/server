@@ -53,7 +53,7 @@ jobs:
                   echo "artifactname=$TARGET" >> $GITHUB_OUTPUT
 
                   # check if a release branch, or master, or a tag
-                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
+                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" || "${{ github.ref_name }}" == "2.4.x" ]]
                   then
                     # Only proceed if we have an sftp password
                     if [ -n "${{ secrets.SFTP_PASSWORD }}" ]
