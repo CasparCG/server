@@ -2,6 +2,10 @@ cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
 
+if(POLICY CMP0135)
+	cmake_policy(SET CMP0135 NEW)
+endif()
+
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
 
 set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "" CACHE INTERNAL "")
