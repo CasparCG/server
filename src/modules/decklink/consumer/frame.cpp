@@ -137,7 +137,7 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
             firstFillLine += 1;
         for (int y = firstFillLine; y < max_y_content; y += decklink_format_desc.field_count) {
             auto line_start_ptr   = reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_dest_line;
-            auto line_content_ptr = line_start_ptr + byte_offset_dest_line; // Future
+            auto line_content_ptr = line_start_ptr + byte_offset_dest_line;
 
             // Fill the start with black
             if (byte_offset_dest_line > 0) {
@@ -145,9 +145,9 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
             }
 
             // Copy the pixels
+            long long src_y = y + y_skip_src_lines - y_skip_dest_lines;
             std::memcpy(line_content_ptr,
-                        frame.image_data(0).data() + (long long)(y + y_skip_src_lines) * byte_count_src_line +
-                            byte_offset_src_line,
+                        frame.image_data(0).data() + src_y * byte_count_src_line + byte_offset_src_line,
                         byte_copy_per_line);
 
             // Fill the end with black
