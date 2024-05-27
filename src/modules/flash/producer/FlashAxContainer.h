@@ -33,7 +33,7 @@
 
 #include "../interop/axflash.h"
 #include <core/video_format.h>
-//#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
+// #import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 
 #include <comdef.h>
 

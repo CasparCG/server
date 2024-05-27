@@ -55,7 +55,7 @@ struct ogl_invalid_framebuffer_operation_ext : virtual ogl_exception
 
 void SMFL_GLCheckError(const std::string& expr, const char* func, const char* file, unsigned int line);
 
-//#ifdef _DEBUG
+// #ifdef _DEBUG
 
 #define CASPAR_GL_EXPR_STR(expr) #expr
 
@@ -80,7 +80,8 @@ void SMFL_GLCheckError(const std::string& expr, const char* func, const char* fi
         caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__); \
         return ret; \
     }()*/
-//#define GL2(expr) [&]() -> decltype(expr) { auto ret = (expr); caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr),
+// #define GL2(expr) [&]() -> decltype(expr) { auto ret = (expr);
+// caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr),
 //__FILE__, __LINE__); return ret; }() #else #define GL(expr) expr #endif
 
 }} // namespace caspar::gl

@@ -100,7 +100,7 @@ bool Input::try_pop(std::shared_ptr<AVPacket>& packet)
     return result;
 }
 
-AVFormatContext* Input::operator->() { return ic_.get(); }
+AVFormatContext*       Input::operator->() { return ic_.get(); }
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
 void Input::abort()
