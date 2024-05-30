@@ -84,7 +84,7 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
         if (config.region_h > 0) // If the user chose a height, respect that
             copy_line_count = std::min(copy_line_count, config.region_h);
 
-        int max_y_content = std::min(y_skip_dest_lines + copy_line_count, channel_format_desc.height);
+        int max_y_content = y_skip_dest_lines + std::min(copy_line_count, channel_format_desc.height);
 
         for (int y = firstLine; y < y_skip_dest_lines; y += decklink_format_desc.field_count) {
             // Fill the line with black
