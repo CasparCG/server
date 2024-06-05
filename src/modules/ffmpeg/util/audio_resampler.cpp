@@ -30,7 +30,7 @@ caspar::array<int32_t> AudioResampler::convert(int frames, const void** src)
 {
     auto result = caspar::array<int32_t>(frames * 8 * sizeof(int32_t));
     auto ptr    = result.data();
-    auto ret    = swr_convert(ctx.get(), (uint8_t**)&ptr, frames, reinterpret_cast<const uint8_t**>(src), frames);
+    swr_convert(ctx.get(), (uint8_t**)&ptr, frames, reinterpret_cast<const uint8_t**>(src), frames);
 
     return result;
 }
