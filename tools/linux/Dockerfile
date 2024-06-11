@@ -1,4 +1,4 @@
-FROM buildpack-deps:jammy as build-casparcg
+FROM docker.io/buildpack-deps:jammy as build-casparcg
 	ADD tools/linux/install-dependencies /
 
 	RUN apt-get update && /install-dependencies
@@ -24,7 +24,7 @@ FROM buildpack-deps:jammy as build-casparcg
 	RUN ln -s /build/staging /staging && \
 		/source/shell/copy_deps.sh /staging/bin/casparcg /staging/lib
 
-FROM nvidia/opengl:1.2-glvnd-devel-ubuntu22.04
+FROM docker.io/nvidia/opengl:1.2-glvnd-devel-ubuntu22.04
 	COPY --from=build-casparcg /staging /opt/casparcg
 
 	RUN set -ex; \
