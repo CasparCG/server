@@ -49,8 +49,7 @@
 #include <boost/thread.hpp>
 
 #include <tbb/parallel_for.h>
-
-#include <ffmpeg/util/av_util.h>
+#include <tbb/parallel_invoke.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -58,6 +57,7 @@
 #endif
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libavutil/imgutils.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -66,6 +66,113 @@ extern "C" {
 #include "../util/ndi.h"
 
 namespace caspar { namespace newtek {
+
+std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat pix_fmt)
+{
+    switch (pix_fmt) {
+        case AV_PIX_FMT_BGRA:
+            return {core::pixel_format::bgra, common::bit_depth::bit8};
+        case AV_PIX_FMT_RGBA:
+            return {core::pixel_format::rgba, common::bit_depth::bit8};
+        case AV_PIX_FMT_UYVY422:
+            return {core::pixel_format::uyvy, common::bit_depth::bit8};
+        default:
+            return {core::pixel_format::invalid, common::bit_depth::bit8};
+    }
+}
+
+core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
+                                          int               width,
+                                          int               height,
+                                          std::vector<int>& data_map,
+                                          core::color_space color_space)
+{
+    // Get linesizes
+    int linesizes[4];
+    av_image_fill_linesizes(linesizes, pix_fmt, width);
+
+    const auto fmt   = get_pixel_format(pix_fmt);
+    auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
+    auto       depth = std::get<1>(fmt);
+
+    switch (desc.format) {
+        case core::pixel_format::bgra:
+        case core::pixel_format::argb:
+        case core::pixel_format::rgba:
+        case core::pixel_format::abgr: {
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
+            return desc;
+        }
+        case core::pixel_format::uyvy: {
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 2, height, 2, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
+
+            data_map.clear();
+            data_map.push_back(0);
+            data_map.push_back(0);
+
+            return desc;
+        }
+        default:
+            desc.format = core::pixel_format::invalid;
+            return desc;
+    }
+}
+
+core::mutable_frame make_frame(void*                    tag,
+                               core::frame_factory&     frame_factory,
+                               std::shared_ptr<AVFrame> video,
+                               std::shared_ptr<AVFrame> audio,
+                               core::color_space        color_space)
+{
+    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
+
+    const auto pix_desc =
+        video ? pixel_format_desc(
+                    static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map, color_space)
+              : core::pixel_format_desc(core::pixel_format::invalid);
+
+    auto frame = frame_factory.create_frame(tag, pix_desc);
+
+    tbb::parallel_invoke(
+        [&]() {
+            if (video) {
+                for (int n = 0; n < static_cast<int>(pix_desc.planes.size()); ++n) {
+                    auto frame_plan_index = data_map.empty() ? n : data_map.at(n);
+
+                    tbb::parallel_for(0, pix_desc.planes[n].height, [&](int y) {
+                        std::memcpy(frame.image_data(n).begin() + y * pix_desc.planes[n].linesize,
+                                    video->data[frame_plan_index] + y * video->linesize[frame_plan_index],
+                                    pix_desc.planes[n].linesize);
+                    });
+                }
+            }
+        },
+        [&]() {
+            if (audio) {
+                const int channel_count = 16;
+                frame.audio_data()      = std::vector<int32_t>(audio->nb_samples * channel_count, 0);
+
+                if (audio->channels == channel_count) {
+                    std::memcpy(frame.audio_data().data(),
+                                reinterpret_cast<int32_t*>(audio->data[0]),
+                                sizeof(int32_t) * channel_count * audio->nb_samples);
+                } else {
+                    // This isn't pretty, but some callers may not provide 16 channels
+
+                    auto dst = frame.audio_data().data();
+                    auto src = reinterpret_cast<int32_t*>(audio->data[0]);
+                    for (auto i = 0; i < audio->nb_samples; i++) {
+                        for (auto j = 0; j < std::min(channel_count, audio->channels); ++j) {
+                            dst[i * channel_count + j] = src[i * audio->channels + j];
+                        }
+                    }
+                }
+            }
+        });
+
+    return frame;
+}
 
 struct newtek_ndi_producer : public core::frame_producer
 {
@@ -211,8 +318,8 @@ struct newtek_ndi_producer : public core::frame_producer
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
                 }
-                auto mframe =
-                    ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
+                auto mframe = make_frame(
+                    this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame), core::color_space::bt709);
                 delete[] audio_frame_32s.p_data;
                 auto dframe = core::draw_frame(std::move(mframe));
                 {
