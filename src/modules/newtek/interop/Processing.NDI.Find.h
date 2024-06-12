@@ -2,13 +2,13 @@
 
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
 // the SDK documentation for the description of the full license terms, which are also provided in the file
-// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// "NDI License Agreement.pdf" within the SDK or online at http://ndi.link/ndisdk_license. Your use of any
 // part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
-// downloaded at http://ndi.tv/
+// downloaded at http://ndi.video/
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2021, NewTek, inc.
+// Copyright (C) 2023-2024 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -27,17 +27,18 @@
 //
 //***********************************************************************************************************
 
-// Structures and type definitions required by NDI finding
-// The reference to an instance of the finder
-typedef void* NDIlib_find_instance_t;
+// Structures and type definitions required by NDI finding.
+// The reference to an instance of the finder.
+struct NDIlib_find_instance_type;
+typedef struct NDIlib_find_instance_type* NDIlib_find_instance_t;
 
-// The creation structure that is used when you are creating a finder
-typedef struct NDIlib_find_create_t
-{	// Do we want to include the list of NDI sources that are running on the local machine? If TRUE then
+// The creation structure that is used when you are creating a finder.
+typedef struct NDIlib_find_create_t {
+	// Do we want to include the list of NDI sources that are running on the local machine? If TRUE then
 	// local sources will be visible, if FALSE then they will not.
 	bool show_local_sources;
 
-	// Which groups do you want to search in for sources
+	// Which groups do you want to search in for sources.
 	const char* p_groups;
 
 	// The list of additional IP addresses that exist that we should query for sources on. For instance, if
@@ -49,9 +50,12 @@ typedef struct NDIlib_find_create_t
 	const char* p_extra_ips;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
-	NDIlib_find_create_t(bool show_local_sources_ = true, const char* p_groups_ = NULL, const char* p_extra_ips_ = NULL);
+	NDIlib_find_create_t(
+		bool show_local_sources_ = true,
+		const char* p_groups_ = NULL,
+		const char* p_extra_ips_ = NULL
+	);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
-
 } NDIlib_find_create_t;
 
 //***********************************************************************************************************
