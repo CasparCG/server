@@ -41,6 +41,7 @@ namespace caspar { namespace core {
 class route_producer
     : public frame_producer
     , public route_control
+	, public std::enable_shared_from_this<route_producer>
 {
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -50,11 +51,12 @@ class route_producer
     caspar::timer consume_timer_;
 
     std::shared_ptr<route>             route_;
-    boost::signals2::scoped_connection connection_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
+
+    boost::signals2::scoped_connection connection_;
 
     int get_source_channel() const override { return source_channel_; }
     int get_source_layer() const override { return source_layer_; }
@@ -74,24 +76,6 @@ class route_producer
         : route_(route)
         , source_channel_(source_channel)
         , source_layer_(source_layer)
-        , connection_(route_->signal.connect([this](const core::draw_frame& frame1, const core::draw_frame& frame2) {
-            auto frame1b = frame1;
-            if (!frame1b) {
-                // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
-                frame1b = core::draw_frame::push(frame1);
-            }
-            auto frame2b = frame2;
-            if (!frame2b) {
-                // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
-                frame2b = core::draw_frame::push(frame2);
-            }
-
-            if (!buffer_.try_push(std::make_pair(frame1b, frame2b))) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-            }
-            graph_->set_value("produce-time", produce_timer_.elapsed() * route_->format_desc.fps * 0.5);
-            produce_timer_.restart();
-        }))
     {
         buffer_.set_capacity(buffer > 0 ? buffer : 1);
 
@@ -103,6 +87,32 @@ class route_producer
         diagnostics::register_graph(graph_);
 
         CASPAR_LOG(debug) << print() << L" Initialized";
+    }
+
+    void connect_slot()
+    {
+		auto weak_self = weak_from_this();
+		connection_ = route_->signal.connect([weak_self](const core::draw_frame& frame1, const core::draw_frame& frame2) {
+					if (auto self = weak_self.lock()) {
+						auto frame1b = frame1;
+						if (!frame1b) {
+							// We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
+							frame1b = core::draw_frame::push(frame1);
+						}
+						auto frame2b = frame2;
+						if (!frame2b) {
+							// We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
+							frame2b = core::draw_frame::push(frame2);
+						}
+
+						if (!self->buffer_.try_push(std::make_pair(frame1b, frame2b))) {
+							self->graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+						}
+						self->graph_->set_value("produce-time", self->produce_timer_.elapsed() * self->route_->format_desc.fps * 0.5);
+						self->produce_timer_.restart();
+					}
+				}
+		);
     }
 
     draw_frame last_frame(const core::video_field field) override
@@ -200,8 +210,9 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);
-
-    return spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer, channel, layer);
+    auto rp = spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer, channel, layer);
+    rp->connect_slot();
+    return rp;
 }
 
 }} // namespace caspar::core
