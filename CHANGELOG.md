@@ -1,3 +1,26 @@
+CasparCG 2.4.1 Stable
+==========================================
+
+### Core
+##### Fixes
+* Fix bad config file examples
+* Fix `casparcg_auto_restart.bat` not starting scanner
+* Revert removal of tbbmalloc, due to notable performance loss on windows
+* Supress some cmake build warnings
+* Build failure when doxygen installed on system
+
+### Producers
+##### Fixes
+* FFmpeg: Ignore ndi:// urls
+* Route: Race condition during destruction
+
+### Consumers
+##### Fixes
+* Decklink: subregion copy not respecting frame height
+* Decklink: subregion vertical offset
+* Decklink: subregion height limited with some formats
+
+
 CasparCG 2.4.0 Stable
 ==========================================
 
