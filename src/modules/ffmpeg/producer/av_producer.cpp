@@ -735,7 +735,7 @@ struct AVProducer::Impl
         }
 
         {
-            const auto start = firstSeek ? av_rescale_q(*firstSeek, format_tb_, TIME_BASE_Q) : start_.load();
+            const auto start =  start_.load();
             if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
                 if (start != AV_NOPTS_VALUE) {
                     duration_ = input_->duration - start;
@@ -744,8 +744,9 @@ struct AVProducer::Impl
                 }
             }
 
-            if (start != AV_NOPTS_VALUE) {
-                seek_internal(start);
+            const auto firstStart = firstSeek ? av_rescale_q(*firstSeek, format_tb_, TIME_BASE_Q) : start;
+            if (firstStart != AV_NOPTS_VALUE) {
+                seek_internal(firstStart);
             } else {
                 reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
             }
