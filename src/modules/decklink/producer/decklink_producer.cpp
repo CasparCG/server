@@ -206,7 +206,7 @@ struct Filter
 
                 auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % 1 %
                              format_desc.audio_sample_rate % format_desc.audio_sample_rate % AV_SAMPLE_FMT_S32 %
-                             av_get_default_channel_layout(format_desc.audio_channels))
+                             ffmpeg::get_channel_layout_mask_for_channels(format_desc.audio_channels))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
@@ -239,12 +239,23 @@ struct Filter
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
+
             AVSampleFormat sample_fmts[]     = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
-            int64_t        channel_layouts[] = {av_get_default_channel_layout(format_desc.audio_channels), 0};
             int            sample_rates[]    = {format_desc.audio_sample_rate, 0};
             FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "channel_layouts", channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN));
+
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+            AVChannelLayout channel_layout = AV_CHANNEL_LAYOUT_STEREO;
+            av_channel_layout_default(&channel_layout, format_desc.audio_channels);
+
+            FF(av_opt_set_chlayout(sink, "ch_layouts", &channel_layout, AV_OPT_SEARCH_CHILDREN));
+            av_channel_layout_uninit(&channel_layout);
+#else
+            int64_t        channel_layouts[] = {av_get_default_channel_layout(format_desc.audio_channels), 0};
+            FF(av_opt_set_int_list(sink, "channel_layouts", channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -686,7 +697,11 @@ class decklink_producer : public IDeckLinkInputCallback
             if (audio) {
                 auto src      = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
                 src->format   = AV_SAMPLE_FMT_S32;
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
+#else
                 src->channels = format_desc_.audio_channels;
+#endif
                 src->sample_rate = format_desc_.audio_sample_rate;
 
                 void* audio_bytes = nullptr;
@@ -695,7 +710,7 @@ class decklink_producer : public IDeckLinkInputCallback
                     src = std::shared_ptr<AVFrame>(src.get(), [src, audio](AVFrame* ptr) { audio->Release(); });
                     src->nb_samples  = audio->GetSampleFrameCount();
                     src->data[0]     = reinterpret_cast<uint8_t*>(audio_bytes);
-                    src->linesize[0] = src->nb_samples * src->channels *
+                    src->linesize[0] = src->nb_samples * format_desc_.audio_channels *
                                        av_get_bytes_per_sample(static_cast<AVSampleFormat>(src->format));
 
                     if (SUCCEEDED(audio->GetPacketTime(&in_audio_pts, format_desc_.audio_sample_rate))) {

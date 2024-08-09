@@ -195,7 +195,7 @@ struct Stream
             } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
                 auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") % 1 %
                              format_desc.audio_sample_rate % format_desc.audio_sample_rate % AV_SAMPLE_FMT_S32 %
-                             av_get_default_channel_layout(format_desc.audio_channels))
+                             get_channel_layout_mask_for_channels(format_desc.audio_channels))
                                 .str();
                 auto name = (boost::format("in_%d") % 0).str();
 
@@ -232,8 +232,15 @@ struct Stream
 #endif
             // TODO codec->profiles
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
+
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
+            // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
+#else
+            FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -286,15 +293,21 @@ struct Stream
 
             enc->sample_fmt     = static_cast<AVSampleFormat>(av_buffersink_get_format(sink));
             enc->sample_rate    = av_buffersink_get_sample_rate(sink);
+            enc->time_base      = st->time_base;
+
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+            FF(av_buffersink_get_ch_layout(sink, &enc->ch_layout));
+#else
             enc->channels       = av_buffersink_get_channels(sink);
             enc->channel_layout = av_buffersink_get_channel_layout(sink);
-            enc->time_base      = st->time_base;
 
             if (!enc->channels) {
                 enc->channels = av_get_channel_layout_nb_channels(enc->channel_layout);
             } else if (!enc->channel_layout) {
                 enc->channel_layout = av_get_default_channel_layout(enc->channels);
             }
+#endif
+
         } else {
             // TODO
         }

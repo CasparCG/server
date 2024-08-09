@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "../defines.h"
+
 struct AVFrame;
 struct AVPacket;
 struct AVFilterContext;
@@ -36,5 +38,7 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
 
 AVDictionary*                      to_dict(std::map<std::string, std::string>&& map);
 std::map<std::string, std::string> to_map(AVDictionary** dict);
+
+uint64_t get_channel_layout_mask_for_channels(int channel_count);
 
 }} // namespace caspar::ffmpeg

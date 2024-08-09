@@ -18,6 +18,7 @@ set(HEADERS
 	producer/ffmpeg_producer.h
 	consumer/ffmpeg_consumer.h
 
+	defines.h
 	ffmpeg.h
 	StdAfx.h
 )
