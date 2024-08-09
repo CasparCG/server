@@ -24,7 +24,7 @@ MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 if (USE_STATIC_BOOST)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
-FIND_PACKAGE (Boost 1.67.0 COMPONENTS system thread chrono filesystem log_setup log locale regex date_time coroutine REQUIRED)
+FIND_PACKAGE (Boost 1.74.0 COMPONENTS system thread chrono filesystem log_setup log locale regex date_time coroutine REQUIRED)
 
 if (NOT USE_SYSTEM_FFMPEG)
 	FetchContent_Declare(
@@ -35,7 +35,6 @@ if (NOT USE_SYSTEM_FFMPEG)
 	)
 
 	FetchContent_MakeAvailable(ffmpeg-lib)
-
 
 	SET (FFMPEG_ROOT_PATH "${ffmpeg-lib_SOURCE_DIR}/ffmpeg/lib/pkgconfig")
 	SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${FFMPEG_ROOT_PATH}")
