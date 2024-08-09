@@ -29,8 +29,8 @@ FIND_PACKAGE (Boost 1.74.0 COMPONENTS system thread chrono filesystem log_setup 
 if (NOT USE_SYSTEM_FFMPEG)
 	FetchContent_Declare(
 		ffmpeg-lib
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-n5.1.3_jammy.tar.gz
-		URL_HASH SHA1=344336816c214d52f63c197acbe9cce7d4a718ef
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-n7.0.2_jammy.tar.gz
+		URL_HASH MD5=b25c102df1793764fa8fb509b0ce7461
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	)
 

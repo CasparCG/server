@@ -74,8 +74,8 @@ add_definitions( -DBOOST_LOCALE_HIDE_AUTO_PTR )
 # FFMPEG
 casparcg_add_external_project(ffmpeg-lib)
 ExternalProject_Add(ffmpeg-lib
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-5.1.2-full_build-shared.zip
-	URL_HASH MD5=bcb1efb68701a4b71e8a7efd9b817965
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-7.0.2-full_build-shared.7z
+	URL_HASH MD5=c5127aeed36a9a86dd3b84346be182f8
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
