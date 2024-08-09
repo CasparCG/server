@@ -57,7 +57,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
                           << L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
                           << L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
                           << L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
-                          << L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
+                          << L"Info:" << (unsigned __int64)info->ExceptionRecord->ExceptionInformation << L"\n"
                           << L"Continuing execution. \n#######################";
 
         CASPAR_LOG_CURRENT_CALL_STACK();

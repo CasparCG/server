@@ -191,7 +191,7 @@ struct artnet_consumer : public core::frame_consumer
     {
         computed_fixtures.clear();
         for (auto fixture : config.fixtures) {
-            for (int i = 0; i < fixture.fixtureCount; i++) {
+            for (unsigned short i = 0; i < fixture.fixtureCount; i++) {
                 computed_fixture computed_fixture{};
                 computed_fixture.type    = fixture.type;
                 computed_fixture.address = fixture.startAddress + i * fixture.fixtureChannels;
@@ -251,13 +251,13 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
         if (startAddress < 1)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture start address must be specified"));
 
-        f.startAddress = startAddress - 1;
+        f.startAddress = (unsigned short)startAddress - 1;
 
         int fixtureCount = xml_channel.second.get(L"fixture-count", -1);
         if (fixtureCount < 1)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
 
-        f.fixtureCount = fixtureCount;
+        f.fixtureCount = (unsigned short)fixtureCount;
 
         std::wstring type = xml_channel.second.get(L"type", L"");
         if (type.empty())
@@ -281,7 +281,7 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
                 user_error() << msg_info(
                     L"Fixture channel count must be at least enough channels for current color mode"));
 
-        f.fixtureChannels = fixtureChannels;
+        f.fixtureChannels = (unsigned short) fixtureChannels;
 
         box b{};
 
