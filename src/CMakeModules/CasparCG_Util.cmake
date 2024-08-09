@@ -34,7 +34,7 @@ FUNCTION (casparcg_add_library PROJECT)
 	# Setup the library and some default config
 	ADD_LIBRARY (${PROJECT} ${PARSED_ARGS_SOURCES})
 	target_compile_features (${PROJECT} PRIVATE cxx_std_17)
-	target_include_directories(${PROJECT} PRIVATE
+	target_include_directories(${PROJECT} SYSTEM PRIVATE
 		${BOOST_INCLUDE_PATH}
 		${TBB_INCLUDE_PATH}
 	)
