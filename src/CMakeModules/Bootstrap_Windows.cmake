@@ -37,7 +37,7 @@ casparcg_add_external_project(boost)
 if (BOOST_USE_PRECOMPILED)
 	ExternalProject_Add(boost
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_74_0-win32-x64-debug-release.zip
-	URL_HASH MD5=TODO-update-me
+	URL_HASH MD5=8d379b0da9a5ae50a3980d2fc1a24d34
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
