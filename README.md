@@ -12,7 +12,8 @@ System Requirements
 
 - A graphics card (GPU) capable of OpenGL 4.5 is required.
 - An Nvidia GPU is recommended, but other GPU's will likely work fine.
-- Only Intel CPU's have been tested and are known to work
+- Intel and AMD CPU's have been tested and are known to work
+- PCIE bandwidth is important between your GPU and CPU, as well as Decklink and CPU. Avoid chipset lanes when possible.
 
 ### Windows
 
@@ -20,7 +21,7 @@ System Requirements
 
 ### Linux
 
- - Ubuntu 22.04 is recommended
+ - Ubuntu 22.04 or 24.04 are recommended
  - Other distributions and releases will work but have not been tested
 
 Getting Started
