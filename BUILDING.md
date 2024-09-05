@@ -26,13 +26,15 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 2. Install CMake (http://www.cmake.org/download/).
 
-3. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+3. Install 7-zip (https://www.7-zip.org/).
 
-4. `cd casparcg-server-master`
+4. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 
-5. `.\tools\windows\build.bat`
+5. `cd casparcg-server-master`
 
-6. Copy the `dist\casparcg_server.zip` file for distribution
+6. `.\tools\windows\build.bat`
+
+7. Copy the `dist\casparcg_server.zip` file for distribution
 
 ## Development using Visual Studio
 
