@@ -59,12 +59,12 @@ FIND_PACKAGE (X11 REQUIRED)
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-117")
-        set(CEF_INCLUDE_PATH "/usr/include/casparcg-cef-117")
+        set(CEF_LIB_DIRS "/usr/lib/casparcg-cef-117")
+        set(CEF_INCLUDE_DIRS "/usr/include/casparcg-cef-117")
 
-        set(CEF_LIB
-            "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
-            "${CEF_LIB_PATH}/libcef_dll_wrapper.a"
+        set(CEF_LIBRARIES
+            "-Wl,-rpath,${CEF_LIB_DIRS} ${CEF_LIB_DIRS}/libcef.so"
+            "${CEF_LIB_DIRS}/libcef_dll_wrapper.a"
         )
     else()
         casparcg_add_external_project(cef)
@@ -83,12 +83,12 @@ if (ENABLE_HTML)
         ExternalProject_Get_Property(cef BINARY_DIR)
 
         # Note: All of these must be referenced in the BUILD_BYPRODUCTS above, to satisfy ninja
-        set(CEF_LIB
+        set(CEF_LIBRARIES
             "${SOURCE_DIR}/Release/libcef.so"
             "${BINARY_DIR}/libcef_dll_wrapper/libcef_dll_wrapper.a"
         )
 
-        set(CEF_INCLUDE_PATH "${SOURCE_DIR}")
+        set(CEF_INCLUDE_DIRS "${SOURCE_DIR}")
         set(CEF_BIN_PATH "${SOURCE_DIR}/Release")
         set(CEF_RESOURCE_PATH "${SOURCE_DIR}/Resources")
     endif()

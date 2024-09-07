@@ -234,7 +234,7 @@ if (ENABLE_HTML)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
-	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
+	set(CEF_INCLUDE_DIRS ${SOURCE_DIR})
 	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
 	link_directories(${SOURCE_DIR}/Release)

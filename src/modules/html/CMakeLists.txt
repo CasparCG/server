@@ -24,7 +24,7 @@ casparcg_add_module_project(html
 target_include_directories(html PRIVATE
     ..
     ../..
-    ${CEF_INCLUDE_PATH}
+    ${CEF_INCLUDE_DIRS}
     )
 
 set_target_properties(html PROPERTIES FOLDER modules)
@@ -38,8 +38,6 @@ if(MSVC)
 		debug Debug/libcef_dll_wrapper
 	)
 else()
-	target_link_libraries(html
-		${CEF_LIB}
-	)
+	target_link_libraries(html ${CEF_LIBRARIES})
 endif()
 
