@@ -45,7 +45,7 @@ if (NOT USE_SYSTEM_FFMPEG)
 else()
 	FIND_PACKAGE (FFmpeg REQUIRED)
 	LINK_DIRECTORIES("${FFMPEG_LIBRARY_DIRS}")
-	
+
 	SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")
 endif()
 
@@ -59,13 +59,9 @@ FIND_PACKAGE (X11 REQUIRED)
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        set(CEF_LIB_DIRS "/usr/lib/casparcg-cef-117")
-        set(CEF_INCLUDE_DIRS "/usr/include/casparcg-cef-117")
-
-        set(CEF_LIBRARIES
-            "-Wl,-rpath,${CEF_LIB_DIRS} ${CEF_LIB_DIRS}/libcef.so"
-            "${CEF_LIB_DIRS}/libcef_dll_wrapper.a"
-        )
+        set(CEF_CUSTOM_LIBRARY_DIRS "/usr/lib/casparcg-cef-117")
+        set(CEF_CUSTOM_INCLUDE_DIRS "/usr/include/casparcg-cef-117")
+        find_package(CEF 117 REQUIRED)
     else()
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
