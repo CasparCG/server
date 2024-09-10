@@ -24,22 +24,10 @@ casparcg_add_module_project(html
 target_include_directories(html PRIVATE
     ..
     ../..
-    ${CEF_INCLUDE_PATH}
-    )
+)
+
+target_link_libraries(html CEF::CEF)
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
-
-if(MSVC)
-	target_link_libraries(html
-		libcef
-		optimized Release/libcef_dll_wrapper
-		debug Debug/libcef_dll_wrapper
-	)
-else()
-	target_link_libraries(html
-		${CEF_LIB}
-	)
-endif()
-

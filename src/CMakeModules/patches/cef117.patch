@@ -1,39 +1,88 @@
---- CMakeLists.txt
-+++ CMakeLists.txt
-@@ -132,11 +132,8 @@
- # Global setup.
- #
- 
--# For VS2022 and Xcode 12+ support.
--cmake_minimum_required(VERSION 3.21)
--
--# Only generate Debug and Release configuration types.
--set(CMAKE_CONFIGURATION_TYPES Debug Release)
-+# VS2022 and Xcode 12+ support needs 3.21, but ubuntu22.04 ships with 3.20
-+cmake_minimum_required(VERSION 3.20)
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -140,7 +140,7 @@ set(CMAKE_CONFIGURATION_TYPES Debug Rele
  
  # Project name.
  # TODO: Change this line to match your project name when you copy this file.
-@@ -234,22 +231,3 @@
+-project(cef)
++project(cef VERSION 117.2.5)
  
- # Display configuration settings.
- PRINT_CEF_CONFIG()
--
--
--#
--# Define the API documentation target.
--#
--
--find_package(Doxygen)
--if(DOXYGEN_FOUND)
--  add_custom_target(apidocs ALL
--    # Generate documentation in the docs/html directory.
--    COMMAND "${DOXYGEN_EXECUTABLE}" Doxyfile
--    # Write a docs/index.html file.
--    COMMAND ${CMAKE_COMMAND} -E echo "<html><head><meta http-equiv=\"refresh\" content=\"0;URL='html/index.html'\"/></head></html>" > docs/index.html
--    WORKING_DIRECTORY "${CEF_ROOT}"
--    COMMENT "Generating API documentation with Doxygen..."
--    VERBATIM )
--else()
--  message(WARNING "Doxygen must be installed to generate API documentation.")
--endif()
+ # Use folders in the resulting project files.
+ set_property(GLOBAL PROPERTY OS_FOLDERS ON)
+@@ -253,3 +253,13 @@ if(DOXYGEN_FOUND)
+ else()
+   message(WARNING "Doxygen must be installed to generate API documentation.")
+ endif()
++
++
++#
++# Install targets.
++#
++
++include(GNUInstallDirs)
++install(DIRECTORY ${CEF_INCLUDE_DIR} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
++install(DIRECTORY ${CEF_BINARY_DIR}/ ${CEF_RESOURCE_DIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
++install(PROGRAMS  ${CEF_BINARY_DIR}/chrome-sandbox DESTINATION ${CMAKE_INSTALL_LIBDIR})
+--- a/cmake/cef_variables.cmake
++++ b/cmake/cef_variables.cmake
+@@ -53,6 +53,7 @@ endif()
+ 
+ # Path to the include directory.
+ set(CEF_INCLUDE_PATH "${_CEF_ROOT}")
++set(CEF_INCLUDE_DIR  "${_CEF_ROOT}/include")
+ 
+ # Path to the libcef_dll_wrapper target.
+ set(CEF_LIBCEF_DLL_WRAPPER_PATH "${_CEF_ROOT}/libcef_dll")
+--- /dev/null
++++ b/libcef_dll/CEFConfig.cmake
+@@ -0,0 +1,4 @@
++include("${CMAKE_CURRENT_LIST_DIR}/CEFTargets.cmake")
++
++add_library(CEF::CEF INTERFACE IMPORTED)
++target_link_libraries(CEF::CEF INTERFACE CEF::libcef_dll_wrapper)
+--- a/libcef_dll/CMakeLists.txt
++++ b/libcef_dll/CMakeLists.txt
+@@ -782,3 +782,43 @@ target_compile_definitions(${CEF_TARGET}
+ 
+ # Remove the default "lib" prefix from the resulting library.
+ set_target_properties(${CEF_TARGET} PROPERTIES PREFIX "")
++
++
++#
++# Install targets.
++#
++
++include(GNUInstallDirs)
++if(NOT CMAKE_INSTALL_CMAKEDIR)
++  set(CEF_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake)
++else()
++  set(CEF_INSTALL_CMAKEDIR ${CMAKE_INSTALL_CMAKEDIR})
++endif()
++
++target_include_directories(${CEF_TARGET} PUBLIC
++  $<BUILD_INTERFACE:${CEF_INCLUDE_PATH}>
++  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
++)
++target_link_directories(${CEF_TARGET} PUBLIC
++  $<BUILD_INTERFACE:${CEF_BINARY_DIR}>
++  $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}>
++)
++if(OS_WINDOWS)
++  target_link_libraries(${CEF_TARGET} PUBLIC libcef.lib)
++else()
++  target_link_libraries(${CEF_TARGET} PUBLIC cef)
++endif()
++
++install(TARGETS ${CEF_TARGET} EXPORT CEF DESTINATION ${CMAKE_INSTALL_LIBDIR})
++install(EXPORT CEF FILE CEFTargets.cmake NAMESPACE CEF:: DESTINATION ${CEF_INSTALL_CMAKEDIR})
++install(FILES CEFConfig.cmake DESTINATION ${CEF_INSTALL_CMAKEDIR})
++
++include(CMakePackageConfigHelpers)
++write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/CEFConfigVersion.cmake
++  VERSION ${PROJECT_VERSION_MAJOR}
++  COMPATIBILITY SameMajorVersion
++)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CEFConfigVersion.cmake DESTINATION ${CEF_INSTALL_CMAKEDIR})
++
++add_library(CEF::CEF INTERFACE IMPORTED GLOBAL)
++target_link_libraries(CEF::CEF INTERFACE ${CEF_TARGET})
