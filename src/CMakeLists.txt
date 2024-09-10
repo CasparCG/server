@@ -7,6 +7,9 @@ set(CONFIG_VERSION_MINOR 5)
 set(CONFIG_VERSION_BUG 0)
 set(CONFIG_VERSION_TAG "Dev")
 
+# support for language servers (eg, clangd or ccls)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/download/ CACHE STRING "Source/mirror to use for external dependencies")
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 
