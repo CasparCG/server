@@ -92,8 +92,6 @@ else ()
 		z
 		pthread
 	)
-
-    set_target_properties(casparcg PROPERTIES INSTALL_RPATH "$ORIGIN/../lib" BUILD_WITH_INSTALL_RPATH ON)
 endif ()
 
 add_custom_target(casparcg_copy_dependencies ALL)
