@@ -25,7 +25,7 @@
 #include "common/os/thread.h"
 #include "config.h"
 #include "decklink_consumer.h"
-#include "frame_factory_hdr_rgbxle.h"
+#include "frame_factory_hdr_v210.h"
 #include "frame_factory_sdr_bgra.h"
 #include "monitor.h"
 
@@ -193,7 +193,7 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
 
 spl::shared_ptr<frame_factory> create_frame_factory(bool hdr)
 {
-    return hdr ? spl::make_shared<frame_factory, frame_factory_hdr_rgbxle>()
+    return hdr ? spl::make_shared<frame_factory, frame_factory_hdr_v210>()
                : spl::make_shared<frame_factory, frame_factory_sdr_bgra>();
 }
 
@@ -639,7 +639,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
         : channel_index_(channel_index)
         , config_(config)
-        , frame_factory_(new frame_factory_sdr_bgra())
+        , frame_factory_(create_frame_factory(config.hdr))
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
     {

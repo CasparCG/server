@@ -35,7 +35,9 @@
 
 namespace caspar { namespace decklink {
 
-class frame_factory_sdr_bgra : public frame_factory
+class frame_factory_sdr_bgra
+    : public frame_factory
+    , std::enable_shared_from_this<frame_factory_sdr_bgra>
 {
   public:
     explicit frame_factory_sdr_bgra();

@@ -35,11 +35,13 @@
 
 namespace caspar { namespace decklink {
 
-class frame_factory_hdr_rgbxle : public frame_factory
+class frame_factory_hdr_v210
+    : public frame_factory
+    , std::enable_shared_from_this<frame_factory_hdr_v210>
 {
   public:
-    explicit frame_factory_hdr_rgbxle();
-    virtual ~frame_factory_hdr_rgbxle();
+    explicit frame_factory_hdr_v210();
+    virtual ~frame_factory_hdr_v210();
 
     virtual BMDPixelFormat        get_pixel_format();
     virtual int                   get_row_bytes(int width);
@@ -54,8 +56,8 @@ class frame_factory_hdr_rgbxle : public frame_factory
   private:
     struct impl;
     std::unique_ptr<impl> impl_;
-    frame_factory_hdr_rgbxle(const frame_factory_hdr_rgbxle&)            = delete;
-    frame_factory_hdr_rgbxle& operator=(const frame_factory_hdr_rgbxle&) = delete;
+    frame_factory_hdr_v210(const frame_factory_hdr_v210&)            = delete;
+    frame_factory_hdr_v210& operator=(const frame_factory_hdr_v210&) = delete;
 };
 
 }} // namespace caspar::decklink
