@@ -643,8 +643,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 state_["has_signal"]             = has_signal_;
 
                 if (video) {
-                    state_["file/video/width"]  = video->GetWidth();
-                    state_["file/video/height"] = video->GetHeight();
+                    state_["file/video/width"]  = static_cast<int>(video->GetWidth());
+                    state_["file/video/height"] = static_cast<int>(video->GetHeight());
                 }
             }
 
