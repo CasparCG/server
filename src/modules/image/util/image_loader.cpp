@@ -66,9 +66,9 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 
 #ifdef WIN32
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), 0), FreeImage_Unload);
+    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
 #else
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), 0), FreeImage_Unload);
+    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
 #endif
 
     if (FreeImage_GetBPP(bitmap.get()) != 32) {
@@ -94,7 +94,7 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
     auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
         FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
         FreeImage_CloseMemory);
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), 0), FreeImage_Unload);
+    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
 
     if (FreeImage_GetBPP(bitmap.get()) != 32) {
         bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
