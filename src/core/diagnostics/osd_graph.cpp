@@ -39,12 +39,15 @@
 #include <GL/glew.h>
 
 #include <atomic>
+#include <cstdio>
+#include <filesystem>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <tuple>
+
+namespace fs = std::filesystem;
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
@@ -62,11 +65,22 @@ sf::Color get_sfml_color(int color)
             static_cast<sf::Uint8>(color >> 0 & 255)};
 }
 
-sf::Font& get_default_font()
+auto& get_default_font()
 {
     static sf::Font DEFAULT_FONT = []() {
+        fs::path path{DIAG_FONT_PATH};
+#ifdef __linux__
+        if (!fs::exists(path)) {
+            auto cmd = "fc-match --format=%{file} " + path.string();
+            if (auto pipe = popen(cmd.data(), "r")) {
+                char buf[128];
+                path.clear();
+                while (fgets(buf, sizeof(buf), pipe)) path += buf;
+            }
+        }
+#endif
         sf::Font font;
-        if (!font.loadFromFile(DIAG_FONT_PATH))
+        if (!font.loadFromFile(path.string()))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(DIAG_FONT_PATH " not found"));
         return font;
     }();
