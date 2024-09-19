@@ -45,7 +45,6 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/executor.h>
-#include <common/forward.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/memory.h>

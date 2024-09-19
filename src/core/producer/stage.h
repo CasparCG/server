@@ -25,7 +25,6 @@
 #include "../monitor/monitor.h"
 
 #include <common/executor.h>
-#include <common/forward.h>
 #include <common/memory.h>
 #include <common/tweener.h>
 
@@ -39,7 +38,7 @@
 #include <tuple>
 #include <vector>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics { class graph; }
 
 namespace caspar { namespace core {
 
