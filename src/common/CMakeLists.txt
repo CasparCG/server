@@ -46,7 +46,6 @@ set(HEADERS
 		executor.h
 		except.h
 		filesystem.h
-		forward.h
 		future.h
 		log.h
 		memory.h
