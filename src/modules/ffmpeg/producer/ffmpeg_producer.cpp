@@ -31,6 +31,7 @@
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/geometry.h>
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 
@@ -73,7 +74,8 @@ struct ffmpeg_producer : public core::frame_producer
                              std::optional<int64_t>               seek,
                              std::optional<int64_t>               duration,
                              std::optional<bool>                  loop,
-                             int                                  seekable)
+                             int                                  seekable,
+                             core::frame_geometry::scale_mode     scale_mode)
         : filename_(filename)
         , frame_factory_(frame_factory)
         , format_desc_(format_desc)
@@ -87,9 +89,9 @@ struct ffmpeg_producer : public core::frame_producer
                                    seek,
                                    duration,
                                    loop,
-                                   seekable))
-    {
-    }
+                                   seekable,
+                                   scale_mode))
+    { }
 
     ~ffmpeg_producer()
     {
@@ -317,6 +319,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto filter_str = get_param(L"FILTER", params, L"");
 
+    auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
+
     boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
@@ -350,7 +354,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                           seek2,
                                                           duration,
                                                           loop,
-                                                          seekable);
+                                                          seekable,
+                                                          scale_mode);
         return core::create_destroy_proxy(std::move(producer));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();

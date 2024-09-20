@@ -47,7 +47,8 @@ core::mutable_frame make_frame(void*                    tag,
                                core::frame_factory&     frame_factory,
                                std::shared_ptr<AVFrame> video,
                                std::shared_ptr<AVFrame> audio,
-                               core::color_space        color_space)
+                               core::color_space        color_space,
+                               core::frame_geometry::scale_mode scale_mode)
 {
     std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
 
@@ -57,6 +58,9 @@ core::mutable_frame make_frame(void*                    tag,
               : core::pixel_format_desc(core::pixel_format::invalid);
 
     auto frame = frame_factory.create_frame(tag, pix_desc);
+    if (scale_mode != core::frame_geometry::scale_mode::stretch) {
+        frame.geometry() = core::frame_geometry::get_default(scale_mode);
+    }
 
     tbb::parallel_invoke(
         [&]() {

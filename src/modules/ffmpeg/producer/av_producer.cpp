@@ -665,6 +665,7 @@ struct AVProducer::Impl
     std::string vfilter_;
 
     int              seekable_       = 2;
+    core::frame_geometry::scale_mode scale_mode_;
     int64_t          frame_count_    = 0;
     bool             frame_flush_    = true;
     int64_t          frame_time_     = AV_NOPTS_VALUE;
@@ -694,7 +695,8 @@ struct AVProducer::Impl
          std::optional<int64_t>               seek,
          std::optional<int64_t>               duration,
          bool                                 loop,
-         int                                  seekable)
+         int                                  seekable,
+         core::frame_geometry::scale_mode     scale_mode)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
@@ -707,6 +709,7 @@ struct AVProducer::Impl
         , afilter_(afilter)
         , vfilter_(vfilter)
         , seekable_(seekable)
+        , scale_mode_(scale_mode)
         , video_executor_(L"video-executor")
         , audio_executor_(L"audio-executor")
     {
@@ -913,7 +916,8 @@ struct AVProducer::Impl
             }
 
             frame.frame = core::draw_frame(
-                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video)));
+                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video), scale_mode_)
+            );
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);
@@ -1237,7 +1241,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        std::optional<int64_t>               seek,
                        std::optional<int64_t>               duration,
                        std::optional<bool>                  loop,
-                       int                                  seekable)
+                       int                                  seekable,
+                       core::frame_geometry::scale_mode     scale_mode)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
                      std::move(name),
@@ -1248,7 +1253,8 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                      std::move(seek),
                      std::move(duration),
                      std::move(loop.value_or(false)),
-                     seekable))
+                     seekable,
+                     scale_mode))
 {
 }
 
