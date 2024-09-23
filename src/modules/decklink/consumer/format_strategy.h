@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Niklas Andersson, niklas@nxtedition.com
+ * Author: Niklas P Andersson, niklas@nxtedition.com
  */
 
 #pragma once
@@ -24,7 +24,6 @@
 #include "../StdAfx.h"
 
 #include "config.h"
-#include "frame_factory.h"
 
 #include "../decklink_api.h"
 
@@ -35,29 +34,26 @@
 
 namespace caspar { namespace decklink {
 
-class frame_factory_hdr_v210
-    : public frame_factory
-    , std::enable_shared_from_this<frame_factory_hdr_v210>
+class format_strategy
 {
-  public:
-    explicit frame_factory_hdr_v210();
-    virtual ~frame_factory_hdr_v210();
+  protected:
+    format_strategy() = default;
 
-    virtual BMDPixelFormat        get_pixel_format();
-    virtual int                   get_row_bytes(int width);
-    virtual std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc);
+  public:
+    format_strategy& operator=(const format_strategy&) = delete;
+    virtual ~format_strategy()                       = default;
+
+    format_strategy(const format_strategy&) = delete;
+
+    virtual BMDPixelFormat        get_pixel_format()                                              = 0;
+    virtual int                   get_row_bytes(int width)                                        = 0;
+    virtual std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc) = 0;
     virtual std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                                          const core::video_format_desc& decklink_format_desc,
                                                          const port_configuration&      config,
                                                          const core::const_frame&       frame1,
                                                          const core::const_frame&       frame2,
-                                                         BMDFieldDominance              field_dominance);
-
-  private:
-    struct impl;
-    std::unique_ptr<impl> impl_;
-    frame_factory_hdr_v210(const frame_factory_hdr_v210&)            = delete;
-    frame_factory_hdr_v210& operator=(const frame_factory_hdr_v210&) = delete;
+                                                         BMDFieldDominance              field_dominance)       = 0;
 };
 
 }} // namespace caspar::decklink

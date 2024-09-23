@@ -24,7 +24,7 @@
 #include "../StdAfx.h"
 
 #include "config.h"
-#include "frame_factory.h"
+#include "format_strategy.h"
 
 #include "../decklink_api.h"
 
@@ -35,13 +35,13 @@
 
 namespace caspar { namespace decklink {
 
-class frame_factory_sdr_bgra
-    : public frame_factory
-    , std::enable_shared_from_this<frame_factory_sdr_bgra>
+class hdr_v210_strategy
+    : public format_strategy
+    , std::enable_shared_from_this<hdr_v210_strategy>
 {
   public:
-    explicit frame_factory_sdr_bgra();
-    virtual ~frame_factory_sdr_bgra();
+    explicit hdr_v210_strategy();
+    virtual ~hdr_v210_strategy();
 
     virtual BMDPixelFormat        get_pixel_format();
     virtual int                   get_row_bytes(int width);
@@ -56,8 +56,8 @@ class frame_factory_sdr_bgra
   private:
     struct impl;
     std::unique_ptr<impl> impl_;
-    frame_factory_sdr_bgra(const frame_factory_sdr_bgra&)            = delete;
-    frame_factory_sdr_bgra& operator=(const frame_factory_sdr_bgra&) = delete;
+    hdr_v210_strategy(const hdr_v210_strategy&)            = delete;
+    hdr_v210_strategy& operator=(const hdr_v210_strategy&) = delete;
 };
 
 }} // namespace caspar::decklink

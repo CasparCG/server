@@ -22,7 +22,7 @@
 
 #include "../StdAfx.h"
 
-#include "frame_factory_sdr_bgra.h"
+#include "sdr_bgra_strategy.h"
 
 #include <common/memshfl.h>
 
@@ -40,7 +40,7 @@ std::shared_ptr<void> convert_to_key_only(const std::shared_ptr<void>& image_dat
     return key_data;
 }
 
-struct frame_factory_sdr_bgra::impl final
+struct sdr_bgra_strategy::impl final
 {
   public:
     impl() = default;
@@ -181,22 +181,22 @@ struct frame_factory_sdr_bgra::impl final
     }
 };
 
-frame_factory_sdr_bgra::frame_factory_sdr_bgra()
+sdr_bgra_strategy::sdr_bgra_strategy()
     : impl_(new impl())
 {
 }
 
-frame_factory_sdr_bgra::~frame_factory_sdr_bgra() {}
+sdr_bgra_strategy::~sdr_bgra_strategy() {}
 
-BMDPixelFormat frame_factory_sdr_bgra::get_pixel_format() { return impl_->get_pixel_format(); }
-int            frame_factory_sdr_bgra::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
+BMDPixelFormat sdr_bgra_strategy::get_pixel_format() { return impl_->get_pixel_format(); }
+int            sdr_bgra_strategy::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
 
-std::shared_ptr<void> frame_factory_sdr_bgra::allocate_frame_data(const core::video_format_desc& format_desc)
+std::shared_ptr<void> sdr_bgra_strategy::allocate_frame_data(const core::video_format_desc& format_desc)
 {
     return impl_->allocate_frame_data(format_desc);
 }
 std::shared_ptr<void>
-frame_factory_sdr_bgra::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+sdr_bgra_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                                const core::video_format_desc& decklink_format_desc,
                                                const port_configuration&      config,
                                                const core::const_frame&       frame1,

@@ -21,7 +21,7 @@
 
 #include "../StdAfx.h"
 
-#include "frame_factory_hdr_v210.h"
+#include "hdr_v210_strategy.h"
 
 #include <common/memshfl.h>
 
@@ -198,7 +198,7 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
 }
 
 
-struct frame_factory_hdr_v210::impl final
+struct hdr_v210_strategy::impl final
 {
     std::vector<float> bt709{0.2126, 0.7152, 0.0722, -0.1146, -0.3854, 0.5, 0.5, -0.4542, -0.0458};
 
@@ -338,22 +338,22 @@ struct frame_factory_hdr_v210::impl final
     }
 };
 
-frame_factory_hdr_v210::frame_factory_hdr_v210()
+hdr_v210_strategy::hdr_v210_strategy()
     : impl_(new impl())
 {
 }
 
-frame_factory_hdr_v210::~frame_factory_hdr_v210() {}
+hdr_v210_strategy::~hdr_v210_strategy() {}
 
-BMDPixelFormat frame_factory_hdr_v210::get_pixel_format() { return impl_->get_pixel_format(); }
-int            frame_factory_hdr_v210::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
+BMDPixelFormat hdr_v210_strategy::get_pixel_format() { return impl_->get_pixel_format(); }
+int            hdr_v210_strategy::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
 
-std::shared_ptr<void> frame_factory_hdr_v210::allocate_frame_data(const core::video_format_desc& format_desc)
+std::shared_ptr<void> hdr_v210_strategy::allocate_frame_data(const core::video_format_desc& format_desc)
 {
     return impl_->allocate_frame_data(format_desc);
 }
 std::shared_ptr<void>
-frame_factory_hdr_v210::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+hdr_v210_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                                const core::video_format_desc& decklink_format_desc,
                                                const port_configuration&      config,
                                                const core::const_frame&       frame1,

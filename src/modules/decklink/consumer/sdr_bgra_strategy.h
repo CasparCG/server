@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Niklas P Andersson, niklas@nxtedition.com
+ * Author: Niklas Andersson, niklas@nxtedition.com
  */
 
 #pragma once
@@ -24,6 +24,7 @@
 #include "../StdAfx.h"
 
 #include "config.h"
+#include "format_strategy.h"
 
 #include "../decklink_api.h"
 
@@ -34,26 +35,29 @@
 
 namespace caspar { namespace decklink {
 
-class frame_factory
+class sdr_bgra_strategy
+    : public format_strategy
+    , std::enable_shared_from_this<sdr_bgra_strategy>
 {
-  protected:
-    frame_factory() = default;
-
   public:
-    frame_factory& operator=(const frame_factory&) = delete;
-    virtual ~frame_factory()                       = default;
+    explicit sdr_bgra_strategy();
+    virtual ~sdr_bgra_strategy();
 
-    frame_factory(const frame_factory&) = delete;
-
-    virtual BMDPixelFormat        get_pixel_format()                                              = 0;
-    virtual int                   get_row_bytes(int width)                                        = 0;
-    virtual std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc) = 0;
+    virtual BMDPixelFormat        get_pixel_format();
+    virtual int                   get_row_bytes(int width);
+    virtual std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc);
     virtual std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                                          const core::video_format_desc& decklink_format_desc,
                                                          const port_configuration&      config,
                                                          const core::const_frame&       frame1,
                                                          const core::const_frame&       frame2,
-                                                         BMDFieldDominance              field_dominance)       = 0;
+                                                         BMDFieldDominance              field_dominance);
+
+  private:
+    struct impl;
+    std::unique_ptr<impl> impl_;
+    sdr_bgra_strategy(const sdr_bgra_strategy&)            = delete;
+    sdr_bgra_strategy& operator=(const sdr_bgra_strategy&) = delete;
 };
 
 }} // namespace caspar::decklink
