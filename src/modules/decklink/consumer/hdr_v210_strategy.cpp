@@ -132,10 +132,10 @@ inline void pack_v210_avx2(__m256i luma[6], __m256i chroma[6], __m128i** v210_de
     uint16_t* luma_ptr   = reinterpret_cast<uint16_t*>(luma_16bit);
     uint16_t* chroma_ptr = reinterpret_cast<uint16_t*>(chroma_16bit);
     for (int i = 0; i < 8; ++i) {
-        __m128i luma_values          = _mm_loadu_si128(reinterpret_cast<__m128i*>(luma_ptr));
-        __m128i chroma_values     = _mm_loadu_si128(reinterpret_cast<__m128i*>(chroma_ptr));
-        __m128i luma_packed       = _mm_mullo_epi16(luma_values, luma_mult);
-        __m128i chroma_packed     = _mm_mullo_epi16(chroma_values, chroma_mult);
+        __m128i luma_values   = _mm_loadu_si128(reinterpret_cast<__m128i*>(luma_ptr));
+        __m128i chroma_values = _mm_loadu_si128(reinterpret_cast<__m128i*>(chroma_ptr));
+        __m128i luma_packed   = _mm_mullo_epi16(luma_values, luma_mult);
+        __m128i chroma_packed = _mm_mullo_epi16(chroma_values, chroma_mult);
 
         luma_packed   = _mm_shuffle_epi8(luma_packed, luma_shuf);
         chroma_packed = _mm_shuffle_epi8(chroma_packed, chroma_shuf);
@@ -196,7 +196,6 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
         }
     }
 }
-
 
 struct hdr_v210_strategy::impl final
 {
@@ -283,12 +282,12 @@ struct hdr_v210_strategy::impl final
                     // Pack the final pixels one by one
                     if (rest_x > 0) {
                         auto src = reinterpret_cast<const ARGBPixel*>(frame.image_data(0).data()) +
-                            (y * decklink_format_desc.width + fullspeed_x * 48);
+                                   (y * decklink_format_desc.width + fullspeed_x * 48);
                         auto dest = reinterpret_cast<uint32_t*>(v210_dest);
 
                         // clear the remainder of the row
-                        auto rest_bytes = reinterpret_cast<uint8_t*>(dest_row) + byte_count_line -
-                                          reinterpret_cast<uint8_t*>(dest);
+                        auto rest_bytes =
+                            reinterpret_cast<uint8_t*>(dest_row) + byte_count_line - reinterpret_cast<uint8_t*>(dest);
                         memset(dest, 0, rest_bytes);
 
                         // pack pixels
@@ -352,13 +351,12 @@ std::shared_ptr<void> hdr_v210_strategy::allocate_frame_data(const core::video_f
 {
     return impl_->allocate_frame_data(format_desc);
 }
-std::shared_ptr<void>
-hdr_v210_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                               const core::video_format_desc& decklink_format_desc,
-                                               const port_configuration&      config,
-                                               const core::const_frame&       frame1,
-                                               const core::const_frame&       frame2,
-                                               BMDFieldDominance              field_dominance)
+std::shared_ptr<void> hdr_v210_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+                                                                const core::video_format_desc& decklink_format_desc,
+                                                                const port_configuration&      config,
+                                                                const core::const_frame&       frame1,
+                                                                const core::const_frame&       frame2,
+                                                                BMDFieldDominance              field_dominance)
 {
     return impl_->convert_frame_for_port(
         channel_format_desc, decklink_format_desc, config, frame1, frame2, field_dominance);

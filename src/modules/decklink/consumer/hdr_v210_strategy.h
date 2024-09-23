@@ -56,7 +56,7 @@ class hdr_v210_strategy
   private:
     struct impl;
     std::unique_ptr<impl> impl_;
-    hdr_v210_strategy(const hdr_v210_strategy&)            = delete;
+    hdr_v210_strategy(const hdr_v210_strategy&) = delete;
     hdr_v210_strategy& operator=(const hdr_v210_strategy&) = delete;
 };
 
