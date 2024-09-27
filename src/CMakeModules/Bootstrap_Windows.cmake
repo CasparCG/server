@@ -159,8 +159,8 @@ casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll" "Release")
 # FREEIMAGE
 casparcg_add_external_project(freeimage)
 ExternalProject_Add(freeimage
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/freeimage/FreeImage3180Win32Win64.zip
-	URL_HASH MD5=393d3df75b14cbcb4887da1c395596e2
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/freeimage/FreeImage319-r1909.zip
+	URL_HASH MD5=c19087de6b42c7e17f71c6c8d4ad158d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
