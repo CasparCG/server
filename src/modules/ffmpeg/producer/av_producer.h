@@ -2,6 +2,7 @@
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/geometry.h>
 #include <core/monitor/monitor.h>
 #include <core/video_format.h>
 
@@ -24,7 +25,8 @@ class AVProducer
                std::optional<int64_t>               seek,
                std::optional<int64_t>               duration,
                std::optional<bool>                  loop,
-               int                                  seekable);
+               int                                  seekable,
+               core::frame_geometry::scale_mode     scale_mode);
 
     core::draw_frame prev_frame(const core::video_field field);
     core::draw_frame next_frame(const core::video_field field);

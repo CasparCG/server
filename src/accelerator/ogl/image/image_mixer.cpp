@@ -95,7 +95,7 @@ class image_renderer
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
 
-        return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>> {
+        return flatten(ogl_->dispatch_async([=, layers = std::move(layers)]() mutable -> std::shared_future<array<const std::uint8_t>> {
             auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
             draw(target_texture, std::move(layers), format_desc);
@@ -142,8 +142,8 @@ class image_renderer
                      local_mix_texture,
                      format_desc);
 
-            draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);
-            draw(target_texture, std::move(layer_texture), layer.blend_mode);
+            draw(layer_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
+            draw(target_texture, std::move(layer_texture), format_desc, layer.blend_mode);
         } else // fast path
         {
             for (auto& item : layer.items)
@@ -154,7 +154,7 @@ class image_renderer
                      local_mix_texture,
                      format_desc);
 
-            draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
+            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
         }
 
         layer_key_texture = std::move(local_key_texture);
@@ -168,6 +168,8 @@ class image_renderer
               const core::video_format_desc& format_desc)
     {
         draw_params draw_params;
+        draw_params.target_width  = format_desc.square_width;
+        draw_params.target_height = format_desc.square_height;
         // TODO: Pass the target color_space
 
         draw_params.pix_desc  = std::move(item.pix_desc);
@@ -180,7 +182,7 @@ class image_renderer
             draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
         }
 
-        if (item.transform.is_key) {
+        if (item.transform.is_key) { // A key means we will use it for the next non-key item as a mask
             local_key_texture =
                 local_key_texture ? local_key_texture
                                   : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, depth_);
@@ -190,20 +192,21 @@ class image_renderer
             draw_params.layer_key  = nullptr;
 
             kernel_.draw(std::move(draw_params));
-        } else if (item.transform.is_mix) {
+        } else if (item.transform.is_mix) { // A mix means precomp the items to a texture, before drawing to the channel
             local_mix_texture =
                 local_mix_texture ? local_mix_texture
                                   : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
 
             draw_params.background = local_mix_texture;
-            draw_params.local_key  = std::move(local_key_texture);
+            draw_params.local_key  = std::move(local_key_texture); // Use and reset the key
             draw_params.layer_key  = layer_key_texture;
 
             draw_params.keyer = keyer::additive;
 
             kernel_.draw(std::move(draw_params));
         } else {
-            draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
+            // If there is a mix, this is the end so draw it and reset
+            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
 
             draw_params.background = target_texture;
             draw_params.local_key  = std::move(local_key_texture);
@@ -214,17 +217,21 @@ class image_renderer
     }
 
     void draw(std::shared_ptr<texture>&  target_texture,
-              std::shared_ptr<texture>&& source_buffer,
+              std::shared_ptr<texture>&& source_texture,
+              core::video_format_desc    format_desc,
               core::blend_mode           blend_mode = core::blend_mode::normal)
     {
-        if (!source_buffer)
+        if (!source_texture)
             return;
 
         draw_params draw_params;
+        draw_params.target_width    = format_desc.square_width;
+        draw_params.target_height   = format_desc.square_height;
         draw_params.pix_desc.format = core::pixel_format::bgra;
         draw_params.pix_desc.planes = {
-            core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4, source_buffer->depth())};
-        draw_params.textures   = {spl::make_shared_ptr(source_buffer)};
+            core::pixel_format_desc::plane(source_texture->width(), source_texture->height(), 4, source_texture->depth())
+        };
+        draw_params.textures   = { spl::make_shared_ptr(source_texture) };
         draw_params.transform  = core::image_transform();
         draw_params.blend_mode = blend_mode;
         draw_params.background = target_texture;

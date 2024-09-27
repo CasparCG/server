@@ -2,6 +2,7 @@
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
@@ -31,7 +32,8 @@ core::mutable_frame     make_frame(void*                    tag,
                                    core::frame_factory&     frame_factory,
                                    std::shared_ptr<AVFrame> video,
                                    std::shared_ptr<AVFrame> audio,
-                                   core::color_space        color_space = core::color_space::bt709);
+                                   core::color_space        color_space = core::color_space::bt709,
+                                   core::frame_geometry::scale_mode = core::frame_geometry::scale_mode::stretch);
 
 std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
