@@ -3,7 +3,8 @@ project (decklink)
 
 set(SOURCES
 		consumer/decklink_consumer.cpp
-		consumer/frame.cpp
+		consumer/hdr_v210_strategy.cpp
+		consumer/sdr_bgra_strategy.cpp
 		consumer/config.cpp
 		consumer/monitor.cpp
 
@@ -13,7 +14,9 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/decklink_consumer.h
-		consumer/frame.h
+		consumer/hdr_v210_strategy.h
+		consumer/sdr_bgra_strategy.h
+		consumer/format_strategy.h
 		consumer/config.h
 		consumer/monitor.h
 
