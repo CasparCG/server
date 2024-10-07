@@ -169,23 +169,27 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
     const auto fmt   = get_pixel_format(pix_fmt);
     auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
     auto       depth = std::get<1>(fmt);
+    auto       bpc   = depth == common::bit_depth::bit8 ? 1 : 2;
+
+    for (int i = 0; i < 4; i++)
+        linesizes[i] /= bpc;
 
     switch (desc.format) {
         case core::pixel_format::gray:
         case core::pixel_format::luma: {
-            desc.planes.push_back(core::pixel_format_desc::plane(width, height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
             return desc;
         }
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
-            desc.planes.push_back(core::pixel_format_desc::plane(width / 3, height, 3, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 3, height, 3, depth));
             return desc;
         }
         case core::pixel_format::bgra:
         case core::pixel_format::argb:
         case core::pixel_format::rgba:
         case core::pixel_format::abgr: {
-            desc.planes.push_back(core::pixel_format_desc::plane(width / 4, height, 4, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
             return desc;
         }
         case core::pixel_format::ycbcr:
@@ -207,21 +211,19 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
             auto size2 = static_cast<int>(dummy_pict_data[2] - dummy_pict_data[1]);
 #endif
             auto h2      = size2 / linesizes[1];
-            auto factor1 = linesizes[0] / linesizes[1];
-            auto factor2 = linesizes[0] / linesizes[2];
 
-            desc.planes.push_back(core::pixel_format_desc::plane(width, height, 1, depth));
-            desc.planes.push_back(core::pixel_format_desc::plane(width / factor1, h2, 1, depth));
-            desc.planes.push_back(core::pixel_format_desc::plane(width / factor2, h2, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], h2, 1, depth));
 
             if (desc.format == core::pixel_format::ycbcra)
-                desc.planes.push_back(core::pixel_format_desc::plane(width, height, 1, depth));
+                desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1, depth));
 
             return desc;
         }
         case core::pixel_format::uyvy: {
-            desc.planes.push_back(core::pixel_format_desc::plane(width / 2, height, 2, depth));
-            desc.planes.push_back(core::pixel_format_desc::plane(width / 4, height, 4, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 2, height, 2, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
 
             data_map.clear();
             data_map.push_back(0);
