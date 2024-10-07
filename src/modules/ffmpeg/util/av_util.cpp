@@ -72,7 +72,13 @@ core::mutable_frame make_frame(void*                    tag,
                 const int channel_count = 16;
                 frame.audio_data()      = std::vector<int32_t>(audio->nb_samples * channel_count, 0);
 
-                if (audio->channels == channel_count) {
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                auto source_channel_count = audio->ch_layout.nb_channels;
+#else
+                auto source_channel_count = audio->channels;
+#endif
+
+                if (source_channel_count == channel_count) {
                     std::memcpy(frame.audio_data().data(),
                                 reinterpret_cast<int32_t*>(audio->data[0]),
                                 sizeof(int32_t) * channel_count * audio->nb_samples);
@@ -82,8 +88,8 @@ core::mutable_frame make_frame(void*                    tag,
                     auto dst = frame.audio_data().data();
                     auto src = reinterpret_cast<int32_t*>(audio->data[0]);
                     for (auto i = 0; i < audio->nb_samples; i++) {
-                        for (auto j = 0; j < std::min(channel_count, audio->channels); ++j) {
-                            dst[i * channel_count + j] = src[i * audio->channels + j];
+                        for (auto j = 0; j < std::min(channel_count, source_channel_count); ++j) {
+                            dst[i * channel_count + j] = src[i * source_channel_count + j];
                         }
                     }
                 }
@@ -291,11 +297,15 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     const auto& buffer = frame.audio_data();
 
     // TODO (fix) Use sample_format_desc.
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    av_channel_layout_default(&av_frame->ch_layout, format_desc.audio_channels);
+#else
     av_frame->channels       = format_desc.audio_channels;
     av_frame->channel_layout = av_get_default_channel_layout(av_frame->channels);
+#endif
     av_frame->sample_rate    = format_desc.audio_sample_rate;
     av_frame->format         = AV_SAMPLE_FMT_S32;
-    av_frame->nb_samples     = static_cast<int>(buffer.size() / av_frame->channels);
+    av_frame->nb_samples     = static_cast<int>(buffer.size() / format_desc.audio_channels);
     FF(av_frame_get_buffer(av_frame.get(), 32));
     std::memcpy(av_frame->data[0], buffer.data(), buffer.size() * sizeof(buffer.data()[0]));
 
@@ -328,6 +338,20 @@ std::map<std::string, std::string> to_map(AVDictionary** dict)
     }
     av_dict_free(dict);
     return map;
+}
+
+
+uint64_t get_channel_layout_mask_for_channels(int channel_count) {
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    AVChannelLayout layout = AV_CHANNEL_LAYOUT_STEREO;
+    av_channel_layout_default(&layout, channel_count);
+    uint64_t channel_layout = layout.u.mask;
+    av_channel_layout_uninit(&layout);
+
+    return channel_layout;
+#else
+    return av_get_default_channel_layout(channel_count);
+#endif
 }
 
 }} // namespace caspar::ffmpeg
