@@ -8,11 +8,17 @@ CasparCG 2.4.1 Stable
 * Revert removal of tbbmalloc, due to notable performance loss on windows
 * Supress some cmake build warnings
 * Build failure when doxygen installed on system
+* Build failures with ffmpeg 7.0
+* Revert RPATH linking changes
 
 ### Producers
 ##### Fixes
 * FFmpeg: Ignore ndi:// urls
+* FFmpeg: Using both in and seek could result in incorrect duration
 * Route: Race condition during destruction
+* Image: Update freeimage on windows with some CVE fixes and failures with certain pngs
+* Image: Respect EXIF rotate flag
+* NDI: list local sources
 
 ### Consumers
 ##### Fixes
