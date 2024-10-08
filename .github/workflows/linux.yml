@@ -68,13 +68,13 @@ jobs:
                   name: upload-artifact
                   path: ${{ steps.rename-build.outputs.artifactname }}
 
-            - name: Copy single file to remote
-              uses: garygrossgarten/github-action-scp@v0.8.0
-              if: ${{ steps.rename-build.outputs.uploadname }}
-              timeout-minutes: 5
-              with:
-                  local: "${{ steps.rename-build.outputs.uploadname }}"
-                  remote: "${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"
-                  host: ${{ secrets.SFTP_HOST }}
-                  username: ${{ secrets.SFTP_USERNAME }}
-                  password: ${{ secrets.SFTP_PASSWORD }}
+            # - name: Copy single file to remote
+            #   uses: garygrossgarten/github-action-scp@v0.8.0
+            #   if: ${{ steps.rename-build.outputs.uploadname }}
+            #   timeout-minutes: 5
+            #   with:
+            #       local: "${{ steps.rename-build.outputs.uploadname }}"
+            #       remote: "${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"
+            #       host: ${{ secrets.SFTP_HOST }}
+            #       username: ${{ secrets.SFTP_USERNAME }}
+            #       password: ${{ secrets.SFTP_PASSWORD }}
