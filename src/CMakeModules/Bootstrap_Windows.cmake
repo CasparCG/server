@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
+include(FetchContent)
 
 if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
@@ -61,7 +62,7 @@ else ()
 		--with-libraries=regex
 		--with-libraries=system
 		--with-libraries=thread
-	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
 	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
@@ -221,24 +222,19 @@ set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
 # CEF
-if (ENABLE_HTML)
-	casparcg_add_external_project(cef)
-	ExternalProject_Add(cef
+if(ENABLE_HTML)
+    FetchContent_Declare(cef
 		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_windows64_minimal.tar.bz2
 		URL_HASH MD5=cff21bce81bada2a9e5f0afbec0858f0
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
-		INSTALL_COMMAND ""
-		PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
+        PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
 	)
-	ExternalProject_Get_Property(cef SOURCE_DIR)
-	ExternalProject_Get_Property(cef BINARY_DIR)
+    set(USE_SANDBOX OFF CACHE INTERNAL "")
+    set(CEF_RUNTIME_LIBRARY_FLAG "/MD" CACHE INTERNAL "")
+    FetchContent_MakeAvailable(cef)
 
-	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
-	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
-	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
-	link_directories(${SOURCE_DIR}/Release)
-	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
+	set(CEF_BIN_PATH ${cef_SOURCE_DIR}/Release)
+	set(CEF_RESOURCE_PATH ${cef_SOURCE_DIR}/Resources)
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
@@ -256,7 +252,7 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vk_swiftshader.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vk_swiftshader_icd.json")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vulkan-1.dll")
-endif ()
+endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT casparcg)
