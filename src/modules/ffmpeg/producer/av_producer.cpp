@@ -212,6 +212,9 @@ class Decoder
                 }
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
+            } catch (...) {
+                eof = true;
+                CASPAR_LOG_CURRENT_EXCEPTION();
             }
         });
     }
