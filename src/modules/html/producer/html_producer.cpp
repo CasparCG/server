@@ -77,17 +77,13 @@ inline std::int_least64_t now()
 
 struct presentation_frame
 {
-    std::int_least64_t timestamp = now();
-    core::draw_frame   frame     = core::draw_frame::empty();
-    bool               has_video = false;
-    bool               has_audio = false;
+    std::int_least64_t timestamp;
+    core::draw_frame   frame;
 
-    explicit presentation_frame(core::draw_frame video = {})
+    explicit presentation_frame(core::draw_frame frame = {}, std::int_least64_t ts = now()) noexcept
+        : timestamp(ts)
+        , frame(std::move(frame))
     {
-        if (video) {
-            frame     = std::move(video);
-            has_video = true;
-        }
     }
 
     presentation_frame(presentation_frame&& other) noexcept
@@ -99,7 +95,7 @@ struct presentation_frame
     presentation_frame(const presentation_frame&)            = delete;
     presentation_frame& operator=(const presentation_frame&) = delete;
 
-    presentation_frame& operator=(presentation_frame&& rhs)
+    presentation_frame& operator=(presentation_frame&& rhs) noexcept
     {
         timestamp = rhs.timestamp;
         frame     = std::move(rhs.frame);
@@ -107,32 +103,6 @@ struct presentation_frame
     }
 
     ~presentation_frame() {}
-
-    void add_audio(core::mutable_frame audio)
-    {
-        if (has_audio)
-            return;
-        has_audio = true;
-
-        if (frame) {
-            frame = core::draw_frame::over(frame, core::draw_frame(std::move(audio)));
-        } else {
-            frame = core::draw_frame(std::move(audio));
-        }
-    }
-
-    void add_video(core::draw_frame video)
-    {
-        if (has_video)
-            return;
-        has_video = true;
-
-        if (frame) {
-            frame = core::draw_frame::over(frame, std::move(video));
-        } else {
-            frame = std::move(video);
-        }
-    }
 };
 
 class html_client
@@ -159,13 +129,15 @@ class html_client
     std::atomic<bool>                    loaded_;
     std::atomic<bool>                    not_found_;
     std::queue<presentation_frame>       frames_;
-    core::draw_frame                     last_generated_frame_;
+    std::queue<presentation_frame>       audio_frames_;
     mutable std::mutex                   frames_mutex_;
+    mutable std::mutex                   audio_frames_mutex_;
     const size_t                         frames_max_size_ = 4;
     std::atomic<bool>                    closing_;
 
     std::unique_ptr<ffmpeg::AudioResampler> audioResampler_;
 
+    core::draw_frame   last_video_frame_;
     core::draw_frame   last_frame_;
     std::int_least64_t last_frame_time_;
 
@@ -223,7 +195,20 @@ class html_client
 
     bool try_pop(const core::video_field field)
     {
+        bool result = false;
         std::lock_guard<std::mutex> lock(frames_mutex_);
+
+        core::draw_frame audio_frame;
+        uint64_t audio_frame_timestamp = 0;
+
+        {
+            std::lock_guard<std::mutex> audio_lock(audio_frames_mutex_);
+            if (!audio_frames_.empty()) {
+                audio_frame_timestamp = audio_frames_.front().timestamp;
+                audio_frame = core::draw_frame(std::move(audio_frames_.front().frame));
+                audio_frames_.pop();
+            }
+        }
 
         if (!frames_.empty()) {
             /*
@@ -252,15 +237,22 @@ class html_client
             }
 
             last_frame_time_ = frames_.front().timestamp;
-            last_frame_      = std::move(frames_.front().frame);
+            last_video_frame_ = std::move(frames_.front().frame);
+            last_frame_      = last_video_frame_;
             frames_.pop();
 
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
 
-            return true;
+            result = true;
         }
 
-        return false;
+        if (audio_frame) {
+            last_frame_time_ = audio_frame_timestamp;
+            last_frame_      = core::draw_frame::over(last_video_frame_, audio_frame);
+            result = true;
+        }
+
+        return result;
     }
 
     core::draw_frame receive(const core::video_field field)
@@ -375,10 +367,9 @@ class html_client
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
             core::draw_frame new_frame = core::draw_frame(std::move(frame));
-            last_generated_frame_      = new_frame;
 
             frames_.push(presentation_frame(std::move(new_frame)));
-            while (frames_.size() > 4) {
+            while (frames_.size() > frames_max_size_) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -449,7 +440,7 @@ class html_client
         // Stop producing if the page fails to load
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
-            frames_.push(std::make_pair(now(), core::draw_frame{}));
+            frames_.push(presentation_frame());
         }
 
         {
@@ -522,21 +513,11 @@ class html_client
         auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
 
         {
-            std::lock_guard<std::mutex> lock(frames_mutex_);
-            if (frames_.empty()) {
-                presentation_frame wrapped_frame(last_generated_frame_);
-                wrapped_frame.add_audio(std::move(audio_frame));
-
-                frames_.push(std::move(wrapped_frame));
-            } else {
-                if (!frames_.back().has_audio) {
-                    frames_.back().add_audio(std::move(audio_frame));
-                } else {
-                    presentation_frame wrapped_frame(last_generated_frame_);
-                    wrapped_frame.add_audio(std::move(audio_frame));
-                    frames_.push(std::move(wrapped_frame));
-                }
+            std::lock_guard<std::mutex> lock(audio_frames_mutex_);
+            while (audio_frames_.size() >= frames_max_size_) {
+                audio_frames_.pop();
             }
+            audio_frames_.push(presentation_frame(core::draw_frame(std::move(audio_frame))));
         }
     }
     void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override { audioResampler_ = nullptr; }
