@@ -1,3 +1,11 @@
+CasparCG 2.4.2 Stable
+==========================================
+
+### Consumers
+##### Fixes
+* Decklink: fix support for driver 14.3 and later
+
+
 CasparCG 2.4.1 Stable
 ==========================================
 
@@ -51,12 +59,12 @@ CasparCG 2.4.0 Stable
 * Build: Disable precompiled headers for linux
 * Build: Support VS2022
 * Build: Replace nuget and locally committed dependencies with direct http downloads
-* Build: Allow configuring diag font path at build time 
+* Build: Allow configuring diag font path at build time
 * Linux: Support setting thread priorities
 * Linux: Initial ARM64 compatibility
 * Linux: Rework build to always use system boost
 * Linux: Rework build process to better support being build as a system package
-* Logging: add config option to disable logging to file and to disable column alignment 
+* Logging: add config option to disable logging to file and to disable column alignment
 * Transitions: Support additional audio fade properties for STING transition
 ##### Fixes
 * Crash upon exiting if HTML producer was running
@@ -234,7 +242,7 @@ General
 -------
 
  * C++14
- * Major refactoring, cleanup, optimization 
+ * Major refactoring, cleanup, optimization
    and stability improvements.
  * Removed unmaintained documentation API.
  * Removed unmaintained program options API.
@@ -275,7 +283,7 @@ MIXER
  * Proper OpenGL pipelining.
  * Blend modes are always enabled.
  * Misc cleanup and fixes.
- * Removed CPU mixer. 
+ * Removed CPU mixer.
  * Mixer always runs in progressive mode. Consumers are expected to convert to interlaced if required.
 
 IMAGE
@@ -283,17 +291,17 @@ IMAGE
  * Correctly apply alpha to base64 encoded pngs from AMCP (Julusian).
  * Unmultiply frame before writing to png (Julusian).
  * Removed scroll producer (moved to 3.0.0)
- 
+
  ROUTE
  -----
- 
+
  * Reimplemented, simplified.
  * Cross channel routing will render full stage instead of simply copying channel output.
  * Reduced overhead and latency.
 
 FFMPEG
 ------
- * Rewritten from scratch for better accuracy, stability and 
+ * Rewritten from scratch for better accuracy, stability and
     performance.
  * Update freezed frame during seeking.
  * FFMPEG 3.4.1.
@@ -635,7 +643,7 @@ Consumers
    * No longer provides sync to the video channel.
    * Supports NewTek NDI out of the box just by upgrading the
       Processing.AirSend library.
-  
+
 Producers
 ---------
 
@@ -968,13 +976,13 @@ Video mixer
     even when not in use on a layer or on a channel. New <mixer /> element added
     to configuration for turning on mixer features that not everybody would want
     to pay for (performance-wise.) blend-modes also moved into this element.
- * Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so 
+ * Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so
     that gamma was interpreted as max_input and vice versa.
 
 Consumers
 ---------
- * Added support for NewTek iVGA, which enables the use of CasparCG Server 
-    fill+key output(s) as input source(s) to a NewTek TriCaster without 
+ * Added support for NewTek iVGA, which enables the use of CasparCG Server
+    fill+key output(s) as input source(s) to a NewTek TriCaster without
     requiring video card(s) in the CasparCG Server machine, or taking up inputs
     in the TriCaster. <newtek-ivga /> element in config enables iVGA on a
     channel. (Robert Nagy sponsored by NewTek)
@@ -1002,8 +1010,8 @@ OSC
     path logged since last UDP send, and sends the new UDP packet (to each
     subscribing OSC receiver) with the values collected. (Robert Nagy sponsored
     by Boffins Technologies)
- * Batches as many OSC messages as possible in an OSC bundle to reduce the 
-    number of UDP packets sent. Breakup into separate packages if necessary to 
+ * Batches as many OSC messages as possible in an OSC bundle to reduce the
+    number of UDP packets sent. Breakup into separate packages if necessary to
     avoid fragmentation. (Robert Nagy sponsored by Boffins Technologies)
  * Removed usage of Microsoft Agents library (Server ran out of memory after a
     while) in favour of direct synchronous invocations.
