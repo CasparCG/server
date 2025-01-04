@@ -208,8 +208,10 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     // IUnknown
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override {
-        CFUUIDBytes iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
+    {
+        REFIID iunknown = IID_IUnknown;
+
         if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
         {
             *ppv = this;
@@ -247,7 +249,7 @@ class decklink_frame : public IDeckLinkVideoFrame
     long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
     long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
     long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width) * 4; }
-    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat10BitYUV; }
+    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
     BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
 
     HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
@@ -651,8 +653,6 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         if (FAILED(output_->StartScheduledPlayback(0, decklink_format_desc_.time_scale, 1.0))) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule primary playback."));
         }
-
-        CASPAR_LOG(info) << "started playback";
 
         for (auto& context : secondary_port_contexts_) {
             context->start_playback([this]() { return print(); });
