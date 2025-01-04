@@ -253,20 +253,10 @@ class decklink_frame
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
     {
-        /* Implementation from the SignalGenHDR example in the Decklink SDK */
-
-#ifdef _WIN32
-        IID iunknown = IID_IUnknown;
-#else
-        REFIID iunknown = IID_IUnknown;
-#endif
-        HRESULT result = E_NOINTERFACE;
-
         if (ppv == nullptr)
             return E_INVALIDARG;
 
-        //// Initialise the return result
-        *ppv = nullptr;
+        REFIID iunknown = IID_IUnknown;
 
         if (std::memcmp(&iid, &iunknown, sizeof(REFIID)) == 0) {
             *ppv = this;
@@ -277,9 +267,12 @@ class decklink_frame
         } else if (hdr_ && std::memcmp(&iid, &IID_IDeckLinkVideoFrameMetadataExtensions, sizeof(REFIID)) == 0) {
             *ppv = static_cast<IDeckLinkVideoFrameMetadataExtensions*>(this);
             AddRef();
+        } else {
+            *ppv = nullptr;
+            return E_NOINTERFACE;
         }
 
-        return result;
+        return S_OK;
     }
 
     ULONG STDMETHODCALLTYPE AddRef() override { return ++ref_count_; }
