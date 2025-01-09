@@ -73,4 +73,8 @@ jobs:
               timeout-minutes: 5
               shell: bash
               run: |
+                set -x
+                eval $(ssh-agent -s)
+                mkdir -v -m 700 $HOME/.ssh
+                ssh-keyscan -H ${{ secrets.SFTP_HOST }} > $HOME/.ssh/known_hosts
                 sshpass -p "${{ secrets.SFTP_PASSWORD }}" scp -r "${{ steps.rename-build.outputs.uploadname }}" "${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"
