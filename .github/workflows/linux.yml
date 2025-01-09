@@ -73,4 +73,4 @@ jobs:
               timeout-minutes: 5
               shell: bash
               run: |
-                sshpass -p "${{ secrets.SFTP_PASSWORD }}" scp -r "${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}" "${{ steps.rename-build.outputs.uploadname }}"
+                sshpass -p "${{ secrets.SFTP_PASSWORD }}" scp -r "${{ steps.rename-build.outputs.uploadname }}" "${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"
