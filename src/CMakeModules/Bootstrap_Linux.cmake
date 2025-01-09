@@ -6,6 +6,10 @@ include(FetchContent)
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
+# Prefer the new boost helper
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
 
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST ON CACHE BOOL "Use shared library version of Boost")

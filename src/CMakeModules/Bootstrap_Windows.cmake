@@ -5,6 +5,10 @@ include(ExternalProject)
 if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
 endif()
+# Prefer the new boost helper
+if(POLICY CMP0167)
+	cmake_policy(SET CMP0167 NEW)
+endif()
 
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
 
