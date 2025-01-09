@@ -543,7 +543,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 static boost::regex prot_exp("^.+:.*");
                 if (!boost::regex_match(path_, prot_exp)) {
-                    if (!full_path.is_complete()) {
+                    if (!full_path.is_absolute()) {
                         full_path = u8(env::media_folder()) + path_;
                     }
 

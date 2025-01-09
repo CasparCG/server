@@ -51,7 +51,7 @@ std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insen
             bool found = false;
 
             for (auto it = directory_iterator(absolute(result)); it != directory_iterator(); ++it) {
-                auto leaf = it->path().leaf();
+                auto leaf = it->path().filename();
 
                 if (boost::algorithm::iequals(part.wstring(), leaf.wstring(), loc)) {
                     result = result / leaf;
