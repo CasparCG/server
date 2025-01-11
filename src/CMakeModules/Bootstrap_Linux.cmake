@@ -63,8 +63,8 @@ FIND_PACKAGE (X11 REQUIRED)
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-117")
-        set(CEF_INCLUDE_PATH "/usr/include/casparcg-cef-117")
+        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-131")
+        set(CEF_INCLUDE_PATH "/usr/include/casparcg-cef-131")
 
         set(CEF_LIB
             "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
@@ -73,12 +73,11 @@ if (ENABLE_HTML)
     else()
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
-            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_linux64_minimal.tar.bz2
-            URL_HASH SHA1=7e6c9cf591cf3b1dabe65a7611f5fc166df2ec1e
+            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_linux64_minimal.tar.bz2
+            URL_HASH SHA1=cbe52ac3c39ef93fdc5021588e12c466e801d9af
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
             CMAKE_ARGS -DUSE_SANDBOX=Off
             INSTALL_COMMAND ""
-            PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
             BUILD_BYPRODUCTS
                 "<SOURCE_DIR>/Release/libcef.so"
                 "<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"

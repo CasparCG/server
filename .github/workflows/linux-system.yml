@@ -37,7 +37,7 @@ jobs:
                     libswscale-dev \
                     libpostproc-dev \
                     libswresample-dev \
-                    casparcg-cef-117-dev
+                    casparcg-cef-131-dev
 
             - name: Run build
               run: |

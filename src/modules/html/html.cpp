@@ -118,7 +118,7 @@ class renderer_application
 
         caspar_log(browser,
                    boost::log::trivial::trace,
-                   "context for frame " + std::to_string(frame->GetIdentifier()) + " created");
+                   "context for frame " + frame->GetIdentifier().ToString() + " created");
         contexts_.push_back(context);
 
         auto window = context->GetGlobal();
@@ -154,11 +154,11 @@ class renderer_application
         if (removed != contexts_.end()) {
             caspar_log(browser,
                        boost::log::trivial::trace,
-                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released");
+                       "context for frame " + frame->GetIdentifier().ToString() + " released");
         } else {
             caspar_log(browser,
                        boost::log::trivial::warning,
-                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released, but not found");
+                       "context for frame " + frame->GetIdentifier().ToString() + " released, but not found");
         }
     }
 
