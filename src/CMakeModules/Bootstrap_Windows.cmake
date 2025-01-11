@@ -228,12 +228,11 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_windows64_minimal.tar.bz2
-		URL_HASH MD5=cff21bce81bada2a9e5f0afbec0858f0
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_windows64_minimal.tar.bz2
+		URL_HASH SHA1=864d40fb6e26a6ac8cf1003cbfcc16d35c90782e
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
 		INSTALL_COMMAND ""
-		PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
 	)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
@@ -243,6 +242,11 @@ if (ENABLE_HTML)
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
 	link_directories(${SOURCE_DIR}/Release)
 	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
+
+	set(CEF_LIB
+			libcef
+			optimized Release/libcef_dll_wrapper
+			debug Debug/libcef_dll_wrapper)
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
