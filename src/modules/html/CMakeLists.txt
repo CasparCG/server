@@ -25,7 +25,9 @@ target_include_directories(html PRIVATE
     ..
     ../..
     ${CEF_INCLUDE_PATH}
-    )
+	${FFMPEG_INCLUDE_PATH}
+)
+target_link_libraries(html ffmpeg)
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
