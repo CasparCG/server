@@ -101,9 +101,10 @@ class route_producer
 						}
 						auto frame2b = frame2;
 						if (!frame2b) {
-							// We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
-							frame2b = core::draw_frame::push(frame2);
-						}
+                            // Ensure that any interlaced channel will repeat frames instead of showing black.
+                            // Note: doing 50p -> 50i will result in dropping to 25p and frame doubling.
+                            frame2b = frame1b;
+                        }
 
 						if (!self->buffer_.try_push(std::make_pair(frame1b, frame2b))) {
 							self->graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
