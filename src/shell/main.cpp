@@ -42,6 +42,7 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/log.h>
+#include <common/ptree.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -265,9 +266,22 @@ int main(int argc, char** argv)
 
         if (should_wait_for_keypress)
             wait_for_keypress();
+    } catch (caspar::ptree_exception& e) {
+        auto info = boost::get_error_info<caspar::msg_info_t>(e);
+        if (info) {
+            CASPAR_LOG(fatal) << *info << ". Please check the configuration file (" << u8(config_file_name)
+                              << ") for errors.";
+        } else {
+            CASPAR_LOG(fatal) << "Please check the configuration file (" << u8(config_file_name) << ") for errors.";
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
+        wait_for_keypress();
     } catch (boost::property_tree::file_parser_error& e) {
         CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message()
                           << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
+        wait_for_keypress();
+    } catch (expected_user_error&) {
+        CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
         wait_for_keypress();
     } catch (user_error&) {
         CASPAR_LOG_CURRENT_EXCEPTION();
