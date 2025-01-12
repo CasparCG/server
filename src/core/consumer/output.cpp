@@ -81,14 +81,16 @@ struct output::impl
 
     bool remove(const spl::shared_ptr<frame_consumer>& consumer) { return remove(consumer->index()); }
 
+    size_t consumer_count()
+    {
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        return consumers_.size();
+    }
+
     void operator()(const const_frame&             input_frame1,
                     const const_frame&             input_frame2,
                     const core::video_format_desc& format_desc)
     {
-        if (!input_frame1) {
-            return;
-        }
-
         auto time = std::move(time_);
 
         if (format_desc_ != format_desc) {
@@ -104,6 +106,18 @@ struct output::impl
             }
             format_desc_ = format_desc;
             time_        = {};
+            return;
+        }
+
+        // If no frame is provided, this should only happen when the channel has no consumers.
+        // Take a shortcut and perform the sleep to let the channel tick correctly.
+        if (!input_frame1) {
+            if (!time) {
+                time = std::chrono::high_resolution_clock::now();
+            } else {
+                std::this_thread::sleep_until(*time);
+            }
+            time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.hz));
             return;
         }
 
@@ -204,11 +218,12 @@ output::output(const spl::shared_ptr<diagnostics::graph>& graph,
 {
 }
 output::~output() {}
-void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
-void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
-bool output::remove(int index) { return impl_->remove(index); }
-bool output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
-void output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
+void   output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
+void   output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
+bool   output::remove(int index) { return impl_->remove(index); }
+bool   output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
+size_t output::consumer_count() const { return impl_->consumer_count(); }
+void   output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
 {
     return (*impl_)(frame, frame2, format_desc);
 }

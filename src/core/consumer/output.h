@@ -52,6 +52,8 @@ class output final
     bool remove(const spl::shared_ptr<frame_consumer>& consumer);
     bool remove(int index);
 
+    size_t consumer_count() const;
+
     core::monitor::state state() const;
 
   private:
