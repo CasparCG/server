@@ -1,0 +1,10 @@
+version=4
+opts=\
+searchmode=plain,\
+repack,\
+repacksuffix=+dfsg,\
+dversionmangle=s/\+(debian|dfsg|ds|deb)(\.\d+)?$//,\
+uversionmangle=s/(\d)[_\.\-\+]?((RC|rc|pre|dev|beta|alpha)\d*)$/$1~$2/,\
+filenamemangle=s%.*/v?@ANY_VERSION@%@PACKAGE@-$1.tar.xz%" \
+https://api.github.com/repos/casparcg/server/releases?per_page=50 \
+https://api.github.com/repos/[^/]+/[^/]+/tarball/v?@ANY_VERSION@
