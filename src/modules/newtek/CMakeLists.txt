@@ -3,21 +3,15 @@ project (newtek)
 
 set(SOURCES
 		consumer/newtek_ndi_consumer.cpp
-
-		producer/newtek_ndi_producer.cpp
-
-		util/ndi.cpp
-
-		newtek.cpp
-
-)
-set(HEADERS
 		consumer/newtek_ndi_consumer.h
 
+		producer/newtek_ndi_producer.cpp
 		producer/newtek_ndi_producer.h
 
+		util/ndi.cpp
 		util/ndi.h
 
+		newtek.cpp
 		newtek.h
 
 		interop/Processing.NDI.compat.h
@@ -38,11 +32,11 @@ set(HEADERS
 )
 
 casparcg_add_module_project(newtek
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "newtek::init"
 )
 target_include_directories(newtek PRIVATE
-    ..
+	..
     ../..
     ${FFMPEG_INCLUDE_PATH}
     )
@@ -55,6 +49,4 @@ source_group(sources\\interop interop/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(newtek
-    ffmpeg
-)
+target_link_libraries(newtek ffmpeg)

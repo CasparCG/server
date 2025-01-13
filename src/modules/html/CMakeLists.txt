@@ -3,26 +3,22 @@ project (html)
 
 set(SOURCES
 		producer/html_cg_proxy.cpp
-		producer/html_producer.cpp
-
-		html.cpp
-)
-set(HEADERS
 		producer/html_cg_proxy.h
+		producer/html_producer.cpp
 		producer/html_producer.h
 
+		html.cpp
 		html.h
 )
 
 casparcg_add_module_project(html
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "html::init"
 	UNINIT_FUNCTION "html::uninit"
 	CLI_INTERCEPTOR "html::intercept_command_line"
 )
 
 target_include_directories(html PRIVATE
-    ..
     ../..
     ${CEF_INCLUDE_PATH}
     )

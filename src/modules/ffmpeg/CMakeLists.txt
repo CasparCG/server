@@ -3,34 +3,31 @@ project (ffmpeg)
 
 set(SOURCES
 	producer/av_producer.cpp
-	producer/av_input.cpp
-	util/av_util.cpp
-	producer/ffmpeg_producer.cpp
-	consumer/ffmpeg_consumer.cpp
-
-	ffmpeg.cpp
-)
-set(HEADERS
-	util/av_assert.h
 	producer/av_producer.h
+	producer/av_input.cpp
 	producer/av_input.h
-	util/av_util.h
+	producer/ffmpeg_producer.cpp
 	producer/ffmpeg_producer.h
+	consumer/ffmpeg_consumer.cpp
 	consumer/ffmpeg_consumer.h
 
-	defines.h
+	util/av_util.cpp
+	util/av_util.h
+	util/av_assert.h
+
+	ffmpeg.cpp
 	ffmpeg.h
+	defines.h
 	StdAfx.h
 )
 
 casparcg_add_module_project(ffmpeg
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "ffmpeg::init"
 	UNINIT_FUNCTION "ffmpeg::uninit"
 )
 
 target_include_directories(ffmpeg PRIVATE
-    ..
     ../..
     ${FFMPEG_INCLUDE_PATH}
     )

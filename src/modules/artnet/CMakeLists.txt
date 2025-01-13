@@ -3,22 +3,20 @@ project (artnet)
 
 set(SOURCES
 	consumer/artnet_consumer.cpp
-
-	artnet.cpp
-)
-set(HEADERS
 	consumer/artnet_consumer.h
 
+	util/fixture_calculation.cpp
+	util/fixture_calculation.h
+
+	artnet.cpp
 	artnet.h
-	util/fixture_calculation.cpp util/fixture_calculation.h
 )
 
 casparcg_add_module_project(artnet
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "artnet::init"
 )
 target_include_directories(artnet PRIVATE
-    ..
     ../..
 )
 

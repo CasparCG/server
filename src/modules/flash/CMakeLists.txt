@@ -3,33 +3,27 @@ project (flash)
 
 set(SOURCES
 		interop/Flash9e_i.c
-
-		producer/FlashAxContainer.cpp
-		producer/flash_producer.cpp
-
-		util/swf.cpp
-
-		flash.cpp
-)
-set(HEADERS
 		interop/axflash.h
 		interop/TimerHelper.h
 
+		producer/FlashAxContainer.cpp
 		producer/FlashAxContainer.h
+		producer/flash_producer.cpp
 		producer/flash_producer.h
 
+		util/swf.cpp
 		util/swf.h
 
+		flash.cpp
 		flash.h
 		StdAfx.h
 )
 
 casparcg_add_module_project(flash
-	SOURCES ${SOURCES} ${HEADERS} 
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "flash::init"
 )
 target_include_directories(flash PRIVATE
-    ..
     ../..
     ${ZLIB_INCLUDE_PATH}
     )

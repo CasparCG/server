@@ -3,36 +3,29 @@ project (image)
 
 set(SOURCES
 		consumer/image_consumer.cpp
-
-		producer/image_producer.cpp
-
-		producer/image_scroll_producer.cpp
-
-		util/image_algorithms.cpp
-		util/image_loader.cpp
-
-		image.cpp
-)
-set(HEADERS
 		consumer/image_consumer.h
 
+		producer/image_producer.cpp
 		producer/image_producer.h
 
+		producer/image_scroll_producer.cpp
 		producer/image_scroll_producer.h
 
+		util/image_algorithms.cpp
 		util/image_algorithms.h
+		util/image_loader.cpp
 		util/image_loader.h
 		util/image_view.h
 
+		image.cpp
 		image.h
 )
 
 casparcg_add_module_project(image
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "image::init"
 )
 target_include_directories(image PRIVATE
-    ..
     ../..
     ${FREEIMAGE_INCLUDE_PATH}
     )
