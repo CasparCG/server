@@ -97,8 +97,10 @@ draw_frame::draw_frame(mutable_frame&& frame)
 {
 }
 draw_frame::draw_frame(std::vector<draw_frame> frames)
-    : impl_(new impl(std::move(frames)))
 {
+    auto frame_size = frames.size();
+    impl_ = std::make_unique<impl>(std::move(frames));
+    if (frame_size > 1) impl_->transform_.image_transform.layer_depth = 1;
 }
 draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
