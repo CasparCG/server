@@ -30,7 +30,6 @@
 #include "../util/http_request.h"
 #include "AMCPCommandQueue.h"
 #include "amcp_args.h"
-#include "amcp_command_repository.h"
 
 #include <common/env.h>
 

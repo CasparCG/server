@@ -312,7 +312,7 @@ class decklink_frame
     [[nodiscard]] int nb_samples() const { return nb_samples_; }
 
     // IDeckLinkVideoFrameMetadataExtensions
-    HRESULT STDMETHODCALLTYPE GetInt(BMDDeckLinkFrameMetadataID metadataID, int64_t* value)
+    HRESULT STDMETHODCALLTYPE GetInt(BMDDeckLinkFrameMetadataID metadataID, int64_t* value) override
     {
         HRESULT result = S_OK;
 
@@ -333,7 +333,7 @@ class decklink_frame
         return result;
     }
 
-    HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value)
+    HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value) override
     {
         const auto color_space = (color_space_ == core::color_space::bt2020) ? &REC_2020 : &REC_709;
         HRESULT    result      = S_OK;
@@ -395,25 +395,27 @@ class decklink_frame
         return result;
     }
 
-    HRESULT STDMETHODCALLTYPE GetFlag(BMDDeckLinkFrameMetadataID, BOOL* value)
+    HRESULT STDMETHODCALLTYPE GetFlag(BMDDeckLinkFrameMetadataID, BOOL* value) override
     {
         // Not expecting GetFlag
         *value = false;
         return E_INVALIDARG;
     }
 
-    HRESULT STDMETHODCALLTYPE GetString(BMDDeckLinkFrameMetadataID, String* value)
+    HRESULT STDMETHODCALLTYPE GetString(BMDDeckLinkFrameMetadataID, String* value) override
     {
         // Not expecting GetString
         *value = nullptr;
         return E_INVALIDARG;
     }
 
+    /*
     HRESULT STDMETHODCALLTYPE GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize)
     {
         *bufferSize = 0;
         return E_INVALIDARG;
     }
+     */
 };
 
 struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback

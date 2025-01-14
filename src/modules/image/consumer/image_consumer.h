@@ -24,7 +24,7 @@
 #include <common/bit_depth.h>
 #include <common/memory.h>
 
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <core/consumer/frame_consumer.h>
 
 #include <string>

@@ -42,6 +42,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
 #include <tbb/concurrent_queue.h>

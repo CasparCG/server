@@ -6,7 +6,7 @@
 #include <core/mixer/mixer.h>
 #include <core/video_format.h>
 
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <future>
 #include <memory>

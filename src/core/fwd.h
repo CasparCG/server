@@ -38,7 +38,6 @@ namespace caspar::core { class video_channel; }
 namespace caspar::core { struct pixel_format_desc; }
 namespace caspar::core { class cg_producer_registry; }
 namespace caspar::core { struct frame_transform; }
-namespace caspar::core { struct write_frame_consumer; }
 namespace caspar::core { struct frame_producer_dependencies; }
 namespace caspar::core { struct module_dependencies; }
 namespace caspar::core { class frame_producer_registry; }

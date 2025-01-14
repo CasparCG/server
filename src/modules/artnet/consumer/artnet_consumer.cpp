@@ -24,22 +24,14 @@
 #undef NOMINMAX
 // ^^ This is needed to avoid a conflict between boost asio and other header files defining NOMINMAX
 
-#include <common/array.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/ptree.h>
-#include <common/utf.h>
-
-#include <core/consumer/frame_consumer.h>
-#include <core/frame/frame.h>
-#include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/locale/encoding_utf.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-#include <cmath>
 #include <thread>
 #include <utility>
 #include <vector>

@@ -26,7 +26,11 @@
 #include "consumer/frame_consumer.h"
 #include "producer/cg_proxy.h"
 #include "producer/frame_producer.h"
-#include "protocol/amcp/amcp_command_repository_wrapper.h"
+// #include "protocol/amcp/amcp_command_repository_wrapper.h"
+
+namespace caspar::protocol::amcp {
+class amcp_command_repository_wrapper;
+}
 
 namespace caspar { namespace core {
 

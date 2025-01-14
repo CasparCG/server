@@ -299,6 +299,9 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
         case core::pixel_format::ycbcra:
             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUVA420P10 : AVPixelFormat::AV_PIX_FMT_YUVA420P;
             break;
+        case core::pixel_format::uyvy:
+            // TODO
+            break;
         case core::pixel_format::count:
         case core::pixel_format::invalid:
             break;
