@@ -46,8 +46,8 @@
 #include <utility>
 #include <vector>
 
+#include "../util/image_algorithms.h"
 #include "../util/image_view.h"
-#include "image/util/image_algorithms.h"
 
 namespace caspar { namespace image {
 

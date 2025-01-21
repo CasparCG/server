@@ -3,21 +3,19 @@ project (bluefish)
 
 set(SOURCES
 		consumer/bluefish_consumer.cpp
+		consumer/bluefish_consumer.h
         producer/bluefish_producer.cpp
+		producer/bluefish_producer.h
 		util/blue_velvet.cpp
+		util/blue_velvet.h
+		util/memory.h
 		bluefish.cpp
-)
-set(HEADERS
-	    consumer/bluefish_consumer.h
-        producer/bluefish_producer.h
-        util/blue_velvet.h
-	    util/memory.h
-        bluefish.h
-	StdAfx.h
+		bluefish.h
+		StdAfx.h
 )
 
 casparcg_add_module_project(bluefish
-    SOURCES ${SOURCES} ${HEADERS}
+    SOURCES ${SOURCES}
 	INIT_FUNCTION "bluefish::init"
 )
 target_include_directories(bluefish PRIVATE
