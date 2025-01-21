@@ -91,7 +91,8 @@ struct ffmpeg_producer : public core::frame_producer
                                    loop,
                                    seekable,
                                    scale_mode))
-    { }
+    {
+    }
 
     ~ffmpeg_producer()
     {
@@ -222,10 +223,7 @@ boost::tribool has_valid_extension(const boost::filesystem::path& filename)
     return boost::tribool(boost::indeterminate);
 }
 
-bool has_invalid_protocol(const std::wstring& filename)
-{
-    return boost::algorithm::istarts_with(filename, L"ndi://");
-}
+bool has_invalid_protocol(const std::wstring& filename) { return boost::algorithm::istarts_with(filename, L"ndi://"); }
 
 bool is_readable(const boost::filesystem::path& filename)
 {

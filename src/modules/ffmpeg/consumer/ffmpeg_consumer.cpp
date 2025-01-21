@@ -292,9 +292,9 @@ struct Stream
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             st->time_base = {1, av_buffersink_get_sample_rate(sink)};
 
-            enc->sample_fmt     = static_cast<AVSampleFormat>(av_buffersink_get_format(sink));
-            enc->sample_rate    = av_buffersink_get_sample_rate(sink);
-            enc->time_base      = st->time_base;
+            enc->sample_fmt  = static_cast<AVSampleFormat>(av_buffersink_get_format(sink));
+            enc->sample_rate = av_buffersink_get_sample_rate(sink);
+            enc->time_base   = st->time_base;
 
 #if FFMPEG_NEW_CHANNEL_LAYOUT
             FF(av_buffersink_get_ch_layout(sink, &enc->ch_layout));

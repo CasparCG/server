@@ -248,16 +248,16 @@ struct oal_consumer : public core::frame_consumer
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         executor_.begin_invoke([=] {
-            auto dst            = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            dst->format         = AV_SAMPLE_FMT_S16;
-            dst->sample_rate    = format_desc_.audio_sample_rate;
+            auto dst         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+            dst->format      = AV_SAMPLE_FMT_S16;
+            dst->sample_rate = format_desc_.audio_sample_rate;
 #if FFMPEG_NEW_CHANNEL_LAYOUT
             av_channel_layout_default(&dst->ch_layout, 2);
 #else
             dst->channels       = 2;
             dst->channel_layout = av_get_default_channel_layout(dst->channels);
 #endif
-            dst->nb_samples     = duration_;
+            dst->nb_samples = duration_;
             if (av_frame_get_buffer(dst.get(), 32) < 0) {
                 // TODO FF error
                 CASPAR_THROW_EXCEPTION(invalid_argument());
@@ -280,16 +280,16 @@ struct oal_consumer : public core::frame_consumer
                 return;
             }
 
-            auto src            = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            src->format         = AV_SAMPLE_FMT_S32;
-            src->sample_rate    = format_desc_.audio_sample_rate;
+            auto src         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+            src->format      = AV_SAMPLE_FMT_S32;
+            src->sample_rate = format_desc_.audio_sample_rate;
 #if FFMPEG_NEW_CHANNEL_LAYOUT
             av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
 #else
             src->channels       = format_desc_.audio_channels;
             src->channel_layout = av_get_default_channel_layout(src->channels);
 #endif
-            src->nb_samples     = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
+            src->nb_samples       = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
             src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
             src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
 

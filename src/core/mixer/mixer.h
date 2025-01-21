@@ -27,7 +27,9 @@
 #include <core/fwd.h>
 #include <core/monitor/monitor.h>
 
-namespace caspar::diagnostics { class graph; }
+namespace caspar::diagnostics {
+class graph;
+}
 
 namespace caspar { namespace core {
 

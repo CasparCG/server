@@ -29,7 +29,9 @@
 #include <future>
 #include <utility>
 
-namespace caspar::protocol::osc { class client; }
+namespace caspar::protocol::osc {
+class client;
+}
 
 namespace caspar { namespace protocol { namespace amcp {
 

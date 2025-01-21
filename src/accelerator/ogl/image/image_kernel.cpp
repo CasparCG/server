@@ -220,13 +220,14 @@ struct image_kernel::impl
             coord.vertex_y += f_p[1];
         };
 
-		auto const first_plane = params.pix_desc.planes.at(0);
-		if (params.geometry.mode() != core::frame_geometry::scale_mode::stretch && first_plane.width > 0 && first_plane.height > 0) {
-			auto width_scale = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
-			auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);
+        auto const first_plane = params.pix_desc.planes.at(0);
+        if (params.geometry.mode() != core::frame_geometry::scale_mode::stretch && first_plane.width > 0 &&
+            first_plane.height > 0) {
+            auto width_scale  = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
+            auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);
 
             double target_scale;
-			switch (params.geometry.mode()) {
+            switch (params.geometry.mode()) {
                 case core::frame_geometry::scale_mode::fit:
                     target_scale = std::min(width_scale, height_scale);
                     f_s[0] *= target_scale / width_scale;
@@ -253,8 +254,8 @@ struct image_kernel::impl
                     break;
 
                 default:;
-			}
-		}
+            }
+        }
 
         int corner = 0;
         for (auto& coord : coords) {

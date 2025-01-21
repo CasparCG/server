@@ -75,7 +75,8 @@ auto& get_default_font()
             if (auto pipe = popen(cmd.data(), "r")) {
                 char buf[128];
                 path.clear();
-                while (fgets(buf, sizeof(buf), pipe)) path += buf;
+                while (fgets(buf, sizeof(buf), pipe))
+                    path += buf;
             }
         }
 #endif

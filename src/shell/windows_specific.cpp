@@ -36,7 +36,7 @@
 #include <io.h>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
-CComModule _AtlModule;
+CComModule                               _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 extern "C" {

@@ -109,7 +109,7 @@ NDIlib_v5* load_library()
     }
 
     NDIlib_find_create_t find_instance_options = {};
-    find_instance_options.show_local_sources = true;
+    find_instance_options.show_local_sources   = true;
 
     find_instance.reset(new NDIlib_find_instance_t(ndi_lib->NDIlib_find_create_v2(&find_instance_options)),
                         [](NDIlib_find_instance_t* p) { ndi_lib->NDIlib_find_destroy(*p); });

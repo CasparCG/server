@@ -64,16 +64,27 @@ struct image_producer : public core::frame_producer
     const uint32_t                             length_ = 0;
     core::draw_frame                           frame_;
 
-    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, std::wstring description, uint32_t length, core::frame_geometry::scale_mode scale_mode) :
-        description_(std::move(description)), frame_factory_(frame_factory), length_(length)
+    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
+                   std::wstring                                description,
+                   uint32_t                                    length,
+                   core::frame_geometry::scale_mode            scale_mode)
+        : description_(std::move(description))
+        , frame_factory_(frame_factory)
+        , length_(length)
     {
         load(load_image(description_), scale_mode);
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length, core::frame_geometry::scale_mode scale_mode) :
-        description_(L"png from memory"), frame_factory_(frame_factory), length_(length)
+    image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
+                   const void*                                 png_data,
+                   size_t                                      size,
+                   uint32_t                                    length,
+                   core::frame_geometry::scale_mode            scale_mode)
+        : description_(L"png from memory")
+        , frame_factory_(frame_factory)
+        , length_(length)
     {
         load(load_png_from_memory(png_data, size), scale_mode);
 
@@ -86,7 +97,7 @@ struct image_producer : public core::frame_producer
         core::pixel_format_desc desc(core::pixel_format::bgra);
         desc.planes.emplace_back(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4);
 
-        auto frame = frame_factory_->create_frame(this, desc);
+        auto frame       = frame_factory_->create_frame(this, desc);
         frame.geometry() = core::frame_geometry::get_default(scale_mode);
 
         std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
@@ -123,7 +134,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         return core::frame_producer::empty();
     }
 
-    auto length = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
+    auto length     = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
 
     auto filename = find_file_within_dir_or_absolute(env::media_folder(), params.at(0), is_valid_file);

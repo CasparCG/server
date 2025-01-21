@@ -150,11 +150,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
-        boost::asio::spawn(service_, std::move(task)
+        boost::asio::spawn(service_,
+                           std::move(task)
 #if BOOST_VERSION >= 108000
-            , [](std::exception_ptr e) {
-                if (e) std::rethrow_exception(e);
-            }
+                               ,
+                           [](std::exception_ptr e) {
+                               if (e)
+                                   std::rethrow_exception(e);
+                           }
 #endif
         );
         return future;

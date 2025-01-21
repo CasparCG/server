@@ -20,25 +20,67 @@
  */
 #pragma once
 
-namespace caspar::accelerator { class accelerator; }
-namespace caspar::accelerator::ogl { class device; }
+namespace caspar::accelerator {
+class accelerator;
+}
+namespace caspar::accelerator::ogl {
+class device;
+}
 
-namespace caspar::core { class stage; }
-namespace caspar::core { class mixer; }
-namespace caspar::core { class output; }
-namespace caspar::core { class image_mixer; }
-namespace caspar::core { struct video_format_desc; }
-namespace caspar::core { class frame_factory; }
-namespace caspar::core { class frame_producer; }
-namespace caspar::core { class frame_consumer; }
-namespace caspar::core { class draw_frame; }
-namespace caspar::core { class mutable_frame; }
-namespace caspar::core { class const_frame; }
-namespace caspar::core { class video_channel; }
-namespace caspar::core { struct pixel_format_desc; }
-namespace caspar::core { class cg_producer_registry; }
-namespace caspar::core { struct frame_transform; }
-namespace caspar::core { struct frame_producer_dependencies; }
-namespace caspar::core { struct module_dependencies; }
-namespace caspar::core { class frame_producer_registry; }
-namespace caspar::core { class video_format_repository; }
+namespace caspar::core {
+class stage;
+}
+namespace caspar::core {
+class mixer;
+}
+namespace caspar::core {
+class output;
+}
+namespace caspar::core {
+class image_mixer;
+}
+namespace caspar::core {
+struct video_format_desc;
+}
+namespace caspar::core {
+class frame_factory;
+}
+namespace caspar::core {
+class frame_producer;
+}
+namespace caspar::core {
+class frame_consumer;
+}
+namespace caspar::core {
+class draw_frame;
+}
+namespace caspar::core {
+class mutable_frame;
+}
+namespace caspar::core {
+class const_frame;
+}
+namespace caspar::core {
+class video_channel;
+}
+namespace caspar::core {
+struct pixel_format_desc;
+}
+namespace caspar::core {
+class cg_producer_registry;
+}
+namespace caspar::core {
+struct frame_transform;
+}
+namespace caspar::core {
+struct frame_producer_dependencies;
+}
+namespace caspar::core {
+struct module_dependencies;
+}
+namespace caspar::core {
+class frame_producer_registry;
+}
+namespace caspar::core {
+class video_format_repository;
+}

@@ -273,7 +273,7 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
                 user_error() << msg_info(
                     L"Fixture channel count must be at least enough channels for current color mode"));
 
-        f.fixtureChannels = (unsigned short) fixtureChannels;
+        f.fixtureChannels = (unsigned short)fixtureChannels;
 
         box b{};
 

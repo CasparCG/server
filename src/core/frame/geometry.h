@@ -75,6 +75,6 @@ class frame_geometry
 };
 
 frame_geometry::scale_mode scale_mode_from_string(const std::wstring&);
-std::wstring scale_mode_to_string(frame_geometry::scale_mode);
+std::wstring               scale_mode_to_string(frame_geometry::scale_mode);
 
 }} // namespace caspar::core
