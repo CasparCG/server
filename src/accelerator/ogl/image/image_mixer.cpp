@@ -82,7 +82,6 @@ class image_renderer
                             core::color_space              color_space)
         : ogl_(ogl)
         , kernel_(ogl_)
-        , depth_(depth)
         , max_frame_size_(max_frame_size)
         , depth_(depth)
         , color_space_(color_space)
@@ -98,7 +97,7 @@ class image_renderer
         //        }
 
         return flatten(ogl_->dispatch_async(
-            [=, layers = std::move(layers)]() mutable -> std::shared_future<array<const std::uint8_t>> {
+            [=, layers = std::move(layers)]() mutable -> std::shared_future<core::mixed_image> {
                 auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
                 draw(target_texture, std::move(layers), format_desc);

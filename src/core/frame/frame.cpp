@@ -155,7 +155,7 @@ const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
 const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc,
-                         boost::any                             opaque)
+                         std::any                             opaque)
     : impl_(new impl(std::move(image_data), std::move(audio_data), desc, opaque))
 {
 }

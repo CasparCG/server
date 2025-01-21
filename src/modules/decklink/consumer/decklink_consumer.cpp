@@ -966,7 +966,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     // //                                                           frame2,
                     // //                                                           mode_->GetFieldDominance());
 
-                    // auto buffer = frame1.value().frame.get();
+                    auto buffer = frame1.value().frame.get();
 
                     // // rgb12:
                     // //                    std::shared_ptr<void> image_data =
@@ -978,20 +978,20 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     // //                    video_display_time);
 
                     // // yuv10:
-                    // std::shared_ptr<void> image_data = create_aligned_buffer(buffer.size(), 128);
-                    // std::memcpy(image_data.get(), buffer.data(), buffer.size());
+                    std::shared_ptr<void> image_data = create_aligned_buffer(buffer.size(), 128);
+                    std::memcpy(image_data.get(), buffer.data(), buffer.size());
 
                     // schedule_next_video(image_data, bmdFormat10BitYUV, nb_samples, video_display_time);
-                    std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
-                                                                              decklink_format_desc_,
-                                                                              config_.primary,
-                                                                              frame1,
-                                                                              frame2,
-                                                                              mode_->GetFieldDominance(),
-                                                                              config_.hdr);
+                    // std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
+                    //                                                           decklink_format_desc_,
+                    //                                                           config_.primary,
+                    //                                                           frame1,
+                    //                                                           frame2,
+                    //                                                           mode_->GetFieldDominance(),
+                    //                                                           config_.hdr);
 
                     schedule_next_video(
-                        image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
+                        image_data, nb_samples, video_display_time, frame1.value().raw_frame.pixel_format_desc().color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -1180,7 +1180,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
                                << msg_info("Decklink consumer does not support hdr in combination with key only"));
     }
 
-    return spl::make_shared<decklink_consumer_proxy>(config);
+    return spl::make_shared<decklink_consumer_proxy>(frame_converter, config);
 }
 
 spl::shared_ptr<core::frame_consumer>

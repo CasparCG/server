@@ -107,7 +107,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
-    auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
+    auto texture_ptr = std::any_cast<std::shared_ptr<texture>>(frame.opaque());
     if (!texture_ptr) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
     }
@@ -126,7 +126,7 @@ ogl_frame_converter::convert_from_rgba(const core::const_frame&         frame,
 
 common::bit_depth ogl_frame_converter::get_frame_bitdepth(const core::const_frame& frame)
 {
-    auto texture_ptr = boost::any_cast<std::shared_ptr<texture>>(frame.opaque());
+    auto texture_ptr = std::any_cast<std::shared_ptr<texture>>(frame.opaque());
     if (!texture_ptr) {
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame!"));
     }
