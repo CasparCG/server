@@ -34,11 +34,17 @@
 
 namespace caspar { namespace decklink {
 
+BMDPixelFormat get_pixel_format(bool hdr);
+int            get_row_bytes(const core::video_format_desc& format_desc, bool hdr);
+
+std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc, bool hdr);
+
 std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                              const core::video_format_desc& decklink_format_desc,
                                              const port_configuration&      config,
                                              const core::const_frame&       frame1,
                                              const core::const_frame&       frame2,
-                                             BMDFieldDominance              field_dominance);
+                                             BMDFieldDominance              field_dominance,
+                                             bool                           hdr);
 
 }} // namespace caspar::decklink

@@ -33,18 +33,21 @@
 #include <SFML/Graphics.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/optional.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
 #include <GL/glew.h>
 
 #include <atomic>
+#include <cstdio>
+#include <filesystem>
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
-#include <tuple>
+
+namespace fs = std::filesystem;
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
@@ -62,18 +65,23 @@ sf::Color get_sfml_color(int color)
             static_cast<sf::Uint8>(color >> 0 & 255)};
 }
 
-sf::Font& get_default_font()
+auto& get_default_font()
 {
     static sf::Font DEFAULT_FONT = []() {
-        sf::Font font;
-#ifdef USE_SYSTEM_DIAG_FONT
-        if (!font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf"))
-            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(
-                                       "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf not found"));
-#else
-        if (!font.loadFromFile("LiberationMono-Regular.ttf"))
-            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("LiberationMono-Regular.ttf not found"));
+        fs::path path{DIAG_FONT_PATH};
+#ifdef __linux__
+        if (!fs::exists(path)) {
+            auto cmd = "fc-match --format=%{file} " + path.string();
+            if (auto pipe = popen(cmd.data(), "r")) {
+                char buf[128];
+                path.clear();
+                while (fgets(buf, sizeof(buf), pipe)) path += buf;
+            }
+        }
 #endif
+        sf::Font font;
+        if (!font.loadFromFile(path.string()))
+            CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(DIAG_FONT_PATH " not found"));
         return font;
     }();
 
@@ -254,9 +262,9 @@ class context : public drawable
 
 class line : public drawable
 {
-    size_t                                                   res_{1024};
-    boost::circular_buffer<sf::Vertex>                       line_data_{res_};
-    boost::circular_buffer<boost::optional<sf::VertexArray>> line_tags_{res_};
+    size_t                                                 res_{1024};
+    boost::circular_buffer<sf::Vertex>                     line_data_{res_};
+    boost::circular_buffer<std::optional<sf::VertexArray>> line_tags_{res_};
 
     std::atomic<float> tick_data_;
     std::atomic<bool>  tick_tag_;
@@ -321,7 +329,7 @@ class line : public drawable
             vertical_dash.append(sf::Vertex(sf::Vector2f(get_insertion_xcoord() - x_delta_, 1.f), color));
             line_tags_.push_back(vertical_dash);
         } else
-            line_tags_.push_back(boost::none);
+            line_tags_.push_back({});
 
         tick_tag_ = false;
 

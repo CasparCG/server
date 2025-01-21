@@ -451,7 +451,7 @@ struct bluefish_producer
                 src_video->interlaced_frame       = !is_progressive;
                 src_video->top_field_first        = height != 486;
                 src_video->key_frame              = 1;
-                src_video->display_picture_number = frames_captured;
+                //src_video->display_picture_number = frames_captured;
                 src_video->pts                    = capture_ts;
 
                 void* video_bytes = reserved_frames_.front()->image_data();
@@ -461,8 +461,12 @@ struct bluefish_producer
                 }
 
                 // Audio
-                src_audio->format      = AV_SAMPLE_FMT_S32;
-                src_audio->channels    = format_desc_.audio_channels;
+                src_audio->format = AV_SAMPLE_FMT_S32;
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                av_channel_layout_default(&src_audio->ch_layout, format_desc_.audio_channels);
+#else
+                src_audio->channels = format_desc_.audio_channels;
+#endif
                 src_audio->sample_rate = format_desc_.audio_sample_rate;
                 src_audio->nb_samples  = 0;
                 int samples_decoded    = 0;
@@ -480,15 +484,15 @@ struct bluefish_producer
                                                        card_type,
                                                        reinterpret_cast<unsigned int*>(hanc_buffer),
                                                        reinterpret_cast<unsigned int*>(&decoded_audio_bytes_[0]),
-                                                       src_audio->channels);
+                                                       format_desc_.audio_channels);
 
                         audio_bytes = reinterpret_cast<int32_t*>(&decoded_audio_bytes_[0]);
 
-                        samples_decoded       = no_extracted_pcm_samples / src_audio->channels;
+                        samples_decoded       = no_extracted_pcm_samples / format_desc_.audio_channels;
                         src_audio->nb_samples = samples_decoded;
                         src_audio->data[0]    = reinterpret_cast<uint8_t*>(audio_bytes);
                         src_audio->linesize[0] =
-                            src_audio->nb_samples * src_audio->channels *
+                            src_audio->nb_samples * format_desc_.audio_channels *
                             av_get_bytes_per_sample(static_cast<AVSampleFormat>(src_audio->format));
                         src_audio->pts = capture_ts;
                     }
@@ -504,7 +508,7 @@ struct bluefish_producer
                         auto audio_bytes = reinterpret_cast<uint8_t*>(&decoded_audio_bytes_[0]);
                         if (audio_bytes) {
                             src_audio->nb_samples     = remainaing_audio_samples_;
-                            int bytes_left            = remainaing_audio_samples_ * 4 * src_audio->channels;
+                            int bytes_left            = remainaing_audio_samples_ * 4 * format_desc_.audio_channels;
                             src_audio->data[0]        = audio_bytes + bytes_left;
                             src_audio->linesize[0]    = bytes_left;
                             remainaing_audio_samples_ = 0;
@@ -703,8 +707,10 @@ class bluefish_producer_proxy : public core::frame_producer
 
     core::draw_frame last_frame(const core::video_field field) override
     {
-        return core::draw_frame::still(producer_->get_frame(field, true));
+        return core::draw_frame::still(producer_->get_frame(field));
     }
+
+    bool is_ready() override { return producer_->is_ready(); }
 
     uint32_t nb_frames() const override { return length_; }
 

@@ -30,6 +30,7 @@
 
 #include <common/array.h>
 #include <common/env.h>
+#include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/utf.h>
@@ -146,10 +147,14 @@ struct image_consumer : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
                                                       const core::video_format_repository&          format_repository,
                                                       const spl::shared_ptr<core::frame_converter>& frame_converter,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      common::bit_depth                                        depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"IMAGE"))
         return core::frame_consumer::empty();
+
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Image consumer only supports 8-bit color depth."));
 
     std::wstring filename;
 

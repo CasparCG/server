@@ -8,13 +8,13 @@ on:
 
 jobs:
     build:
-        runs-on: windows-2019
+        runs-on: windows-2022
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: Download media-scanner
-              uses: robinraju/release-downloader@v1.8
+              uses: robinraju/release-downloader@v1.10
               with:
                   repository: "casparcg/media-scanner"
                   latest: true
@@ -55,7 +55,7 @@ jobs:
                     fi
                   fi
 
-            - uses: actions/upload-artifact@v3
+            - uses: actions/upload-artifact@v4
               with:
                   name: upload-artifact
                   path: ${{ steps.rename-build.outputs.artifactname }}
@@ -63,6 +63,7 @@ jobs:
             - name: Copy single file to remote
               uses: garygrossgarten/github-action-scp@v0.8.0
               if: ${{ steps.rename-build.outputs.uploadname }}
+              timeout-minutes: 5
               with:
                   local: "${{ steps.rename-build.outputs.uploadname }}"
                   remote: "${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.rename-build.outputs.uploadname }}"

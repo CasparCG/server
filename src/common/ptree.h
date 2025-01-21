@@ -25,7 +25,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/property_tree/exceptions.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
 #include <map>

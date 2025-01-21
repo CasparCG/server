@@ -59,7 +59,8 @@ struct texture::impl
         GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[static_cast<int>(depth)][stride_], width_, height_));
+        GL(glTextureStorage2D(
+            id_, 1, INTERNAL_FORMAT[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], width_, height_));
     }
 
     ~impl() { glDeleteTextures(1, &id_); }
@@ -76,7 +77,10 @@ struct texture::impl
 
     void attach() { GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0)); }
 
-    void clear() { GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], nullptr)); }
+    void clear()
+    {
+        GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], nullptr));
+    }
 
     void copy_from(buffer& src)
     {
@@ -88,8 +92,15 @@ struct texture::impl
             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         }
 
-        GL(glTextureSubImage2D(
-            id_, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[static_cast<int>(depth_)][stride_], nullptr));
+        GL(glTextureSubImage2D(id_,
+                               0,
+                               0,
+                               0,
+                               width_,
+                               height_,
+                               FORMAT[stride_],
+                               TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_],
+                               nullptr));
 
         src.unbind();
     }
@@ -97,7 +108,8 @@ struct texture::impl
     void copy_to(buffer& dst, common::bit_depth depth)
     {
         dst.bind();
-        GL(glGetTextureImage(id_, 0, FORMAT[stride_], TYPE[static_cast<int>(depth)][stride_], size_, nullptr));
+        GL(glGetTextureImage(
+            id_, 0, FORMAT[stride_], TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], size_, nullptr));
         dst.unbind();
     }
 };

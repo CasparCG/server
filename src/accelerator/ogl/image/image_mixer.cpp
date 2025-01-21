@@ -40,9 +40,7 @@
 
 #include <GL/glew.h>
 
-#include <boost/any.hpp>
-
-#include <algorithm>
+#include <any>
 #include <vector>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -75,13 +73,19 @@ class image_renderer
     image_kernel            kernel_;
     const size_t            max_frame_size_;
     common::bit_depth       depth_;
+    core::color_space       color_space_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl, common::bit_depth depth, const size_t max_frame_size)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl,
+                            const size_t                   max_frame_size,
+                            common::bit_depth              depth,
+                            core::color_space              color_space)
         : ogl_(ogl)
         , kernel_(ogl_)
         , depth_(depth)
         , max_frame_size_(max_frame_size)
+        , depth_(depth)
+        , color_space_(color_space)
     {
     }
 
@@ -93,19 +97,23 @@ class image_renderer
         //            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         //        }
 
-        return flatten(ogl_->dispatch_async([=]() mutable {
-            auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
+        return flatten(ogl_->dispatch_async(
+            [=, layers = std::move(layers)]() mutable -> std::shared_future<array<const std::uint8_t>> {
+                auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
-            draw(target_texture, std::move(layers), format_desc);
+                draw(target_texture, std::move(layers), format_desc);
 
-            auto bytes = ogl_->copy_async(target_texture, true).share();
+                auto bytes = ogl_->copy_async(target_texture, true).share();
 
-            return std::async(std::launch::deferred,
-                              [bytes = std::move(bytes), target_texture = std::move(target_texture)]() {
-                                  return core::mixed_image(bytes.get(), std::move(target_texture));
-                              });
-        }));
+                return std::async(std::launch::deferred,
+                                  [bytes = std::move(bytes), target_texture = std::move(target_texture)]() {
+                                      return core::mixed_image(bytes.get(), std::move(target_texture));
+                                  });
+            }));
     }
+
+    common::bit_depth depth() const { return depth_; }
+    core::color_space color_space() const { return color_space_; }
 
   private:
     void draw(std::shared_ptr<texture>&      target_texture,
@@ -142,8 +150,8 @@ class image_renderer
                      local_mix_texture,
                      format_desc);
 
-            draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);
-            draw(target_texture, std::move(layer_texture), layer.blend_mode);
+            draw(layer_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
+            draw(target_texture, std::move(layer_texture), format_desc, layer.blend_mode);
         } else // fast path
         {
             for (auto& item : layer.items)
@@ -154,7 +162,7 @@ class image_renderer
                      local_mix_texture,
                      format_desc);
 
-            draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
+            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
         }
 
         layer_key_texture = std::move(local_key_texture);
@@ -168,6 +176,10 @@ class image_renderer
               const core::video_format_desc& format_desc)
     {
         draw_params draw_params;
+        draw_params.target_width  = format_desc.square_width;
+        draw_params.target_height = format_desc.square_height;
+        // TODO: Pass the target color_space
+
         draw_params.pix_desc  = std::move(item.pix_desc);
         draw_params.transform = std::move(item.transform);
         draw_params.geometry  = item.geometry;
@@ -178,7 +190,7 @@ class image_renderer
             draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
         }
 
-        if (item.transform.is_key) {
+        if (item.transform.is_key) { // A key means we will use it for the next non-key item as a mask
             local_key_texture =
                 local_key_texture ? local_key_texture
                                   : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, depth_);
@@ -188,20 +200,21 @@ class image_renderer
             draw_params.layer_key  = nullptr;
 
             kernel_.draw(std::move(draw_params));
-        } else if (item.transform.is_mix) {
+        } else if (item.transform.is_mix) { // A mix means precomp the items to a texture, before drawing to the channel
             local_mix_texture =
                 local_mix_texture ? local_mix_texture
                                   : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
 
             draw_params.background = local_mix_texture;
-            draw_params.local_key  = std::move(local_key_texture);
+            draw_params.local_key  = std::move(local_key_texture); // Use and reset the key
             draw_params.layer_key  = layer_key_texture;
 
             draw_params.keyer = keyer::additive;
 
             kernel_.draw(std::move(draw_params));
         } else {
-            draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
+            // If there is a mix, this is the end so draw it and reset
+            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
 
             draw_params.background = target_texture;
             draw_params.local_key  = std::move(local_key_texture);
@@ -212,21 +225,24 @@ class image_renderer
     }
 
     void draw(std::shared_ptr<texture>&  target_texture,
-              std::shared_ptr<texture>&& source_buffer,
+              std::shared_ptr<texture>&& source_texture,
+              core::video_format_desc    format_desc,
               core::blend_mode           blend_mode = core::blend_mode::normal)
     {
-        if (!source_buffer)
+        if (!source_texture)
             return;
 
         draw_params draw_params;
+        draw_params.target_width    = format_desc.square_width;
+        draw_params.target_height   = format_desc.square_height;
         draw_params.pix_desc.format = core::pixel_format::bgra;
-        draw_params.pix_desc.planes = {
-            core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4)};
-        draw_params.textures   = {spl::make_shared_ptr(source_buffer)};
-        draw_params.transform  = core::image_transform();
-        draw_params.blend_mode = blend_mode;
-        draw_params.background = target_texture;
-        draw_params.geometry   = core::frame_geometry::get_default();
+        draw_params.pix_desc.planes = {core::pixel_format_desc::plane(
+            source_texture->width(), source_texture->height(), 4, source_texture->depth())};
+        draw_params.textures        = {spl::make_shared_ptr(source_texture)};
+        draw_params.transform       = core::image_transform();
+        draw_params.blend_mode      = blend_mode;
+        draw_params.background      = target_texture;
+        draw_params.geometry        = core::frame_geometry::get_default();
 
         kernel_.draw(std::move(draw_params));
     }
@@ -244,9 +260,13 @@ struct image_mixer::impl
     common::bit_depth                  depth_;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl, int channel_id, common::bit_depth depth, const size_t max_frame_size)
+    impl(const spl::shared_ptr<device>& ogl,
+         const int                      channel_id,
+         const size_t                   max_frame_size,
+         common::bit_depth              depth,
+         core::color_space              color_space)
         : ogl_(ogl)
-        , renderer_(ogl, depth, max_frame_size)
+        , renderer_(ogl, max_frame_size, depth, color_space)
         , transform_stack_(1)
         , depth_(depth)
     {
@@ -285,7 +305,7 @@ struct image_mixer::impl
         item.transform = transform_stack_.back();
         item.geometry  = frame.geometry();
 
-        auto textures_ptr = boost::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
 
         if (textures_ptr) {
             item.textures = *textures_ptr;
@@ -315,9 +335,16 @@ struct image_mixer::impl
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
     {
+        return create_frame(tag, desc, common::bit_depth::bit8);
+    }
+
+    core::mutable_frame
+    create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth) override
+    {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            image_data.push_back(ogl_->create_array(plane.size));
+            auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
+            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
@@ -325,12 +352,11 @@ struct image_mixer::impl
                                    std::move(image_data),
                                    array<int32_t>{},
                                    desc,
-                                   [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> boost::any {
+                                   [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                                        auto self = weak_self.lock();
                                        if (!self) {
-                                           return boost::any{};
+                                           return std::any{};
                                        }
-
                                        std::vector<future_texture> textures;
                                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
                                            textures.emplace_back(self->ogl_->copy_async(image_data[n],
@@ -347,13 +373,17 @@ struct image_mixer::impl
     {
         return spl::make_shared<ogl_frame_converter>(ogl_);
     }
+
+    common::bit_depth depth() const { return renderer_.depth(); }
+    core::color_space color_space() const { return renderer_.color_space(); }
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
-                         int                            channel_id,
+                         const int                      channel_id,
+                         const size_t                   max_frame_size,
                          common::bit_depth              depth,
-                         const size_t                   max_frame_size)
-    : impl_(std::make_unique<impl>(ogl, channel_id, depth, max_frame_size))
+                         core::color_space              color_space)
+    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth, color_space))
 {
 }
 image_mixer::~image_mixer() {}
@@ -368,6 +398,14 @@ core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel
 {
     return impl_->create_frame(tag, desc);
 }
+core::mutable_frame
+image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth)
+{
+    return impl_->create_frame(tag, desc, depth);
+}
 spl::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
+
+common::bit_depth image_mixer::depth() const { return impl_->depth(); }
+core::color_space image_mixer::color_space() const { return impl_->color_space(); }
 
 }}} // namespace caspar::accelerator::ogl

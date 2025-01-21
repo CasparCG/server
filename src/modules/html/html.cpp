@@ -113,9 +113,12 @@ class renderer_application
     void
     OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
     {
+        if (!frame->IsMain())
+            return;
+
         caspar_log(browser,
                    boost::log::trivial::trace,
-                   "context for frame " + std::to_string(frame->GetIdentifier()) + " created");
+                   "context for frame " + frame->GetIdentifier().ToString() + " created");
         contexts_.push_back(context);
 
         auto window = context->GetGlobal();
@@ -142,17 +145,20 @@ class renderer_application
                            CefRefPtr<CefFrame>     frame,
                            CefRefPtr<CefV8Context> context) override
     {
+        if (!frame->IsMain())
+            return;
+
         auto removed =
             boost::remove_if(contexts_, [&](const CefRefPtr<CefV8Context>& c) { return c->IsSame(context); });
 
         if (removed != contexts_.end()) {
             caspar_log(browser,
                        boost::log::trivial::trace,
-                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released");
+                       "context for frame " + frame->GetIdentifier().ToString() + " released");
         } else {
             caspar_log(browser,
                        boost::log::trivial::warning,
-                       "context for frame " + std::to_string(frame->GetIdentifier()) + " released, but not found");
+                       "context for frame " + frame->GetIdentifier().ToString() + " released, but not found");
         }
     }
 
@@ -218,6 +224,12 @@ void init(const core::module_dependencies& dependencies)
         settings.no_sandbox                   = true;
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
+
+        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"");
+        if (!cache_path.empty()) {
+            CefString(&settings.cache_path).FromWString(cache_path);
+        }
+
         CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
     });
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });

@@ -2,13 +2,13 @@
 
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
 // the SDK documentation for the description of the full license terms, which are also provided in the file
-// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// "NDI License Agreement.pdf" within the SDK or online at http://ndi.link/ndisdk_license. Your use of any
 // part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
-// downloaded at http://ndi.tv/
+// downloaded at http://ndi.video/
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2021, NewTek, inc.
+// Copyright (C) 2023-2024 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -29,35 +29,36 @@
 
 // Structures and type definitions required by NDI routing.
 // The reference to an instance of the router.
-typedef void* NDIlib_routing_instance_t;
+struct NDIlib_routing_instance_type;
+typedef struct NDIlib_routing_instance_type* NDIlib_routing_instance_t;
 
-// The creation structure that is used when you are creating a sender
+// The creation structure that is used when you are creating a sender.
 typedef struct NDIlib_routing_create_t
-{	// The name of the NDI source to create. This is a NULL terminated UTF8 string.
+{
+	// The name of the NDI source to create. This is a NULL terminated UTF8 string.
 	const char* p_ndi_name;
 
-	// What groups should this source be part of
+	// What groups should this source be part of.
 	const char* p_groups;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_routing_create_t(const char* p_ndi_name_ = NULL, const char* p_groups_ = NULL);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
-
 } NDIlib_routing_create_t;
 
-// Create an NDI routing source
+// Create an NDI routing source.
 PROCESSINGNDILIB_API
 NDIlib_routing_instance_t NDIlib_routing_create(const NDIlib_routing_create_t* p_create_settings);
 
-// Destroy and NDI routing source
+// Destroy and NDI routing source.
 PROCESSINGNDILIB_API
 void NDIlib_routing_destroy(NDIlib_routing_instance_t p_instance);
 
-// Change the routing of this source to another destination
+// Change the routing of this source to another destination.
 PROCESSINGNDILIB_API
 bool NDIlib_routing_change(NDIlib_routing_instance_t p_instance, const NDIlib_source_t* p_source);
 
-// Change the routing of this source to another destination
+// Change the routing of this source to another destination.
 PROCESSINGNDILIB_API
 bool NDIlib_routing_clear(NDIlib_routing_instance_t p_instance);
 

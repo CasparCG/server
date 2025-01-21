@@ -35,6 +35,7 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include <queue>
 #include <unordered_map>
 #include <vector>
 
@@ -72,16 +73,25 @@ struct mixer::impl
 
         state_["audio"] = audio_mixer_.state();
 
-        buffer_.push(std::async(
-            std::launch::deferred,
-            [image = std::move(image), audio = std::move(audio), graph = graph_, format_desc, tag = this]() mutable {
-                auto image2 = image.get();
-                auto desc   = pixel_format_desc(pixel_format::bgra);
-                desc.planes.emplace_back(format_desc.width, format_desc.height, 4);
-                std::vector<array<const uint8_t>> image_data;
-                image_data.emplace_back(std::move(image2.rgba8));
-                return const_frame(std::move(image_data), std::move(audio), desc, image2.texture);
-            }));
+        auto depth       = image_mixer_->depth();
+        auto color_space = image_mixer_->color_space();
+
+        buffer_.push(std::async(std::launch::deferred,
+                                [image = std::move(image),
+                                 audio = std::move(audio),
+                                 graph = graph_,
+                                 depth,
+                                 color_space,
+                                 format_desc,
+                                 tag = this]() mutable {
+                                    auto image2 = image.get();
+                                    auto desc   = pixel_format_desc(pixel_format::bgra, color_space);
+                                    desc.planes.push_back(
+                                        pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
+                                    std::vector<array<const uint8_t>> image_data;
+                                    image_data.emplace_back(std::move(image2.rgba8)); // TODO - this is wrong for hdr
+                                    return const_frame(std::move(image_data), std::move(audio), desc, image2.texture);
+                                }));
 
         if (buffer_.size() <= format_desc.field_count) {
             return const_frame{};
@@ -112,4 +122,6 @@ mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc
     return impl_->image_mixer_->create_frame(tag, desc);
 }
 core::monitor::state mixer::state() const { return impl_->state_; }
+
+common::bit_depth mixer::depth() const { return impl_->image_mixer_->depth(); }
 }} // namespace caspar::core

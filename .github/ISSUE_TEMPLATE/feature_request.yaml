@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an idea for this project
+labels:
+  - type/enhancement
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you post, make sure to check for existing matching feature requests:
+        https://github.com/CasparCG/server/issues?q=+is%3Aissue+label%3Atype%2Fbug
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: How should the feature/enhancement work?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Solution suggestion
+      description: If you have any suggestions on how the solution should work, add that here.

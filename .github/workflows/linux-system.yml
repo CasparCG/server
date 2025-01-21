@@ -11,38 +11,98 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os:
-                    - ubuntu-20.04
-                    - ubuntu-22.04
+                include:
+                    - os: ubuntu-22.04
+                      distribution: jammy
+                    - os: ubuntu-24.04
+                      distribution: noble
 
         runs-on: ${{ matrix.os }}
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: Setup environment
+              id: setup-env
               run: |
-                  sudo apt-get update
-                  sudo ./tools/linux/install-dependencies
+                  ln -s tools/linux/deb/ubuntu-${{ matrix.distribution }}/debian ./
 
-                  sudo apt-get install -y libboost-all-dev \
-                    libavcodec-dev \
-                    libavformat-dev \
-                    libavdevice-dev \
-                    libavutil-dev \
-                    libavfilter-dev \
-                    libswscale-dev \
-                    libpostproc-dev \
-                    libswresample-dev
+                  # Build a version number for this build
+                  GH_REF="${GITHUB_REF##*/}"
+                  GH_REF=$(echo "$GH_REF" | sed 's/[\/]/_/g' | sed 's/ /_/g')
+
+                  VERSION_MAJOR=$(grep -oPi 'set\(CONFIG_VERSION_MAJOR \K\d+' src/CMakeLists.txt)
+                  VERSION_MINOR=$(grep -oPi 'set\(CONFIG_VERSION_MINOR \K\d+' src/CMakeLists.txt)
+                  VERSION_PATCH=$(grep -oPi 'set\(CONFIG_VERSION_BUG \K\d+' src/CMakeLists.txt)
+
+                  BUILD_VERSION="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}~${GH_REF}-${{ matrix.distribution }}+${GITHUB_SHA:0:7}"
+                  echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+                  echo "Building as $BUILD_VERSION"
+
+                  BUILD_FILENAME="casparcg-server-${BUILD_VERSION}"
+                  echo "BUILD_FILENAME=$BUILD_FILENAME" >> $GITHUB_OUTPUT
+
+                  # install some needed tooling
+                  sudo apt-get update
+                  sudo apt-get -y install software-properties-common build-essential dpkg-dev debhelper devscripts
+                  sudo add-apt-repository ppa:casparcg/ppa
+
+                  # Put something in the changelog
+                  export DEBEMAIL="builds@casparcg.com"
+                  export DEBFULLNAME="CasparCG Builds"
+                  dch -v "$BUILD_VERSION" --create -D ${{ matrix.distribution }} --package casparcg-server-beta "Build"
+
+                  # Install build dependencies
+                  sudo apt-get build-dep .
+
+                  # update the control file to reference the current cef version
+                  CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-131)
+                  sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
+
+                  # Download required packages
+                  cd ..
+                  apt-get download casparcg-cef-131=$CASPARCG_CEF_VER
+                  apt-get download casparcg-scanner
+              env:
+                  CI: 1
 
             - name: Run build
               run: |
+                  # Perform build
+                  debuild -b -uc -us
+              env:
+                  CI: 1
 
-                  mkdir build
-                  cd build
+            - name: Collect artifacts
+              id: artifacts
+              run: |
+                  mkdir -p dist
+                  mv ../*.deb dist/
 
-                  cmake ../src -DUSE_STATIC_BOOST=OFF -DUSE_SYSTEM_FFMPEG=ON
-                  make -j2
+                  # collect some docs for the zip
+                  cp README.md dist/
+                  cp tools/linux/deb/INSTALLING dist/
+
+                  # check if a release branch, or master, or a tag
+                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
+                  then
+                    # Only proceed if we have an sftp password
+                    if [ -n "${{ secrets.SFTP_PASSWORD }}" ]
+                    then
+                      zip -r "${{ steps.setup-env.outputs.BUILD_FILENAME }}.zip" dist
+
+                      set -x
+                      eval $(ssh-agent -s)
+                      mkdir -v -m 700 $HOME/.ssh
+                      ssh-keyscan -H ${{ secrets.SFTP_HOST }} > $HOME/.ssh/known_hosts
+                      sshpass -p '${{ secrets.SFTP_PASSWORD }}' rsync -avvz --mkpath "${{ steps.setup-env.outputs.BUILD_FILENAME }}.zip" "${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_ROOT }}/${{ github.ref_name }}/${{ steps.setup-env.outputs.BUILD_FILENAME }}.zip"
+                    fi
+                  fi
 
               env:
                   CI: 1
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
+                  path: dist

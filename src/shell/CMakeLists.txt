@@ -55,7 +55,9 @@ if (MSVC)
 		Winmm.lib
 		Ws2_32.lib
 		optimized tbb.lib
+		optimized tbbmalloc.lib
 		debug tbb_debug.lib
+		debug tbbmalloc_debug.lib
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
@@ -90,8 +92,6 @@ else ()
 		z
 		pthread
 	)
-
-    set_target_properties(casparcg PROPERTIES INSTALL_RPATH "$ORIGIN/../lib" BUILD_WITH_INSTALL_RPATH ON)
 endif ()
 
 add_custom_target(casparcg_copy_dependencies ALL)

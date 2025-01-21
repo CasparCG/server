@@ -27,7 +27,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/optional.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
 #include <cinttypes>
@@ -55,6 +54,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <set>
 #include <string>

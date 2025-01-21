@@ -212,7 +212,11 @@ struct newtek_ndi_producer : public core::frame_producer
                 if (audio_frame.p_data != nullptr) {
                     audio_frame_32s.reference_level = 0;
                     ndi_lib_->util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
-                    a_frame->channels    = audio_frame_32s.no_channels;
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                    av_channel_layout_default(&a_frame->ch_layout, audio_frame_32s.no_channels);
+#else
+                    a_frame->channels = audio_frame_32s.no_channels;
+#endif
                     a_frame->sample_rate = audio_frame_32s.sample_rate;
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);

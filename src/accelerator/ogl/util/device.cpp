@@ -93,7 +93,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         device_.setActive(true);
 
         auto err = glewInit();
-        if (err != GLEW_OK && err != GLEW_ERROR_NO_GLX_DISPLAY) {
+        if (err != GLEW_OK && err != 4) { // GLEW_ERROR_NO_GLX_DISPLAY
             std::stringstream str;
             str << "Failed to initialize GLEW (" << (int)err << "): " << glewGetErrorString(err) << std::endl;
             CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info(str.str()));
@@ -157,7 +157,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
-        boost::asio::spawn(service_, std::move(task));
+        boost::asio::spawn(service_,
+                           std::move(task)
+#if BOOST_VERSION >= 108000
+                               ,
+                           [](std::exception_ptr e) {
+                               if (e)
+                                   std::rethrow_exception(e);
+                           }
+#endif
+        );
         return future;
     }
 
@@ -186,9 +195,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
         CASPAR_VERIFY(stride > 0 && stride < 5);
         CASPAR_VERIFY(width > 0 && height > 0);
 
+        auto depth_pool_index = depth == common::bit_depth::bit8 ? 0 : 1;
+
         // TODO (perf) Shared pool.
-        auto pool =
-            &device_pools_[static_cast<int>(depth)][stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
+        auto pool = &device_pools_[depth_pool_index][stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
@@ -390,11 +400,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         size_t                       total_pooled_device_buffer_size  = 0;
         size_t                       total_pooled_device_buffer_count = 0;
 
-        for (const auto& depth_pools : device_pools_) {
-            for (size_t i = 0; i < depth_pools.size(); ++i) {
-                auto& pools      = depth_pools.at(i);
-                bool  mipmapping = i > 3;
-                auto  stride     = mipmapping ? i - 3 : i + 1;
+        for (size_t i = 0; i < device_pools_.size(); ++i) {
+            auto& depth_pools = device_pools_.at(i);
+            for (size_t j = 0; j < depth_pools.size(); ++j) {
+                auto& pools      = depth_pools.at(j);
+                bool  mipmapping = j > 3;
+                auto  stride     = mipmapping ? j - 3 : j + 1;
 
                 for (auto& pool : pools) {
                     auto width  = pool.first >> 16;

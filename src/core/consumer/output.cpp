@@ -23,15 +23,16 @@
 #include "frame_consumer.h"
 
 #include "../frame/frame.h"
+#include "../frame/pixel_format.h"
 
+#include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memory.h>
 
-#include <boost/optional.hpp>
-
 #include <chrono>
 #include <map>
+#include <optional>
 #include <thread>
 #include <utility>
 
@@ -49,7 +50,7 @@ struct output::impl
     std::mutex                                     consumers_mutex_;
     std::map<int, spl::shared_ptr<frame_consumer>> consumers_;
 
-    boost::optional<time_point_t> time_;
+    std::optional<time_point_t> time_;
 
   public:
     impl(const spl::shared_ptr<diagnostics::graph>& graph, video_format_desc format_desc, int channel_index)
@@ -80,14 +81,16 @@ struct output::impl
 
     bool remove(const spl::shared_ptr<frame_consumer>& consumer) { return remove(consumer->index()); }
 
+    size_t consumer_count()
+    {
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        return consumers_.size();
+    }
+
     void operator()(const const_frame&             input_frame1,
                     const const_frame&             input_frame2,
                     const core::video_format_desc& format_desc)
     {
-        if (!input_frame1) {
-            return;
-        }
-
         auto time = std::move(time_);
 
         if (format_desc_ != format_desc) {
@@ -102,18 +105,37 @@ struct output::impl
                 }
             }
             format_desc_ = format_desc;
-            time_        = boost::none;
+            time_        = {};
             return;
         }
 
-        if (input_frame1.size() != format_desc_.size) {
+        // If no frame is provided, this should only happen when the channel has no consumers.
+        // Take a shortcut and perform the sleep to let the channel tick correctly.
+        if (!input_frame1) {
+            if (!time) {
+                time = std::chrono::high_resolution_clock::now();
+            } else {
+                std::this_thread::sleep_until(*time);
+            }
+            time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.hz));
+            return;
+        }
+
+        const auto bytesPerComponent1 =
+            input_frame1.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+        if (input_frame1.size() != format_desc_.size * bytesPerComponent1) {
             CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
 
-        if (input_frame2 && input_frame2.size() != format_desc_.size) {
-            CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
-            return;
+        if (input_frame2) {
+            const auto bytesPerComponent2 =
+                input_frame2.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+
+            if (input_frame2.size() != format_desc_.size * bytesPerComponent2) {
+                CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
+                return;
+            }
         }
 
         decltype(consumers_) consumers;
@@ -196,11 +218,12 @@ output::output(const spl::shared_ptr<diagnostics::graph>& graph,
 {
 }
 output::~output() {}
-void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
-void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
-bool output::remove(int index) { return impl_->remove(index); }
-bool output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
-void output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
+void   output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
+void   output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
+bool   output::remove(int index) { return impl_->remove(index); }
+bool   output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
+size_t output::consumer_count() const { return impl_->consumer_count(); }
+void   output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
 {
     return (*impl_)(frame, frame2, format_desc);
 }

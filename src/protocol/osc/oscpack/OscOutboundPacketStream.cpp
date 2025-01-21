@@ -63,7 +63,7 @@ static void FromInt32(char* p, int32_t x)
     p[0] = u.c[3];*/
     *reinterpret_cast<int32_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<int32_t*>(p)               = x;
+    *reinterpret_cast<int32_t*>(p) = x;
 #endif
 }
 
@@ -83,7 +83,7 @@ static void FromUInt32(char* p, uint32_t x)
     p[0] = u.c[3];*/
     *reinterpret_cast<uint32_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<uint32_t*>(p)              = x;
+    *reinterpret_cast<uint32_t*>(p) = x;
 #endif
 }
 
@@ -107,7 +107,7 @@ static void FromInt64(char* p, int64_t x)
     p[0] = u.c[7];*/
     *reinterpret_cast<int64_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<int64_t*>(p)               = x;
+    *reinterpret_cast<int64_t*>(p) = x;
 #endif
 }
 
@@ -131,7 +131,7 @@ static void FromUInt64(char* p, uint64_t x)
     p[0] = u.c[7];*/
     *reinterpret_cast<uint64_t*>(p) = caspar::swap_byte_order(x);
 #else
-    *reinterpret_cast<uint64_t*>(p)              = x;
+    *reinterpret_cast<uint64_t*>(p) = x;
 #endif
 }
 
@@ -421,7 +421,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<(float rhs)
     argumentCurrent_[1] = u.c[2];
     argumentCurrent_[0] = u.c[3];
 #else
-    *reinterpret_cast<float*>(argumentCurrent_)  = rhs;
+    *reinterpret_cast<float*>(argumentCurrent_) = rhs;
 #endif
 
     argumentCurrent_ += 4;

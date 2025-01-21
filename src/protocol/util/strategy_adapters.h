@@ -106,36 +106,4 @@ class delimiter_based_chunking_strategy_factory : public protocol_strategy_facto
     }
 };
 
-/**
- * Adapts an IProtocolStrategy to be used as a
- * protocol_strategy_factory<wchar_t>.
- *
- * Use wrap_legacy_protocol() to wrap it as a protocol_strategy_factory<char>
- * for use directly by the async event server.
- */
-class legacy_strategy_adapter_factory : public protocol_strategy_factory<wchar_t>
-{
-    ProtocolStrategyPtr strategy_;
-
-  public:
-    legacy_strategy_adapter_factory(const ProtocolStrategyPtr& strategy);
-
-    protocol_strategy<wchar_t>::ptr create(const client_connection<wchar_t>::ptr& client_connection) override;
-};
-
-/**
- * Wraps an IProtocolStrategy in a legacy_strategy_adapter_factory, wrapped in
- * a to_unicode_adapter_factory (using the codepage reported by the
- * IProtocolStrategy) wrapped in a delimiter_based_chunking_strategy_factory
- * with the given delimiter string.
- *
- * @param delimiter The delimiter to use to separate messages.
- * @param strategy  The legacy protocol strategy (the same instance will serve
- *                  all connections).
- *
- * @return the adapted strategy.
- */
-protocol_strategy_factory<char>::ptr wrap_legacy_protocol(const std::string&         delimiter,
-                                                          const ProtocolStrategyPtr& strategy);
-
 }} // namespace caspar::IO

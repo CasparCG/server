@@ -27,6 +27,7 @@
 #else
 #ifdef _MSC_VER
 #include <intrin.h>
+#include <tbb/scalable_allocator.h>
 #else
 #include <tmmintrin.h>
 #endif

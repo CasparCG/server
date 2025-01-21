@@ -20,9 +20,25 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 # Windows
 
+## Building distributable
+
+1. Install Visual Studio 2022.
+
+2. Install CMake (http://www.cmake.org/download/).
+
+3. Install 7-zip (https://www.7-zip.org/).
+
+4. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+
+5. `cd casparcg-server-master`
+
+6. `.\tools\windows\build.bat`
+
+7. Copy the `dist\casparcg_server.zip` file for distribution
+
 ## Development using Visual Studio
 
-1. Install Visual Studio 2019.
+1. Install Visual Studio 2022.
 
 2. Install CMake (http://www.cmake.org/download/).
 
@@ -34,7 +50,7 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 6. `cd build`
 
-7. `cmake -G "Visual Studio 16 2019" -A x64 ../src`
+7. `cmake -G "Visual Studio 17 2022" -A x64 ../src`
 
 8. Open `CasparCG Server.sln`
 

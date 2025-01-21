@@ -17,7 +17,6 @@
 #include <common/assert.h>
 #include <common/env.h>
 #include <common/except.h>
-#include <common/forward.h>
 #include <common/future.h>
 #include <common/gl/gl_check.h>
 #include <common/memory.h>

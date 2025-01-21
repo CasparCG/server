@@ -24,6 +24,7 @@
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_visitor.h>
+#include <core/frame/pixel_format.h>
 
 #include <cstdint>
 #include <future>
@@ -60,8 +61,14 @@ class image_mixer
     virtual std::future<mixed_image> operator()(const struct video_format_desc& format_desc) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
+    class mutable_frame create_frame(const void*                     video_stream_tag,
+                                     const struct pixel_format_desc& desc,
+                                     common::bit_depth               depth) override                               = 0;
 
     spl::shared_ptr<frame_converter> create_frame_converter() override = 0;
+
+    virtual common::bit_depth depth() const       = 0;
+    virtual core::color_space color_space() const = 0;
 };
 
 }} // namespace caspar::core

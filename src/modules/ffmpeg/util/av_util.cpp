@@ -1,6 +1,7 @@
 #include "av_util.h"
-
 #include "av_assert.h"
+
+#include <common/bit_depth.h>
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -22,6 +23,8 @@ extern "C" {
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <tuple>
+
 namespace caspar { namespace ffmpeg {
 
 std::shared_ptr<AVFrame> alloc_frame()
@@ -40,12 +43,25 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
-core::mutable_frame copy_frame_tmp(core::mutable_frame            frame,
-                                   const core::pixel_format_desc& pix_desc,
-                                   const std::vector<int>&        data_map,
-                                   std::shared_ptr<AVFrame>       video,
-                                   std::shared_ptr<AVFrame>       audio)
+core::mutable_frame make_frame(void*                            tag,
+                               core::frame_factory&             frame_factory,
+                               std::shared_ptr<AVFrame>         video,
+                               std::shared_ptr<AVFrame>         audio,
+                               core::color_space                color_space,
+                               core::frame_geometry::scale_mode scale_mode)
 {
+    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
+
+    const auto pix_desc =
+        video ? pixel_format_desc(
+                    static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map, color_space)
+              : core::pixel_format_desc(core::pixel_format::invalid);
+
+    auto frame = frame_factory.create_frame(tag, pix_desc);
+    if (scale_mode != core::frame_geometry::scale_mode::stretch) {
+        frame.geometry() = core::frame_geometry::get_default(scale_mode);
+    }
+
     tbb::parallel_invoke(
         [&]() {
             if (video) {
@@ -62,13 +78,28 @@ core::mutable_frame copy_frame_tmp(core::mutable_frame            frame,
         },
         [&]() {
             if (audio) {
-                // TODO This is a bit of a hack
-                frame.audio_data() = std::vector<int32_t>(audio->nb_samples * 8, 0);
-                auto dst           = frame.audio_data().data();
-                auto src           = reinterpret_cast<int32_t*>(audio->data[0]);
-                for (auto i = 0; i < audio->nb_samples; i++) {
-                    for (auto j = 0; j < std::min(8, audio->channels); ++j) {
-                        dst[i * 8 + j] = src[i * audio->channels + j];
+                const int channel_count = 16;
+                frame.audio_data()      = std::vector<int32_t>(audio->nb_samples * channel_count, 0);
+
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                auto source_channel_count = audio->ch_layout.nb_channels;
+#else
+                auto source_channel_count = audio->channels;
+#endif
+
+                if (source_channel_count == channel_count) {
+                    std::memcpy(frame.audio_data().data(),
+                                reinterpret_cast<int32_t*>(audio->data[0]),
+                                sizeof(int32_t) * channel_count * audio->nb_samples);
+                } else {
+                    // This isn't pretty, but some callers may not provide 16 channels
+
+                    auto dst = frame.audio_data().data();
+                    auto src = reinterpret_cast<int32_t*>(audio->data[0]);
+                    for (auto i = 0; i < audio->nb_samples; i++) {
+                        for (auto j = 0; j < std::min(channel_count, source_channel_count); ++j) {
+                            dst[i * channel_count + j] = src[i * source_channel_count + j];
+                        }
                     }
                 }
             }
@@ -77,120 +108,122 @@ core::mutable_frame copy_frame_tmp(core::mutable_frame            frame,
     return frame;
 }
 
-core::mutable_frame make_frame(void*                    tag,
-                               core::frame_factory&     frame_factory,
-                               std::shared_ptr<AVFrame> video,
-                               std::shared_ptr<AVFrame> audio)
-{
-    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
-
-    const auto pix_desc =
-        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
-              : core::pixel_format_desc(core::pixel_format::invalid);
-
-    auto frame = frame_factory.create_frame(tag, pix_desc);
-
-    return copy_frame_tmp(std::move(frame), pix_desc, data_map, std::move(video), std::move(audio));
-}
-
-//core::mutable_frame make_frame2(void*                                         tag,
-//                                const std::shared_ptr<core::frame_converter>& frame_factory,
-//                                std::shared_ptr<AVFrame>                      video,
-//                                std::shared_ptr<AVFrame>                      audio)
-//{
-//    std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
-//
-//    const auto pix_desc =
-//        video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map)
-//              : core::pixel_format_desc(core::pixel_format::invalid);
-//
-//    auto frame = frame_factory->create_frame(tag, pix_desc);
-//
-//    return copy_frame_tmp(std::move(frame), pix_desc, data_map, std::move(video), std::move(audio));
-//}
-
-core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
+std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat pix_fmt)
 {
     switch (pix_fmt) {
         case AV_PIX_FMT_GRAY8:
-            return core::pixel_format::gray;
+            return {core::pixel_format::gray, common::bit_depth::bit8};
         case AV_PIX_FMT_RGB24:
-        case AV_PIX_FMT_RGB48LE:
-            return core::pixel_format::rgb;
+            return {core::pixel_format::rgb, common::bit_depth::bit8};
+        case AV_PIX_FMT_RGB48:
+            return {core::pixel_format::rgb, common::bit_depth::bit16};
         case AV_PIX_FMT_BGR24:
-        case AV_PIX_FMT_BGR48LE:
-            return core::pixel_format::bgr;
+            return {core::pixel_format::bgr, common::bit_depth::bit8};
+        case AV_PIX_FMT_BGR48:
+            return {core::pixel_format::bgr, common::bit_depth::bit16};
         case AV_PIX_FMT_BGRA:
-        case AV_PIX_FMT_BGRA64LE:
-            return core::pixel_format::bgra;
+            return {core::pixel_format::bgra, common::bit_depth::bit8};
+        case AV_PIX_FMT_BGRA64:
+            return {core::pixel_format::bgra, common::bit_depth::bit16};
         case AV_PIX_FMT_ARGB:
-            return core::pixel_format::argb;
+            return {core::pixel_format::argb, common::bit_depth::bit8};
         case AV_PIX_FMT_RGBA:
-        case AV_PIX_FMT_RGBA64LE:
-            return core::pixel_format::rgba;
+            return {core::pixel_format::rgba, common::bit_depth::bit8};
+        case AV_PIX_FMT_RGBA64:
+            return {core::pixel_format::rgba, common::bit_depth::bit16};
         case AV_PIX_FMT_ABGR:
-            return core::pixel_format::abgr;
+            return {core::pixel_format::abgr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV444P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV444P10:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUV444P12:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit12};
+        case AV_PIX_FMT_YUV444P16:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit16};
         case AV_PIX_FMT_YUV422P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV422P10:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUV422P12:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit12};
+        case AV_PIX_FMT_YUV422P16:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit16};
         case AV_PIX_FMT_YUV420P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV420P10:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUV420P12:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit12};
+        case AV_PIX_FMT_YUV420P16:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit16};
         case AV_PIX_FMT_YUV411P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV410P:
-            return core::pixel_format::ycbcr;
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUVA420P:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUVA420P10:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUVA420P16:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit16};
         case AV_PIX_FMT_YUVA422P:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUVA422P10:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUVA422P12:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit12};
+        case AV_PIX_FMT_YUVA422P16:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit16};
         case AV_PIX_FMT_YUVA444P:
-            return core::pixel_format::ycbcra;
+            return {core::pixel_format::ycbcra, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUVA444P10:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUVA444P12:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit12};
+        case AV_PIX_FMT_YUVA444P16:
+            return {core::pixel_format::ycbcra, common::bit_depth::bit16};
         case AV_PIX_FMT_UYVY422:
-            return core::pixel_format::uyvy;
-        case AV_PIX_FMT_YUV444P10LE:
-        case AV_PIX_FMT_YUV422P10LE:
-        case AV_PIX_FMT_YUV420P10LE:
-            return core::pixel_format::ycbcr10;
-        case AV_PIX_FMT_YUV444P16LE:
-        case AV_PIX_FMT_YUV422P16LE:
-        case AV_PIX_FMT_YUV420P16LE:
-            return core::pixel_format::ycbcr16;
-        case AV_PIX_FMT_YUVA444P10LE:
-        case AV_PIX_FMT_YUVA422P10LE:
-        case AV_PIX_FMT_YUVA420P10LE:
-            return core::pixel_format::ycbcra10;
-        case AV_PIX_FMT_YUVA444P16LE:
-        case AV_PIX_FMT_YUVA422P16LE:
-        case AV_PIX_FMT_YUVA420P16LE:
-            return core::pixel_format::ycbcra16;
+            return {core::pixel_format::uyvy, common::bit_depth::bit8};
         default:
-            return core::pixel_format::invalid;
+            return {core::pixel_format::invalid, common::bit_depth::bit8};
     }
 }
 
-core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height, std::vector<int>& data_map)
+core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
+                                          int               width,
+                                          int               height,
+                                          std::vector<int>& data_map,
+                                          core::color_space color_space)
 {
     // Get linesizes
     int linesizes[4];
     av_image_fill_linesizes(linesizes, pix_fmt, width);
 
-    core::pixel_format_desc desc = core::pixel_format_desc(get_pixel_format(pix_fmt));
+    const auto fmt   = get_pixel_format(pix_fmt);
+    auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
+    auto       depth = std::get<1>(fmt);
+    auto       bpc   = depth == common::bit_depth::bit8 ? 1 : 2;
+
+    for (int i = 0; i < 4; i++)
+        linesizes[i] /= bpc;
 
     switch (desc.format) {
         case core::pixel_format::gray:
         case core::pixel_format::luma: {
-            desc.planes.emplace_back(linesizes[0], height, 1);
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
             return desc;
         }
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
-            auto depth =  (pix_fmt == AV_PIX_FMT_BGR48LE || pix_fmt==AV_PIX_FMT_RGB48LE) ? common::bit_depth::bit16:common::bit_depth::bit8;
-            auto scale = depth == common::bit_depth::bit16?6:3;
-            desc.planes.emplace_back(linesizes[0] / scale, height, 3, depth);
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 3, height, 3, depth));
             return desc;
         }
         case core::pixel_format::bgra:
         case core::pixel_format::argb:
         case core::pixel_format::rgba:
         case core::pixel_format::abgr: {
-            auto depth =  (pix_fmt == AV_PIX_FMT_BGRA64LE || pix_fmt==AV_PIX_FMT_RGBA64LE) ? common::bit_depth::bit16:common::bit_depth::bit8;
-            auto scale = depth == common::bit_depth::bit16?8:4;
-            desc.planes.emplace_back(linesizes[0] / scale, height, 4, depth);
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
             return desc;
         }
         case core::pixel_format::ycbcr:
@@ -201,42 +234,21 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int 
             for (int i = 0; i < 4; i++)
                 linesizes1[i] = linesizes[i];
             av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
+            auto size2 = static_cast<int>(sizes[1]);
+            auto h2    = size2 / linesizes[1];
 
-            auto h2 = static_cast<int>(sizes[1]) / linesizes[1];
-
-            desc.planes.emplace_back(linesizes[0], height, 1);
-            desc.planes.emplace_back(linesizes[1], h2, 1);
-            desc.planes.emplace_back(linesizes[2], h2, 1);
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], h2, 1, depth));
 
             if (desc.format == core::pixel_format::ycbcra)
-                desc.planes.emplace_back(linesizes[3], height, 1);
-
-            return desc;
-        }
-        case core::pixel_format::ycbcr10:
-        case core::pixel_format::ycbcra10:
-        case core::pixel_format::ycbcr16:
-        case core::pixel_format::ycbcra16: {
-            size_t    sizes[4];
-            ptrdiff_t linesizes1[4];
-            for (int i = 0; i < 4; i++)
-                linesizes1[i] = linesizes[i];
-            av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
-
-            auto h2 = static_cast<int>(sizes[1]) / linesizes[1];
-
-            desc.planes.emplace_back(linesizes[0] / 2, height, 1, common::bit_depth::bit16);
-            desc.planes.emplace_back(linesizes[1] / 2, h2, 1, common::bit_depth::bit16);
-            desc.planes.emplace_back(linesizes[2] / 2, h2, 1, common::bit_depth::bit16);
-
-            if (desc.format == core::pixel_format::ycbcra10)
-                desc.planes.emplace_back(linesizes[3] / 2, height, 1, common::bit_depth::bit16);
+                desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1, depth));
 
             return desc;
         }
         case core::pixel_format::uyvy: {
-            desc.planes.emplace_back(linesizes[0] / 2, height, 2);
-            desc.planes.emplace_back(linesizes[0] / 4, height, 4);
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 2, height, 2, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 4, height, 4, depth));
 
             data_map.clear();
             data_map.push_back(0);
@@ -266,28 +278,29 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     av_frame->width               = format_desc.width;
     av_frame->height              = format_desc.height;
 
+    const auto is_16bit = planes[0].depth != common::bit_depth::bit8;
     switch (format) {
         case core::pixel_format::rgb:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_RGB48 : AVPixelFormat::AV_PIX_FMT_RGB24;
             break;
         case core::pixel_format::bgr:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGR48 : AVPixelFormat::AV_PIX_FMT_BGR24;
             break;
         case core::pixel_format::rgba:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_RGBA64 : AVPixelFormat::AV_PIX_FMT_RGBA;
             break;
         case core::pixel_format::argb:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_ARGB;
             break;
         case core::pixel_format::bgra:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_BGRA;
             break;
         case core::pixel_format::abgr:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_ABGR;
             break;
         case core::pixel_format::gray:
         case core::pixel_format::luma:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_GRAY16 : AVPixelFormat::AV_PIX_FMT_GRAY8;
             break;
         case core::pixel_format::ycbcr: {
             int y_w = planes[0].width;
@@ -296,27 +309,30 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
             int c_h = planes[1].height;
 
             if (c_h == y_h && c_w == y_w)
-                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
+                av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV444P10 : AVPixelFormat::AV_PIX_FMT_YUV444P;
             else if (c_h == y_h && c_w * 2 == y_w)
-                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
+                av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV422P10 : AVPixelFormat::AV_PIX_FMT_YUV422P;
             else if (c_h == y_h && c_w * 4 == y_w)
-                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
+                av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV422P10 : AVPixelFormat::AV_PIX_FMT_YUV411P;
             else if (c_h * 2 == y_h && c_w * 2 == y_w)
-                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+                av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV420P10 : AVPixelFormat::AV_PIX_FMT_YUV420P;
             else if (c_h * 2 == y_h && c_w * 4 == y_w)
-                av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
+                av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV420P10 : AVPixelFormat::AV_PIX_FMT_YUV410P;
 
             break;
         }
         case core::pixel_format::ycbcra:
-            av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
+            av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUVA420P10 : AVPixelFormat::AV_PIX_FMT_YUVA420P;
+            break;
+        case core::pixel_format::uyvy:
+            // TODO
             break;
         case core::pixel_format::count:
         case core::pixel_format::invalid:
             break;
     }
 
-    FF(av_frame_get_buffer(av_frame.get(), 32));
+    FF(av_frame_get_buffer(av_frame.get(), is_16bit ? 64 : 32));
 
     // TODO (perf) Avoid extra memcpy.
     for (int n = 0; n < planes.size(); ++n) {
@@ -337,11 +353,15 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     const auto& buffer = frame.audio_data();
 
     // TODO (fix) Use sample_format_desc.
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    av_channel_layout_default(&av_frame->ch_layout, format_desc.audio_channels);
+#else
     av_frame->channels       = format_desc.audio_channels;
     av_frame->channel_layout = av_get_default_channel_layout(av_frame->channels);
-    av_frame->sample_rate    = format_desc.audio_sample_rate;
-    av_frame->format         = AV_SAMPLE_FMT_S32;
-    av_frame->nb_samples     = static_cast<int>(buffer.size() / av_frame->channels);
+#endif
+    av_frame->sample_rate = format_desc.audio_sample_rate;
+    av_frame->format      = AV_SAMPLE_FMT_S32;
+    av_frame->nb_samples  = static_cast<int>(buffer.size() / format_desc.audio_channels);
     FF(av_frame_get_buffer(av_frame.get(), 32));
     std::memcpy(av_frame->data[0], buffer.data(), buffer.size() * sizeof(buffer.data()[0]));
 
@@ -374,6 +394,20 @@ std::map<std::string, std::string> to_map(AVDictionary** dict)
     }
     av_dict_free(dict);
     return map;
+}
+
+uint64_t get_channel_layout_mask_for_channels(int channel_count)
+{
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    AVChannelLayout layout = AV_CHANNEL_LAYOUT_STEREO;
+    av_channel_layout_default(&layout, channel_count);
+    uint64_t channel_layout = layout.u.mask;
+    av_channel_layout_uninit(&layout);
+
+    return channel_layout;
+#else
+    return av_get_default_channel_layout(channel_count);
+#endif
 }
 
 }} // namespace caspar::ffmpeg

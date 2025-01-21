@@ -322,7 +322,7 @@ frame_transform tweened_transform::fetch()
 
 void tweened_transform::tick(int num) { time_ = std::min(time_ + num, duration_); }
 
-boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
+std::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
 {
     if (boost::iequals(str, L"none")) {
         return chroma::legacy_type::none;
@@ -333,7 +333,7 @@ boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
     if (boost::iequals(str, L"blue")) {
         return chroma::legacy_type::blue;
     } else {
-        return boost::none;
+        return {};
     }
 }
 

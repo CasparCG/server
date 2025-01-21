@@ -1,0 +1,50 @@
+Source: casparcg-server-beta
+Maintainer: Julian Waller <git@julusian.co.uk>
+Section: video
+Priority: optional
+Standards-Version: 4.6.0.1
+Build-Depends: cmake,
+               debhelper-compat (= 13),
+               dh-exec,
+               libavcodec-dev,
+               libavdevice-dev,
+               libavfilter-dev,
+               libavformat-dev,
+               libavutil-dev,
+               libboost-chrono-dev,
+               libboost-coroutine-dev,
+               libboost-date-time-dev,
+               libboost-dev,
+               libboost-filesystem-dev,
+               libboost-locale-dev,
+               libboost-log-dev,
+               libboost-regex-dev,
+               libboost-system-dev,
+               libboost-thread-dev,
+               libfreeimage-dev,
+               libicu-dev,
+               libglew-dev,
+               libjpeg-dev,
+               libopenal-dev,
+               libpostproc-dev,
+               libsfml-dev,
+               libsimde-dev,
+               libswresample-dev,
+               libswscale-dev,
+               libtbb-dev,
+               libxrandr-dev,
+               pkg-config,
+               txt2man,
+               zlib1g-dev,
+               casparcg-cef-131-dev
+Homepage: https://github.com/CasparCG/server/
+Vcs-Git: https://github.com/CasparCG/server.git
+Vcs-Browser: https://github.com/CasparCG/server/
+
+Package: casparcg-server-beta
+Pre-Depends: ${misc:Pre-Depends}
+Depends: fonts-liberation, casparcg-cef-131 (= @CASPARCG_CEF_VER@), ${misc:Depends}, ${shlibs:Depends}
+Architecture: amd64
+Description: layered real-time video compositor to multiple outputs
+ Play out professional graphics, audio and video to multiple outputs as a
+ layerbased real-time compositor.

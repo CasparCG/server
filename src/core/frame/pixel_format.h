@@ -24,6 +24,8 @@
 #include <common/bit_depth.h>
 #include <vector>
 
+#include <common/bit_depth.h>
+
 namespace caspar { namespace core {
 
 enum class pixel_format
@@ -39,12 +41,19 @@ enum class pixel_format
     bgr,
     rgb,
     uyvy,
-    ycbcr10,
-    ycbcra10,
-    ycbcr16,
-    ycbcra16,
+    // ycbcr10,
+    // ycbcra10,
+    // ycbcr16,
+    // ycbcra16,
     count,
     invalid,
+};
+
+enum class color_space
+{
+    bt601,
+    bt709,
+    bt2020,
 };
 
 struct pixel_format_desc final
@@ -60,12 +69,7 @@ struct pixel_format_desc final
 
         plane() = default;
 
-        plane(int width, int height, int stride)
-            : plane(width, height, stride, common::bit_depth::bit8)
-        {
-        }
-
-        plane(int width, int height, int stride, common::bit_depth depth)
+        plane(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8)
             : linesize(width * stride * common::bytes_per_pixel(depth))
             , width(width)
             , height(height)
@@ -78,14 +82,16 @@ struct pixel_format_desc final
 
     pixel_format_desc() = default;
 
-    explicit pixel_format_desc(pixel_format format)
+    explicit pixel_format_desc(pixel_format format, core::color_space color_space = core::color_space::bt709)
         : format(format)
+        , color_space(color_space)
     {
     }
 
     pixel_format       format      = pixel_format::invalid;
     bool               is_straight = false;
     std::vector<plane> planes;
+    core::color_space  color_space = core::color_space::bt709;
 };
 
 }} // namespace caspar::core

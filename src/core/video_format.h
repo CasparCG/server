@@ -73,6 +73,14 @@ enum class video_format
     x2160p5000,
     x2160p5994,
     x2160p6000,
+    x4kDCIp2398,
+    x4kDCIp2400,
+    x4kDCIp2500,
+    x4kDCIp2997,
+    x4kDCIp3000,
+    x4kDCIp5000,
+    x4kDCIp5994,
+    x4kDCIp6000,
     invalid,
     custom,
     count
@@ -95,7 +103,7 @@ struct video_format_desc final
     std::size_t          size; // frame size in bytes
     std::wstring         name; // name of output format
 
-    int              audio_channels = 8;
+    int              audio_channels = 16;
     int              audio_sample_rate;
     std::vector<int> audio_cadence; // rotating optimal number of samples per frame
 

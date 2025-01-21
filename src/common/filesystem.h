@@ -23,7 +23,14 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include <optional>
+
 namespace caspar {
+
+std::optional<boost::filesystem::path>
+find_file_within_dir_or_absolute(const std::wstring&                                        parent_dir,
+                                 const std::wstring&                                        filename,
+                                 const std::function<bool(const boost::filesystem::path&)>& is_valid_file);
 
 boost::filesystem::path get_relative(const boost::filesystem::path& file, const boost::filesystem::path& relative_to);
 boost::filesystem::path get_relative_without_extension(const boost::filesystem::path& file,

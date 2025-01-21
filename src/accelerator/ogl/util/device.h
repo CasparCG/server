@@ -37,13 +37,13 @@ namespace caspar { namespace accelerator { namespace ogl {
 // This must match description_layout in shader_from_rgba.comp
 struct convert_from_texture_description
 {
-    uint32_t     target_format;
-    uint32_t     is_16_bit;
+    uint32_t target_format;
+    uint32_t is_16_bit;
     uint32_t width;
     uint32_t height;
     uint32_t words_per_line;
-    uint32_t     key_only;
-    uint32_t     straighten;
+    uint32_t key_only;
+    uint32_t straighten;
 };
 
 class device final

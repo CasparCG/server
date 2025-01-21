@@ -64,6 +64,9 @@ class frame_factory
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
 
+    virtual class mutable_frame
+    create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, common::bit_depth depth) = 0;
+
     virtual spl::shared_ptr<frame_converter> create_frame_converter() = 0;
 };
 

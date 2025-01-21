@@ -26,7 +26,7 @@ extern "C" {
 
 namespace caspar { namespace ffmpeg {
 
-Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph, boost::optional<bool> seekable)
+Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph, std::optional<bool> seekable)
     : filename_(filename)
     , graph_(graph)
     , seekable_(seekable)
@@ -100,7 +100,7 @@ bool Input::try_pop(std::shared_ptr<AVPacket>& packet)
     return result;
 }
 
-AVFormatContext* Input::operator->() { return ic_.get(); }
+AVFormatContext*       Input::operator->() { return ic_.get(); }
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
 void Input::abort()

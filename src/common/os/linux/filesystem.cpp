@@ -23,8 +23,6 @@
 
 #include "../filesystem.h"
 
-#include <list>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 
@@ -32,7 +30,7 @@ using namespace boost::filesystem;
 
 namespace caspar {
 
-boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
+std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
 {
     path p(case_insensitive);
 
@@ -53,7 +51,7 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
             bool found = false;
 
             for (auto it = directory_iterator(absolute(result)); it != directory_iterator(); ++it) {
-                auto leaf = it->path().leaf();
+                auto leaf = it->path().filename();
 
                 if (boost::algorithm::iequals(part.wstring(), leaf.wstring(), loc)) {
                     result = result / leaf;
@@ -63,7 +61,7 @@ boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_ins
             }
 
             if (!found)
-                return boost::none;
+                return {};
         }
     }
 

@@ -29,6 +29,8 @@
 #include <set>
 #include <string>
 
+#include <boost/filesystem.hpp>
+
 struct FIBITMAP;
 
 namespace caspar { namespace image {
@@ -42,8 +44,8 @@ struct loaded_image
     bool                      is_straight;
 };
 
-loaded_image                  load_image(const std::wstring& filename, bool allow_all_formats);
-loaded_image                  load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
-const std::set<std::wstring>& supported_extensions();
+loaded_image load_image(const std::wstring& filename, bool allow_all_formats);
+loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
+bool         is_valid_file(const boost::filesystem::path& filename);
 
 }} // namespace caspar::image

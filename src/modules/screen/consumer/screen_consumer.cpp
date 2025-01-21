@@ -609,13 +609,17 @@ struct screen_consumer_proxy : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
                                                       const core::video_format_repository&          format_repository,
                                                       const spl::shared_ptr<core::frame_converter>& frame_converter,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      common::bit_depth                                        depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
     }
 
     configuration config;
+
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Screen consumer only supports 8-bit color depth."));
 
     if (params.size() > 1) {
         try {
@@ -634,6 +638,19 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
+    if (contains_param(L"X", params)) {
+        config.screen_x = get_param(L"X", params, 0);
+    }
+    if (contains_param(L"Y", params)) {
+        config.screen_y = get_param(L"Y", params, 0);
+    }
+    if (contains_param(L"WIDTH", params)) {
+        config.screen_width = get_param(L"WIDTH", params, 0);
+    }
+    if (contains_param(L"HEIGHT", params)) {
+        config.screen_height = get_param(L"HEIGHT", params, 0);
+    }
+
     if (config.sbs_key && config.key_only) {
         CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
         config.key_only = false;
@@ -646,9 +663,14 @@ spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const spl::shared_ptr<core::frame_converter>&            frame_converter,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              common::bit_depth                                        depth)
 {
     configuration config;
+
+    if (depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Screen consumer only supports 8-bit color depth."));
+
     config.name          = ptree.get(L"name", config.name);
     config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
     config.screen_x      = ptree.get(L"x", config.screen_x);

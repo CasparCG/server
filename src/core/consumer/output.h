@@ -24,14 +24,12 @@
 #include "../fwd.h"
 #include "../monitor/monitor.h"
 
-#include <common/forward.h>
 #include <common/memory.h>
-
 #include <core/video_format.h>
 
 #include <memory>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics { class graph; }
 
 namespace caspar { namespace core {
 
@@ -53,6 +51,8 @@ class output final
     void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
     bool remove(const spl::shared_ptr<frame_consumer>& consumer);
     bool remove(int index);
+
+    size_t consumer_count() const;
 
     core::monitor::state state() const;
 

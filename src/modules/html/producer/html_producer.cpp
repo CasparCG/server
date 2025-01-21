@@ -40,7 +40,6 @@
 #include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -58,6 +57,7 @@
 #include <include/cef_render_handler.h>
 #pragma warning(pop)
 
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -216,6 +216,7 @@ class html_client
 
     bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
                        CefRefPtr<CefFrame>            frame,
+                       int                            popup_id,
                        const CefString&               target_url,
                        const CefString&               target_frame_name,
                        WindowOpenDisposition          target_disposition,
@@ -541,8 +542,8 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
 
     const auto url = found_filename ? L"file://" + *found_filename : param_url;
 
-    boost::optional<int> width;
-    boost::optional<int> height;
+    std::optional<int> width;
+    std::optional<int> height;
     {
         auto u8_url = u8(url);
 

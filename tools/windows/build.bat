@@ -1,11 +1,11 @@
 @echo off
 
 set BUILD_ARCHIVE_NAME=casparcg_server
-set BUILD_VCVARSALL=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat
+set BUILD_VCVARSALL=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat
 set BUILD_7ZIP=C:\Program Files\7-Zip\7z.exe
 
 @REM Github Actions has Enterprise available
-if DEFINED CI set BUILD_VCVARSALL=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat
+if DEFINED CI set BUILD_VCVARSALL=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat
 
 :: Clean and enter shadow build folder
 echo Cleaning...
@@ -18,7 +18,7 @@ call "%BUILD_VCVARSALL%" amd64 || goto :error
 
 :: Run cmake
 cd dist || goto :error
-cmake -G "Visual Studio 16 2019" -A x64 ..\src || goto :error
+cmake -G "Visual Studio 17 2022" -A x64 ..\src || goto :error
 
 :: Build with MSBuild
 echo Building...

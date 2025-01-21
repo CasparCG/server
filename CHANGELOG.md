@@ -1,4 +1,4 @@
-CasparCG 2.4.0 (Unreleased) 
+CasparCG 2.4.0 Stable
 ==========================================
 
 ### Core
@@ -8,24 +8,32 @@ CasparCG 2.4.0 (Unreleased)
 * Preserve unicode characters in console input/output
 * Producers to be run at startup can be defined in casparcg.config
 * Support 8K frames
+* Support 4K DCI frames
 * Remove undocumented CII and CLK protocol implementations
+* Config parameter can be an absolute system path, not just relative to the working directory
 * AMCP: Add CLEAR ALL command
 * AMCP: Command batching syntax
 * AMCP: LOAD/LOADBG/PLAY commands accept a CLEAR_ON_404 parameter, to instruct the layer to be cleared when the requested file was not found
 * AMCP: Add commands to subscribe and unsubscribe to OSC on any port number
+* AMCP: Add CALLBG command to perform CALL on background producer
 * Build: Require C++17 for building
 * Build: Support newer versions of Boost
 * Build: Support newer versions of TBB
 * Build: Disable precompiled headers for linux
 * Build: Support VS2022
 * Build: Replace nuget and locally committed dependencies with direct http downloads
+* Build: Allow configuring diag font path at build time 
 * Linux: Support setting thread priorities
 * Linux: Initial ARM64 compatibility
+* Linux: Rework build to always use system boost
+* Linux: Rework build process to better support being build as a system package
 * Logging: add config option to disable logging to file and to disable column alignment 
 * Transitions: Support additional audio fade properties for STING transition
 ##### Fixes
+* Crash upon exiting if HTML producer was running
 * AMCP: Ensure all consumers and producers are reported in `INFO` commands
 * AMCP: Deferred mixer operations were not being cleared after being applied
+* AMCP: `LOAD` command would show a frame or two of black while new producer was loading
 * OpenGL: Fix support for recent Linux drivers
 * Linux: Fix endless looping on stdin
 * Route: Fix error when clearing layer
@@ -40,13 +48,19 @@ CasparCG 2.4.0 (Unreleased)
 * FFmpeg: Allow specifying both SEEK and IN for PLAY commands
 * HTML: Update to CEF 117
 * HTML: `CALL 1-10 RELOAD` to reload a renderer
+* HTML: Expose `cache-path` setting
 * NDI: Upgrade to NDI5
 * System Audio: Allow specifying output device to use
 ##### Fixes
 * Decklink: Log spamming when using some input formats
 * FFmpeg: Prevent loading unreadable files
 * FFmpeg: Unable to play files with unicode filenames
+* FFmpeg: Don't lowercase filter parameters
+* FFmpeg: Support parameters with name containing a dash
 * HTML: media-stream permission denied
+* HTML: Expose angle backend config field, the best backend varies depending on the templates and machine
+* HTML: Crash when multiple iframes were loaded within a renderer
+* Image: Improve file loading algorithm to match the case insensitive and absolute path support already used by ffmpeg
 
 ### Consumers
 ##### Improvements

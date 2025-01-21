@@ -97,8 +97,10 @@ draw_frame::draw_frame(mutable_frame&& frame)
 {
 }
 draw_frame::draw_frame(std::vector<draw_frame> frames)
-    : impl_(new impl(std::move(frames)))
 {
+    auto frame_size = frames.size();
+    impl_ = std::make_unique<impl>(std::move(frames));
+    if (frame_size > 1) impl_->transform_.image_transform.layer_depth = 1;
 }
 draw_frame::~draw_frame() {}
 draw_frame& draw_frame::operator=(draw_frame other)
@@ -110,8 +112,8 @@ void                   draw_frame::swap(draw_frame& other) { impl_.swap(other.im
 const frame_transform& draw_frame::transform() const { return impl_->transform_; }
 frame_transform&       draw_frame::transform() { return impl_->transform_; }
 void                   draw_frame::accept(frame_visitor& visitor) const { impl_->accept(visitor); }
-bool draw_frame::operator==(const draw_frame& other) const { return impl_ && *impl_ == *other.impl_; }
-bool draw_frame::operator!=(const draw_frame& other) const { return !(*this == other); }
+bool                   draw_frame::operator==(const draw_frame& other) const { return impl_ && *impl_ == *other.impl_; }
+bool                   draw_frame::operator!=(const draw_frame& other) const { return !(*this == other); }
 
 draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 {

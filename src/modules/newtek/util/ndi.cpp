@@ -108,7 +108,10 @@ NDIlib_v5* load_library()
         not_initialized();
     }
 
-    find_instance.reset(new NDIlib_find_instance_t(ndi_lib->NDIlib_find_create_v2(nullptr)),
+    NDIlib_find_create_t find_instance_options = {};
+    find_instance_options.show_local_sources = true;
+
+    find_instance.reset(new NDIlib_find_instance_t(ndi_lib->NDIlib_find_create_v2(&find_instance_options)),
                         [](NDIlib_find_instance_t* p) { ndi_lib->NDIlib_find_destroy(*p); });
     return ndi_lib;
 }
@@ -129,7 +132,7 @@ std::map<std::string, NDIlib_source_t> get_current_sources()
 void not_installed()
 {
     CASPAR_THROW_EXCEPTION(not_supported()
-                           << msg_info(dll_name() + L" not available. Install NDI Redist version 5.0 or higher from " +
+                           << msg_info(dll_name() + L" not available. Install NDI Redist version 6.0 or higher from " +
                                        u16(NDILIB_REDIST_URL)));
 }
 

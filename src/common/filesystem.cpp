@@ -20,12 +20,60 @@
  */
 #include "except.h"
 
+#include "./os/filesystem.h"
 #include "filesystem.h"
 
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
 namespace caspar {
+
+std::optional<boost::filesystem::path>
+probe_path(const boost::filesystem::path&                             full_path,
+           const std::function<bool(const boost::filesystem::path&)>& is_valid_file)
+{
+    auto parent = find_case_insensitive(full_path.parent_path().wstring());
+
+    if (!parent)
+        return {};
+
+    auto dir = boost::filesystem::path(*parent);
+    auto loc = std::locale(""); // Use system locale
+
+    auto leaf_name     = full_path.filename().stem().wstring();
+    auto has_extension = !full_path.filename().extension().wstring().empty();
+    auto leaf_filename = full_path.filename().wstring();
+
+    for (auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it) {
+        if (has_extension) {
+            auto it_path = it->path().filename().wstring();
+            if (boost::iequals(it_path, leaf_filename, loc) && is_valid_file(it->path().wstring()))
+                return it->path();
+        }
+        if (boost::iequals(it->path().stem().wstring(), leaf_filename, loc) && is_valid_file(it->path().wstring()))
+            return it->path();
+    }
+
+    return {};
+}
+
+std::optional<boost::filesystem::path>
+find_file_within_dir_or_absolute(const std::wstring&                                        parent_dir,
+                                 const std::wstring&                                        filename,
+                                 const std::function<bool(const boost::filesystem::path&)>& is_valid_file)
+{
+    // Try it assuming an absolute path was given
+    auto file_path       = boost::filesystem::path(filename);
+    auto file_path_match = probe_path(file_path, is_valid_file);
+    if (file_path_match) {
+        return file_path_match;
+    }
+
+    // Try and find within the default parent directory
+    auto full_path = boost::filesystem::path(parent_dir) / boost::filesystem::path(filename);
+    return probe_path(full_path, is_valid_file);
+}
 
 boost::filesystem::path get_relative(const boost::filesystem::path& file, const boost::filesystem::path& relative_to)
 {

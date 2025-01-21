@@ -34,6 +34,7 @@
 #pragma warning(disable : 4481) // nonstandard extension used: override specifier 'override'
 #pragma warning(disable : 4834) // discarding return value of function with 'nodiscard' attribute
 #pragma warning(disable : 4996) // function call with parameters that may be unsafe
+#pragma warning(disable : 4459) // declaration of 'query' hides global declaration
 #pragma warning(                                                                                                       \
     disable : 4334) // '<<': result of 32 - bit shift implicitly converted to 64 bits(was 64 - bit shift intended ?)
 

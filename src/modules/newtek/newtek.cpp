@@ -27,6 +27,7 @@
 #include "util/ndi.h"
 
 #include <core/consumer/frame_consumer.h>
+#include <protocol/amcp/amcp_command_repository_wrapper.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <common/env.h>

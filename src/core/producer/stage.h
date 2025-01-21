@@ -25,7 +25,6 @@
 #include "../monitor/monitor.h"
 
 #include <common/executor.h>
-#include <common/forward.h>
 #include <common/memory.h>
 #include <common/tweener.h>
 
@@ -39,7 +38,7 @@
 #include <tuple>
 #include <vector>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics { class graph; }
 
 namespace caspar { namespace core {
 
@@ -87,6 +86,7 @@ class stage_base
     virtual std::future<void>         play(int index)                                                              = 0;
     virtual std::future<void>         stop(int index)                                                              = 0;
     virtual std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)                     = 0;
+    virtual std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)                   = 0;
     virtual std::future<void>         clear(int index)                                                             = 0;
     virtual std::future<void>         clear()                                                                      = 0;
     virtual std::future<void>         swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms)  = 0;
@@ -136,6 +136,7 @@ class stage final : public stage_base
     std::future<void>            play(int index) override;
     std::future<void>            stop(int index) override;
     std::future<std::wstring>    call(int index, const std::vector<std::wstring>& params) override;
+    std::future<std::wstring>    callbg(int index, const std::vector<std::wstring>& params) override;
     std::future<void>            clear(int index) override;
     std::future<void>            clear() override;
     std::future<void>            swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms) override;
@@ -191,6 +192,7 @@ class stage_delayed final : public stage_base
     std::future<void>            play(int index) override;
     std::future<void>            stop(int index) override;
     std::future<std::wstring>    call(int index, const std::vector<std::wstring>& params) override;
+    std::future<std::wstring>    callbg(int index, const std::vector<std::wstring>& params) override;
     std::future<void>            clear(int index) override;
     std::future<void>            clear() override;
     std::future<void>            swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms) override;
