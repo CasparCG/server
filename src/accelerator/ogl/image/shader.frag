@@ -8,6 +8,8 @@ uniform sampler2D	plane[4];
 uniform sampler2D	local_key;
 uniform sampler2D	layer_key;
 
+uniform bool        is_straight_alpha;
+
 uniform mat3		color_matrix;
 uniform vec3		luma_coeff;
 uniform bool		has_local_key;
@@ -495,7 +497,7 @@ vec4 get_rgba_color()
 		{
 			float y = get_sample(plane[0], TexCoord.st / TexCoord.q).g * precision_factor[0];
 			float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).b * precision_factor[1];
-			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];			
+			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
 			return ycbcra_to_rgba(y, cb, cr, 1.0);
 		}
     }
@@ -505,6 +507,8 @@ vec4 get_rgba_color()
 void main()
 {
     vec4 color = get_rgba_color();
+    if (is_straight_alpha)
+        color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
     if(levels)
