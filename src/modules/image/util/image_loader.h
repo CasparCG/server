@@ -46,6 +46,7 @@ struct loaded_image
 
 loaded_image load_image(const std::wstring& filename, bool allow_all_formats);
 loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
-bool         is_valid_file(const boost::filesystem::path& filename);
+
+bool is_valid_file(const boost::filesystem::path& filename);
 
 }} // namespace caspar::image
