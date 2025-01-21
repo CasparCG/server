@@ -72,7 +72,7 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_image(description_), scale_mode);
+        load(load_image(description_, true), scale_mode);
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
@@ -86,21 +86,22 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_png_from_memory(png_data, size), scale_mode);
+        load(load_png_from_memory(png_data, size, true), scale_mode);
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
-    void load(const std::shared_ptr<FIBITMAP>& bitmap, core::frame_geometry::scale_mode scale_mode)
+    void load(const loaded_image& image, core::frame_geometry::scale_mode scale_mode)
     {
-        FreeImage_FlipVertical(bitmap.get());
         core::pixel_format_desc desc(core::pixel_format::bgra);
-        desc.planes.emplace_back(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4);
+        desc.is_straight_alpha = image.is_straight;
+        desc.planes.emplace_back(
+            FreeImage_GetWidth(image.bitmap.get()), FreeImage_GetHeight(image.bitmap.get()), image.stride, image.depth);
 
         auto frame       = frame_factory_->create_frame(this, desc);
-        frame.geometry() = core::frame_geometry::get_default(scale_mode);
+        frame.geometry() = core::frame_geometry::get_default_vflip(scale_mode);
 
-        std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
+        std::copy_n(FreeImage_GetBits(image.bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
         frame_ = core::draw_frame(std::move(frame));
     }
 

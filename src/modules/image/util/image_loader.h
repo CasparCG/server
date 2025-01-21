@@ -21,6 +21,10 @@
 
 #pragma once
 
+#include <core/frame/pixel_format.h>
+
+#include <common/bit_depth.h>
+
 #include <memory>
 #include <set>
 #include <string>
@@ -31,8 +35,17 @@ struct FIBITMAP;
 
 namespace caspar { namespace image {
 
-std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename);
-std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size);
+struct loaded_image
+{
+    std::shared_ptr<FIBITMAP> bitmap;
+    core::pixel_format        format;
+    int                       stride;
+    common::bit_depth         depth;
+    bool                      is_straight;
+};
+
+loaded_image load_image(const std::wstring& filename, bool allow_all_formats);
+loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
 
 bool is_valid_file(const boost::filesystem::path& filename);
 

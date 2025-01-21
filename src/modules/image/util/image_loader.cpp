@@ -42,9 +42,68 @@
 #include "image_algorithms.h"
 #include "image_view.h"
 
+#if FREEIMAGE_COLORORDER == FREEIMAGE_COLORORDER_BGR
+#define IMAGE_BGRA_FORMAT core::pixel_format::bgra
+#define IMAGE_BGR_FORMAT core::pixel_format::bgr
+#else
+#define IMAGE_BGRA_FORMAT core::pixel_format::rgba
+#define IMAGE_BGR_FORMAT core::pixel_format::rgb
+#endif
+
 namespace caspar { namespace image {
 
-std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
+loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMAP> bitmap, bool allow_all_formats)
+{
+    core::pixel_format format;
+    int                stride;
+    common::bit_depth  depth = common::bit_depth::bit8;
+
+    unsigned int bpp = FreeImage_GetBPP(bitmap.get());
+
+    if (bpp == 32) {
+        format = IMAGE_BGRA_FORMAT;
+        stride = 4;
+    } else if (allow_all_formats && bpp == 24) {
+        format = IMAGE_BGR_FORMAT;
+        stride = 3;
+    } else if (allow_all_formats && bpp == 64) {
+        // freeimage appears to ignore endianness
+        format = core::pixel_format::rgba;
+        stride = 4;
+        depth  = common::bit_depth::bit16;
+    } else if (allow_all_formats && bpp == 48) {
+        // freeimage appears to ignore endianness
+        format = core::pixel_format::rgb;
+        stride = 3;
+        depth  = common::bit_depth::bit16;
+    } else if (allow_all_formats && !FreeImage_IsTransparent(bitmap.get())) {
+        format = IMAGE_BGR_FORMAT;
+        stride = 3;
+
+        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo24Bits(bitmap.get()), FreeImage_Unload);
+
+    } else {
+        format = IMAGE_BGRA_FORMAT;
+        stride = 4;
+
+        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
+    }
+
+    if (!bitmap)
+        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+
+    // PNG-images need to be premultiplied with their alpha
+    bool is_straight = fif == FIF_PNG && (format == core::pixel_format::bgra || format == core::pixel_format::rgba);
+    if (!allow_all_formats && is_straight) {
+        image_view<bgra_pixel> original_view(
+            FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+        premultiply(original_view);
+    }
+
+    return {std::move(bitmap), format, stride, depth, is_straight};
+}
+
+loaded_image load_image(const std::wstring& filename, bool allow_all_formats)
 {
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
@@ -72,23 +131,10 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
         std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
 #endif
 
-    if (FreeImage_GetBPP(bitmap.get()) != 32) {
-        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
-        if (!bitmap)
-            CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
-    }
-
-    // PNG-images need to be premultiplied with their alpha
-    if (fif == FIF_PNG) {
-        image_view<bgra_pixel> original_view(
-            FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-        premultiply(original_view);
-    }
-
-    return bitmap;
+    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
 }
 
-std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size)
+loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats)
 {
     FREE_IMAGE_FORMAT fif = FIF_PNG;
 
@@ -98,18 +144,7 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
     auto bitmap =
         std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
 
-    if (FreeImage_GetBPP(bitmap.get()) != 32) {
-        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
-
-        if (!bitmap)
-            CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
-    }
-
-    // PNG-images need to be premultiplied with their alpha
-    image_view<bgra_pixel> original_view(
-        FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-    premultiply(original_view);
-    return bitmap;
+    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
 }
 
 bool is_valid_file(const boost::filesystem::path& filename)
