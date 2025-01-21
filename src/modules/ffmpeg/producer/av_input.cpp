@@ -163,8 +163,7 @@ void Input::internal_reset()
     auto ic2 = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
-        CASPAR_LOG(warning) << "av_input[" + filename_ + "]"
-                            << " Unused option " << p.first << "=" << p.second;
+        CASPAR_LOG(warning) << "av_input[" + filename_ + "]" << " Unused option " << p.first << "=" << p.second;
     }
 
     FF(avformat_find_stream_info(ic2.get(), nullptr));

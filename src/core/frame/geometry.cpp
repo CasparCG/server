@@ -40,8 +40,9 @@ bool frame_geometry::coord::operator==(const frame_geometry::coord& other) const
 
 struct frame_geometry::impl
 {
-    impl(frame_geometry::geometry_type type, frame_geometry::scale_mode mode, std::vector<coord> data) :
-        type_{type}, mode_{mode}
+    impl(frame_geometry::geometry_type type, frame_geometry::scale_mode mode, std::vector<coord> data)
+        : type_{type}
+        , mode_{mode}
     {
         if (type == geometry_type::quad && data.size() != 4)
             CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be 4"));
@@ -54,9 +55,10 @@ struct frame_geometry::impl
     std::vector<coord>            data_;
 };
 
-frame_geometry::frame_geometry(geometry_type type, scale_mode mode, std::vector<coord> data) :
-    impl_{new impl{type, mode, std::move(data)}}
-{ }
+frame_geometry::frame_geometry(geometry_type type, scale_mode mode, std::vector<coord> data)
+    : impl_{new impl{type, mode, std::move(data)}}
+{
+}
 
 frame_geometry::geometry_type             frame_geometry::type() const { return impl_->type_; }
 frame_geometry::scale_mode                frame_geometry::mode() const { return impl_->mode_; }
@@ -71,7 +73,7 @@ const frame_geometry frame_geometry::get_default(scale_mode mode)
         {1.0, 1.0, 1.0, 1.0}, // lower right
         {0.0, 1.0, 0.0, 1.0}  // lower left
     };
-    return frame_geometry{ frame_geometry::geometry_type::quad, mode, std::move(data) };
+    return frame_geometry{frame_geometry::geometry_type::quad, mode, std::move(data)};
 }
 const frame_geometry frame_geometry::get_default_vflip(scale_mode mode)
 {
@@ -82,46 +84,43 @@ const frame_geometry frame_geometry::get_default_vflip(scale_mode mode)
         {1.0, 1.0, 1.0, 0.0}, // lower right
         {0.0, 1.0, 0.0, 0.0}  // lower left
     };
-    return frame_geometry{ frame_geometry::geometry_type::quad, mode, std::move(data) };
+    return frame_geometry{frame_geometry::geometry_type::quad, mode, std::move(data)};
 }
 
-frame_geometry::scale_mode scale_mode_from_string(const std::wstring& str) {
-	auto str2 = boost::to_lower_copy(str);
-	if (str2 == L"fit") {
-		return frame_geometry::scale_mode::fit;
-	}
-	else if (str2 == L"fill") {
-		return frame_geometry::scale_mode::fill;
-	}
-	else if (str2 == L"original") {
-		return frame_geometry::scale_mode::original;
-	}
-	else if (str2 == L"hfill") {
-		return frame_geometry::scale_mode::hfill;
-	}
-	else if (str2 == L"vfill") {
-		return frame_geometry::scale_mode::vfill;
-	}
-	else {
-		return frame_geometry::scale_mode::stretch;
-	}
+frame_geometry::scale_mode scale_mode_from_string(const std::wstring& str)
+{
+    auto str2 = boost::to_lower_copy(str);
+    if (str2 == L"fit") {
+        return frame_geometry::scale_mode::fit;
+    } else if (str2 == L"fill") {
+        return frame_geometry::scale_mode::fill;
+    } else if (str2 == L"original") {
+        return frame_geometry::scale_mode::original;
+    } else if (str2 == L"hfill") {
+        return frame_geometry::scale_mode::hfill;
+    } else if (str2 == L"vfill") {
+        return frame_geometry::scale_mode::vfill;
+    } else {
+        return frame_geometry::scale_mode::stretch;
+    }
 }
 
-std::wstring scale_mode_to_string(frame_geometry::scale_mode mode) {
-	switch (mode) {
-	case frame_geometry::scale_mode::fit:
-		return L"FIT";
-	case frame_geometry::scale_mode::fill:
-		return L"FILL";
-	case frame_geometry::scale_mode::original:
-		return L"ORIGINAL";
-	case frame_geometry::scale_mode::hfill:
-		return L"HFILL";
-	case frame_geometry::scale_mode::vfill:
-		return L"VFILL";
-	default:
-		return L"STRETCH";
-	}
+std::wstring scale_mode_to_string(frame_geometry::scale_mode mode)
+{
+    switch (mode) {
+        case frame_geometry::scale_mode::fit:
+            return L"FIT";
+        case frame_geometry::scale_mode::fill:
+            return L"FILL";
+        case frame_geometry::scale_mode::original:
+            return L"ORIGINAL";
+        case frame_geometry::scale_mode::hfill:
+            return L"HFILL";
+        case frame_geometry::scale_mode::vfill:
+            return L"VFILL";
+        default:
+            return L"STRETCH";
+    }
 }
 
 }} // namespace caspar::core

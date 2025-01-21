@@ -116,9 +116,8 @@ class renderer_application
         if (!frame->IsMain())
             return;
 
-        caspar_log(browser,
-                   boost::log::trivial::trace,
-                   "context for frame " + frame->GetIdentifier().ToString() + " created");
+        caspar_log(
+            browser, boost::log::trivial::trace, "context for frame " + frame->GetIdentifier().ToString() + " created");
         contexts_.push_back(context);
 
         auto window = context->GetGlobal();

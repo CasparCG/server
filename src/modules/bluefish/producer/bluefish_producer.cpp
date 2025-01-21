@@ -445,14 +445,14 @@ struct bluefish_producer
                 auto src_audio = alloc_frame();
 
                 // video
-                src_video->format                 = AV_PIX_FMT_RGB24;
-                src_video->width                  = width;
-                src_video->height                 = height;
-                src_video->interlaced_frame       = !is_progressive;
-                src_video->top_field_first        = height != 486;
-                src_video->key_frame              = 1;
-                //src_video->display_picture_number = frames_captured;
-                src_video->pts                    = capture_ts;
+                src_video->format           = AV_PIX_FMT_RGB24;
+                src_video->width            = width;
+                src_video->height           = height;
+                src_video->interlaced_frame = !is_progressive;
+                src_video->top_field_first  = height != 486;
+                src_video->key_frame        = 1;
+                // src_video->display_picture_number = frames_captured;
+                src_video->pts = capture_ts;
 
                 void* video_bytes = reserved_frames_.front()->image_data();
                 if (reserved_frames_.front() && video_bytes) {

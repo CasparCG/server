@@ -98,7 +98,7 @@ struct const_frame::impl
     impl(std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
          const core::pixel_format_desc&         desc,
-         std::any                             opaque)
+         std::any                               opaque)
         : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
@@ -155,7 +155,7 @@ const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
 const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc,
-                         std::any                             opaque)
+                         std::any                               opaque)
     : impl_(new impl(std::move(image_data), std::move(audio_data), desc, opaque))
 {
 }

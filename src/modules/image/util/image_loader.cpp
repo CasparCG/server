@@ -127,7 +127,8 @@ loaded_image load_image(const std::wstring& filename, bool allow_all_formats)
 #ifdef WIN32
     auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
 #else
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
+    auto bitmap =
+        std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
 #endif
 
     return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
@@ -140,7 +141,8 @@ loaded_image load_png_from_memory(const void* memory_location, size_t size, bool
     auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
         FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
         FreeImage_CloseMemory);
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
+    auto bitmap =
+        std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
 
     return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
 }

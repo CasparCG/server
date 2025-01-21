@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 struct mixed_image
 {
     array<const uint8_t> rgba8;
-    std::any           texture;
+    std::any             texture;
 
     mixed_image(array<const uint8_t> rgba8, std::any texture)
         : rgba8(rgba8)

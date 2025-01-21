@@ -684,13 +684,13 @@ struct AVProducer::Impl
     std::string afilter_;
     std::string vfilter_;
 
-    int              seekable_       = 2;
+    int                              seekable_ = 2;
     core::frame_geometry::scale_mode scale_mode_;
-    int64_t          frame_count_    = 0;
-    bool             frame_flush_    = true;
-    int64_t          frame_time_     = AV_NOPTS_VALUE;
-    int64_t          frame_duration_ = AV_NOPTS_VALUE;
-    core::draw_frame frame_;
+    int64_t                          frame_count_    = 0;
+    bool                             frame_flush_    = true;
+    int64_t                          frame_time_     = AV_NOPTS_VALUE;
+    int64_t                          frame_duration_ = AV_NOPTS_VALUE;
+    core::draw_frame                 frame_;
 
     std::deque<Frame>         buffer_;
     mutable boost::mutex      buffer_mutex_;
@@ -805,7 +805,7 @@ struct AVProducer::Impl
         }
 
         {
-            const auto start =  start_.load();
+            const auto start = start_.load();
             if (duration_ == AV_NOPTS_VALUE && input_->duration > 0) {
                 if (start != AV_NOPTS_VALUE) {
                     duration_ = input_->duration - start;
@@ -936,8 +936,7 @@ struct AVProducer::Impl
             }
 
             frame.frame = core::draw_frame(
-                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video), scale_mode_)
-            );
+                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video), scale_mode_));
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);

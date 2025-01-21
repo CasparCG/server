@@ -33,7 +33,7 @@ core::mutable_frame     make_frame(void*                    tag,
                                    std::shared_ptr<AVFrame> video,
                                    std::shared_ptr<AVFrame> audio,
                                    core::color_space        color_space = core::color_space::bt709,
-                                   core::frame_geometry::scale_mode = core::frame_geometry::scale_mode::stretch);
+                                   core::frame_geometry::scale_mode     = core::frame_geometry::scale_mode::stretch);
 
 core::mutable_frame make_frame2(void*                                         tag,
                                 const std::shared_ptr<core::frame_converter>& frame_factory,

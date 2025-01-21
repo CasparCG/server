@@ -29,7 +29,9 @@
 
 #include <memory>
 
-namespace caspar::diagnostics { class graph; }
+namespace caspar::diagnostics {
+class graph;
+}
 
 namespace caspar { namespace core {
 

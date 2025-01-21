@@ -990,8 +990,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     //                                                           mode_->GetFieldDominance(),
                     //                                                           config_.hdr);
 
-                    schedule_next_video(
-                        image_data, nb_samples, video_display_time, frame1.value().raw_frame.pixel_format_desc().color_space);
+                    schedule_next_video(image_data,
+                                        nb_samples,
+                                        video_display_time,
+                                        frame1.value().raw_frame.pixel_format_desc().color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);

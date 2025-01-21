@@ -96,8 +96,8 @@ class image_renderer
         //            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         //        }
 
-        return flatten(ogl_->dispatch_async(
-            [=, layers = std::move(layers)]() mutable -> std::shared_future<core::mixed_image> {
+        return flatten(
+            ogl_->dispatch_async([=, layers = std::move(layers)]() mutable -> std::shared_future<core::mixed_image> {
                 auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
                 draw(target_texture, std::move(layers), format_desc);
