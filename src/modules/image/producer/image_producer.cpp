@@ -93,7 +93,7 @@ struct image_producer : public core::frame_producer
 
     void load(const loaded_image& image, core::frame_geometry::scale_mode scale_mode)
     {
-        core::pixel_format_desc desc(core::pixel_format::bgra);
+        core::pixel_format_desc desc(image.format);
         desc.is_straight_alpha = image.is_straight;
         desc.planes.emplace_back(
             FreeImage_GetWidth(image.bitmap.get()), FreeImage_GetHeight(image.bitmap.get()), image.stride, image.depth);
