@@ -21,6 +21,8 @@
 
 #include "fixture_calculation.h"
 
+#include "core/frame/pixel_format.h"
+
 #define M_PI 3.14159265358979323846 /* pi */
 
 namespace caspar { namespace artnet {
@@ -84,10 +86,10 @@ rect compute_rect(box fixtureBox, int index, int count)
     return rectangle;
 }
 
-color average_color(const core::const_frame& frame, rect& rectangle)
+color average_color(const core::pixel_format_desc::plane& pix_desc, const array<const uint8_t>& pixels, rect& rectangle)
 {
-    int width  = (int)frame.width();
-    int height = (int)frame.height();
+    int width  = pix_desc.width;
+    int height = pix_desc.height;
 
     float x_values[] = {rectangle.p1.x, rectangle.p2.x, rectangle.p3.x, rectangle.p4.x};
     float y_values[] = {rectangle.p1.y, rectangle.p2.y, rectangle.p3.y, rectangle.p4.y};
@@ -135,8 +137,7 @@ color average_color(const core::const_frame& frame, rect& rectangle)
     int y_min = std::max(0, std::min(height - 1, (int)y_values[0]));
     int y_max = std::max(0, std::min(height - 1, (int)y_values[3]));
 
-    const array<const std::uint8_t>& values    = frame.image_data(0);
-    const std::uint8_t*              value_ptr = values.data();
+    const std::uint8_t*              value_ptr = pixels.data();
 
     // Total color values, as well as the number of pixels in the rectangle
     // used to calculate the average without loss of precision

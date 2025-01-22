@@ -27,7 +27,9 @@
 #include <common/except.h>
 #include <common/future.h>
 
+#include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_converter.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -40,8 +42,8 @@
 #include <ffmpeg/util/av_util.h>
 
 #include "../util/image_algorithms.h"
-#include "../util/image_view.h"
 #include "../util/image_converter.h"
+#include "../util/image_view.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -63,10 +65,12 @@ namespace caspar::image {
 
 struct image_consumer : public core::frame_consumer
 {
-    const std::wstring filename_;
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+    const std::wstring                           filename_;
 
-    explicit image_consumer(std::wstring filename)
-        : filename_(std::move(filename))
+    explicit image_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, std::wstring filename)
+        : frame_converter_(frame_converter)
+        , filename_(std::move(filename))
     {
     }
 
@@ -76,13 +80,14 @@ struct image_consumer : public core::frame_consumer
     {
         auto filename = filename_;
 
-        std::thread async([frame, filename] {
+        auto encode_format = core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8);
+        // encode_format.straight_alpha = true; // Future
+
+        std::thread async([frame_converter = frame_converter_, frame, filename, encode_format] {
             try {
                 std::string filename2;
 
-                if (frame.pixel_format_desc().format != core::pixel_format::bgra)
-                    CASPAR_THROW_EXCEPTION(caspar_exception()
-                                           << msg_info("image_consumer received frame with wrong format"));
+                auto rgba_bytes = frame_converter->convert_to_buffer(frame, encode_format).get();
 
                 if (filename.empty())
                     filename2 =
@@ -116,7 +121,7 @@ struct image_consumer : public core::frame_consumer
                 av_frame->format      = AV_PIX_FMT_BGRA;
                 av_frame->pts         = 0;
                 av_frame->linesize[0] = static_cast<int>(frame.width()) * 4;
-                av_frame->data[0]     = const_cast<uint8_t*>(frame.image_data(0).data());
+                av_frame->data[0]     = const_cast<uint8_t*>(rgba_bytes.data());
 
                 // The png encoder requires RGB ordering, the mixer producers BGR.
                 auto av_frame2 = convert_image_frame(av_frame, AV_PIX_FMT_RGBA);
@@ -162,8 +167,9 @@ struct image_consumer : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       common::bit_depth                                        depth)
 {
@@ -178,7 +184,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() > 1)
         filename = params.at(1);
 
-    return spl::make_shared<image_consumer>(filename);
+    return spl::make_shared<image_consumer>(frame_converter, filename);
 }
 
 } // namespace caspar::image

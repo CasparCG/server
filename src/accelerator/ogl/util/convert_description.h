@@ -16,31 +16,26 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
 
-#include <common/bit_depth.h>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <memory>
 
-#include "frame_converter.h"
+namespace caspar::accelerator::ogl {
 
-namespace caspar { namespace core {
-
-class frame_factory
+// This must match description_layout in shader_from_rgba.comp
+struct convert_from_texture_description
 {
-  public:
-    frame_factory()                                = default;
-    frame_factory& operator=(const frame_factory&) = delete;
-    virtual ~frame_factory()                       = default;
-
-    frame_factory(const frame_factory&) = delete;
-
-    virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
-    virtual class mutable_frame
-    create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, common::bit_depth depth) = 0;
-
-    virtual spl::shared_ptr<frame_converter> create_frame_converter() = 0;
+    uint32_t target_format;
+    uint32_t is_16_bit;
+    uint32_t width;
+    uint32_t height;
+    uint32_t words_per_line;
+    uint32_t key_only;
+    uint32_t straighten;
 };
 
-}} // namespace caspar::core
+} // namespace caspar::accelerator::ogl

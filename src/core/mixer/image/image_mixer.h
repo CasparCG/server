@@ -48,12 +48,14 @@ class image_mixer
 
     virtual void update_aspect_ratio(double aspect_ratio) = 0;
 
-    virtual std::future<array<const uint8_t>> render(const struct video_format_desc& format_desc) = 0;
+    virtual std::future<std::any> render(const struct video_format_desc& format_desc) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
     class mutable_frame create_frame(const void*                     video_stream_tag,
                                      const struct pixel_format_desc& desc,
                                      common::bit_depth               depth) override                               = 0;
+
+    spl::shared_ptr<frame_converter> create_frame_converter() override = 0;
 
     virtual common::bit_depth depth() const       = 0;
     virtual core::color_space color_space() const = 0;

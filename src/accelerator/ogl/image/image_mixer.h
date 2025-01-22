@@ -48,12 +48,14 @@ class image_mixer final : public core::image_mixer
 
     image_mixer& operator=(const image_mixer&) = delete;
 
-    std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc) override;
-    core::mutable_frame                    create_frame(const void* tag, const core::pixel_format_desc& desc) override;
+    std::future<std::any> render(const core::video_format_desc& format_desc) override;
+    core::mutable_frame   create_frame(const void* tag, const core::pixel_format_desc& desc) override;
     core::mutable_frame
     create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc, common::bit_depth depth) override;
 
     void update_aspect_ratio(double aspect_ratio) override;
+
+    spl::shared_ptr<core::frame_converter> create_frame_converter() override;
 
     // core::image_mixer
 

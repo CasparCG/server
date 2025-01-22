@@ -24,6 +24,8 @@
 #undef NOMINMAX
 // ^^ This is needed to avoid a conflict between boost asio and other header files defining NOMINMAX
 
+#include "core/frame/frame_converter.h"
+
 #include <common/future.h>
 #include <common/log.h>
 #include <common/ptree.h>
@@ -54,14 +56,17 @@ struct configuration
 
 struct artnet_consumer : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     const configuration           config;
     std::vector<computed_fixture> computed_fixtures;
 
   public:
     // frame_consumer
 
-    explicit artnet_consumer(configuration config)
-        : config(std::move(config))
+    explicit artnet_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, configuration config)
+        : frame_converter_(frame_converter)
+        , config(std::move(config))
         , io_service_()
         , socket(io_service_)
     {
@@ -76,9 +81,12 @@ struct artnet_consumer : public core::frame_consumer
 
     void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override
     {
-        thread_ = std::thread([this] {
+        thread_ = std::thread([this]() {
             long long time      = 1000 / config.refreshRate;
             auto      last_send = std::chrono::system_clock::now();
+
+            array<const uint8_t> last_fetched_pixels;
+            core::const_frame last_fetched_frame;
 
             while (!abort_request_) {
                 try {
@@ -100,11 +108,18 @@ struct artnet_consumer : public core::frame_consumer
                     if (!frame)
                         continue; // No frame available
 
+                    if (last_fetched_frame != frame) {
+                        last_fetched_frame = frame;
+                        // Future: this is not the most performant, but is simple to immediately wait
+                        last_fetched_pixels = frame_converter_->convert_to_buffer(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8)).get();
+                    }
+
+
                     uint8_t dmx_data[512];
                     memset(dmx_data, 0, 512);
 
                     for (auto computed_fixture : computed_fixtures) {
-                        auto     color = average_color(frame, computed_fixture.rectangle);
+                        auto     color = average_color(frame.pixel_format_desc().planes[0], last_fetched_pixels, computed_fixture.rectangle);
                         uint8_t* ptr   = dmx_data + computed_fixture.address;
 
                         switch (computed_fixture.type) {
@@ -303,6 +318,7 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               common::bit_depth                                        depth)
 {
@@ -321,6 +337,6 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 
     config.fixtures = get_fixtures_ptree(ptree);
 
-    return spl::make_shared<artnet_consumer>(config);
+    return spl::make_shared<artnet_consumer>(frame_converter, config);
 }
 }} // namespace caspar::artnet

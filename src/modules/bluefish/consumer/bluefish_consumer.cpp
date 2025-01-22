@@ -26,6 +26,7 @@
 #include "../util/memory.h"
 
 #include <core/consumer/frame_consumer.h>
+#include <core/frame/frame_converter.h>
 #include <core/frame/frame.h>
 
 #include <common/diagnostics/graph.h>
@@ -163,6 +164,8 @@ EBlueVideoChannel get_bluesdk_videochannel_from_streamid(bluefish_hardware_outpu
 
 struct bluefish_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     const int           channel_index_;
     const configuration config_;
 
@@ -208,8 +211,12 @@ struct bluefish_consumer
     bluefish_consumer(const bluefish_consumer&)            = delete;
     bluefish_consumer& operator=(const bluefish_consumer&) = delete;
 
-    bluefish_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
-        : channel_index_(channel_index)
+    bluefish_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                        const configuration& config,
+                      const core::video_format_desc&                                                    format_desc,
+                      int                                                                               channel_index)
+        : frame_converter_(frame_converter)
+        , channel_index_(channel_index)
         , config_(config)
         , format_desc_(format_desc)
     {
@@ -632,9 +639,13 @@ struct bluefish_consumer
             return !abort_request_;
         }
 
+        auto frame2 = frame_converter_->convert_to_buffer_and_frame(
+            frame,
+            core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8, format_desc_.width, format_desc_.height));
+
         try {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
-            copy_frame(frame);
+            copy_frame(frame2);
             graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed() * format_desc_.fps * 0.5));
             tick_timer_.restart();
         } catch (...) {
@@ -706,10 +717,14 @@ struct bluefish_consumer
         blue_->video_playback_stop(0, 0);
     }
 
-    void copy_frame(core::const_frame frame)
+    void copy_frame(core::converted_frame frame)
     {
         int audio_samples_for_next_frame =
             blue_->get_num_audio_samples_for_frame(mode_, static_cast<unsigned int>(audio_frames_filled_));
+
+        
+        // TODO - avoid doing the .get() immediately
+        auto frame_pixels = frame.pixels.get();
 
         if (interlaced_) {
             if (!last_field_buf_) // field 1
@@ -717,17 +732,17 @@ struct bluefish_consumer
                 if (reserved_frames_.try_pop(last_field_buf_)) {
                     // copy video data into holding buf
                     void* dest = last_field_buf_->image_data();
-                    if (frame.image_data(0).size()) {
-                        std::memcpy(dest, frame.image_data(0).begin(), frame.image_data(0).size());
+                    if (frame_pixels.size()) {
+                        std::memcpy(dest, frame_pixels.begin(), frame_pixels.size());
                     } else
                         std::memset(dest, 0, last_field_buf_->image_size());
 
                     // now copy Some of the Audio bytes that we need
                     if (config_.embedded_audio) {
-                        auto audio_size = frame.audio_data().size() * 4;
+                        auto audio_size = frame.frame.audio_data().size() * 4;
                         if (audio_size) {
                             tmp_audio_buf_.insert(
-                                tmp_audio_buf_.end(), frame.audio_data().begin(), frame.audio_data().end());
+                                tmp_audio_buf_.end(), frame.frame.audio_data().begin(), frame.frame.audio_data().end());
                         }
                     }
                 }
@@ -735,10 +750,10 @@ struct bluefish_consumer
             {
                 // we have already done the video... just grab the last bit of audio, encode and push to Q.
                 if (config_.embedded_audio) {
-                    auto audio_size = frame.audio_data().size() * 4;
+                    auto audio_size = frame.frame.audio_data().size() * 4;
                     if (audio_size) {
                         tmp_audio_buf_.insert(
-                            tmp_audio_buf_.end(), frame.audio_data().begin(), frame.audio_data().end());
+                            tmp_audio_buf_.end(), frame.frame.audio_data().begin(), frame.frame.audio_data().end());
 
                         encode_hanc(reinterpret_cast<BLUE_U32*>(last_field_buf_->hanc_data()),
                                     reinterpret_cast<void*>(tmp_audio_buf_.data()),
@@ -757,21 +772,21 @@ struct bluefish_consumer
             // Copy to local buffers
             if (reserved_frames_.try_pop(buf)) {
                 void* dest = buf->image_data();
-                if (frame.image_data(0).size()) {
+                if (frame_pixels.size()) {
                     if (config_.uhd_mode == uhd_output_option::force_2si) {
                         // Do the Square Division top 2si conversion here.
                         blue_->convert_sq_to_2si(
-                            (int)frame.width(), (int)frame.height(), (void*)frame.image_data(0).begin(), dest);
+                            (int)frame.frame.width(), (int)frame.frame.height(), (void*)frame_pixels.begin(), dest);
                     } else
-                        std::memcpy(dest, frame.image_data(0).begin(), frame.image_data(0).size());
+                        std::memcpy(dest, frame_pixels.begin(), frame_pixels.size());
                 } else
                     std::memset(dest, 0, buf->image_size());
 
                 // encode and copy hanc data
                 if (config_.embedded_audio) {
-                    if (frame.audio_data().size()) {
+                    if (frame.frame.audio_data().size()) {
                         encode_hanc(reinterpret_cast<BLUE_U32*>(buf->hanc_data()),
-                                    (void*)frame.audio_data().data(),
+                                    (void*)frame.frame.audio_data().data(),
                                     audio_samples_for_next_frame,
                                     static_cast<int>(format_desc_.audio_channels));
                         ++audio_frames_filled_;
@@ -831,14 +846,18 @@ struct bluefish_consumer
 
 struct bluefish_consumer_proxy : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
     const configuration                config_;
     std::unique_ptr<bluefish_consumer> consumer_;
     core::video_format_desc            format_desc_;
     executor                           executor_;
 
   public:
-    explicit bluefish_consumer_proxy(const configuration& config)
-        : config_(config)
+    explicit bluefish_consumer_proxy(
+        const spl::shared_ptr<core::frame_converter>& frame_converter,
+        const configuration& config)
+        : frame_converter_(frame_converter)
+        , config_(config)
         , executor_(L"bluefish_consumer[" + std::to_wstring(config.device_index) + L"]")
     {
     }
@@ -854,7 +873,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_.reset(new bluefish_consumer(config_, format_desc, channel_index));
+            consumer_.reset(new bluefish_consumer(frame_converter_, config_, format_desc, channel_index));
         });
     }
 
@@ -881,8 +900,9 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       common::bit_depth                                        depth)
 {
@@ -936,12 +956,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     config.embedded_audio   = contains_param(L"EMBEDDED_AUDIO", params);
     config.watchdog_timeout = 2;
 
-    return spl::make_shared<bluefish_consumer_proxy>(config);
+    return spl::make_shared<bluefish_consumer_proxy>(frame_converter, config);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               common::bit_depth                                        depth)
 {
@@ -999,7 +1020,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     else if (uhd_mode == 3)
         config.uhd_mode = uhd_output_option::force_square_division;
 
-    return spl::make_shared<bluefish_consumer_proxy>(config);
+    return spl::make_shared<bluefish_consumer_proxy>(frame_converter, config);
 }
 
 }} // namespace caspar::bluefish

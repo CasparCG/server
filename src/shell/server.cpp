@@ -365,6 +365,7 @@ struct server::impl
                                 consumer_registry_->create_consumer(name,
                                                                     xml_consumer.second,
                                                                     video_format_repository_,
+                                                                    channel.raw_channel->frame_converter(),
                                                                     channels_vec,
                                                                     channel.raw_channel->mixer().depth()));
                     } catch (...) {
