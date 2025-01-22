@@ -33,22 +33,24 @@
 
 #include <functional>
 #include <future>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace caspar { namespace core {
 
 void destroy_consumers_synchronously();
 
 using consumer_factory_t =
-    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&     params,
-                                                  const core::video_format_repository& format_repository,
+    std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&              params,
+                                                  const core::video_format_repository&          format_repository,
+                                                  const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                   const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                   common::bit_depth                                        depth)>;
 using preconfigured_consumer_factory_t =
-    std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&  element,
-                                                  const core::video_format_repository& format_repository,
+    std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&           element,
+                                                  const core::video_format_repository&          format_repository,
+                                                  const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                   const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                   common::bit_depth                                        depth)>;
 
@@ -59,13 +61,15 @@ class frame_consumer_registry
     void register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory);
     void register_preconfigured_consumer_factory(const std::wstring&                     element_name,
                                                  const preconfigured_consumer_factory_t& factory);
-    spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                    const core::video_format_repository& format_repository,
+    spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                    const core::video_format_repository&          format_repository,
+                                                    const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                     const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                     common::bit_depth depth) const;
-    spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                  element_name,
-                                                    const boost::property_tree::wptree&  element,
-                                                    const core::video_format_repository& format_repository,
+    spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                           element_name,
+                                                    const boost::property_tree::wptree&           element,
+                                                    const core::video_format_repository&          format_repository,
+                                                    const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                     const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                     common::bit_depth depth) const;
 

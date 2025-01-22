@@ -29,6 +29,7 @@
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
 #include "frame/frame.h"
+#include "frame/frame_converter.h"
 #include "frame/frame_factory.h"
 #include "mixer/mixer.h"
 #include "producer/stage.h"
@@ -61,10 +62,11 @@ struct video_channel::impl final
         return spl::make_shared<caspar::diagnostics::graph>();
     }(index_);
 
-    caspar::core::output         output_;
-    spl::shared_ptr<image_mixer> image_mixer_;
-    caspar::core::mixer          mixer_;
-    std::shared_ptr<core::stage> stage_;
+    caspar::core::output                   output_;
+    spl::shared_ptr<image_mixer>           image_mixer_;
+    spl::shared_ptr<core::frame_converter> frame_converter_;
+    caspar::core::mixer                    mixer_;
+    std::shared_ptr<core::stage>           stage_;
 
     uint64_t frame_counter_ = 0;
 
@@ -105,6 +107,7 @@ struct video_channel::impl final
         : index_(index)
         , output_(graph_, format_desc, index)
         , image_mixer_(std::move(image_mixer))
+        , frame_converter_(image_mixer_->create_frame_converter())
         , mixer_(index, graph_, image_mixer_)
         , stage_(std::make_shared<core::stage>(index, graph_, format_desc))
         , tick_(std::move(tick))
@@ -250,6 +253,7 @@ mixer&                              video_channel::mixer() { return impl_->mixer
 const output&                       video_channel::output() const { return impl_->output_; }
 output&                             video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
+spl::shared_ptr<frame_converter>    video_channel::frame_converter() { return impl_->frame_converter_; }
 int                                 video_channel::index() const { return impl_->index(); }
 core::monitor::state                video_channel::state() const { return impl_->state_; }
 

@@ -36,6 +36,7 @@
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/frame/frame_converter.h>
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 
@@ -52,13 +53,15 @@ namespace caspar { namespace image {
 
 struct image_consumer : public core::frame_consumer
 {
-    const std::wstring filename_;
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+    const std::wstring                           filename_;
 
   public:
     // frame_consumer
 
-    explicit image_consumer(std::wstring filename)
-        : filename_(std::move(filename))
+    explicit image_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, std::wstring filename)
+        : frame_converter_(frame_converter)
+        , filename_(std::move(filename))
     {
     }
 
@@ -68,7 +71,10 @@ struct image_consumer : public core::frame_consumer
     {
         auto filename = filename_;
 
-        std::thread async([frame, filename] {
+        auto encode_format = core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8);
+        // encode_format.straight_alpha = true; // Future
+
+        std::thread async([frame_converter = frame_converter_, frame, filename, encode_format] {
             try {
                 auto filename2 = filename;
 
@@ -79,10 +85,13 @@ struct image_consumer : public core::frame_consumer
                 else
                     filename2 = env::media_folder() + filename2 + L".png";
 
+                auto rgba_bytes =
+                    frame_converter->convert_to_buffer(frame, encode_format).get();
+
                 auto bitmap = std::shared_ptr<FIBITMAP>(
                     FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32),
                     FreeImage_Unload);
-                std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data(0).begin(), frame.image_data(0).size());
+                std::memcpy(FreeImage_GetBits(bitmap.get()), rgba_bytes.begin(), rgba_bytes.size());
 
                 image_view<bgra_pixel> original_view(
                     FreeImage_GetBits(bitmap.get()), static_cast<int>(frame.width()), static_cast<int>(frame.height()));
@@ -117,8 +126,9 @@ struct image_consumer : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       common::bit_depth                                        depth)
 {
@@ -133,7 +143,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() > 1)
         filename = params.at(1);
 
-    return spl::make_shared<image_consumer>(filename);
+    return spl::make_shared<image_consumer>(frame_converter, filename);
 }
 
 }} // namespace caspar::image
