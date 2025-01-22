@@ -35,7 +35,7 @@ core::mutable_frame     make_frame(void*                    tag,
                                    core::color_space        color_space = core::color_space::bt709,
                                    core::frame_geometry::scale_mode     = core::frame_geometry::scale_mode::stretch);
 
-std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
+std::shared_ptr<AVFrame> make_av_video_frame(const core::converted_frame& frame, const core::video_format_desc& format_des);
 std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, const core::video_format_desc& format_des);
 
 AVDictionary*                      to_dict(std::map<std::string, std::string>&& map);

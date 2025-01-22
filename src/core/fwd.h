@@ -34,11 +34,13 @@ class output;
 class image_mixer;
 struct video_format_desc;
 class frame_factory;
+class frame_converter;
 class frame_producer;
 class frame_consumer;
 class draw_frame;
 class mutable_frame;
 class const_frame;
+struct converted_frame;
 class video_channel;
 struct pixel_format_desc;
 struct frame_transform;
@@ -48,4 +50,4 @@ class cg_producer_registry;
 class frame_producer_registry;
 class frame_consumer_registry;
 class video_format_repository;
-}
+} // namespace caspar::core
