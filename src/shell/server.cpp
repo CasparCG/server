@@ -212,11 +212,11 @@ struct server::impl
                 int              cadence_sum = 0;
 
                 const std::wstring     cadence_str = xml_channel.second.get(L"cadence", L"");
-                std::set<std::wstring> cadence_parts;
+                std::list<std::wstring> cadence_parts;
                 boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
 
                 for (auto& cad : cadence_parts) {
-                    if (cad == L"")
+                    if (cad.empty())
                         continue;
 
                     const int c = std::stoi(cad);
@@ -224,15 +224,20 @@ struct server::impl
                     cadence_sum += c;
                 }
 
-                if (cadence.size() == 0) {
+                if (cadence.empty()) {
+                    // Attempt to calculate in the cadence for integer formats
                     const int c = static_cast<int>(48000 / (static_cast<double>(timescale) / duration) + 0.5);
                     cadence.push_back(c);
                     cadence_sum += c;
                 }
 
+                if (cadence_sum * timescale != 48000 * duration * cadence.size()) {
+                    auto samples_per_second = static_cast<double>(cadence_sum * timescale) / (duration * cadence.size());
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Incorrect cadence in video-mode " + id + L". Got "+ std::to_wstring(samples_per_second)+L" samples per second, expected 48000"));
+                }
+
                 const auto new_format = video_format_desc(
                     video_format::custom, field_count, width, height, width, height, timescale, duration, id, cadence);
-                // TODO: verify cadence_sum to look correct
 
                 const auto existing = video_format_repository_.find(id);
                 if (existing.format != video_format::invalid)
