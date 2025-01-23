@@ -16,6 +16,7 @@ casparcg_add_module_project(oal
 target_include_directories(oal PRIVATE
     ../..
     ${FFMPEG_INCLUDE_PATH}
+	${OPENAL_INCLUDE_PATH}
     )
 
 set_target_properties(oal PROPERTIES FOLDER modules)
@@ -27,5 +28,6 @@ if(MSVC)
 			OpenAL32)
 else()
 	target_link_libraries(oal
-			OpenAL::OpenAL)
+			openal)
+			# OpenAL::OpenAL) # This is better but breaks ubuntu22.04
 endif()
