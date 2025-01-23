@@ -251,6 +251,8 @@ void init(const core::module_dependencies& dependencies)
 
 void uninit()
 {
+    if (!g_cef_executor) return;
+
     invoke([] { CefQuitMessageLoop(); });
     g_cef_executor->begin_invoke([&] { CefShutdown(); });
     g_cef_executor.reset();
