@@ -340,8 +340,7 @@ struct image_mixer::impl
     {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
-            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel));
+            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel(depth)));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();

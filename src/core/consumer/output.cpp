@@ -122,7 +122,7 @@ struct output::impl
         }
 
         const auto bytesPerComponent1 =
-            input_frame1.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+            common::bytes_per_pixel(input_frame1.pixel_format_desc().planes.at(0).depth);
         if (input_frame1.size() != format_desc_.size * bytesPerComponent1) {
             CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
@@ -130,7 +130,7 @@ struct output::impl
 
         if (input_frame2) {
             const auto bytesPerComponent2 =
-                input_frame2.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
+                common::bytes_per_pixel(input_frame2.pixel_format_desc().planes.at(0).depth);
 
             if (input_frame2.size() != format_desc_.size * bytesPerComponent2) {
                 CASPAR_LOG(warning) << print() << L" Invalid input frame size.";

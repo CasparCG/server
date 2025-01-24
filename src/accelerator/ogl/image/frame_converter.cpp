@@ -58,7 +58,7 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
     }
 
     // Download unmodified for now
-    auto new_download = ogl_->copy_async(tex_ptr->gl_texture).share();
+    auto new_download = ogl_->copy_async(tex_ptr->gl_texture, true).share();
     tex_ptr->buffer_cache.emplace(cache_key, new_download);
 
     return new_download;
