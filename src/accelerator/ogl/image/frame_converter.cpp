@@ -34,8 +34,7 @@ ogl_frame_converter::ogl_frame_converter(const spl::shared_ptr<device>& ogl)
 }
 
 std::shared_future<array<const std::uint8_t>>
-ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
-                                       const core::frame_conversion_format& format)
+ogl_frame_converter::convert_to_buffer(const core::const_frame& frame, const core::frame_conversion_format& format)
 {
     if (format.format != core::frame_conversion_format::pixel_format::rgba8)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("format not implemented"));
@@ -58,7 +57,7 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
     }
 
     // Download unmodified for now
-    auto new_download = ogl_->copy_async(tex_ptr->gl_texture).share();
+    auto new_download = ogl_->copy_async(tex_ptr->gl_texture, true).share();
     tex_ptr->buffer_cache.emplace(cache_key, new_download);
 
     return new_download;

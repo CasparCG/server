@@ -41,6 +41,7 @@ class texture final
     void copy_from(int source);
 #endif
     void copy_from(class buffer& source);
+    void copy_to(class buffer& dest, common::bit_depth depth);
     void copy_to(class buffer& dest);
 
     void attach();
