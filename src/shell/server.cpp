@@ -343,11 +343,6 @@ struct server::impl
     {
         auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-        std::vector<spl::shared_ptr<core::video_channel>> channels_vec;
-        for (auto& cc : *channels_) {
-            channels_vec.emplace_back(cc.raw_channel);
-        }
-
         for (auto& channel : *channels_) {
             core::diagnostics::scoped_call_context save;
             core::diagnostics::call_context::for_thread().video_channel = channel.raw_channel->index();
@@ -366,7 +361,6 @@ struct server::impl
                                                                     xml_consumer.second,
                                                                     video_format_repository_,
                                                                     channel.raw_channel->frame_converter(),
-                                                                    channels_vec,
                                                                     channel.raw_channel->mixer().depth()));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
