@@ -213,7 +213,7 @@ struct server::impl
                 std::vector<int> cadence;
                 int              cadence_sum = 0;
 
-                const std::wstring     cadence_str = xml_channel.second.get(L"cadence", L"");
+                const std::wstring      cadence_str = xml_channel.second.get(L"cadence", L"");
                 std::list<std::wstring> cadence_parts;
                 boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
 
@@ -234,8 +234,11 @@ struct server::impl
                 }
 
                 if (cadence_sum * timescale != 48000 * duration * cadence.size()) {
-                    auto samples_per_second = static_cast<double>(cadence_sum * timescale) / (duration * cadence.size());
-                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Incorrect cadence in video-mode " + id + L". Got "+ std::to_wstring(samples_per_second)+L" samples per second, expected 48000"));
+                    auto samples_per_second =
+                        static_cast<double>(cadence_sum * timescale) / (duration * cadence.size());
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Incorrect cadence in video-mode " + id +
+                                                                    L". Got " + std::to_wstring(samples_per_second) +
+                                                                    L" samples per second, expected 48000"));
                 }
 
                 const auto new_format = video_format_desc(
