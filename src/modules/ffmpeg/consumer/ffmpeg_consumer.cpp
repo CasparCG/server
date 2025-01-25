@@ -279,6 +279,9 @@ struct Stream
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
             st->time_base = av_inv_q(av_buffersink_get_frame_rate(sink));
 
+            // Ensure the frame_rate is set in a way that rtmp will find it
+            st->avg_frame_rate = av_buffersink_get_frame_rate(sink);
+
             enc->width               = av_buffersink_get_w(sink);
             enc->height              = av_buffersink_get_h(sink);
             enc->framerate           = av_buffersink_get_frame_rate(sink);
