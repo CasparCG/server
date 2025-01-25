@@ -68,7 +68,7 @@ struct mixer::impl
             frame.accept(*image_mixer_);
         }
 
-        auto image = (*image_mixer_)(format_desc);
+        auto image = image_mixer_->render(format_desc);
         auto audio = audio_mixer_(format_desc, nb_samples);
 
         state_["audio"] = audio_mixer_.state();
