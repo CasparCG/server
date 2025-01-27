@@ -101,6 +101,11 @@ casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
 
+set(EXTERNAL_CMAKE_ARGS "")
+if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+	set(EXTERNAL_CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=$<CONFIG>")
+endif ()
+
 # TBB
 casparcg_add_external_project(tbb)
 ExternalProject_Add(tbb
@@ -182,12 +187,18 @@ ExternalProject_Add(zlib
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/zlib/zlib-1.3.tar.gz
 	URL_HASH MD5=60373b133d630f74f4a1f94c1185a53f
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CMAKE_ARGS ${EXTERNAL_CMAKE_ARGS}
 	INSTALL_COMMAND ""
 )
 ExternalProject_Get_Property(zlib SOURCE_DIR)
 ExternalProject_Get_Property(zlib BINARY_DIR)
 set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
-link_directories(${BINARY_DIR}/Release)
+
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+	link_directories(${BINARY_DIR}/Release)
+else()
+	link_directories(${BINARY_DIR})
+endif()
 
 # OPENAL
 casparcg_add_external_project(openal)
@@ -224,6 +235,7 @@ set(TEMPLATE_HOST_PATH "${SOURCE_DIR}")
 set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
+message("TEST ${EXTERNAL_CMAKE_ARGS}")
 # CEF
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
@@ -231,22 +243,29 @@ if (ENABLE_HTML)
 		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_windows64_minimal.tar.bz2
 		URL_HASH SHA1=864d40fb6e26a6ac8cf1003cbfcc16d35c90782e
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
+		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
 		INSTALL_COMMAND ""
 	)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
+
 	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
-	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
+	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
 	link_directories(${SOURCE_DIR}/Release)
 	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
 
+	if (CMAKE_GENERATOR MATCHES "Visual Studio")
 	set(CEF_LIB
 			libcef
 			optimized Release/libcef_dll_wrapper
 			debug Debug/libcef_dll_wrapper)
+	else()
+	set(CEF_LIB
+			libcef
+			libcef_dll_wrapper)
+	endif()
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
