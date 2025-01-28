@@ -340,6 +340,20 @@ struct image_kernel::impl
             shader_->set("chroma", false);
         }
 
+        if (params.transform.edgeblend.left > epsilon || params.transform.edgeblend.right > epsilon ||
+            params.transform.edgeblend.top > epsilon || params.transform.edgeblend.bottom > epsilon) {
+            shader_->set("edgeblend", true);
+            shader_->set("edgeblend_left", params.transform.edgeblend.left);
+            shader_->set("edgeblend_right", params.transform.edgeblend.right);
+            shader_->set("edgeblend_top", params.transform.edgeblend.top);
+            shader_->set("edgeblend_bottom", params.transform.edgeblend.bottom);
+            shader_->set("edgeblend_g", params.transform.edgeblend.g);
+            shader_->set("edgeblend_p", params.transform.edgeblend.p);
+            shader_->set("edgeblend_a", params.transform.edgeblend.a);
+        } else {
+            shader_->set("edgeblend", false);
+        }
+
         // Setup blend_func
 
         if (params.transform.is_key) {
