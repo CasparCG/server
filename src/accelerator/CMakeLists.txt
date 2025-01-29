@@ -10,6 +10,8 @@ set(SOURCES
 	ogl/util/device.cpp
 	ogl/util/shader.cpp
 	ogl/util/texture.cpp
+	ogl/util/matrix.cpp
+	ogl/util/transforms.cpp
 
 	accelerator.cpp
 )
@@ -22,6 +24,8 @@ set(HEADERS
 	ogl/util/device.h
 	ogl/util/shader.h
 	ogl/util/texture.h
+	ogl/util/matrix.h
+	ogl/util/transforms.h
 
 	ogl_image_vertex.h
 	ogl_image_fragment.h

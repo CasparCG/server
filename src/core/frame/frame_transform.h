@@ -80,6 +80,12 @@ struct image_transform final
     double brightness = 1.0;
     double saturation = 1.0;
 
+    /**
+     * This enables the clip/crop/perspective fields.
+     * It is often desirable to have this disabled, to avoid cropping/clipping unnecessarily
+     */
+    bool enable_geometry_modifiers = false;
+
     std::array<double, 2> anchor           = {0.0, 0.0};
     std::array<double, 2> fill_translation = {0.0, 0.0};
     std::array<double, 2> fill_scale       = {1.0, 1.0};
@@ -96,9 +102,6 @@ struct image_transform final
     bool             is_mix      = false;
     core::blend_mode blend_mode  = blend_mode::normal;
     int              layer_depth = 0;
-
-    image_transform& operator*=(const image_transform& other);
-    image_transform  operator*(const image_transform& other) const;
 
     static image_transform tween(double                 time,
                                  const image_transform& source,
@@ -134,9 +137,6 @@ struct frame_transform final
 
     core::image_transform image_transform;
     core::audio_transform audio_transform;
-
-    frame_transform& operator*=(const frame_transform& other);
-    frame_transform  operator*(const frame_transform& other) const;
 
     static frame_transform tween(double                 time,
                                  const frame_transform& source,
