@@ -3,6 +3,7 @@ project (core)
 
 set(SOURCES
 		consumer/frame_consumer.cpp
+		consumer/frame_consumer_registry.cpp
 		consumer/output.cpp
 
 		diagnostics/call_context.cpp
@@ -25,6 +26,7 @@ set(SOURCES
 
 		producer/cg_proxy.cpp
 		producer/frame_producer.cpp
+		producer/frame_producer_registry.cpp
 		producer/layer.cpp
 		producer/stage.cpp
 
@@ -33,6 +35,7 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/frame_consumer.h
+		consumer/frame_consumer_registry.h
 		consumer/output.h
 
 		diagnostics/call_context.h
@@ -63,6 +66,7 @@ set(HEADERS
 
 		producer/cg_proxy.h
 		producer/frame_producer.h
+		producer/frame_producer_registry.h
 		producer/layer.h
 		producer/stage.h
 

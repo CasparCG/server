@@ -41,6 +41,8 @@
 #include <common/param.h>
 
 #include <core/consumer/output.h>
+#include <core/consumer/frame_consumer.h>
+#include <core/consumer/frame_consumer_registry.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/frame/frame_transform.h>
@@ -48,6 +50,7 @@
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/frame_producer_registry.h>
 #include <core/producer/stage.h>
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>

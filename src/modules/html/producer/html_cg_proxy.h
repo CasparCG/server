@@ -46,8 +46,7 @@ class html_cg_proxy : public core::cg_proxy
     std::wstring invoke(int layer, const std::wstring& label) override;
 
   private:
-    struct impl;
-    spl::shared_ptr<impl> impl_;
+    spl::shared_ptr<core::frame_producer> producer_;
 };
 
 }} // namespace caspar::html

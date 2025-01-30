@@ -9,6 +9,7 @@ set(SOURCES
 
 		html.cpp
 		html.h
+		util.h
 )
 
 casparcg_add_module_project(html

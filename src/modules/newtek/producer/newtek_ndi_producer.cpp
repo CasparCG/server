@@ -307,8 +307,7 @@ spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_prod
     }
     const bool low_bandwidth = contains_param(L"LOW_BANDWIDTH", params);
 
-    auto producer = spl::make_shared<newtek_ndi_producer>(
+    return spl::make_shared<newtek_ndi_producer>(
         dependencies.frame_factory, dependencies.format_desc, name_or_url, low_bandwidth);
-    return core::create_destroy_proxy(std::move(producer));
 }
 }} // namespace caspar::newtek

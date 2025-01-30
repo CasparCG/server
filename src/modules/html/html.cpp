@@ -20,6 +20,7 @@
  */
 
 #include "html.h"
+#include "util.h"
 
 #include "producer/html_cg_proxy.h"
 #include "producer/html_producer.h"
@@ -44,7 +45,7 @@
 #include <include/cef_version.h>
 #pragma warning(pop)
 
-namespace caspar { namespace html {
+namespace caspar::html {
 
 std::unique_ptr<executor> g_cef_executor;
 
@@ -308,4 +309,4 @@ std::future<void> begin_invoke(const std::function<void()>& func)
     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
 }
 
-}} // namespace caspar::html
+} // namespace caspar::html

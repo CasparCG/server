@@ -25,7 +25,6 @@
 #include "amcp_command_repository.h"
 #include "amcp_shared.h"
 #include <accelerator/accelerator.h>
-#include <core/consumer/frame_consumer.h>
 #include <future>
 #include <utility>
 

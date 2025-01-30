@@ -16,36 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@supergly.tv
  */
+
 #pragma once
 
-namespace caspar::accelerator {
-class accelerator;
-}
-namespace caspar::accelerator::ogl {
-class device;
-}
+#include <functional>
+#include <future>
+#include <string>
 
-namespace caspar::core {
-class stage;
-class mixer;
-class output;
-class image_mixer;
-struct video_format_desc;
-class frame_factory;
-class frame_producer;
-class frame_consumer;
-class draw_frame;
-class mutable_frame;
-class const_frame;
-class video_channel;
-struct pixel_format_desc;
-struct frame_transform;
-struct frame_producer_dependencies;
-struct module_dependencies;
-class cg_producer_registry;
-class frame_producer_registry;
-class frame_consumer_registry;
-class video_format_repository;
-}
+namespace caspar::html {
+
+const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
+const std::string LOG_MESSAGE_NAME    = "CasparCGLog";
+
+void              invoke(const std::function<void()>& func);
+std::future<void> begin_invoke(const std::function<void()>& func);
+
+} // namespace caspar::html

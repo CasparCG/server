@@ -28,14 +28,11 @@
 #include "frame.h"
 #include "monitor.h"
 
-#include "../decklink.h"
 #include "../util/util.h"
 
 #include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
-#include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
 #include <common/diagnostics/graph.h>
@@ -48,7 +45,6 @@
 #include <boost/circular_buffer.hpp>
 
 #include <atomic>
-#include <common/memshfl.h>
 #include <common/prec_timer.h>
 #include <condition_variable>
 #include <future>

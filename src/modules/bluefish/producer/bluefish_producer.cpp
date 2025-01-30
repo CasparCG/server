@@ -740,14 +740,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto length         = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto in_format_desc = dependencies.format_repository.find(get_param(L"FORMAT", params, L"INVALID"));
 
-    auto producer = spl::make_shared<bluefish_producer_proxy>(dependencies.format_desc,
+    return spl::make_shared<bluefish_producer_proxy>(dependencies.format_desc,
                                                               dependencies.frame_factory,
                                                               dependencies.format_repository,
                                                               device_index,
                                                               stream_index,
                                                               uhd_mode,
                                                               length);
-
-    return create_destroy_proxy(producer);
 }
 }} // namespace caspar::bluefish

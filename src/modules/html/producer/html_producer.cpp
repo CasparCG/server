@@ -61,7 +61,7 @@
 #include <queue>
 #include <utility>
 
-#include "../html.h"
+#include "../util.h"
 
 namespace caspar { namespace html {
 
@@ -565,7 +565,7 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
         format_desc.square_height = *height;
     }
 
-    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
+    return spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url);
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

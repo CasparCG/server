@@ -342,7 +342,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
 
     try {
-        auto producer = spl::make_shared<ffmpeg_producer>(dependencies.frame_factory,
+        return spl::make_shared<ffmpeg_producer>(dependencies.frame_factory,
                                                           dependencies.format_desc,
                                                           name,
                                                           path,
@@ -354,7 +354,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                           loop,
                                                           seekable,
                                                           scale_mode);
-        return core::create_destroy_proxy(std::move(producer));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
     }

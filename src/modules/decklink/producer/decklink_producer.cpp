@@ -962,7 +962,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto vfilter = boost::to_lower_copy(get_param(L"VF", params, filter_str));
     auto afilter = boost::to_lower_copy(get_param(L"AF", params, get_param(L"FILTER", params, L"")));
 
-    auto producer = spl::make_shared<decklink_producer_proxy>(dependencies.format_desc,
+    return spl::make_shared<decklink_producer_proxy>(dependencies.format_desc,
                                                               dependencies.frame_factory,
                                                               dependencies.format_repository,
                                                               device_index,
@@ -972,6 +972,5 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                               format_str,
                                                               freeze_on_lost,
                                                               hdr);
-    return core::create_destroy_proxy(producer);
 }
 }} // namespace caspar::decklink
