@@ -87,14 +87,9 @@ struct image_kernel::impl
     GLuint                  vao_;
     GLuint                  vbo_;
 
-    spl::shared_ptr<texture> white_texture_;
-
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
         , shader_(ogl_->dispatch_sync([&] { return get_image_shader(ogl); }))
-        , white_texture_(
-              ogl_->copy_async(caspar::array<uint8_t>(std::vector<uint8_t>{255}), 1, 1, 1, common::bit_depth::bit8)
-                  .get())
     {
         ogl_->dispatch_sync([&] {
             GL(glGenVertexArrays(1, &vao_));
@@ -165,45 +160,13 @@ struct image_kernel::impl
             //			}
         }
 
-        auto transformed_coords = params.transforms.transform_coords(coords);
+        coords = params.transforms.transform_coords(coords);
 
         // Skip drawing if all the coordinates will be outside the screen.
-        if (transformed_coords.cropped_coords.size() < 3 || is_outside_screen(transformed_coords.cropped_coords)) {
+        if (coords.size() < 3 || is_outside_screen(coords)) {
             return;
         }
 
-        if (!transformed_coords.uncropped_coords.empty()) {
-            // If separate uncropped_coords were provided, then we need to do a first pass to generate a new mask.
-            // This could probably be done mathematically to figure out the correct texture_q values to allow doing this
-            // in one pass, but this is rather edge case logic, only applicable when perspective is used
-
-            auto modified_local_key =
-                ogl_->create_texture(params.target_width, params.target_height, 1, common::bit_depth::bit8);
-
-            draw_params tmp_params;
-            tmp_params.target_width    = params.target_width;
-            tmp_params.target_height   = params.target_height;
-            tmp_params.pix_desc.format = core::pixel_format::gray;
-            tmp_params.pix_desc.planes = {core::pixel_format_desc::plane(1, 1, 1, common::bit_depth::bit8)};
-            tmp_params.textures        = {white_texture_};
-            tmp_params.background      = modified_local_key; // Debug: set to params.background to see the crop region instead
-            tmp_params.local_key       = params.local_key;
-            tmp_params.aspect_ratio    = params.aspect_ratio;
-
-            // Draw the first pass
-            draw_unchecked(tmp_params, transformed_coords.cropped_coords);
-
-            // Do the final pass with the textute coordinates and the modified local_key
-            params.local_key = std::move(modified_local_key);
-            draw_unchecked(params, transformed_coords.uncropped_coords);
-        } else {
-            // Draw with the cropped coordinates
-            draw_unchecked(params, transformed_coords.cropped_coords);
-        }
-    }
-
-    void draw_unchecked(draw_params params, const std::vector<core::frame_geometry::coord>& coords) const
-    {
         double precision_factor[4] = {1, 1, 1, 1};
 
         // Bind textures

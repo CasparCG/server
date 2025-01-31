@@ -179,37 +179,6 @@ bool inline point_is_to_left_of_line(const t_point& line_1, const t_point& line_
 }
 
 // http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-bool get_line_intersection(double  p0_x,
-                           double  p0_y,
-                           double  p1_x,
-                           double  p1_y,
-                           double  p2_x,
-                           double  p2_y,
-                           double  p3_x,
-                           double  p3_y,
-                           double& result_x,
-                           double& result_y)
-{
-    double s1_x = p1_x - p0_x;
-    double s1_y = p1_y - p0_y;
-    double s2_x = p3_x - p2_x;
-    double s2_y = p3_y - p2_y;
-
-    double s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-    double t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
-        // Collision detected
-        result_x = p0_x + t * s1_x;
-        result_y = p0_y + t * s1_y;
-
-        return true;
-    }
-
-    return false; // No collision
-}
-
-// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 bool get_intersection_with_crop_line(const t_point& crop0, const t_point& crop1, const t_point& p0, const t_point& p1, t_point& result)
 {
     double s1_x = crop1(0) - crop0(0);
@@ -264,28 +233,33 @@ void crop_texture_for_vertex(const wrapped_vertex& line_a, const wrapped_vertex&
 
     vertex.texture_x = line_a.texture_x + dist_delta * (line_b.texture_x - line_a.texture_x);
     vertex.texture_y = line_a.texture_y + dist_delta * (line_b.texture_y - line_a.texture_y);
+    vertex.texture_q = line_a.texture_q + dist_delta * (line_b.texture_q - line_a.texture_q);
 }
 
-void fill_texture_q_for_quad(std::vector<core::frame_geometry::coord>& result)
+void fill_texture_q_for_quad(std::vector<wrapped_vertex>& coords)
 {
-    double diagonal_intersection_x;
-    double diagonal_intersection_y;
+    if (coords.size() != 4) return;
 
-    if (result.size() == 4 && get_line_intersection(result[0].vertex_x,
-                                                    result[0].vertex_y,
-                                                    result[2].vertex_x,
-                                                    result[2].vertex_y,
-                                                    result[1].vertex_x,
-                                                    result[1].vertex_y,
-                                                    result[3].vertex_x,
-                                                    result[3].vertex_y,
-                                                    diagonal_intersection_x,
-                                                    diagonal_intersection_y)) {
-        // http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
-        auto d0 = hypotenuse(result[3].vertex_x, result[3].vertex_y, diagonal_intersection_x, diagonal_intersection_y);
-        auto d1 = hypotenuse(result[2].vertex_x, result[2].vertex_y, diagonal_intersection_x, diagonal_intersection_y);
-        auto d2 = hypotenuse(result[1].vertex_x, result[1].vertex_y, diagonal_intersection_x, diagonal_intersection_y);
-        auto d3 = hypotenuse(result[0].vertex_x, result[0].vertex_y, diagonal_intersection_x, diagonal_intersection_y);
+    // Based on formula from:
+    // http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
+    
+    double s1_x = coords[2].vertex(0) - coords[0].vertex(0);
+    double s1_y = coords[2].vertex(1) - coords[0].vertex(1);
+    double s2_x = coords[3].vertex(0) - coords[1].vertex(0);
+    double s2_y = coords[3].vertex(1) - coords[1].vertex(1);
+
+    double s = (-s1_y * (coords[0].vertex(0) - coords[1].vertex(0)) + s1_x * (coords[0].vertex(1) - coords[1].vertex(1))) / (-s2_x * s1_y + s1_x * s2_y);
+    double t = (s2_x * (coords[0].vertex(1) - coords[1].vertex(1)) - s2_y * (coords[0].vertex(0) - coords[1].vertex(0))) / (-s2_x * s1_y + s1_x * s2_y);
+
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+        // Collision detected
+        double diagonal_intersection_x = coords[0].vertex(0) + t * s1_x;
+        double diagonal_intersection_y = coords[0].vertex(1) + t * s1_y;
+
+        auto d0 = hypotenuse(coords[3].vertex(0), coords[3].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d1 = hypotenuse(coords[2].vertex(0), coords[2].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d2 = hypotenuse(coords[1].vertex(0), coords[1].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d3 = hypotenuse(coords[0].vertex(0), coords[0].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
 
         auto ulq = calc_q(d3, d1);
         auto urq = calc_q(d2, d0);
@@ -295,7 +269,7 @@ void fill_texture_q_for_quad(std::vector<core::frame_geometry::coord>& result)
         std::vector<double> q_values = {ulq, urq, lrq, llq};
 
         int corner = 0;
-        for (auto& coord : result) {
+        for (auto& coord : coords) {
             coord.texture_q = q_values[corner];
             coord.texture_x *= q_values[corner];
             coord.texture_y *= q_values[corner];
@@ -306,161 +280,167 @@ void fill_texture_q_for_quad(std::vector<core::frame_geometry::coord>& result)
     }
 }
 
-draw_transformed_coords
+void transform_vertex(const draw_transform_step& step, t_point& vertex)
+{
+    // Apply basic transforms of this step
+    vertex = vertex * step.vertex_matrix;
+
+    // Apply perspective. These rely on x and y of the coord, so can't be done as a shared matrix
+    apply_perspective_to_vertex(vertex, step.perspective);
+}
+
+
+std::vector<core::frame_geometry::coord>
 draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>& coords) const
 {
     // Convert to matrix representations
     std::vector<wrapped_vertex> cropped_coords;
-    std::vector<wrapped_vertex> uncropped_coords;
     cropped_coords.reserve(coords.size());
-    uncropped_coords.reserve(coords.size());
 
     for (const auto& coord : coords) {
         cropped_coords.emplace_back(coord);
-        uncropped_coords.emplace_back(coord);
     }
+
+
+    std::vector<draw_crop_region> transformed_regions;
 
     // Apply the transforms
     for (int i = (int)steps.size() - 1; i >= 0; i--) {
-        for (auto& coord : cropped_coords) {
-            // Apply basic transforms of this step
-            coord.vertex = coord.vertex * steps[i].vertex_matrix;
-
-            // Apply perspective. These rely on x and y of the coord, so can't be done as a shared matrix
-            apply_perspective_to_vertex(coord.vertex, steps[i].perspective);
+        for (auto &coord: cropped_coords) {
+            transform_vertex(steps[i], coord.vertex);
         }
 
-        for (auto& coord : uncropped_coords) {
-            // Apply basic transforms of this step
-            coord.vertex = coord.vertex * steps[i].vertex_matrix;
-
-            // Apply perspective. These rely on x and y of the coord, so can't be done as a shared matrix
-            apply_perspective_to_vertex(coord.vertex, steps[i].perspective);
-        }
-
-        for (auto& crop_region : steps[i].crop_regions) {
+        // Transform existing regions
+        for (auto& region: transformed_regions) {
             for (int l = 0; l < 4; ++l) {
-                // Apply the crop, one edge at a time
-                auto to_index   = l == 3 ? 0 : l + 1;
-                auto from_point = crop_region.coords[l];
-                auto to_point   = crop_region.coords[to_index];
+                transform_vertex(steps[i], region.coords[l]);
+            }
+        }
 
-                // Apply perspective. These rely on x and y of the coord, so can't be done as a shared matrix
-                apply_perspective_to_vertex(from_point, steps[i].perspective);
-                apply_perspective_to_vertex(to_point, steps[i].perspective);
+        // Push new regions
+        for (auto& region: steps[i].crop_regions) {
+            draw_crop_region new_region = region;
+            for (int l = 0; l < 4; ++l) {
+                // Only apply perspective for new ones
+                apply_perspective_to_vertex(new_region.coords[l], steps[i].perspective);
+            }
 
-                std::unordered_set<size_t> points_to_left_of_line;
+            transformed_regions.push_back(new_region);
+        }
+    }
 
-                // Figure out which points are 'left' of the line (outside the crop region)
-                for (size_t j = 0; j < cropped_coords.size(); ++j) {
-                    bool v = point_is_to_left_of_line(from_point, to_point, cropped_coords[j].vertex);
-                    if (v) points_to_left_of_line.insert(j);
-                }
+    // Apply the perspective correction
+    fill_texture_q_for_quad(cropped_coords);
 
-                if (points_to_left_of_line.empty()) {
-                    // Line has no effect, skip
+    // Perform the crop
+    for (auto& crop_region : transformed_regions) {
+        for (int l = 0; l < 4; ++l) {
+            // Apply the crop, one edge at a time
+            int to_index   = l == 3 ? 0 : l + 1;
+            t_point from_point = crop_region.coords[l];
+            t_point to_point   = crop_region.coords[to_index];
+
+            std::unordered_set<size_t> points_to_left_of_line;
+
+            // Figure out which points are 'left' of the line (outside the crop region)
+            for (size_t j = 0; j < cropped_coords.size(); ++j) {
+                bool v = point_is_to_left_of_line(from_point, to_point, cropped_coords[j].vertex);
+                if (v) points_to_left_of_line.insert(j);
+            }
+
+            if (points_to_left_of_line.empty()) {
+                // Line has no effect, skip
+                continue;
+            } else if (points_to_left_of_line.size() == cropped_coords.size()) {
+                // All are to the left, shape has no geometry
+                return {};
+            }
+
+            std::vector<wrapped_vertex> new_coords;
+            new_coords.reserve(cropped_coords.size() * 2); // Avoid reallocs for complex shapes
+
+            // Iterate through the coords
+            for (size_t j = 0; j < cropped_coords.size(); ++j) {
+                if (points_to_left_of_line.count(j) == 0) {
+                    new_coords.push_back(cropped_coords[j]);
                     continue;
-                } else if (points_to_left_of_line.size() == cropped_coords.size()) {
-                    // All are to the left, shape has no geometry
-                    return {};
                 }
 
-                std::vector<wrapped_vertex> new_coords;
-                new_coords.reserve(cropped_coords.size() * 2); // Avoid reallocs for complex shapes
+                size_t prev_index = j == 0 ? cropped_coords.size() - 1 : j - 1;
+                size_t next_index = j == cropped_coords.size() - 1 ? 0 : j + 1;
 
-                // Iterate through the coords
-                for (size_t j = 0; j < cropped_coords.size(); ++j) {
-                    if (points_to_left_of_line.count(j) == 0) {
-                        new_coords.push_back(cropped_coords[j]);
-                        continue;
-                    }
+                bool prev_is_left_of_line = points_to_left_of_line.count(prev_index) == 1;
+                bool next_is_left_of_line = points_to_left_of_line.count(next_index) == 1;
 
-                    size_t prev_index = j == 0 ? cropped_coords.size() - 1 : j - 1;
-                    size_t next_index = j == cropped_coords.size() - 1 ? 0 : j + 1;
+                if (prev_is_left_of_line && next_is_left_of_line) {
+                    // Vertex and its edges are completely left of the line, skip
+                    continue;
+                }
 
-                    bool prev_is_left_of_line = points_to_left_of_line.count(prev_index) == 1;
-                    bool next_is_left_of_line = points_to_left_of_line.count(next_index) == 1;
-
-                    if (prev_is_left_of_line && next_is_left_of_line) {
-                        // Vertex and its edges are completely left of the line, skip
-                        continue;
-                    }
-
-                    if (!prev_is_left_of_line) {
-                        // This edge intersects the crop line, calculate the new coordinates
-                        wrapped_vertex new_coord;
-                        if (get_intersection_with_crop_line(to_point,
-                                                            from_point,
-                                                            cropped_coords[prev_index].vertex,
-                                                            cropped_coords[j].vertex,
-                                                            new_coord.vertex)) {
-                            crop_texture_for_vertex(cropped_coords[prev_index], cropped_coords[j], new_coord);
-                            new_coords.emplace_back(std::move(new_coord));
-                        } else {
-                            // Geometry error! skip coordinate
-                        }
-                    }
-
-                    if (!next_is_left_of_line) {
-                        // This edge intersects the crop line, calculate the new coordinates
-                        wrapped_vertex new_coord;
-                        if (get_intersection_with_crop_line(to_point,
-                                                            from_point,
-                                                            cropped_coords[j].vertex,
-                                                            cropped_coords[next_index].vertex,
-                                                            new_coord.vertex)) {
-                            crop_texture_for_vertex(cropped_coords[j], cropped_coords[next_index], new_coord);
-                            new_coords.emplace_back(std::move(new_coord));
-                        } else {
-                            // Geometry error! skip coordinate
-                        }
+                if (!prev_is_left_of_line) {
+                    // This edge intersects the crop line, calculate the new coordinates
+                    wrapped_vertex new_coord;
+                    if (get_intersection_with_crop_line(to_point,
+                                                        from_point,
+                                                        cropped_coords[prev_index].vertex,
+                                                        cropped_coords[j].vertex,
+                                                        new_coord.vertex)) {
+                        crop_texture_for_vertex(cropped_coords[prev_index], cropped_coords[j], new_coord);
+                        new_coords.emplace_back(std::move(new_coord));
+                    } else {
+                        // Geometry error! skip coordinate
                     }
                 }
 
-                // Polygon is cropped, update state
-                cropped_coords = new_coords;
+                if (!next_is_left_of_line) {
+                    // This edge intersects the crop line, calculate the new coordinates
+                    wrapped_vertex new_coord;
+                    if (get_intersection_with_crop_line(to_point,
+                                                        from_point,
+                                                        cropped_coords[j].vertex,
+                                                        cropped_coords[next_index].vertex,
+                                                        new_coord.vertex)) {
+                        crop_texture_for_vertex(cropped_coords[j], cropped_coords[next_index], new_coord);
+                        new_coords.emplace_back(std::move(new_coord));
+                    } else {
+                        // Geometry error! skip coordinate
+                    }
+                }
             }
 
-            {
-                static const double pixel_epsilon = 0.0001; // less than a pixel at 8k
+            // Polygon is cropped, update state
+            cropped_coords = new_coords;
+        }
 
-                // Prune duplicate coords
-                std::vector<wrapped_vertex> new_coords;
-                new_coords.reserve(cropped_coords.size()); // Avoid reallocs
+        {
+            static const double pixel_epsilon = 0.0001; // less than a pixel at 8k
 
-                for (size_t j = 0; j < cropped_coords.size(); ++j) {
-                    size_t prev_index = j == 0 ? cropped_coords.size() - 1 : j - 1;
+            // Prune duplicate coords
+            std::vector<wrapped_vertex> new_coords;
+            new_coords.reserve(cropped_coords.size()); // Avoid reallocs
 
-                    auto delta = cropped_coords[j].vertex - cropped_coords[prev_index].vertex;
-                    if (std::abs(delta(0)) > pixel_epsilon || std::abs(delta(1)) > pixel_epsilon) {
-                        new_coords.emplace_back(cropped_coords[j]);
-                    }
+            for (size_t j = 0; j < cropped_coords.size(); ++j) {
+                size_t prev_index = j == 0 ? cropped_coords.size() - 1 : j - 1;
+
+                auto delta = cropped_coords[j].vertex - cropped_coords[prev_index].vertex;
+                if (std::abs(delta(0)) > pixel_epsilon || std::abs(delta(1)) > pixel_epsilon) {
+                    new_coords.emplace_back(cropped_coords[j]);
                 }
-
-                if (new_coords.size() < 3) {
-                    // Not enough coords to draw anything
-                    return {};
-                }
-                cropped_coords = new_coords;
             }
+
+            if (new_coords.size() < 3) {
+                // Not enough coords to draw anything
+                return {};
+            }
+            cropped_coords = new_coords;
         }
     }
 
     // Convert back to frame_geometry types
-    draw_transformed_coords result = {};
-    result.cropped_coords.reserve(cropped_coords.size());
+    std::vector<core::frame_geometry::coord> result;
+    result.reserve(cropped_coords.size());
     for (auto& coord : cropped_coords) {
-        result.cropped_coords.push_back(coord.as_geometry());
-    }
-
-    // If there is a perspective applied, we need separate coords for drawing the texture, with correct texture_q values
-    if (steps.size() > 1) {
-        result.uncropped_coords.reserve(uncropped_coords.size());
-        for (auto& coord : uncropped_coords) {
-            result.uncropped_coords.push_back(coord.as_geometry());
-        }
-
-        fill_texture_q_for_quad(result.uncropped_coords);
+        result.push_back(coord.as_geometry());
     }
 
     return result;
