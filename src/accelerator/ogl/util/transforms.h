@@ -43,12 +43,6 @@ struct draw_transform_step
     t_matrix vertex_matrix;
 };
 
-struct draw_transformed_coords
-{
-    std::vector<core::frame_geometry::coord> cropped_coords;
-    std::vector<core::frame_geometry::coord> uncropped_coords;
-};
-
 struct draw_transforms
 {
     std::vector<draw_transform_step> steps;
@@ -71,7 +65,7 @@ struct draw_transforms
 
     [[nodiscard]] draw_transforms combine_transform(const core::image_transform& transform, double aspect_ratio) const;
 
-    [[nodiscard]] draw_transformed_coords transform_coords(const std::vector<core::frame_geometry::coord>& coords) const;
+    [[nodiscard]] std::vector<core::frame_geometry::coord> transform_coords(const std::vector<core::frame_geometry::coord>& coords) const;
 };
 
 } // namespace caspar::accelerator::ogl
