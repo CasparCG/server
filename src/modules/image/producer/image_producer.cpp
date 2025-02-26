@@ -70,6 +70,8 @@ struct image_producer : public core::frame_producer
     {
         load(load_image(description_));
 
+        state_["file/path"] = description_;
+
         CASPAR_LOG(info) << print() << L" Initialized";
     }
 
@@ -107,7 +109,6 @@ struct image_producer : public core::frame_producer
 
     core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
-        state_["file/path"] = description_;
         return frame_;
     }
 
