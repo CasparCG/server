@@ -65,10 +65,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::array<std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4>, 2> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>                 host_pools_;
 
-    using sync_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
-
-    sync_queue_t sync_queue_;
-
     GLuint fbo_;
 
     std::wstring version_;
@@ -136,8 +132,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
         for (auto& pools : device_pools_)
             for (auto& pool : pools)
                 pool.clear();
-
-        sync_queue_.clear();
 
         GL(glDeleteFramebuffers(1, &fbo_));
     }
@@ -222,7 +216,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto ptr = buf.get();
         return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), self = shared_from_this()](buffer*) mutable {
-            self->sync_queue_.emplace(std::move(buf));
+            auto pool = &self->host_pools_[static_cast<int>(buf->write() ? 1 : 0)][buf->size()];
+            pool->push(std::move(buf));
         });
     }
 
@@ -230,7 +225,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         auto buf = create_buffer(size, true);
         auto ptr = reinterpret_cast<uint8_t*>(buf->data());
-        return array<uint8_t>(ptr, buf->size(), buf);
+        return array<uint8_t>(ptr, buf->size(), std::move(buf));
     }
 
     std::future<std::shared_ptr<texture>>
@@ -261,8 +256,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
             auto buf = create_buffer(source->size(), false);
             source->copy_to(*buf);
 
-            sync_queue_.push(nullptr);
-
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
             GL(glFlush());
@@ -280,53 +273,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
             }
 
             glDeleteSync(fence);
-
-            {
-                std::shared_ptr<buffer> buf2;
-                while (sync_queue_.try_pop(buf2) && buf2) {
-                    auto pool = &host_pools_[static_cast<int>(buf2->write() ? 1 : 0)][buf2->size()];
-                    pool->push(std::move(buf2));
-                }
-            }
 
             auto ptr  = reinterpret_cast<uint8_t*>(buf->data());
             auto size = buf->size();
             return array<const uint8_t>(ptr, size, std::move(buf));
         });
     }
-
-#ifdef WIN32
-    /* Unused? */
-    std::future<std::shared_ptr<texture>>
-    copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
-    {
-        return spawn_async([=](yield_context yield) {
-            auto tex = create_texture(width, height, stride, depth, false);
-
-            tex->copy_from(source);
-
-            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-            GL(glFlush());
-
-            deadline_timer timer(service_);
-            for (auto n = 0; true; ++n) {
-                // TODO (perf) Smarter non-polling solution?
-                timer.expires_from_now(boost::posix_time::milliseconds(2));
-                timer.async_wait(yield);
-
-                auto wait = glClientWaitSync(fence, 0, 1);
-                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                    break;
-                }
-            }
-
-            glDeleteSync(fence);
-
-            return tex;
-        });
-    }
-#endif
 
     boost::property_tree::wptree info() const
     {
