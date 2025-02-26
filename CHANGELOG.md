@@ -1,3 +1,26 @@
+CasparCG 2.4.3 Stable
+==========================================
+
+### Core
+##### Fixes
+* Improve error handling for invalid config files #1571
+* Flush logs before exit #1571
+* Check audio cadence values look sane before accepting format #1588
+* Cross-channel routes from progressive to interlaced showing lots of black #1576
+* Transition: ignoring some transforms of input frames #1602
+
+### Producers
+##### Fixes
+* FFmpeg: fix crash on invalid frame header
+* Decklink: Crash with ffmpeg 7 #1582
+* HTML: Fix crash during uninit on exit
+* Image: update state during init #1601
+
+### Consumers
+##### Fixes
+* FFmpeg: set frame_rate for rtmp streams #1462
+
+
 CasparCG 2.4.2 Stable
 ==========================================
 
