@@ -168,11 +168,15 @@ class transition_producer : public frame_producer
         return dst_producer_->call(params);
     }
 
-    [[nodiscard]] draw_frame compose(draw_frame dst_frame, draw_frame src_frame) const
+    [[nodiscard]] draw_frame compose(draw_frame dst_frame0, draw_frame src_frame0) const
     {
         if (info_.type == transition_type::cut) {
-            return src_frame;
+            return src_frame0;
         }
+
+        // Wrap the frames so that the transforms can be mutated
+        draw_frame dst_frame = draw_frame::push(std::move(dst_frame0));
+        draw_frame src_frame = draw_frame::push(std::move(src_frame0));
 
         const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration));
 
