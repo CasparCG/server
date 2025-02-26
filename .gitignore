@@ -14,3 +14,9 @@ casparcg_server
 
 src/cmake-build-*
 src/.idea
+
+# debian build artifacts
+/debian
+/obj-*
+# Temporary for 2.4.x branch
+/tools/linux/deb/
