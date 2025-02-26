@@ -7,14 +7,10 @@ CasparCG 2.5.0 Stable
 * Build for Windows with VS2022
 * Rework linux builds to produce ubuntu deb files
 * Update ffmpeg to 7.0
-* Improve logging when encountering an invalid config file
-* Improve error messages when startup fails
 ##### Fixes
 * Build with boost 1.85/1.86
 * Only produce mixed frames on channels which have consumers
-* Flush logs before exit
 * Routed channels not compositing correctly when channel used a MIXER KEY
-* Check audio cadence in custom video-formats looks correct
 
 ### Producers
 ##### Improvements
@@ -23,8 +19,7 @@ CasparCG 2.5.0 Stable
 * Image: Reduce format/colour conversions performed on the CPU
 * HTML: Update CEF to 131
 ##### Fixes
-* Decklink: Producer crashing when used with ffmpeg 7
-* Route: Cross-channel routes to an interlaced channel showing lots of black frames
+* 
 
 ### Consumers
 ##### Improvements
@@ -33,6 +28,29 @@ CasparCG 2.5.0 Stable
 
 ##### Fixes
 *
+
+
+CasparCG 2.4.3 Stable
+==========================================
+
+### Core
+##### Fixes
+* Improve error handling for invalid config files #1571
+* Flush logs before exit #1571
+* Check audio cadence values look sane before accepting format #1588
+* Cross-channel routes from progressive to interlaced showing lots of black #1576
+* Transition: ignoring some transforms of input frames #1602
+
+### Producers
+##### Fixes
+* FFmpeg: fix crash on invalid frame header
+* Decklink: Crash with ffmpeg 7 #1582
+* HTML: Fix crash during uninit on exit
+* Image: update state during init #1601
+
+### Consumers
+##### Fixes
+* FFmpeg: set frame_rate for rtmp streams #1462
 
 
 CasparCG 2.4.2 Stable
