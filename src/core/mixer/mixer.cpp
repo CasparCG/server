@@ -62,6 +62,8 @@ struct mixer::impl
 
     const_frame operator()(std::vector<draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
     {
+        image_mixer_->update_aspect_ratio(static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height));
+
         for (auto& frame : frames) {
             frame.accept(audio_mixer_);
             frame.transform().image_transform.layer_depth = 1;
