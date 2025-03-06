@@ -99,6 +99,13 @@ image_transform& image_transform::operator*=(const image_transform& other)
     chroma.spill_suppress = std::max(other.chroma.spill_suppress, chroma.spill_suppress);
     chroma.spill_suppress_saturation =
         std::min(other.chroma.spill_suppress_saturation, chroma.spill_suppress_saturation);
+    edgeblend.left = std::max(edgeblend.left, other.edgeblend.left);
+    edgeblend.right = std::max(edgeblend.right, other.edgeblend.right);
+    edgeblend.top = std::max(edgeblend.top, other.edgeblend.top);
+    edgeblend.bottom = std::max(edgeblend.bottom, other.edgeblend.bottom);
+    edgeblend.g = std::max(edgeblend.g, other.edgeblend.g);
+    edgeblend.p = std::max(edgeblend.p, other.edgeblend.p);
+    edgeblend.a = std::max(edgeblend.a, other.edgeblend.a);
     is_key |= other.is_key;
     invert |= other.invert;
     is_mix |= other.is_mix;
@@ -175,6 +182,13 @@ image_transform image_transform::tween(double                 time,
     result.levels.max_output   = do_tween(time, source.levels.max_output, dest.levels.max_output, duration, tween);
     result.levels.min_output   = do_tween(time, source.levels.min_output, dest.levels.min_output, duration, tween);
     result.levels.gamma        = do_tween(time, source.levels.gamma, dest.levels.gamma, duration, tween);
+    result.edgeblend.bottom        = do_tween(time, source.edgeblend.bottom, dest.edgeblend.bottom, duration, tween);
+    result.edgeblend.top        = do_tween(time, source.edgeblend.top, dest.edgeblend.top, duration, tween);
+    result.edgeblend.right        = do_tween(time, source.edgeblend.right, dest.edgeblend.right, duration, tween);
+    result.edgeblend.left        = do_tween(time, source.edgeblend.left, dest.edgeblend.left, duration, tween);
+    result.edgeblend.g        = do_tween(time, source.edgeblend.g, dest.edgeblend.g, duration, tween);
+    result.edgeblend.p        = do_tween(time, source.edgeblend.p, dest.edgeblend.p, duration, tween);
+    result.edgeblend.a        = do_tween(time, source.edgeblend.a, dest.edgeblend.a, duration, tween);
     result.chroma.target_hue   = do_tween(time, source.chroma.target_hue, dest.chroma.target_hue, duration, tween);
     result.chroma.hue_width    = do_tween(time, source.chroma.hue_width, dest.chroma.hue_width, duration, tween);
     result.chroma.min_saturation =
@@ -228,7 +242,15 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
            eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
            eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) && eq(lhs.chroma.softness, rhs.chroma.softness) &&
            eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
-           eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+           eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) &&
+           eq(lhs.edgeblend.bottom, rhs.edgeblend.bottom) &&
+           eq(lhs.edgeblend.right, rhs.edgeblend.right) &&
+           eq(lhs.edgeblend.left, rhs.edgeblend.left) &&
+           eq(lhs.edgeblend.top, rhs.edgeblend.top) &&
+           eq(lhs.edgeblend.g, rhs.edgeblend.g) &&
+           eq(lhs.edgeblend.p, rhs.edgeblend.p) &&
+           eq(lhs.edgeblend.a, rhs.edgeblend.a) &&
+           lhs.crop == rhs.crop &&
            lhs.perspective == rhs.perspective;
 }
 

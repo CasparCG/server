@@ -87,7 +87,7 @@ struct artnet_consumer : public core::frame_consumer
                     long long                     elapsed_ms =
                         std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_seconds).count();
 
-                    long long sleep_time = time - elapsed_ms * 1000;
+                    long long sleep_time = time - elapsed_ms;
                     if (sleep_time > 0)
                         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 
