@@ -82,6 +82,22 @@ struct output::impl
 
     bool remove(const spl::shared_ptr<frame_consumer>& consumer) { return remove(consumer->index()); }
 
+    std::future<bool> call(int index, const std::vector<std::wstring>& params)
+    {
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        auto                        it = consumers_.find(index);
+        if (it != consumers_.end()) {
+            try {
+                return it->second->call(params);
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+        } else {
+            CASPAR_LOG(warning) << print() << L" No consumer found for index " << index << L".";
+        }
+        return caspar::make_ready_future(false);
+    }
+
     size_t consumer_count()
     {
         std::lock_guard<std::mutex> lock(consumers_mutex_);
@@ -219,10 +235,14 @@ output::output(const spl::shared_ptr<diagnostics::graph>& graph,
 {
 }
 output::~output() {}
-void   output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
-void   output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
-bool   output::remove(int index) { return impl_->remove(index); }
-bool   output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
+void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(index, consumer); }
+void output::add(const spl::shared_ptr<frame_consumer>& consumer) { impl_->add(consumer); }
+bool output::remove(int index) { return impl_->remove(index); }
+bool output::remove(const spl::shared_ptr<frame_consumer>& consumer) { return impl_->remove(consumer); }
+std::future<bool> output::call(int index, const std::vector<std::wstring>& params)
+{
+    return impl_->call(index, params);
+}
 size_t output::consumer_count() const { return impl_->consumer_count(); }
 void   output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
 {
