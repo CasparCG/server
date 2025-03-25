@@ -47,7 +47,7 @@ extern "C" {
 
 namespace caspar { namespace image {
 
-
+// Based on: https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/lavfutils.c
 int ff_load_image(uint8_t *data[4], int linesize[4],
                   int *w, int *h, enum AVPixelFormat *pix_fmt,
                   const char *filename, AVFormatContext *format_ctx, void *log_ctx)
@@ -202,7 +202,7 @@ static int readFunction(void* opaque, uint8_t* buf, int buf_size) {
     return data.size();
 }
 
-std::shared_ptr<AVFrame> load_from_memory2(std::vector<unsigned char> image_data) {
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data) {
     const std::shared_ptr<unsigned char> buffer(reinterpret_cast<unsigned char*>(av_malloc(image_data.size())), &av_free);
 
     auto avioContext = avio_alloc_context(buffer.get(), image_data.size(), 0, reinterpret_cast<void*>(&image_data), &readFunction, nullptr, nullptr);

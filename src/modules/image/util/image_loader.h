@@ -39,7 +39,7 @@ struct FIBITMAP;
 namespace caspar { namespace image {
 
 std::shared_ptr<AVFrame> load_image(const std::wstring& filename);
-std::shared_ptr<AVFrame> load_from_memory2(std::vector<unsigned char> image_data);
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data);
 
 bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src);
 std::shared_ptr<AVFrame> convert_to_bgra32(const std::shared_ptr<AVFrame>& src);
