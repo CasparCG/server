@@ -32,12 +32,8 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
-#include <common/log.h>
-#include <common/utf.h>
 
-#include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
-#include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
