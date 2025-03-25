@@ -31,6 +31,7 @@
 #include <common/except.h>
 #include <common/utf.h>
 
+
 #if defined(_MSC_VER)
 #pragma warning(disable : 4714) // marked as __forceinline not inlined
 #endif
@@ -50,7 +51,121 @@
 #define IMAGE_BGR_FORMAT core::pixel_format::rgb
 #endif
 
+extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+#include <libavutil/dict.h>
+#include <libavutil/log.h>
+#include <libavutil/pixfmt.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+}
+
 namespace caspar { namespace image {
+
+
+int ff_load_image(uint8_t *data[4], int linesize[4],
+                  int *w, int *h, enum AVPixelFormat *pix_fmt,
+                  const char *filename, void *log_ctx)
+{
+    const AVInputFormat *iformat = NULL;
+    AVFormatContext *format_ctx = NULL;
+    const AVCodec *codec;
+    AVCodecContext *codec_ctx = NULL;
+    AVCodecParameters *par;
+    AVFrame *frame = NULL;
+    int ret = 0;
+    AVPacket pkt;
+    AVDictionary *opt=NULL;
+
+    iformat = av_find_input_format("image2pipe");
+    if ((ret = avformat_open_input(&format_ctx, filename, iformat, NULL)) < 0) {
+        av_log(log_ctx, AV_LOG_ERROR,
+               "Failed to open input file '%s'\n", filename);
+        return ret;
+    }
+
+    if ((ret = avformat_find_stream_info(format_ctx, NULL)) < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Find stream info failed\n");
+        goto end;
+    }
+
+    par = format_ctx->streams[0]->codecpar;
+    codec = avcodec_find_decoder(par->codec_id);
+    if (!codec) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to find codec\n");
+        ret = AVERROR(EINVAL);
+        goto end;
+    }
+
+    codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to alloc video decoder context\n");
+        ret = AVERROR(ENOMEM);
+        goto end;
+    }
+
+    ret = avcodec_parameters_to_context(codec_ctx, par);
+    if (ret < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to copy codec parameters to decoder context\n");
+        goto end;
+    }
+
+    av_dict_set(&opt, "thread_type", "slice", 0);
+    if ((ret = avcodec_open2(codec_ctx, codec, &opt)) < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to open codec\n");
+        goto end;
+    }
+
+    if (!(frame = av_frame_alloc()) ) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to alloc frame\n");
+        ret = AVERROR(ENOMEM);
+        goto end;
+    }
+
+    ret = av_read_frame(format_ctx, &pkt);
+    if (ret < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to read frame from file\n");
+        goto end;
+    }
+
+    ret = avcodec_send_packet(codec_ctx, &pkt);
+    av_packet_unref(&pkt);
+    if (ret < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Error submitting a packet to decoder\n");
+        goto end;
+    }
+
+    ret = avcodec_receive_frame(codec_ctx, frame);
+    if (ret < 0) {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to decode image from file\n");
+        goto end;
+    }
+
+    *w       = frame->width;
+    *h       = frame->height;
+    *pix_fmt = static_cast<AVPixelFormat>(frame->format);
+
+    if ((ret = av_image_alloc(data, linesize, *w, *h, *pix_fmt, 16)) < 0)
+        goto end;
+    ret = 0;
+
+    av_image_copy2(data, linesize, frame->data, frame->linesize,
+                   *pix_fmt, *w, *h);
+
+end:
+    avcodec_free_context(&codec_ctx);
+    avformat_close_input(&format_ctx);
+    av_frame_free(&frame);
+    av_dict_free(&opt);
+
+    if (ret < 0)
+        av_log(log_ctx, AV_LOG_ERROR, "Error loading image file '%s'\n", filename);
+    return ret;
+}
+
 
 loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMAP> bitmap, bool allow_all_formats)
 {
@@ -103,35 +218,50 @@ loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMA
     return {std::move(bitmap), format, stride, depth, is_straight};
 }
 
+std::shared_ptr<AVFrame> load_image2(const std::wstring& filename) {
+    if (!boost::filesystem::exists(filename))
+        CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
+
+    auto src_video = ffmpeg::alloc_frame();
+    int res = ff_load_image(src_video->data, src_video->linesize, &src_video->width, &src_video->height,
+                            reinterpret_cast<AVPixelFormat *>(&src_video->format), u8(filename).c_str(), nullptr);
+    if (res != 0)
+        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+
+    return std::move(src_video);
+}
+
 loaded_image load_image(const std::wstring& filename, bool allow_all_formats)
 {
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
-#ifdef WIN32
-    FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);
-#else
-    FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(u8(filename).c_str(), 0);
-#endif
 
-    if (fif == FIF_UNKNOWN)
-#ifdef WIN32
-        fif = FreeImage_GetFIFFromFilenameU(filename.c_str());
-#else
-        fif = FreeImage_GetFIFFromFilename(u8(filename).c_str());
-#endif
 
-    if (fif == FIF_UNKNOWN || (FreeImage_FIFSupportsReading(fif) == 0))
-        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+        #ifdef WIN32
+            FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);
+        #else
+            FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(u8(filename).c_str(), 0);
+        #endif
 
-#ifdef WIN32
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
-#else
-    auto bitmap =
-        std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
-#endif
+            if (fif == FIF_UNKNOWN)
+        #ifdef WIN32
+                fif = FreeImage_GetFIFFromFilenameU(filename.c_str());
+        #else
+                fif = FreeImage_GetFIFFromFilename(u8(filename).c_str());
+        #endif
 
-    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
+            if (fif == FIF_UNKNOWN || (FreeImage_FIFSupportsReading(fif) == 0) || fif == FIF_PNG)
+                CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+
+        #ifdef WIN32
+            auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
+        #else
+            auto bitmap =
+                std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
+        #endif
+
+            return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
 }
 
 loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats)

@@ -334,6 +334,7 @@ struct Filter
                             (format_desc.framerate.numerator() * format_desc.field_count) %
                             format_desc.framerate.denominator() % (static_cast<double>(start_time) / AV_TIME_BASE))
                                .str();
+
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
             if (filter_spec.empty()) {
                 filter_spec = "anull";
@@ -442,6 +443,11 @@ struct Filter
                 video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
                 filter_spec = "alphamerge," + filter_spec;
             }
+
+            if (video_av_streams.size() == 1 &&
+                video_av_streams[0]->codecpar->codec_id == AV_CODEC_ID_PNG) {
+                filter_spec += ",premultiply=inplace=1";
+            }
         }
 
         graph = std::shared_ptr<AVFilterGraph>(avfilter_graph_alloc(),
@@ -501,6 +507,10 @@ struct Filter
                     if (st->framerate.num > 0 && st->framerate.den > 0) {
                         args += (boost::format(":frame_rate=%d/%d") % st->framerate.num % st->framerate.den).str();
                     }
+
+//                    if (st->codec_id == AV_CODEC_ID_PNG) {
+//                        args += ";premultiply=inplace=1";
+//                    }
 
                     AVFilterContext* source = nullptr;
                     FF(avfilter_graph_create_filter(
@@ -915,8 +925,10 @@ struct AVProducer::Impl
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
             }
 
+//            bool is_straight_alpha = false;
+
             frame.frame = core::draw_frame(
-                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video), scale_mode_));
+                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video)));
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);

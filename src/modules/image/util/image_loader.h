@@ -22,8 +22,11 @@
 #pragma once
 
 #include <core/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
 
 #include <common/bit_depth.h>
+
+#include <ffmpeg/util/av_util.h>
 
 #include <memory>
 #include <set>
@@ -43,6 +46,8 @@ struct loaded_image
     common::bit_depth         depth;
     bool                      is_straight;
 };
+
+std::shared_ptr<AVFrame> load_image2(const std::wstring& filename);
 
 loaded_image load_image(const std::wstring& filename, bool allow_all_formats);
 loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);

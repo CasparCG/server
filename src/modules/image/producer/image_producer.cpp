@@ -72,7 +72,9 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_image(description_, true), scale_mode);
+        auto av_frame = load_image2(description_);
+        auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+        frame_ = core::draw_frame(std::move(frame));
 
         state_["file/path"] = description_;
 
