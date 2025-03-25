@@ -21,38 +21,15 @@
 
 #include "image_producer.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#if defined(_MSC_VER)
-#include <windows.h>
-#endif
-#include <FreeImage.h>
-
 #include "../util/image_loader.h"
 
-#include <core/video_format.h>
-
-#include <core/frame/draw_frame.h>
-#include <core/frame/frame.h>
-#include <core/frame/frame_factory.h>
-#include <core/frame/geometry.h>
-#include <core/frame/pixel_format.h>
-#include <core/monitor/monitor.h>
-#include <core/producer/frame_producer.h>
-
-#include <common/array.h>
 #include <common/base64.h>
 #include <common/env.h>
 #include <common/filesystem.h>
-#include <common/log.h>
-#include <common/os/filesystem.h>
 #include <common/param.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 
-#include <algorithm>
-#include <set>
 #include <utility>
 
 namespace caspar { namespace image {
@@ -73,7 +50,7 @@ struct image_producer : public core::frame_producer
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        auto av_frame = load_image2(description_);
+        auto av_frame = load_image(description_);
         if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_to_bgra32(av_frame);
 
         auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
@@ -99,20 +76,6 @@ struct image_producer : public core::frame_producer
         frame_ = core::draw_frame(std::move(frame));
 
         CASPAR_LOG(info) << print() << L" Initialized";
-    }
-
-    void load(const loaded_image& image, core::frame_geometry::scale_mode scale_mode)
-    {
-        core::pixel_format_desc desc(image.format);
-        desc.is_straight_alpha = image.is_straight;
-        desc.planes.emplace_back(
-            FreeImage_GetWidth(image.bitmap.get()), FreeImage_GetHeight(image.bitmap.get()), image.stride, image.depth);
-
-        auto frame       = frame_factory_->create_frame(this, desc);
-        frame.geometry() = core::frame_geometry::get_default_vflip(scale_mode);
-
-        std::copy_n(FreeImage_GetBits(image.bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
-        frame_ = core::draw_frame(std::move(frame));
     }
 
     // frame_producer
