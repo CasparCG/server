@@ -162,6 +162,10 @@ struct image_scroll_producer : public core::frame_producer
         auto                   count = width_ * height_ * 4;
         image_view<bgra_pixel> original_view(bytes, width_, height_);
 
+        // This needs to be performed before being the blur is applied
+        if (premultiply_with_alpha)
+            premultiply(original_view);
+
         boost::scoped_array<uint8_t> blurred_copy;
 
         if (motion_blur_px > 0) {
@@ -186,7 +190,6 @@ struct image_scroll_producer : public core::frame_producer
 
             while (count > 0) {
                 core::pixel_format_desc desc = core::pixel_format_desc(core::pixel_format::bgra);
-                desc.is_straight_alpha = premultiply_with_alpha;
                 desc.planes.emplace_back(width_, format_desc_.height, 4);
                 auto frame = frame_factory->create_frame(this, desc);
 
@@ -212,7 +215,6 @@ struct image_scroll_producer : public core::frame_producer
             int i = 0;
             while (count > 0) {
                 core::pixel_format_desc desc = core::pixel_format_desc(core::pixel_format::bgra);
-                desc.is_straight_alpha = premultiply_with_alpha;
                 desc.planes.emplace_back(format_desc_.width, height_, 4);
                 auto frame = frame_factory->create_frame(this, desc);
                 if (count >= frame.image_data(0).size()) {

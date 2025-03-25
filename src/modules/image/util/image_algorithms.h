@@ -167,6 +167,36 @@ void blur(const SrcView& src, DstView& dst, double angle_radians, int blur_px, c
 }
 
 /**
+ * Premultiply with alpha for each pixel in an ImageView. The modifications is
+ * done in place. The pixel type of the ImageView must model the RGBAPixel
+ * concept.
+ *
+ * @param view_to_modify The image view to premultiply in place. Has to model
+ *                       the ImageView concept and have a pixel type that
+ *                       models RGBAPixel.
+ */
+template <class SrcDstView>
+void premultiply(SrcDstView& view_to_modify)
+{
+    std::for_each(view_to_modify.begin(), view_to_modify.end(), [&](typename SrcDstView::pixel_type& pixel) {
+        int alpha = static_cast<int>(pixel.a());
+
+        if (alpha != 255) // Performance optimization
+        {
+            // We don't event try to premultiply 0 since it will be unaffected.
+            if (pixel.r())
+                pixel.r() = static_cast<uint8_t>(static_cast<int>(pixel.r()) * alpha / 255);
+
+            if (pixel.g())
+                pixel.g() = static_cast<uint8_t>(static_cast<int>(pixel.g()) * alpha / 255);
+
+            if (pixel.b())
+                pixel.b() = static_cast<uint8_t>(static_cast<int>(pixel.b()) * alpha / 255);
+        }
+    });
+}
+
+/**
  * Un-multiply with alpha for each pixel in an ImageView. The modifications is
  * done in place. The pixel type of the ImageView must model the RGBAPixel
  * concept.
