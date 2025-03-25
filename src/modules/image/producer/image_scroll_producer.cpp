@@ -141,11 +141,12 @@ struct image_scroll_producer : public core::frame_producer
         if (end_time_)
             speed = -1.0;
 
-        auto image = load_image(filename_, false);
-        FreeImage_FlipVertical(image.bitmap.get());
 
-        width_  = FreeImage_GetWidth(image.bitmap.get());
-        height_ = FreeImage_GetHeight(image.bitmap.get());
+        auto av_frame = convert_to_bgra32(load_image2(filename_));
+        auto image = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, core::frame_geometry::scale_mode::stretch, true);
+
+        width_  = image.width();
+        height_ = image.height();
 
         bool vertical   = width_ == format_desc_.width;
         bool horizontal = height_ == format_desc_.height;

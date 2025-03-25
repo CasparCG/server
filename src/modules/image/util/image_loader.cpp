@@ -31,6 +31,7 @@
 #include <common/except.h>
 #include <common/utf.h>
 
+#include <core/frame/pixel_format.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4714) // marked as __forceinline not inlined
@@ -68,10 +69,9 @@ namespace caspar { namespace image {
 
 int ff_load_image(uint8_t *data[4], int linesize[4],
                   int *w, int *h, enum AVPixelFormat *pix_fmt,
-                  const char *filename, void *log_ctx)
+                  const char *filename, AVFormatContext *format_ctx, void *log_ctx)
 {
     const AVInputFormat *iformat = NULL;
-    AVFormatContext *format_ctx = NULL;
     const AVCodec *codec;
     AVCodecContext *codec_ctx = NULL;
     AVCodecParameters *par;
@@ -218,13 +218,75 @@ loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMA
     return {std::move(bitmap), format, stride, depth, is_straight};
 }
 
+bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src) {
+    std::vector<int> data_map;
+    auto sample_pix_desc =
+            ffmpeg::pixel_format_desc(
+                    static_cast<AVPixelFormat>(src->format), src->width, src->height, data_map, core::color_space::bt709);
+   return sample_pix_desc.format != core::pixel_format::invalid;
+}
+
+std::shared_ptr<AVFrame> convert_to_bgra32(const std::shared_ptr<AVFrame>& src) {
+    const auto target_format = AV_PIX_FMT_BGRA;
+
+    if (src->format == target_format) return src;
+
+    std::shared_ptr<SwsContext> sws;
+    sws.reset(sws_getContext(
+                      src->width, src->height, static_cast<AVPixelFormat>(src->format), src->width, src->height, target_format, 0, nullptr, nullptr, nullptr),
+              [](SwsContext* ptr) { sws_freeContext(ptr); });
+
+    if (!sws) {
+        CASPAR_THROW_EXCEPTION(caspar_exception());
+    }
+
+    auto dest = ffmpeg::alloc_frame();
+    dest->sample_aspect_ratio = src->sample_aspect_ratio;
+    dest->width               = src->width;
+    dest->height              = src->height;
+    dest->format              = target_format;
+    dest->colorspace          = AVCOL_SPC_BT709;
+    av_frame_get_buffer(dest.get(), 64);
+
+    sws_scale_frame(sws.get(), dest.get(), src.get());
+
+    return dest;
+}
+
 std::shared_ptr<AVFrame> load_image2(const std::wstring& filename) {
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
     auto src_video = ffmpeg::alloc_frame();
     int res = ff_load_image(src_video->data, src_video->linesize, &src_video->width, &src_video->height,
-                            reinterpret_cast<AVPixelFormat *>(&src_video->format), u8(filename).c_str(), nullptr);
+                            reinterpret_cast<AVPixelFormat *>(&src_video->format), u8(filename).c_str(), nullptr, nullptr);
+    if (res != 0)
+        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+
+    return std::move(src_video);
+}
+
+
+static int readFunction(void* opaque, uint8_t* buf, int buf_size) {
+    auto& data = *reinterpret_cast<std::vector<unsigned char>*>(opaque);
+    memcpy(buf, data.data(), buf_size);
+    return data.size();
+}
+
+std::shared_ptr<AVFrame> load_from_memory2(std::vector<unsigned char> image_data) {
+    const std::shared_ptr<unsigned char> buffer(reinterpret_cast<unsigned char*>(av_malloc(image_data.size())), &av_free);
+
+    auto avioContext = avio_alloc_context(buffer.get(), image_data.size(), 0, reinterpret_cast<void*>(&image_data), &readFunction, nullptr, nullptr);
+
+    const auto avFormat = std::shared_ptr<AVFormatContext>(avformat_alloc_context(), &avformat_free_context);
+    avFormat->pb = avioContext;
+
+    auto src_video = ffmpeg::alloc_frame();
+    int res = ff_load_image(src_video->data, src_video->linesize, &src_video->width, &src_video->height,
+                            reinterpret_cast<AVPixelFormat *>(&src_video->format), "base64",  avFormat.get(), nullptr);
+
+    avio_context_free(&avioContext);
+
     if (res != 0)
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 
@@ -264,18 +326,6 @@ loaded_image load_image(const std::wstring& filename, bool allow_all_formats)
             return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
 }
 
-loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats)
-{
-    FREE_IMAGE_FORMAT fif = FIF_PNG;
-
-    auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
-        FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
-        FreeImage_CloseMemory);
-    auto bitmap =
-        std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
-
-    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
-}
 
 bool is_valid_file(const boost::filesystem::path& filename)
 {

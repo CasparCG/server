@@ -41,6 +41,7 @@
 #include <core/producer/frame_producer.h>
 
 #include <common/array.h>
+#include <common/base64.h>
 #include <common/env.h>
 #include <common/filesystem.h>
 #include <common/log.h>
@@ -73,6 +74,8 @@ struct image_producer : public core::frame_producer
         , length_(length)
     {
         auto av_frame = load_image2(description_);
+        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_to_bgra32(av_frame);
+
         auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
 
@@ -82,15 +85,18 @@ struct image_producer : public core::frame_producer
     }
 
     image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory,
-                   const void*                                 png_data,
-                   size_t                                      size,
+                   std::vector<unsigned char>                  image_data,
                    uint32_t                                    length,
                    core::frame_geometry::scale_mode            scale_mode)
-        : description_(L"png from memory")
+        : description_(L"base64 image from memory")
         , frame_factory_(frame_factory)
         , length_(length)
     {
-        load(load_png_from_memory(png_data, size, true), scale_mode);
+        auto av_frame = load_from_memory2(std::move(image_data));
+        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_to_bgra32(av_frame);
+
+        auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+        frame_ = core::draw_frame(std::move(frame));
 
         CASPAR_LOG(info) << print() << L" Initialized";
     }
@@ -140,6 +146,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto length     = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
+
+//    if (boost::iequals(params.at(0), L"[PNG_BASE64]")) {
+//        if (params.size() < 2)
+//            return core::frame_producer::empty();
+//
+//        auto png_data = from_base64(u8(params.at(1)));
+//
+//        return spl::make_shared<image_producer>(dependencies.frame_factory, std::move(png_data), length, scale_mode);
+//    }
 
     auto filename = find_file_within_dir_or_absolute(env::media_folder(), params.at(0), is_valid_file);
     if (!filename) {
