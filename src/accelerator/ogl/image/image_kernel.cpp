@@ -122,45 +122,50 @@ struct image_kernel::impl
             return;
         }
 
+        auto transforms = params.transforms;
+
         auto const first_plane = params.pix_desc.planes.at(0);
         if (params.geometry.mode() != core::frame_geometry::scale_mode::stretch && first_plane.width > 0 &&
             first_plane.height > 0) {
-            /* auto width_scale  = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
-             auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);*/
+             auto width_scale  = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
+             auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);
 
-            // HACK: TODO
-            //            double target_scale;
-            //			switch (params.geometry.mode()) {
-            //                case core::frame_geometry::scale_mode::fit:
-            //                    target_scale = std::min(width_scale, height_scale);
-            //                    f_s[0] *= target_scale / width_scale;
-            //                    f_s[1] *= target_scale / height_scale;
-            //                    break;
-            //
-            //                case core::frame_geometry::scale_mode::fill:
-            //                    target_scale = std::max(width_scale, height_scale);
-            //                    f_s[0] *= target_scale / width_scale;
-            //                    f_s[1] *= target_scale / height_scale;
-            //                    break;
-            //
-            //                case core::frame_geometry::scale_mode::original:
-            //                    f_s[0] /= width_scale;
-            //                    f_s[1] /= height_scale;
-            //                    break;
-            //
-            //                case core::frame_geometry::scale_mode::hfill:
-            //                    f_s[1] *= width_scale / height_scale;
-            //                    break;
-            //
-            //                case core::frame_geometry::scale_mode::vfill:
-            //                    f_s[0] *= height_scale / width_scale;
-            //                    break;
-            //
-            //                default:;
-            //			}
+            core::image_transform transform;
+            double target_scale;
+            switch (params.geometry.mode()) {
+                case core::frame_geometry::scale_mode::fit:
+                    target_scale = std::min(width_scale, height_scale);
+
+                    transform.fill_scale[0] *= target_scale / width_scale;
+                    transform.fill_scale[1] *= target_scale / height_scale;
+                    break;
+
+                case core::frame_geometry::scale_mode::fill:
+                    target_scale = std::max(width_scale, height_scale);
+                    transform.fill_scale[0] *= target_scale / width_scale;
+                    transform.fill_scale[1] *= target_scale / height_scale;
+                    break;
+
+                case core::frame_geometry::scale_mode::original:
+                    transform.fill_scale[0] /= width_scale;
+                    transform.fill_scale[1] /= height_scale;
+                    break;
+
+                case core::frame_geometry::scale_mode::hfill:
+                    transform.fill_scale[1] *= width_scale / height_scale;
+                    break;
+
+                case core::frame_geometry::scale_mode::vfill:
+                    transform.fill_scale[0] *= height_scale / width_scale;
+                    break;
+
+                default:;
+            }
+
+            transforms = transforms.combine_transform(transform, params.aspect_ratio);
         }
 
-        coords = params.transforms.transform_coords(coords);
+        coords = transforms.transform_coords(coords);
 
         // Skip drawing if all the coordinates will be outside the screen.
         if (coords.size() < 3 || is_outside_screen(coords)) {
@@ -218,26 +223,26 @@ struct image_kernel::impl
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);
         shader_->set("opacity",
-                     params.transforms.image_transform.is_key ? 1.0 : params.transforms.image_transform.opacity);
+                     transforms.image_transform.is_key ? 1.0 : transforms.image_transform.opacity);
 
-        if (params.transforms.image_transform.chroma.enable) {
+        if (transforms.image_transform.chroma.enable) {
             shader_->set("chroma", true);
-            shader_->set("chroma_show_mask", params.transforms.image_transform.chroma.show_mask);
-            shader_->set("chroma_target_hue", params.transforms.image_transform.chroma.target_hue / 360.0);
-            shader_->set("chroma_hue_width", params.transforms.image_transform.chroma.hue_width);
-            shader_->set("chroma_min_saturation", params.transforms.image_transform.chroma.min_saturation);
-            shader_->set("chroma_min_brightness", params.transforms.image_transform.chroma.min_brightness);
-            shader_->set("chroma_softness", 1.0 + params.transforms.image_transform.chroma.softness);
-            shader_->set("chroma_spill_suppress", params.transforms.image_transform.chroma.spill_suppress / 360.0);
+            shader_->set("chroma_show_mask", transforms.image_transform.chroma.show_mask);
+            shader_->set("chroma_target_hue", transforms.image_transform.chroma.target_hue / 360.0);
+            shader_->set("chroma_hue_width", transforms.image_transform.chroma.hue_width);
+            shader_->set("chroma_min_saturation", transforms.image_transform.chroma.min_saturation);
+            shader_->set("chroma_min_brightness", transforms.image_transform.chroma.min_brightness);
+            shader_->set("chroma_softness", 1.0 + transforms.image_transform.chroma.softness);
+            shader_->set("chroma_spill_suppress", transforms.image_transform.chroma.spill_suppress / 360.0);
             shader_->set("chroma_spill_suppress_saturation",
-                         params.transforms.image_transform.chroma.spill_suppress_saturation);
+                         transforms.image_transform.chroma.spill_suppress_saturation);
         } else {
             shader_->set("chroma", false);
         }
 
         // Setup blend_func
 
-        if (params.transforms.image_transform.is_key) {
+        if (transforms.image_transform.is_key) {
             params.blend_mode = core::blend_mode::normal;
         }
 
@@ -247,31 +252,31 @@ struct image_kernel::impl
         shader_->set("keyer", params.keyer);
 
         // Setup image-adjustements
-        shader_->set("invert", params.transforms.image_transform.invert);
+        shader_->set("invert", transforms.image_transform.invert);
 
-        if (params.transforms.image_transform.levels.min_input > epsilon ||
-            params.transforms.image_transform.levels.max_input < 1.0 - epsilon ||
-            params.transforms.image_transform.levels.min_output > epsilon ||
-            params.transforms.image_transform.levels.max_output < 1.0 - epsilon ||
-            std::abs(params.transforms.image_transform.levels.gamma - 1.0) > epsilon) {
+        if (transforms.image_transform.levels.min_input > epsilon ||
+            transforms.image_transform.levels.max_input < 1.0 - epsilon ||
+            transforms.image_transform.levels.min_output > epsilon ||
+            transforms.image_transform.levels.max_output < 1.0 - epsilon ||
+            std::abs(transforms.image_transform.levels.gamma - 1.0) > epsilon) {
             shader_->set("levels", true);
-            shader_->set("min_input", params.transforms.image_transform.levels.min_input);
-            shader_->set("max_input", params.transforms.image_transform.levels.max_input);
-            shader_->set("min_output", params.transforms.image_transform.levels.min_output);
-            shader_->set("max_output", params.transforms.image_transform.levels.max_output);
-            shader_->set("gamma", params.transforms.image_transform.levels.gamma);
+            shader_->set("min_input", transforms.image_transform.levels.min_input);
+            shader_->set("max_input", transforms.image_transform.levels.max_input);
+            shader_->set("min_output", transforms.image_transform.levels.min_output);
+            shader_->set("max_output", transforms.image_transform.levels.max_output);
+            shader_->set("gamma", transforms.image_transform.levels.gamma);
         } else {
             shader_->set("levels", false);
         }
 
-        if (std::abs(params.transforms.image_transform.brightness - 1.0) > epsilon ||
-            std::abs(params.transforms.image_transform.saturation - 1.0) > epsilon ||
-            std::abs(params.transforms.image_transform.contrast - 1.0) > epsilon) {
+        if (std::abs(transforms.image_transform.brightness - 1.0) > epsilon ||
+            std::abs(transforms.image_transform.saturation - 1.0) > epsilon ||
+            std::abs(transforms.image_transform.contrast - 1.0) > epsilon) {
             shader_->set("csb", true);
 
-            shader_->set("brt", params.transforms.image_transform.brightness);
-            shader_->set("sat", params.transforms.image_transform.saturation);
-            shader_->set("con", params.transforms.image_transform.contrast);
+            shader_->set("brt", transforms.image_transform.brightness);
+            shader_->set("sat", transforms.image_transform.saturation);
+            shader_->set("con", transforms.image_transform.contrast);
         } else {
             shader_->set("csb", false);
         }
