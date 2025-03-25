@@ -25,7 +25,7 @@
 
 #include <common/except.h>
 
-#include <zlib.h> // Compiled into FreeImage
+#include <zlib.h>
 
 #include <fstream>
 #include <streambuf>

@@ -26,12 +26,12 @@
 #define NOMINMAX
 #include <windows.h>
 #endif
-#include <FreeImage.h>
 
 #include <common/array.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
+#include <common/scope_exit.h>
 
 #include <core/frame/frame.h>
 
@@ -40,9 +40,24 @@
 
 #include <utility>
 #include <vector>
+#include <fstream>
+
+#include <ffmpeg/util/av_assert.h>
+#include <ffmpeg/util/av_util.h>
 
 #include "../util/image_algorithms.h"
 #include "../util/image_view.h"
+
+extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavutil/imgutils.h>
+#include <libavutil/dict.h>
+#include <libavutil/log.h>
+#include <libavutil/pixfmt.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+}
 
 namespace caspar { namespace image {
 
@@ -66,30 +81,58 @@ struct image_consumer : public core::frame_consumer
 
         std::thread async([frame, filename] {
             try {
-                auto filename2 = filename;
+                std::string filename2;
 
-                if (filename2.empty())
-                    filename2 = env::media_folder() +
+                if (frame.pixel_format_desc().format != core::pixel_format::bgra) CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("image_consumer received frame with wrong format"));
+
+                if (filename.empty())
+                    filename2 = u8(env::media_folder() +
                                 boost::posix_time::to_iso_wstring(boost::posix_time::second_clock::local_time()) +
-                                L".png";
+                                L".png");
                 else
-                    filename2 = env::media_folder() + filename2 + L".png";
+                    filename2 = u8(env::media_folder() + filename + L".png");
 
-                auto bitmap = std::shared_ptr<FIBITMAP>(
-                    FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32),
-                    FreeImage_Unload);
-                std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data(0).begin(), frame.image_data(0).size());
+                std::fstream file_stream(filename2, std::fstream::out | std::fstream::trunc | std::fstream::binary);
+                if (!file_stream) FF_RET(AVERROR(EINVAL), "fstream_open");
 
-                image_view<bgra_pixel> original_view(
-                    FreeImage_GetBits(bitmap.get()), static_cast<int>(frame.width()), static_cast<int>(frame.height()));
-                unmultiply(original_view);
+                const AVCodec* codec = avcodec_find_encoder_by_name("png");
+                if (!codec) FF_RET(AVERROR(EINVAL), "avcodec_find_encoder_by_name");
 
-                FreeImage_FlipVertical(bitmap.get());
-#ifdef WIN32
-                FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
-#else
-                FreeImage_Save(FIF_PNG, bitmap.get(), u8(filename2).c_str(), 0);
-#endif
+                AVCodecContext *ctx = avcodec_alloc_context3(codec);
+                CASPAR_SCOPE_EXIT { avcodec_free_context(&ctx); };
+
+                ctx->width = frame.width();
+                ctx->height = frame.height();
+                ctx->pix_fmt = AV_PIX_FMT_BGRA;
+                ctx->time_base = {1, 1};
+                ctx->framerate = {0,1};
+
+                FF(avcodec_open2(ctx, codec, nullptr));
+
+                auto av_frame = ffmpeg::alloc_frame();
+                av_frame->width = frame.width();
+                av_frame->height = frame.height();
+                av_frame->format = AV_PIX_FMT_BGRA;
+                av_frame->pts = 0;
+                av_frame->linesize[0] = frame.width() * 4;
+                av_frame->data[0] = (uint8_t*)frame.image_data(0).data();
+
+                FF(avcodec_send_frame(ctx, av_frame.get()));
+                FF(avcodec_send_frame(ctx, nullptr));
+
+                AVPacket *pkt = av_packet_alloc();
+                CASPAR_SCOPE_EXIT { av_packet_free(&pkt); };
+                int ret = 0;
+                while (ret >= 0) {
+                    ret = avcodec_receive_packet(ctx, pkt);
+                    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                        break;
+                    FF_RET(ret, "avcodec_receive_packet");
+
+                    file_stream.write(reinterpret_cast<const char *>(pkt->data), pkt->size);
+                    av_packet_unref(pkt);
+                }
+
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION()
             }

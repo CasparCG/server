@@ -26,6 +26,5 @@
 namespace caspar { namespace image {
 
 void init(const core::module_dependencies& dependencies);
-void uninit();
 
 }} // namespace caspar::image

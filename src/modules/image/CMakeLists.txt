@@ -29,7 +29,6 @@ target_include_directories(image PRIVATE
 	..
     ../..
 	${FFMPEG_INCLUDE_PATH}
-    ${FREEIMAGE_INCLUDE_PATH}
     )
 
 set_target_properties(image PROPERTIES FOLDER modules)
@@ -41,14 +40,10 @@ source_group(sources ./*)
 if(MSVC)
 	target_link_libraries(image
 		ffmpeg
-
-		FreeImage.lib
 	)
 else()
 	target_link_libraries(image
 		ffmpeg
-
-		freeimage
 	)
 endif()
 

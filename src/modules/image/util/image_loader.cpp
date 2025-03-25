@@ -52,23 +52,22 @@ int ff_load_image(uint8_t *data[4], int linesize[4],
                   int *w, int *h, enum AVPixelFormat *pix_fmt,
                   const char *filename, AVFormatContext *format_ctx, void *log_ctx)
 {
-    const AVInputFormat *iformat = NULL;
     const AVCodec *codec;
     AVCodecContext *codec_ctx = NULL;
     AVCodecParameters *par;
     AVFrame *frame = NULL;
     int ret = 0;
     AVPacket pkt;
-    AVDictionary *opt=NULL;
+    AVDictionary *opt = NULL;
 
-    iformat = av_find_input_format("image2pipe");
-    if ((ret = avformat_open_input(&format_ctx, filename, iformat, NULL)) < 0) {
+    const AVInputFormat* iformat = av_find_input_format("image2pipe");
+    if ((ret = avformat_open_input(&format_ctx, filename, iformat, nullptr)) < 0) {
         av_log(log_ctx, AV_LOG_ERROR,
                "Failed to open input file '%s'\n", filename);
         return ret;
     }
 
-    if ((ret = avformat_find_stream_info(format_ctx, NULL)) < 0) {
+    if ((ret = avformat_find_stream_info(format_ctx, nullptr)) < 0) {
         av_log(log_ctx, AV_LOG_ERROR, "Find stream info failed\n");
         goto end;
     }
