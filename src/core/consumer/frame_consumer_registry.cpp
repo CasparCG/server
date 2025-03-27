@@ -48,9 +48,9 @@ class destroy_consumer_proxy : public frame_consumer
 {
     std::shared_ptr<frame_consumer> consumer_;
 
-public:
+  public:
     destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
-            : consumer_(std::move(consumer))
+        : consumer_(std::move(consumer))
     {
         destroy_consumers_in_separate_thread() = true;
     }
@@ -105,9 +105,9 @@ class print_consumer_proxy : public frame_consumer
 {
     std::shared_ptr<frame_consumer> consumer_;
 
-public:
+  public:
     print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
-            : consumer_(std::move(consumer))
+        : consumer_(std::move(consumer))
     {
     }
 
@@ -135,10 +135,7 @@ public:
     core::monitor::state state() const override { return consumer_->state(); }
 };
 
-
-frame_consumer_registry::frame_consumer_registry()
-{
-}
+frame_consumer_registry::frame_consumer_registry() {}
 
 void frame_consumer_registry::register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory)
 {
@@ -152,10 +149,10 @@ void frame_consumer_registry::register_preconfigured_consumer_factory(const std:
 }
 
 spl::shared_ptr<core::frame_consumer>
-frame_consumer_registry::create_consumer(const std::vector<std::wstring>&                         params,
-                                         const core::video_format_repository&                     format_repository,
-                                         const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                         common::bit_depth                                        depth) const
+frame_consumer_registry::create_consumer(const std::vector<std::wstring>&              params,
+                                         const core::video_format_repository&          format_repository,
+                                         const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                         common::bit_depth                             depth) const
 {
     if (params.empty())
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
@@ -165,7 +162,7 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
     if (!std::any_of(
             consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool {
                 try {
-                    consumer = factory(params, format_repository, channels, depth);
+                    consumer = factory(params, format_repository, frame_converter, depth);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -178,11 +175,11 @@ frame_consumer_registry::create_consumer(const std::vector<std::wstring>&       
 }
 
 spl::shared_ptr<frame_consumer>
-frame_consumer_registry::create_consumer(const std::wstring&                                      element_name,
-                                         const boost::property_tree::wptree&                      element,
-                                         const core::video_format_repository&                     format_repository,
-                                         const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                         common::bit_depth                                        depth) const
+frame_consumer_registry::create_consumer(const std::wstring&                           element_name,
+                                         const boost::property_tree::wptree&           element,
+                                         const core::video_format_repository&          format_repository,
+                                         const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                         common::bit_depth                             depth) const
 {
     auto& preconfigured_consumer_factories = preconfigured_consumer_factories_;
     auto  found                            = preconfigured_consumer_factories.find(element_name);
@@ -192,7 +189,7 @@ frame_consumer_registry::create_consumer(const std::wstring&                    
                                << msg_info(L"No consumer factory registered for element name " + element_name));
 
     return spl::make_shared<destroy_consumer_proxy>(
-        spl::make_shared<print_consumer_proxy>(found->second(element, format_repository, channels, depth)));
+        spl::make_shared<print_consumer_proxy>(found->second(element, format_repository, frame_converter, depth)));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
@@ -215,7 +212,5 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
     static spl::shared_ptr<frame_consumer> consumer = spl::make_shared<empty_frame_consumer>();
     return consumer;
 }
-
-
 
 }} // namespace caspar::core

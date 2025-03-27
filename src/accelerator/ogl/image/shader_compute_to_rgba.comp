@@ -16,25 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
+#version 430
 
-#pragma once
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-#include <common/bit_depth.h>
-#include <common/memory.h>
+layout(rgba16f, binding = 0) uniform image2D imgOutput; // Note: this needs to match what it is writing to
 
-#include <boost/property_tree/ptree_fwd.hpp>
-#include <core/consumer/frame_consumer.h>
+void main() {
+    vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
-#include <string>
-#include <vector>
+    value.r = float(texelCoord.x)/(gl_NumWorkGroups.x);
+    value.g = float(texelCoord.y)/(gl_NumWorkGroups.y);
 
-namespace caspar { namespace image {
-
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
-                                                      const core::video_format_repository&          format_repository,
-                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
-                                                      common::bit_depth                                        depth);
-
-}} // namespace caspar::image
+    imageStore(imgOutput, texelCoord, value);
+}
