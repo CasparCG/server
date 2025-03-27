@@ -69,10 +69,10 @@ Before beginning, check the build options section below, to decide if you want t
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
 3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-4. If not using system ffmpeg, run `./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies` to install the dependencies needed by the ffmpeg build
-5. If using system CEF, `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
-6. `mkdir build && cd build`
-7. `cmake ../src`
+4. If using system CEF (the default), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
+5. `mkdir build && cd build`
+6. `cmake ../src`. Optionally specify any build options from below.
+7. If not using system ffmpeg, run `./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies` to install the dependencies needed by the ffmpeg build
 8. `make -j8`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
@@ -83,7 +83,7 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
--DUSE_SYSTEM_FFMPEG=OFF - (Linux only, default ON) use the version of ffmpeg from your OS.
+-DUSE_SYSTEM_FFMPEG=OFF - (Linux only, default ON) use the version of ffmpeg from your OS. This is only verified to work on Ubuntu 22.04
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
 
