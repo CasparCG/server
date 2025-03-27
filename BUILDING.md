@@ -80,7 +80,7 @@ Before beginning, check the build options section below, to decide if you want t
 2. `cd casparcg-server-master`
 3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
 4. `mkdir build && cd build`
-5. `cmake ../src`
+5. `cmake ../src`. Optionally specify any build options from below.
 6. If not using system ffmpeg, run `./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies` to install the dependencies needed by the ffmpeg build
 7. `make -j8`
 
