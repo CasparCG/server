@@ -29,6 +29,11 @@
 #include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 
+#include <utility>
+
+#include "../util/matrix.h"
+#include "../util/transforms.h"
+
 namespace caspar { namespace accelerator { namespace ogl {
 
 enum class keyer
@@ -41,7 +46,7 @@ struct draw_params final
 {
     core::pixel_format_desc                     pix_desc = core::pixel_format_desc(core::pixel_format::invalid);
     std::vector<spl::shared_ptr<class texture>> textures;
-    core::image_transform                       transform;
+    draw_transforms                             transforms;
     core::frame_geometry                        geometry   = core::frame_geometry::get_default();
     core::blend_mode                            blend_mode = core::blend_mode::normal;
     ogl::keyer                                  keyer      = ogl::keyer::linear;
