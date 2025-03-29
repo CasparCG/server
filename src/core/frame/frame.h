@@ -97,8 +97,8 @@ struct converted_frame
     const_frame                                   frame;
     std::shared_future<array<const std::uint8_t>> pixels;
 
-    static converted_frame empty() {
-        return converted_frame({}, {});
+    explicit converted_frame()
+    {
     }
 
     converted_frame(const core::const_frame& frame, std::shared_future<array<const std::uint8_t>> pixels)

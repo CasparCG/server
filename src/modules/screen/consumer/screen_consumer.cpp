@@ -371,7 +371,7 @@ struct screen_consumer
 
     void tick()
     {
-        auto in_frame = core::converted_frame::empty();
+        auto in_frame = core::converted_frame();
 
         while (!frame_buffer_.try_pop(in_frame) && is_running_) {
             // TODO (fix)
