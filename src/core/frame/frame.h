@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <memory>
 #include <vector>
 
@@ -31,8 +32,6 @@ class mutable_frame final
     mutable_frame& operator=(const mutable_frame&) = delete;
     mutable_frame& operator=(mutable_frame&& other);
 
-    void swap(mutable_frame& other);
-
     const struct pixel_format_desc& pixel_format_desc() const;
 
     array<std::uint8_t>&       image_data(std::size_t index);
@@ -57,7 +56,7 @@ class const_frame final
 {
   public:
     const_frame();
-    explicit const_frame(std::vector<array<const std::uint8_t>> image_data,
+    explicit const_frame(std::any image_ptr,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc);
     const_frame(const const_frame& other);
@@ -69,7 +68,7 @@ class const_frame final
 
     const struct pixel_format_desc& pixel_format_desc() const;
 
-    const array<const std::uint8_t>& image_data(std::size_t index) const;
+    const std::any& image_ptr() const;
 
     const array<const std::int32_t>& audio_data() const;
 
@@ -78,8 +77,6 @@ class const_frame final
     std::size_t height() const;
 
     std::size_t size() const;
-
-    const std::any& opaque() const;
 
     const class frame_geometry& geometry() const;
 
@@ -93,6 +90,26 @@ class const_frame final
   private:
     struct impl;
     std::shared_ptr<impl> impl_;
+};
+
+struct converted_frame
+{
+    const_frame                                   frame;
+    std::shared_future<array<const std::uint8_t>> pixels;
+
+    explicit converted_frame()
+    {
+    }
+
+    converted_frame(const core::const_frame& frame, std::shared_future<array<const std::uint8_t>> pixels)
+        : frame(frame)
+        , pixels(std::move(pixels))
+    {
+    }
+
+    bool is_empty() {
+        return frame == core::const_frame{} || !pixels.valid();
+    }
 };
 
 }} // namespace caspar::core

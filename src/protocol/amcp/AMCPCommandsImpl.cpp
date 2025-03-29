@@ -482,7 +482,7 @@ std::wstring add_command(command_context& ctx)
 
     auto consumer = ctx.static_context->consumer_registry->create_consumer(ctx.parameters,
                                                                            ctx.static_context->format_repository,
-                                                                           get_channels(ctx),
+                                                                           ctx.channel.raw_channel->frame_converter(),
                                                                            ctx.channel.raw_channel->mixer().depth());
     ctx.channel.raw_channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
@@ -503,7 +503,7 @@ std::wstring remove_command(command_context& ctx)
         index = ctx.static_context->consumer_registry
                     ->create_consumer(ctx.parameters,
                                       ctx.static_context->format_repository,
-                                      get_channels(ctx),
+                                      ctx.channel.raw_channel->frame_converter(),
                                       ctx.channel.raw_channel->mixer().depth())
                     ->index();
     }
@@ -523,8 +523,11 @@ std::wstring print_command(command_context& ctx)
         std::copy(std::cbegin(ctx.parameters), std::cend(ctx.parameters), params.begin() + 1);
     }
 
-    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
-        params, ctx.static_context->format_repository, get_channels(ctx), ctx.channel.raw_channel->mixer().depth()));
+    ctx.channel.raw_channel->output().add(
+        ctx.static_context->consumer_registry->create_consumer(params,
+                                                               ctx.static_context->format_repository,
+                                                               ctx.channel.raw_channel->frame_converter(),
+                                                               ctx.channel.raw_channel->mixer().depth()));
 
     return L"202 PRINT OK\r\n";
 }
@@ -1389,8 +1392,10 @@ std::wstring channel_grid_command(command_context& ctx)
     params.emplace_back(L"0");
     params.emplace_back(L"NAME");
     params.emplace_back(L"Channel Grid Window");
-    auto screen = ctx.static_context->consumer_registry->create_consumer(
-        params, ctx.static_context->format_repository, get_channels(ctx), ctx.channel.raw_channel->mixer().depth());
+    auto screen = ctx.static_context->consumer_registry->create_consumer(params,
+                                                                         ctx.static_context->format_repository,
+                                                                         ctx.channel.raw_channel->frame_converter(),
+                                                                         ctx.channel.raw_channel->mixer().depth());
 
     self.raw_channel->output().add(screen);
 
