@@ -22,8 +22,11 @@
 #pragma once
 
 #include <core/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
 
 #include <common/bit_depth.h>
+
+#include <ffmpeg/util/av_util.h>
 
 #include <memory>
 #include <set>
@@ -35,17 +38,11 @@ struct FIBITMAP;
 
 namespace caspar { namespace image {
 
-struct loaded_image
-{
-    std::shared_ptr<FIBITMAP> bitmap;
-    core::pixel_format        format;
-    int                       stride;
-    common::bit_depth         depth;
-    bool                      is_straight;
-};
+std::shared_ptr<AVFrame> load_image(const std::wstring& filename);
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data);
 
-loaded_image load_image(const std::wstring& filename, bool allow_all_formats);
-loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats);
+bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src);
+std::shared_ptr<AVFrame> convert_to_bgra32(const std::shared_ptr<AVFrame>& src);
 
 bool is_valid_file(const boost::filesystem::path& filename);
 

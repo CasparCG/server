@@ -75,7 +75,6 @@ CasparCG Server uses the following third party libraries:
 - FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence.
   FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
 - Threading Building Blocks (http://www.threadingbuildingblocks.org/) library under the GPLv2 Licence.
-- FreeImage (http://freeimage.sourceforge.net/) under the GPLv2 License.
 - SFML (http://www.sfml-dev.org/) under the zlib/libpng License.
 - GLEW (http://glew.sourceforge.net) under the modified BSD License.
 - boost (http://www.boost.org/) under the Boost Software License, version 1.0.

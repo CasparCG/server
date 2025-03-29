@@ -26,8 +26,9 @@ casparcg_add_module_project(image
 	INIT_FUNCTION "image::init"
 )
 target_include_directories(image PRIVATE
+	..
     ../..
-    ${FREEIMAGE_INCLUDE_PATH}
+	${FFMPEG_INCLUDE_PATH}
     )
 
 set_target_properties(image PROPERTIES FOLDER modules)
@@ -38,11 +39,11 @@ source_group(sources ./*)
 
 if(MSVC)
 	target_link_libraries(image
-		FreeImage.lib
+		ffmpeg
 	)
 else()
 	target_link_libraries(image
-		freeimage
+		ffmpeg
 	)
 endif()
 
