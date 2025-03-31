@@ -50,14 +50,15 @@ extern "C" {
 namespace caspar { namespace image {
 
 // Based on: https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/lavfutils.c
-int ff_load_image(uint8_t *data[4], int linesize[4],
-                  int *w, int *h, enum AVPixelFormat *pix_fmt,
+int ff_load_image(AVFrame* frame,
                   const char *filename, AVFormatContext *format_ctx, void *log_ctx)
 {
+    if (!frame)
+        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("ff_load_image missing frame."));
+
     const AVCodec *codec;
     AVCodecContext *codec_ctx = NULL;
     AVCodecParameters *par;
-    AVFrame *frame = NULL;
     int ret = 0;
     AVPacket pkt;
     AVDictionary *opt = NULL;
@@ -101,12 +102,6 @@ int ff_load_image(uint8_t *data[4], int linesize[4],
         goto end;
     }
 
-    if (!(frame = av_frame_alloc()) ) {
-        av_log(log_ctx, AV_LOG_ERROR, "Failed to alloc frame\n");
-        ret = AVERROR(ENOMEM);
-        goto end;
-    }
-
     ret = av_read_frame(format_ctx, &pkt);
     if (ret < 0) {
         av_log(log_ctx, AV_LOG_ERROR, "Failed to read frame from file\n");
@@ -126,21 +121,9 @@ int ff_load_image(uint8_t *data[4], int linesize[4],
         goto end;
     }
 
-    *w       = frame->width;
-    *h       = frame->height;
-    *pix_fmt = static_cast<AVPixelFormat>(frame->format);
-
-    if ((ret = av_image_alloc(data, linesize, *w, *h, *pix_fmt, 16)) < 0)
-        goto end;
-    ret = 0;
-
-    av_image_copy2(data, linesize, frame->data, frame->linesize,
-                   *pix_fmt, *w, *h);
-
 end:
     avcodec_free_context(&codec_ctx);
     avformat_close_input(&format_ctx);
-    av_frame_free(&frame);
     av_dict_free(&opt);
 
     if (ret < 0)
@@ -153,8 +136,7 @@ std::shared_ptr<AVFrame> load_image(const std::wstring& filename) {
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
     auto src_video = ffmpeg::alloc_frame();
-    int res = ff_load_image(src_video->data, src_video->linesize, &src_video->width, &src_video->height,
-                            reinterpret_cast<AVPixelFormat *>(&src_video->format), u8(filename).c_str(), nullptr, nullptr);
+    int res = ff_load_image(src_video.get(), u8(filename).c_str(), nullptr, nullptr);
     if (res != 0)
         CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 
@@ -177,8 +159,7 @@ std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
     avFormat->pb = avioContext;
 
     auto src_video = ffmpeg::alloc_frame();
-    int res = ff_load_image(src_video->data, src_video->linesize, &src_video->width, &src_video->height,
-                            reinterpret_cast<AVPixelFormat *>(&src_video->format), "base64",  avFormat.get(), nullptr);
+    int res = ff_load_image(src_video.get(), "base64",  avFormat.get(), nullptr);
 
     avio_context_free(&avioContext);
 

@@ -50,7 +50,7 @@ std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src
               [](SwsContext* ptr) { sws_freeContext(ptr); });
 
     if (!sws) {
-        CASPAR_THROW_EXCEPTION(caspar_exception());
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to create SwsContext"));
     }
 
     auto dest = ffmpeg::alloc_frame();
