@@ -32,4 +32,18 @@ apt-get install -yq --no-install-recommends \
 	libudev-dev \
 	libglu1-mesa-dev \
 	libboost-all-dev \
-	libnss3-dev 
+	libnss3-dev \
+    libcups2-dev \
+    libxdamage-dev \
+    libxcomposite-dev \
+    libatk1.0-dev \
+	libatspi2.0-dev \
+	libatk-bridge2.0-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libavdevice-dev \
+    libavutil-dev \
+    libavfilter-dev \
+    libswscale-dev \
+    libpostproc-dev \
+    libswresample-dev

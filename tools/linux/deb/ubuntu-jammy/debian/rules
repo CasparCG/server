@@ -3,7 +3,7 @@
 	dh $@ --sourcedirectory=src --buildsystem=cmake
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DUSE_SYSTEM_CEF=ON -DUSE_STATIC_BOOST=OFF -DUSE_SYSTEM_FFMPEG=ON -DDIAG_FONT_PATH=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
+	dh_auto_configure -- -DUSE_SYSTEM_CEF=ON -DUSE_STATIC_BOOST=OFF -DDIAG_FONT_PATH=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
 
 # Generate and install manual page
 debian/casparcg-server-beta.1: debian/casparcg.txt2man

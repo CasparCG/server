@@ -13,7 +13,6 @@ endif()
 
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
-set(USE_SYSTEM_FFMPEG ON CACHE BOOL "Use the version of ffmpeg from your OS")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 
 # Determine build (target) platform
@@ -30,30 +29,7 @@ if (USE_STATIC_BOOST)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
 FIND_PACKAGE (Boost 1.74.0 COMPONENTS system thread chrono filesystem log_setup log locale regex date_time coroutine REQUIRED)
-
-if (NOT USE_SYSTEM_FFMPEG)
-	FetchContent_Declare(
-		ffmpeg-lib
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-n7.0.2_jammy.tar.gz
-		URL_HASH MD5=b25c102df1793764fa8fb509b0ce7461
-		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	)
-
-	FetchContent_MakeAvailable(ffmpeg-lib)
-
-	SET (FFMPEG_ROOT_PATH "${ffmpeg-lib_SOURCE_DIR}/ffmpeg/lib/pkgconfig")
-	SET (ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${FFMPEG_ROOT_PATH}")
-
-	FIND_PACKAGE (FFmpeg REQUIRED)
-	LINK_DIRECTORIES("${ffmpeg-lib_SOURCE_DIR}/ffmpeg/lib")
-	SET (FFMPEG_INCLUDE_PATH "${ffmpeg-lib_SOURCE_DIR}/ffmpeg/include")
-else()
-	FIND_PACKAGE (FFmpeg REQUIRED)
-	LINK_DIRECTORIES("${FFMPEG_LIBRARY_DIRS}")
-	
-	SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")
-endif()
-
+FIND_PACKAGE (FFmpeg REQUIRED)
 FIND_PACKAGE (OpenGL REQUIRED COMPONENTS OpenGL GLX)
 FIND_PACKAGE (FreeImage REQUIRED)
 FIND_PACKAGE (GLEW REQUIRED)
@@ -103,6 +79,9 @@ SET (TBB_INCLUDE_PATH "${TBB_INCLUDE_DIRS}")
 SET (GLEW_INCLUDE_PATH "${GLEW_INCLUDE_DIRS}")
 SET (SFML_INCLUDE_PATH "${SFML_INCLUDE_DIR}")
 SET (FREEIMAGE_INCLUDE_PATH "${FreeImage_INCLUDE_DIRS}")
+SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")
+
+LINK_DIRECTORIES("${FFMPEG_LIBRARY_DIRS}")
 
 SET_PROPERTY (GLOBAL PROPERTY USE_FOLDERS ON)
 

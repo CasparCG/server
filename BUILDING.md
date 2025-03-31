@@ -46,7 +46,18 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 # Linux
 
-## Building inside Docker
+## Building on your system
+
+We only officially support Ubuntu LTS releases, other distros may work but often run into build issues. We are happy to accept PRs to resolve these issues, but are unlikely to write fixes ourselves.
+
+We currently document two approaches to building CasparCG. The recommended way is to use the `deb` packaging we have in the repository, but we only provide that for Ubuntu LTS releases.
+Other deb based distros can work with some tweaks to one of those, other distros will need something else which is not documented here.
+
+We also provide a script to produce a build in docker, but this is not recommended unless absolutely necessary. The resulting builds are often rather brittle depending on where they are used.
+
+To perform a custom build, follow the Development steps below, and you may need to do some extra packaging steps, or install steps on the target systems.
+
+### Building inside Docker
 
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
@@ -54,7 +65,7 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 If all goes to plan, a docker image `casparcg/server` has been created containing CasparCG Server.
 
-## Extracting CasparCG Server from Docker
+### Extracting CasparCG Server from Docker
 
 1. `./tools/linux/extract-from-docker`
 
@@ -69,11 +80,10 @@ Before beginning, check the build options section below, to decide if you want t
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
 3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-4. If using system CEF (the default), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
+4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
 5. `mkdir build && cd build`
-6. `cmake ../src`. Optionally specify any build options from below.
-7. If not using system ffmpeg, run `./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies` to install the dependencies needed by the ffmpeg build
-8. `make -j8`
+6. `cmake ../src` You can add any of the build options from below to this command
+7. `make -j8`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
 
@@ -82,8 +92,6 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
-
--DUSE_SYSTEM_FFMPEG=OFF - (Linux only, default ON) use the version of ffmpeg from your OS. This is only verified to work on Ubuntu 22.04
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
 
