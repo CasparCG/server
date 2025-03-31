@@ -32,7 +32,6 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/future.h>
-#include <common/scope_exit.h>
 
 #include <core/frame/frame.h>
 
@@ -101,8 +100,9 @@ struct image_consumer : public core::frame_consumer
                 if (!codec)
                     FF_RET(AVERROR(EINVAL), "avcodec_find_encoder");
 
-                AVCodecContext* ctx = avcodec_alloc_context3(codec);
-                CASPAR_SCOPE_EXIT { avcodec_free_context(&ctx); };
+                auto ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),[](AVCodecContext *ptr) {
+                    avcodec_free_context(&ptr);
+                });
 
                 ctx->width     = frame.width();
                 ctx->height    = frame.height();
@@ -110,7 +110,7 @@ struct image_consumer : public core::frame_consumer
                 ctx->time_base = {1, 1};
                 ctx->framerate = {0, 1};
 
-                FF(avcodec_open2(ctx, codec, nullptr));
+                FF(avcodec_open2(ctx.get(), codec, nullptr));
 
                 auto av_frame         = ffmpeg::alloc_frame();
                 av_frame->width       = frame.width();
@@ -126,20 +126,21 @@ struct image_consumer : public core::frame_consumer
                 image_view<bgra_pixel> original_view(av_frame2->data[0], av_frame2->width, av_frame2->height);
                 unmultiply(original_view);
 
-                FF(avcodec_send_frame(ctx, av_frame2.get()));
-                FF(avcodec_send_frame(ctx, nullptr));
+                FF(avcodec_send_frame(ctx.get(), av_frame2.get()));
+                FF(avcodec_send_frame(ctx.get(), nullptr));
 
-                AVPacket* pkt = av_packet_alloc();
-                CASPAR_SCOPE_EXIT { av_packet_free(&pkt); };
+                auto pkt = std::shared_ptr<AVPacket>(av_packet_alloc(),[](AVPacket *ptr) {
+                   av_packet_free(&ptr);
+               });
                 int ret = 0;
                 while (ret >= 0) {
-                    ret = avcodec_receive_packet(ctx, pkt);
+                    ret = avcodec_receive_packet(ctx.get(), pkt.get());
                     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
                         break;
                     FF_RET(ret, "avcodec_receive_packet");
 
                     file_stream.write(reinterpret_cast<const char*>(pkt->data), pkt->size);
-                    av_packet_unref(pkt);
+                    av_packet_unref(pkt.get());
                 }
 
             } catch (...) {
