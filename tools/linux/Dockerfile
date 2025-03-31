@@ -1,4 +1,4 @@
-FROM docker.io/buildpack-deps:jammy as build-casparcg
+FROM docker.io/buildpack-deps:jammy AS build-casparcg
 	ADD tools/linux/install-dependencies /
 
 	RUN apt-get update && /install-dependencies
@@ -13,10 +13,7 @@ FROM docker.io/buildpack-deps:jammy as build-casparcg
 	ARG CXX
 	ARG GIT_HASH
 
-	RUN cmake -GNinja /source -DUSE_STATIC_BOOST=ON -DUSE_SYSTEM_FFMPEG=OFF -DUSE_SYSTEM_CEF=OFF
-
-	# ensure ffmpeg dependencies are installed
-	RUN apt-get update && ./_deps/ffmpeg-lib-src/ffmpeg/install-ffmpeg-dependencies
+	RUN cmake -GNinja /source -DUSE_STATIC_BOOST=ON -DUSE_SYSTEM_CEF=OFF
 
 	RUN ninja
 
