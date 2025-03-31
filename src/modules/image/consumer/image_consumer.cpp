@@ -17,6 +17,7 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #include "image_consumer.h"
@@ -47,6 +48,7 @@
 
 #include "../util/image_algorithms.h"
 #include "../util/image_view.h"
+#include "image/util/image_converter.h"
 
 extern "C" {
 #define __STDC_CONSTANT_MACROS
@@ -59,14 +61,11 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-namespace caspar { namespace image {
+namespace caspar::image {
 
 struct image_consumer : public core::frame_consumer
 {
     const std::wstring filename_;
-
-  public:
-    // frame_consumer
 
     explicit image_consumer(std::wstring filename)
         : filename_(std::move(filename))
@@ -83,44 +82,54 @@ struct image_consumer : public core::frame_consumer
             try {
                 std::string filename2;
 
-                if (frame.pixel_format_desc().format != core::pixel_format::bgra) CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("image_consumer received frame with wrong format"));
+                if (frame.pixel_format_desc().format != core::pixel_format::bgra)
+                    CASPAR_THROW_EXCEPTION(caspar_exception()
+                                           << msg_info("image_consumer received frame with wrong format"));
 
                 if (filename.empty())
-                    filename2 = u8(env::media_folder() +
-                                boost::posix_time::to_iso_wstring(boost::posix_time::second_clock::local_time()) +
-                                L".png");
+                    filename2 =
+                        u8(env::media_folder() +
+                           boost::posix_time::to_iso_wstring(boost::posix_time::second_clock::local_time()) + L".png");
                 else
                     filename2 = u8(env::media_folder() + filename + L".png");
 
                 std::fstream file_stream(filename2, std::fstream::out | std::fstream::trunc | std::fstream::binary);
-                if (!file_stream) FF_RET(AVERROR(EINVAL), "fstream_open");
+                if (!file_stream)
+                    FF_RET(AVERROR(EINVAL), "fstream_open");
 
-                const AVCodec* codec = avcodec_find_encoder_by_name("png");
-                if (!codec) FF_RET(AVERROR(EINVAL), "avcodec_find_encoder_by_name");
+                const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_PNG);
+                if (!codec)
+                    FF_RET(AVERROR(EINVAL), "avcodec_find_encoder");
 
-                AVCodecContext *ctx = avcodec_alloc_context3(codec);
+                AVCodecContext* ctx = avcodec_alloc_context3(codec);
                 CASPAR_SCOPE_EXIT { avcodec_free_context(&ctx); };
 
-                ctx->width = frame.width();
-                ctx->height = frame.height();
-                ctx->pix_fmt = AV_PIX_FMT_BGRA;
+                ctx->width     = frame.width();
+                ctx->height    = frame.height();
+                ctx->pix_fmt   = AV_PIX_FMT_RGBA;
                 ctx->time_base = {1, 1};
-                ctx->framerate = {0,1};
+                ctx->framerate = {0, 1};
 
                 FF(avcodec_open2(ctx, codec, nullptr));
 
-                auto av_frame = ffmpeg::alloc_frame();
-                av_frame->width = frame.width();
-                av_frame->height = frame.height();
-                av_frame->format = AV_PIX_FMT_BGRA;
-                av_frame->pts = 0;
+                auto av_frame         = ffmpeg::alloc_frame();
+                av_frame->width       = frame.width();
+                av_frame->height      = frame.height();
+                av_frame->format      = AV_PIX_FMT_BGRA;
+                av_frame->pts         = 0;
                 av_frame->linesize[0] = frame.width() * 4;
-                av_frame->data[0] = (uint8_t*)frame.image_data(0).data();
+                av_frame->data[0]     = const_cast<uint8_t*>(frame.image_data(0).data());
 
-                FF(avcodec_send_frame(ctx, av_frame.get()));
+                // The png encoder requires RGB ordering, the mixer producers BGR.
+                auto av_frame2 = convert_image_frame(av_frame, AV_PIX_FMT_RGBA);
+                // Also straighten the alpha, as png is always straight, and the mixer produces premultiplied
+                image_view<bgra_pixel> original_view(av_frame2->data[0], av_frame2->width, av_frame2->height);
+                unmultiply(original_view);
+
+                FF(avcodec_send_frame(ctx, av_frame2.get()));
                 FF(avcodec_send_frame(ctx, nullptr));
 
-                AVPacket *pkt = av_packet_alloc();
+                AVPacket* pkt = av_packet_alloc();
                 CASPAR_SCOPE_EXIT { av_packet_free(&pkt); };
                 int ret = 0;
                 while (ret >= 0) {
@@ -129,7 +138,7 @@ struct image_consumer : public core::frame_consumer
                         break;
                     FF_RET(ret, "avcodec_receive_packet");
 
-                    file_stream.write(reinterpret_cast<const char *>(pkt->data), pkt->size);
+                    file_stream.write(reinterpret_cast<const char*>(pkt->data), pkt->size);
                     av_packet_unref(pkt);
                 }
 
@@ -175,4 +184,4 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     return spl::make_shared<image_consumer>(filename);
 }
 
-}} // namespace caspar::image
+} // namespace caspar::image

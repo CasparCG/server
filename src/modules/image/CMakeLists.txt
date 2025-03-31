@@ -13,6 +13,8 @@ set(SOURCES
 
 		util/image_algorithms.cpp
 		util/image_algorithms.h
+		util/image_converter.cpp
+		util/image_converter.h
 		util/image_loader.cpp
 		util/image_loader.h
 		util/image_view.h

@@ -17,11 +17,13 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #include "image_producer.h"
 
 #include "../util/image_loader.h"
+#include "../util/image_converter.h"
 
 #include <common/base64.h>
 #include <common/env.h>
@@ -51,7 +53,7 @@ struct image_producer : public core::frame_producer
         , length_(length)
     {
         auto av_frame = load_image(description_);
-        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_to_bgra32(av_frame);
+        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
         auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
@@ -70,7 +72,7 @@ struct image_producer : public core::frame_producer
         , length_(length)
     {
         auto av_frame = load_from_memory(std::move(image_data));
-        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_to_bgra32(av_frame);
+        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
         auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));

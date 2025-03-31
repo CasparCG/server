@@ -17,9 +17,11 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #include "image_loader.h"
+#include "image_algorithms.h"
 
 #include <common/except.h>
 
@@ -31,7 +33,7 @@
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
-#include "image_algorithms.h"
+#include <set>
 
 extern "C" {
 #define __STDC_CONSTANT_MACROS
@@ -144,41 +146,6 @@ end:
     if (ret < 0)
         av_log(log_ctx, AV_LOG_ERROR, "Error loading image file '%s'\n", filename);
     return ret;
-}
-
-bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src) {
-    std::vector<int> data_map;
-    auto sample_pix_desc =
-            ffmpeg::pixel_format_desc(
-                    static_cast<AVPixelFormat>(src->format), src->width, src->height, data_map, core::color_space::bt709);
-   return sample_pix_desc.format != core::pixel_format::invalid;
-}
-
-std::shared_ptr<AVFrame> convert_to_bgra32(const std::shared_ptr<AVFrame>& src) {
-    const auto target_format = AV_PIX_FMT_BGRA;
-
-    if (src->format == target_format) return src;
-
-    std::shared_ptr<SwsContext> sws;
-    sws.reset(sws_getContext(
-                      src->width, src->height, static_cast<AVPixelFormat>(src->format), src->width, src->height, target_format, 0, nullptr, nullptr, nullptr),
-              [](SwsContext* ptr) { sws_freeContext(ptr); });
-
-    if (!sws) {
-        CASPAR_THROW_EXCEPTION(caspar_exception());
-    }
-
-    auto dest = ffmpeg::alloc_frame();
-    dest->sample_aspect_ratio = src->sample_aspect_ratio;
-    dest->width               = src->width;
-    dest->height              = src->height;
-    dest->format              = target_format;
-    dest->colorspace          = AVCOL_SPC_BT709;
-    av_frame_get_buffer(dest.get(), 64);
-
-    sws_scale_frame(sws.get(), dest.get(), src.get());
-
-    return dest;
 }
 
 std::shared_ptr<AVFrame> load_image(const std::wstring& filename) {

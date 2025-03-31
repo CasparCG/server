@@ -1,3 +1,5 @@
+#pragma once
+
 #include <libavutil/pixfmt.h>
 
 #include <core/frame/frame.h>

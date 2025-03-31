@@ -22,8 +22,8 @@
 
 #include "image_scroll_producer.h"
 
-
 #include "../util/image_algorithms.h"
+#include "../util/image_converter.h"
 #include "../util/image_loader.h"
 #include "../util/image_view.h"
 
@@ -32,7 +32,6 @@
 #include <common/env.h>
 #include <common/filesystem.h>
 #include <common/future.h>
-#include <common/os/filesystem.h>
 #include <common/param.h>
 
 #include <boost/algorithm/string.hpp>
@@ -130,7 +129,7 @@ struct image_scroll_producer : public core::frame_producer
         if (end_time_)
             speed = -1.0;
 
-        auto av_frame = convert_to_bgra32(load_image(filename_));
+        auto av_frame = convert_image_frame(load_image(filename_), AV_PIX_FMT_BGRA);
 
         width_  = av_frame->width;
         height_ = av_frame->height;
