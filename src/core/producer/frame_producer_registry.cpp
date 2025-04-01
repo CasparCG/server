@@ -203,6 +203,12 @@ frame_producer_registry::create_producer(const frame_producer_dependencies& depe
                                                 << arg_value_info(u8(str)));
     }
 
+    // Skip destroy_producer_proxy for route_producer, as it needs to be able to perform this cast
+    // This isn't a nice approach, but it keeps it simple and ensures every other producer has the destroy_producer_proxy wrapping
+    if (spl::instance_of<core::route_control>(producer)) {
+        return std::move(producer);
+    }
+
     return spl::make_shared<destroy_producer_proxy>(std::move(producer));
 }
 

@@ -589,6 +589,13 @@ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<T2>& p)
     return shared_ptr<T>(std::move(temp));
 }
 
+template <class T, class T2>
+bool instance_of(const shared_ptr<T2>& p)
+{
+    auto temp = std::dynamic_pointer_cast<T>(std::shared_ptr<T2>(p));
+    return temp != nullptr;
+}
+
 //
 // enable_safe_this
 //
