@@ -559,6 +559,13 @@ struct Filter
                                               AV_PIX_FMT_YUVA422P,
                                               AV_PIX_FMT_YUVA420P,
                                               AV_PIX_FMT_UYVY422,
+                                              // bwdif needs planar rgb
+                                              AV_PIX_FMT_GBRP,
+                                              AV_PIX_FMT_GBRP10,
+                                              AV_PIX_FMT_GBRP12,
+                                              AV_PIX_FMT_GBRP16,
+                                              AV_PIX_FMT_GBRAP,
+                                              AV_PIX_FMT_GBRAP16,
                                               AV_PIX_FMT_NONE};
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #ifdef _MSC_VER

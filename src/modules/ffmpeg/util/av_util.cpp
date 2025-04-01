@@ -153,6 +153,18 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
             return {core::pixel_format::ycbcra, common::bit_depth::bit8};
         case AV_PIX_FMT_UYVY422:
             return {core::pixel_format::uyvy, common::bit_depth::bit8};
+        case AV_PIX_FMT_GBRP:
+            return {core::pixel_format::gbrp, common::bit_depth::bit8};
+        case AV_PIX_FMT_GBRP10:
+            return {core::pixel_format::gbrp, common::bit_depth::bit10};
+        case AV_PIX_FMT_GBRP12:
+            return {core::pixel_format::gbrp, common::bit_depth::bit12};
+        case AV_PIX_FMT_GBRP16:
+            return {core::pixel_format::gbrp, common::bit_depth::bit16};
+        case AV_PIX_FMT_GBRAP:
+            return {core::pixel_format::gbrap, common::bit_depth::bit8};
+        case AV_PIX_FMT_GBRAP16:
+            return {core::pixel_format::gbrap, common::bit_depth::bit16};
         default:
             return {core::pixel_format::invalid, common::bit_depth::bit8};
     }
@@ -185,6 +197,19 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
         case core::pixel_format::bgr:
         case core::pixel_format::rgb: {
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0] / 3, height, 3, depth));
+            return desc;
+        }
+        case core::pixel_format::gbrp: {
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], height, 1, depth));
+            return desc;
+        }
+        case core::pixel_format::gbrap: {
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[2], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1, depth));
             return desc;
         }
         case core::pixel_format::bgra:
@@ -302,6 +327,10 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUVA420P10 : AVPixelFormat::AV_PIX_FMT_YUVA420P;
             break;
         case core::pixel_format::uyvy:
+            // TODO
+            break;
+        case core::pixel_format::gbrp:
+        case core::pixel_format::gbrap:
             // TODO
             break;
         case core::pixel_format::count:
