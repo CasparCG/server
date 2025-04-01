@@ -44,11 +44,9 @@ bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src) {
 std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src, AVPixelFormat pixFmt) {
     if (src->format == pixFmt) return src;
 
-    std::shared_ptr<SwsContext> sws;
-    sws.reset(sws_getContext(
+    auto sws = std::shared_ptr<SwsContext>(sws_getContext(
                       src->width, src->height, static_cast<AVPixelFormat>(src->format), src->width, src->height, pixFmt, 0, nullptr, nullptr, nullptr),
               [](SwsContext* ptr) { sws_freeContext(ptr); });
-
     if (!sws) {
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to create SwsContext"));
     }
@@ -61,7 +59,7 @@ std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src
     dest->colorspace          = AVCOL_SPC_BT709;
     av_frame_get_buffer(dest.get(), 64);
 
-    sws_scale_frame(sws.get(), dest.get(), src.get());
+    sws_scale(sws.get(), src->data, src->linesize, 0, src->height, dest->data, dest->linesize);
 
     return dest;
 }

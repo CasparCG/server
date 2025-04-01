@@ -107,7 +107,7 @@ std::shared_ptr<AVFrame> load_image(const std::wstring& filename) {
 static int readFunction(void* opaque, uint8_t* buf, int buf_size) {
     auto& data = *static_cast<std::vector<unsigned char>*>(opaque);
     memcpy(buf, data.data(), buf_size);
-    return data.size();
+    return static_cast<int>(data.size());
 }
 
 std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data) {
@@ -115,7 +115,7 @@ std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
 
     auto avioContext =
         std::shared_ptr<AVIOContext>(
-        avio_alloc_context(buffer.get(), image_data.size(), 0, reinterpret_cast<void*>(&image_data), &readFunction, nullptr, nullptr),
+        avio_alloc_context(buffer.get(), static_cast<int>(image_data.size()), 0, reinterpret_cast<void*>(&image_data), &readFunction, nullptr, nullptr),
         [](AVIOContext *ptr) {
             avio_context_free(&ptr);
         });

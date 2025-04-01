@@ -102,8 +102,8 @@ struct image_consumer : public core::frame_consumer
                     avcodec_free_context(&ptr);
                 });
 
-                ctx->width     = frame.width();
-                ctx->height    = frame.height();
+                ctx->width     = static_cast<int>(frame.width());
+                ctx->height    = static_cast<int>(frame.height());
                 ctx->pix_fmt   = AV_PIX_FMT_RGBA;
                 ctx->time_base = {1, 1};
                 ctx->framerate = {0, 1};
@@ -111,11 +111,11 @@ struct image_consumer : public core::frame_consumer
                 FF(avcodec_open2(ctx.get(), codec, nullptr));
 
                 auto av_frame         = ffmpeg::alloc_frame();
-                av_frame->width       = frame.width();
-                av_frame->height      = frame.height();
+                av_frame->width       = static_cast<int>(frame.width());
+                av_frame->height      = static_cast<int>(frame.height());
                 av_frame->format      = AV_PIX_FMT_BGRA;
                 av_frame->pts         = 0;
-                av_frame->linesize[0] = frame.width() * 4;
+                av_frame->linesize[0] = static_cast<int>(frame.width()) * 4;
                 av_frame->data[0]     = const_cast<uint8_t*>(frame.image_data(0).data());
 
                 // The png encoder requires RGB ordering, the mixer producers BGR.

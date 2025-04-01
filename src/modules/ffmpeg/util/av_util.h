@@ -1,6 +1,8 @@
 #pragma once
 
+extern "C" {
 #include <libavutil/pixfmt.h>
+}
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
