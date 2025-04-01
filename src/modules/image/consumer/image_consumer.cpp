@@ -47,7 +47,7 @@
 
 #include "../util/image_algorithms.h"
 #include "../util/image_view.h"
-#include "image/util/image_converter.h"
+#include "../util/image_converter.h"
 
 extern "C" {
 #define __STDC_CONSTANT_MACROS
