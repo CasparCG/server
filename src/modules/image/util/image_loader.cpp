@@ -142,8 +142,19 @@ std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
 
 bool is_valid_file(const boost::filesystem::path& filename)
 {
-    static const std::set<std::wstring> extensions = {
-        L".png", L".tga", L".bmp", L".jpg", L".jpeg", L".gif", L".tiff", L".tif", L".jp2", L".jpx", L".j2k", L".j2c"};
+    static const std::set<std::wstring> extensions = {L".png",
+                                                      L".tga",
+                                                      L".bmp",
+                                                      L".jpg",
+                                                      L".jpeg",
+                                                      L".gif",
+                                                      L".tiff",
+                                                      L".tif",
+                                                      L".jp2",
+                                                      L".jpx",
+                                                      L".j2k",
+                                                      L".j2c",
+                                                      L".webp"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
     if (extensions.find(ext) == extensions.end()) {
