@@ -53,8 +53,6 @@ extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavutil/imgutils.h>
-#include <libavutil/dict.h>
-#include <libavutil/log.h>
 #include <libavutil/pixfmt.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>

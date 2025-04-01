@@ -45,7 +45,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 #include <libavutil/dict.h>
-#include <libavutil/log.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 }
@@ -53,7 +52,7 @@ extern "C" {
 namespace caspar { namespace image {
 
 // Based on: https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/lavfutils.c
-std::shared_ptr<AVFrame> ff_load_image(const char *filename, AVFormatContext *format_ctx, void *log_ctx)
+std::shared_ptr<AVFrame> ff_load_image(const char *filename, AVFormatContext *format_ctx)
 {
     auto frame = ffmpeg::alloc_frame();
 
@@ -101,7 +100,7 @@ std::shared_ptr<AVFrame> load_image(const std::wstring& filename) {
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
-    return ff_load_image(u8(filename).c_str(), nullptr, nullptr);
+    return ff_load_image(u8(filename).c_str(), nullptr);
 }
 
 
@@ -124,7 +123,7 @@ std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
     const auto avFormat = std::shared_ptr<AVFormatContext>(avformat_alloc_context(), &avformat_free_context);
     avFormat->pb = avioContext.get();
 
-    return ff_load_image("base64",  avFormat.get(), nullptr);
+    return ff_load_image("base64",  avFormat.get());
 }
 
 bool is_valid_file(const boost::filesystem::path& filename)
