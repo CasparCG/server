@@ -22,12 +22,6 @@
 
 #include "image_consumer.h"
 
-#if defined(_MSC_VER)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 #include <common/array.h>
 #include <common/env.h>
 #include <common/except.h>
@@ -49,6 +43,10 @@
 #include "../util/image_view.h"
 #include "../util/image_converter.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -57,6 +55,9 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace caspar::image {
 

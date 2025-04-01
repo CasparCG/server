@@ -46,11 +46,18 @@
 #include <optional>
 #include <utility>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavutil/frame.h>
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace caspar { namespace image {
 

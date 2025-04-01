@@ -39,6 +39,10 @@
 
 #include <set>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -48,6 +52,9 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace caspar { namespace image {
 
