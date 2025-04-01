@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -31,4 +31,4 @@ bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src);
 
 std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src, AVPixelFormat pixFmt);
 
-}
+} // namespace caspar::image

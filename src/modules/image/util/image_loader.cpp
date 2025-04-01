@@ -42,17 +42,17 @@
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/dict.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
-#include <libavutil/dict.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
 }
 
 namespace caspar { namespace image {
 
 // Based on: https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/lavfutils.c
-std::shared_ptr<AVFrame> ff_load_image(const char *filename, AVFormatContext *format_ctx)
+std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* format_ctx)
 {
     auto frame = ffmpeg::alloc_frame();
 
@@ -60,25 +60,29 @@ std::shared_ptr<AVFrame> ff_load_image(const char *filename, AVFormatContext *fo
 
     const AVInputFormat* iformat = av_find_input_format("image2pipe");
     FF(avformat_open_input(&format_ctx, filename, iformat, nullptr));
-    CASPAR_SCOPE_EXIT { if (!has_input_format_ctx) avformat_close_input(&format_ctx); };
+    CASPAR_SCOPE_EXIT
+    {
+        if (!has_input_format_ctx)
+            avformat_close_input(&format_ctx);
+    };
 
     FF(avformat_find_stream_info(format_ctx, nullptr));
 
-    const AVCodecParameters* par = format_ctx->streams[0]->codecpar;
-    const AVCodec * codec = avcodec_find_decoder(par->codec_id);
+    const AVCodecParameters* par   = format_ctx->streams[0]->codecpar;
+    const AVCodec*           codec = avcodec_find_decoder(par->codec_id);
     if (!codec) {
         FF_RET(AVERROR(EINVAL), "avcodec_find_decoder");
     }
 
     auto codec_ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
-                                              [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+                                                     [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
     if (!codec_ctx) {
         FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
     }
 
     FF(avcodec_parameters_to_context(codec_ctx.get(), par));
 
-    AVDictionary *opt = nullptr;
+    AVDictionary* opt = nullptr;
     CASPAR_SCOPE_EXIT { av_dict_free(&opt); };
 
     av_dict_set(&opt, "thread_type", "slice", 0);
@@ -96,34 +100,38 @@ std::shared_ptr<AVFrame> ff_load_image(const char *filename, AVFormatContext *fo
     return frame;
 }
 
-std::shared_ptr<AVFrame> load_image(const std::wstring& filename) {
+std::shared_ptr<AVFrame> load_image(const std::wstring& filename)
+{
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
     return ff_load_image(u8(filename).c_str(), nullptr);
 }
 
-
-static int readFunction(void* opaque, uint8_t* buf, int buf_size) {
+static int readFunction(void* opaque, uint8_t* buf, int buf_size)
+{
     auto& data = *static_cast<std::vector<unsigned char>*>(opaque);
     memcpy(buf, data.data(), buf_size);
     return static_cast<int>(data.size());
 }
 
-std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data) {
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
+{
     const std::shared_ptr<unsigned char> buffer(static_cast<unsigned char*>(av_malloc(image_data.size())), &av_free);
 
-    auto avioContext =
-        std::shared_ptr<AVIOContext>(
-        avio_alloc_context(buffer.get(), static_cast<int>(image_data.size()), 0, reinterpret_cast<void*>(&image_data), &readFunction, nullptr, nullptr),
-        [](AVIOContext *ptr) {
-            avio_context_free(&ptr);
-        });
+    auto avioContext = std::shared_ptr<AVIOContext>(avio_alloc_context(buffer.get(),
+                                                                       static_cast<int>(image_data.size()),
+                                                                       0,
+                                                                       reinterpret_cast<void*>(&image_data),
+                                                                       &readFunction,
+                                                                       nullptr,
+                                                                       nullptr),
+                                                    [](AVIOContext* ptr) { avio_context_free(&ptr); });
 
     const auto avFormat = std::shared_ptr<AVFormatContext>(avformat_alloc_context(), &avformat_free_context);
-    avFormat->pb = avioContext.get();
+    avFormat->pb        = avioContext.get();
 
-    return ff_load_image("base64",  avFormat.get());
+    return ff_load_image("base64", avFormat.get());
 }
 
 bool is_valid_file(const boost::filesystem::path& filename)

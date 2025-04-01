@@ -38,9 +38,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <fstream>
 #include <utility>
 #include <vector>
-#include <fstream>
 
 #include <ffmpeg/util/av_assert.h>
 #include <ffmpeg/util/av_util.h>
@@ -52,10 +52,10 @@
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
 }
 
 namespace caspar::image {
@@ -98,9 +98,8 @@ struct image_consumer : public core::frame_consumer
                 if (!codec)
                     FF_RET(AVERROR(EINVAL), "avcodec_find_encoder");
 
-                auto ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),[](AVCodecContext *ptr) {
-                    avcodec_free_context(&ptr);
-                });
+                auto ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                                           [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
 
                 ctx->width     = static_cast<int>(frame.width());
                 ctx->height    = static_cast<int>(frame.height());
@@ -127,10 +126,8 @@ struct image_consumer : public core::frame_consumer
                 FF(avcodec_send_frame(ctx.get(), av_frame2.get()));
                 FF(avcodec_send_frame(ctx.get(), nullptr));
 
-                auto pkt = std::shared_ptr<AVPacket>(av_packet_alloc(),[](AVPacket *ptr) {
-                   av_packet_free(&ptr);
-               });
-                int ret = 0;
+                auto pkt = std::shared_ptr<AVPacket>(av_packet_alloc(), [](AVPacket* ptr) { av_packet_free(&ptr); });
+                int  ret = 0;
                 while (ret >= 0) {
                     ret = avcodec_receive_packet(ctx.get(), pkt.get());
                     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)

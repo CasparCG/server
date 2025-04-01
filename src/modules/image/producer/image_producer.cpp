@@ -22,8 +22,8 @@
 
 #include "image_producer.h"
 
-#include "../util/image_loader.h"
 #include "../util/image_converter.h"
+#include "../util/image_loader.h"
 
 #include <common/base64.h>
 #include <common/env.h>
@@ -53,9 +53,11 @@ struct image_producer : public core::frame_producer
         , length_(length)
     {
         auto av_frame = load_image(description_);
-        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
+        if (!is_frame_compatible_with_mixer(av_frame))
+            av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
-        auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+        auto frame =
+            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
 
         state_["file/path"] = description_;
@@ -72,9 +74,11 @@ struct image_producer : public core::frame_producer
         , length_(length)
     {
         auto av_frame = load_from_memory(std::move(image_data));
-        if (!is_frame_compatible_with_mixer(av_frame)) av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
+        if (!is_frame_compatible_with_mixer(av_frame))
+            av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
-        auto frame = ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+        auto frame =
+            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
 
         CASPAR_LOG(info) << print() << L" Initialized";
@@ -88,10 +92,7 @@ struct image_producer : public core::frame_producer
 
     bool is_ready() override { return true; }
 
-    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
-    {
-        return frame_;
-    }
+    core::draw_frame receive_impl(const core::video_field field, int nb_samples) override { return frame_; }
 
     uint32_t nb_frames() const override { return length_; }
 
@@ -112,14 +113,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto length     = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
 
-//    if (boost::iequals(params.at(0), L"[PNG_BASE64]")) {
-//        if (params.size() < 2)
-//            return core::frame_producer::empty();
-//
-//        auto png_data = from_base64(u8(params.at(1)));
-//
-//        return spl::make_shared<image_producer>(dependencies.frame_factory, std::move(png_data), length, scale_mode);
-//    }
+    //    if (boost::iequals(params.at(0), L"[PNG_BASE64]")) {
+    //        if (params.size() < 2)
+    //            return core::frame_producer::empty();
+    //
+    //        auto png_data = from_base64(u8(params.at(1)));
+    //
+    //        return spl::make_shared<image_producer>(dependencies.frame_factory, std::move(png_data), length,
+    //        scale_mode);
+    //    }
 
     auto filename = find_file_within_dir_or_absolute(env::media_folder(), params.at(0), is_valid_file);
     if (!filename) {
