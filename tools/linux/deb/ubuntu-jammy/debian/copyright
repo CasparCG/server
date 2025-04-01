@@ -48,7 +48,6 @@ License:   Zlib
  3. This notice may not be removed or altered from any source distribution.
 
 Files:     src/CMakeModules/FindFFmpeg.cmake
-           src/CMakeModules/FindFreeImage.cmake
 Copyright: 2006 Matthias Kretz, <kretz@kde.org>
            2007 Matt Williams
            2008 Alexander Neundorf, <neundorf@kde.org>

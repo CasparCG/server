@@ -165,22 +165,6 @@ casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-2.dll" "Release")
 casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-d-2.dll" "Debug")
 casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll" "Release")
 
-# FREEIMAGE
-casparcg_add_external_project(freeimage)
-ExternalProject_Add(freeimage
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/freeimage/FreeImage319-r1909.zip
-	URL_HASH MD5=c19087de6b42c7e17f71c6c8d4ad158d
-	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(freeimage SOURCE_DIR)
-set(FREEIMAGE_INCLUDE_PATH "${SOURCE_DIR}/Dist/x64")
-set(FREEIMAGE_BIN_PATH "${FREEIMAGE_INCLUDE_PATH}")
-link_directories("${FREEIMAGE_INCLUDE_PATH}")
-casparcg_add_runtime_dependency("${FREEIMAGE_INCLUDE_PATH}/FreeImage.dll")
-
 #ZLIB
 casparcg_add_external_project(zlib)
 ExternalProject_Add(zlib

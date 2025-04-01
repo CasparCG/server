@@ -22,35 +22,17 @@
 
 #include "image_scroll_producer.h"
 
-#if defined(_MSC_VER)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#endif
-#include <FreeImage.h>
-
 #include "../util/image_algorithms.h"
+#include "../util/image_converter.h"
 #include "../util/image_loader.h"
 #include "../util/image_view.h"
 
-#include <core/video_format.h>
-
-#include <core/frame/draw_frame.h>
-#include <core/frame/frame.h>
-#include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
-#include <core/frame/pixel_format.h>
-#include <core/monitor/monitor.h>
 
-#include <common/array.h>
 #include <common/env.h>
-#include <common/except.h>
 #include <common/filesystem.h>
 #include <common/future.h>
-#include <common/log.h>
-#include <common/os/filesystem.h>
 #include <common/param.h>
-#include <common/tweener.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time.hpp>
@@ -63,6 +45,19 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavutil/frame.h>
+}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace caspar { namespace image {
 
@@ -141,11 +136,10 @@ struct image_scroll_producer : public core::frame_producer
         if (end_time_)
             speed = -1.0;
 
-        auto image = load_image(filename_, false);
-        FreeImage_FlipVertical(image.bitmap.get());
+        auto av_frame = convert_image_frame(load_image(filename_), AV_PIX_FMT_BGRA);
 
-        width_  = FreeImage_GetWidth(image.bitmap.get());
-        height_ = FreeImage_GetHeight(image.bitmap.get());
+        width_  = av_frame->width;
+        height_ = av_frame->height;
 
         bool vertical   = width_ == format_desc_.width;
         bool horizontal = height_ == format_desc_.height;
@@ -170,10 +164,11 @@ struct image_scroll_producer : public core::frame_producer
 
         speed_ = speed_tweener(speed, speed, 0, tweener(L"linear"));
 
-        auto                   bytes = FreeImage_GetBits(image.bitmap.get());
+        auto                   bytes = av_frame->data[0];
         auto                   count = width_ * height_ * 4;
         image_view<bgra_pixel> original_view(bytes, width_, height_);
 
+        // This needs to be performed before being the blur is applied
         if (premultiply_with_alpha)
             premultiply(original_view);
 
@@ -194,7 +189,6 @@ struct image_scroll_producer : public core::frame_producer
             caspar::tweener        blur_tweener(L"easeInQuad");
             blur(original_view, blurred_view, angle, motion_blur_px, blur_tweener);
             bytes = blurred_copy.get();
-            image.bitmap.reset();
         }
 
         if (vertical) {

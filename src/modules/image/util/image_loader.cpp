@@ -17,140 +17,151 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #include "image_loader.h"
-
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#if defined(_MSC_VER)
-#include <windows.h>
-#endif
-#include <FreeImage.h>
+#include "image_algorithms.h"
 
 #include <common/except.h>
-#include <common/utf.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4714) // marked as __forceinline not inlined
 #endif
 
+#include "common/scope_exit.h"
+
+#include <ffmpeg/util/av_assert.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
-#include "image_algorithms.h"
-#include "image_view.h"
+#include <set>
 
-#if FREEIMAGE_COLORORDER == FREEIMAGE_COLORORDER_BGR
-#define IMAGE_BGRA_FORMAT core::pixel_format::bgra
-#define IMAGE_BGR_FORMAT core::pixel_format::bgr
-#else
-#define IMAGE_BGRA_FORMAT core::pixel_format::rgba
-#define IMAGE_BGR_FORMAT core::pixel_format::rgb
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/dict.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+}
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 namespace caspar { namespace image {
 
-loaded_image prepare_loaded_image(FREE_IMAGE_FORMAT fif, std::shared_ptr<FIBITMAP> bitmap, bool allow_all_formats)
+// Based on: https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/lavfutils.c
+std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* format_ctx)
 {
-    core::pixel_format format;
-    int                stride;
-    common::bit_depth  depth = common::bit_depth::bit8;
+    auto frame = ffmpeg::alloc_frame();
 
-    unsigned int bpp = FreeImage_GetBPP(bitmap.get());
+    bool has_input_format_ctx = format_ctx != nullptr;
 
-    if (bpp == 32) {
-        format = IMAGE_BGRA_FORMAT;
-        stride = 4;
-    } else if (allow_all_formats && bpp == 24) {
-        format = IMAGE_BGR_FORMAT;
-        stride = 3;
-    } else if (allow_all_formats && bpp == 64) {
-        // freeimage appears to ignore endianness
-        format = core::pixel_format::rgba;
-        stride = 4;
-        depth  = common::bit_depth::bit16;
-    } else if (allow_all_formats && bpp == 48) {
-        // freeimage appears to ignore endianness
-        format = core::pixel_format::rgb;
-        stride = 3;
-        depth  = common::bit_depth::bit16;
-    } else if (allow_all_formats && !FreeImage_IsTransparent(bitmap.get())) {
-        format = IMAGE_BGR_FORMAT;
-        stride = 3;
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+    const AVInputFormat* input_format = nullptr;
+#else
+    AVInputFormat* input_format = nullptr;
+#endif
 
-        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo24Bits(bitmap.get()), FreeImage_Unload);
+    input_format = av_find_input_format("image2pipe");
+    FF(avformat_open_input(&format_ctx, filename, input_format, nullptr));
+    CASPAR_SCOPE_EXIT
+    {
+        if (!has_input_format_ctx)
+            avformat_close_input(&format_ctx);
+    };
 
-    } else {
-        format = IMAGE_BGRA_FORMAT;
-        stride = 4;
+    FF(avformat_find_stream_info(format_ctx, nullptr));
 
-        bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
+    const AVCodecParameters* par   = format_ctx->streams[0]->codecpar;
+    const AVCodec*           codec = avcodec_find_decoder(par->codec_id);
+    if (!codec) {
+        FF_RET(AVERROR(EINVAL), "avcodec_find_decoder");
     }
 
-    if (!bitmap)
-        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
-
-    // PNG-images need to be premultiplied with their alpha
-    bool is_straight = fif == FIF_PNG && (format == core::pixel_format::bgra || format == core::pixel_format::rgba);
-    if (!allow_all_formats && is_straight) {
-        image_view<bgra_pixel> original_view(
-            FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-        premultiply(original_view);
+    auto codec_ctx = std::shared_ptr<AVCodecContext>(avcodec_alloc_context3(codec),
+                                                     [](AVCodecContext* ptr) { avcodec_free_context(&ptr); });
+    if (!codec_ctx) {
+        FF_RET(AVERROR(ENOMEM), "avcodec_alloc_context3");
     }
 
-    return {std::move(bitmap), format, stride, depth, is_straight};
+    FF(avcodec_parameters_to_context(codec_ctx.get(), par));
+
+    AVDictionary* opt = nullptr;
+    CASPAR_SCOPE_EXIT { av_dict_free(&opt); };
+
+    av_dict_set(&opt, "thread_type", "slice", 0);
+    FF(avcodec_open2(codec_ctx.get(), codec, &opt));
+
+    AVPacket pkt;
+    FF(av_read_frame(format_ctx, &pkt));
+
+    const int ret = avcodec_send_packet(codec_ctx.get(), &pkt);
+    av_packet_unref(&pkt);
+    FF_RET(ret, "avcodec_send_packet");
+
+    FF(avcodec_receive_frame(codec_ctx.get(), frame.get()));
+
+    return frame;
 }
 
-loaded_image load_image(const std::wstring& filename, bool allow_all_formats)
+std::shared_ptr<AVFrame> load_image(const std::wstring& filename)
 {
     if (!boost::filesystem::exists(filename))
         CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
-#ifdef WIN32
-    FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);
-#else
-    FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(u8(filename).c_str(), 0);
-#endif
-
-    if (fif == FIF_UNKNOWN)
-#ifdef WIN32
-        fif = FreeImage_GetFIFFromFilenameU(filename.c_str());
-#else
-        fif = FreeImage_GetFIFFromFilename(u8(filename).c_str());
-#endif
-
-    if (fif == FIF_UNKNOWN || (FreeImage_FIFSupportsReading(fif) == 0))
-        CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
-
-#ifdef WIN32
-    auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
-#else
-    auto bitmap =
-        std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), JPEG_EXIFROTATE), FreeImage_Unload);
-#endif
-
-    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
+    return ff_load_image(u8(filename).c_str(), nullptr);
 }
 
-loaded_image load_png_from_memory(const void* memory_location, size_t size, bool allow_all_formats)
+static int readFunction(void* opaque, uint8_t* buf, int buf_size)
 {
-    FREE_IMAGE_FORMAT fif = FIF_PNG;
+    auto& data = *static_cast<std::vector<unsigned char>*>(opaque);
+    memcpy(buf, data.data(), buf_size);
+    return static_cast<int>(data.size());
+}
 
-    auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
-        FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
-        FreeImage_CloseMemory);
-    auto bitmap =
-        std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), JPEG_EXIFROTATE), FreeImage_Unload);
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data)
+{
+    const std::shared_ptr<unsigned char> buffer(static_cast<unsigned char*>(av_malloc(image_data.size())), &av_free);
 
-    return prepare_loaded_image(fif, std::move(bitmap), allow_all_formats);
+    auto avioContext = std::shared_ptr<AVIOContext>(avio_alloc_context(buffer.get(),
+                                                                       static_cast<int>(image_data.size()),
+                                                                       0,
+                                                                       reinterpret_cast<void*>(&image_data),
+                                                                       &readFunction,
+                                                                       nullptr,
+                                                                       nullptr),
+                                                    [](AVIOContext* ptr) { avio_context_free(&ptr); });
+
+    const auto avFormat = std::shared_ptr<AVFormatContext>(avformat_alloc_context(), &avformat_free_context);
+    avFormat->pb        = avioContext.get();
+
+    return ff_load_image("base64", avFormat.get());
 }
 
 bool is_valid_file(const boost::filesystem::path& filename)
 {
-    static const std::set<std::wstring> extensions = {
-        L".png", L".tga", L".bmp", L".jpg", L".jpeg", L".gif", L".tiff", L".tif", L".jp2", L".jpx", L".j2k", L".j2c"};
+    static const std::set<std::wstring> extensions = {L".png",
+                                                      L".tga",
+                                                      L".bmp",
+                                                      L".jpg",
+                                                      L".jpeg",
+                                                      L".gif",
+                                                      L".tiff",
+                                                      L".tif",
+                                                      L".jp2",
+                                                      L".jpx",
+                                                      L".j2k",
+                                                      L".j2c",
+                                                      L".webp"};
 
     auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
     if (extensions.find(ext) == extensions.end()) {

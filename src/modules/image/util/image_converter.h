@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
@@ -24,15 +24,11 @@
 #include <ffmpeg/util/av_util.h>
 
 #include <memory>
-#include <string>
 
-#include <boost/filesystem.hpp>
+namespace caspar::image {
 
-namespace caspar { namespace image {
+bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src);
 
-std::shared_ptr<AVFrame> load_image(const std::wstring& filename);
-std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data);
+std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src, AVPixelFormat pixFmt);
 
-bool is_valid_file(const boost::filesystem::path& filename);
-
-}} // namespace caspar::image
+} // namespace caspar::image
