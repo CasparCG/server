@@ -58,8 +58,14 @@ std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* fo
 
     bool has_input_format_ctx = format_ctx != nullptr;
 
-    const AVInputFormat* iformat = av_find_input_format("image2pipe");
-    FF(avformat_open_input(&format_ctx, filename, iformat, nullptr));
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+    const AVInputFormat* input_format = nullptr;
+#else
+    AVInputFormat* input_format = nullptr;
+#endif
+
+    input_format = av_find_input_format("image2pipe");
+    FF(avformat_open_input(&format_ctx, filename, input_format, nullptr));
     CASPAR_SCOPE_EXIT
     {
         if (!has_input_format_ctx)
