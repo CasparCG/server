@@ -47,26 +47,4 @@ static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment
 }
 #endif
 
-static void* aligned_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
-{
-    __m128i*       dest128   = reinterpret_cast<__m128i*>(dest);
-    const __m128i* source128 = reinterpret_cast<const __m128i*>(source);
-
-    count /= 16; // 128 bit
-
-    const __m128i mask128 = _mm_set_epi32(m1, m2, m3, m4);
-    for (size_t n = 0; n < count / 4; ++n) {
-        __m128i xmm0 = _mm_load_si128(source128++);
-        __m128i xmm1 = _mm_load_si128(source128++);
-        __m128i xmm2 = _mm_load_si128(source128++);
-        __m128i xmm3 = _mm_load_si128(source128++);
-
-        _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm0, mask128));
-        _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm1, mask128));
-        _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm2, mask128));
-        _mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm3, mask128));
-    }
-    return dest;
-}
-
 } // namespace caspar

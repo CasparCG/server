@@ -1048,11 +1048,11 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     download_pixel_format = core::frame_conversion_format::pixel_format::decklink_v210;
                     break;
             }
-            auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(
-                frame,
-                core::frame_conversion_format( download_pixel_format,
-                                              decklink_format_desc_.width,
-                                              decklink_format_desc_.height));
+            auto download_format = core::frame_conversion_format( download_pixel_format,
+                                                                  decklink_format_desc_.width,
+                                                                  decklink_format_desc_.height);
+            download_format.key_only = config_.primary.key_only; // TODO - per port!
+            auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(frame,download_format);
 
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             if (field != core::video_field::b) {

@@ -48,15 +48,6 @@ std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_
     return create_aligned_buffer(size, 256);
 }
 
-std::shared_ptr<void> convert_to_key_only(const std::shared_ptr<void>& image_data, std::size_t byte_count)
-{
-    auto key_data = create_aligned_buffer(byte_count);
-
-    aligned_memshfl(key_data.get(), image_data.get(), byte_count, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-
-    return key_data;
-}
-
 void convert_frame(const core::video_format_desc&   channel_format_desc,
                    const core::video_format_desc&   decklink_format_desc,
                    const port_configuration&        config,
@@ -179,10 +170,6 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   ch
 
     } else {
         convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1, pixel_format);
-    }
-
-    if (config.key_only) {
-        image_data = convert_to_key_only(image_data, decklink_format_desc.size);
     }
 
     return image_data;
