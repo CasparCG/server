@@ -27,7 +27,7 @@ layout(rgba8, binding = 1) uniform image2D imgInput8bit; // Note: this needs to 
 
 layout(std430, binding = 2) buffer buffer_layout
 {
-    uint bufferOutput[];
+    writeonly uint bufferOutput[];
 };
 
 layout(std430, binding = 3) buffer description_layout
@@ -95,6 +95,10 @@ vec3 rgba_to_bt709(vec4 pixel) {
     float cr16 = pixel.r - KGoKRi * pixel.g - KBoKRi * pixel.b;
     float cr = (CbCrOffset + cr16 * HalfCbCrRange);
 
+//    float y = 0.5;
+//    float cb = 0;
+//    float cr = 0;
+
     return vec3(y, cb, cr);
 }
 
@@ -102,27 +106,31 @@ uint to_10bit(float val) {
     return uint(round(val * 1023));
 }
 
-void decklink_v210() {
+uint decklink_v210() {
     // basic coordinates
-    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
-    uint x_offset = gl_GlobalInvocationID.x * 4; // 4 words per op
-    uint offset = y_offset + x_offset;
-    uint image_x = gl_GlobalInvocationID.x * 6;
+    uint image_x = gl_GlobalInvocationID.x / 4 * 6;
 
-    // sample image and compute words
+    // TODO - this has a high cost compared to bgra, probably due to the amount of computation done here..
+
+    // Compute all the possible ycbcr values
     vec3 ycbcr0 = rgba_to_bt709(read_pixel(ivec2(image_x + 0, gl_GlobalInvocationID.y)));
-    bufferOutput[offset + 0] = to_10bit(ycbcr0.t) + (to_10bit(ycbcr0.s) << 10) + (to_10bit(ycbcr0.p) << 20);
-
     vec3 ycbcr1 = rgba_to_bt709(read_pixel(ivec2(image_x + 1, gl_GlobalInvocationID.y)));
     vec3 ycbcr2 = rgba_to_bt709(read_pixel(ivec2(image_x + 2, gl_GlobalInvocationID.y)));
-    bufferOutput[offset + 1] = to_10bit(ycbcr1.s) + (to_10bit(ycbcr2.t) << 10) + (to_10bit(ycbcr2.s) << 20);
-
     vec3 ycbcr3 = rgba_to_bt709(read_pixel(ivec2(image_x + 3, gl_GlobalInvocationID.y)));
     vec3 ycbcr4 = rgba_to_bt709(read_pixel(ivec2(image_x + 4, gl_GlobalInvocationID.y)));
-    bufferOutput[offset + 2] = to_10bit(ycbcr2.p) + (to_10bit(ycbcr3.s) << 10) + (to_10bit(ycbcr4.t) << 20);
-
     vec3 ycbcr5 = rgba_to_bt709(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)));
-    bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
+
+    // Combine the possible return vecs
+    vec3[] output_candidates = vec3[4] (
+        vec3(ycbcr0.t, ycbcr0.s, ycbcr0.p),
+        vec3(ycbcr1.s, ycbcr2.t, ycbcr2.s),
+        vec3(ycbcr2.p, ycbcr3.s, ycbcr4.t),
+        vec3(ycbcr4.s, ycbcr4.p, ycbcr5.s)
+    );
+
+    // Perform final combination
+    vec3 output_vals = output_candidates[gl_GlobalInvocationID.x % 4];
+    return to_10bit(output_vals.x) + (to_10bit(output_vals.y) << 10) + (to_10bit(output_vals.z) << 20);
 }
 
 uint float_to_uint8(float val) {
@@ -132,17 +140,13 @@ uint float_to_uint16(float val) {
     return uint(clamp(round(val * 65535), 0, 65535));
 }
 
-void bgra8() {
+uint bgra8() {
     // TODO: is this excessive to do in a shader?
-    // basic coordinates
-    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
-    uint x_offset = gl_GlobalInvocationID.x; // 1 words per op
-    uint offset = y_offset + x_offset;
 
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    bufferOutput[offset] = float_to_uint8(pixel.b) + (float_to_uint8(pixel.g) << 8) + (float_to_uint8(pixel.r) << 16) + (float_to_uint8(pixel.a) << 24);
+    return float_to_uint8(pixel.b) + (float_to_uint8(pixel.g) << 8) + (float_to_uint8(pixel.r) << 16) + (float_to_uint8(pixel.a) << 24);
 }
 
 void rgba16() {
@@ -174,21 +178,32 @@ void bgra16() {
 }
 
 void main() {
-    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+//    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+
+    // Don't overflow the line
+    if (gl_GlobalInvocationID.x >= words_per_line) return;
+
+    uint buffer_offset = gl_GlobalInvocationID.y * words_per_line + gl_GlobalInvocationID.x;
+
+    /**
+     * Some notes:
+     * - Each call must write to the buffer sequentially, with just one write. Failing to do this makes the shader 10x slower.
+     * - As the shader is being run in multiples of 32, we need to consider the x overflow condition
+     */
 
     switch(target_format){
         case 0: // bgra8
-            bgra8();
+            bufferOutput[buffer_offset] = bgra8();
             break;
-        case 1: // rgba16
-            rgba16();
-            break;
-        case 2: // bgra16
-            bgra16();
-            break;
+//        case 1: // rgba16
+//            rgba16();
+//            break;
+//        case 2: // bgra16
+//            bgra16();
+//            break;
 
         case 3:
-            decklink_v210();
+            bufferOutput[buffer_offset] = decklink_v210();
             break;
     }
 }

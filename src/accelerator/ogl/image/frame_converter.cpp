@@ -97,7 +97,7 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
 
             // TODO - result must be 128byte aligned. can that be guaranteed here?
             buffer_size = row_bytes * frame.height();
-            x_count = row_blocks * 8;
+            x_count = row_blocks * 32;
             y_count = frame.height();
             words_per_line = row_blocks * 32;
             break;
