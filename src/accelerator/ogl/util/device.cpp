@@ -331,6 +331,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 case common::bit_depth::bit16:
                     texid_16bit = texture->id();
                     break;
+                default:
+                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Only 8/16 bit textures can be converted to a buffer"));
             }
 
 
