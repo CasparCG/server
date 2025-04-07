@@ -64,6 +64,8 @@ vec3 rgba_to_bt709(vec4 pixel) {
         return vec3(pixel.a, 0.5, 0.5);
     }
 
+    // TODO - would this perform better if these were constants?
+
     float KR = 0.2126;
     float KB = 0.0722;
     float KG = 1.0 - KR - KB;
@@ -83,23 +85,15 @@ vec3 rgba_to_bt709(vec4 pixel) {
     float KBoKRi = KB / KRi;
     float KGoKRi = KG / KRi;
 
-//    vec3 y_range = vec3(KR * YRange, KG * YRange, KB * YRange);
-//    vec3 y_offset = vec3(YOffset, YOffset, YOffset);
 
-    float y16 = KR * pixel.r + KG * pixel.g + KB * pixel.b;
-    float y = (YOffset + y16 * YRange);
+    mat3 m_scale = mat3(KR, KG, KB,
+                        -KRoKBi, -KGoKBi, 1,
+                        1, -KGoKRi, -KBoKRi);
 
-    float cb16 = -KRoKBi * pixel.r - KGoKBi * pixel.g + pixel.b;
-    float cb = (CbCrOffset + cb16 * HalfCbCrRange);
+    vec3 v_scale_range = vec3(YRange, HalfCbCrRange, HalfCbCrRange);
+    vec3 v_offset = vec3(YOffset, CbCrOffset, CbCrOffset);
 
-    float cr16 = pixel.r - KGoKRi * pixel.g - KBoKRi * pixel.b;
-    float cr = (CbCrOffset + cr16 * HalfCbCrRange);
-
-//    float y = 0.5;
-//    float cb = 0;
-//    float cr = 0;
-
-    return vec3(y, cb, cr);
+    return pixel.rgb * m_scale * v_scale_range + v_offset;
 }
 
 uint to_10bit(float val) {
