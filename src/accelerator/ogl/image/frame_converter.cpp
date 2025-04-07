@@ -22,11 +22,29 @@
 #include "../util/convert_description.h"
 #include "../util/texture.h"
 
-#include <core/frame/pixel_format.h>
-
 #include <common/except.h>
 
+#include <boost/functional/hash.hpp>
+
 namespace caspar::accelerator::ogl {
+
+std::size_t hash_convertion_format(const caspar::core::frame_conversion_format &s) noexcept {
+    std::size_t result = 0;
+    boost::hash_combine(result, s.format);
+    boost::hash_combine(result, s.width);
+    boost::hash_combine(result, s.height);
+    boost::hash_combine(result, s.key_only);
+    boost::hash_combine(result, s.straight_alpha);
+
+    boost::hash_combine(result, s.region.src_x);
+    boost::hash_combine(result, s.region.src_y);
+    boost::hash_combine(result, s.region.dest_x);
+    boost::hash_combine(result, s.region.dest_y);
+    boost::hash_combine(result, s.region.w);
+    boost::hash_combine(result, s.region.h);
+    return result;
+}
+
 
 ogl_frame_converter::ogl_frame_converter(const spl::shared_ptr<device>& ogl)
     : ogl_(ogl)
@@ -48,7 +66,8 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
     if (!tex_ptr)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame"));
 
-    uint8_t cache_key = 0; // Future: this should be a unique key derived from `frame_conversion_format`
+    // Future: sanitise the subregion geometry, to ensure it is sane and in the simplest form
+    size_t cache_key = hash_convertion_format(format);
 
     // Note: This cache is a bit race prone, but is memory safe. At worst we will schedule the download of the same
     // buffer multiple times rather than reusing the one. But it will do so safely.

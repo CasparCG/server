@@ -33,6 +33,8 @@ namespace caspar::core {
 
 struct frame_conversion_format
 {
+    // Note: when adding fields to this, the cache_key calculation must be updated
+
     enum pixel_format
     {
         bgra8 = 0,

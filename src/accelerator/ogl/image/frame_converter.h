@@ -27,13 +27,15 @@
 
 #include "../util/device.h"
 
+
+
 namespace caspar::accelerator::ogl {
 
 struct ogl_texture_and_buffer_cache
 {
     const std::shared_ptr<texture> gl_texture;
 
-    tbb::concurrent_unordered_map<uint8_t, std::shared_future<array<const uint8_t>>> buffer_cache;
+    tbb::concurrent_unordered_map<size_t, std::shared_future<array<const uint8_t>>> buffer_cache;
 
     ogl_texture_and_buffer_cache(std::shared_ptr<texture> gl_texture) : gl_texture(std::move(gl_texture)) {}
 };
