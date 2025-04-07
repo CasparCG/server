@@ -449,7 +449,7 @@ struct screen_consumer
                 shader_->set("key_only", true);
                 GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
             } else {
-                shader_->set("key_only", config_.key_only);
+                shader_->set("key_only", false); // Handled during download
                 GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
             }
 
@@ -469,7 +469,10 @@ struct screen_consumer
 
     std::future<bool> send(core::video_field field, const core::const_frame& frame)
     {
-        auto frame2 = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+        auto format = core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8);
+        format.key_only = config_.key_only;
+
+        auto frame2 = frame_converter_->convert_to_buffer_and_frame(frame, format);
         if (!frame_buffer_.try_push(frame2)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
