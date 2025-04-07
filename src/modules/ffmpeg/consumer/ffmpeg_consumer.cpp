@@ -687,7 +687,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     std::optional<core::converted_frame> wrapped_frame;
                     if (frame)
                         // TODO - better pixel format
-                        wrapped_frame = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8));
+                        wrapped_frame = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
 
                     caspar::timer frame_timer;
                     tbb::parallel_invoke(

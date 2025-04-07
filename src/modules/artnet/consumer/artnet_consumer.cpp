@@ -111,7 +111,7 @@ struct artnet_consumer : public core::frame_consumer
                     if (last_fetched_frame != frame) {
                         last_fetched_frame = frame;
                         // Future: this is not the most performant, but is simple to immediately wait
-                        last_fetched_pixels = frame_converter_->convert_to_buffer(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8)).get();
+                        last_fetched_pixels = frame_converter_->convert_to_buffer(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8)).get();
                     }
 
 

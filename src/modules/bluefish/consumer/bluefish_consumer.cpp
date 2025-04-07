@@ -641,7 +641,7 @@ struct bluefish_consumer
 
         auto frame2 = frame_converter_->convert_to_buffer_and_frame(
             frame,
-            core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8, format_desc_.width, format_desc_.height));
+            core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8, format_desc_.width, format_desc_.height));
 
         try {
             std::unique_lock<std::mutex> lock(buffer_mutex_);

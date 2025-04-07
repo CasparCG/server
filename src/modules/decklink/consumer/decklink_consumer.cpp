@@ -1037,7 +1037,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         if (frame) {
             auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(
                 frame,
-                core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8,
+                core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8,
                                               decklink_format_desc_.width,
                                               decklink_format_desc_.height));
 

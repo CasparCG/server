@@ -37,7 +37,7 @@ std::shared_future<array<const std::uint8_t>>
 ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
                                        const core::frame_conversion_format& format)
 {
-    if (format.format != core::frame_conversion_format::pixel_format::rgba8)
+    if (format.format != core::frame_conversion_format::pixel_format::bgra8)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("format not implemented"));
     if (format.key_only)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("key_only not implemented"));

@@ -226,7 +226,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         auto wrapped_frame =
-               frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8));
+               frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
 
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);

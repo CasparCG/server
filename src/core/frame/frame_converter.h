@@ -35,7 +35,7 @@ struct frame_conversion_format
 {
     enum pixel_format
     {
-        rgba8 = 0,
+        bgra8 = 0,
         // rgba16        = 0,
         // bgra16        = 1,
         // decklink_v210 = 2,

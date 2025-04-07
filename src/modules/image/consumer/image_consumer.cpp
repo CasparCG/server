@@ -71,7 +71,7 @@ struct image_consumer : public core::frame_consumer
     {
         auto filename = filename_;
 
-        auto encode_format = core::frame_conversion_format(core::frame_conversion_format::pixel_format::rgba8);
+        auto encode_format = core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8);
         // encode_format.straight_alpha = true; // Future
 
         std::thread async([frame_converter = frame_converter_, frame, filename, encode_format] {
