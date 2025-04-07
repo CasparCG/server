@@ -75,6 +75,7 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
     int          words_per_line = 0;
 
     switch (format.format) {
+//        case core::frame_conversion_format::pixel_format::rgba8:
         case core::frame_conversion_format::pixel_format::bgra8:
             x_count        = frame.width();
             y_count        = frame.height();

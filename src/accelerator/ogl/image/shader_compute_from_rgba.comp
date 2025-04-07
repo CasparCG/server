@@ -125,6 +125,18 @@ void decklink_v210() {
     bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
 
+void bgra8() {
+    // TODO: is this excessive to do in a shader?
+    // basic coordinates
+    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
+    uint x_offset = gl_GlobalInvocationID.x; // 1 words per op
+    uint offset = y_offset + x_offset;
+
+    // TODO - can this be done solely as integer?
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    bufferOutput[offset] = uint(pixel.b * 255) + (uint(pixel.g * 255) << 8) + (uint(pixel.r * 255) << 16) + (uint(pixel.a * 255) << 24);
+}
 
 void rgba16() {
     // TODO: is this excessive to do in a shader?
@@ -158,14 +170,17 @@ void main() {
     ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
     switch(target_format){
-        case 0: // rgba16
+        case 0: // bgra8
+            bgra8();
+            break;
+        case 1: // rgba16
             rgba16();
             break;
-        case 1: // bgra16
+        case 2: // bgra16
             bgra16();
             break;
 
-        case 2:
+        case 3:
             decklink_v210();
             break;
     }
