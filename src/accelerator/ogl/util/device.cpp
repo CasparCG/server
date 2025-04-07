@@ -324,17 +324,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
             GLuint texid_8bit  = 0;
             GLuint texid_16bit = 0;
 
-            switch (texture->depth()) {
-                case common::bit_depth::bit8:
-                    texid_8bit = texture->id();
-                    break;
-                case common::bit_depth::bit16:
-                    texid_16bit = texture->id();
-                    break;
-                default:
-                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Only 8/16 bit textures can be converted to a buffer"));
+            if (description.is_16_bit) {
+                texid_16bit = texture->id();
+            } else {
+                texid_8bit = texture->id();
             }
-
 
             GL(glBindImageTexture(0, texid_16bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16));
             GL(glBindImageTexture(1, texid_8bit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8));

@@ -55,13 +55,6 @@ std::shared_future<array<const std::uint8_t>>
 ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
                                        const core::frame_conversion_format& format)
 {
-    if (format.format != core::frame_conversion_format::pixel_format::bgra8)
-        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("format not implemented"));
-    if (format.key_only)
-        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("key_only not implemented"));
-    if (format.straight_alpha)
-        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("straight_alpha not implemented"));
-
     auto tex_ptr = std::any_cast<std::shared_ptr<ogl_texture_and_buffer_cache>>(frame.image_ptr());
     if (!tex_ptr)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame"));
@@ -76,8 +69,58 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
         return cached_download->second;
     }
 
-    // Download unmodified for now
-    auto new_download = ogl_->copy_async(tex_ptr->gl_texture, true).share();
+    int          buffer_size    = 0;
+    unsigned int x_count        = 0;
+    unsigned int y_count        = 0;
+    int          words_per_line = 0;
+
+    switch (format.format) {
+        case core::frame_conversion_format::pixel_format::bgra8:
+            x_count        = frame.width();
+            y_count        = frame.height();
+            buffer_size    = frame.width() * frame.height() * 4;
+            words_per_line = frame.width();
+            break;
+
+//        case core::frame_conversion_format::pixel_format::rgba16:
+//        case core::frame_conversion_format::pixel_format::bgra16:
+//            x_count        = frame.width();
+//            y_count        = frame.height();
+//            buffer_size    = frame.width() * frame.height() * 8;
+//            words_per_line = frame.width() * 2;
+//
+//            break;
+//        case core::frame_conversion_format::pixel_format::decklink_v210:
+//            auto row_blocks = ((frame.width() + 47) / 48);
+//            auto row_bytes  = row_blocks * 128;
+//
+//            // TODO - result must be 128byte aligned. can that be guaranteed here?
+//            buffer_size    = row_bytes * frame.height();
+//            x_count        = row_blocks * 8;
+//            y_count        = frame.height();
+//            words_per_line = row_blocks * 32;
+//            break;
+        default:
+            // Handled in guard below
+            break;
+    }
+
+    if (buffer_size == 0 || x_count == 0 || y_count == 0 || words_per_line == 0) {
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
+    }
+
+    convert_from_texture_description description{};
+    description.target_format  = format.format;
+    description.is_16_bit      = tex_ptr->gl_texture->depth() == common::bit_depth::bit16;
+    description.width          = frame.width();
+    description.height         = frame.height();
+    description.words_per_line = words_per_line;
+    description.key_only       = format.key_only;
+    description.straighten     = format.straight_alpha;
+
+    // Start download
+    auto new_download = ogl_->convert_from_texture(tex_ptr->gl_texture, buffer_size, description, x_count, y_count).share();
+
     tex_ptr->buffer_cache.emplace(cache_key, new_download);
 
     return new_download;
