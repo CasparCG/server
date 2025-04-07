@@ -20,7 +20,7 @@
  */
 #version 430
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(rgba16, binding = 0) uniform image2D imgInput16bit; // Note: this needs to match what it is writing to
 layout(rgba8, binding = 1) uniform image2D imgInput8bit; // Note: this needs to match what it is writing to

@@ -110,6 +110,9 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unknown encoded frame format"));
     }
 
+    x_count = (x_count + 31) / 32;
+    y_count = (y_count + 31) / 32;
+
     convert_from_texture_description description{};
     description.target_format  = format.format;
     description.is_16_bit      = tex_ptr->gl_texture->depth() == common::bit_depth::bit16;
