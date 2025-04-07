@@ -52,8 +52,8 @@
 #include <future>
 #include <thread>
 
-#include "ogl_image_from_rgba.h"
-#include "ogl_image_to_rgba.h"
+#include "ogl_image_compute_from_rgba.h"
+#include "ogl_image_compute_to_rgba.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
