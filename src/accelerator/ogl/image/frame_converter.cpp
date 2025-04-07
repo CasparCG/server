@@ -83,24 +83,25 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
             words_per_line = frame.width();
             break;
 
-//        case core::frame_conversion_format::pixel_format::rgba16:
-//        case core::frame_conversion_format::pixel_format::bgra16:
-//            x_count        = frame.width();
-//            y_count        = frame.height();
-//            buffer_size    = frame.width() * frame.height() * 8;
-//            words_per_line = frame.width() * 2;
-//
-//            break;
-//        case core::frame_conversion_format::pixel_format::decklink_v210:
-//            auto row_blocks = ((frame.width() + 47) / 48);
-//            auto row_bytes  = row_blocks * 128;
-//
-//            // TODO - result must be 128byte aligned. can that be guaranteed here?
-//            buffer_size    = row_bytes * frame.height();
-//            x_count        = row_blocks * 8;
-//            y_count        = frame.height();
-//            words_per_line = row_blocks * 32;
-//            break;
+        case core::frame_conversion_format::pixel_format::rgba16:
+        case core::frame_conversion_format::pixel_format::bgra16:
+            x_count        = frame.width();
+            y_count        = frame.height();
+            buffer_size    = frame.width() * frame.height() * 8;
+            words_per_line = frame.width() * 2;
+
+            break;
+        case core::frame_conversion_format::pixel_format::decklink_v210: {
+            auto row_blocks = ((frame.width() + 47) / 48);
+            auto row_bytes = row_blocks * 128;
+
+            // TODO - result must be 128byte aligned. can that be guaranteed here?
+            buffer_size = row_bytes * frame.height();
+            x_count = row_blocks * 8;
+            y_count = frame.height();
+            words_per_line = row_blocks * 32;
+            break;
+        }
         default:
             // Handled in guard below
             break;

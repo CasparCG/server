@@ -37,10 +37,10 @@ struct frame_conversion_format
 
     enum pixel_format
     {
-        bgra8 = 0,
-        // rgba16        = 0,
-        // bgra16        = 1,
-        // decklink_v210 = 2,
+        bgra8         = 0,
+        rgba16        = 1,
+        bgra16        = 2,
+        decklink_v210 = 3,
     };
 
     struct subregion_geometry

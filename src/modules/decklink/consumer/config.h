@@ -85,6 +85,12 @@ struct configuration
         disabled,
     };
 
+    enum class pixel_format_t
+    {
+        bgra,
+        yuv10,
+    };
+
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
@@ -92,6 +98,7 @@ struct configuration
     wait_for_reference_t wait_for_reference          = wait_for_reference_t::automatic;
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
+    pixel_format_t       pixel_format                = pixel_format_t::bgra;
     bool                 hdr                         = false;
 
     port_configuration              primary;
@@ -109,9 +116,11 @@ struct configuration
 };
 
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
+                               const common::bit_depth& depth,
                                const core::video_format_repository& format_repository);
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
+                                const common::bit_depth& depth,
                                 const core::video_format_repository& format_repository);
 
 }} // namespace caspar::decklink

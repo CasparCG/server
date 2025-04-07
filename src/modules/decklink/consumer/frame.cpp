@@ -30,17 +30,22 @@
 
 namespace caspar { namespace decklink {
 
-BMDPixelFormat get_pixel_format(bool hdr) { return hdr ? bmdFormat10BitRGBXLE : bmdFormat8BitBGRA; }
-int            get_row_bytes(const core::video_format_desc& format_desc, bool hdr)
+BMDPixelFormat get_pixel_format(const configuration::pixel_format_t& pixel_format) {
+    if (pixel_format == configuration::pixel_format_t::yuv10) return bmdFormat10BitYUV;
+    // RGB and fallback
+    return bmdFormat8BitBGRA;
+}
+int            get_row_bytes(const core::video_format_desc& format_desc, const configuration::pixel_format_t& pixel_format)
 {
-    return hdr ? ((format_desc.width + 63) / 64) * 256 : format_desc.width * 4;
+    if (pixel_format == configuration::pixel_format_t::yuv10) return ((format_desc.width + 47) / 48) * 128;
+    // RGB and fallback
+    return format_desc.width * 4;
 }
 
-std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc, bool hdr)
+std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc, const configuration::pixel_format_t& pixel_format)
 {
-    auto alignment = hdr ? 256 : 64;
-    auto size      = hdr ? get_row_bytes(format_desc, hdr) * format_desc.height : format_desc.size;
-    return create_aligned_buffer(size, alignment);
+    auto size      = pixel_format != configuration::pixel_format_t::bgra ? get_row_bytes(format_desc, pixel_format) * format_desc.height : format_desc.size;
+    return create_aligned_buffer(size, 256);
 }
 
 std::shared_ptr<void> convert_to_key_only(const std::shared_ptr<void>& image_data, std::size_t byte_count)
@@ -58,7 +63,7 @@ void convert_frame(const core::video_format_desc&   channel_format_desc,
                    std::shared_ptr<void>&           image_data,
                    bool                             topField,
                    const array<const std::uint8_t>& frame,
-                   bool                             hdr)
+                   configuration::pixel_format_t pixel_format)
 {
     // No point copying an empty frame
     if (!frame)
@@ -70,33 +75,11 @@ void convert_frame(const core::video_format_desc&   channel_format_desc,
         config.region_w == 0 && config.region_h == 0 && config.dest_x == 0 && config.dest_y == 0) {
         // Fast path
 
-        if (hdr) {
-            // Pack eight byte R16G16B16A16 pixels as four byte 10bit RGB R10G10B10XX
-            const int NUM_THREADS     = 4;
-            auto      rows_per_thread = decklink_format_desc.height / NUM_THREADS;
-            size_t    byte_count_line = get_row_bytes(decklink_format_desc, hdr);
-            tbb::parallel_for(0, NUM_THREADS, [&](int i) {
-                auto end = (i + 1) * rows_per_thread;
-                for (int y = firstLine + i * rows_per_thread; y < end; y += decklink_format_desc.field_count) {
-                    auto dest = reinterpret_cast<uint32_t*>(image_data.get()) + (long long)y * byte_count_line / 4;
-                    for (int x = 0; x < decklink_format_desc.width; x += 1) {
-                        auto src = reinterpret_cast<const uint16_t*>(
-                            frame.data() + (long long)y * decklink_format_desc.width * 8 + x * 8);
-                        uint16_t blue  = src[0] >> 6;
-                        uint16_t green = src[1] >> 6;
-                        uint16_t red   = src[2] >> 6;
-                        dest[x]        = ((uint32_t)(red) << 22) + ((uint32_t)(green) << 12) + ((uint32_t)(blue) << 2);
-                    }
-                }
-            });
-
-        } else {
-            size_t byte_count_line = (size_t)decklink_format_desc.width * 4;
-            for (int y = firstLine; y < decklink_format_desc.height; y += decklink_format_desc.field_count) {
-                std::memcpy(reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_line,
-                            frame.data() + (long long)y * byte_count_line,
-                            byte_count_line);
-            }
+        size_t    byte_count_line = get_row_bytes(decklink_format_desc, pixel_format);
+        for (int y = firstLine; y < decklink_format_desc.height; y += decklink_format_desc.field_count) {
+            std::memcpy(reinterpret_cast<char*>(image_data.get()) + (long long)y * byte_count_line,
+                        frame.data() + (long long)y * byte_count_line,
+                        byte_count_line);
         }
     } else {
         // Take a sub-region
@@ -173,9 +156,9 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   ch
                                              const array<const std::uint8_t>& frame1,
                                              const array<const std::uint8_t>& frame2,
                                              BMDFieldDominance                field_dominance,
-                                             bool                             hdr)
+                                             configuration::pixel_format_t    pixel_format)
 {
-    std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc, hdr);
+    std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc, pixel_format);
 
     if (field_dominance != bmdProgressiveFrame) {
         convert_frame(channel_format_desc,
@@ -184,7 +167,7 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   ch
                       image_data,
                       field_dominance == bmdUpperFieldFirst,
                       frame1,
-                      hdr);
+                      pixel_format);
 
         convert_frame(channel_format_desc,
                       decklink_format_desc,
@@ -192,10 +175,10 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   ch
                       image_data,
                       field_dominance != bmdUpperFieldFirst,
                       frame2,
-                      hdr);
+                      pixel_format);
 
     } else {
-        convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1, hdr);
+        convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1, pixel_format);
     }
 
     if (config.key_only) {
