@@ -125,6 +125,13 @@ void decklink_v210() {
     bufferOutput[offset + 3] = to_10bit(ycbcr4.s) + (to_10bit(ycbcr4.p) << 10) + (to_10bit(ycbcr5.s) << 20);
 }
 
+uint float_to_uint8(float val) {
+    return uint(clamp(round(val * 255), 0, 255));
+}
+uint float_to_uint16(float val) {
+    return uint(clamp(round(val * 65535), 0, 65535));
+}
+
 void bgra8() {
     // TODO: is this excessive to do in a shader?
     // basic coordinates
@@ -135,7 +142,7 @@ void bgra8() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    bufferOutput[offset] = uint(pixel.b * 255) + (uint(pixel.g * 255) << 8) + (uint(pixel.r * 255) << 16) + (uint(pixel.a * 255) << 24);
+    bufferOutput[offset] = float_to_uint8(pixel.b) + (float_to_uint8(pixel.g) << 8) + (float_to_uint8(pixel.r) << 16) + (float_to_uint8(pixel.a) << 24);
 }
 
 void rgba16() {
@@ -148,8 +155,8 @@ void rgba16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    bufferOutput[offset + 0] = uint(pixel.r * 65535) + (uint(pixel.g * 65535) << 16);
-    bufferOutput[offset + 1] = uint(pixel.b * 65535) + (uint(pixel.a * 65535) << 16);
+    bufferOutput[offset + 0] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.g) << 16);
+    bufferOutput[offset + 1] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.a) << 16);
 }
 
 void bgra16() {
@@ -162,8 +169,8 @@ void bgra16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
-    bufferOutput[offset + 0] = uint(pixel.b * 65535) + (uint(pixel.g * 65535) << 16);
-    bufferOutput[offset + 1] = uint(pixel.r * 65535) + (uint(pixel.a * 65535) << 16);
+    bufferOutput[offset + 0] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.g) << 16);
+    bufferOutput[offset + 1] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.a) << 16);
 }
 
 void main() {
