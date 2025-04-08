@@ -18,16 +18,16 @@
  *
  * Author: Julian Waller, julian@superfly.tv
  */
-#version 430
+#version 450
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(rgba16, binding = 0) uniform image2D imgInput16bit; // Note: this needs to match what it is writing to
 layout(rgba8, binding = 1) uniform image2D imgInput8bit; // Note: this needs to match what it is writing to
 
-layout(std430, binding = 2) buffer buffer_layout
+layout(std430, binding = 2) writeonly buffer buffer_layout
 {
-    writeonly uint bufferOutput[];
+    uint bufferOutput[];
 };
 
 layout(std430, binding = 3) buffer description_layout
