@@ -23,6 +23,7 @@
 
 #include "../fwd.h"
 #include "../monitor/monitor.h"
+#include "channel_info.h"
 
 #include <common/bit_depth.h>
 #include <common/memory.h>
@@ -45,12 +46,12 @@ using consumer_factory_t =
     std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&     params,
                                                   const core::video_format_repository& format_repository,
                                                   const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                  common::bit_depth                                        depth)>;
+                                                  const core::channel_info& channel_info)>;
 using preconfigured_consumer_factory_t =
     std::function<spl::shared_ptr<frame_consumer>(const boost::property_tree::wptree&  element,
                                                   const core::video_format_repository& format_repository,
                                                   const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                  common::bit_depth                                        depth)>;
+                                                  const core::channel_info& channel_info)>;
 
 class frame_consumer_registry
 {
@@ -62,12 +63,12 @@ class frame_consumer_registry
     spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                     const core::video_format_repository& format_repository,
                                                     const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                    common::bit_depth depth) const;
+                                                    const core::channel_info& channel_info) const;
     spl::shared_ptr<frame_consumer> create_consumer(const std::wstring&                  element_name,
                                                     const boost::property_tree::wptree&  element,
                                                     const core::video_format_repository& format_repository,
                                                     const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                    common::bit_depth depth) const;
+                                                    const core::channel_info& channel_info) const;
 
   private:
     std::vector<consumer_factory_t>                          consumer_factories_;

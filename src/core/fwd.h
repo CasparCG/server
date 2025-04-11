@@ -48,4 +48,5 @@ class cg_producer_registry;
 class frame_producer_registry;
 class frame_consumer_registry;
 class video_format_repository;
+struct channel_info;
 } // namespace caspar::core

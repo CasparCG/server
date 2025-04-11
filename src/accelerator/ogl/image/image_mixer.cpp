@@ -72,18 +72,13 @@ class image_renderer
     image_kernel            kernel_;
     const size_t            max_frame_size_;
     common::bit_depth       depth_;
-    core::color_space       color_space_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl,
-                            const size_t                   max_frame_size,
-                            common::bit_depth              depth,
-                            core::color_space              color_space)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl, const size_t max_frame_size, common::bit_depth depth)
         : ogl_(ogl)
         , kernel_(ogl_)
         , max_frame_size_(max_frame_size)
         , depth_(depth)
-        , color_space_(color_space)
     {
     }
 
@@ -106,7 +101,6 @@ class image_renderer
     }
 
     common::bit_depth depth() const { return depth_; }
-    core::color_space color_space() const { return color_space_; }
 
   private:
     void draw(std::shared_ptr<texture>&      target_texture,
@@ -255,13 +249,9 @@ struct image_mixer::impl
     double aspect_ratio_ = 1.0;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl,
-         const int                      channel_id,
-         const size_t                   max_frame_size,
-         common::bit_depth              depth,
-         core::color_space              color_space)
+    impl(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size, common::bit_depth depth)
         : ogl_(ogl)
-        , renderer_(ogl, max_frame_size, depth, color_space)
+        , renderer_(ogl, max_frame_size, depth)
         , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
@@ -368,15 +358,13 @@ struct image_mixer::impl
     }
 
     common::bit_depth depth() const { return renderer_.depth(); }
-    core::color_space color_space() const { return renderer_.color_space(); }
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
                          const int                      channel_id,
                          const size_t                   max_frame_size,
-                         common::bit_depth              depth,
-                         core::color_space              color_space)
-    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth, color_space))
+                         common::bit_depth              depth)
+    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth))
 {
 }
 image_mixer::~image_mixer() {}
@@ -399,6 +387,5 @@ image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, 
 }
 
 common::bit_depth image_mixer::depth() const { return impl_->depth(); }
-core::color_space image_mixer::color_space() const { return impl_->color_space(); }
 
 }}} // namespace caspar::accelerator::ogl

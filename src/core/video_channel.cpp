@@ -26,6 +26,7 @@
 
 #include "video_format.h"
 
+#include "consumer/channel_info.h"
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
 #include "frame/frame.h"
@@ -53,7 +54,8 @@ struct video_channel::impl final
 {
     monitor::state state_;
 
-    const int index_;
+    const int         index_;
+    const color_space default_color_space_;
 
     const spl::shared_ptr<caspar::diagnostics::graph> graph_ = [](int index) {
         core::diagnostics::scoped_call_context save;
@@ -100,9 +102,11 @@ struct video_channel::impl final
   public:
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
+         color_space                               default_color_space,
          std::unique_ptr<image_mixer>              image_mixer,
          std::function<void(core::monitor::state)> tick)
         : index_(index)
+        , default_color_space_(default_color_space)
         , output_(graph_, format_desc, index)
         , image_mixer_(std::move(image_mixer))
         , mixer_(index, graph_, image_mixer_)
@@ -233,13 +237,23 @@ struct video_channel::impl final
     }
 
     int index() const { return index_; }
+
+    channel_info get_consumer_channel_info() const
+    {
+        channel_info info        = {};
+        info.channel_index       = index_;
+        info.depth               = mixer_.depth();
+        info.default_color_space = default_color_space_;
+        return info;
+    }
 };
 
 video_channel::video_channel(int                                       index,
                              const core::video_format_desc&            format_desc,
+                             color_space                               default_color_space,
                              std::unique_ptr<image_mixer>              image_mixer,
                              std::function<void(core::monitor::state)> tick)
-    : impl_(new impl(index, format_desc, std::move(image_mixer), std::move(tick)))
+    : impl_(new impl(index, format_desc, default_color_space, std::move(image_mixer), std::move(tick)))
 {
 }
 video_channel::~video_channel() {}
@@ -251,7 +265,8 @@ const output&                       video_channel::output() const { return impl_
 output&                             video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
 int                                 video_channel::index() const { return impl_->index(); }
-core::monitor::state                video_channel::state() const { return impl_->state_; }
+channel_info         video_channel::get_consumer_channel_info() const { return impl_->get_consumer_channel_info(); };
+core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 
