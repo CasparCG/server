@@ -24,6 +24,8 @@
 #include "fwd.h"
 #include "video_format.h"
 
+#include "frame/pixel_format.h"
+
 #include "monitor/monitor.h"
 
 #include <common/memory.h>
@@ -71,6 +73,7 @@ class video_channel final
   public:
     explicit video_channel(int                                       index,
                            const video_format_desc&                  format_desc,
+                           color_space                               default_color_space,
                            std::unique_ptr<image_mixer>              image_mixer,
                            std::function<void(core::monitor::state)> on_tick);
     ~video_channel();

@@ -21,8 +21,8 @@
 
 #pragma once
 
+#include "../frame/pixel_format.h"
 #include "common/bit_depth.h"
-#include "core/frame/pixel_format.h"
 
 namespace caspar::core {
 
@@ -30,7 +30,7 @@ struct channel_info
 {
     int               channel_index;
     common::bit_depth depth;
-    //    color_space default_color_space;
+    color_space       default_color_space;
 };
 
 } // namespace caspar::core
