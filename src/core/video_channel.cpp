@@ -26,6 +26,7 @@
 
 #include "video_format.h"
 
+#include "consumer/channel_info.h"
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
 #include "frame/frame.h"
@@ -233,6 +234,16 @@ struct video_channel::impl final
     }
 
     int index() const { return index_; }
+
+    channel_info get_consumer_channel_info() const
+    {
+        channel_info info  = {};
+        info.channel_index = index_;
+        info.depth         = mixer_.depth();
+        // TODO - color_space
+        // info.default_color_space = mixer_.
+        return info;
+    }
 };
 
 video_channel::video_channel(int                                       index,
@@ -251,7 +262,8 @@ const output&                       video_channel::output() const { return impl_
 output&                             video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
 int                                 video_channel::index() const { return impl_->index(); }
-core::monitor::state                video_channel::state() const { return impl_->state_; }
+channel_info         video_channel::get_consumer_channel_info() const { return impl_->get_consumer_channel_info(); };
+core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 
