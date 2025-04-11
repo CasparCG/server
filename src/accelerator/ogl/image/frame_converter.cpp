@@ -45,6 +45,30 @@ std::size_t hash_convertion_format(const caspar::core::frame_conversion_format &
     return result;
 }
 
+void sanitise_subregion(core::frame_conversion_format& format, const core::const_frame& frame) {
+    // Ensure the copy isn't based on outside the texture
+    // Note: These do technically mangle the dimensions, but this is acceptable to ensure it is safe
+    if (format.region.src_x < 0) format.region.src_x = 0;
+    if (format.region.src_y < 0) format.region.src_y = 0;
+    if (format.region.dest_x < 0) format.region.dest_x = 0;
+    if (format.region.dest_y < 0) format.region.dest_y = 0;
+
+    // Calculate the w/h based on the actual dimensions and offsets
+    if (format.region.w <= 0) {
+        format.region.w = std::min(format.width - format.region.dest_x, (int)frame.width() - format.region.src_x);
+    } else {
+        format.region.w = std::min(format.region.w, format.width - format.region.dest_x);
+    }
+    if (format.region.h <= 0) {
+        format.region.h = std::min(format.height - format.region.dest_y, (int) frame.height() - format.region.src_y);
+    } else {
+        format.region.h = std::min(format.region.h, format.height - format.region.dest_y);
+    }
+
+    // Future: This is reading from a texture, so maybe doesn't need to be a 1:1 pixel mapping.
+    // We could have src_w and dest_w instead of just w
+    // Some rotation too?
+}
 
 ogl_frame_converter::ogl_frame_converter(const spl::shared_ptr<device>& ogl)
     : ogl_(ogl)
@@ -53,11 +77,14 @@ ogl_frame_converter::ogl_frame_converter(const spl::shared_ptr<device>& ogl)
 
 std::shared_future<array<const std::uint8_t>>
 ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
-                                       const core::frame_conversion_format& format)
+                                       const core::frame_conversion_format& format0)
 {
     auto tex_ptr = std::any_cast<std::shared_ptr<ogl_texture_and_buffer_cache>>(frame.image_ptr());
     if (!tex_ptr)
         CASPAR_THROW_EXCEPTION(not_supported() << msg_info("No texture inside frame"));
+
+    core::frame_conversion_format format = format0;
+    sanitise_subregion(format, frame);
 
     // Future: sanitise the subregion geometry, to ensure it is sane and in the simplest form
     size_t cache_key = hash_convertion_format(format);
@@ -123,6 +150,13 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
     description.words_per_line = words_per_line;
     description.key_only       = format.key_only;
     description.straighten     = format.straight_alpha;
+
+    description.region_src_x = format.region.src_x;
+    description.region_src_y = format.region.src_y;
+    description.region_dest_x = format.region.dest_x;
+    description.region_dest_y = format.region.dest_y;
+    description.region_w = format.region.w;
+    description.region_h = format.region.h;
 
     // Start download
     auto new_download = ogl_->convert_from_texture(tex_ptr->gl_texture, buffer_size, description, x_count, y_count).share();

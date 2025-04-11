@@ -40,6 +40,13 @@ layout(std430, binding = 3) buffer description_layout
     uint words_per_line;
     uint key_only;
     uint straighten;
+
+    uint region_src_x;
+    uint region_src_y;
+    uint region_dest_x;
+    uint region_dest_y;
+    uint region_w;
+    uint region_h;
 };
 
 vec4 straighten_pixel(vec4 pixel) {
@@ -52,7 +59,12 @@ vec4 straighten_pixel(vec4 pixel) {
 }
 
 vec4 read_pixel(ivec2 coord) {
-    vec4 pixel = is_16_bit > 0 ? imageLoad(imgInput16bit, coord) : imageLoad(imgInput8bit, coord);
+    // TODO - what is the performance impact of this?
+    if (coord.x < region_dest_x || coord.y < region_dest_y || coord.x > region_w + region_dest_x || coord.y > region_h + region_dest_y) return vec4(0, 0, 0, 0);
+
+    ivec2 tex_coord = coord + ivec2(region_src_x, region_src_y) - ivec2(region_dest_x, region_dest_y);
+
+    vec4 pixel = is_16_bit > 0 ? imageLoad(imgInput16bit, tex_coord) : imageLoad(imgInput8bit, tex_coord);
     if (key_only > 0) return pixel.aaaa;
     if (straighten > 0) return straighten_pixel(pixel);
     return pixel;
@@ -71,11 +83,6 @@ mat3 yuv_bt601_mat = mat3(0.299, 0.587, 0.114,
     1, -0.587 / 0.701, -0.114 / 0.701);
 
 vec3 rgba_to_yuv(vec4 pixel, mat3 yuv_mat) {
-    if (key_only > 0) {
-        // TODO - verify everything about this
-        return vec3(pixel.a, 0, 0) * yuv_scale_range + yuv_offset;
-    }
-
     return pixel.rgb * yuv_mat * yuv_scale_range + yuv_offset;
 }
 

@@ -36,6 +36,13 @@ struct convert_from_texture_description
     uint32_t words_per_line;
     uint32_t key_only;
     uint32_t straighten;
+
+    uint32_t region_src_x;
+    uint32_t region_src_y;
+    uint32_t region_dest_x;
+    uint32_t region_dest_y;
+    uint32_t region_w;
+    uint32_t region_h;
 };
 
 } // namespace caspar::accelerator::ogl
