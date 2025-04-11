@@ -70,13 +70,13 @@ mat3 yuv_bt601_mat = mat3(0.299, 0.587, 0.114,
     -0.299 / 0.886, -0.587 / 0.886, 1,
     1, -0.587 / 0.701, -0.114 / 0.701);
 
-vec3 rgba_to_yuv(vec4 pixel) {
+vec3 rgba_to_yuv(vec4 pixel, mat3 yuv_mat) {
     if (key_only > 0) {
         // TODO - verify everything about this
         return vec3(pixel.a, 0, 0) * yuv_scale_range + yuv_offset;
     }
 
-    return pixel.rgb * yuv_bt709_mat * yuv_scale_range + yuv_offset;
+    return pixel.rgb * yuv_mat * yuv_scale_range + yuv_offset;
 }
 
 uint to_10bit(float val) {

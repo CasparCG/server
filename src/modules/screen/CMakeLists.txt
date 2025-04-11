@@ -12,8 +12,8 @@ set(SOURCES
 	screen.h
 )
 
-bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
-bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
+compile_gl_shader("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
+compile_gl_shader("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
 
 if (MSVC)
 else ()

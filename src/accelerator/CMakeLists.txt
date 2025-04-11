@@ -40,10 +40,10 @@ set(HEADERS
 	StdAfx.h
 )
 
-bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
-bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
-bin2c("ogl/image/shader_compute_to_rgba.comp" "ogl_image_compute_to_rgba.h" "caspar::accelerator::ogl" "compute_to_rgba_shader")
-bin2c("ogl/image/shader_compute_from_rgba.comp" "ogl_image_compute_from_rgba.h" "caspar::accelerator::ogl" "compute_from_rgba_shader")
+compile_gl_shader("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
+compile_gl_shader("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+compile_gl_shader("ogl/image/shader_compute_to_rgba.comp" "ogl_image_compute_to_rgba.h" "caspar::accelerator::ogl" "compute_to_rgba_shader")
+compile_gl_shader("ogl/image/shader_compute_from_rgba.comp" "ogl_image_compute_from_rgba.h" "caspar::accelerator::ogl" "compute_from_rgba_shader")
 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(accelerator PRIVATE
