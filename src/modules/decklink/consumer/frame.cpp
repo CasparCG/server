@@ -98,6 +98,8 @@ std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   de
 {
     std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc, pixel_format);
 
+    // These copies feel a bit wasteful, but we need to correct the buffer alignment
+
     if (field_dominance != bmdProgressiveFrame) {
         convert_frame(decklink_format_desc,
                       image_data,

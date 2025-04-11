@@ -79,7 +79,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     boost::thread                        send_thread;
     executor                             executor_;
 
-    std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
+    std::unique_ptr<NDIlib_send_instance_type, std::function<void(NDIlib_send_instance_type*)>> ndi_send_instance_;
 
   public:
     newtek_ndi_consumer(
@@ -124,8 +124,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         NDI_send_create_desc.clock_video = false;
         NDI_send_create_desc.clock_audio = false;
 
-        ndi_send_instance_ = {new NDIlib_send_instance_t(ndi_lib_->send_create(&NDI_send_create_desc)),
-                              [this](auto p) { this->ndi_lib_->send_destroy(*p); }};
+        ndi_send_instance_ = {ndi_lib_->send_create(&NDI_send_create_desc),
+                              [this](auto p) { this->ndi_lib_->send_destroy(p); }};
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
@@ -136,6 +136,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_video_frame_.frame_format_type    = NDIlib_frame_format_type_progressive;
 
         if (format_desc.field_count == 2 && allow_fields_) {
+            // The frame needs to be half height because of interlacing, so we use a temporary block of memory for the frames
             ndi_video_frame_.yres /= 2;
             ndi_video_frame_.frame_rate_N /= 2;
             ndi_video_frame_.picture_aspect_ratio = format_desc.width * 1.0f / format_desc.height;
@@ -199,8 +200,9 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     int  audio_data_size        = static_cast<int>(audio_data.size());
                     ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
                     ndi_audio_frame_.p_data     = const_cast<int*>(audio_data.data());
-                    ndi_lib_->util_send_send_audio_interleaved_32s(*ndi_send_instance_, &ndi_audio_frame_);
+                    ndi_lib_->util_send_send_audio_interleaved_32s(ndi_send_instance_.get(), &ndi_audio_frame_);
                     if (format_desc_.field_count == 2 && allow_fields_) {
+                        // Copy the needed lines into the temporary buffer
                         ndi_video_frame_.frame_format_type =
                             (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
                         for (auto y = 0; y < ndi_video_frame_.yres; ++y) {
@@ -209,9 +211,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
                                         format_desc_.width * 4);
                         }
                     } else {
-                        ndi_video_frame_.p_data = const_cast<uint8_t*>(pixels.begin());
+                        // Pass the raw frame
+                        // TODO - this seems to leak memory on linux, but the field flow above doesnt.
+                        ndi_video_frame_.p_data = const_cast<uint8_t*>(pixels.data());
                     }
-                    ndi_lib_->send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
+                    ndi_lib_->send_send_video_v2(ndi_send_instance_.get(), &ndi_video_frame_);
                     frame_no_++;
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     std::this_thread::sleep_until(time_point);

@@ -136,7 +136,8 @@ uint bgra8() {
 }
 
 void rgba16() {
-    // TODO: is this excessive to do in a shader?
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
+
     // basic coordinates
     uint y_offset = gl_GlobalInvocationID.y * words_per_line;
     uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
@@ -145,12 +146,14 @@ void rgba16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
+    // TODO - this needs to be reimplements to write a single word per execution
     bufferOutput[offset + 0] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.g) << 16);
     bufferOutput[offset + 1] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.a) << 16);
 }
 
 void bgra16() {
-    // TODO: is this excessive to do in a shader?
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
+
     // basic coordinates
     uint y_offset = gl_GlobalInvocationID.y * words_per_line;
     uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
@@ -159,6 +162,7 @@ void bgra16() {
     // TODO - can this be done solely as integer?
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
+    // TODO - this needs to be reimplements to write a single word per execution
     bufferOutput[offset + 0] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.g) << 16);
     bufferOutput[offset + 1] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.a) << 16);
 }
