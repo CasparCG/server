@@ -71,18 +71,19 @@ class image_renderer
 {
     spl::shared_ptr<device> ogl_;
     image_kernel            kernel_;
-    const size_t            max_frame_size_;
     common::bit_depth       depth_;
     core::color_space       color_space_;
 
+
+    core::video_format_desc empty_format_desc_;
+    std::shared_ptr<ogl_texture_and_buffer_cache> empty_texture_;
+
   public:
     explicit image_renderer(const spl::shared_ptr<device>& ogl,
-                            const size_t                   max_frame_size,
                             common::bit_depth              depth,
                             core::color_space              color_space)
         : ogl_(ogl)
         , kernel_(ogl_)
-        , max_frame_size_(max_frame_size)
         , depth_(depth)
         , color_space_(color_space)
     {
@@ -91,14 +92,23 @@ class image_renderer
     std::future<std::shared_ptr<ogl_texture_and_buffer_cache>> render(std::vector<layer>             layers,
                                                                       const core::video_format_desc& format_desc)
     {
-        // TODO - reenable
-        // Create and cache a texture that will be purged every time the format_desc changes.
-        // While not strictly necessary, this will minimise the risk of memory 'leaks' when consumers keep changing the
-        // required local buffer size And by caching, we will avoid the overhead of creating and downloading a new
-        // texture each tick if (layers.empty()) { // Bypass GPU with empty frame.
-        //     static const std::vector<uint8_t> buffer(max_frame_size_, 0);
-        //     return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
-        // }
+        if (empty_format_desc_.height != format_desc.height || empty_format_desc_.width != format_desc.width) {
+            // Dimensions of channel have changed, discard the empty_texture
+            empty_texture_ = nullptr;
+            empty_format_desc_ = format_desc;
+        }
+
+        if (layers.empty()) { // Skip compositing, and reuse a static empty texture
+            if (!empty_texture_) {
+                // Lazily generate the texture
+                empty_texture_ = ogl_->dispatch_sync(
+                [=]() {
+                    auto texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
+                    return std::make_shared<ogl_texture_and_buffer_cache>(std::move(texture));
+                });
+            }
+            return make_ready_future(empty_texture_);
+         }
 
         return ogl_->dispatch_async(
             [=, layers = std::move(layers)]() mutable -> std::shared_ptr<ogl_texture_and_buffer_cache> {
@@ -262,11 +272,10 @@ struct image_mixer::impl
   public:
     impl(const spl::shared_ptr<device>& ogl,
          const int                      channel_id,
-         const size_t                   max_frame_size,
          common::bit_depth              depth,
          core::color_space              color_space)
         : ogl_(ogl)
-        , renderer_(ogl, max_frame_size, depth, color_space)
+        , renderer_(ogl, depth, color_space)
         , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
@@ -377,10 +386,9 @@ struct image_mixer::impl
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
                          const int                      channel_id,
-                         const size_t                   max_frame_size,
                          common::bit_depth              depth,
                          core::color_space              color_space)
-    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth, color_space))
+    : impl_(std::make_unique<impl>(ogl, channel_id, depth, color_space))
 {
 }
 image_mixer::~image_mixer() {}

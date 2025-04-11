@@ -39,7 +39,6 @@ class image_mixer final : public core::image_mixer
   public:
     image_mixer(const spl::shared_ptr<class device>& ogl,
                 int                                  channel_id,
-                const size_t                         max_frame_size,
                 common::bit_depth                    depth,
                 core::color_space                    color_space);
     image_mixer(const image_mixer&) = delete;
