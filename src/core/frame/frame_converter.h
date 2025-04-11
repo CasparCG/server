@@ -38,8 +38,8 @@ struct frame_conversion_format
     enum pixel_format
     {
         bgra8    = 0,
-        rgba16   = 1,
-        bgra16   = 2,
+//        rgba16   = 1,
+//        bgra16   = 2,
         v210_709 = 3,
         v210_601 = 4,
     };

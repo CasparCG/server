@@ -110,14 +110,14 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
             words_per_line = frame.width();
             break;
 
-        case core::frame_conversion_format::pixel_format::rgba16:
-        case core::frame_conversion_format::pixel_format::bgra16:
-            x_count        = frame.width();
-            y_count        = frame.height();
-            buffer_size    = frame.width() * frame.height() * 8;
-            words_per_line = frame.width() * 2;
-
-            break;
+//        case core::frame_conversion_format::pixel_format::rgba16:
+//        case core::frame_conversion_format::pixel_format::bgra16:
+//            x_count        = frame.width();
+//            y_count        = frame.height();
+//            buffer_size    = frame.width() * frame.height() * 8;
+//            words_per_line = frame.width() * 2;
+//
+//            break;
         case core::frame_conversion_format::pixel_format::v210_601:
         case core::frame_conversion_format::pixel_format::v210_709: {
             auto row_blocks = ((frame.width() + 47) / 48);
