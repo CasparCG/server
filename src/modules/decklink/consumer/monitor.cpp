@@ -37,13 +37,13 @@ core::monitor::state get_state_for_port(const port_configuration&      port_conf
         state["video-mode"] = port_config.format.name;
     }
 
-    if (port_config.has_subregion_geometry()) {
-        state["subregion/src-x"]  = port_config.src_x;
-        state["subregion/src-y"]  = port_config.src_y;
-        state["subregion/src-x"]  = port_config.dest_x;
-        state["subregion/dest-y"] = port_config.dest_y;
-        state["subregion/width"]  = port_config.region_w;
-        state["subregion/height"] = port_config.region_h;
+    if (port_config.region.has_subregion_geometry()) {
+        state["subregion/src-x"]  = port_config.region.src_x;
+        state["subregion/src-y"]  = port_config.region.src_y;
+        state["subregion/src-x"]  = port_config.region.dest_x;
+        state["subregion/dest-y"] = port_config.region.dest_y;
+        state["subregion/width"]  = port_config.region.w;
+        state["subregion/height"] = port_config.region.h;
     }
 
     return state;

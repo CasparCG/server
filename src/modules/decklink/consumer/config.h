@@ -22,6 +22,7 @@
 #pragma once
 
 #include <core/frame/pixel_format.h>
+#include <core/frame/frame_converter.h>
 #include <core/video_format.h>
 
 namespace caspar { namespace decklink {
@@ -32,17 +33,8 @@ struct port_configuration
     bool key_only     = false;
 
     core::video_format_desc format;
-    int                     src_x    = 0;
-    int                     src_y    = 0;
-    int                     dest_x   = 0;
-    int                     dest_y   = 0;
-    int                     region_w = 0;
-    int                     region_h = 0;
 
-    [[nodiscard]] bool has_subregion_geometry() const
-    {
-        return src_x != 0 || src_y != 0 || region_w != 0 || region_h != 0 || dest_x != 0 || dest_y != 0;
-    }
+    core::frame_conversion_format::subregion_geometry region;
 };
 
 struct hdr_meta_configuration

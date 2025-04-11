@@ -43,12 +43,12 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
 
     auto subregion_tree = ptree.get_child_optional(L"subregion");
     if (subregion_tree) {
-        port_config.src_x    = subregion_tree->get(L"src-x", port_config.src_x);
-        port_config.src_y    = subregion_tree->get(L"src-y", port_config.src_y);
-        port_config.dest_x   = subregion_tree->get(L"dest-x", port_config.dest_x);
-        port_config.dest_y   = subregion_tree->get(L"dest-y", port_config.dest_y);
-        port_config.region_w = subregion_tree->get(L"width", port_config.region_w);
-        port_config.region_h = subregion_tree->get(L"height", port_config.region_h);
+        port_config.region.src_x    = subregion_tree->get(L"src-x", port_config.region.src_x);
+        port_config.region.src_y    = subregion_tree->get(L"src-y", port_config.region.src_y);
+        port_config.region.dest_x   = subregion_tree->get(L"dest-x", port_config.region.dest_x);
+        port_config.region.dest_y   = subregion_tree->get(L"dest-y", port_config.region.dest_y);
+        port_config.region.w = subregion_tree->get(L"width", port_config.region.w);
+        port_config.region.h = subregion_tree->get(L"height", port_config.region.h);
     }
 
     return port_config;

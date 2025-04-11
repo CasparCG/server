@@ -540,9 +540,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
             frame1 = frame;
         }
 
-        auto image_data = convert_frame_for_port(channel_format_desc_,
-                                                 decklink_format_desc_,
-                                                 output_config_,
+        auto image_data = convert_frame_for_port(decklink_format_desc_,
                                                  frame1,
                                                  frame2,
                                                  mode_->GetFieldDominance(),
@@ -585,6 +583,12 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     }
 };
 
+struct decklink_downloaded_frame_set {
+    core::const_frame                                   frame;
+    std::shared_future<array<const std::uint8_t>> primary_pixels;
+    std::vector<std::shared_future<array<const std::uint8_t>>> secondary_pixels;
+};
+
 struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 {
     const spl::shared_ptr<core::frame_converter> frame_converter_;
@@ -607,7 +611,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
     std::mutex                        buffer_mutex_;
     std::condition_variable           buffer_cond_;
-    std::queue<core::converted_frame> buffer_;
+    std::queue<decklink_downloaded_frame_set> buffer_;
     int                               buffer_capacity_ = channel_format_desc_.field_count;
 
     const int buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
@@ -905,8 +909,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 }
             }
 
-            std::optional<core::converted_frame> frame1 = pop();
-            std::optional<core::converted_frame> frame2;
+            std::optional<decklink_downloaded_frame_set> frame1 = pop();
+            std::optional<decklink_downloaded_frame_set> frame2;
 
             bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
             if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
@@ -940,14 +944,12 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             // Schedule video
             tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
-                auto buffer1 = frame1.value().pixels.get();
-                auto buffer2 = frame2.has_value() ? frame2.value().pixels.get() : buffer1;
-
                 if (i == -1) {
+                    auto buffer1 = frame1.value().primary_pixels.get();
+                    auto buffer2 = frame2.has_value() ? frame2.value().primary_pixels.get() : buffer1;
+
                     // Primary port
-                    std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
-                                                                              decklink_format_desc_,
-                                                                              config_.primary,
+                    std::shared_ptr<void> image_data = convert_frame_for_port(decklink_format_desc_,
                                                                               buffer1,
                                                                               buffer2,
                                                                               mode_->GetFieldDominance(),
@@ -962,6 +964,13 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                         schedule_next_audio(std::move(audio_data), nb_samples);
                     }
                 } else {
+                    if (frame1.value().secondary_pixels.size() <= i || (frame2.has_value() && frame2.value().secondary_pixels.size() <= i)) {
+                        // TODO - log missing buffer
+                        return;
+                    }
+                    auto buffer1 = frame1.value().secondary_pixels[i].get();
+                    auto buffer2 = frame2.has_value() ? frame2.value().secondary_pixels[i].get() : buffer1;
+
                     // Send frame to secondary ports
                     auto& context = secondary_port_contexts_[i];
                     context->schedule_frame(buffer1, video_display_time);
@@ -984,9 +993,9 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         return S_OK;
     }
 
-    std::optional<core::converted_frame> pop()
+    std::optional<decklink_downloaded_frame_set> pop()
     {
-        std::optional<core::converted_frame> frame;
+        std::optional<decklink_downloaded_frame_set> frame;
         {
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             buffer_cond_.wait(lock, [&] { return !buffer_.empty() || abort_request_; });
@@ -1039,21 +1048,12 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         if (frame) {
-            auto download_pixel_format = core::frame_conversion_format::pixel_format::bgra8;
-            switch(config_.pixel_format) {
-                case configuration::pixel_format_t::bgra:
-                    download_pixel_format = core::frame_conversion_format::pixel_format::bgra8;
-                    break;
-                case configuration::pixel_format_t::yuv10:
-                    // TODO - choose correct yuv space
-                    download_pixel_format = core::frame_conversion_format::pixel_format::decklink_v210_709;
-                    break;
+            decklink_downloaded_frame_set wrapped_frame = {};
+            wrapped_frame.frame = frame;
+            wrapped_frame.primary_pixels = frame_converter_->convert_to_buffer(wrapped_frame.frame, get_download_format_for_port(config_, config_.primary, decklink_format_desc_));
+            for (const auto& secondary_port: secondary_port_contexts_) {
+                wrapped_frame.secondary_pixels.push_back(frame_converter_->convert_to_buffer(wrapped_frame.frame, get_download_format_for_port(config_, secondary_port->output_config_, secondary_port->decklink_format_desc_)));
             }
-            auto download_format = core::frame_conversion_format( download_pixel_format,
-                                                                  decklink_format_desc_.width,
-                                                                  decklink_format_desc_.height);
-            download_format.key_only = config_.primary.key_only; // TODO - per port!
-            auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(frame,download_format);
 
             std::unique_lock<std::mutex> lock(buffer_mutex_);
             if (field != core::video_field::b) {
@@ -1165,7 +1165,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 {
     configuration config = parse_xml_config(ptree, depth, format_repository);
 
-    if (config.hdr && config.primary.has_subregion_geometry()) {
+    if (config.hdr && config.primary.region.has_subregion_geometry()) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info("Decklink consumer does not support hdr in combination with sub regions."));
     }

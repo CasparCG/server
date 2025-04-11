@@ -52,6 +52,11 @@ struct frame_conversion_format
         int dest_y = 0;
         int w      = 0;
         int h      = 0;
+
+        [[nodiscard]] bool has_subregion_geometry() const
+        {
+            return src_x != 0 || src_y != 0 || w != 0 || h != 0 || dest_x != 0 || dest_y != 0;
+        }
     };
 
     explicit frame_conversion_format(pixel_format format, int width, int height)
@@ -66,9 +71,9 @@ struct frame_conversion_format
     {
     }
 
-    pixel_format format;
-    int width;
-    int height;
+    const pixel_format format;
+    const int width;
+    const int height;
 
     bool key_only = false;
     bool straight_alpha = false;
