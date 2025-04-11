@@ -17,13 +17,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int   count = 0;
-    char* pch   = strtok(argv[1], "::");
-    while (pch != nullptr) {
-        printf("namespace %s {\n", pch);
-        pch = strtok(nullptr, "::");
-        count++;
-    }
+    printf("namespace %s {\n", argv[1]);
 
     printf("const char %s[] = {\n", argv[2]);
     unsigned long n = 0;
@@ -41,8 +35,7 @@ int main(int argc, char** argv)
     fclose(f);
     printf("0x00\n};\n");
 
-    for (int i = 0; i < count; i++)
-        printf("}\n");
+    printf("}\n");
 
     return 0;
 }

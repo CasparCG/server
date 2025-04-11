@@ -11,6 +11,7 @@ set(SOURCES
 	ogl/util/compute_shader.cpp
 	ogl/util/device.cpp
 	ogl/util/shader.cpp
+	ogl/util/shaders_source.cpp
 	ogl/util/texture.cpp
 	ogl/util/matrix.cpp
 	ogl/util/transforms.cpp
@@ -27,6 +28,7 @@ set(HEADERS
 	ogl/util/compute_shader.h
 	ogl/util/device.h
 	ogl/util/shader.h
+	ogl/util/shaders_source.h
 	ogl/util/texture.h
 	ogl/util/matrix.h
 	ogl/util/transforms.h

@@ -23,6 +23,7 @@
 #include "buffer.h"
 #include "compute_shader.h"
 #include "shader.h"
+#include "shaders_source.h"
 #include "texture.h"
 
 #include <common/array.h>
@@ -51,9 +52,6 @@
 #include <array>
 #include <future>
 #include <thread>
-
-#include "ogl_image_shader_compute_from_rgba_comp.h"
-#include "ogl_image_shader_compute_to_rgba_comp.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -318,8 +316,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
-                compute_from_rgba_ =
-                    std::make_unique<compute_shader>(std::string(ogl_image_shader_compute_from_rgba_comp));
+                compute_from_rgba_ = std::make_unique<compute_shader>(shaders_source::compute_from_rgba);
 
             // single input texture
             GLuint texid_8bit  = 0;
