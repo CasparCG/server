@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <core/consumer/channel_info.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
@@ -47,11 +48,10 @@ struct port_configuration
 
 struct hdr_meta_configuration
 {
-    float             min_dml             = 0.005f;
-    float             max_dml             = 1000.0f;
-    float             max_fall            = 100.0f;
-    float             max_cll             = 1000.0f;
-    core::color_space default_color_space = core::color_space::bt709;
+    float min_dml  = 0.005f;
+    float max_dml  = 1000.0f;
+    float max_fall = 100.0f;
+    float max_cll  = 1000.0f;
 };
 
 struct configuration
@@ -97,6 +97,7 @@ struct configuration
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
 
+    core::color_space      color_space = core::color_space::bt709;
     hdr_meta_configuration hdr_meta;
 
     [[nodiscard]] int buffer_depth() const
@@ -109,9 +110,11 @@ struct configuration
 };
 
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
-                               const core::video_format_repository& format_repository);
+                               const core::video_format_repository& format_repository,
+                               const core::channel_info&            channel_info);
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
-                                const core::video_format_repository& format_repository);
+                                const core::video_format_repository& format_repository,
+                                const core::channel_info&            channel_info);
 
 }} // namespace caspar::decklink

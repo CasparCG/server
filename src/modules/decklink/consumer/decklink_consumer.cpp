@@ -711,7 +711,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc_, config_.hdr);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.hdr_meta.default_color_space);
+            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.color_space);
             for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }
@@ -933,8 +933,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                               mode_->GetFieldDominance(),
                                                                               config_.hdr);
 
-                    schedule_next_video(
-                        image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
+                    schedule_next_video(image_data, nb_samples, video_display_time, config_.color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -1105,7 +1104,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         return core::frame_consumer::empty();
     }
 
-    configuration config = parse_amcp_config(params, format_repository);
+    configuration config = parse_amcp_config(params, format_repository, channel_info);
 
     config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
@@ -1123,7 +1122,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    configuration config = parse_xml_config(ptree, format_repository);
+    configuration config = parse_xml_config(ptree, format_repository, channel_info);
 
     config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
