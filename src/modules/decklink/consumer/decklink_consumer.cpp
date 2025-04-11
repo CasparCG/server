@@ -30,6 +30,7 @@
 
 #include "../util/util.h"
 
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
@@ -1098,7 +1099,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                      common::bit_depth                                        depth)
+                                                      const core::channel_info& channel_info)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
@@ -1106,7 +1107,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     configuration config = parse_amcp_config(params, format_repository);
 
-    config.hdr = (depth != common::bit_depth::bit8);
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
     if (config.hdr && config.primary.key_only) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
@@ -1120,11 +1121,11 @@ spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              common::bit_depth                                        depth)
+                              const core::channel_info&                                channel_info)
 {
     configuration config = parse_xml_config(ptree, format_repository);
 
-    config.hdr = (depth != common::bit_depth::bit8);
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
     if (config.hdr && config.primary.has_subregion_geometry()) {
         CASPAR_THROW_EXCEPTION(caspar_exception()

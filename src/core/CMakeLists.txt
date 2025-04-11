@@ -75,6 +75,7 @@ set(HEADERS
 		StdAfx.h
 		video_channel.h
 		video_format.h
+		consumer/channel_info.h
 )
 
 casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
