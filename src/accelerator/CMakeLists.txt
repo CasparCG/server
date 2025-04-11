@@ -31,21 +31,21 @@ set(HEADERS
 	ogl/util/matrix.h
 	ogl/util/transforms.h
 
-	ogl_image_vertex.h
-	ogl_image_fragment.h
-	ogl_image_compute_to_rgba.h
-	ogl_image_compute_from_rgba.h
-
 	accelerator.h
 	StdAfx.h
 )
 
-compile_gl_shader("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
-compile_gl_shader("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
-compile_gl_shader("ogl/image/shader_compute_to_rgba.comp" "ogl_image_compute_to_rgba.h" "caspar::accelerator::ogl" "compute_to_rgba_shader")
-compile_gl_shader("ogl/image/shader_compute_from_rgba.comp" "ogl_image_compute_from_rgba.h" "caspar::accelerator::ogl" "compute_from_rgba_shader")
+compile_gl_shaders(accelerator-shaders
+    NAMESPACE "caspar::accelerator::ogl"
+    SOURCES
+        "ogl/image/shader.vert"
+        "ogl/image/shader.frag"
+        "ogl/image/shader_compute_to_rgba.comp"
+        "ogl/image/shader_compute_from_rgba.comp"
+    )
 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
+add_dependencies(accelerator accelerator-shaders)
 target_include_directories(accelerator PRIVATE
     ..
     ${CMAKE_CURRENT_BINARY_DIR}

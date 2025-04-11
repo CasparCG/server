@@ -52,8 +52,8 @@
 #include <future>
 #include <thread>
 
-#include "ogl_image_compute_from_rgba.h"
-#include "ogl_image_compute_to_rgba.h"
+#include "ogl_image_shader_compute_from_rgba_comp.h"
+#include "ogl_image_shader_compute_to_rgba_comp.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -310,7 +310,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
     */
 
-     std::future<array<const uint8_t>> convert_from_texture(const std::shared_ptr<texture>&         texture,
+    std::future<array<const uint8_t>> convert_from_texture(const std::shared_ptr<texture>&         texture,
                                                            int                                     buffer_size,
                                                            const convert_from_texture_description& description,
                                                            unsigned int                            x_count,
@@ -318,7 +318,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     {
         return spawn_async([=](yield_context yield) {
             if (!compute_from_rgba_)
-                compute_from_rgba_ = std::make_unique<compute_shader>(std::string(compute_from_rgba_shader));
+                compute_from_rgba_ =
+                    std::make_unique<compute_shader>(std::string(ogl_image_shader_compute_from_rgba_comp));
 
             // single input texture
             GLuint texid_8bit  = 0;
