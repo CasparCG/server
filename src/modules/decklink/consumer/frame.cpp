@@ -50,7 +50,7 @@ core::frame_conversion_format get_download_format_for_port(const configuration& 
             break;
         case configuration::pixel_format_t::yuv10:
             // TODO - choose correct yuv space
-            download_pixel_format = core::frame_conversion_format::pixel_format::decklink_v210_709;
+            download_pixel_format = core::frame_conversion_format::pixel_format::v210_709;
             break;
     }
 

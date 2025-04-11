@@ -60,6 +60,8 @@ vec4 straighten_pixel(vec4 pixel) {
 
 vec4 read_pixel(ivec2 coord) {
     // TODO - what is the performance impact of this?
+    // When the output is a full frame, it is 'free' as it will always sample the texture.
+    // When doing a crop, it appears to save compute cycles, presumably because of less memory reads?
     if (coord.x < region_dest_x || coord.y < region_dest_y || coord.x > region_w + region_dest_x || coord.y > region_h + region_dest_y) return vec4(0, 0, 0, 0);
 
     ivec2 tex_coord = coord + ivec2(region_src_x, region_src_y) - ivec2(region_dest_x, region_dest_y);
@@ -90,11 +92,12 @@ uint to_10bit(float val) {
     return uint(round(val * 1023));
 }
 
-uint decklink_v210(mat3 yuv_mat) {
+uint v210(mat3 yuv_mat) {
     // basic coordinates
     uint image_x = gl_GlobalInvocationID.x / 4 * 6;
 
     // TODO - this has a high cost compared to bgra, probably due to the amount of computation done here..
+
 
     // Compute all the possible ycbcr values
     vec3 ycbcr0 = rgba_to_yuv(read_pixel(ivec2(image_x + 0, gl_GlobalInvocationID.y)), yuv_mat);
@@ -104,7 +107,8 @@ uint decklink_v210(mat3 yuv_mat) {
     vec3 ycbcr4 = rgba_to_yuv(read_pixel(ivec2(image_x + 4, gl_GlobalInvocationID.y)), yuv_mat);
     vec3 ycbcr5 = rgba_to_yuv(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)), yuv_mat);
 
-    // Combine the possible return vecs
+    // TODO - do some interpolation of the uv values to minimise artifacts?
+    // Combine the possible return vecs (components are: stpq)
     vec3[] output_candidates = vec3[4] (
         vec3(ycbcr0.t, ycbcr0.s, ycbcr0.p),
         vec3(ycbcr1.s, ycbcr2.t, ycbcr2.s),
@@ -125,9 +129,7 @@ uint float_to_uint16(float val) {
 }
 
 uint bgra8() {
-    // TODO: is this excessive to do in a shader?
-
-    // TODO - can this be done solely as integer?
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
     vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
 
     return float_to_uint8(pixel.b) + (float_to_uint8(pixel.g) << 8) + (float_to_uint8(pixel.r) << 16) + (float_to_uint8(pixel.a) << 24);
@@ -187,10 +189,10 @@ void main() {
 //            break;
 
         case 3:
-            bufferOutput[buffer_offset] = decklink_v210(yuv_bt709_mat);
+            bufferOutput[buffer_offset] = v210(yuv_bt709_mat);
             break;
         case 4:
-            bufferOutput[buffer_offset] = decklink_v210(yuv_bt601_mat);
+            bufferOutput[buffer_offset] = v210(yuv_bt601_mat);
             break;
     }
 }
