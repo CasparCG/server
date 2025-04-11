@@ -41,7 +41,7 @@
 namespace caspar { namespace core {
 
 using producer_factory_t = std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
-                                                                                       const std::vector<std::wstring>&)>;
+                                                                               const std::vector<std::wstring>&)>;
 
 class frame_producer_registry
 {
@@ -60,6 +60,6 @@ class frame_producer_registry
     frame_producer_registry& operator=(const frame_producer_registry&) = delete;
 };
 
-void                                  destroy_producers_synchronously();
+void destroy_producers_synchronously();
 
 }} // namespace caspar::core

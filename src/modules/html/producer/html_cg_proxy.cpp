@@ -31,7 +31,6 @@
 
 namespace caspar { namespace html {
 
-
 html_cg_proxy::html_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer)
     : producer_(producer)
 {
@@ -62,9 +61,9 @@ void html_cg_proxy::next(int layer) { producer_->call({L"next()"}); }
 void html_cg_proxy::update(int layer, const std::wstring& data)
 {
     producer_->call({(boost::wformat(L"update(\"%1%\")") %
-                            boost::algorithm::replace_all_copy(
-                                boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
-                               .str()});
+                      boost::algorithm::replace_all_copy(
+                          boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
+                         .str()});
 }
 
 std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)

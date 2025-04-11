@@ -48,9 +48,9 @@ class destroy_consumer_proxy : public frame_consumer
 {
     std::shared_ptr<frame_consumer> consumer_;
 
-public:
+  public:
     destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
-            : consumer_(std::move(consumer))
+        : consumer_(std::move(consumer))
     {
         destroy_consumers_in_separate_thread() = true;
     }
@@ -105,9 +105,9 @@ class print_consumer_proxy : public frame_consumer
 {
     std::shared_ptr<frame_consumer> consumer_;
 
-public:
+  public:
     print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer)
-            : consumer_(std::move(consumer))
+        : consumer_(std::move(consumer))
     {
     }
 
@@ -135,10 +135,7 @@ public:
     core::monitor::state state() const override { return consumer_->state(); }
 };
 
-
-frame_consumer_registry::frame_consumer_registry()
-{
-}
+frame_consumer_registry::frame_consumer_registry() {}
 
 void frame_consumer_registry::register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory)
 {

@@ -99,10 +99,7 @@ class color_producer : public frame_producer
 
     // frame_producer
 
-    draw_frame receive_impl(const core::video_field field, int nb_samples) override
-    {
-        return frame_;
-    }
+    draw_frame receive_impl(const core::video_field field, int nb_samples) override { return frame_; }
 
     std::wstring print() const override { return L"color[" + color_str_ + L"]"; }
 

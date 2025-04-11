@@ -90,10 +90,14 @@ draw_transforms draw_transforms::combine_transform(const core::image_transform& 
     apply_transform_colour_values(new_transform.image_transform, transform);
     new_transform.current().vertex_matrix = new_matrix * new_transform.current().vertex_matrix;
 
-    // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten other draw_frames
+    // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten
+    // other draw_frames
     if (transform.enable_geometry_modifiers) {
         // Push the new clip before the new transform applied
-        draw_crop_region new_clip(transform.clip_translation[0],transform.clip_translation[1], transform.clip_translation[0]+ transform.clip_scale[0],transform.clip_translation[1] + transform.clip_scale[1]);
+        draw_crop_region new_clip(transform.clip_translation[0],
+                                  transform.clip_translation[1],
+                                  transform.clip_translation[0] + transform.clip_scale[0],
+                                  transform.clip_translation[1] + transform.clip_scale[1]);
         new_clip.apply_transform(transform_before);
         new_transform.current().crop_regions.push_back(std::move(new_clip));
 
@@ -149,9 +153,7 @@ struct wrapped_vertex
         texture_q = coord.texture_q;
     }
 
-    explicit wrapped_vertex() {
-        vertex(2) = 1;
-    };
+    explicit wrapped_vertex() { vertex(2) = 1; };
 
     [[nodiscard]] core::frame_geometry::coord as_geometry() const
     {
@@ -179,7 +181,11 @@ bool inline point_is_to_left_of_line(const t_point& line_1, const t_point& line_
 }
 
 // http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-bool get_intersection_with_crop_line(const t_point& crop0, const t_point& crop1, const t_point& p0, const t_point& p1, t_point& result)
+bool get_intersection_with_crop_line(const t_point& crop0,
+                                     const t_point& crop1,
+                                     const t_point& p0,
+                                     const t_point& p1,
+                                     t_point&       result)
 {
     double s1_x = crop1(0) - crop0(0);
     double s1_y = crop1(1) - crop0(1);
@@ -238,28 +244,37 @@ void crop_texture_for_vertex(const wrapped_vertex& line_a, const wrapped_vertex&
 
 void fill_texture_q_for_quad(std::vector<wrapped_vertex>& coords)
 {
-    if (coords.size() != 4) return;
+    if (coords.size() != 4)
+        return;
 
     // Based on formula from:
     // http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
-    
+
     double s1_x = coords[2].vertex(0) - coords[0].vertex(0);
     double s1_y = coords[2].vertex(1) - coords[0].vertex(1);
     double s2_x = coords[3].vertex(0) - coords[1].vertex(0);
     double s2_y = coords[3].vertex(1) - coords[1].vertex(1);
 
-    double s = (-s1_y * (coords[0].vertex(0) - coords[1].vertex(0)) + s1_x * (coords[0].vertex(1) - coords[1].vertex(1))) / (-s2_x * s1_y + s1_x * s2_y);
-    double t = (s2_x * (coords[0].vertex(1) - coords[1].vertex(1)) - s2_y * (coords[0].vertex(0) - coords[1].vertex(0))) / (-s2_x * s1_y + s1_x * s2_y);
+    double s =
+        (-s1_y * (coords[0].vertex(0) - coords[1].vertex(0)) + s1_x * (coords[0].vertex(1) - coords[1].vertex(1))) /
+        (-s2_x * s1_y + s1_x * s2_y);
+    double t =
+        (s2_x * (coords[0].vertex(1) - coords[1].vertex(1)) - s2_y * (coords[0].vertex(0) - coords[1].vertex(0))) /
+        (-s2_x * s1_y + s1_x * s2_y);
 
     if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
         // Collision detected
         double diagonal_intersection_x = coords[0].vertex(0) + t * s1_x;
         double diagonal_intersection_y = coords[0].vertex(1) + t * s1_y;
 
-        auto d0 = hypotenuse(coords[3].vertex(0), coords[3].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
-        auto d1 = hypotenuse(coords[2].vertex(0), coords[2].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
-        auto d2 = hypotenuse(coords[1].vertex(0), coords[1].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
-        auto d3 = hypotenuse(coords[0].vertex(0), coords[0].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d0 =
+            hypotenuse(coords[3].vertex(0), coords[3].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d1 =
+            hypotenuse(coords[2].vertex(0), coords[2].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d2 =
+            hypotenuse(coords[1].vertex(0), coords[1].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+        auto d3 =
+            hypotenuse(coords[0].vertex(0), coords[0].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
 
         auto ulq = calc_q(d3, d1);
         auto urq = calc_q(d2, d0);
@@ -289,7 +304,6 @@ void transform_vertex(const draw_transform_step& step, t_point& vertex)
     apply_perspective_to_vertex(vertex, step.perspective);
 }
 
-
 std::vector<core::frame_geometry::coord>
 draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>& coords) const
 {
@@ -301,24 +315,23 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
         cropped_coords.emplace_back(coord);
     }
 
-
     std::vector<draw_crop_region> transformed_regions;
 
     // Apply the transforms
     for (int i = (int)steps.size() - 1; i >= 0; i--) {
-        for (auto &coord: cropped_coords) {
+        for (auto& coord : cropped_coords) {
             transform_vertex(steps[i], coord.vertex);
         }
 
         // Transform existing regions
-        for (auto& region: transformed_regions) {
+        for (auto& region : transformed_regions) {
             for (int l = 0; l < 4; ++l) {
                 transform_vertex(steps[i], region.coords[l]);
             }
         }
 
         // Push new regions
-        for (auto& region: steps[i].crop_regions) {
+        for (auto& region : steps[i].crop_regions) {
             draw_crop_region new_region = region;
             for (int l = 0; l < 4; ++l) {
                 // Only apply perspective for new ones
@@ -336,7 +349,7 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
     for (auto& crop_region : transformed_regions) {
         for (int l = 0; l < 4; ++l) {
             // Apply the crop, one edge at a time
-            int to_index   = l == 3 ? 0 : l + 1;
+            int     to_index   = l == 3 ? 0 : l + 1;
             t_point from_point = crop_region.coords[l];
             t_point to_point   = crop_region.coords[to_index];
 
@@ -345,7 +358,8 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
             // Figure out which points are 'left' of the line (outside the crop region)
             for (size_t j = 0; j < cropped_coords.size(); ++j) {
                 bool v = point_is_to_left_of_line(from_point, to_point, cropped_coords[j].vertex);
-                if (v) points_to_left_of_line.insert(j);
+                if (v)
+                    points_to_left_of_line.insert(j);
             }
 
             if (points_to_left_of_line.empty()) {

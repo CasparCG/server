@@ -33,10 +33,7 @@
 
 namespace caspar { namespace core {
 
-
-frame_producer_registry::frame_producer_registry()
-{
-}
+frame_producer_registry::frame_producer_registry() {}
 
 void frame_producer_registry::register_producer_factory(std::wstring name, const producer_factory_t& factory)
 {
@@ -204,7 +201,8 @@ frame_producer_registry::create_producer(const frame_producer_dependencies& depe
     }
 
     // Skip destroy_producer_proxy for route_producer, as it needs to be able to perform this cast
-    // This isn't a nice approach, but it keeps it simple and ensures every other producer has the destroy_producer_proxy wrapping
+    // This isn't a nice approach, but it keeps it simple and ensures every other producer has the
+    // destroy_producer_proxy wrapping
     if (spl::instance_of<core::route_control>(producer)) {
         return std::move(producer);
     }

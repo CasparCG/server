@@ -33,9 +33,9 @@
 
 #include <functional>
 #include <future>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace caspar { namespace core {
 

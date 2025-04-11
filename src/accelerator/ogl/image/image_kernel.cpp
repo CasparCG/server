@@ -127,11 +127,11 @@ struct image_kernel::impl
         auto const first_plane = params.pix_desc.planes.at(0);
         if (params.geometry.mode() != core::frame_geometry::scale_mode::stretch && first_plane.width > 0 &&
             first_plane.height > 0) {
-             auto width_scale  = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
-             auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);
+            auto width_scale  = static_cast<double>(params.target_width) / static_cast<double>(first_plane.width);
+            auto height_scale = static_cast<double>(params.target_height) / static_cast<double>(first_plane.height);
 
             core::image_transform transform;
-            double target_scale;
+            double                target_scale;
             switch (params.geometry.mode()) {
                 case core::frame_geometry::scale_mode::fit:
                     target_scale = std::min(width_scale, height_scale);
@@ -222,8 +222,7 @@ struct image_kernel::impl
         shader_->set("has_local_key", static_cast<bool>(params.local_key));
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);
-        shader_->set("opacity",
-                     transforms.image_transform.is_key ? 1.0 : transforms.image_transform.opacity);
+        shader_->set("opacity", transforms.image_transform.is_key ? 1.0 : transforms.image_transform.opacity);
 
         if (transforms.image_transform.chroma.enable) {
             shader_->set("chroma", true);

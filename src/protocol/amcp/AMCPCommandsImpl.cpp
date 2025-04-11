@@ -40,9 +40,9 @@
 #include <common/os/filesystem.h>
 #include <common/param.h>
 
-#include <core/consumer/output.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/consumer/frame_consumer_registry.h>
+#include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/frame/frame_transform.h>

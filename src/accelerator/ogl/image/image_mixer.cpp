@@ -234,9 +234,9 @@ class image_renderer
         draw_params.pix_desc.planes = {core::pixel_format_desc::plane(
             source_texture->width(), source_texture->height(), 4, source_texture->depth())};
         draw_params.textures        = {spl::make_shared_ptr(source_texture)};
-        draw_params.blend_mode = blend_mode;
-        draw_params.background = target_texture;
-        draw_params.geometry   = core::frame_geometry::get_default();
+        draw_params.blend_mode      = blend_mode;
+        draw_params.background      = target_texture;
+        draw_params.geometry        = core::frame_geometry::get_default();
 
         kernel_.draw(std::move(draw_params));
     }

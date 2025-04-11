@@ -131,20 +131,22 @@ bool operator==(const rectangle& lhs, const rectangle& rhs)
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
     return eq(lhs.opacity, rhs.opacity) && eq(lhs.contrast, rhs.contrast) && eq(lhs.brightness, rhs.brightness) &&
-           eq(lhs.saturation, rhs.saturation) && boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
-           boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
-           boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
-           boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
-           boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
-           lhs.is_key == rhs.is_key && lhs.invert == rhs.invert && lhs.is_mix == rhs.is_mix &&
-           lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
-           lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
-           eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
-           eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
-           eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) && eq(lhs.chroma.softness, rhs.chroma.softness) &&
-           eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
-           eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
-           lhs.perspective == rhs.perspective || lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
+               eq(lhs.saturation, rhs.saturation) && boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
+               boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
+               boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
+               boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
+               boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
+               lhs.is_key == rhs.is_key && lhs.invert == rhs.invert && lhs.is_mix == rhs.is_mix &&
+               lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
+               lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
+               eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
+               eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
+               eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) &&
+               eq(lhs.chroma.softness, rhs.chroma.softness) &&
+               eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
+               eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+               lhs.perspective == rhs.perspective ||
+           lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
 bool operator!=(const image_transform& lhs, const image_transform& rhs) { return !(lhs == rhs); }

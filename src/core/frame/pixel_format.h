@@ -40,7 +40,7 @@ enum class pixel_format
     bgr,
     rgb,
     uyvy,
-    gbrp, // planar
+    gbrp,  // planar
     gbrap, // planar
     count,
     invalid,

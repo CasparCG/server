@@ -65,7 +65,8 @@ struct draw_transforms
 
     [[nodiscard]] draw_transforms combine_transform(const core::image_transform& transform, double aspect_ratio) const;
 
-    [[nodiscard]] std::vector<core::frame_geometry::coord> transform_coords(const std::vector<core::frame_geometry::coord>& coords) const;
+    [[nodiscard]] std::vector<core::frame_geometry::coord>
+    transform_coords(const std::vector<core::frame_geometry::coord>& coords) const;
 };
 
 } // namespace caspar::accelerator::ogl

@@ -186,7 +186,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                         res.is_interlaced = true;
                         if (l.second) {
                             res.foreground2 =
-                                    draw_frame::push(layer.receive(video_field::b, result.nb_samples), tween.fetch());
+                                draw_frame::push(layer.receive(video_field::b, result.nb_samples), tween.fetch());
                             res.foreground2.transform().image_transform.enable_geometry_modifiers = true;
                         }
                         if (has_background_route)

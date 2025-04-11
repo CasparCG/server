@@ -741,11 +741,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto in_format_desc = dependencies.format_repository.find(get_param(L"FORMAT", params, L"INVALID"));
 
     return spl::make_shared<bluefish_producer_proxy>(dependencies.format_desc,
-                                                              dependencies.frame_factory,
-                                                              dependencies.format_repository,
-                                                              device_index,
-                                                              stream_index,
-                                                              uhd_mode,
-                                                              length);
+                                                     dependencies.frame_factory,
+                                                     dependencies.format_repository,
+                                                     device_index,
+                                                     stream_index,
+                                                     uhd_mode,
+                                                     length);
 }
 }} // namespace caspar::bluefish

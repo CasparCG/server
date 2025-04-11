@@ -40,8 +40,8 @@
 #include <ffmpeg/util/av_util.h>
 
 #include "../util/image_algorithms.h"
-#include "../util/image_view.h"
 #include "../util/image_converter.h"
+#include "../util/image_view.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
