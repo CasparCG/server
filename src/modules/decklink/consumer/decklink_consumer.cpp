@@ -1045,7 +1045,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     download_pixel_format = core::frame_conversion_format::pixel_format::bgra8;
                     break;
                 case configuration::pixel_format_t::yuv10:
-                    download_pixel_format = core::frame_conversion_format::pixel_format::decklink_v210;
+                    // TODO - choose correct yuv space
+                    download_pixel_format = core::frame_conversion_format::pixel_format::decklink_v210_709;
                     break;
             }
             auto download_format = core::frame_conversion_format( download_pixel_format,

@@ -40,7 +40,8 @@ struct frame_conversion_format
         bgra8         = 0,
         rgba16        = 1,
         bgra16        = 2,
-        decklink_v210 = 3,
+        decklink_v210_709 = 3,
+        decklink_v210_601 = 4,
     };
 
     struct subregion_geometry

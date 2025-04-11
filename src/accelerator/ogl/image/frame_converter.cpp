@@ -91,7 +91,8 @@ ogl_frame_converter::convert_to_buffer(const core::const_frame&         frame,
             words_per_line = frame.width() * 2;
 
             break;
-        case core::frame_conversion_format::pixel_format::decklink_v210: {
+        case core::frame_conversion_format::pixel_format::decklink_v210_601:
+        case core::frame_conversion_format::pixel_format::decklink_v210_709: {
             auto row_blocks = ((frame.width() + 47) / 48);
             auto row_bytes = row_blocks * 128;
 
