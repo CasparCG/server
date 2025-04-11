@@ -135,8 +135,6 @@ class video_format_repository
     video_format_desc find_format(const video_format& format) const;
     void              store(const video_format_desc& format);
 
-    std::size_t get_max_video_format_size() const;
-
     static video_format_desc invalid();
 
   private:

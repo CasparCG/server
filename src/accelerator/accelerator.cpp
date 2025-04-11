@@ -30,7 +30,6 @@ struct accelerator::impl
     {
         return std::make_unique<ogl::image_mixer>(spl::make_shared_ptr(get_device()),
                                                   channel_id,
-                                                  format_repository_.get_max_video_format_size(),
                                                   depth,
                                                   color_space);
     }

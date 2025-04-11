@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "core/frame/pixel_format.h"
+
 #include <core/frame/frame.h>
 
 #include <cmath>
@@ -86,6 +88,6 @@ struct fixture
 };
 
 rect  compute_rect(box fixtureBox, int index, int count);
-color average_color(const core::const_frame& frame, rect& rectangle);
+color average_color(const core::pixel_format_desc::plane& pix_desc, const array<const uint8_t>& pixels, rect& rectangle);
 
 }} // namespace caspar::artnet

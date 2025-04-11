@@ -397,9 +397,9 @@ struct oal_consumer : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       common::bit_depth                                        depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
@@ -411,7 +411,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               common::bit_depth                                        depth)
 {
     return spl::make_shared<oal_consumer>();
