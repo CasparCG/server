@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/bit_depth.h>
+#include <common/memory.h>
 
 #include "frame_converter.h"
 

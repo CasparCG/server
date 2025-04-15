@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "core/video_format.h"
-
 #include <common/bit_depth.h>
 
 #include <core/frame/frame.h>
@@ -81,6 +79,29 @@ struct frame_conversion_format
     subregion_geometry region;
 };
 
+struct converted_frame
+{
+    frame_conversion_format::pixel_format         format = frame_conversion_format::pixel_format::bgra8;
+    const_frame                                   frame;
+    std::shared_future<array<const std::uint8_t>> pixels;
+
+    explicit converted_frame()
+    {
+    }
+
+    converted_frame(const frame_conversion_format& format, const core::const_frame& frame, std::shared_future<array<const std::uint8_t>> pixels)
+        : format(format.format)
+        , frame(frame)
+        , pixels(std::move(pixels))
+    {
+    }
+
+    bool is_empty() {
+        return frame == core::const_frame{} || !pixels.valid();
+    }
+};
+
+
 class frame_converter
 {
   public:
@@ -100,7 +121,7 @@ class frame_converter
     converted_frame convert_to_buffer_and_frame(const core::const_frame& frame, const frame_conversion_format& format)
     {
         auto pixels = this->convert_to_buffer(frame, format);
-        return converted_frame(frame, pixels);
+        return converted_frame(format, frame, pixels);
     }
 
     virtual common::bit_depth get_frame_bitdepth(const core::const_frame& frame) = 0;

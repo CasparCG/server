@@ -269,11 +269,6 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::converted_frame&   fram
 {
     auto av_frame = alloc_frame();
 
-    auto pix_desc = frame.frame.pixel_format_desc();
-    auto pixels   = frame.pixels.get();
-
-    auto planes = pix_desc.planes;
-    auto format = pix_desc.format;
 
     const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                      boost::rational<int>(format_desc.width, format_desc.height);
@@ -282,85 +277,26 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::converted_frame&   fram
     av_frame->width               = format_desc.width;
     av_frame->height              = format_desc.height;
 
-    const auto is_16bit = planes[0].depth != common::bit_depth::bit8;
-    // We only need to support the formats that the mixer can produce
-    if (format == core::pixel_format::rgba) {
-        av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_RGBA64 : AVPixelFormat::AV_PIX_FMT_RGBA;
-    } else if (format == core::pixel_format::bgra) {
-        av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_BGRA;
-    } else {
-        // TODO - is this safe?
-        return nullptr;
+    int linesize = 0;
+    switch (frame.format) {
+        case core::frame_conversion_format::bgra8:
+            av_frame->format = AV_PIX_FMT_BGRA;
+            linesize = format_desc.width * 4;
+            break;
+        case core::frame_conversion_format::v210_709:
+        case core::frame_conversion_format::v210_601:
+            // Not supported
+            return nullptr;
     }
 
-    // switch (format) {
-    //     case core::pixel_format::rgb:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_RGB48 : AVPixelFormat::AV_PIX_FMT_RGB24;
-    //         break;
-    //     case core::pixel_format::bgr:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGR48 : AVPixelFormat::AV_PIX_FMT_BGR24;
-    //         break;
-    //     case core::pixel_format::rgba:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_RGBA64 : AVPixelFormat::AV_PIX_FMT_RGBA;
-    //         break;
-    //     case core::pixel_format::argb:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_ARGB;
-    //         break;
-    //     case core::pixel_format::bgra:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_BGRA;
-    //         break;
-    //     case core::pixel_format::abgr:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_BGRA64 : AVPixelFormat::AV_PIX_FMT_ABGR;
-    //         break;
-    //     case core::pixel_format::gray:
-    //     case core::pixel_format::luma:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_GRAY16 : AVPixelFormat::AV_PIX_FMT_GRAY8;
-    //         break;
-    //     case core::pixel_format::ycbcr: {
-    //         int y_w = planes[0].width;
-    //         int y_h = planes[0].height;
-    //         int c_w = planes[1].width;
-    //         int c_h = planes[1].height;
+    FF(av_frame_get_buffer(av_frame.get(), linesize * av_frame->height));
 
-    //         if (c_h == y_h && c_w == y_w)
-    //             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV444P10 :
-    //             AVPixelFormat::AV_PIX_FMT_YUV444P;
-    //         else if (c_h == y_h && c_w * 2 == y_w)
-    //             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV422P10 :
-    //             AVPixelFormat::AV_PIX_FMT_YUV422P;
-    //         else if (c_h == y_h && c_w * 4 == y_w)
-    //             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV422P10 :
-    //             AVPixelFormat::AV_PIX_FMT_YUV411P;
-    //         else if (c_h * 2 == y_h && c_w * 2 == y_w)
-    //             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV420P10 :
-    //             AVPixelFormat::AV_PIX_FMT_YUV420P;
-    //         else if (c_h * 2 == y_h && c_w * 4 == y_w)
-    //             av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUV420P10 :
-    //             AVPixelFormat::AV_PIX_FMT_YUV410P;
-
-    //         break;
-    //     }
-    //     case core::pixel_format::ycbcra:
-    //         av_frame->format = is_16bit ? AVPixelFormat::AV_PIX_FMT_YUVA420P10 : AVPixelFormat::AV_PIX_FMT_YUVA420P;
-    //         break;
-    //     case core::pixel_format::uyvy:
-    //         // TODO
-    //         break;
-    //     case core::pixel_format::gbrp:
-    //     case core::pixel_format::gbrap:
-    //         // TODO
-    //         break;
-    //     case core::pixel_format::count:
-    //     case core::pixel_format::invalid:
-    //         break;
-    // }
-
-    FF(av_frame_get_buffer(av_frame.get(), is_16bit ? 64 : 32));
+    auto pixels = frame.pixels.get();
 
     // TODO (perf) Avoid extra memcpy.
     for (int y = 0; y < av_frame->height; ++y) {
         std::memcpy(
-            av_frame->data[0] + y * av_frame->linesize[0], pixels.data() + y * planes[0].linesize, planes[0].linesize);
+            av_frame->data[0] + y * av_frame->linesize[0], pixels.data() + y * linesize, linesize);
     }
 
     return av_frame;

@@ -90,24 +90,4 @@ class const_frame final
     std::shared_ptr<impl> impl_;
 };
 
-struct converted_frame
-{
-    const_frame                                   frame;
-    std::shared_future<array<const std::uint8_t>> pixels;
-
-    explicit converted_frame()
-    {
-    }
-
-    converted_frame(const core::const_frame& frame, std::shared_future<array<const std::uint8_t>> pixels)
-        : frame(frame)
-        , pixels(std::move(pixels))
-    {
-    }
-
-    bool is_empty() {
-        return frame == core::const_frame{} || !pixels.valid();
-    }
-};
-
 }} // namespace caspar::core
