@@ -48,6 +48,9 @@ std::size_t hash_convertion_format(const caspar::core::frame_conversion_format& 
 
 void sanitise_subregion(core::frame_conversion_format& format, const core::const_frame& frame)
 {
+if (format.width <= 0) format.width = (int)frame.width();
+if (format.height <= 0) format.height = (int)frame.height();
+
     // Ensure the copy isn't based on outside the texture
     // Note: These do technically mangle the dimensions, but this is acceptable to ensure it is safe
     if (format.region.src_x < 0)
@@ -61,15 +64,15 @@ void sanitise_subregion(core::frame_conversion_format& format, const core::const
 
     // Calculate the w/h based on the actual dimensions and offsets
     if (format.region.w <= 0) {
-        format.region.w = std::min(format.width - format.region.dest_x, (int)frame.width() - format.region.src_x);
-    } else {
-        format.region.w = std::min(format.region.w, format.width - format.region.dest_x);
+        format.region.w = (int)frame.width() - format.region.src_x;
     }
+    format.region.w = std::min(format.region.w, format.width - format.region.dest_x);
+
     if (format.region.h <= 0) {
-        format.region.h = std::min(format.height - format.region.dest_y, (int)frame.height() - format.region.src_y);
-    } else {
-        format.region.h = std::min(format.region.h, format.height - format.region.dest_y);
+        format.region.h = (int)frame.height() - format.region.src_y;
     }
+    format.region.h = std::min(format.region.h, format.height - format.region.dest_y);
+
 
     // Future: This is reading from a texture, so maybe doesn't need to be a 1:1 pixel mapping.
     // We could have src_w and dest_w instead of just w

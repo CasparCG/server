@@ -70,8 +70,8 @@ struct frame_conversion_format
     }
 
     const pixel_format format;
-    const int          width;
-    const int          height;
+    int          width;
+    int          height;
 
     bool key_only       = false;
     bool straight_alpha = false;
