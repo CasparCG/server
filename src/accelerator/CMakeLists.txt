@@ -8,8 +8,10 @@ set(SOURCES
 	ogl/image/frame_converter.cpp
 
 	ogl/util/buffer.cpp
+	ogl/util/compute_shader.cpp
 	ogl/util/device.cpp
 	ogl/util/shader.cpp
+	ogl/util/shaders_source.cpp
 	ogl/util/texture.cpp
 	ogl/util/matrix.cpp
 	ogl/util/transforms.cpp
@@ -23,23 +25,29 @@ set(HEADERS
 	ogl/image/frame_converter.h
 
 	ogl/util/buffer.h
+	ogl/util/compute_shader.h
 	ogl/util/device.h
 	ogl/util/shader.h
+	ogl/util/shaders_source.h
 	ogl/util/texture.h
 	ogl/util/matrix.h
 	ogl/util/transforms.h
-
-	ogl_image_vertex.h
-	ogl_image_fragment.h
 
 	accelerator.h
 	StdAfx.h
 )
 
-bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
-bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+compile_gl_shaders(accelerator-shaders
+    NAMESPACE "caspar::accelerator::ogl"
+    SOURCES
+        "ogl/image/shader.vert"
+        "ogl/image/shader.frag"
+        "ogl/image/shader_compute_to_rgba.comp"
+        "ogl/image/shader_compute_from_rgba.comp"
+    )
 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
+add_dependencies(accelerator accelerator-shaders)
 target_include_directories(accelerator PRIVATE
     ..
     ${CMAKE_CURRENT_BINARY_DIR}

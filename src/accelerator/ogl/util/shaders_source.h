@@ -21,28 +21,18 @@
 
 #pragma once
 
-#include <boost/property_tree/ptree_fwd.hpp>
-#include <memory>
+#include <string>
 
 namespace caspar::accelerator::ogl {
 
-// This must match description_layout in shader_from_rgba.comp
-struct convert_from_texture_description
+class shaders_source
 {
-    uint32_t target_format;
-    uint32_t is_16_bit;
-    uint32_t width;
-    uint32_t height;
-    uint32_t words_per_line;
-    uint32_t key_only;
-    uint32_t straighten;
+  public:
+    static const std::string image_fragment;
+    static const std::string image_vertex;
 
-    uint32_t region_src_x;
-    uint32_t region_src_y;
-    uint32_t region_dest_x;
-    uint32_t region_dest_y;
-    uint32_t region_w;
-    uint32_t region_h;
+    static const std::string compute_from_rgba;
+    static const std::string compute_to_rgba;
 };
 
 } // namespace caspar::accelerator::ogl

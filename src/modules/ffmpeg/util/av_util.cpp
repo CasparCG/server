@@ -183,7 +183,7 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
     const auto fmt   = get_pixel_format(pix_fmt);
     auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
     auto       depth = std::get<1>(fmt);
-    auto       bpc   = depth == common::bit_depth::bit8 ? 1 : 2;
+    auto       bpc   = common::bytes_per_pixel(depth);
 
     for (int i = 0; i < 4; i++)
         linesizes[i] /= bpc;

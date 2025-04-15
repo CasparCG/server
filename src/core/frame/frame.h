@@ -76,8 +76,6 @@ class const_frame final
 
     std::size_t height() const;
 
-    std::size_t size() const;
-
     const class frame_geometry& geometry() const;
 
     bool operator==(const const_frame& other) const;

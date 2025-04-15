@@ -79,11 +79,12 @@ struct newtek_ndi_consumer : public core::frame_consumer
     boost::thread                        send_thread;
     executor                             executor_;
 
-    std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
+    std::unique_ptr<NDIlib_send_instance_type, std::function<void(NDIlib_send_instance_type*)>> ndi_send_instance_;
 
   public:
-    newtek_ndi_consumer(
-    const spl::shared_ptr<core::frame_converter>& frame_converter, std::wstring name, bool allow_fields)
+    newtek_ndi_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                        std::wstring                                  name,
+                        bool                                          allow_fields)
         : frame_converter_(frame_converter)
         , name_(!name.empty() ? name : default_ndi_name())
         , instance_no_(instances_++)
@@ -124,8 +125,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         NDI_send_create_desc.clock_video = false;
         NDI_send_create_desc.clock_audio = false;
 
-        ndi_send_instance_ = {new NDIlib_send_instance_t(ndi_lib_->send_create(&NDI_send_create_desc)),
-                              [this](auto p) { this->ndi_lib_->send_destroy(*p); }};
+        ndi_send_instance_ = {ndi_lib_->send_create(&NDI_send_create_desc),
+                              [this](auto p) { this->ndi_lib_->send_destroy(p); }};
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
@@ -136,6 +137,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_video_frame_.frame_format_type    = NDIlib_frame_format_type_progressive;
 
         if (format_desc.field_count == 2 && allow_fields_) {
+            // The frame needs to be half height because of interlacing, so we use a temporary block of memory for the
+            // frames
             ndi_video_frame_.yres /= 2;
             ndi_video_frame_.frame_rate_N /= 2;
             ndi_video_frame_.picture_aspect_ratio = format_desc.width * 1.0f / format_desc.height;
@@ -189,7 +192,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
                             continue;
                         }
                     }
-                    auto frame = wrapped_frame.value().frame;
+                    auto frame  = wrapped_frame.value().frame;
                     auto pixels = wrapped_frame.value().pixels.get();
 
                     graph_->set_value("ndi-tick", ndi_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -199,8 +202,9 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     int  audio_data_size        = static_cast<int>(audio_data.size());
                     ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
                     ndi_audio_frame_.p_data     = const_cast<int*>(audio_data.data());
-                    ndi_lib_->util_send_send_audio_interleaved_32s(*ndi_send_instance_, &ndi_audio_frame_);
+                    ndi_lib_->util_send_send_audio_interleaved_32s(ndi_send_instance_.get(), &ndi_audio_frame_);
                     if (format_desc_.field_count == 2 && allow_fields_) {
+                        // Copy the needed lines into the temporary buffer
                         ndi_video_frame_.frame_format_type =
                             (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
                         for (auto y = 0; y < ndi_video_frame_.yres; ++y) {
@@ -209,9 +213,11 @@ struct newtek_ndi_consumer : public core::frame_consumer
                                         format_desc_.width * 4);
                         }
                     } else {
-                        ndi_video_frame_.p_data = const_cast<uint8_t*>(pixels.begin());
+                        // Pass the raw frame
+                        // TODO - this seems to leak memory on linux, but the field flow above doesnt.
+                        ndi_video_frame_.p_data = const_cast<uint8_t*>(pixels.data());
                     }
-                    ndi_lib_->send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
+                    ndi_lib_->send_send_video_v2(ndi_send_instance_.get(), &ndi_video_frame_);
                     frame_no_++;
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     std::this_thread::sleep_until(time_point);
@@ -225,8 +231,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        auto wrapped_frame =
-               frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+        auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(
+            frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
 
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -271,11 +277,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
 
-spl::shared_ptr<core::frame_consumer>
-create_ndi_consumer(const std::vector<std::wstring>&                         params,
-                    const core::video_format_repository&                     format_repository,
-                    const spl::shared_ptr<core::frame_converter>&            frame_converter,
-                    common::bit_depth                                        depth)
+spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&     params,
+                                                          const core::video_format_repository& format_repository,
+                                                          const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                                          common::bit_depth                             depth)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
@@ -289,10 +294,10 @@ create_ndi_consumer(const std::vector<std::wstring>&                         par
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_ndi_consumer(const boost::property_tree::wptree&                      ptree,
-                                  const core::video_format_repository&                     format_repository,
-                                  const spl::shared_ptr<core::frame_converter>&            frame_converter,
-                                  common::bit_depth                                        depth)
+create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           ptree,
+                                  const core::video_format_repository&          format_repository,
+                                  const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                  common::bit_depth                             depth)
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);

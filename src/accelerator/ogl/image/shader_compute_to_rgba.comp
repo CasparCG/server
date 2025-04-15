@@ -18,31 +18,18 @@
  *
  * Author: Julian Waller, julian@superfly.tv
  */
+#version 430
 
-#pragma once
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-#include <boost/property_tree/ptree_fwd.hpp>
-#include <memory>
+layout(rgba16f, binding = 0) uniform image2D imgOutput; // Note: this needs to match what it is writing to
 
-namespace caspar::accelerator::ogl {
+void main() {
+    vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
-// This must match description_layout in shader_from_rgba.comp
-struct convert_from_texture_description
-{
-    uint32_t target_format;
-    uint32_t is_16_bit;
-    uint32_t width;
-    uint32_t height;
-    uint32_t words_per_line;
-    uint32_t key_only;
-    uint32_t straighten;
+    value.r = float(texelCoord.x)/(gl_NumWorkGroups.x);
+    value.g = float(texelCoord.y)/(gl_NumWorkGroups.y);
 
-    uint32_t region_src_x;
-    uint32_t region_src_y;
-    uint32_t region_dest_x;
-    uint32_t region_dest_y;
-    uint32_t region_w;
-    uint32_t region_h;
-};
-
-} // namespace caspar::accelerator::ogl
+    imageStore(imgOutput, texelCoord, value);
+}

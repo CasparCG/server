@@ -33,12 +33,15 @@ namespace caspar::core {
 
 struct frame_conversion_format
 {
+    // Note: when adding fields to this, the cache_key calculation must be updated
+
     enum pixel_format
     {
         bgra8 = 0,
-        // rgba16        = 0,
-        // bgra16        = 1,
-        // decklink_v210 = 2,
+        //        rgba16   = 1,
+        //        bgra16   = 2,
+        v210_709 = 3,
+        v210_601 = 4,
     };
 
     struct subregion_geometry
@@ -49,30 +52,34 @@ struct frame_conversion_format
         int dest_y = 0;
         int w      = 0;
         int h      = 0;
+
+        [[nodiscard]] bool has_subregion_geometry() const
+        {
+            return src_x != 0 || src_y != 0 || w != 0 || h != 0 || dest_x != 0 || dest_y != 0;
+        }
     };
 
     explicit frame_conversion_format(pixel_format format, int width, int height)
-    : format(format)
-    , width(width)
-    , height(height)
+        : format(format)
+        , width(width)
+        , height(height)
     {
     }
 
     explicit frame_conversion_format(pixel_format format)
-   : frame_conversion_format(format, 0, 0)
+        : frame_conversion_format(format, 0, 0)
     {
     }
 
-    pixel_format format;
-    int width;
-    int height;
+    const pixel_format format;
+    const int          width;
+    const int          height;
 
-    bool key_only = false;
+    bool key_only       = false;
     bool straight_alpha = false;
 
     subregion_geometry region;
 };
-
 
 class frame_converter
 {
@@ -87,11 +94,10 @@ class frame_converter
 
     // virtual class draw_frame convert_to_rgba(const class mutable_frame& frame) = 0;
 
-    virtual std::shared_future<array<const std::uint8_t>>
-    convert_to_buffer(const core::const_frame& frame, const frame_conversion_format& format) = 0;
+    virtual std::shared_future<array<const std::uint8_t>> convert_to_buffer(const core::const_frame&       frame,
+                                                                            const frame_conversion_format& format) = 0;
 
-    converted_frame
-    convert_to_buffer_and_frame(const core::const_frame& frame, const frame_conversion_format& format)
+    converted_frame convert_to_buffer_and_frame(const core::const_frame& frame, const frame_conversion_format& format)
     {
         auto pixels = this->convert_to_buffer(frame, format);
         return converted_frame(frame, pixels);

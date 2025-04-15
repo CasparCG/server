@@ -28,23 +28,27 @@
 #include "../decklink_api.h"
 
 #include <core/frame/frame.h>
+#include <core/frame/frame_converter.h>
 #include <core/video_format.h>
 
 #include <memory>
 
 namespace caspar { namespace decklink {
 
-BMDPixelFormat get_pixel_format(bool hdr);
-int            get_row_bytes(const core::video_format_desc& format_desc, bool hdr);
+BMDPixelFormat get_pixel_format(const configuration::pixel_format_t& pixel_format);
+int get_row_bytes(const core::video_format_desc& format_desc, const configuration::pixel_format_t& pixel_format);
 
-std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc, bool hdr);
+core::frame_conversion_format get_download_format_for_port(const configuration&           root_config,
+                                                           const port_configuration&      port_config,
+                                                           const core::video_format_desc& decklink_format_desc);
 
-std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   channel_format_desc,
-                                             const core::video_format_desc&   decklink_format_desc,
-                                             const port_configuration&        config,
+std::shared_ptr<void> allocate_frame_data(const core::video_format_desc&       format_desc,
+                                          const configuration::pixel_format_t& pixel_format);
+
+std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc&   decklink_format_desc,
                                              const array<const std::uint8_t>& frame1,
                                              const array<const std::uint8_t>& frame2,
                                              BMDFieldDominance                field_dominance,
-                                             bool                             hdr);
+                                             configuration::pixel_format_t    pixel_format);
 
 }} // namespace caspar::decklink

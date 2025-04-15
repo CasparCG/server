@@ -19,30 +19,20 @@
  * Author: Julian Waller, julian@superfly.tv
  */
 
-#pragma once
+#include "shaders_source.h"
 
-#include <boost/property_tree/ptree_fwd.hpp>
-#include <memory>
+#include "ogl_image_shader_frag.h"
+#include "ogl_image_shader_vert.h"
+
+#include "ogl_image_shader_compute_from_rgba_comp.h"
+#include "ogl_image_shader_compute_to_rgba_comp.h"
 
 namespace caspar::accelerator::ogl {
 
-// This must match description_layout in shader_from_rgba.comp
-struct convert_from_texture_description
-{
-    uint32_t target_format;
-    uint32_t is_16_bit;
-    uint32_t width;
-    uint32_t height;
-    uint32_t words_per_line;
-    uint32_t key_only;
-    uint32_t straighten;
+const std::string shaders_source::image_fragment = std::string(ogl_image_shader_frag);
+const std::string shaders_source::image_vertex   = std::string(ogl_image_shader_vert);
 
-    uint32_t region_src_x;
-    uint32_t region_src_y;
-    uint32_t region_dest_x;
-    uint32_t region_dest_y;
-    uint32_t region_w;
-    uint32_t region_h;
-};
+const std::string shaders_source::compute_from_rgba = std::string(ogl_image_shader_compute_from_rgba_comp);
+const std::string shaders_source::compute_to_rgba   = std::string(ogl_image_shader_compute_to_rgba_comp);
 
 } // namespace caspar::accelerator::ogl

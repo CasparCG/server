@@ -33,9 +33,12 @@ struct ogl_texture_and_buffer_cache
 {
     const std::shared_ptr<texture> gl_texture;
 
-    tbb::concurrent_unordered_map<uint8_t, std::shared_future<array<const uint8_t>>> buffer_cache;
+    tbb::concurrent_unordered_map<size_t, std::shared_future<array<const uint8_t>>> buffer_cache;
 
-    ogl_texture_and_buffer_cache(std::shared_ptr<texture> gl_texture) : gl_texture(std::move(gl_texture)) {}
+    ogl_texture_and_buffer_cache(std::shared_ptr<texture> gl_texture)
+        : gl_texture(std::move(gl_texture))
+    {
+    }
 };
 
 class ogl_frame_converter
@@ -50,8 +53,8 @@ class ogl_frame_converter
 
     ogl_frame_converter& operator=(const ogl_frame_converter&) = delete;
 
-    std::shared_future<array<const std::uint8_t>> convert_to_buffer(const core::const_frame&   frame,
-                                                                    const core::frame_conversion_format& format) override;
+    std::shared_future<array<const std::uint8_t>>
+    convert_to_buffer(const core::const_frame& frame, const core::frame_conversion_format& format) override;
 
     common::bit_depth get_frame_bitdepth(const core::const_frame& frame) override;
 

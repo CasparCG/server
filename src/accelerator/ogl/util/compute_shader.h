@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -21,28 +21,28 @@
 
 #pragma once
 
-#include <boost/property_tree/ptree_fwd.hpp>
+#include <GL/glew.h>
 #include <memory>
+#include <string>
 
-namespace caspar::accelerator::ogl {
+namespace caspar { namespace accelerator { namespace ogl {
 
-// This must match description_layout in shader_from_rgba.comp
-struct convert_from_texture_description
+class compute_shader final
 {
-    uint32_t target_format;
-    uint32_t is_16_bit;
-    uint32_t width;
-    uint32_t height;
-    uint32_t words_per_line;
-    uint32_t key_only;
-    uint32_t straighten;
+    compute_shader(const compute_shader&);
+    compute_shader& operator=(const compute_shader&);
 
-    uint32_t region_src_x;
-    uint32_t region_src_y;
-    uint32_t region_dest_x;
-    uint32_t region_dest_y;
-    uint32_t region_w;
-    uint32_t region_h;
+public:
+    explicit compute_shader(const std::string& compute_source_str);
+    ~compute_shader();
+
+    void use() const;
+
+    [[nodiscard]] GLuint id() const;
+
+private:
+    struct impl;
+    std::unique_ptr<impl> impl_;
 };
 
-} // namespace caspar::accelerator::ogl
+}}} // namespace caspar::accelerator::ogl

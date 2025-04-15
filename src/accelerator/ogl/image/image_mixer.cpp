@@ -74,14 +74,11 @@ class image_renderer
     common::bit_depth       depth_;
     core::color_space       color_space_;
 
-
-    core::video_format_desc empty_format_desc_;
+    core::video_format_desc                       empty_format_desc_;
     std::shared_ptr<ogl_texture_and_buffer_cache> empty_texture_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl,
-                            common::bit_depth              depth,
-                            core::color_space              color_space)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl, common::bit_depth depth, core::color_space color_space)
         : ogl_(ogl)
         , kernel_(ogl_)
         , depth_(depth)
@@ -94,21 +91,20 @@ class image_renderer
     {
         if (empty_format_desc_.height != format_desc.height || empty_format_desc_.width != format_desc.width) {
             // Dimensions of channel have changed, discard the empty_texture
-            empty_texture_ = nullptr;
+            empty_texture_     = nullptr;
             empty_format_desc_ = format_desc;
         }
 
         if (layers.empty()) { // Skip compositing, and reuse a static empty texture
             if (!empty_texture_) {
                 // Lazily generate the texture
-                empty_texture_ = ogl_->dispatch_sync(
-                [=]() {
+                empty_texture_ = ogl_->dispatch_sync([=]() {
                     auto texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
                     return std::make_shared<ogl_texture_and_buffer_cache>(std::move(texture));
                 });
             }
             return make_ready_future(empty_texture_);
-         }
+        }
 
         return ogl_->dispatch_async(
             [=, layers = std::move(layers)]() mutable -> std::shared_ptr<ogl_texture_and_buffer_cache> {
@@ -349,8 +345,7 @@ struct image_mixer::impl
     {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
-            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel));
+            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel(depth)));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();

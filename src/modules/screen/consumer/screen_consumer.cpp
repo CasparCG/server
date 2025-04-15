@@ -58,8 +58,8 @@
 #include "../util/x11_util.h"
 #endif
 
-#include "consumer_screen_fragment.h"
-#include "consumer_screen_vertex.h"
+#include "consumer_screen_frag.h"
+#include "consumer_screen_vert.h"
 #include "core/frame/frame_converter.h"
 
 #include <accelerator/ogl/util/shader.h>
@@ -68,7 +68,8 @@ namespace caspar { namespace screen {
 
 std::unique_ptr<accelerator::ogl::shader> get_shader()
 {
-    return std::make_unique<accelerator::ogl::shader>(std::string(vertex_shader), std::string(fragment_shader));
+    return std::make_unique<accelerator::ogl::shader>(std::string(consumer_screen_vert),
+                                                      std::string(consumer_screen_frag));
 }
 
 enum class stretch
@@ -158,7 +159,10 @@ struct screen_consumer
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
-    screen_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config, const core::video_format_desc& format_desc, int channel_index)
+    screen_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                    const configuration&                          config,
+                    const core::video_format_desc&                format_desc,
+                    int                                           channel_index)
         : frame_converter_(frame_converter)
         , config_(config)
         , format_desc_(format_desc)
@@ -449,7 +453,7 @@ struct screen_consumer
                 shader_->set("key_only", true);
                 GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
             } else {
-                shader_->set("key_only", config_.key_only);
+                shader_->set("key_only", false); // Handled during download
                 GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
             }
 
@@ -469,7 +473,10 @@ struct screen_consumer
 
     std::future<bool> send(core::video_field field, const core::const_frame& frame)
     {
-        auto frame2 = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+        auto format     = core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8);
+        format.key_only = config_.key_only;
+
+        auto frame2 = frame_converter_->convert_to_buffer_and_frame(frame, format);
         if (!frame_buffer_.try_push(frame2)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
@@ -573,11 +580,11 @@ struct screen_consumer
 struct screen_consumer_proxy : public core::frame_consumer
 {
     const spl::shared_ptr<core::frame_converter> frame_converter_;
-    const configuration              config_;
-    std::unique_ptr<screen_consumer> consumer_;
+    const configuration                          config_;
+    std::unique_ptr<screen_consumer>             consumer_;
 
   public:
-    explicit screen_consumer_proxy(const spl::shared_ptr<core::frame_converter> &frame_converter, configuration config)
+    explicit screen_consumer_proxy(const spl::shared_ptr<core::frame_converter>& frame_converter, configuration config)
         : frame_converter_(frame_converter)
         , config_(std::move(config))
     {
@@ -618,7 +625,7 @@ struct screen_consumer_proxy : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
                                                       const core::video_format_repository&          format_repository,
                                                       const spl::shared_ptr<core::frame_converter>& frame_converter,
-                                                      common::bit_depth                                        depth)
+                                                      common::bit_depth                             depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
@@ -668,10 +675,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
-                              const core::video_format_repository&                     format_repository,
-                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
-                              common::bit_depth                                        depth)
+create_preconfigured_consumer(const boost::property_tree::wptree&           ptree,
+                              const core::video_format_repository&          format_repository,
+                              const spl::shared_ptr<core::frame_converter>& frame_converter,
+                              common::bit_depth                             depth)
 {
     configuration config;
 

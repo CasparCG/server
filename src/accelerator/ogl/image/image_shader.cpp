@@ -22,9 +22,7 @@
 
 #include "../util/device.h"
 #include "../util/shader.h"
-
-#include "ogl_image_fragment.h"
-#include "ogl_image_vertex.h"
+#include "../util/shaders_source.h"
 
 namespace caspar { namespace accelerator { namespace ogl {
 
@@ -52,7 +50,7 @@ std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
         }
     };
 
-    existing_shader.reset(new shader(std::string(vertex_shader), std::string(fragment_shader)), deleter);
+    existing_shader.reset(new shader(shaders_source::image_vertex, shaders_source::image_fragment), deleter);
 
     g_shader = existing_shader;
 

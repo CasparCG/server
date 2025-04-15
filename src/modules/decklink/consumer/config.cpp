@@ -43,12 +43,12 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
 
     auto subregion_tree = ptree.get_child_optional(L"subregion");
     if (subregion_tree) {
-        port_config.src_x    = subregion_tree->get(L"src-x", port_config.src_x);
-        port_config.src_y    = subregion_tree->get(L"src-y", port_config.src_y);
-        port_config.dest_x   = subregion_tree->get(L"dest-x", port_config.dest_x);
-        port_config.dest_y   = subregion_tree->get(L"dest-y", port_config.dest_y);
-        port_config.region_w = subregion_tree->get(L"width", port_config.region_w);
-        port_config.region_h = subregion_tree->get(L"height", port_config.region_h);
+        port_config.region.src_x    = subregion_tree->get(L"src-x", port_config.region.src_x);
+        port_config.region.src_y    = subregion_tree->get(L"src-y", port_config.region.src_y);
+        port_config.region.dest_x   = subregion_tree->get(L"dest-x", port_config.region.dest_x);
+        port_config.region.dest_y   = subregion_tree->get(L"dest-y", port_config.region.dest_y);
+        port_config.region.w = subregion_tree->get(L"width", port_config.region.w);
+        port_config.region.h = subregion_tree->get(L"height", port_config.region.h);
     }
 
     return port_config;
@@ -68,9 +68,12 @@ core::color_space get_color_space(const std::wstring& str)
 }
 
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
+                               const common::bit_depth& depth,
                                const core::video_format_repository& format_repository)
 {
     configuration config;
+
+    config.hdr = (depth != common::bit_depth::bit8);
 
     auto duplex = ptree.get(L"duplex", L"default");
     if (duplex == L"full") {
@@ -95,6 +98,15 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         config.wait_for_reference = configuration::wait_for_reference_t::automatic;
     }
     config.wait_for_reference_duration = ptree.get(L"wait-for-reference-duration", config.wait_for_reference_duration);
+
+    auto pixel_format = ptree.get(L"pixel-format", L"auto");
+    if (pixel_format == L"rgba" || pixel_format == L"bgra") {
+        config.pixel_format = configuration::pixel_format_t::bgra;
+    } else if (pixel_format == L"yuv" || pixel_format == L"yuv10") {
+        config.pixel_format = configuration::pixel_format_t::yuv10;
+    } else {
+        config.pixel_format = config.hdr ?  configuration::pixel_format_t::yuv10 : configuration::pixel_format_t::bgra;
+    }
 
     config.primary = parse_output_config(ptree, format_repository);
     if (config.primary.device_index == -1)
@@ -146,9 +158,12 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
 }
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
+                                const common::bit_depth& depth,
                                 const core::video_format_repository& format_repository)
 {
     configuration config;
+
+    config.hdr = (depth != common::bit_depth::bit8);
 
     if (params.size() > 1)
         config.primary.device_index = std::stoi(params.at(1));
