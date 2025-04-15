@@ -52,7 +52,7 @@ struct texture::impl
         , height_(height)
         , stride_(stride)
         , depth_(depth)
-        , size_(width * height * stride * (depth == common::bit_depth::bit8 ? 1 : 2))
+        , size_(width * height * stride * common::bytes_per_pixel(depth))
     {
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
         GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -60,7 +60,7 @@ struct texture::impl
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
         GL(glTextureStorage2D(
-            id_, 1, INTERNAL_FORMAT[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], width_, height_));
+            id_, 1, INTERNAL_FORMAT[common::bytes_per_pixel(depth_) - 1][stride_], width_, height_));
     }
 
     ~impl() { glDeleteTextures(1, &id_); }
@@ -79,7 +79,7 @@ struct texture::impl
 
     void clear()
     {
-        GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], nullptr));
+        GL(glClearTexImage(id_, 0, FORMAT[stride_], TYPE[common::bytes_per_pixel(depth_) - 1][stride_], nullptr));
     }
 
 #ifdef WIN32
@@ -107,18 +107,10 @@ struct texture::impl
                                width_,
                                height_,
                                FORMAT[stride_],
-                               TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_],
+                               TYPE[common::bytes_per_pixel(depth_) - 1][stride_],
                                nullptr));
 
         src.unbind();
-    }
-
-    void copy_to(buffer& dst)
-    {
-        dst.bind();
-        GL(glGetTextureImage(
-            id_, 0, FORMAT[stride_], TYPE[depth_ == common::bit_depth::bit8 ? 0 : 1][stride_], size_, nullptr));
-        dst.unbind();
     }
 };
 
@@ -144,7 +136,6 @@ void texture::clear() { impl_->clear(); }
 void texture::copy_from(int source) { impl_->copy_from(source); }
 #endif
 void              texture::copy_from(buffer& source) { impl_->copy_from(source); }
-void              texture::copy_to(buffer& dest) { impl_->copy_to(dest); }
 int               texture::width() const { return impl_->width_; }
 int               texture::height() const { return impl_->height_; }
 int               texture::stride() const { return impl_->stride_; }

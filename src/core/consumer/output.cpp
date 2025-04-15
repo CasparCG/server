@@ -121,18 +121,13 @@ struct output::impl
             return;
         }
 
-        const auto bytesPerComponent1 =
-            input_frame1.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
-        if (input_frame1.size() != format_desc_.size * bytesPerComponent1) {
+        if (input_frame1.width() != format_desc_.width || input_frame1.height() != format_desc_.height) {
             CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
             return;
         }
 
         if (input_frame2) {
-            const auto bytesPerComponent2 =
-                input_frame2.pixel_format_desc().planes.at(0).depth == common::bit_depth::bit8 ? 1 : 2;
-
-            if (input_frame2.size() != format_desc_.size * bytesPerComponent2) {
+            if (input_frame2.width() != format_desc_.width || input_frame2.height() != format_desc_.height) {
                 CASPAR_LOG(warning) << print() << L" Invalid input frame size.";
                 return;
             }

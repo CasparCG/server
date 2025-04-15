@@ -1,0 +1,202 @@
+/*
+ * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Julian Waller, julian@superfly.tv
+ */
+#version 450
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(rgba16, binding = 0) uniform image2D imgInput16bit; // Note: this needs to match what it is writing to
+layout(rgba8, binding = 1) uniform image2D imgInput8bit; // Note: this needs to match what it is writing to
+
+layout(std430, binding = 2) writeonly buffer buffer_layout
+{
+    uint bufferOutput[];
+};
+
+layout(std430, binding = 3) buffer description_layout
+{
+    // This must match convert_from_texture_description in device.h
+    uint target_format;
+    uint is_16_bit;
+    uint frame_width;
+    uint frame_height;
+    uint words_per_line;
+    uint key_only;
+    uint straighten;
+
+    uint region_src_x;
+    uint region_src_y;
+    uint region_dest_x;
+    uint region_dest_y;
+    uint region_w;
+    uint region_h;
+};
+
+vec4 straighten_pixel(vec4 pixel) {
+    return vec4(
+        pixel.r / pixel.a,
+        pixel.g / pixel.a,
+        pixel.b / pixel.a,
+        pixel.a
+    );
+}
+
+vec4 read_pixel(ivec2 coord) {
+    // TODO - what is the performance impact of this?
+    // When the output is a full frame, it is 'free' as it will always sample the texture.
+    // When doing a crop, it appears to save compute cycles, presumably because of less memory reads?
+    if (coord.x < region_dest_x || coord.y < region_dest_y || coord.x > region_w + region_dest_x || coord.y > region_h + region_dest_y) return vec4(0, 0, 0, 0);
+
+    ivec2 tex_coord = coord + ivec2(region_src_x, region_src_y) - ivec2(region_dest_x, region_dest_y);
+
+    vec4 pixel = is_16_bit > 0 ? imageLoad(imgInput16bit, tex_coord) : imageLoad(imgInput8bit, tex_coord);
+    if (key_only > 0) return pixel.aaaa;
+    if (straighten > 0) return straighten_pixel(pixel);
+    return pixel;
+}
+
+vec3 yuv_scale_range = vec3(219.0 / 256.0, 224.0 / 512.0, 224.0 / 512.0);
+vec3 yuv_offset = vec3(16.0 / 256.0, 0.5, 0.5);
+
+mat3 yuv_bt709_mat = mat3(0.2126, 0.7152, 0.0722,
+    -0.2126 / 0.9278, -0.7152 / 0.9278, 1,
+    1, -0.7152 / 0.7874, -0.0722 / 0.7874);
+
+// TODO - test this
+mat3 yuv_bt601_mat = mat3(0.299, 0.587, 0.114,
+    -0.299 / 0.886, -0.587 / 0.886, 1,
+    1, -0.587 / 0.701, -0.114 / 0.701);
+
+vec3 rgba_to_yuv(vec4 pixel, mat3 yuv_mat) {
+    return pixel.rgb * yuv_mat * yuv_scale_range + yuv_offset;
+}
+
+uint to_10bit(float val) {
+    return uint(round(val * 1023));
+}
+
+uint v210(mat3 yuv_mat) {
+    // basic coordinates
+    uint image_x = gl_GlobalInvocationID.x / 4 * 6;
+
+    // TODO - this has a high cost compared to bgra, probably due to the amount of computation done here..
+
+
+    // Compute all the possible ycbcr values
+    vec3 ycbcr0 = rgba_to_yuv(read_pixel(ivec2(image_x + 0, gl_GlobalInvocationID.y)), yuv_mat);
+    vec3 ycbcr1 = rgba_to_yuv(read_pixel(ivec2(image_x + 1, gl_GlobalInvocationID.y)), yuv_mat);
+    vec3 ycbcr2 = rgba_to_yuv(read_pixel(ivec2(image_x + 2, gl_GlobalInvocationID.y)), yuv_mat);
+    vec3 ycbcr3 = rgba_to_yuv(read_pixel(ivec2(image_x + 3, gl_GlobalInvocationID.y)), yuv_mat);
+    vec3 ycbcr4 = rgba_to_yuv(read_pixel(ivec2(image_x + 4, gl_GlobalInvocationID.y)), yuv_mat);
+    vec3 ycbcr5 = rgba_to_yuv(read_pixel(ivec2(image_x + 5, gl_GlobalInvocationID.y)), yuv_mat);
+
+    // TODO - do some interpolation of the uv values to minimise artifacts?
+    // Combine the possible return vecs (components are: stpq)
+    vec3[] output_candidates = vec3[4] (
+        vec3(ycbcr0.t, ycbcr0.s, ycbcr0.p),
+        vec3(ycbcr1.s, ycbcr2.t, ycbcr2.s),
+        vec3(ycbcr2.p, ycbcr3.s, ycbcr4.t),
+        vec3(ycbcr4.s, ycbcr4.p, ycbcr5.s)
+    );
+
+    // Perform final combination
+    vec3 output_vals = output_candidates[gl_GlobalInvocationID.x % 4];
+    return to_10bit(output_vals.x) + (to_10bit(output_vals.y) << 10) + (to_10bit(output_vals.z) << 20);
+}
+
+uint float_to_uint8(float val) {
+    return uint(clamp(round(val * 255), 0, 255));
+}
+uint float_to_uint16(float val) {
+    return uint(clamp(round(val * 65535), 0, 65535));
+}
+
+uint bgra8() {
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    return float_to_uint8(pixel.b) + (float_to_uint8(pixel.g) << 8) + (float_to_uint8(pixel.r) << 16) + (float_to_uint8(pixel.a) << 24);
+}
+
+void rgba16() {
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
+
+    // basic coordinates
+    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
+    uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
+    uint offset = y_offset + x_offset;
+
+    // TODO - can this be done solely as integer?
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    // TODO - this needs to be reimplements to write a single word per execution
+    bufferOutput[offset + 0] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.g) << 16);
+    bufferOutput[offset + 1] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.a) << 16);
+}
+
+void bgra16() {
+    // This feels excessive to do in a compute shader, but the tansforms in read_pixel make it worthwhile
+
+    // basic coordinates
+    uint y_offset = gl_GlobalInvocationID.y * words_per_line;
+    uint x_offset = gl_GlobalInvocationID.x * 2; // 4 words per op
+    uint offset = y_offset + x_offset;
+
+    // TODO - can this be done solely as integer?
+    vec4 pixel = read_pixel(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y));
+
+    // TODO - this needs to be reimplements to write a single word per execution
+    bufferOutput[offset + 0] = float_to_uint16(pixel.b) + (float_to_uint16(pixel.g) << 16);
+    bufferOutput[offset + 1] = float_to_uint16(pixel.r) + (float_to_uint16(pixel.a) << 16);
+}
+
+void main() {
+//    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+
+    // Don't overflow the line
+    if (gl_GlobalInvocationID.x >= words_per_line) return;
+
+    uint buffer_offset = gl_GlobalInvocationID.y * words_per_line + gl_GlobalInvocationID.x;
+
+    /**
+     * Some notes:
+     * - Each call must write to the buffer sequentially, with just one write. Failing to do this makes the shader 10x slower.
+     * - As the shader is being run in multiples of 32, we need to consider the x overflow condition
+     */
+
+    switch(target_format){
+        case 0: // bgra8
+            bufferOutput[buffer_offset] = bgra8();
+            break;
+//        case 1: // rgba16
+//            rgba16();
+//            break;
+//        case 2: // bgra16
+//            bgra16();
+//            break;
+
+        case 3:
+            bufferOutput[buffer_offset] = v210(yuv_bt709_mat);
+            break;
+        case 4:
+            bufferOutput[buffer_offset] = v210(yuv_bt601_mat);
+            break;
+    }
+}

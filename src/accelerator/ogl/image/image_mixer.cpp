@@ -20,6 +20,7 @@
  */
 #include "image_mixer.h"
 
+#include "frame_converter.h"
 #include "image_kernel.h"
 
 #include "../util/buffer.h"
@@ -70,39 +71,49 @@ class image_renderer
 {
     spl::shared_ptr<device> ogl_;
     image_kernel            kernel_;
-    const size_t            max_frame_size_;
     common::bit_depth       depth_;
     core::color_space       color_space_;
 
+    core::video_format_desc                       empty_format_desc_;
+    std::shared_ptr<ogl_texture_and_buffer_cache> empty_texture_;
+
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl,
-                            const size_t                   max_frame_size,
-                            common::bit_depth              depth,
-                            core::color_space              color_space)
+    explicit image_renderer(const spl::shared_ptr<device>& ogl, common::bit_depth depth, core::color_space color_space)
         : ogl_(ogl)
         , kernel_(ogl_)
-        , max_frame_size_(max_frame_size)
         , depth_(depth)
         , color_space_(color_space)
     {
     }
 
-    std::future<array<const std::uint8_t>> operator()(std::vector<layer>             layers,
-                                                      const core::video_format_desc& format_desc)
+    std::future<std::shared_ptr<ogl_texture_and_buffer_cache>> render(std::vector<layer>             layers,
+                                                                      const core::video_format_desc& format_desc)
     {
-        if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(max_frame_size_, 0);
-            return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
+        if (empty_format_desc_.height != format_desc.height || empty_format_desc_.width != format_desc.width) {
+            // Dimensions of channel have changed, discard the empty_texture
+            empty_texture_     = nullptr;
+            empty_format_desc_ = format_desc;
         }
 
-        return flatten(ogl_->dispatch_async(
-            [=, layers = std::move(layers)]() mutable -> std::shared_future<array<const std::uint8_t>> {
+        if (layers.empty()) { // Skip compositing, and reuse a static empty texture
+            if (!empty_texture_) {
+                // Lazily generate the texture
+                empty_texture_ = ogl_->dispatch_sync([=]() {
+                    auto texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
+                    return std::make_shared<ogl_texture_and_buffer_cache>(std::move(texture));
+                });
+            }
+            return make_ready_future(empty_texture_);
+        }
+
+        return ogl_->dispatch_async(
+            [=, layers = std::move(layers)]() mutable -> std::shared_ptr<ogl_texture_and_buffer_cache> {
                 auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
 
                 draw(target_texture, std::move(layers), format_desc);
 
-                return ogl_->copy_async(target_texture);
-            }));
+                return std::make_shared<ogl_texture_and_buffer_cache>(std::move(target_texture));
+            });
     }
 
     common::bit_depth depth() const { return depth_; }
@@ -257,11 +268,10 @@ struct image_mixer::impl
   public:
     impl(const spl::shared_ptr<device>& ogl,
          const int                      channel_id,
-         const size_t                   max_frame_size,
          common::bit_depth              depth,
          core::color_space              color_space)
         : ogl_(ogl)
-        , renderer_(ogl, max_frame_size, depth, color_space)
+        , renderer_(ogl, depth, color_space)
         , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
@@ -303,18 +313,12 @@ struct image_mixer::impl
         item.transforms = transform_stack_.back();
         item.geometry   = frame.geometry();
 
-        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.image_ptr());
 
         if (textures_ptr) {
             item.textures = *textures_ptr;
         } else {
-            for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
-                item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
-                                                            item.pix_desc.planes[n].width,
-                                                            item.pix_desc.planes[n].height,
-                                                            item.pix_desc.planes[n].stride,
-                                                            item.pix_desc.planes[n].depth));
-            }
+            CASPAR_LOG(debug) << "Skipping drawing frame which has no textures";
         }
 
         layer_stack_.back()->items.push_back(item);
@@ -326,9 +330,9 @@ struct image_mixer::impl
         layer_stack_.resize(transform_stack_.back().image_transform.layer_depth);
     }
 
-    std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+    std::shared_future<std::shared_ptr<ogl_texture_and_buffer_cache>> render(const core::video_format_desc& format_desc)
     {
-        return renderer_(std::move(layers_), format_desc);
+        return renderer_.render(std::move(layers_), format_desc);
     }
 
     core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
@@ -341,8 +345,7 @@ struct image_mixer::impl
     {
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
-            auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
-            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel));
+            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel(depth)));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
@@ -367,16 +370,20 @@ struct image_mixer::impl
                                    });
     }
 
+    spl::shared_ptr<core::frame_converter> create_frame_converter() override
+    {
+        return spl::make_shared<ogl_frame_converter>(ogl_);
+    }
+
     common::bit_depth depth() const { return renderer_.depth(); }
     core::color_space color_space() const { return renderer_.color_space(); }
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
                          const int                      channel_id,
-                         const size_t                   max_frame_size,
                          common::bit_depth              depth,
                          core::color_space              color_space)
-    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth, color_space))
+    : impl_(std::make_unique<impl>(ogl, channel_id, depth, color_space))
 {
 }
 image_mixer::~image_mixer() {}
@@ -384,9 +391,10 @@ void image_mixer::push(const core::frame_transform& transform) { impl_->push(tra
 void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
 void image_mixer::pop() { impl_->pop(); }
 void image_mixer::update_aspect_ratio(double aspect_ratio) { impl_->update_aspect_ratio(aspect_ratio); }
-std::future<array<const std::uint8_t>> image_mixer::render(const core::video_format_desc& format_desc)
+std::future<std::any> image_mixer::render(const core::video_format_desc& format_desc)
 {
-    return impl_->render(format_desc);
+    auto texture = impl_->render(format_desc);
+    return std::async([texture = std::move(texture)]() -> std::any { return std::any(texture.get()); });
 }
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
 {
@@ -397,6 +405,7 @@ image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, 
 {
     return impl_->create_frame(tag, desc, depth);
 }
+spl::shared_ptr<core::frame_converter> image_mixer::create_frame_converter() { return impl_->create_frame_converter(); }
 
 common::bit_depth image_mixer::depth() const { return impl_->depth(); }
 core::color_space image_mixer::color_space() const { return impl_->color_space(); }

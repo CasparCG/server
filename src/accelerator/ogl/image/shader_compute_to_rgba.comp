@@ -16,35 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
+#version 430
 
-#pragma once
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-#ifdef USE_SIMDE
-#define SIMDE_ENABLE_NATIVE_ALIASES
-#include <simde/x86/ssse3.h>
-#else
-#ifdef _MSC_VER
-#include <intrin.h>
-#include <tbb/scalable_allocator.h>
-#else
-#include <tmmintrin.h>
-#endif
-#endif
+layout(rgba16f, binding = 0) uniform image2D imgOutput; // Note: this needs to match what it is writing to
 
-namespace caspar {
+void main() {
+    vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
-#ifdef _MSC_VER
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
-{
-    return std::shared_ptr<void>(scalable_aligned_malloc(size, alignment), scalable_aligned_free);
+    value.r = float(texelCoord.x)/(gl_NumWorkGroups.x);
+    value.g = float(texelCoord.y)/(gl_NumWorkGroups.y);
+
+    imageStore(imgOutput, texelCoord, value);
 }
-#else
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
-{
-    return std::shared_ptr<void>(aligned_alloc(alignment, size), free);
-}
-#endif
-
-} // namespace caspar

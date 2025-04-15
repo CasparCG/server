@@ -14,6 +14,7 @@ endif()
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
+set(SKIP_SHADER_CHECK OFF CACHE BOOL "Skip the GLSL shader check (useful if glslangValidator is not available for your platform)")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")

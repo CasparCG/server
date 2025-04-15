@@ -16,32 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
 
-#include <common/bit_depth.h>
-#include <common/memory.h>
+#include <string>
 
-#include "frame_converter.h"
+namespace caspar::accelerator::ogl {
 
-namespace caspar { namespace core {
-
-class frame_factory
+class shaders_source
 {
   public:
-    frame_factory()                                = default;
-    frame_factory& operator=(const frame_factory&) = delete;
-    virtual ~frame_factory()                       = default;
+    static const std::string image_fragment;
+    static const std::string image_vertex;
 
-    frame_factory(const frame_factory&) = delete;
-
-    virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
-    virtual class mutable_frame
-    create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, common::bit_depth depth) = 0;
-
-    virtual spl::shared_ptr<frame_converter> create_frame_converter() = 0;
+    static const std::string compute_from_rgba;
+    static const std::string compute_to_rgba;
 };
 
-}} // namespace caspar::core
+} // namespace caspar::accelerator::ogl

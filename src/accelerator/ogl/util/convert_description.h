@@ -16,35 +16,33 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
 
-#ifdef USE_SIMDE
-#define SIMDE_ENABLE_NATIVE_ALIASES
-#include <simde/x86/ssse3.h>
-#else
-#ifdef _MSC_VER
-#include <intrin.h>
-#include <tbb/scalable_allocator.h>
-#else
-#include <tmmintrin.h>
-#endif
-#endif
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <memory>
 
-namespace caspar {
+namespace caspar::accelerator::ogl {
 
-#ifdef _MSC_VER
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
+// This must match description_layout in shader_from_rgba.comp
+struct convert_from_texture_description
 {
-    return std::shared_ptr<void>(scalable_aligned_malloc(size, alignment), scalable_aligned_free);
-}
-#else
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
-{
-    return std::shared_ptr<void>(aligned_alloc(alignment, size), free);
-}
-#endif
+    uint32_t target_format;
+    uint32_t is_16_bit;
+    uint32_t width;
+    uint32_t height;
+    uint32_t words_per_line;
+    uint32_t key_only;
+    uint32_t straighten;
 
-} // namespace caspar
+    uint32_t region_src_x;
+    uint32_t region_src_y;
+    uint32_t region_dest_x;
+    uint32_t region_dest_y;
+    uint32_t region_w;
+    uint32_t region_h;
+};
+
+} // namespace caspar::accelerator::ogl

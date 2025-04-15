@@ -22,6 +22,7 @@
 #pragma once
 
 #include <core/frame/pixel_format.h>
+#include <core/frame/frame_converter.h>
 #include <core/video_format.h>
 
 namespace caspar { namespace decklink {
@@ -32,17 +33,8 @@ struct port_configuration
     bool key_only     = false;
 
     core::video_format_desc format;
-    int                     src_x    = 0;
-    int                     src_y    = 0;
-    int                     dest_x   = 0;
-    int                     dest_y   = 0;
-    int                     region_w = 0;
-    int                     region_h = 0;
 
-    [[nodiscard]] bool has_subregion_geometry() const
-    {
-        return src_x != 0 || src_y != 0 || region_w != 0 || region_h != 0 || dest_x != 0 || dest_y != 0;
-    }
+    core::frame_conversion_format::subregion_geometry region;
 };
 
 struct hdr_meta_configuration
@@ -85,6 +77,12 @@ struct configuration
         disabled,
     };
 
+    enum class pixel_format_t
+    {
+        bgra,
+        yuv10,
+    };
+
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
@@ -92,6 +90,7 @@ struct configuration
     wait_for_reference_t wait_for_reference          = wait_for_reference_t::automatic;
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
+    pixel_format_t       pixel_format                = pixel_format_t::bgra;
     bool                 hdr                         = false;
 
     port_configuration              primary;
@@ -109,9 +108,11 @@ struct configuration
 };
 
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
+                               const common::bit_depth& depth,
                                const core::video_format_repository& format_repository);
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
+                                const common::bit_depth& depth,
                                 const core::video_format_repository& format_repository);
 
 }} // namespace caspar::decklink

@@ -47,11 +47,14 @@
 #include <thread>
 
 #include "../util/ndi.h"
+#include "core/frame/frame_converter.h"
 
 namespace caspar { namespace newtek {
 
 struct newtek_ndi_consumer : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     static std::atomic<int> instances_;
     const int               instance_no_;
     const std::wstring      name_;
@@ -72,15 +75,18 @@ struct newtek_ndi_consumer : public core::frame_consumer
     std::condition_variable              buffer_cond_;
     std::condition_variable              worker_cond_;
     bool                                 ready_for_frame_;
-    std::queue<core::const_frame>        buffer_;
+    std::queue<core::converted_frame>    buffer_;
     boost::thread                        send_thread;
     executor                             executor_;
 
-    std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
+    std::unique_ptr<NDIlib_send_instance_type, std::function<void(NDIlib_send_instance_type*)>> ndi_send_instance_;
 
   public:
-    newtek_ndi_consumer(std::wstring name, bool allow_fields)
-        : name_(!name.empty() ? name : default_ndi_name())
+    newtek_ndi_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter,
+                        std::wstring                                  name,
+                        bool                                          allow_fields)
+        : frame_converter_(frame_converter)
+        , name_(!name.empty() ? name : default_ndi_name())
         , instance_no_(instances_++)
         , frame_no_(0)
         , allow_fields_(allow_fields)
@@ -119,8 +125,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         NDI_send_create_desc.clock_video = false;
         NDI_send_create_desc.clock_audio = false;
 
-        ndi_send_instance_ = {new NDIlib_send_instance_t(ndi_lib_->send_create(&NDI_send_create_desc)),
-                              [this](auto p) { this->ndi_lib_->send_destroy(*p); }};
+        ndi_send_instance_ = {ndi_lib_->send_create(&NDI_send_create_desc),
+                              [this](auto p) { this->ndi_lib_->send_destroy(p); }};
 
         ndi_video_frame_.xres                 = format_desc.width;
         ndi_video_frame_.yres                 = format_desc.height;
@@ -131,6 +137,8 @@ struct newtek_ndi_consumer : public core::frame_consumer
         ndi_video_frame_.frame_format_type    = NDIlib_frame_format_type_progressive;
 
         if (format_desc.field_count == 2 && allow_fields_) {
+            // The frame needs to be half height because of interlacing, so we use a temporary block of memory for the
+            // frames
             ndi_video_frame_.yres /= 2;
             ndi_video_frame_.frame_rate_N /= 2;
             ndi_video_frame_.picture_aspect_ratio = format_desc.width * 1.0f / format_desc.height;
@@ -171,14 +179,22 @@ struct newtek_ndi_consumer : public core::frame_consumer
                 auto time_point  = std::chrono::steady_clock::now();
                 time_point += std::chrono::microseconds(frametimeUs);
                 while (!send_thread.interruption_requested()) {
-                    core::const_frame frame;
+                    std::optional<core::converted_frame> wrapped_frame;
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
                         worker_cond_.wait(lock, [&] { return !buffer_.empty(); });
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
-                        frame = std::move(buffer_.front());
+                        wrapped_frame = std::move(buffer_.front());
                         buffer_.pop();
+
+                        if (!wrapped_frame.has_value()) {
+                            // Didn't get a frame for some reason, try again
+                            continue;
+                        }
                     }
+                    auto frame  = wrapped_frame.value().frame;
+                    auto pixels = wrapped_frame.value().pixels.get();
+
                     graph_->set_value("ndi-tick", ndi_timer_.elapsed() * format_desc_.fps * 0.5);
                     ndi_timer_.restart();
                     frame_timer_.restart();
@@ -186,19 +202,22 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     int  audio_data_size        = static_cast<int>(audio_data.size());
                     ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
                     ndi_audio_frame_.p_data     = const_cast<int*>(audio_data.data());
-                    ndi_lib_->util_send_send_audio_interleaved_32s(*ndi_send_instance_, &ndi_audio_frame_);
+                    ndi_lib_->util_send_send_audio_interleaved_32s(ndi_send_instance_.get(), &ndi_audio_frame_);
                     if (format_desc_.field_count == 2 && allow_fields_) {
+                        // Copy the needed lines into the temporary buffer
                         ndi_video_frame_.frame_format_type =
                             (frame_no_ % 2 ? NDIlib_frame_format_type_field_1 : NDIlib_frame_format_type_field_0);
                         for (auto y = 0; y < ndi_video_frame_.yres; ++y) {
                             std::memcpy(reinterpret_cast<char*>(ndi_video_frame_.p_data) + y * format_desc_.width * 4,
-                                        frame.image_data(0).data() + (y * 2 + frame_no_ % 2) * format_desc_.width * 4,
+                                        pixels.data() + (y * 2 + frame_no_ % 2) * format_desc_.width * 4,
                                         format_desc_.width * 4);
                         }
                     } else {
-                        ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
+                        // Pass the raw frame
+                        // TODO - this seems to leak memory on linux, but the field flow above doesnt.
+                        ndi_video_frame_.p_data = const_cast<uint8_t*>(pixels.data());
                     }
-                    ndi_lib_->send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
+                    ndi_lib_->send_send_video_v2(ndi_send_instance_.get(), &ndi_video_frame_);
                     frame_no_++;
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     std::this_thread::sleep_until(time_point);
@@ -212,12 +231,15 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
+        auto wrapped_frame = frame_converter_->convert_to_buffer_and_frame(
+            frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+
         return executor_.begin_invoke([=] {
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
             {
                 std::unique_lock<std::mutex> lock(buffer_mutex_);
-                buffer_.push(std::move(frame));
+                buffer_.push(std::move(wrapped_frame));
             }
             worker_cond_.notify_all();
             return true;
@@ -255,11 +277,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
 std::atomic<int> newtek_ndi_consumer::instances_(0);
 
-spl::shared_ptr<core::frame_consumer>
-create_ndi_consumer(const std::vector<std::wstring>&                         params,
-                    const core::video_format_repository&                     format_repository,
-                    const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                    common::bit_depth                                        depth)
+spl::shared_ptr<core::frame_consumer> create_ndi_consumer(const std::vector<std::wstring>&     params,
+                                                          const core::video_format_repository& format_repository,
+                                                          const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                                          common::bit_depth                             depth)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
@@ -269,14 +290,14 @@ create_ndi_consumer(const std::vector<std::wstring>&                         par
 
     std::wstring name         = get_param(L"NAME", params, L"");
     bool         allow_fields = contains_param(L"ALLOW_FIELDS", params);
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    return spl::make_shared<newtek_ndi_consumer>(frame_converter, name, allow_fields);
 }
 
 spl::shared_ptr<core::frame_consumer>
-create_preconfigured_ndi_consumer(const boost::property_tree::wptree&                      ptree,
-                                  const core::video_format_repository&                     format_repository,
-                                  const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                  common::bit_depth                                        depth)
+create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           ptree,
+                                  const core::video_format_repository&          format_repository,
+                                  const spl::shared_ptr<core::frame_converter>& frame_converter,
+                                  common::bit_depth                             depth)
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);
@@ -284,7 +305,7 @@ create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           
     if (depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Newtek NDI consumer only supports 8-bit color depth."));
 
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    return spl::make_shared<newtek_ndi_consumer>(frame_converter, name, allow_fields);
 }
 
 }} // namespace caspar::newtek

@@ -16,35 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
-#pragma once
+#include "shaders_source.h"
 
-#ifdef USE_SIMDE
-#define SIMDE_ENABLE_NATIVE_ALIASES
-#include <simde/x86/ssse3.h>
-#else
-#ifdef _MSC_VER
-#include <intrin.h>
-#include <tbb/scalable_allocator.h>
-#else
-#include <tmmintrin.h>
-#endif
-#endif
+#include "ogl_image_shader_frag.h"
+#include "ogl_image_shader_vert.h"
 
-namespace caspar {
+#include "ogl_image_shader_compute_from_rgba_comp.h"
+#include "ogl_image_shader_compute_to_rgba_comp.h"
 
-#ifdef _MSC_VER
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
-{
-    return std::shared_ptr<void>(scalable_aligned_malloc(size, alignment), scalable_aligned_free);
-}
-#else
-static std::shared_ptr<void> create_aligned_buffer(size_t size, size_t alignment = 64)
-{
-    return std::shared_ptr<void>(aligned_alloc(alignment, size), free);
-}
-#endif
+namespace caspar::accelerator::ogl {
 
-} // namespace caspar
+const std::string shaders_source::image_fragment = std::string(ogl_image_shader_frag);
+const std::string shaders_source::image_vertex   = std::string(ogl_image_shader_vert);
+
+const std::string shaders_source::compute_from_rgba = std::string(ogl_image_shader_compute_from_rgba_comp);
+const std::string shaders_source::compute_to_rgba   = std::string(ogl_image_shader_compute_to_rgba_comp);
+
+} // namespace caspar::accelerator::ogl

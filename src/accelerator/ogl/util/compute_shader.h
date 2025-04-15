@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -16,45 +16,31 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
 
-#include <common/bit_depth.h>
+#include <GL/glew.h>
 #include <memory>
+#include <string>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-class texture final
+class compute_shader final
 {
-  public:
-    texture(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8);
-    texture(const texture&) = delete;
-    texture(texture&& other);
-    ~texture();
+    compute_shader(const compute_shader&);
+    compute_shader& operator=(const compute_shader&);
 
-    texture& operator=(const texture&) = delete;
-    texture& operator=(texture&& other);
+public:
+    explicit compute_shader(const std::string& compute_source_str);
+    ~compute_shader();
 
-#ifdef WIN32
-    void copy_from(int source);
-#endif
-    void copy_from(class buffer& source);
+    void use() const;
 
-    void attach();
-    void clear();
-    void bind(int index);
-    void unbind();
+    [[nodiscard]] GLuint id() const;
 
-    int               width() const;
-    int               height() const;
-    int               stride() const;
-    common::bit_depth depth() const;
-    int               size() const;
-    int               id() const;
-
-  private:
+private:
     struct impl;
     std::unique_ptr<impl> impl_;
 };
