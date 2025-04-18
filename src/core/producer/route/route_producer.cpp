@@ -25,6 +25,9 @@
 #include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
+#include <core/frame/frame.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/frame_visitor.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
 #include <core/video_channel.h>
@@ -35,8 +38,63 @@
 #include <tbb/concurrent_queue.h>
 
 #include <optional>
+#include <stack>
 
 namespace caspar { namespace core {
+
+class fix_stream_tag : public frame_visitor
+{
+    const void* stream_tag_;
+    std::stack<std::pair<frame_transform, std::vector<draw_frame>>> frames_stack_;
+    std::optional<const_frame>                                    upd_frame_;
+    
+    fix_stream_tag(const fix_stream_tag&);
+    fix_stream_tag& operator=(const fix_stream_tag&);
+
+  public:
+    fix_stream_tag(void* stream_tag)
+        : stream_tag_(stream_tag)
+    {
+        frames_stack_ = std::stack<std::pair<frame_transform, std::vector<draw_frame>>>();
+        frames_stack_.emplace(frame_transform{}, std::vector<draw_frame>());
+    }
+
+    void push(const frame_transform& transform) {
+        frames_stack_.emplace(transform, std::vector<core::draw_frame>());
+    }
+
+    void visit(const const_frame& frame) {
+        upd_frame_ = frame.with_tag(stream_tag_);
+    }
+
+    void pop() {
+        auto popped = frames_stack_.top();
+        frames_stack_.pop();
+
+        if (upd_frame_ != std::nullopt) {
+            auto new_frame        = draw_frame(std::move(*upd_frame_));
+            upd_frame_            = std::nullopt;
+            new_frame.transform() = popped.first;
+            frames_stack_.top().second.push_back(std::move(new_frame));
+        } else {
+            auto new_frame        = draw_frame(std::move(popped.second));
+            new_frame.transform() = popped.first;
+            frames_stack_.top().second.push_back(new_frame);
+        }
+    }
+
+    draw_frame operator()(draw_frame frame) {
+        frame.accept(*this);
+
+        auto popped = frames_stack_.top();
+        frames_stack_.pop();
+        draw_frame result = draw_frame(std::move(popped.second));
+
+        frames_stack_ = std::stack<std::pair<frame_transform, std::vector<draw_frame>>>();
+        frames_stack_.emplace(frame_transform{}, std::vector<draw_frame>());
+        return result;
+    }
+};
 
 class route_producer
     : public frame_producer
@@ -55,6 +113,7 @@ class route_producer
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
+    fix_stream_tag                                               tag_fix_;
 
     boost::signals2::scoped_connection connection_;
 
@@ -76,6 +135,7 @@ class route_producer
         : route_(route)
         , source_channel_(source_channel)
         , source_layer_(source_layer)
+        , tag_fix_(this)
     {
         buffer_.set_capacity(buffer > 0 ? buffer : 1);
 
@@ -100,6 +160,10 @@ class route_producer
                         // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
                         frame1b = core::draw_frame::push(frame1);
                     }
+
+                    // Update the tag in the frame to allow the audio mixer to distinguish between the source frame and the routed frame
+                    frame1b = self->tag_fix_(frame1b);
+
                     auto frame2b = frame2;
                     if (!frame2b) {
                         // Ensure that any interlaced channel will repeat frames instead of showing black.
