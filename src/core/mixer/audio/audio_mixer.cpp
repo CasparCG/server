@@ -111,15 +111,16 @@ struct audio_mixer::impl
 
             size_t last_size = 0;
             const int32_t* last_ptr = nullptr;
-            bool fix_1001 = (1001 == format_desc.framerate.denominator());
-            if (fix_1001) {
+            // Check if the format has a variable audio cadence (needs special handling)
+            bool has_variable_cadence = format_desc.audio_cadence.size() > 1;
+            if (has_variable_cadence) {
                 auto audio_stream = audio_streams_.find(item.tag);
                 if (audio_stream != audio_streams_.end()) {
                     last_size = audio_stream->second.size();
                     last_ptr = audio_stream->second.data();
                 } else if (nullptr != item.tag) {
                     // Insert a sample of silence at startup
-                    // Covers the startup case where eg dst_size is 801 and item_size is 800
+                    // Covers the startup case where there may be a cadence mismatch
                     // The sample of silence will be output before any valid audio data from the source
                     last_size = channels;
                     std::vector<int32_t> buf(last_size);
@@ -139,7 +140,7 @@ struct audio_mixer::impl
                 }
             }
 
-            if (fix_1001 && item.tag) {
+            if (has_variable_cadence && item.tag) {
                 if (item_size + last_size > dst_size) {
                     auto                 buf_size = item_size + last_size - dst_size;
                     std::vector<int32_t> buf(buf_size);

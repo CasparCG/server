@@ -111,9 +111,13 @@ class route_producer
     std::shared_ptr<route> route_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
+    std::optional<std::pair<core::draw_frame, core::draw_frame>> previous_frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
+    bool                                                         has_variable_cadence_ = false;
+    bool                                                         is_interlaced_ = false;
+    bool                                                         is_cross_channel_ = false;
 
     boost::signals2::scoped_connection connection_;
 
@@ -123,10 +127,16 @@ class route_producer
     // set the buffer depth to 2 for cross-channel routes, 1 otherwise
     void set_cross_channel(bool cross) override
     {
+        is_cross_channel_ = cross;
         if (cross) {
             buffer_.set_capacity(2);
+            // Check if the format has variable audio cadence (more than one value)
+            has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
+            is_interlaced_ = route_->format_desc.field_count == 2;
         } else {
             buffer_.set_capacity(1);
+            has_variable_cadence_ = false;
+            is_interlaced_ = false;
         }
     }
 
@@ -137,6 +147,7 @@ class route_producer
         , source_layer_(source_layer)
         , tag_fix_(this)
     {
+        graph_ = spl::make_shared<diagnostics::graph>();
         buffer_.set_capacity(buffer > 0 ? buffer : 1);
 
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -169,6 +180,9 @@ class route_producer
                         // Ensure that any interlaced channel will repeat frames instead of showing black.
                         // Note: doing 50p -> 50i will result in dropping to 25p and frame doubling.
                         frame2b = frame1b;
+                    } else if (self->is_interlaced_) {
+                        // For interlaced formats, ensure field B gets the proper tag as well
+                        frame2b = self->tag_fix_(frame2b);
                     }
 
                     if (!self->buffer_.try_push(std::make_pair(frame1b, frame2b))) {
@@ -207,7 +221,12 @@ class route_producer
             std::pair<core::draw_frame, core::draw_frame> frame;
             if (!buffer_.try_pop(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+                // If we have variable cadence or interlacing and are cross-channel, preserve the previous frame
+                if ((has_variable_cadence_ || is_interlaced_) && previous_frame_ && is_cross_channel_) {
+                    frame_ = previous_frame_;
+                }
             } else {
+                previous_frame_ = frame_;
                 frame_ = frame;
             }
         }
