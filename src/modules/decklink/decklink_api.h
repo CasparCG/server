@@ -214,6 +214,11 @@ REFIID iface_id<IDeckLinkConfiguration_v10_11>()
 {
     return IID_IDeckLinkConfiguration_v10_11;
 }
+template <>
+REFIID iface_id<IDeckLinkVideoFrameAncillaryPackets>()
+{
+    return IID_IDeckLinkVideoFrameAncillaryPackets;
+}
 
 template <typename I, typename T>
 static com_iface_ptr<I> iface_cast(com_ptr<T> ptr, bool optional = false)
