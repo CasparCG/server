@@ -99,8 +99,13 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkOutp
     BOOL           supported  = false;
 
     auto displayMode = mode->GetDisplayMode();
-    if (FAILED(device->DoesSupportVideoMode(
-            bmdVideoConnectionUnspecified, displayMode, pix_fmt, flag, &actualMode, &supported)))
+    if (FAILED(device->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+                                            displayMode,
+                                            pix_fmt,
+                                            bmdNoVideoOutputConversion,
+                                            flag,
+                                            &actualMode,
+                                            &supported)))
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info(L"Could not determine whether device supports requested video format: " +
                                            get_mode_name(mode)));
@@ -406,13 +411,11 @@ class decklink_frame
         return E_INVALIDARG;
     }
 
-    /*
-    HRESULT STDMETHODCALLTYPE GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize)
+    HRESULT STDMETHODCALLTYPE GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize) override
     {
         *bufferSize = 0;
         return E_INVALIDARG;
     }
-     */
 };
 
 struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
@@ -1067,7 +1070,9 @@ struct decklink_consumer_proxy : public core::frame_consumer
         });
     }
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
