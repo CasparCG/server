@@ -48,6 +48,11 @@ struct port_configuration
     }
 };
 
+struct vanc_configuration
+{
+    bool enable = false;
+};
+
 struct hdr_meta_configuration
 {
     float min_dml  = 0.005f;
@@ -101,6 +106,8 @@ struct configuration
 
     core::color_space      color_space = core::color_space::bt709;
     hdr_meta_configuration hdr_meta;
+
+    vanc_configuration vanc;
 
     [[nodiscard]] int buffer_depth() const
     {

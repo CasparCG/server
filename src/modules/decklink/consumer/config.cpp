@@ -54,6 +54,14 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
     return port_config;
 }
 
+vanc_configuration parse_vanc_config(const boost::property_tree::wptree& vanc_tree)
+{
+    vanc_configuration vanc_config;
+    vanc_config.enable = true;
+
+    return vanc_config;
+};
+
 core::color_space get_color_space(const std::wstring& str)
 {
     auto color_space_str = boost::to_lower_copy(str);
@@ -142,6 +150,11 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         config.hdr_meta.max_dml  = hdr_metadata->get(L"max-dml", config.hdr_meta.max_dml);
         config.hdr_meta.max_fall = hdr_metadata->get(L"max-fall", config.hdr_meta.max_fall);
         config.hdr_meta.max_cll  = hdr_metadata->get(L"max-cll", config.hdr_meta.max_cll);
+    }
+
+    auto vanc = ptree.get_child_optional(L"vanc");
+    if (vanc) {
+        config.vanc = parse_vanc_config(vanc.get());
     }
 
     return config;
