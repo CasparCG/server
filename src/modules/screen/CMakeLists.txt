@@ -39,4 +39,4 @@ set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
-target_link_libraries(screen accelerator ffmpeg)
+target_link_libraries(screen PRIVATE accelerator ffmpeg)

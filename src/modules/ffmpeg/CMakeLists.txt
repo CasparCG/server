@@ -43,7 +43,7 @@ if (MSVC)
 	# target_link_libraries(ffmpeg
 	# )
 else()
-	target_link_libraries(ffmpeg
+	target_link_libraries(ffmpeg PRIVATE
 			${FFMPEG_LIBRARIES}
 	)
 endif()

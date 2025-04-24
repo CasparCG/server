@@ -35,7 +35,6 @@ target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     )
 casparcg_add_build_dependencies(casparcg)
 
@@ -47,6 +46,8 @@ target_link_libraries(casparcg
 		core
 		protocol
 
+		TBB::tbb
+		TBB::tbbmalloc
 		"${CASPARCG_MODULE_PROJECTS}"
 )
 
@@ -54,15 +55,13 @@ if (MSVC)
 	target_link_libraries(casparcg
 		Winmm.lib
 		Ws2_32.lib
-		optimized tbb.lib
-		optimized tbbmalloc.lib
-		debug tbb_debug.lib
-		debug tbbmalloc_debug.lib
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
 		debug zlibstaticd.lib
 		optimized zlibstatic.lib
+		
+		optimized TBB::tbbmalloc_proxy
 		
 		avformat.lib
 		avcodec.lib
@@ -75,7 +74,6 @@ if (MSVC)
 else ()
 	target_link_libraries(casparcg
 		${Boost_LIBRARIES}
-		${TBB_LIBRARIES}
 		${GLEW_LIBRARIES}
 		OpenGL::GL
 		${X11_LIBRARIES}

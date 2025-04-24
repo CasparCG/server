@@ -24,10 +24,10 @@ source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
 if(MSVC)
-	target_link_libraries(oal
+	target_link_libraries(oal PRIVATE
 			OpenAL32)
 else()
-	target_link_libraries(oal
+	target_link_libraries(oal PRIVATE
 			openal)
 			# OpenAL::OpenAL) # This is better but breaks ubuntu22.04
 endif()

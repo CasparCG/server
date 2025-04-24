@@ -36,8 +36,8 @@ FUNCTION (casparcg_add_library PROJECT)
 	target_compile_features (${PROJECT} PRIVATE cxx_std_17)
 	target_include_directories(${PROJECT} SYSTEM PRIVATE
 		${BOOST_INCLUDE_PATH}
-		${TBB_INCLUDE_PATH}
 	)
+	target_link_libraries(${PROJECT} PRIVATE TBB::tbb)
 
 	if (CASPARCG_EXTERNAL_PROJECTS)
 		# Setup dependency on ExternalProject
@@ -72,7 +72,7 @@ FUNCTION (casparcg_add_module_project PROJECT)
 
 	# Setup the library and some default config
 	casparcg_add_library (${PROJECT} SOURCES ${PARSED_ARGS_SOURCES})
-	target_link_libraries(${PROJECT} common core)
+	target_link_libraries(${PROJECT} PRIVATE common core)
 
 	# Setup linker and code loading
 	SET (CASPARCG_MODULE_PROJECTS "${CASPARCG_MODULE_PROJECTS}" "${PROJECT}" CACHE INTERNAL "")

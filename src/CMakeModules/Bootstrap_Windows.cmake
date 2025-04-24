@@ -108,19 +108,17 @@ if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
 endif ()
 
 # TBB
-casparcg_add_external_project(tbb)
-ExternalProject_Add(tbb
+FetchContent_Declare(tbb
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
 	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(tbb SOURCE_DIR)
-set(TBB_INCLUDE_PATH "${SOURCE_DIR}/include")
-set(TBB_BIN_PATH "${SOURCE_DIR}/redist/intel64/vc14")
-link_directories("${SOURCE_DIR}/lib/intel64/vc14")
+FetchContent_MakeAvailable(tbb)
+
+list(APPEND CMAKE_PREFIX_PATH ${tbb_SOURCE_DIR}/lib/cmake/tbb)
+find_package(tbb REQUIRED)
+
+set(TBB_BIN_PATH "${tbb_SOURCE_DIR}/redist/intel64/vc14")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll" "Release")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll" "Debug")
 casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll" "Release")

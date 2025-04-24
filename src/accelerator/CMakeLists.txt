@@ -51,7 +51,7 @@ source_group(sources\\cpu\\util cpu/util/.*)
 source_group(sources\\ogl\\image ogl/image/.*)
 source_group(sources\\ogl\\util ogl/util/.*)
 
-target_link_libraries(accelerator
+target_link_libraries(accelerator PRIVATE
 		common
 		core
 
