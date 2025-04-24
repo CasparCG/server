@@ -77,7 +77,7 @@ else ()
 		--with-libraries=regex
 		--with-libraries=system
 		--with-libraries=thread
-	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
 	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
@@ -160,7 +160,7 @@ FetchContent_MakeAvailable(sfml)
 
 list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
 # set(SFML_STATIC_LIBRARIES TRUE)
-FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
+find_package(SFML 2 COMPONENTS graphics window REQUIRED)
 
 casparcg_add_runtime_dependency_from_target(sfml-graphics)
 casparcg_add_runtime_dependency_from_target(sfml-window)
@@ -256,7 +256,7 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_200_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
-	
+
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
