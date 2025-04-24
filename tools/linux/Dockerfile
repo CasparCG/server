@@ -15,7 +15,9 @@ FROM docker.io/buildpack-deps:jammy AS build-casparcg
 
 	RUN cmake -GNinja /source -DUSE_STATIC_BOOST=ON -DUSE_SYSTEM_CEF=OFF
 
-	RUN ninja
+	RUN cmake --build .
+
+    RUN cmake --install . --prefix staging
 
 	# Find a better way to copy deps
 	RUN ln -s /build/staging /staging && \

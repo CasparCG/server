@@ -232,20 +232,22 @@ if (ENABLE_HTML)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
+    add_library(CEF::CEF INTERFACE IMPORTED)
+    target_include_directories(CEF::CEF INTERFACE
+        "${SOURCE_DIR}"
+    )
 
-	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
 	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
-	link_directories(${SOURCE_DIR}/Release)
-	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
+	target_link_directories(CEF::CEF INTERFACE ${SOURCE_DIR}/Release ${BINARY_DIR}/libcef_dll_wrapper)
 
 	if (CMAKE_GENERATOR MATCHES "Visual Studio")
-	set(CEF_LIB
+	    target_link_libraries(CEF::CEF INTERFACE
 			libcef
 			optimized Release/libcef_dll_wrapper
 			debug Debug/libcef_dll_wrapper)
 	else()
-	set(CEF_LIB
+	    target_link_libraries(CEF::CEF INTERFACE
 			libcef
 			libcef_dll_wrapper)
 	endif()

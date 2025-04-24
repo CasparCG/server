@@ -31,6 +31,9 @@ endif ()
 
 
 add_executable(casparcg ${SOURCES} ${HEADERS})
+set_target_properties(casparcg PROPERTIES
+        OUTPUT_NAME "${CASPARCG_BINARY_NAME}"
+    )
 target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..
@@ -46,9 +49,10 @@ target_link_libraries(casparcg
 		core
 		protocol
 
+		"${CASPARCG_MODULE_PROJECTS}"
+
 		TBB::tbb
 		TBB::tbbmalloc
-		"${CASPARCG_MODULE_PROJECTS}"
 )
 
 if (MSVC)
@@ -189,27 +193,13 @@ if (MSVC)
 	    endforeach(FILE_TO_COPY)
     endif ()
 else ()
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/casparcg.config ${CMAKE_BINARY_DIR}/staging/casparcg.config)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/liberation-fonts/LiberationMono-Regular.ttf ${CMAKE_BINARY_DIR}/staging/LiberationMono-Regular.ttf)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/run.sh ${CMAKE_BINARY_DIR}/staging/run.sh)
+	install(TARGETS casparcg)
 
-# Disabled as HTML module is disabled
-  if (ENABLE_HTML AND NOT USE_SYSTEM_CEF)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CEF_RESOURCE_PATH}/locales ${CMAKE_BINARY_DIR}/staging/lib/locales)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_100_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_100_percent.pak)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_200_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_200_percent.pak)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/icudtl.dat ${CMAKE_BINARY_DIR}/staging/lib/icudtl.dat)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/resources.pak ${CMAKE_BINARY_DIR}/staging/lib/resources.pak)
-
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/chrome-sandbox ${CMAKE_BINARY_DIR}/staging/lib/chrome-sandbox)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libcef.so ${CMAKE_BINARY_DIR}/staging/lib/libcef.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libEGL.so ${CMAKE_BINARY_DIR}/staging/lib/libEGL.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libGLESv2.so ${CMAKE_BINARY_DIR}/staging/lib/libGLESv2.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libvk_swiftshader.so ${CMAKE_BINARY_DIR}/staging/lib/libvk_swiftshader.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libvulkan.so.1 ${CMAKE_BINARY_DIR}/staging/lib/libvulkan.so.1)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/snapshot_blob.bin ${CMAKE_BINARY_DIR}/staging/lib/snapshot_blob.bin)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/v8_context_snapshot.bin ${CMAKE_BINARY_DIR}/staging/lib/v8_context_snapshot.bin)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/vk_swiftshader_icd.json ${CMAKE_BINARY_DIR}/staging/lib/vk_swiftshader_icd.json)
-  endif ()
+    if ("${CASPARCG_BINARY_NAME}" STREQUAL "casparcg")
+        # Looks like a 'default' build, produce a portable folder
+	    install(FILES casparcg.config run.sh DESTINATION ".")
+    else ()
+        # Looks like a build for a system package manager
+        install(FILES casparcg.config DESTINATION "share/${CASPARCG_BINARY_NAME}")
+    endif ()
 endif ()
