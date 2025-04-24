@@ -42,7 +42,6 @@ target_include_directories(accelerator PRIVATE
     ..
     ${CMAKE_CURRENT_BINARY_DIR}
     ${GLEW_INCLUDE_PATH}
-    ${SFML_INCLUDE_PATH}
     )
 target_precompile_headers(accelerator PRIVATE "StdAfx.h")
 
@@ -52,4 +51,11 @@ source_group(sources\\cpu\\util cpu/util/.*)
 source_group(sources\\ogl\\image ogl/image/.*)
 source_group(sources\\ogl\\util ogl/util/.*)
 
-target_link_libraries(accelerator common core)
+target_link_libraries(accelerator
+		common
+		core
+
+		sfml-graphics
+		sfml-window
+		sfml-system
+)

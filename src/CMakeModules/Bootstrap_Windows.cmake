@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
+include(FetchContent)
 
 if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
@@ -145,25 +146,23 @@ add_definitions( -DGLEW_NO_GLU )
 casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 
 # SFML
-casparcg_add_external_project(sfml)
-ExternalProject_Add(sfml
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.4.2-windows-vc14-64-bit.zip
-	URL_HASH MD5=8a2f747335fa21a7a232976daa9031ac
+FetchContent_Declare(sfml
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.6.2-windows-vc17-64-bit.zip
+	URL_HASH MD5=dee0602d6f94d1843eef4d7568d2c23d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(sfml SOURCE_DIR)
-set(SFML_INCLUDE_PATH ${SOURCE_DIR}/include)
-set(SFML_BIN_PATH "${SOURCE_DIR}/bin")
-link_directories(${SOURCE_DIR}/lib)
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll" "Release")
+FetchContent_MakeAvailable(sfml)
+
+list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
+# set(SFML_STATIC_LIBRARIES TRUE)
+FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
+
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-graphics-d-2.dll" "Debug")
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-graphics-2.dll" "Release")
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-window-d-2.dll" "Debug")
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-window-2.dll" "Release")
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-system-d-2.dll" "Debug")
+casparcg_add_runtime_dependency("${sfml_SOURCE_DIR}/bin/sfml-system-2.dll" "Release")
 
 #ZLIB
 casparcg_add_external_project(zlib)
@@ -219,7 +218,6 @@ set(TEMPLATE_HOST_PATH "${SOURCE_DIR}")
 set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
-message("TEST ${EXTERNAL_CMAKE_ARGS}")
 # CEF
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)

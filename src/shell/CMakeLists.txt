@@ -63,12 +63,6 @@ if (MSVC)
 		openal32.lib
 		debug zlibstaticd.lib
 		optimized zlibstatic.lib
-		debug sfml-graphics-d.lib
-		debug sfml-window-d.lib
-		debug sfml-system-d.lib
-		optimized sfml-graphics.lib
-		optimized sfml-window.lib
-		optimized sfml-system.lib
 		
 		avformat.lib
 		avcodec.lib
