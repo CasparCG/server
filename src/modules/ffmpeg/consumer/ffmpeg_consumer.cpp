@@ -74,6 +74,7 @@ extern "C" {
 #include <tbb/parallel_invoke.h>
 
 #include <memory>
+#include <optional>
 #include <thread>
 
 namespace caspar { namespace ffmpeg {
