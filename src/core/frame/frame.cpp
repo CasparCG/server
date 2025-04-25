@@ -179,9 +179,20 @@ std::size_t                      const_frame::height() const { return impl_->hei
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const void*                      const_frame::stream_tag() const { return impl_->tag_; }
 const_frame                      const_frame::with_tag(const void* new_tag) const {
-    const_frame copy(*this);
-    copy.impl_->tag_ = new_tag;
-    return copy;
+    if (!impl_) {
+        return const_frame();
+    }
+    
+    std::vector<array<const std::uint8_t>> image_data_copy = impl_->image_data_;
+    auto new_frame = const_frame(std::move(image_data_copy), impl_->audio_data_, impl_->desc_);
+    
+    new_frame.impl_->tag_ = new_tag;
+    new_frame.impl_->geometry_ = impl_->geometry_;
+    if (impl_->opaque_.has_value()) {
+        new_frame.impl_->opaque_ = impl_->opaque_;
+    }
+    
+    return new_frame;
 }
 const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
 const std::any&                  const_frame::opaque() const { return impl_->opaque_; }
