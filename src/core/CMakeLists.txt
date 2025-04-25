@@ -99,4 +99,8 @@ source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 
-target_link_libraries(core common)
+target_link_libraries(
+	core
+	${SFML_LIBRARIES}
+	common
+)
