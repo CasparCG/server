@@ -103,6 +103,8 @@ struct audio_mixer::impl
         auto mixed = std::vector<double>(size_t(nb_samples) * channels, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
+        
+        std::vector<int32_t> silence_buffer(channels, 0);
 
         for (auto& item : items) {
             auto ptr       = item.samples.data();
@@ -123,9 +125,8 @@ struct audio_mixer::impl
                     // Covers the startup case where there may be a cadence mismatch
                     // The sample of silence will be output before any valid audio data from the source
                     last_size = channels;
-                    std::vector<int32_t> buf(last_size);
-                    std::memset(buf.data(), 0, last_size * sizeof(int32_t));
-                    last_ptr = buf.data();
+                    std::memset(silence_buffer.data(), 0, channels * sizeof(int32_t));
+                    last_ptr = silence_buffer.data();
                 }
             }
 
