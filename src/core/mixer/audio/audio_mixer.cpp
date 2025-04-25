@@ -35,6 +35,7 @@
 #include <atomic>
 #include <stack>
 #include <vector>
+#include <map>
 
 namespace caspar { namespace core {
 
@@ -55,6 +56,7 @@ struct audio_mixer::impl
     std::stack<core::audio_transform>           transform_stack_;
     std::vector<audio_item>                     items_;
     std::map<const void*, std::vector<int32_t>> audio_streams_;
+    std::map<const void*, double>               previous_volumes_;
     video_format_desc                           format_desc_;
     std::atomic<float>                          master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph>         graph_;
@@ -93,6 +95,7 @@ struct audio_mixer::impl
     {
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
+            previous_volumes_.clear();
             format_desc_ = format_desc;
         }
 
@@ -103,11 +106,24 @@ struct audio_mixer::impl
         auto mixed = std::vector<double>(size_t(nb_samples) * channels, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
+        std::map<const void*, double> next_volumes;
 
         for (auto& item : items) {
             auto ptr       = item.samples.data();
             auto item_size = item.samples.size();
             auto dst_size  = result.size();
+            auto volume    = item.transform.volume;
+            auto immediate = item.transform.immediate_volume;
+            auto tag       = item.tag;
+            
+            next_volumes[tag] = volume;
+            
+            double prev_volume = volume;
+            if (tag && previous_volumes_.count(tag) > 0) {
+                prev_volume = previous_volumes_[tag];
+            }
+
+            size_t samples_per_frame = dst_size / channels;
 
             size_t last_size = 0;
             const int32_t* last_ptr = nullptr;
@@ -130,14 +146,27 @@ struct audio_mixer::impl
             }
 
             for (auto n = 0; n < dst_size; ++n) {
+                double sample_value = 0.0;
+                
                 if (last_ptr && n < last_size) {
-                    mixed[n] = static_cast<double>(last_ptr[n]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
-                    mixed[n] = static_cast<double>(ptr[n - last_size]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[n - last_size]);
                 } else {
                     auto offset = int(item_size) - (channels - (n % channels));
-                    mixed[n]    = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[offset]);
                 }
+                
+                double applied_volume = volume;
+                
+                if (!immediate && std::abs(prev_volume - volume) > 0.001) {
+                    size_t sample_index = n / channels;
+                    double position = static_cast<double>(sample_index) / static_cast<double>(samples_per_frame);
+                    
+                    applied_volume = prev_volume + (volume - prev_volume) * position;
+                }
+                
+                mixed[n] += sample_value * applied_volume;
             }
 
             if (has_variable_cadence && item.tag) {
@@ -150,7 +179,9 @@ struct audio_mixer::impl
                     next_audio_streams[item.tag] = std::vector<int32_t>();
             }
         }
-
+        
+        previous_volumes_ = std::move(next_volumes);
+        
         audio_streams_ = std::move(next_audio_streams);
 
         auto master_volume = master_volume_.load();

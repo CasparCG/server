@@ -37,6 +37,9 @@ enum class transition_type
     push,
     slide,
     wipe,
+    fadecut,
+    cutfade,
+    vfade,
     count
 };
 

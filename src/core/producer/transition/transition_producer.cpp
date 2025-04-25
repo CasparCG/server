@@ -94,7 +94,31 @@ class transition_producer : public frame_producer
         return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : core::frame_producer::empty();
     }
 
-    [[nodiscard]] std::optional<int64_t> auto_play_delta() const override { return info_.duration; }
+    [[nodiscard]] std::optional<int64_t> auto_play_delta() const override 
+    {
+        // Return how many frames before the end of the source clip to start the transition
+        // to ensure the last frame of source is visible before the transition completes
+        
+        switch(info_.type) {
+            case transition_type::cut:
+                // CUT: Source is immediately replaced, so need full duration
+                return info_.duration;
+                
+            case transition_type::cutfade:
+                // CUTFADE: Source is removed on first frame, so no need for extra frames
+                return 0;
+                
+            case transition_type::vfade:
+                // VFADE: Source fades out by the midpoint
+                // Need to show last source frame one frame before midpoint
+                return static_cast<int64_t>(std::floor(info_.duration / 2.0)) - 1;
+
+            default:
+                // For all other transitions, need to show
+                //last source frame one frame before end of transition
+                return info_.duration > 0 ? info_.duration - 1 : 0;
+        }
+    }
 
     void update_state()
     {
@@ -113,6 +137,12 @@ class transition_producer : public frame_producer
                     return "push";
                 case transition_type::cut:
                     return "cut";
+                case transition_type::fadecut:
+                    return "fadecut";
+                case transition_type::cutfade:
+                    return "cutfade";
+                case transition_type::vfade:
+                    return "vfade";
                 default:
                     return "n/a";
             }
@@ -125,31 +155,43 @@ class transition_producer : public frame_producer
 
         update_is_ready(field);
 
+        // If destination is not ready, always use source (don't start any transition)
         if (!dst_is_ready_) {
             return src_producer_->receive(field, nb_samples);
         }
 
+        // Get destination frame
         auto dst = dst_producer_->receive(field, nb_samples);
         if (!dst) {
             dst = dst_producer_->last_frame(field);
         }
 
+        // Get source frame
         auto src = src_producer_->receive(field, nb_samples);
         if (!src) {
             src = src_producer_->last_frame(field);
         }
 
+        // If no destination frame is available, use source
         if (!dst) {
             return src;
         }
 
+        // If transition is complete, return destination
         if (current_frame_ >= info_.duration) {
             return dst;
         }
 
-        current_frame_ += 1;
+        // For CUT transitions, immediately complete
+        if (info_.type == transition_type::cut) {
+            current_frame_ = info_.duration; // Force transition to complete
+            return dst;
+        }
 
-        return compose(dst, src);
+        // For all other cases, compose the frame and progress the transition
+        auto result = compose(dst, src);
+        current_frame_++;
+        return result;
     }
 
     [[nodiscard]] uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
@@ -163,7 +205,7 @@ class transition_producer : public frame_producer
 
     [[nodiscard]] std::wstring name() const override { return L"transition"; }
 
-    std::future<std::wstring> call(const std::vector<std::wstring>& params) override
+    [[nodiscard]] std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
         return dst_producer_->call(params);
     }
@@ -178,24 +220,133 @@ class transition_producer : public frame_producer
         draw_frame dst_frame = draw_frame::push(std::move(dst_frame0));
         draw_frame src_frame = draw_frame::push(std::move(src_frame0));
 
-        const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration));
-
+        // Calculate delta - will naturally be 1.0 at the final frame (when current_frame_ == info_.duration - 1)
+        const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
         const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
 
+        // Set default audio volumes for both frames
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
 
-        if (info_.type == transition_type::mix) {
+        // Apply transition-specific transforms
+        if (info_.type == transition_type::cutfade) {
+            // CUTFADE: Fade in destination from black
+            double mix;
+            
+            if (current_frame_ == 0) {
+                // First frame is black
+                mix = 0.0;
+            } else {
+                // Linear progression between frames 1 and (duration-1)
+                // Will naturally reach 1.0 at final frame
+                mix = static_cast<double>(current_frame_) / static_cast<double>(info_.duration - 1);
+            }
+            
+            if (info_.duration <= 1) {
+                mix = 1.0;
+            }
+            
+            dst_frame.transform().image_transform.opacity = mix;
+            dst_frame.transform().audio_transform.volume = mix;
+            dst_frame.transform().audio_transform.immediate_volume = current_frame_ == 0;
+            
+            return dst_frame;
+        } 
+        else if (info_.type == transition_type::fadecut) {
+            // FADECUT: Fade out source to zero opacity by the final frame,
+            // then the next frame will be the unmodified destination
+            
+            // Calculate fade out for source - linear fade from 1.0 to 0.0
+            double opacity = 0.0;
+            if (info_.duration > 1) {
+                // Linear fade from 1.0 to 0.0 over the entire transition
+                opacity = 1.0 - delta;
+            }
+            
+            src_frame.transform().image_transform.opacity = opacity;
+            src_frame.transform().audio_transform.volume = opacity;
+            src_frame.transform().audio_transform.immediate_volume = current_frame_ == 0;
+            
+            return src_frame;
+        }
+        else if (info_.type == transition_type::vfade) {
+            // VFADE: Fade out source for first half, fade in destination for second half
+            // At midpoint, both source and destination have zero opacity
+            
+            // For even-duration transitions, ensure we have black frames in the middle
+            bool is_even_duration = (info_.duration % 2 == 0);
+            
+            // Calculate custom thresholds for even durations to create two black frames
+            if (is_even_duration) {
+                // For even durations, create two black frames in the middle
+                // For a 10-frame transition, frames 4 and 5 would be black
+                double half_step = 0.5 / (info_.duration - 1);
+                
+                // First middle frame (last frame of first half)
+                if (delta >= (0.5 - half_step) && delta < 0.5) {
+                    src_frame.transform().image_transform.opacity = 0.0;
+                    src_frame.transform().audio_transform.volume = 0.0;
+                    return src_frame;
+                }
+                
+                // Second middle frame (first frame of second half)
+                if (delta >= 0.5 && delta < (0.5 + half_step)) {
+                    dst_frame.transform().image_transform.opacity = 0.0;
+                    dst_frame.transform().audio_transform.volume = 0.0;
+                    dst_frame.transform().audio_transform.immediate_volume = true;
+                    return dst_frame;
+                }
+            }
+            
+            // Exactly at midpoint for odd durations (delta = 0.5)
+            if (!is_even_duration && delta == 0.5) {
+                // Set dst frame with zero opacity for the midpoint
+                dst_frame.transform().image_transform.opacity = 0.0;
+                dst_frame.transform().audio_transform.volume = 0.0;
+                dst_frame.transform().audio_transform.immediate_volume = true;
+                return dst_frame;
+            }
+            // First half: fade out source (when delta < 0.5)
+            else if (delta < 0.5) {
+                // Map 0.0-0.5 to 1.0-0.0 for fade out
+                double fade_out = 1.0 - (delta * 2.0);
+                
+                src_frame.transform().image_transform.opacity = fade_out;
+                src_frame.transform().audio_transform.volume = fade_out;
+                return src_frame;
+            }
+            // Second half: fade in destination (when delta > 0.5)
+            else {
+                // Map 0.5-1.0 to 0.0-1.0 for fade in
+                double fade_in = (delta - 0.5) * 2.0;
+                
+                dst_frame.transform().image_transform.opacity = fade_in;
+                dst_frame.transform().audio_transform.volume = fade_in;
+                dst_frame.transform().audio_transform.immediate_volume = 
+                    is_even_duration ? 
+                    (delta < 0.5 + (1.0 / (info_.duration - 1))) : 
+                    (delta <= 0.5 + (1.0 / (info_.duration - 1)));
+                
+                return dst_frame;
+            }
+        }
+        else if (info_.type == transition_type::mix) {
             dst_frame.transform().image_transform.opacity = delta;
             dst_frame.transform().image_transform.is_mix  = true;
             src_frame.transform().image_transform.opacity = 1.0 - delta;
             src_frame.transform().image_transform.is_mix  = true;
-        } else if (info_.type == transition_type::slide) {
+        } 
+        else if (info_.type == transition_type::slide) {
+            // Math naturally gives translation 0 at final frame
             dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
-        } else if (info_.type == transition_type::push) {
+        } 
+        else if (info_.type == transition_type::push) {
+            // Math naturally gives correct positions at final frame
             dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
             src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * dir;
-        } else if (info_.type == transition_type::wipe) {
+        } 
+        else if (info_.type == transition_type::wipe) {
+            // Math naturally gives full reveal at final frame
             if (info_.direction == transition_direction::from_right) {
                 dst_frame.transform().image_transform.clip_scale[0] = delta;
             } else {
@@ -219,8 +370,9 @@ spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr
 
 bool try_match_transition(const std::wstring& message, transition_info& transitionInfo)
 {
+    // Using word boundaries to ensure we match complete transition names
     static const boost::wregex expr(
-        LR"(.*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\s*(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
+        LR"(.*\b(?<TRANSITION>VFADE|FADECUT|CUTFADE|CUT|PUSH|SLIDE|WIPE|MIX)\b\s+(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
     boost::wsmatch what;
     if (!boost::regex_match(message, what, expr)) {
         return false;
@@ -246,6 +398,12 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
         transitionInfo.type = transition_type::slide;
     else if (transition == L"WIPE")
         transitionInfo.type = transition_type::wipe;
+    else if (transition == L"FADECUT")
+        transitionInfo.type = transition_type::fadecut;
+    else if (transition == L"CUTFADE")
+        transitionInfo.type = transition_type::cutfade;
+    else if (transition == L"VFADE")
+        transitionInfo.type = transition_type::vfade;
 
     if (direction == L"FROMLEFT" || direction == L"RIGHT")
         transitionInfo.direction = transition_direction::from_left;
