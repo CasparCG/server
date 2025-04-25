@@ -28,7 +28,6 @@ casparcg_add_module_project(screen
 	INIT_FUNCTION "screen::init"
 )
 target_include_directories(screen PRIVATE
-    ../..
     ${CMAKE_CURRENT_BINARY_DIR}
     ${GLEW_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}

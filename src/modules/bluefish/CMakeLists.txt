@@ -20,7 +20,6 @@ casparcg_add_module_project(bluefish
 )
 target_include_directories(bluefish PRIVATE
     ..
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(bluefish PRIVATE "StdAfx.h")

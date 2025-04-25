@@ -49,7 +49,7 @@ target_link_libraries(casparcg
 		core
 		protocol
 
-		"${CASPARCG_MODULE_PROJECTS}"
+		"${CASPARCG_MODULE_TARGETS}"
 
 		TBB::tbb
 		TBB::tbbmalloc

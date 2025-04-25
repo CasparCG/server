@@ -59,7 +59,6 @@ casparcg_add_module_project(decklink
 )
 target_include_directories(decklink PRIVATE
     ..
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(decklink PRIVATE "StdAfx.h")

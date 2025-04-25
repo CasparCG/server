@@ -14,7 +14,6 @@ casparcg_add_module_project(oal
 	INIT_FUNCTION "oal::init"
 )
 target_include_directories(oal PRIVATE
-    ../..
     ${FFMPEG_INCLUDE_PATH}
 )
 target_link_libraries(oal PRIVATE OpenAL::OpenAL)

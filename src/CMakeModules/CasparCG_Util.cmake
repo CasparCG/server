@@ -5,9 +5,9 @@ FUNCTION (casparcg_add_external_project NAME)
 ENDFUNCTION()
 
 # Mark a project as depending on all of the ExternalProjects, to ensure build order
-FUNCTION(casparcg_add_build_dependencies PROJECT)
+FUNCTION(casparcg_add_build_dependencies TARGET)
 	if (CASPARCG_EXTERNAL_PROJECTS)
-		ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+		ADD_DEPENDENCIES (${TARGET} ${CASPARCG_EXTERNAL_PROJECTS})
 	endif()
 ENDFUNCTION()
 
@@ -15,10 +15,10 @@ SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_INIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_UNINIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL "")
-SET (CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
+SET (CASPARCG_MODULE_TARGETS "" CACHE INTERNAL "")
 
 # CasparCG version of CMake `add_library`
-FUNCTION (casparcg_add_library PROJECT)
+FUNCTION (casparcg_add_library TARGET)
 	cmake_parse_arguments(
         PARSED_ARGS # prefix of output variables
         "" # list of names of the boolean arguments (only defined ones will be true)
@@ -27,28 +27,28 @@ FUNCTION (casparcg_add_library PROJECT)
         ${ARGN} # arguments of the function to parse, here we take the all original ones
     )
 
-	if(NOT PROJECT)
-        message(FATAL_ERROR "You must provide a project name")
+	if(NOT TARGET)
+        message(FATAL_ERROR "You must provide a target name")
 	endif()
 
 	# Setup the library and some default config
-	ADD_LIBRARY (${PROJECT} ${PARSED_ARGS_SOURCES})
-	target_compile_features (${PROJECT} PRIVATE cxx_std_17)
-	target_include_directories(${PROJECT} SYSTEM PRIVATE
+	ADD_LIBRARY (${TARGET} ${PARSED_ARGS_SOURCES})
+	target_compile_features (${TARGET} PRIVATE cxx_std_17)
+	target_include_directories(${TARGET} SYSTEM PRIVATE
 		${BOOST_INCLUDE_PATH}
 	)
-	target_link_libraries(${PROJECT} PRIVATE TBB::tbb)
+	target_link_libraries(${TARGET} PRIVATE TBB::tbb)
 
 	if (CASPARCG_EXTERNAL_PROJECTS)
 		# Setup dependency on ExternalProject
-		ADD_DEPENDENCIES (${PROJECT} ${CASPARCG_EXTERNAL_PROJECTS})
+		ADD_DEPENDENCIES (${TARGET} ${CASPARCG_EXTERNAL_PROJECTS})
 	endif()
 
 ENDFUNCTION ()
 
 # CasparCG version of CMake `add_library` specifically for modules
-SET (CASPARCG_MODULE_PROJECTS "" CACHE INTERNAL "")
-FUNCTION (casparcg_add_module_project PROJECT)
+SET (CASPARCG_MODULE_TARGETS "" CACHE INTERNAL "")
+FUNCTION (casparcg_add_module_project TARGET)
 	cmake_parse_arguments(
         PARSED_ARGS # prefix of output variables
         "" # list of names of the boolean arguments (only defined ones will be true)
@@ -57,13 +57,13 @@ FUNCTION (casparcg_add_module_project PROJECT)
         ${ARGN} # arguments of the function to parse, here we take the all original ones
     )
 
-	# Use project if name is missing
+	# Use target if name is missing
 	if (NOT PARSED_ARGS_NAME)
-		set (PARSED_ARGS_NAME ${PROJECT})
+		set (PARSED_ARGS_NAME ${TARGET})
 	endif()
 	# Use default path if header not defined
 	if (NOT PARSED_ARGS_HEADER_FILE)
-		set (PARSED_ARGS_HEADER_FILE "modules/${PROJECT}/${PROJECT}.h")
+		set (PARSED_ARGS_HEADER_FILE "modules/${TARGET}/${TARGET}.h")
 	endif()
 	# Use default init name if nto d
 	if (NOT PARSED_ARGS_INIT_FUNCTION)
@@ -71,11 +71,15 @@ FUNCTION (casparcg_add_module_project PROJECT)
 	endif()
 
 	# Setup the library and some default config
-	casparcg_add_library (${PROJECT} SOURCES ${PARSED_ARGS_SOURCES})
-	target_link_libraries(${PROJECT} PRIVATE common core)
+	casparcg_add_library (${TARGET} SOURCES ${PARSED_ARGS_SOURCES})
+	target_link_libraries(${TARGET} PRIVATE common core)
+	target_include_directories(${TARGET} PRIVATE
+			# TODO: This should be replaced by the linked libraries eventually
+			../..
+	)
 
 	# Setup linker and code loading
-	SET (CASPARCG_MODULE_PROJECTS "${CASPARCG_MODULE_PROJECTS}" "${PROJECT}" CACHE INTERNAL "")
+	SET (CASPARCG_MODULE_TARGETS "${CASPARCG_MODULE_TARGETS}" "${TARGET}" CACHE INTERNAL "")
 	SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
 		"#include <${PARSED_ARGS_HEADER_FILE}>"
 		CACHE INTERNAL ""

@@ -29,7 +29,6 @@ casparcg_add_module_project(image
 )
 target_include_directories(image PRIVATE
 	..
-    ../..
 	${FFMPEG_INCLUDE_PATH}
     )
 
