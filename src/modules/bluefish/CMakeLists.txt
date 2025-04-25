@@ -32,4 +32,4 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources\\interop interop/*)
 
-target_link_libraries(bluefish ffmpeg)
+target_link_libraries(bluefish PRIVATE ffmpeg)

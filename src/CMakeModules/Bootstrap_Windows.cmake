@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
+include(FetchContent)
 
 if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
@@ -31,6 +32,17 @@ function(casparcg_add_runtime_dependency_dir FILE_TO_COPY)
 	endif()
 	if ("${ARGV1}" STREQUAL "Debug" OR NOT ARGV1)
 		set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG_DIRS "${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG_DIRS}" "${FILE_TO_COPY}" CACHE INTERNAL "")
+	endif()
+endfunction()
+function(casparcg_add_runtime_dependency_from_target TARGET)
+	get_target_property(_runtime_lib_name ${TARGET} IMPORTED_LOCATION_RELEASE)
+	if (NOT "${_runtime_lib_name}" STREQUAL "")
+		set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "${CASPARCG_RUNTIME_DEPENDENCIES_RELEASE}" "${_runtime_lib_name}" CACHE INTERNAL "")
+	endif()
+	
+	get_target_property(_runtime_lib_name ${TARGET} IMPORTED_LOCATION_DEBUG)
+	if (NOT "${_runtime_lib_name}" STREQUAL "")
+		set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG "${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG}" "${_runtime_lib_name}" CACHE INTERNAL "")
 	endif()
 endfunction()
 
@@ -65,7 +77,7 @@ else ()
 		--with-libraries=regex
 		--with-libraries=system
 		--with-libraries=thread
-	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
 	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
@@ -107,25 +119,19 @@ if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
 endif ()
 
 # TBB
-casparcg_add_external_project(tbb)
-ExternalProject_Add(tbb
+FetchContent_Declare(tbb
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
 	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(tbb SOURCE_DIR)
-set(TBB_INCLUDE_PATH "${SOURCE_DIR}/include")
-set(TBB_BIN_PATH "${SOURCE_DIR}/redist/intel64/vc14")
-link_directories("${SOURCE_DIR}/lib/intel64/vc14")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll" "Release")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll" "Debug")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll" "Release")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll" "Debug")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll" "Release")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll" "Debug")
+FetchContent_MakeAvailable(tbb)
+
+list(APPEND CMAKE_PREFIX_PATH ${tbb_SOURCE_DIR}/lib/cmake/tbb)
+find_package(tbb REQUIRED)
+
+casparcg_add_runtime_dependency_from_target(TBB::tbb)
+casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc)
+casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc_proxy)
 
 # GLEW
 casparcg_add_external_project(glew)
@@ -145,25 +151,20 @@ add_definitions( -DGLEW_NO_GLU )
 casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 
 # SFML
-casparcg_add_external_project(sfml)
-ExternalProject_Add(sfml
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.4.2-windows-vc14-64-bit.zip
-	URL_HASH MD5=8a2f747335fa21a7a232976daa9031ac
+FetchContent_Declare(sfml
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.6.2-windows-vc17-64-bit.zip
+	URL_HASH MD5=dee0602d6f94d1843eef4d7568d2c23d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(sfml SOURCE_DIR)
-set(SFML_INCLUDE_PATH ${SOURCE_DIR}/include)
-set(SFML_BIN_PATH "${SOURCE_DIR}/bin")
-link_directories(${SOURCE_DIR}/lib)
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll" "Release")
+FetchContent_MakeAvailable(sfml)
+
+list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
+# set(SFML_STATIC_LIBRARIES TRUE)
+find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+
+casparcg_add_runtime_dependency_from_target(sfml-graphics)
+casparcg_add_runtime_dependency_from_target(sfml-window)
+casparcg_add_runtime_dependency_from_target(sfml-system)
 
 #ZLIB
 casparcg_add_external_project(zlib)
@@ -219,7 +220,6 @@ set(TEMPLATE_HOST_PATH "${SOURCE_DIR}")
 set(LIBERATION_FONTS_BIN_PATH "${PROJECT_SOURCE_DIR}/shell/liberation-fonts")
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Regular.ttf")
 
-message("TEST ${EXTERNAL_CMAKE_ARGS}")
 # CEF
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
@@ -256,7 +256,7 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_200_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
-	
+
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")

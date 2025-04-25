@@ -39,13 +39,7 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-if(MSVC)
-	target_link_libraries(image
-		ffmpeg
-	)
-else()
-	target_link_libraries(image
-		ffmpeg
-	)
-endif()
+target_link_libraries(image PRIVATE
+	ffmpeg
+)
 

@@ -31,12 +31,10 @@ target_include_directories(screen PRIVATE
     ../..
     ${CMAKE_CURRENT_BINARY_DIR}
     ${GLEW_INCLUDE_PATH}
-    ${SFML_INCLUDE_PATH}
     ${FFMPEG_INCLUDE_PATH}
-    )
+)
+target_link_libraries(screen PRIVATE accelerator ffmpeg sfml-window)
 
 set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
-
-target_link_libraries(screen accelerator ffmpeg)

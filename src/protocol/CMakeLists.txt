@@ -73,4 +73,4 @@ source_group(sources\\osc osc/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(protocol common core)
+target_link_libraries(protocol PRIVATE common core)

@@ -23,7 +23,7 @@ target_include_directories(html PRIVATE
     ../..
     ${CEF_INCLUDE_PATH}
     )
-target_link_libraries(html ${CEF_LIB})
+target_link_libraries(html PRIVATE ${CEF_LIB})
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
