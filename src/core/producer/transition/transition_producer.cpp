@@ -199,16 +199,16 @@ class transition_producer : public frame_producer
 
     [[nodiscard]] draw_frame compose(const core::video_field field, int nb_samples) const
     {
-        // Helper lambdas to get frames
+        // Helper lambdas to get wrapped frames
         auto get_src_frame = [&]() {
-            auto f = draw_frame::push(src_producer_->receive(field, nb_samples));
+            auto f = src_producer_->receive(field, nb_samples);
             if (!f) f = src_producer_->last_frame(field);
-            return f;
+            return draw_frame::push(std::move(f));
         };
         auto get_dst_frame = [&]() {
-            auto f = draw_frame::push(dst_producer_->receive(field, nb_samples));
+            auto f = dst_producer_->receive(field, nb_samples);
             if (!f) f = dst_producer_->last_frame(field);
-            return f;
+            return draw_frame::push(std::move(f));
         };
 
         if (info_.type == transition_type::cut) {
@@ -269,10 +269,8 @@ class transition_producer : public frame_producer
             }
         }
         // For all other transitions, we need both frames
-        auto src = get_src_frame();
-        auto dst = get_dst_frame();
-        draw_frame dst_frame = draw_frame::push(std::move(dst));
-        draw_frame src_frame = draw_frame::push(std::move(src));
+        auto src_frame = get_src_frame();
+        auto dst_frame = get_dst_frame();
         const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
         const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
         src_frame.transform().audio_transform.volume = 1.0 - delta;
