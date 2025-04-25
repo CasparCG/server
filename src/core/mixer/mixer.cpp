@@ -92,7 +92,7 @@ struct mixer::impl
                                         pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
                                     std::vector<array<const uint8_t>> image_data;
                                     image_data.emplace_back(std::move(image.get()));
-                                    return const_frame(std::move(image_data), std::move(audio), desc);
+                                    return const_frame(tag, std::move(image_data), std::move(audio), desc);
                                 }));
 
         if (buffer_.size() <= format_desc.field_count) {
