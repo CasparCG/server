@@ -93,33 +93,24 @@ struct const_frame::impl
     std::vector<array<const std::uint8_t>> image_data_;
     array<const std::int32_t>              audio_data_;
     core::pixel_format_desc                desc_     = core::pixel_format_desc(pixel_format::invalid);
-    const void*                            tag_ = nullptr;
+    const void*                            tag_;
     frame_geometry                         geometry_ = frame_geometry::get_default();
     std::any                               opaque_;
 
-    impl(std::vector<array<const std::uint8_t>> image_data,
+    impl(const void*                            tag,
+         std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
          const core::pixel_format_desc&         desc)
         : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
+        , tag_(tag)
     {
         if (desc_.planes.size() != image_data_.size()) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
     }
 
-    impl(std::vector<array<std::uint8_t>>&& image_data,
-         array<const std::int32_t>          audio_data,
-         const core::pixel_format_desc&     desc)
-        : image_data_(std::make_move_iterator(image_data.begin()), std::make_move_iterator(image_data.end()))
-        , audio_data_(std::move(audio_data))
-        , desc_(desc)
-    {
-        if (desc_.planes.size() != image_data_.size()) {
-            CASPAR_THROW_EXCEPTION(invalid_argument());
-        }
-    }
 
     impl(mutable_frame&& other)
         : image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
@@ -147,10 +138,11 @@ struct const_frame::impl
 };
 
 const_frame::const_frame() {}
-const_frame::const_frame(std::vector<array<const std::uint8_t>> image_data,
+const_frame::const_frame(const void*                            tag,
+                         std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const core::pixel_format_desc&         desc)
-    : impl_(new impl(std::move(image_data), std::move(audio_data), desc))
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
 {
 }
 const_frame::const_frame(mutable_frame&& other)
@@ -184,9 +176,8 @@ const_frame                      const_frame::with_tag(const void* new_tag) cons
     }
     
     std::vector<array<const std::uint8_t>> image_data_copy = impl_->image_data_;
-    auto new_frame = const_frame(std::move(image_data_copy), impl_->audio_data_, impl_->desc_);
+    auto new_frame = const_frame(new_tag, std::move(image_data_copy), impl_->audio_data_, impl_->desc_);
     
-    new_frame.impl_->tag_ = new_tag;
     new_frame.impl_->geometry_ = impl_->geometry_;
     if (impl_->opaque_.has_value()) {
         new_frame.impl_->opaque_ = impl_->opaque_;
