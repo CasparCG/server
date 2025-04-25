@@ -57,12 +57,12 @@ if (MSVC)
 		Ws2_32.lib
 		OpenGL32.lib
 		glew32.lib
-		openal32.lib
 		debug zlibstaticd.lib
 		optimized zlibstatic.lib
-		
+
+		OpenAL::OpenAL
 		optimized TBB::tbbmalloc_proxy
-		
+
 		avformat.lib
 		avcodec.lib
 		avutil.lib
@@ -98,7 +98,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) == Debug (
 				    echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
@@ -110,7 +110,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) NEQ Debug (
 				    echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
@@ -123,7 +123,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) == Debug (
 				    echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
@@ -135,7 +135,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) NEQ Debug (
 				    echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
@@ -148,7 +148,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
@@ -159,7 +159,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"
@@ -170,7 +170,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
@@ -181,7 +181,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"

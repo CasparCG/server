@@ -37,6 +37,13 @@ find_package(OpenAL REQUIRED)
 find_package(SFML 2 COMPONENTS graphics window REQUIRED)
 find_package(X11 REQUIRED)
 
+# support for Ubuntu 22.04
+if (NOT TARGET OpenAL::OpenAL)
+    add_library(OpenAL::OpenAL INTERFACE IMPORTED)
+    target_include_directories(OpenAL::OpenAL INTERFACE ${OPENAL_INCLUDE_DIR})
+    target_link_libraries(OpenAL::OpenAL INTERFACE ${OPENAL_LIBRARY})
+endif()
+
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
         set(CEF_LIB_PATH "/usr/lib/casparcg-cef-131")

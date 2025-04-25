@@ -39,7 +39,7 @@ function(casparcg_add_runtime_dependency_from_target TARGET)
 	if (NOT "${_runtime_lib_name}" STREQUAL "")
 		set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "${CASPARCG_RUNTIME_DEPENDENCIES_RELEASE}" "${_runtime_lib_name}" CACHE INTERNAL "")
 	endif()
-	
+
 	get_target_property(_runtime_lib_name ${TARGET} IMPORTED_LOCATION_DEBUG)
 	if (NOT "${_runtime_lib_name}" STREQUAL "")
 		set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG "${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG}" "${_runtime_lib_name}" CACHE INTERNAL "")
@@ -185,21 +185,20 @@ else()
 	link_directories(${BINARY_DIR})
 endif()
 
-# OPENAL
-casparcg_add_external_project(openal)
-ExternalProject_Add(openal
+# OpenAL
+FetchContent_Declare(openal
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/openal/openal-soft-1.19.1-bin.zip
 	URL_HASH MD5=b78ef1ba26f7108e763f92df6bbc3fa5
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	BUILD_IN_SOURCE 1
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ${CMAKE_COMMAND} -E copy bin/Win64/soft_oal.dll bin/Win64/OpenAL32.dll
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(openal SOURCE_DIR)
-set(OPENAL_INCLUDE_PATH "${SOURCE_DIR}/include")
-link_directories("${SOURCE_DIR}/libs/Win64")
-casparcg_add_runtime_dependency("${SOURCE_DIR}/bin/Win64/OpenAL32.dll")
+FetchContent_MakeAvailable(openal)
+file(COPY_FILE ${openal_SOURCE_DIR}/bin/Win64/soft_oal.dll ${openal_SOURCE_DIR}/bin/Win64/OpenAL32.dll)
+
+add_library(OpenAL::OpenAL INTERFACE IMPORTED)
+target_include_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/include)
+target_link_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/libs/Win64)
+target_link_libraries(OpenAL::OpenAL INTERFACE OpenAL32)
+casparcg_add_runtime_dependency("${openal_SOURCE_DIR}/bin/Win64/OpenAL32.dll")
 
 # flash template host
 casparcg_add_external_project(flashtemplatehost)
