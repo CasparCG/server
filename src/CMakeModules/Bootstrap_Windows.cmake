@@ -134,21 +134,18 @@ casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc)
 casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc_proxy)
 
 # GLEW
-casparcg_add_external_project(glew)
-ExternalProject_Add(glew
+FetchContent_Declare(glew
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/glew/glew-2.2.0-win32.zip
 	URL_HASH MD5=1feddfe8696c192fa46a0df8eac7d4bf
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(glew SOURCE_DIR)
-set(GLEW_INCLUDE_PATH ${SOURCE_DIR}/include)
-set(GLEW_BIN_PATH ${SOURCE_DIR}/bin/Release/x64)
-link_directories(${SOURCE_DIR}/lib/Release/x64)
-add_definitions( -DGLEW_NO_GLU )
-casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
+FetchContent_MakeAvailable(glew)
+
+add_library(GLEW::glew INTERFACE IMPORTED)
+target_include_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/include)
+target_link_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/lib/Release/x64)
+target_link_libraries(GLEW::glew INTERFACE glew32)
+casparcg_add_runtime_dependency("${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
 
 # SFML
 FetchContent_Declare(sfml

@@ -48,6 +48,7 @@ target_link_libraries(casparcg
 
 		TBB::tbb
 		TBB::tbbmalloc
+		GLEW::glew
 		"${CASPARCG_MODULE_PROJECTS}"
 )
 
@@ -56,7 +57,6 @@ if (MSVC)
 		Winmm.lib
 		Ws2_32.lib
 		OpenGL32.lib
-		glew32.lib
 		debug zlibstaticd.lib
 		optimized zlibstatic.lib
 
@@ -74,7 +74,6 @@ if (MSVC)
 else ()
 	target_link_libraries(casparcg
 		${Boost_LIBRARIES}
-		${GLEW_LIBRARIES}
 		OpenGL::GL
 		${X11_LIBRARIES}
 		${FFMPEG_LIBRARIES}

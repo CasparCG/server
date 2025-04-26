@@ -61,11 +61,9 @@ set(HEADERS
 )
 
 casparcg_add_library(common SOURCES ${SOURCES} ${HEADERS})
-target_include_directories(common PRIVATE
-    ..
-    ${GLEW_INCLUDE_PATH}
-    )
-target_precompile_headers(common PRIVATE "stdafx.h")
+target_include_directories(common PRIVATE ..)
+target_precompile_headers(common PRIVATE stdafx.h)
+target_link_libraries(common PRIVATE GLEW::glew)
 
 source_group(sources ./*)
 source_group(sources\\gl gl/*)
