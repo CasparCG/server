@@ -113,9 +113,13 @@ casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
 
+get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
 set(EXTERNAL_CMAKE_ARGS "")
-if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+if (is_multi_config)
 	set(EXTERNAL_CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=$<CONFIG>")
+else()
+	set(EXTERNAL_CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}")
 endif ()
 
 # TBB
@@ -179,7 +183,7 @@ ExternalProject_Get_Property(zlib SOURCE_DIR)
 ExternalProject_Get_Property(zlib BINARY_DIR)
 set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
 
-if (CMAKE_GENERATOR MATCHES "Visual Studio")
+if (is_multi_config)
 	link_directories(${BINARY_DIR}/Release)
 else()
 	link_directories(${BINARY_DIR})
@@ -233,23 +237,24 @@ if (ENABLE_HTML)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
     add_library(CEF::CEF INTERFACE IMPORTED)
+	add_dependencies(CEF::CEF cef)
     target_include_directories(CEF::CEF INTERFACE
         "${SOURCE_DIR}"
     )
 
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
 	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
-	target_link_directories(CEF::CEF INTERFACE ${SOURCE_DIR}/Release ${BINARY_DIR}/libcef_dll_wrapper)
 
-	if (CMAKE_GENERATOR MATCHES "Visual Studio")
+	if (is_multi_config)
 	    target_link_libraries(CEF::CEF INTERFACE
-			libcef
-			optimized Release/libcef_dll_wrapper
-			debug Debug/libcef_dll_wrapper)
+			${SOURCE_DIR}/Release/libcef.lib
+			optimized ${BINARY_DIR}/libcef_dll_wrapper/Release/libcef_dll_wrapper.lib
+			debug ${BINARY_DIR}/libcef_dll_wrapper/Debug/libcef_dll_wrapper.lib)
 	else()
-	    target_link_libraries(CEF::CEF INTERFACE
-			libcef
-			libcef_dll_wrapper)
+		link_directories(${SOURCE_DIR}/Release ${BINARY_DIR}/libcef_dll_wrapper)
+		target_link_libraries(CEF::CEF INTERFACE
+			libcef.lib
+			libcef_dll_wrapper.lib)
 	endif()
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
