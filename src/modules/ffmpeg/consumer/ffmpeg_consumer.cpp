@@ -86,6 +86,8 @@ namespace caspar { namespace ffmpeg {
 
 struct Stream
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     std::shared_ptr<AVFilterGraph> graph  = nullptr;
     AVFilterContext*               sink   = nullptr;
     AVFilterContext*               source = nullptr;
@@ -97,13 +99,15 @@ struct Stream
 
     int64_t pts = 0;
 
-    Stream(AVFormatContext*                    oc,
+    Stream(const spl::shared_ptr<core::frame_converter>& frame_converter,
+           AVFormatContext*                    oc,
            std::string                         suffix,
            AVCodecID                           codec_id,
            const core::video_format_desc&      format_desc,
            bool                                realtime,
            common::bit_depth                   depth,
            std::map<std::string, std::string>& options)
+    : frame_converter_(frame_converter)
     {
         std::map<std::string, std::string> stream_options;
 
@@ -377,16 +381,17 @@ struct Stream
         return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
     }
 
-    void send(core::const_frame&                             in_frame,
+    void send(std::optional<core::converted_frame>&          in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
 
-        if (in_frame) {
+        if (in_frame.has_value()) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame = make_av_video_frame(in_frame, format_desc);
+                frame = make_av_video_frame(in_frame.value(), format_desc);
+                if (!frame) FF_RET(AVERROR(EFAULT), "make_av_video_frame");
 
                 {
                     auto frame2                 = alloc_frame();
@@ -427,7 +432,7 @@ struct Stream
                 frame->pts = pts;
                 pts += 1;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
-                frame      = make_av_audio_frame(in_frame, format_desc);
+                frame      = make_av_audio_frame(in_frame.value().frame, format_desc);
                 frame->pts = pts;
                 pts += frame->nb_samples;
             } else {
@@ -468,6 +473,8 @@ struct Stream
 
 struct ffmpeg_consumer : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     core::monitor::state    state_;
     mutable std::mutex      state_mutex_;
     int                     channel_index_ = -1;
@@ -488,8 +495,10 @@ struct ffmpeg_consumer : public core::frame_consumer
     common::bit_depth depth_;
 
   public:
-    ffmpeg_consumer(std::string path, std::string args, bool realtime, common::bit_depth depth)
-        : channel_index_([&] {
+    ffmpeg_consumer(
+    const spl::shared_ptr<core::frame_converter> frame_converter, std::string path, std::string args, bool realtime, common::bit_depth depth)
+        : frame_converter_(frame_converter)
+        , channel_index_([&] {
             boost::crc_16_type result;
             result.process_bytes(path.data(), path.length());
             return result.checksum();
@@ -582,7 +591,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
-                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
+                    video_stream.emplace(frame_converter_, oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
 
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
@@ -592,7 +601,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 std::optional<Stream> audio_stream;
                 if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
-                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, depth_, options);
+                    audio_stream.emplace(frame_converter_,oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, depth_, options);
                 }
 
                 if (!(oc->oformat->flags & AVFMT_NOFILE)) {
@@ -676,16 +685,21 @@ struct ffmpeg_consumer : public core::frame_consumer
                     graph_->set_value("input",
                                       static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
+                    std::optional<core::converted_frame> wrapped_frame;
+                    if (frame)
+                        // TODO - better pixel format
+                        wrapped_frame = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+
                     caspar::timer frame_timer;
                     tbb::parallel_invoke(
                         [&] {
                             if (video_stream) {
-                                video_stream->send(frame, format_desc, packet_cb);
+                                video_stream->send(wrapped_frame, format_desc, packet_cb);
                             }
                         },
                         [&] {
                             if (audio_stream) {
-                                audio_stream->send(frame, format_desc, packet_cb);
+                                audio_stream->send(wrapped_frame, format_desc, packet_cb);
                             }
                         });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
@@ -738,9 +752,9 @@ struct ffmpeg_consumer : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       common::bit_depth                                        depth)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
@@ -751,17 +765,17 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     for (auto n = 2; n < params.size(); ++n) {
         args.emplace_back(u8(params[n]));
     }
-    return spl::make_shared<ffmpeg_consumer>(
+    return spl::make_shared<ffmpeg_consumer>(frame_converter,
         path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"), depth);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               common::bit_depth                                        depth)
 {
-    return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
+    return spl::make_shared<ffmpeg_consumer>(frame_converter, u8(ptree.get<std::wstring>(L"path", L"")),
                                              u8(ptree.get<std::wstring>(L"args", L"")),
                                              ptree.get(L"realtime", false),
                                              depth);

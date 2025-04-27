@@ -60,6 +60,8 @@
 
 #include "consumer_screen_fragment.h"
 #include "consumer_screen_vertex.h"
+#include "core/frame/frame_converter.h"
+
 #include <accelerator/ogl/util/shader.h>
 
 namespace caspar { namespace screen {
@@ -121,6 +123,8 @@ struct frame
 
 struct screen_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
+
     const configuration     config_;
     core::video_format_desc format_desc_;
     int                     channel_index_;
@@ -141,7 +145,7 @@ struct screen_consumer
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       tick_timer_;
 
-    tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
+    tbb::concurrent_bounded_queue<core::converted_frame> frame_buffer_;
 
     std::unique_ptr<accelerator::ogl::shader> shader_;
     GLuint                                    vao_;
@@ -154,8 +158,9 @@ struct screen_consumer
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
-    screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index)
-        : config_(config)
+    screen_consumer(const spl::shared_ptr<core::frame_converter>& frame_converter, const configuration& config, const core::video_format_desc& format_desc, int channel_index)
+        : frame_converter_(frame_converter)
+        , config_(config)
         , format_desc_(format_desc)
         , channel_index_(channel_index)
     {
@@ -366,7 +371,7 @@ struct screen_consumer
 
     void tick()
     {
-        core::const_frame in_frame;
+        auto in_frame = core::converted_frame();
 
         while (!frame_buffer_.try_pop(in_frame) && is_running_) {
             // TODO (fix)
@@ -375,7 +380,7 @@ struct screen_consumer
             }
         }
 
-        if (!in_frame) {
+        if (in_frame.is_empty()) {
             return;
         }
 
@@ -395,7 +400,8 @@ struct screen_consumer
                 }
             }
 
-            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
+            auto pixels = in_frame.pixels.get();
+            std::memcpy(frame.ptr, pixels.begin(), format_desc_.size);
 
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
             GL(glTextureSubImage2D(
@@ -463,7 +469,8 @@ struct screen_consumer
 
     std::future<bool> send(core::video_field field, const core::const_frame& frame)
     {
-        if (!frame_buffer_.try_push(frame)) {
+        auto frame2 = frame_converter_->convert_to_buffer_and_frame(frame, core::frame_conversion_format(core::frame_conversion_format::pixel_format::bgra8));
+        if (!frame_buffer_.try_push(frame2)) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
         return make_ready_future(is_running_.load());
@@ -565,12 +572,14 @@ struct screen_consumer
 
 struct screen_consumer_proxy : public core::frame_consumer
 {
+    const spl::shared_ptr<core::frame_converter> frame_converter_;
     const configuration              config_;
     std::unique_ptr<screen_consumer> consumer_;
 
   public:
-    explicit screen_consumer_proxy(configuration config)
-        : config_(std::move(config))
+    explicit screen_consumer_proxy(const spl::shared_ptr<core::frame_converter> &frame_converter, configuration config)
+        : frame_converter_(frame_converter)
+        , config_(std::move(config))
     {
     }
 
@@ -579,7 +588,7 @@ struct screen_consumer_proxy : public core::frame_consumer
     void initialize(const core::video_format_desc& format_desc, int channel_index) override
     {
         consumer_.reset();
-        consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_index);
+        consumer_ = std::make_unique<screen_consumer>(frame_converter_, config_, format_desc, channel_index);
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
@@ -606,9 +615,9 @@ struct screen_consumer_proxy : public core::frame_consumer
     }
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
-                                                      const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&              params,
+                                                      const core::video_format_repository&          format_repository,
+                                                      const spl::shared_ptr<core::frame_converter>& frame_converter,
                                                       common::bit_depth                                        depth)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
@@ -655,13 +664,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.key_only = false;
     }
 
-    return spl::make_shared<screen_consumer_proxy>(config);
+    return spl::make_shared<screen_consumer_proxy>(frame_converter, config);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const spl::shared_ptr<core::frame_converter>&            frame_converter,
                               common::bit_depth                                        depth)
 {
     configuration config;
@@ -725,7 +734,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.aspect = configuration::aspect_ratio::aspect_4_3;
     }
 
-    return spl::make_shared<screen_consumer_proxy>(config);
+    return spl::make_shared<screen_consumer_proxy>(frame_converter, config);
 }
 
 }} // namespace caspar::screen

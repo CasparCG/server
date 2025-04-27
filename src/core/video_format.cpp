@@ -177,18 +177,6 @@ struct video_format_repository::impl
         const std::wstring lower = boost::to_lower_copy(format.name);
         formats_.insert({lower, format});
     }
-
-    std::size_t get_max_video_format_size() const
-    {
-        size_t max = 0;
-        for (auto& f : formats_) {
-            if (f.second.size > max)
-                max = f.second.size;
-        }
-
-        const size_t MaxBytesPerColor = 2;
-        return max * MaxBytesPerColor;
-    }
 };
 
 video_format_repository::video_format_repository()
@@ -205,8 +193,6 @@ video_format_desc video_format_repository::find_format(const video_format& forma
     return impl_->find_format(format);
 }
 void video_format_repository::store(const video_format_desc& format) { impl_->store(format); }
-
-std::size_t video_format_repository::get_max_video_format_size() const { return impl_->get_max_video_format_size(); }
 
 video_format_desc::video_format_desc(const video_format     format,
                                      const int              field_count,

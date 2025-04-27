@@ -43,6 +43,7 @@ set(HEADERS
 
 		frame/draw_frame.h
 		frame/frame.h
+		frame/frame_converter.h
 		frame/frame_factory.h
 		frame/frame_transform.h
 		frame/frame_visitor.h
