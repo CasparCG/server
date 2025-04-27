@@ -171,12 +171,7 @@ struct audio_mixer::impl
                         graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-buffer-overflow");
                         
                         // Apply the most restrictive limit
-                        auto original_size = buf_size;
                         buf_size = std::min(max_buffer_size_, item_size);
-                        
-                        CASPAR_LOG(warning) << "Audio buffer overflow - limiting from " 
-                                           << original_size << " to " << buf_size 
-                                           << " samples (" << format_desc_.name << ")";
                     }
                     
                     std::vector<int32_t> buf(buf_size);
