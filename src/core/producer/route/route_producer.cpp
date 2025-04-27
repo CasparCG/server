@@ -142,7 +142,6 @@ class route_producer
     std::shared_ptr<route> route_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
-    std::optional<std::pair<core::draw_frame, core::draw_frame>> previous_frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
@@ -211,7 +210,7 @@ class route_producer
                         // Ensure that any interlaced channel will repeat frames instead of showing black.
                         // Note: doing 50p -> 50i will result in dropping to 25p and frame doubling.
                         frame2b = frame1b;
-                    } else if (self->is_interlaced_) {
+                    } else {
                         // For interlaced formats, ensure field B gets the proper tag as well
                         frame2b = self->tag_fix_(frame2b);
                     }
@@ -252,12 +251,7 @@ class route_producer
             std::pair<core::draw_frame, core::draw_frame> frame;
             if (!buffer_.try_pop(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
-                // If we have variable cadence or interlacing and are cross-channel, preserve the previous frame
-                if ((has_variable_cadence_ || is_interlaced_) && previous_frame_ && is_cross_channel_) {
-                    frame_ = previous_frame_;
-                }
             } else {
-                previous_frame_ = frame_;
                 frame_ = frame;
             }
         }
