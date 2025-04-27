@@ -145,8 +145,8 @@ class route_producer
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
-    bool                                                         has_variable_cadence_ = false;
-    bool                                                         is_interlaced_ = false;
+    bool                                                         source_has_variable_cadence_ = false;
+    bool                                                         source_is_interlaced_ = false;
     bool                                                         is_cross_channel_ = false;
 
     boost::signals2::scoped_connection connection_;
@@ -161,12 +161,12 @@ class route_producer
         if (cross) {
             buffer_.set_capacity(2);
             // Check if the format has variable audio cadence (more than one value)
-            has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
-            is_interlaced_ = route_->format_desc.field_count == 2;
+            source_has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
+            source_is_interlaced_ = route_->format_desc.field_count == 2;
         } else {
             buffer_.set_capacity(1);
-            has_variable_cadence_ = false;
-            is_interlaced_ = false;
+            source_has_variable_cadence_ = false;
+            source_is_interlaced_ = false;
         }
     }
 
