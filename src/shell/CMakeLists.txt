@@ -82,7 +82,6 @@ else ()
 	target_link_libraries(casparcg
 		${Boost_LIBRARIES}
 		${TBB_LIBRARIES}
-		${SFML_LIBRARIES}
 		${GLEW_LIBRARIES}
 		OpenGL::GL
 		${X11_LIBRARIES}
