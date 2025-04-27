@@ -39,21 +39,38 @@
 
 #include <optional>
 #include <stack>
+#include <unordered_map>
 
 namespace caspar { namespace core {
 
+// Tag wrapper to create unique stream tags while preserving original tags
+struct route_stream_tag
+{
+    const void* route_ptr;  // Pointer to the route producer
+    const void* source_tag; // Original tag from the source frame
+    int         sequence;   // Sequence number to ensure uniqueness
+    
+    bool operator==(const route_stream_tag& other) const
+    {
+        return route_ptr == other.route_ptr && 
+               source_tag == other.source_tag && 
+               sequence == other.sequence;
+    }
+};
+
 class fix_stream_tag : public frame_visitor
 {
-    const void* stream_tag_;
+    const void*                                                route_producer_ptr_;
+    std::unordered_map<const void*, int>                       source_tag_counters_;
     std::stack<std::pair<frame_transform, std::vector<draw_frame>>> frames_stack_;
-    std::optional<const_frame>                                    upd_frame_;
+    std::optional<const_frame>                                 upd_frame_;
     
     fix_stream_tag(const fix_stream_tag&);
     fix_stream_tag& operator=(const fix_stream_tag&);
 
   public:
     fix_stream_tag(void* stream_tag)
-        : stream_tag_(stream_tag)
+        : route_producer_ptr_(stream_tag)
     {
         frames_stack_ = std::stack<std::pair<frame_transform, std::vector<draw_frame>>>();
         frames_stack_.emplace(frame_transform{}, std::vector<draw_frame>());
@@ -64,7 +81,21 @@ class fix_stream_tag : public frame_visitor
     }
 
     void visit(const const_frame& frame) {
-        upd_frame_ = frame.with_tag(stream_tag_);
+        // Get original tag from the frame
+        const void* source_tag = frame.stream_tag();
+        
+        // Use the original tag with the route pointer to create a unique identifier
+        // Use the memory address of the route producer as a base and add a counter
+        // value that's unique per source tag
+        intptr_t base_value = reinterpret_cast<intptr_t>(route_producer_ptr_);
+        int counter = source_tag_counters_[source_tag]++;
+        
+        // Combine into a unique value - offset by some large value to avoid
+        // potential collisions with real pointers
+        intptr_t unique_value = base_value + counter + 1000000;
+        const void* unique_tag = reinterpret_cast<const void*>(unique_value);
+        
+        upd_frame_ = frame.with_tag(unique_tag);
     }
 
     void pop() {
