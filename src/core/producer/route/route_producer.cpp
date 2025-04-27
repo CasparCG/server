@@ -43,21 +43,6 @@
 
 namespace caspar { namespace core {
 
-// Tag wrapper to create unique stream tags while preserving original tags
-struct route_stream_tag
-{
-    const void* route_ptr;  // Pointer to the route producer
-    const void* source_tag; // Original tag from the source frame
-    int         sequence;   // Sequence number to ensure uniqueness
-    
-    bool operator==(const route_stream_tag& other) const
-    {
-        return route_ptr == other.route_ptr && 
-               source_tag == other.source_tag && 
-               sequence == other.sequence;
-    }
-};
-
 class fix_stream_tag : public frame_visitor
 {
     const void*                                                route_producer_ptr_;
