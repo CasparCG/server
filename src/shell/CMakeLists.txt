@@ -31,11 +31,13 @@ endif ()
 
 
 add_executable(casparcg ${SOURCES} ${HEADERS})
+set_target_properties(casparcg PROPERTIES
+        OUTPUT_NAME "${CASPARCG_BINARY_NAME}"
+    )
 target_compile_features(casparcg PRIVATE cxx_std_17)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
-    ${TBB_INCLUDE_PATH}
     )
 casparcg_add_build_dependencies(casparcg)
 
@@ -47,29 +49,24 @@ target_link_libraries(casparcg
 		core
 		protocol
 
-		"${CASPARCG_MODULE_PROJECTS}"
+		"${CASPARCG_MODULE_TARGETS}"
+
+		TBB::tbb
+		TBB::tbbmalloc
+		GLEW::glew
 )
 
 if (MSVC)
 	target_link_libraries(casparcg
 		Winmm.lib
 		Ws2_32.lib
-		optimized tbb.lib
-		optimized tbbmalloc.lib
-		debug tbb_debug.lib
-		debug tbbmalloc_debug.lib
 		OpenGL32.lib
-		glew32.lib
-		openal32.lib
 		debug zlibstaticd.lib
 		optimized zlibstatic.lib
-		debug sfml-graphics-d.lib
-		debug sfml-window-d.lib
-		debug sfml-system-d.lib
-		optimized sfml-graphics.lib
-		optimized sfml-window.lib
-		optimized sfml-system.lib
-		
+
+		OpenAL::OpenAL
+		optimized TBB::tbbmalloc_proxy
+
 		avformat.lib
 		avcodec.lib
 		avutil.lib
@@ -81,8 +78,6 @@ if (MSVC)
 else ()
 	target_link_libraries(casparcg
 		${Boost_LIBRARIES}
-		${TBB_LIBRARIES}
-		${GLEW_LIBRARIES}
 		OpenGL::GL
 		${X11_LIBRARIES}
 		${FFMPEG_LIBRARIES}
@@ -101,12 +96,12 @@ set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
 add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory \"${OUTPUT_FOLDER}\")
 
 if (MSVC)
-    if (CMAKE_GENERATOR MATCHES "Visual Studio")
+    if (is_multi_config)
 	    foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG})
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) == Debug (
 				    echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
@@ -118,7 +113,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) NEQ Debug (
 				    echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
@@ -131,7 +126,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) == Debug (
 				    echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
@@ -143,7 +138,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND if $(ConfigurationName) NEQ Debug (
 				    echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
@@ -156,7 +151,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
@@ -167,7 +162,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Debug ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"
@@ -178,7 +173,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\" &&
 				    ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
@@ -189,7 +184,7 @@ if (MSVC)
 		    get_filename_component(FOLDER_NAME "${FILE_TO_COPY}" NAME)
 		    add_custom_command(
 			    TARGET casparcg_copy_dependencies
-			    POST_BUILD 
+			    POST_BUILD
 			    COMMAND echo \"Copy Release ${FILE_TO_COPY}\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/${FOLDER_NAME}/\" &&
 				    ${CMAKE_COMMAND} -E copy_directory \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/${FOLDER_NAME}/\"
@@ -197,27 +192,13 @@ if (MSVC)
 	    endforeach(FILE_TO_COPY)
     endif ()
 else ()
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/shell/casparcg ${CMAKE_BINARY_DIR}/staging/bin/casparcg)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/casparcg.config ${CMAKE_BINARY_DIR}/staging/casparcg.config)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/liberation-fonts/LiberationMono-Regular.ttf ${CMAKE_BINARY_DIR}/staging/LiberationMono-Regular.ttf)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shell/run.sh ${CMAKE_BINARY_DIR}/staging/run.sh)
+	install(TARGETS casparcg)
 
-# Disabled as HTML module is disabled
-  if (ENABLE_HTML AND NOT USE_SYSTEM_CEF)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CEF_RESOURCE_PATH}/locales ${CMAKE_BINARY_DIR}/staging/lib/locales)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_100_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_100_percent.pak)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/chrome_200_percent.pak ${CMAKE_BINARY_DIR}/staging/lib/chrome_200_percent.pak)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/icudtl.dat ${CMAKE_BINARY_DIR}/staging/lib/icudtl.dat)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_RESOURCE_PATH}/resources.pak ${CMAKE_BINARY_DIR}/staging/lib/resources.pak)
-
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/chrome-sandbox ${CMAKE_BINARY_DIR}/staging/lib/chrome-sandbox)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libcef.so ${CMAKE_BINARY_DIR}/staging/lib/libcef.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libEGL.so ${CMAKE_BINARY_DIR}/staging/lib/libEGL.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libGLESv2.so ${CMAKE_BINARY_DIR}/staging/lib/libGLESv2.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libvk_swiftshader.so ${CMAKE_BINARY_DIR}/staging/lib/libvk_swiftshader.so)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/libvulkan.so.1 ${CMAKE_BINARY_DIR}/staging/lib/libvulkan.so.1)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/snapshot_blob.bin ${CMAKE_BINARY_DIR}/staging/lib/snapshot_blob.bin)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/v8_context_snapshot.bin ${CMAKE_BINARY_DIR}/staging/lib/v8_context_snapshot.bin)
-	ADD_CUSTOM_COMMAND (TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CEF_BIN_PATH}/vk_swiftshader_icd.json ${CMAKE_BINARY_DIR}/staging/lib/vk_swiftshader_icd.json)
-  endif ()
+    if ("${CASPARCG_BINARY_NAME}" STREQUAL "casparcg")
+        # Looks like a 'default' build, produce a portable folder
+	    install(FILES casparcg.config run.sh DESTINATION ".")
+    else ()
+        # Looks like a build for a system package manager
+        install(FILES casparcg.config DESTINATION "share/${CASPARCG_BINARY_NAME}")
+    endif ()
 endif ()

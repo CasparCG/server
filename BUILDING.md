@@ -38,11 +38,11 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 1. Install Visual Studio 2022.
 
-3. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
+2. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 
-4. Open the cloned folder in Visual Studio.
+3. Open the cloned folder in Visual Studio.
 
-5. Build All and ensure it builds successfully
+4. Build All and ensure it builds successfully
 
 # Linux
 
@@ -83,7 +83,8 @@ Before beginning, check the build options section below, to decide if you want t
 4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
 5. `mkdir build && cd build`
 6. `cmake ../src` You can add any of the build options from below to this command
-7. `make -j8`
+7. `cmake --build . --parallel`
+8. `cmake --install . --prefix staging`
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
 
@@ -96,3 +97,5 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
 
 -DDIAG_FONT_PATH - Specify an alternate path/font to use for the DIAG window. On linux, this will often want to be set to an absolute path of a font
+
+-DCASPARCG_BINARY_NAME=casparcg-server - (Linux only) generate the executable with the specified name. This also reconfigures the install target to be a bit more friendly with system package managers.

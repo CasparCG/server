@@ -16,9 +16,6 @@ casparcg_add_module_project(artnet
 	SOURCES ${SOURCES}
 	INIT_FUNCTION "artnet::init"
 )
-target_include_directories(artnet PRIVATE
-    ../..
-)
 
 set_target_properties(artnet PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

@@ -1,3 +1,0 @@
-#!/usr/bin/dh-exec
-[amd64] obj-x86_64-linux-gnu/staging/bin/casparcg => /usr/bin/casparcg-server-beta
-src/shell/casparcg.config => /usr/share/casparcg-server-beta/casparcg.config.example

@@ -24,7 +24,6 @@ casparcg_add_module_project(flash
 	INIT_FUNCTION "flash::init"
 )
 target_include_directories(flash PRIVATE
-    ../..
     ${ZLIB_INCLUDE_PATH}
     )
 target_precompile_headers(flash PRIVATE "StdAfx.h")

@@ -78,12 +78,9 @@ set(HEADERS
 )
 
 casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
-target_include_directories(core PRIVATE
-    ..
-    ${SFML_INCLUDE_PATH}
-    ${GLEW_INCLUDE_PATH}
-    )
-target_precompile_headers(core PRIVATE "StdAfx.h")
+target_include_directories(core PRIVATE ..)
+target_precompile_headers(core PRIVATE StdAfx.h)
+target_link_libraries(core PRIVATE common GLEW::glew sfml-graphics)
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
@@ -98,9 +95,3 @@ source_group(sources\\producer\\color producer/color/*)
 source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
-
-target_link_libraries(
-	core
-	${SFML_LIBRARIES}
-	common
-)

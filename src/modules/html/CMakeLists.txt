@@ -18,12 +18,7 @@ casparcg_add_module_project(html
 	UNINIT_FUNCTION "html::uninit"
 	CLI_INTERCEPTOR "html::intercept_command_line"
 )
-
-target_include_directories(html PRIVATE
-    ../..
-    ${CEF_INCLUDE_PATH}
-    )
-target_link_libraries(html ${CEF_LIB})
+target_link_libraries(html PRIVATE CEF::CEF)
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
