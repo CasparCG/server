@@ -40,6 +40,7 @@
 #include <optional>
 #include <stack>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace caspar { namespace core {
 
@@ -49,6 +50,11 @@ class fix_stream_tag : public frame_visitor
     std::unordered_map<const void*, int>                       source_tag_counters_;
     std::stack<std::pair<frame_transform, std::vector<draw_frame>>> frames_stack_;
     std::optional<const_frame>                                 upd_frame_;
+    std::unordered_set<const void*>                            recent_tags_;
+    size_t                                                     max_map_size_ = 100;
+    unsigned int                                               frame_count_ = 0;
+    unsigned int                                               cleanup_interval_ = 1000;
+    int                                                        counter_max_value_ = 2000000000; // ~2 billion
     
     fix_stream_tag(const fix_stream_tag&);
     fix_stream_tag& operator=(const fix_stream_tag&);
@@ -69,15 +75,40 @@ class fix_stream_tag : public frame_visitor
         // Get original tag from the frame
         const void* source_tag = frame.stream_tag();
         
-        // Use the original tag with the route pointer to create a unique identifier
-        // Use the memory address of the route producer as a base and add a counter
-        // value that's unique per source tag
-        intptr_t base_value = reinterpret_cast<intptr_t>(route_producer_ptr_);
-        int counter = source_tag_counters_[source_tag]++;
+        // Track this tag as recently used
+        recent_tags_.insert(source_tag);
         
-        // Combine into a unique value - offset by some large value to avoid
-        // potential collisions with real pointers
-        intptr_t unique_value = base_value + counter + 1000000;
+        // Perform occasional cleanup of unused tags
+        if (++frame_count_ % cleanup_interval_ == 0) {
+            // Only clean if the map is larger than our threshold
+            if (source_tag_counters_.size() > max_map_size_) {
+                // Remove tags that weren't recently used
+                for (auto it = source_tag_counters_.begin(); it != source_tag_counters_.end();) {
+                    if (recent_tags_.find(it->first) == recent_tags_.end()) {
+                        it = source_tag_counters_.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+                
+                // Reset the recent tags tracking for the next interval
+                recent_tags_.clear();
+                
+                // Always keep the current tag
+                recent_tags_.insert(source_tag);
+            }
+        }
+        
+        // Get the counter for this source tag, prevent overflow
+        int& counter = source_tag_counters_[source_tag];
+        if (counter > counter_max_value_) {
+            // Reset counter to prevent overflow, still keeping values unique
+            counter = 1000000;
+        }
+        
+        // Use the original tag with the route pointer to create a unique identifier
+        intptr_t base_value = reinterpret_cast<intptr_t>(route_producer_ptr_);
+        intptr_t unique_value = base_value + counter++ + 1000000;
         const void* unique_tag = reinterpret_cast<const void*>(unique_value);
         
         upd_frame_ = frame.with_tag(unique_tag);
