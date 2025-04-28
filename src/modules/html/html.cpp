@@ -176,6 +176,8 @@ class renderer_application
             }
         }
 
+        command_line->AppendSwitchWithValue("ozone-platform", "headless");
+
         command_line->AppendSwitch("disable-web-security");
         command_line->AppendSwitch("enable-begin-frame-scheduling");
         command_line->AppendSwitch("enable-media-stream");
