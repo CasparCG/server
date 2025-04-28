@@ -29,7 +29,6 @@ casparcg_add_module_project(image
 )
 target_include_directories(image PRIVATE
 	..
-    ../..
 	${FFMPEG_INCLUDE_PATH}
     )
 
@@ -39,13 +38,7 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-if(MSVC)
-	target_link_libraries(image
-		ffmpeg
-	)
-else()
-	target_link_libraries(image
-		ffmpeg
-	)
-endif()
+target_link_libraries(image PRIVATE
+	ffmpeg
+)
 

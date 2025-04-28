@@ -39,21 +39,23 @@
 
 #include <optional>
 #include <stack>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace caspar { namespace core {
 
 class fix_stream_tag : public frame_visitor
 {
-    const void* stream_tag_;
+    const void*                                                route_producer_ptr_;
     std::stack<std::pair<frame_transform, std::vector<draw_frame>>> frames_stack_;
-    std::optional<const_frame>                                    upd_frame_;
+    std::optional<const_frame>                                 upd_frame_;
     
     fix_stream_tag(const fix_stream_tag&);
     fix_stream_tag& operator=(const fix_stream_tag&);
 
   public:
     fix_stream_tag(void* stream_tag)
-        : stream_tag_(stream_tag)
+        : route_producer_ptr_(stream_tag)
     {
         frames_stack_ = std::stack<std::pair<frame_transform, std::vector<draw_frame>>>();
         frames_stack_.emplace(frame_transform{}, std::vector<draw_frame>());
@@ -64,7 +66,19 @@ class fix_stream_tag : public frame_visitor
     }
 
     void visit(const const_frame& frame) {
-        upd_frame_ = frame.with_tag(stream_tag_);
+        // Get original tag from the frame
+        const void* source_tag = frame.stream_tag();
+        
+        // Calculate a unique but stable tag for this source
+        // This calculation will always produce the same result for the same inputs
+        intptr_t base_addr = reinterpret_cast<intptr_t>(route_producer_ptr_);
+        intptr_t source_addr = reinterpret_cast<intptr_t>(source_tag);
+        // Use XOR to create a unique value that combines route producer and source identities
+        intptr_t unique_value = base_addr ^ source_addr ^ 0xDEADBEEF; // Constant helps avoid collisions
+        const void* unique_tag = reinterpret_cast<const void*>(unique_value);
+        
+        // Apply the tag to the frame
+        upd_frame_ = frame.with_tag(unique_tag);
     }
 
     void pop() {
@@ -111,12 +125,11 @@ class route_producer
     std::shared_ptr<route> route_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
-    std::optional<std::pair<core::draw_frame, core::draw_frame>> previous_frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
-    bool                                                         has_variable_cadence_ = false;
-    bool                                                         is_interlaced_ = false;
+    bool                                                         source_has_variable_cadence_ = false;
+    bool                                                         source_is_interlaced_ = false;
     bool                                                         is_cross_channel_ = false;
 
     boost::signals2::scoped_connection connection_;
@@ -131,12 +144,12 @@ class route_producer
         if (cross) {
             buffer_.set_capacity(2);
             // Check if the format has variable audio cadence (more than one value)
-            has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
-            is_interlaced_ = route_->format_desc.field_count == 2;
+            source_has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
+            source_is_interlaced_ = route_->format_desc.field_count == 2;
         } else {
             buffer_.set_capacity(1);
-            has_variable_cadence_ = false;
-            is_interlaced_ = false;
+            source_has_variable_cadence_ = false;
+            source_is_interlaced_ = false;
         }
     }
 
@@ -180,7 +193,7 @@ class route_producer
                         // Ensure that any interlaced channel will repeat frames instead of showing black.
                         // Note: doing 50p -> 50i will result in dropping to 25p and frame doubling.
                         frame2b = frame1b;
-                    } else if (self->is_interlaced_) {
+                    } else {
                         // For interlaced formats, ensure field B gets the proper tag as well
                         frame2b = self->tag_fix_(frame2b);
                     }
@@ -221,12 +234,7 @@ class route_producer
             std::pair<core::draw_frame, core::draw_frame> frame;
             if (!buffer_.try_pop(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
-                // If we have variable cadence or interlacing and are cross-channel, preserve the previous frame
-                if ((has_variable_cadence_ || is_interlaced_) && previous_frame_ && is_cross_channel_) {
-                    frame_ = previous_frame_;
-                }
             } else {
-                previous_frame_ = frame_;
                 frame_ = frame;
             }
         }

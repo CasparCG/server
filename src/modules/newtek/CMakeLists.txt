@@ -37,7 +37,6 @@ casparcg_add_module_project(newtek
 )
 target_include_directories(newtek PRIVATE
 	..
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(newtek PRIVATE "StdAfx.h")
@@ -49,4 +48,4 @@ source_group(sources\\interop interop/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(newtek ffmpeg)
+target_link_libraries(newtek PRIVATE ffmpeg)

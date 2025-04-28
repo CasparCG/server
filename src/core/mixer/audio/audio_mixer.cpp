@@ -60,17 +60,23 @@ struct audio_mixer::impl
     video_format_desc                           format_desc_;
     std::atomic<float>                          master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph>         graph_;
-
-    impl(const impl&)            = delete;
-    impl& operator=(const impl&) = delete;
+    size_t                                      max_expected_cadence_samples_{0};
+    size_t                                      max_buffer_size_{0};
+    bool                                        has_variable_cadence_{false};
+    std::vector<int32_t>                        silence_buffer_;
+    int                                         channels_{0};
 
     impl(spl::shared_ptr<diagnostics::graph> graph)
         : graph_(std::move(graph))
     {
         graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
         graph_->set_color("audio-clipping", diagnostics::color(0.3f, 0.6f, 0.3f));
+        graph_->set_color("audio-buffer-overflow", diagnostics::color(0.6f, 0.3f, 0.3f));
         transform_stack_.push(core::audio_transform());
     }
+
+    impl(const impl&)            = delete;
+    impl& operator=(const impl&) = delete;
 
     void push(const frame_transform& transform)
     {
@@ -97,13 +103,35 @@ struct audio_mixer::impl
             audio_streams_.clear();
             previous_volumes_.clear();
             format_desc_ = format_desc;
+            channels_ = format_desc.audio_channels;
+            
+            // Calculate these values only when format changes
+            max_expected_cadence_samples_ = 0;
+            if (!format_desc.audio_cadence.empty()) {
+                max_expected_cadence_samples_ = *std::max_element(format_desc.audio_cadence.begin(), format_desc.audio_cadence.end());
+            }
+            
+            // Pre-calculate max buffer size based on max cadence (2 frames worth)
+            max_buffer_size_ = channels_;
+            if (max_expected_cadence_samples_ > 0) {
+                max_buffer_size_ *= 2 * max_expected_cadence_samples_;
+            } else {
+                max_buffer_size_ *= 4000; // Fallback: 2 frames × ~2000 samples
+            }
+            
+            has_variable_cadence_ = format_desc.audio_cadence.size() > 1;
+            
+            if (has_variable_cadence_) {
+                silence_buffer_.resize(channels_, 0);
+            } else {
+                silence_buffer_.clear();
+            }
         }
 
-        auto channels = format_desc.audio_channels;
         auto items    = std::move(items_);
-        auto result   = std::vector<int32_t>(size_t(nb_samples) * channels, 0);
+        auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
 
-        auto mixed = std::vector<double>(size_t(nb_samples) * channels, 0.0f);
+        auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
         std::map<const void*, double> next_volumes;
@@ -123,13 +151,12 @@ struct audio_mixer::impl
                 prev_volume = previous_volumes_[tag];
             }
 
-            size_t samples_per_frame = dst_size / channels;
+            size_t samples_per_frame = dst_size / channels_;
 
             size_t last_size = 0;
             const int32_t* last_ptr = nullptr;
-            // Check if the format has a variable audio cadence (needs special handling)
-            bool has_variable_cadence = format_desc.audio_cadence.size() > 1;
-            if (has_variable_cadence) {
+            
+            if (has_variable_cadence_) {
                 auto audio_stream = audio_streams_.find(item.tag);
                 if (audio_stream != audio_streams_.end()) {
                     last_size = audio_stream->second.size();
@@ -138,10 +165,8 @@ struct audio_mixer::impl
                     // Insert a sample of silence at startup
                     // Covers the startup case where there may be a cadence mismatch
                     // The sample of silence will be output before any valid audio data from the source
-                    last_size = channels;
-                    std::vector<int32_t> buf(last_size);
-                    std::memset(buf.data(), 0, last_size * sizeof(int32_t));
-                    last_ptr = buf.data();
+                    last_size = channels_;
+                    last_ptr = silence_buffer_.data();
                 }
             }
 
@@ -153,14 +178,18 @@ struct audio_mixer::impl
                 } else if (n < last_size + item_size) {
                     sample_value = static_cast<double>(ptr[n - last_size]);
                 } else {
-                    auto offset = int(item_size) - (channels - (n % channels));
+                    int channel_pos = n % channels_;
+                    int offset = int(item_size) - (channels_ - channel_pos);
+                    if (offset < 0) {
+                        offset = channel_pos;
+                    }
                     sample_value = static_cast<double>(ptr[offset]);
                 }
                 
                 double applied_volume = volume;
                 
                 if (!immediate && std::abs(prev_volume - volume) > 0.001) {
-                    size_t sample_index = n / channels;
+                    size_t sample_index = n / channels_;
                     double position = static_cast<double>(sample_index) / static_cast<double>(samples_per_frame);
                     
                     applied_volume = prev_volume + (volume - prev_volume) * position;
@@ -169,9 +198,19 @@ struct audio_mixer::impl
                 mixed[n] += sample_value * applied_volume;
             }
 
-            if (has_variable_cadence && item.tag) {
+            if (has_variable_cadence_ && item.tag) {
                 if (item_size + last_size > dst_size) {
-                    auto                 buf_size = item_size + last_size - dst_size;
+                    // Initial buffer size calculation - unmodified excess data
+                    auto buf_size = item_size + last_size - dst_size;
+                    
+                    // Apply the most restrictive limit and log if needed
+                    if (buf_size > max_buffer_size_ || buf_size > item_size) {
+                        graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-buffer-overflow");
+                        
+                        // Apply the most restrictive limit
+                        buf_size = std::min(max_buffer_size_, item_size);
+                    }
+                    
                     std::vector<int32_t> buf(buf_size);
                     std::memcpy(buf.data(), item.samples.data() + dst_size - last_size, buf_size * sizeof(int32_t));
                     next_audio_streams[item.tag] = std::move(buf);
@@ -196,9 +235,9 @@ struct audio_mixer::impl
             }
         }
 
-        auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
-        for (size_t n = 0; n < result.size(); n += channels) {
-            for (int ch = 0; ch < channels; ++ch) {
+        auto max = std::vector<int32_t>(channels_, std::numeric_limits<int32_t>::min());
+        for (size_t n = 0; n < result.size(); n += channels_) {
+            for (int ch = 0; ch < channels_; ++ch) {
                 max[ch] = std::max(max[ch], std::abs(result[n + ch]));
             }
         }

@@ -59,7 +59,6 @@ casparcg_add_module_project(decklink
 )
 target_include_directories(decklink PRIVATE
     ..
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(decklink PRIVATE "StdAfx.h")
@@ -72,11 +71,11 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 
 if (MSVC)
-	target_link_libraries(decklink
+	target_link_libraries(decklink PRIVATE
 			ffmpeg
 	)
 else()
-	target_link_libraries(decklink
+	target_link_libraries(decklink PRIVATE
 			ffmpeg
 
 			dl

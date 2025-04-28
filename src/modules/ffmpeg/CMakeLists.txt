@@ -28,7 +28,6 @@ casparcg_add_module_project(ffmpeg
 )
 
 target_include_directories(ffmpeg PRIVATE
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(ffmpeg PRIVATE "StdAfx.h")
@@ -43,7 +42,7 @@ if (MSVC)
 	# target_link_libraries(ffmpeg
 	# )
 else()
-	target_link_libraries(ffmpeg
+	target_link_libraries(ffmpeg PRIVATE
 			${FFMPEG_LIBRARIES}
 	)
 endif()
