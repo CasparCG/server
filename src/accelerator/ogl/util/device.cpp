@@ -21,6 +21,7 @@
 #include "device.h"
 
 #include "buffer.h"
+#include "context.h"
 #include "shader.h"
 #include "texture.h"
 
@@ -32,8 +33,6 @@
 #include <common/os/thread.h>
 
 #include <GL/glew.h>
-
-#include <SFML/Window/Context.hpp>
 
 #ifdef WIN32
 #include <GL/wglew.h>
@@ -60,7 +59,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
     using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
-    sf::Context device_;
+    std::unique_ptr<device_context> context_;
 
     std::array<std::array<tbb::concurrent_unordered_map<size_t, texture_queue_t>, 4>, 2> device_pools_;
     std::array<tbb::concurrent_unordered_map<size_t, buffer_queue_t>, 2>                 host_pools_;
@@ -74,12 +73,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::thread                         thread_;
 
     impl()
-        : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+        : context_(new device_context())
         , work_(make_work_guard(service_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
-        device_.setActive(true);
+        context_->bind();
 
         auto err = glewInit();
         if (err != GLEW_OK && err != 4) { // GLEW_ERROR_NO_GLX_DISPLAY
@@ -109,13 +108,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glCreateFramebuffers(1, &fbo_));
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
-        device_.setActive(false);
+        context_->unbind();
 
         thread_ = std::thread([&] {
-            device_.setActive(true);
+            context_->bind();
             set_thread_name(L"OpenGL Device");
             service_.run();
-            device_.setActive(false);
+            context_->unbind();
         });
     }
 
@@ -124,7 +123,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         work_.reset();
         thread_.join();
 
-        device_.setActive(true);
+        context_->bind();
 
         for (auto& pool : host_pools_)
             pool.clear();
