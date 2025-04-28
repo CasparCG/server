@@ -61,9 +61,8 @@ struct audio_mixer::impl
     size_t                                      max_expected_cadence_samples_{0};
     size_t                                      max_buffer_size_{0};
     bool                                        has_variable_cadence_{false};
-
-    impl(const impl&)            = delete;
-    impl& operator=(const impl&) = delete;
+    std::vector<int32_t>                        silence_buffer_;
+    int                                         channels_{0};
 
     impl(spl::shared_ptr<diagnostics::graph> graph)
         : graph_(std::move(graph))
@@ -73,6 +72,9 @@ struct audio_mixer::impl
         graph_->set_color("audio-buffer-overflow", diagnostics::color(0.6f, 0.3f, 0.3f));
         transform_stack_.push(core::audio_transform());
     }
+
+    impl(const impl&)            = delete;
+    impl& operator=(const impl&) = delete;
 
     void push(const frame_transform& transform)
     {
@@ -98,6 +100,7 @@ struct audio_mixer::impl
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
             format_desc_ = format_desc;
+            channels_ = format_desc.audio_channels;
             
             // Calculate these values only when format changes
             max_expected_cadence_samples_ = 0;
@@ -106,26 +109,28 @@ struct audio_mixer::impl
             }
             
             // Pre-calculate max buffer size based on max cadence (2 frames worth)
-            max_buffer_size_ = format_desc.audio_channels;
+            max_buffer_size_ = channels_;
             if (max_expected_cadence_samples_ > 0) {
                 max_buffer_size_ *= 2 * max_expected_cadence_samples_;
             } else {
                 max_buffer_size_ *= 4000; // Fallback: 2 frames × ~2000 samples
             }
             
-            // Check if format has variable audio cadence (needs special handling)
             has_variable_cadence_ = format_desc.audio_cadence.size() > 1;
+            
+            if (has_variable_cadence_) {
+                silence_buffer_.resize(channels_, 0);
+            } else {
+                silence_buffer_.clear();
+            }
         }
 
-        auto channels = format_desc.audio_channels;
         auto items    = std::move(items_);
-        auto result   = std::vector<int32_t>(size_t(nb_samples) * channels, 0);
+        auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
 
-        auto mixed = std::vector<double>(size_t(nb_samples) * channels, 0.0f);
+        auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
-        
-        std::vector<int32_t> silence_buffer(channels, 0);
         
         for (auto& item : items) {
             auto ptr       = item.samples.data();
@@ -144,9 +149,8 @@ struct audio_mixer::impl
                     // Insert a sample of silence at startup
                     // Covers the startup case where there may be a cadence mismatch
                     // The sample of silence will be output before any valid audio data from the source
-                    last_size = channels;
-                    std::memset(silence_buffer.data(), 0, channels * sizeof(int32_t));
-                    last_ptr = silence_buffer.data();
+                    last_size = channels_;
+                    last_ptr = silence_buffer_.data();
                 }
             }
 
@@ -156,8 +160,12 @@ struct audio_mixer::impl
                 } else if (n < last_size + item_size) {
                     mixed[n] = static_cast<double>(ptr[n - last_size]) * item.transform.volume + mixed[n];
                 } else {
-                    auto offset = int(item_size) - (channels - (n % channels));
-                    mixed[n]    = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
+                    int channel_pos = n % channels_;
+                    int offset = int(item_size) - (channels_ - channel_pos);
+                    if (offset < 0) {
+                        offset = channel_pos;
+                    }
+                    mixed[n] = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
                 }
             }
 
@@ -196,9 +204,9 @@ struct audio_mixer::impl
             }
         }
 
-        auto max = std::vector<int32_t>(channels, std::numeric_limits<int32_t>::min());
-        for (size_t n = 0; n < result.size(); n += channels) {
-            for (int ch = 0; ch < channels; ++ch) {
+        auto max = std::vector<int32_t>(channels_, std::numeric_limits<int32_t>::min());
+        for (size_t n = 0; n < result.size(); n += channels_) {
+            for (int ch = 0; ch < channels_; ++ch) {
                 max[ch] = std::max(max[ch], std::abs(result[n + ch]));
             }
         }
