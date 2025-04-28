@@ -13,20 +13,11 @@ struct device_context::impl
     EGLDisplay eglDisplay_;
     EGLContext eglContext_;
 
-    std::string envDisplay_;
-
     impl()
         : eglDisplay_(EGL_NO_DISPLAY)
         , eglContext_(EGL_NO_CONTEXT)
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
-
-        // Forces EGL headless mode
-        const char* rawEnvDisplay = getenv("DISPLAY");
-        if (rawEnvDisplay != nullptr) {
-            envDisplay_ = rawEnvDisplay;
-            unsetenv("DISPLAY");
-        }
 
         eglDisplay_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -82,12 +73,6 @@ device_context::device_context()
 {
 }
 device_context::~device_context() {}
-
-void device_context::postinit()
-{
-    // Restore DISPLAY
-    //  setenv("DISPLAY", impl_->envDisplay_.c_str(), 0);
-}
 
 void device_context::bind() { eglMakeCurrent(impl_->eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, impl_->eglContext_); }
 void device_context::unbind() { eglMakeCurrent(impl_->eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT); }

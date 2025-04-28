@@ -14,8 +14,6 @@ class device_context final
 
     device_context& operator=(const device_context&) = delete;
 
-    void postinit();
-
     void bind();
     void unbind();
 

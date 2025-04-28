@@ -24,8 +24,6 @@ device_context::device_context()
 }
 device_context::~device_context() {}
 
-void device_context::postinit() {}
-
 void device_context::bind() { impl_->device_.setActive(true); }
 void device_context::unbind() { impl_->device_.setActive(false); }
 
