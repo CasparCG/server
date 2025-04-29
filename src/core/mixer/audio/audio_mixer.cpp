@@ -188,6 +188,7 @@ struct audio_mixer::impl
                 } else if (n < last_size + item_size) {
                     sample_value = static_cast<double>(ptr[n - last_size]);
                 } else {
+                    // If we run out of samples, hold the last sample value per channel
                     int channel_pos = n % channels_;
                     int offset = int(item_size) - (channels_ - channel_pos);
                     if (offset < 0) {
@@ -214,22 +215,29 @@ struct audio_mixer::impl
             // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             if (has_variable_cadence_ && item.tag) {
                 if (item_size + last_size > dst_size) {
-                    // Initial buffer size calculation - unmodified excess data
-                    auto buf_size = item_size + last_size - dst_size;
+                    // Calculate remaining samples after mixing the current frame
+                    auto remaining_samples = item_size + last_size - dst_size;
                     
                     // Apply the most restrictive limit and log if needed
-                    if (buf_size > max_buffer_size_ || buf_size > item_size) {
+                    if (remaining_samples > max_buffer_size_ || remaining_samples > item_size) {
                         graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-buffer-overflow");
                         
                         // Apply the most restrictive limit
-                        buf_size = std::min(max_buffer_size_, item_size);
+                        remaining_samples = (max_buffer_size_ < item_size) ? max_buffer_size_ : item_size;
                     }
                     
-                    std::vector<int32_t> buf(buf_size);
-                    std::memcpy(buf.data(), item.samples.data() + dst_size - last_size, buf_size * sizeof(int32_t));
-                    next_audio_streams[item.tag] = std::move(buf);
-                } else
+                    std::vector<int32_t> buf(remaining_samples);
+                    // Calculate the correct offset in the source buffer
+                    size_t offset = (dst_size > last_size) ? (dst_size - last_size) : 0;
+                    if (offset < item_size) {
+                        std::memcpy(buf.data(), ptr + offset, remaining_samples * sizeof(int32_t));
+                        next_audio_streams[item.tag] = std::move(buf);
+                    } else {
+                        next_audio_streams[item.tag] = std::vector<int32_t>();
+                    }
+                } else {
                     next_audio_streams[item.tag] = std::vector<int32_t>();
+                }
             }
         }
         
