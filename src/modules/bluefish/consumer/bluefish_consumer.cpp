@@ -850,12 +850,12 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     }
 
     // frame_consumer
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_.reset(new bluefish_consumer(config_, format_desc, channel_index));
+            consumer_.reset(new bluefish_consumer(config_, format_desc, channel_info.index));
         });
     }
 

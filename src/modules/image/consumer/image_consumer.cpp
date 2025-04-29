@@ -71,7 +71,7 @@ struct image_consumer : public core::frame_consumer
     {
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override {}
+    void initialize(const core::video_format_desc& /*format_desc*/, const core::channel_info& channel_info, int port_index) override {}
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {

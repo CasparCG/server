@@ -76,7 +76,7 @@ struct artnet_consumer : public core::frame_consumer
         compute_fixtures();
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override
+    void initialize(const core::video_format_desc& /*format_desc*/, const core::channel_info& channel_info, int port_index) override
     {
         thread_ = std::thread([this] {
             long long time      = 1000 / config.refreshRate;

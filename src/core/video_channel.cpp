@@ -54,14 +54,13 @@ struct video_channel::impl final
 {
     monitor::state state_;
 
-    const int         index_;
-    const color_space default_color_space_;
+    const channel_info channel_info_;
 
     const spl::shared_ptr<caspar::diagnostics::graph> graph_ = [](int index) {
         core::diagnostics::scoped_call_context save;
         core::diagnostics::call_context::for_thread().video_channel = index;
         return spl::make_shared<caspar::diagnostics::graph>();
-    }(index_);
+    }(channel_info_.index);
 
     caspar::core::output         output_;
     spl::shared_ptr<image_mixer> image_mixer_;
@@ -105,9 +104,8 @@ struct video_channel::impl final
          color_space                               default_color_space,
          std::unique_ptr<image_mixer>              image_mixer,
          std::function<void(core::monitor::state)> tick)
-        : index_(index)
-        , default_color_space_(default_color_space)
-        , output_(graph_, format_desc, index)
+        : channel_info_(index, image_mixer->depth(), default_color_space)
+        , output_(graph_, format_desc, channel_info_)
         , image_mixer_(std::move(image_mixer))
         , mixer_(index, graph_, image_mixer_)
         , stage_(std::make_shared<core::stage>(index, graph_, format_desc))
@@ -125,7 +123,7 @@ struct video_channel::impl final
 
         thread_ = std::thread([=] {
             set_thread_realtime_priority();
-            set_thread_name(L"channel-" + std::to_wstring(index_));
+            set_thread_name(L"channel-" + std::to_wstring(channel_info_.index));
 
             while (!abort_request_) {
                 try {
@@ -216,7 +214,7 @@ struct video_channel::impl final
         if (!route) {
             route              = std::make_shared<core::route>();
             route->format_desc = stage_->video_format_desc(); // TODO this needs updating whenever the videomode changes
-            route->name        = std::to_wstring(index_);
+            route->name        = std::to_wstring(channel_info_.index);
             if (index != -1) {
                 route->name += L"/" + std::to_wstring(index);
             }
@@ -233,19 +231,12 @@ struct video_channel::impl final
 
     std::wstring print() const
     {
-        return L"video_channel[" + std::to_wstring(index_) + L"|" + stage_->video_format_desc().name + L"]";
+        return L"video_channel[" + std::to_wstring(channel_info_.index) + L"|" + stage_->video_format_desc().name + L"]";
     }
 
-    int index() const { return index_; }
+    int index() const { return channel_info_.index; }
 
-    channel_info get_consumer_channel_info() const
-    {
-        channel_info info        = {};
-        info.channel_index       = index_;
-        info.depth               = mixer_.depth();
-        info.default_color_space = default_color_space_;
-        return info;
-    }
+    channel_info get_consumer_channel_info() const { return channel_info_; }
 };
 
 video_channel::video_channel(int                                       index,
