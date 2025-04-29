@@ -190,7 +190,9 @@ struct audio_mixer::impl
                 
                 if (!immediate && std::abs(prev_volume - volume) > 0.001) {
                     size_t sample_index = n / channels_;
+                    // Simple linear ramping between previous and current volume
                     double position = static_cast<double>(sample_index) / static_cast<double>(samples_per_frame);
+                    position = std::min(1.0, std::max(0.0, position)); // Clamp position between 0 and 1
                     
                     applied_volume = prev_volume + (volume - prev_volume) * position;
                 }
