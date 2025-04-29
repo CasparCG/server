@@ -55,8 +55,8 @@ struct audio_mixer::impl
     monitor::state                              state_;
     std::stack<core::audio_transform>           transform_stack_;
     std::vector<audio_item>                     items_;
-    std::map<const void*, std::vector<int32_t>> audio_streams_;
-    std::map<const void*, double>               previous_volumes_;
+    std::map<const void*, std::vector<int32_t>> audio_streams_;    // For audio cadence handling
+    std::map<const void*, double>               previous_volumes_; // For audio transitions
     video_format_desc                           format_desc_;
     std::atomic<float>                          master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph>         graph_;
@@ -100,8 +100,12 @@ struct audio_mixer::impl
     array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples)
     {
         if (format_desc_ != format_desc) {
+            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             audio_streams_.clear();
+            // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
             previous_volumes_.clear();
+            
+            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             format_desc_ = format_desc;
             channels_ = format_desc.audio_channels;
             
@@ -130,16 +134,19 @@ struct audio_mixer::impl
 
         auto items    = std::move(items_);
         auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
-
         auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
+        // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
+        // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
         std::map<const void*, double> next_volumes;
 
         for (auto& item : items) {
             auto ptr       = item.samples.data();
             auto item_size = item.samples.size();
             auto dst_size  = result.size();
+            
+            // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
             auto volume    = item.transform.volume;
             auto immediate = item.transform.immediate_volume;
             auto tag       = item.tag;
@@ -152,7 +159,8 @@ struct audio_mixer::impl
             }
 
             size_t samples_per_frame = dst_size / channels_;
-
+            
+            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             size_t last_size = 0;
             const int32_t* last_ptr = nullptr;
             
@@ -170,9 +178,11 @@ struct audio_mixer::impl
                 }
             }
 
+            // Sample collection and volume application loop
             for (auto n = 0; n < dst_size; ++n) {
                 double sample_value = 0.0;
                 
+                // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
                 if (last_ptr && n < last_size) {
                     sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
@@ -186,6 +196,7 @@ struct audio_mixer::impl
                     sample_value = static_cast<double>(ptr[offset]);
                 }
                 
+                // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
                 double applied_volume = volume;
                 
                 if (!immediate && std::abs(prev_volume - volume) > 0.001) {
@@ -200,6 +211,7 @@ struct audio_mixer::impl
                 mixed[n] += sample_value * applied_volume;
             }
 
+            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             if (has_variable_cadence_ && item.tag) {
                 if (item_size + last_size > dst_size) {
                     // Initial buffer size calculation - unmodified excess data
@@ -221,8 +233,10 @@ struct audio_mixer::impl
             }
         }
         
+        // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
         previous_volumes_ = std::move(next_volumes);
         
+        // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
         audio_streams_ = std::move(next_audio_streams);
 
         auto master_volume = master_volume_.load();
