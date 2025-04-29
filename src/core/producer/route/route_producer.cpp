@@ -123,13 +123,13 @@ class route_producer
     caspar::timer consume_timer_;
 
     std::shared_ptr<route> route_;
+    const video_format_desc format_desc_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
-    bool                                                         source_has_variable_cadence_ = false;
-    bool                                                         source_is_interlaced_ = false;
+    core::video_format_desc                                      source_format_;
     bool                                                         is_cross_channel_ = false;
 
     boost::signals2::scoped_connection connection_;
@@ -143,19 +143,17 @@ class route_producer
         is_cross_channel_ = cross;
         if (cross) {
             buffer_.set_capacity(2);
-            // Check if the format has variable audio cadence (more than one value)
-            source_has_variable_cadence_ = route_->format_desc.audio_cadence.size() > 1;
-            source_is_interlaced_ = route_->format_desc.field_count == 2;
+            source_format_ = route_->format_desc;
         } else {
             buffer_.set_capacity(1);
-            source_has_variable_cadence_ = false;
-            source_is_interlaced_ = false;
+            source_format_ = core::video_format_desc();
         }
     }
 
   public:
-    route_producer(std::shared_ptr<route> route, int buffer, int source_channel, int source_layer)
+    route_producer(std::shared_ptr<route> route, video_format_desc format_desc, int buffer, int source_channel, int source_layer)
         : route_(route)
+        , format_desc_(format_desc)
         , source_channel_(source_channel)
         , source_layer_(source_layer)
         , tag_fix_(this)
@@ -191,7 +189,6 @@ class route_producer
                     auto frame2b = frame2;
                     if (!frame2b) {
                         // Ensure that any interlaced channel will repeat frames instead of showing black.
-                        // Note: doing 50p -> 50i will result in dropping to 25p and frame doubling.
                         frame2b = frame1b;
                     } else {
                         // For interlaced formats, ensure field B gets the proper tag as well
@@ -228,8 +225,16 @@ class route_producer
         }
     }
 
-    draw_frame receive_impl(const core::video_field field, int nb_samples) override
+    core::video_field next_field_ = core::video_field::a;
+    draw_frame receive_impl(core::video_field field, int nb_samples) override
     {
+        // If going i -> p, alternate between the fields
+        // Note: this doesn't fix the audio if going 50i -> 25p
+        if (field == core::video_field::progressive && source_format_.field_count != 1 && format_desc_.fps >= source_format_.fps) {
+            field = next_field_;
+            next_field_ = (next_field_ == core::video_field::a) ? core::video_field::b : core::video_field::a;
+        }
+
         if (field == core::video_field::a || field == core::video_field::progressive) {
             std::pair<core::draw_frame, core::draw_frame> frame;
             if (!buffer_.try_pop(frame)) {
@@ -303,7 +308,7 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);
-    auto rp     = spl::make_shared<route_producer>((*channel_it)->route(layer, mode), buffer, channel, layer);
+    auto rp     = spl::make_shared<route_producer>((*channel_it)->route(layer, mode), dependencies.format_desc, buffer, channel, layer);
     rp->connect_slot();
     return rp;
 }
