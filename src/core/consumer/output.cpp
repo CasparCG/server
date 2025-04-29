@@ -21,6 +21,7 @@
 #include "output.h"
 
 #include "frame_consumer.h"
+#include "channel_info.h"
 
 #include "../frame/frame.h"
 #include "../frame/pixel_format.h"
@@ -44,7 +45,7 @@ struct output::impl
 {
     monitor::state                      state_;
     spl::shared_ptr<diagnostics::graph> graph_;
-    const int                           channel_index_;
+    const channel_info                  channel_info_;
     video_format_desc                   format_desc_;
 
     std::mutex                                     consumers_mutex_;
@@ -53,10 +54,10 @@ struct output::impl
     std::optional<time_point_t> time_;
 
   public:
-    impl(const spl::shared_ptr<diagnostics::graph>& graph, video_format_desc format_desc, int channel_index)
+    impl(const spl::shared_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const core::channel_info& channel_info)
         : graph_(graph)
-        , channel_index_(channel_index)
-        , format_desc_(std::move(format_desc))
+        , channel_info_(channel_info)
+        , format_desc_(format_desc)
     {
     }
 
@@ -64,7 +65,7 @@ struct output::impl
     {
         remove(index);
 
-        consumer->initialize(format_desc_, channel_index_);
+        consumer->initialize(format_desc_, channel_info_, index);
 
         std::lock_guard<std::mutex> lock(consumers_mutex_);
         consumers_.emplace(index, std::move(consumer));
@@ -97,7 +98,7 @@ struct output::impl
             std::lock_guard<std::mutex> lock(consumers_mutex_);
             for (auto it = consumers_.begin(); it != consumers_.end();) {
                 try {
-                    it->second->initialize(format_desc, it->first);
+                    it->second->initialize(format_desc, channel_info_, it->first);
                     ++it;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
@@ -208,13 +209,13 @@ struct output::impl
         }
     }
 
-    std::wstring print() const { return L"output[" + std::to_wstring(channel_index_) + L"]"; }
+    std::wstring print() const { return L"output[" + std::to_wstring(channel_info_.index) + L"]"; }
 };
 
 output::output(const spl::shared_ptr<diagnostics::graph>& graph,
                const video_format_desc&                   format_desc,
-               int                                        channel_index)
-    : impl_(new impl(graph, format_desc, channel_index))
+               const core::channel_info&                  channel_info)
+    : impl_(new impl(graph, format_desc, channel_info))
 {
 }
 output::~output() {}

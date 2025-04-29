@@ -16,26 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Eliyah Sundström eliyah@sundstroem.com
+ * Author: Julian Waller, julian@superfly.tv
  */
 
 #pragma once
 
-#include "../util/fixture_calculation.h"
+#include "../frame/pixel_format.h"
+#include "common/bit_depth.h"
 
-#include <common/bit_depth.h>
-#include <common/memory.h>
+namespace caspar::core {
 
-#include <core/consumer/frame_consumer.h>
+struct channel_info
+{
+    channel_info(int channel_index, common::bit_depth depth, color_space color_space)
+    : index(channel_index)
+    , depth(depth)
+    , default_color_space(color_space)
+    {}
 
-#include <string>
-#include <vector>
+    int               index;
+    common::bit_depth depth;
+    color_space       default_color_space;
+};
 
-namespace caspar { namespace artnet {
-
-spl::shared_ptr<core::frame_consumer>
-create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
-                              const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              const core::channel_info&                                channel_info);
-}} // namespace caspar::artnet
+} // namespace caspar::core

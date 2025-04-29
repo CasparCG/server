@@ -30,6 +30,7 @@
 
 #include "../util/util.h"
 
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
@@ -710,7 +711,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc_, config_.hdr);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.hdr_meta.default_color_space);
+            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.color_space);
             for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }
@@ -932,8 +933,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                               mode_->GetFieldDominance(),
                                                                               config_.hdr);
 
-                    schedule_next_video(
-                        image_data, nb_samples, video_display_time, frame1.pixel_format_desc().color_space);
+                    schedule_next_video(image_data, nb_samples, video_display_time, config_.color_space);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -1067,12 +1067,12 @@ struct decklink_consumer_proxy : public core::frame_consumer
         });
     }
 
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_index);
+            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_info.index);
         });
     }
 
@@ -1098,15 +1098,15 @@ struct decklink_consumer_proxy : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                      common::bit_depth                                        depth)
+                                                      const core::channel_info& channel_info)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
     }
 
-    configuration config = parse_amcp_config(params, format_repository);
+    configuration config = parse_amcp_config(params, format_repository, channel_info);
 
-    config.hdr = (depth != common::bit_depth::bit8);
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
     if (config.hdr && config.primary.key_only) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
@@ -1120,11 +1120,11 @@ spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              common::bit_depth                                        depth)
+                              const core::channel_info&                                channel_info)
 {
-    configuration config = parse_xml_config(ptree, format_repository);
+    configuration config = parse_xml_config(ptree, format_repository, channel_info);
 
-    config.hdr = (depth != common::bit_depth::bit8);
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
     if (config.hdr && config.primary.has_subregion_geometry()) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
