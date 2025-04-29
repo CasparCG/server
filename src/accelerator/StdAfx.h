@@ -1,5 +1,4 @@
 #include <GL/glew.h>
-#include <SFML/Window/Context.hpp>
 #include <algorithm>
 #include <array>
 #include <boost/algorithm/cxx11/all_of.hpp>

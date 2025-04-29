@@ -30,6 +30,8 @@ apt-get install -yq --no-install-recommends \
 	libxrandr-dev \
 	libudev-dev \
 	libglu1-mesa-dev \
+	libgl1-mesa-dev \
+	libegl1-mesa-dev \
 	libboost-all-dev \
 	libnss3-dev \
     libcups2-dev \

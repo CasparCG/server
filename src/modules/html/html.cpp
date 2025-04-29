@@ -169,12 +169,24 @@ class renderer_application
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
+            auto default_backend = L"gl";
+#if __unix__
+            // If there is no X server, Chromium requires us to force it to the angle backend
+            if (getenv("DISPLAY") == nullptr) default_backend = L"vulkan";
+#endif
+
             // This gives better performance on the gpu->cpu readback, but can perform worse with intense templates
-            auto backend = env::properties().get(L"configuration.html.angle-backend", L"gl");
+            auto backend = env::properties().get(L"configuration.html.angle-backend", default_backend);
             if (backend.size() > 0) {
                 command_line->AppendSwitchWithValue("use-angle", backend);
             }
         }
+
+#if __unix__
+        if (getenv("DISPLAY") == nullptr) {
+            command_line->AppendSwitchWithValue("ozone-platform", "headless");
+        }
+#endif
 
         command_line->AppendSwitch("disable-web-security");
         command_line->AppendSwitch("enable-begin-frame-scheduling");

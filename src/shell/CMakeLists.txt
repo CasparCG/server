@@ -79,6 +79,8 @@ else ()
 	target_link_libraries(casparcg
 		${Boost_LIBRARIES}
 		OpenGL::GL
+		OpenGL::OpenGL
+		OpenGL::EGL
 		${X11_LIBRARIES}
 		${FFMPEG_LIBRARIES}
 		dl
