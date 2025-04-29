@@ -7,19 +7,23 @@ CasparCG 2.5.0 Stable
 * Build for Windows with VS2022
 * Rework linux builds to produce ubuntu deb files
 * Update ffmpeg to 7.0
+* Reimplement mixer transforms, to handle routes correctly
+* Support more pixel formats from ffmpeg, to preserve colour accuracy better
+* Support running on headless linux
 ##### Fixes
 * Build with boost 1.85/1.86
 * Only produce mixed frames on channels which have consumers
 * Routed channels not compositing correctly when channel used a MIXER KEY
+* Handle audio for fractional framerates properly
 
 ### Producers
 ##### Improvements
 * FFmpeg: Support loading with a scaling-mode, to configure how clips get fit into the channel
 * Image: Support loading with a scaling-mode, to configure how images get fit into the channel
-* Image: Reduce format/colour conversions performed on the CPU
+* Image: Replace freeimage with ffmpeg
 * HTML: Update CEF to 131
 ##### Fixes
-* 
+* Route: Use full field rate when performing i->p channel route
 
 ### Consumers
 ##### Improvements
