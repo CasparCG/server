@@ -38,7 +38,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
     {
       public:
         std::future<bool> send(const core::video_field field, const_frame) override { return make_ready_future(false); }
-        void              initialize(const video_format_desc&, int) override {}
+        void              initialize(const video_format_desc&, const core::channel_info&, int port_index) override {}
         std::wstring      print() const override { return L"empty"; }
         std::wstring      name() const override { return L"empty"; }
         bool              has_synchronization_clock() const override { return false; }

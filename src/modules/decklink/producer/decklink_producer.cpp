@@ -743,7 +743,6 @@ class decklink_producer : public IDeckLinkInputCallback
                         return S_OK;
                     }
 
-                    audio_filter_.sink->inputs[0]->min_samples = audio_cadence_[0];
                     if (av_buffersink_get_frame_flags(audio_filter_.sink, av_audio.get(), AV_BUFFERSINK_FLAG_PEEK) <
                         0) {
                         return S_OK;

@@ -40,7 +40,7 @@ class output final
   public:
     explicit output(const spl::shared_ptr<diagnostics::graph>& graph,
                     const video_format_desc&                   format_desc,
-                    int                                        channel_index);
+                    const core::channel_info&                  channel_info);
 
     output(const output&)            = delete;
     output& operator=(const output&) = delete;

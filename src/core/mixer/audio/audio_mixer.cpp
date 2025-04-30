@@ -145,22 +145,7 @@ struct audio_mixer::impl
             auto ptr       = item.samples.data();
             auto item_size = item.samples.size();
             auto dst_size  = result.size();
-            
-            // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
-            auto volume    = item.transform.volume;
-            auto immediate = item.transform.immediate_volume;
-            auto tag       = item.tag;
-            
-            next_volumes[tag] = volume;
-            
-            double prev_volume = volume;
-            if (tag && previous_volumes_.count(tag) > 0) {
-                prev_volume = previous_volumes_[tag];
-            }
 
-            size_t samples_per_frame = dst_size / channels_;
-            
-            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             size_t last_size = 0;
             const int32_t* last_ptr = nullptr;
             
@@ -198,19 +183,19 @@ struct audio_mixer::impl
                 }
                 
                 // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
-                double applied_volume = volume;
+                double applied_volume = item.transform.volume;
                 
-                if (!immediate && std::abs(prev_volume - volume) > 0.001) {
+                if (!item.transform.immediate_volume && std::abs(item.transform.volume - item.transform.volume) > 0.001) {
                     size_t sample_index = n / channels_;
                     // Simple linear ramping between previous and current volume
-                    double position = static_cast<double>(sample_index) / static_cast<double>(samples_per_frame);
+                    double position = static_cast<double>(sample_index) / static_cast<double>(dst_size / channels_);
                     position = std::min(1.0, std::max(0.0, position)); // Clamp between 0 and 1
 
-                    applied_volume = prev_volume + (volume - prev_volume) * position;
+                    applied_volume = item.transform.volume + (item.transform.volume - item.transform.volume) * position;
 
                     // Clamp to avoid overshoot beyond the intended target
-                    double low  = std::min(prev_volume, volume);
-                    double high = std::max(prev_volume, volume);
+                    double low  = std::min(item.transform.volume, item.transform.volume);
+                    double high = std::max(item.transform.volume, item.transform.volume);
                     if (applied_volume < low)  applied_volume = low;
                     if (applied_volume > high) applied_volume = high;
                 }

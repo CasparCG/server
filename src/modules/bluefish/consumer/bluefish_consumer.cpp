@@ -25,6 +25,7 @@
 #include "../util/blue_velvet.h"
 #include "../util/memory.h"
 
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 
@@ -849,12 +850,12 @@ struct bluefish_consumer_proxy : public core::frame_consumer
     }
 
     // frame_consumer
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_.reset(new bluefish_consumer(config_, format_desc, channel_index));
+            consumer_.reset(new bluefish_consumer(config_, format_desc, channel_info.index));
         });
     }
 
@@ -884,13 +885,13 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                      common::bit_depth                                        depth)
+                                                      const core::channel_info& channel_info)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"BLUEFISH")) {
         return core::frame_consumer::empty();
     }
 
-    if (depth != common::bit_depth::bit8)
+    if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish consumer only supports 8-bit color depth."));
 
     configuration config;
@@ -943,13 +944,13 @@ spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              common::bit_depth                                        depth)
+                              const core::channel_info&                                channel_info)
 {
     configuration config;
     auto          device_index = ptree.get(L"device", 1);
     config.device_index        = device_index;
 
-    if (depth != common::bit_depth::bit8)
+    if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish consumer only supports 8-bit color depth."));
 
     auto device_stream = ptree.get(L"sdi-stream", L"1");

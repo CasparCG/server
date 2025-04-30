@@ -33,6 +33,7 @@
 #include <common/scope_exit.h>
 #include <common/timer.h>
 
+#include <core/consumer/channel_info.h>
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 
@@ -519,14 +520,14 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
         }
 
         format_desc_   = format_desc;
-        channel_index_ = channel_index;
+        channel_index_ = channel_info.index;
 
         graph_->set_text(print());
 
@@ -741,7 +742,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                                                      common::bit_depth                                        depth)
+                                                      const core::channel_info& channel_info)
 {
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
@@ -752,18 +753,18 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         args.emplace_back(u8(params[n]));
     }
     return spl::make_shared<ffmpeg_consumer>(
-        path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"), depth);
+        path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"), channel_info.depth);
 }
 
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              common::bit_depth                                        depth)
+                              const core::channel_info&                                channel_info)
 {
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
                                              u8(ptree.get<std::wstring>(L"args", L"")),
                                              ptree.get(L"realtime", false),
-                                             depth);
+                                             channel_info.depth);
 }
 }} // namespace caspar::ffmpeg

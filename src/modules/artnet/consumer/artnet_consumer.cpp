@@ -28,6 +28,8 @@
 #include <common/log.h>
 #include <common/ptree.h>
 
+#include <core/consumer/channel_info.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -74,7 +76,7 @@ struct artnet_consumer : public core::frame_consumer
         compute_fixtures();
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override
+    void initialize(const core::video_format_desc& /*format_desc*/, const core::channel_info& channel_info, int port_index) override
     {
         thread_ = std::thread([this] {
             long long time      = 1000 / config.refreshRate;
@@ -304,11 +306,11 @@ spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-                              common::bit_depth                                        depth)
+                              const core::channel_info&                                channel_info)
 {
     configuration config;
 
-    if (depth != common::bit_depth::bit8)
+    if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Artnet consumer only supports 8-bit color depth."));
 
     config.universe    = ptree.get(L"universe", config.universe);
