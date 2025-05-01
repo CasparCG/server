@@ -96,28 +96,36 @@ class transition_producer : public frame_producer
 
     [[nodiscard]] std::optional<int64_t> auto_play_delta() const override 
     {
-        // Return how many frames before the end of the source clip to start the transition
-        // to ensure the last frame of source is visible before the transition completes
+        // Return how many frames before the end to start the transition
+        // Must never return 0 to avoid duplicate fields in AUTO playback
+        
+        int64_t delta;
         
         switch(info_.type) {
             case transition_type::cut:
-                // CUT: Source is immediately replaced, so need full duration
-                return info_.duration;
+                // CUT: Need full duration to show all frames
+                delta = info_.duration;
+                break;
                 
             case transition_type::cutfade:
-                // CUTFADE: Source is removed on first frame, so no need for extra frames
-                return 0;
+                // CUTFADE: Source is removed on first frame
+                delta = 1;
+                break;
                 
             case transition_type::vfade:
-                // VFADE: Source fades out by the midpoint
-                // Need to show last source frame one frame before midpoint
-                return static_cast<int64_t>(std::floor(info_.duration / 2.0)) - 1;
+                // VFADE: Source fades out by midpoint
+                delta = static_cast<int64_t>(std::floor(info_.duration / 2.0));
+                break;
 
             default:
-                // For all other transitions, need to show
-                //last source frame one frame before end of transition
-                return info_.duration > 0 ? info_.duration - 1 : 0;
+                // Standard transitions (MIX, PUSH, SLIDE, WIPE)
+                // Need full duration to complete properly and avoid duplicated fields
+                delta = info_.duration;
+                break;
         }
+        
+        // Ensure we never return less than 1
+        return std::max(delta, int64_t(1));
     }
 
     void update_state()
