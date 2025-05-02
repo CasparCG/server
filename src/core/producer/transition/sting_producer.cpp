@@ -201,57 +201,39 @@ class sting_producer : public frame_producer
 
         // Empty mask = Cut mode
         if (mask_producer_ == frame_producer::empty()) {
-            // Get the src and dst frames as needed
-            auto src = src_.get(field);
-            if (!src) {
-                src = src_producer_->receive(field, nb_samples);
-                src_.set(field, src);
-                if (!src) src = src_producer_->last_frame(field);
+            // Get source frame
+            auto src = src_producer_->receive(field, nb_samples);
+            if (!src) src = src_producer_->last_frame(field);
+
+            // Get destination frame
+            auto dst = dst_producer_->receive(field, nb_samples);
+            if (!dst) dst = dst_producer_->last_frame(field);
+
+            // Get overlay if any
+            auto overlay = draw_frame::empty();
+            if (overlay_producer_ != frame_producer::empty()) {
+                overlay = overlay_producer_->receive(field, nb_samples);
+                if (!overlay) overlay = overlay_producer_->last_frame(field);
             }
 
-            // Always load dst frame to ensure it's ready when needed
-            auto dst = dst_.get(field);
-            if (!dst) {
-                dst = dst_producer_->receive(field, nb_samples);
-                dst_.set(field, dst);
-                if (!dst) dst = dst_producer_->last_frame(field);
-            }
-            
-            // Determine which frame to display: src before trigger, dst after
-            draw_frame result;
-            if (current_frame_ < info_.trigger_point) {
-                result = src;
-            } else {
-                // Only use dst if we actually have it
-                result = dst ? dst : src;
-            }
-            
-            // Audio fade according to configured fade parameters (same as compose)
+            // Apply audio fade
             double audio_delta = get_audio_delta();
             if (src) src.transform().audio_transform.volume = 1.0 - audio_delta;
             if (dst) dst.transform().audio_transform.volume = audio_delta;
 
-            // Add overlay if any
-            bool has_overlay = overlay_producer_ != core::frame_producer::empty();
-            auto overlay = overlay_.get(field);
-            if (has_overlay && !overlay) {
-                overlay = overlay_producer_->receive(field, nb_samples);
-                overlay_.set(field, overlay);
-                if (!overlay) overlay = overlay_producer_->last_frame(field);
+            // Determine which frame to show based on trigger point
+            draw_frame result;
+            if (current_frame_ < info_.trigger_point) {
+                result = src;
+            } else {
+                result = dst;
             }
-            
-            // Only clear caches if we successfully got new frames
-            if (src) src_.set(field, draw_frame{});
-            if (dst) dst_.set(field, draw_frame{});
-            if (overlay) overlay_.set(field, draw_frame{});
+
+            // Increment frame counter
             current_frame_++;
-            
-            // Return frame (with overlay if present)
+
+            // Return frame with overlay if present
             if (overlay && result) {
-                // If we're past trigger point and have dst, use dst as base for overlay
-                if (current_frame_ > info_.trigger_point && dst) {
-                    return draw_frame::over(dst, overlay);
-                }
                 return draw_frame::over(result, overlay);
             }
             return result;
