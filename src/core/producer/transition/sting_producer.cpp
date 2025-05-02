@@ -201,8 +201,6 @@ class sting_producer : public frame_producer
 
         // Empty mask = Cut mode
         if (mask_producer_ == frame_producer::empty()) {
-            bool use_dst = current_frame_ >= info_.trigger_point;
-            
             // Get the src and dst frames as needed
             auto src = src_.get(field);
             if (!src) {
@@ -211,15 +209,22 @@ class sting_producer : public frame_producer
                 if (!src) src = src_producer_->last_frame(field);
             }
 
+            // Always load dst frame to ensure it's ready when needed
             auto dst = dst_.get(field);
-            if (!dst && use_dst) {
+            if (!dst) {
                 dst = dst_producer_->receive(field, nb_samples);
                 dst_.set(field, dst);
                 if (!dst) dst = dst_producer_->last_frame(field);
             }
             
             // Determine which frame to display: src before trigger, dst after
-            draw_frame result = (current_frame_ < info_.trigger_point ? src : dst);
+            draw_frame result;
+            if (current_frame_ < info_.trigger_point) {
+                result = src;
+            } else {
+                // Only use dst if we actually have it
+                result = dst ? dst : src;
+            }
             
             // Audio fade according to configured fade parameters (same as compose)
             double audio_delta = get_audio_delta();
@@ -235,10 +240,10 @@ class sting_producer : public frame_producer
                 if (!overlay) overlay = overlay_producer_->last_frame(field);
             }
             
-            // Clear caches and increment frame counter
-            src_.set(field, draw_frame{});
-            dst_.set(field, draw_frame{});
-            overlay_.set(field, draw_frame{});
+            // Only clear caches if we successfully got new frames
+            if (src) src_.set(field, draw_frame{});
+            if (dst) dst_.set(field, draw_frame{});
+            if (overlay) overlay_.set(field, draw_frame{});
             current_frame_++;
             
             // Return frame (with overlay if present)
