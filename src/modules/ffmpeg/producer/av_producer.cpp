@@ -193,10 +193,18 @@ class Decoder
                     } else {
                         FF_RET(ret, "avcodec_receive_frame");
 
+                        // TODO: Maybe Fixed in:
+                        // https://github.com/FFmpeg/FFmpeg/commit/33203a08e0a26598cb103508327a1dc184b27bc6
                         // NOTE This is a workaround for DVCPRO HD.
+#if LIBAVCODEC_VERSION_MAJOR < 61
                         if (av_frame->width > 1024 && av_frame->interlaced_frame) {
                             av_frame->top_field_first = 1;
                         }
+#else
+                        if (av_frame->width > 1024 && (av_frame->flags & AV_FRAME_FLAG_INTERLACED)) {
+                            av_frame->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST;
+                        }
+#endif
 
                         // TODO (fix) is this always best?
                         av_frame->pts = av_frame->best_effort_timestamp;
