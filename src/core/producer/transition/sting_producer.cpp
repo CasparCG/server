@@ -205,7 +205,7 @@ class sting_producer : public frame_producer
             
             // Get the src and dst frames as needed
             auto src = src_.get(field);
-            if (!src && !use_dst) {
+            if (!src) {
                 src = src_producer_->receive(field, nb_samples);
                 src_.set(field, src);
                 if (!src) src = src_producer_->last_frame(field);
@@ -218,19 +218,14 @@ class sting_producer : public frame_producer
                 if (!dst) dst = dst_producer_->last_frame(field);
             }
             
-            // Primary visual frame is just whichever producer's turn it is
-            draw_frame result = use_dst ? dst : src;
+            // Determine which frame to display: src before trigger, dst after
+            draw_frame result = (current_frame_ < info_.trigger_point ? src : dst);
             
-            // Audio volumes for the cut
-            double audio_delta = current_frame_ >= info_.trigger_point ? 1.0 : 0.0;
+            // Audio fade according to configured fade parameters (same as compose)
+            double audio_delta = get_audio_delta();
             if (src) src.transform().audio_transform.volume = 1.0 - audio_delta;
             if (dst) dst.transform().audio_transform.volume = audio_delta;
-            
-            // Immediate volume at the cut point
-            bool is_cut_frame = (current_frame_ == info_.trigger_point);
-            if (src) src.transform().audio_transform.immediate_volume = is_cut_frame;
-            if (dst) dst.transform().audio_transform.immediate_volume = is_cut_frame;
-            
+
             // Add overlay if any
             bool has_overlay = overlay_producer_ != core::frame_producer::empty();
             auto overlay = overlay_.get(field);
@@ -240,13 +235,13 @@ class sting_producer : public frame_producer
                 if (!overlay) overlay = overlay_producer_->last_frame(field);
             }
             
-            // Clear caches and increment frame
+            // Clear caches and increment frame counter
             src_.set(field, draw_frame{});
             dst_.set(field, draw_frame{});
             overlay_.set(field, draw_frame{});
             current_frame_++;
             
-            // Return result with overlay
+            // Return frame (with overlay if present)
             if (overlay && result) {
                 return draw_frame::over(result, overlay);
             }
