@@ -32,6 +32,7 @@
 #include <common/scope_exit.h>
 
 #include <future>
+#include <vector>
 
 namespace caspar { namespace core {
 
@@ -93,12 +94,48 @@ class sting_producer : public frame_producer
 
     spl::shared_ptr<frame_producer> following_producer() const override
     {
-        auto duration = target_duration();
-        return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
+        // Empty mask = Cut Mode
+        if (mask_producer_ == frame_producer::empty()) {
+            // Handle based on trigger point and overlay duration
+            if (current_frame_ >= info_.trigger_point) {
+                // If no overlay or we've passed overlay's duration
+                if (overlay_producer_ == frame_producer::empty()) {
+                    return dst_producer_;
+                }
+                
+                // Get overlay duration and add it to trigger point
+                uint32_t overlay_duration = overlay_producer_->nb_frames();
+                if (overlay_duration != 0 && overlay_duration != UINT32_MAX && 
+                    current_frame_ >= info_.trigger_point + overlay_duration) {
+                    return dst_producer_;
+                }
+            }
+            
+            // Still transitioning
+            return core::frame_producer::empty();
+        }
+        // Standard sting mode
+        else {
+            auto duration = target_duration();
+            return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
+        }
     }
 
     std::optional<int64_t> auto_play_delta() const override
     {
+        // Empty mask = Cut Mode - return max of trigger_point or audio_fade duration
+        if (mask_producer_ == frame_producer::empty()) {
+            uint32_t audio_end = 0;
+            if (info_.audio_fade_duration < UINT32_MAX) {
+                audio_end = info_.audio_fade_start + info_.audio_fade_duration;
+            }
+            
+            // Return the max of trigger_point or audio_fade_end as the delta
+            int64_t delta = static_cast<int64_t>(std::max(info_.trigger_point, audio_end));
+            return std::optional<int64_t>(delta);
+        }
+        
+        // Standard sting mode - original code
         auto duration = static_cast<int64_t>(mask_producer_->nb_frames());
         // ffmpeg will return -1 when media is still loading, so we need to cast duration first
         if (duration > -1) {
@@ -109,6 +146,22 @@ class sting_producer : public frame_producer
 
     std::optional<uint32_t> target_duration() const
     {
+        // For empty mask, use trigger point + overlay duration
+        if (mask_producer_ == frame_producer::empty()) {
+            uint32_t duration = info_.trigger_point;
+            
+            // Add overlay duration if available
+            if (overlay_producer_ != frame_producer::empty()) {
+                uint32_t overlay_duration = overlay_producer_->nb_frames();
+                if (overlay_duration != 0 && overlay_duration != UINT32_MAX) {
+                    duration = info_.trigger_point + overlay_duration;
+                }
+            }
+            
+            return duration;
+        }
+        
+        // Original sting logic
         auto autoplay = auto_play_delta();
         if (!autoplay) {
             return {};
@@ -134,16 +187,74 @@ class sting_producer : public frame_producer
         CASPAR_SCOPE_EXIT
         {
             state_                    = dst_producer_->state();
-            state_["transition/type"] = std::string("sting");
+            state_["transition/type"] = mask_producer_ == frame_producer::empty() ? 
+                                        std::string("cut") : std::string("sting");
 
             if (duration)
                 state_["transition/frame"] = {static_cast<int>(current_frame_), static_cast<int>(*duration)};
         };
 
+        // If transition is complete, just return dst directly
         if (duration && current_frame_ >= *duration) {
             return dst_producer_->receive(field, nb_samples);
         }
 
+        // Empty mask = Cut mode
+        if (mask_producer_ == frame_producer::empty()) {
+            bool use_dst = current_frame_ >= info_.trigger_point;
+            
+            // Get the src and dst frames as needed
+            auto src = src_.get(field);
+            if (!src && !use_dst) {
+                src = src_producer_->receive(field, nb_samples);
+                src_.set(field, src);
+                if (!src) src = src_producer_->last_frame(field);
+            }
+
+            auto dst = dst_.get(field);
+            if (!dst && use_dst) {
+                dst = dst_producer_->receive(field, nb_samples);
+                dst_.set(field, dst);
+                if (!dst) dst = dst_producer_->last_frame(field);
+            }
+            
+            // Primary visual frame is just whichever producer's turn it is
+            draw_frame result = use_dst ? dst : src;
+            
+            // Audio volumes for the cut
+            double audio_delta = current_frame_ >= info_.trigger_point ? 1.0 : 0.0;
+            if (src) src.transform().audio_transform.volume = 1.0 - audio_delta;
+            if (dst) dst.transform().audio_transform.volume = audio_delta;
+            
+            // Immediate volume at the cut point
+            bool is_cut_frame = (current_frame_ == info_.trigger_point);
+            if (src) src.transform().audio_transform.immediate_volume = is_cut_frame;
+            if (dst) dst.transform().audio_transform.immediate_volume = is_cut_frame;
+            
+            // Add overlay if any
+            bool has_overlay = overlay_producer_ != core::frame_producer::empty();
+            auto overlay = overlay_.get(field);
+            if (has_overlay && !overlay) {
+                overlay = overlay_producer_->receive(field, nb_samples);
+                overlay_.set(field, overlay);
+                if (!overlay) overlay = overlay_producer_->last_frame(field);
+            }
+            
+            // Clear caches and increment frame
+            src_.set(field, draw_frame{});
+            dst_.set(field, draw_frame{});
+            overlay_.set(field, draw_frame{});
+            current_frame_++;
+            
+            // Return result with overlay
+            if (overlay && result) {
+                return draw_frame::over(result, overlay);
+            }
+            return result;
+        }
+        
+        // Regular STING mode below - original code
+        
         auto src = src_.get(field);
         if (!src) {
             src = src_producer_->receive(field, nb_samples);
@@ -187,9 +298,8 @@ class sting_producer : public frame_producer
             return src;
         }
 
-        // Ensure mask and overlay are in perfect sync
+        // Ensure mask and overlay are in sync
         if (!mask_and_overlay_valid) {
-            // If one is behind, then fetch the last_frame of both
             mask    = mask_producer_->last_frame(field);
             overlay = overlay_producer_->last_frame(field);
         }
@@ -229,6 +339,7 @@ class sting_producer : public frame_producer
 
     double get_audio_delta() const
     {
+        // Use audio_fade params for both empty mask and normal sting modes
         if (current_frame_ < info_.audio_fade_start) {
             return 0;
         }
