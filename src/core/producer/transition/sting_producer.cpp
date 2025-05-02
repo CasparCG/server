@@ -32,7 +32,6 @@
 #include <common/scope_exit.h>
 
 #include <future>
-#include <vector>
 
 namespace caspar { namespace core {
 
@@ -86,10 +85,6 @@ class sting_producer : public frame_producer
         , mask_producer_(mask)
         , overlay_producer_(overlay)
     {
-        CASPAR_LOG(debug) << L"Created sting transition with parameters:";
-        CASPAR_LOG(debug) << L"  Audio fade start: " << info_.audio_fade_start;
-        CASPAR_LOG(debug) << L"  Audio fade duration: " << info_.audio_fade_duration;
-        CASPAR_LOG(debug) << L"  Trigger point: " << info_.trigger_point;
     }
 
     // frame_producer
@@ -135,9 +130,6 @@ class sting_producer : public frame_producer
     draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         auto duration = target_duration();
-
-        CASPAR_LOG(debug) << L"Sting receive_impl: current_frame_=" << current_frame_
-                          << L", target_duration=" << (duration ? std::to_wstring(*duration) : L"none");
 
         CASPAR_SCOPE_EXIT
         {
@@ -261,9 +253,6 @@ class sting_producer : public frame_producer
         const double delta                           = get_audio_delta();
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
-        CASPAR_LOG(debug) << L"Sting compose: Audio delta=" << delta
-                          << L", src_volume=" << src_frame.transform().audio_transform.volume
-                          << L", dst_volume=" << dst_frame.transform().audio_transform.volume;
 
         draw_frame mask_frame2                         = mask_frame;
         mask_frame.transform().image_transform.is_key  = true;
