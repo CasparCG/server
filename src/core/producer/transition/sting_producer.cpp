@@ -248,6 +248,10 @@ class sting_producer : public frame_producer
             
             // Return frame (with overlay if present)
             if (overlay && result) {
+                // If we're past trigger point and have dst, use dst as base for overlay
+                if (current_frame_ > info_.trigger_point && dst) {
+                    return draw_frame::over(dst, overlay);
+                }
                 return draw_frame::over(result, overlay);
             }
             return result;
