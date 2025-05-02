@@ -208,10 +208,19 @@ class Decoder
 #endif
                         if (duration_pts <= 0) {
                             if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+#if LIBAVCODEC_VERSION_MAJOR < 62
+                                const int ticks_per_frame = ctx->ticks_per_frame;
+#else
+                                // https://github.com/FFmpeg/FFmpeg/commit/e930b834a928546f9cbc937f6633709053448232#diff-115616f8a2b59cab3aac4e7f4c8c31e69e94e7fcfa339b9f65b0bf34308aa80fR682
+                                const int ticks_per_frame =
+                                    (ctx->codec_descriptor && (ctx->codec_descriptor->props & AV_CODEC_PROP_FIELDS))
+                                        ? 2
+                                        : 1;
+#endif
                                 const auto ticks = av_stream_get_parser(st) ? av_stream_get_parser(st)->repeat_pict + 1
-                                                                            : ctx->ticks_per_frame;
+                                                                            : ticks_per_frame;
                                 duration_pts     = static_cast<int64_t>(AV_TIME_BASE) * ctx->framerate.den * ticks /
-                                               ctx->framerate.num / ctx->ticks_per_frame;
+                                               ctx->framerate.num / ticks_per_frame;
                                 duration_pts = av_rescale_q(duration_pts, {1, AV_TIME_BASE}, st->time_base);
                             } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
                                 duration_pts = av_rescale_q(av_frame->nb_samples, {1, ctx->sample_rate}, st->time_base);
