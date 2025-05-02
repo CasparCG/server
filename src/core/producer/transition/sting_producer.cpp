@@ -115,6 +115,12 @@ class sting_producer : public frame_producer
         }
 
         auto autoplay2 = static_cast<uint32_t>(*autoplay);
+        
+        // Force finite duration when using infinite masks with audio fade
+        if (autoplay2 == UINT32_MAX && info_.audio_fade_duration < UINT32_MAX) {
+            return info_.audio_fade_start + info_.audio_fade_duration;
+        }
+        
         if (info_.audio_fade_duration < UINT32_MAX) {
             return std::max(autoplay2, info_.audio_fade_duration + info_.audio_fade_start);
         }
