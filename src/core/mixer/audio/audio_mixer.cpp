@@ -100,12 +100,9 @@ struct audio_mixer::impl
     array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples)
     {
         if (format_desc_ != format_desc) {
-            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             audio_streams_.clear();
-            // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
             previous_volumes_.clear();
             
-            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             format_desc_ = format_desc;
             channels_ = format_desc.audio_channels;
             
@@ -136,9 +133,7 @@ struct audio_mixer::impl
         auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
         auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
-        // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
-        // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
         std::map<const void*, double> next_volumes;
 
         for (auto& item : items) {
@@ -167,7 +162,6 @@ struct audio_mixer::impl
             for (auto n = 0; n < dst_size; ++n) {
                 double sample_value = 0.0;
                 
-                // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
                 if (last_ptr && n < last_size) {
                     sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
@@ -182,7 +176,6 @@ struct audio_mixer::impl
                     sample_value = static_cast<double>(ptr[offset]);
                 }
                 
-                // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
                 double applied_volume = item.transform.volume;
                 
                 if (!item.transform.immediate_volume && std::abs(item.transform.volume - item.transform.volume) > 0.001) {
@@ -203,7 +196,6 @@ struct audio_mixer::impl
                 mixed[n] += sample_value * applied_volume;
             }
 
-            // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
             if (has_variable_cadence_ && item.tag) {
                 if (item_size + last_size > dst_size) {
                     // Calculate remaining samples after mixing the current frame
@@ -232,10 +224,7 @@ struct audio_mixer::impl
             }
         }
         
-        // --- AUDIO TRANSITION HANDLING (tk-cutfade) ---
         previous_volumes_ = std::move(next_volumes);
-        
-        // --- AUDIO CADENCE HANDLING (tk-1001-2) ---
         audio_streams_ = std::move(next_audio_streams);
 
         auto master_volume = master_volume_.load();
