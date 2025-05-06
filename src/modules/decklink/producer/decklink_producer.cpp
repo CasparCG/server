@@ -731,6 +731,7 @@ class decklink_producer : public IDeckLinkInputCallback
                 }
             }
 
+            av_buffersink_set_frame_size(audio_filter_.sink, audio_cadence_[0]);
             while (true) {
                 {
                     auto av_video = alloc_frame();
