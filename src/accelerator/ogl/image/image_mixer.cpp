@@ -20,6 +20,7 @@
  */
 #include "image_mixer.h"
 
+#include "core/frame/frame_side_data.h"
 #include "image_kernel.h"
 
 #include "../util/buffer.h"
@@ -340,6 +341,7 @@ struct image_mixer::impl
                                    std::move(image_data),
                                    array<int32_t>{},
                                    desc,
+                                   std::vector<core::mutable_frame_side_data>{},
                                    [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                                        auto self = weak_self.lock();
                                        if (!self) {

@@ -130,13 +130,31 @@ struct audio_transform final
 bool operator==(const audio_transform& lhs, const audio_transform& rhs);
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
+struct side_data_transform final
+{
+    bool use_closed_captions = true;
+
+    side_data_transform& operator*=(const side_data_transform& other);
+    side_data_transform  operator*(const side_data_transform& other) const;
+
+    static side_data_transform tween(double                     time,
+                                     const side_data_transform& source,
+                                     const side_data_transform& dest,
+                                     double                     duration,
+                                     const tweener&             tween);
+};
+
+bool operator==(const side_data_transform& lhs, const side_data_transform& rhs);
+bool operator!=(const side_data_transform& lhs, const side_data_transform& rhs);
+
 struct frame_transform final
 {
   public:
     frame_transform();
 
-    core::image_transform image_transform;
-    core::audio_transform audio_transform;
+    core::image_transform     image_transform;
+    core::audio_transform     audio_transform;
+    core::side_data_transform side_data_transform;
 
     static frame_transform tween(double                 time,
                                  const frame_transform& source,

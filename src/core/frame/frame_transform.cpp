@@ -180,6 +180,41 @@ bool operator==(const audio_transform& lhs, const audio_transform& rhs) { return
 
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return !(lhs == rhs); }
 
+// side_data_transform
+
+side_data_transform& side_data_transform::operator*=(const side_data_transform& other)
+{
+    use_closed_captions &= other.use_closed_captions;
+    return *this;
+}
+
+side_data_transform side_data_transform::operator*(const side_data_transform& other) const
+{
+    return side_data_transform(*this) *= other;
+}
+
+side_data_transform side_data_transform::tween(double                     time,
+                                               const side_data_transform& source,
+                                               const side_data_transform& dest,
+                                               double                     duration,
+                                               const tweener&             tween)
+{
+    side_data_transform result;
+    result.use_closed_captions = dest.use_closed_captions;
+    static_cast<void>(time);
+    static_cast<void>(source);
+    static_cast<void>(duration);
+    static_cast<void>(tween);
+    return result;
+}
+
+bool operator==(const side_data_transform& lhs, const side_data_transform& rhs)
+{
+    return lhs.use_closed_captions == rhs.use_closed_captions;
+}
+
+bool operator!=(const side_data_transform& lhs, const side_data_transform& rhs) { return !(lhs == rhs); }
+
 // frame_transform
 frame_transform::frame_transform() = default;
 
@@ -194,12 +229,15 @@ frame_transform frame_transform::tween(double                 time,
         image_transform::tween(time, source.image_transform, dest.image_transform, duration, tween);
     result.audio_transform =
         audio_transform::tween(time, source.audio_transform, dest.audio_transform, duration, tween);
+    result.side_data_transform =
+        side_data_transform::tween(time, source.side_data_transform, dest.side_data_transform, duration, tween);
     return result;
 }
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 {
-    return lhs.image_transform == rhs.image_transform && lhs.audio_transform == rhs.audio_transform;
+    return lhs.image_transform == rhs.image_transform && lhs.audio_transform == rhs.audio_transform &&
+           lhs.side_data_transform == rhs.side_data_transform;
 }
 
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs) { return !(lhs == rhs); }
