@@ -212,8 +212,11 @@ struct Stream
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            // FIXME: original code never deallocates sink
+            sink = avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out");
+            if (!sink) {
+                FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc_filter");
+            }
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -222,18 +225,40 @@ struct Stream
             // TODO codec->profiles
             // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
             // AV_OPT_SEARCH_CHILDREN));
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
             FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+#else
+            const AVPixelFormat* pix_fmts     = nullptr;
+            int                  num_pix_fmts = 0;
+            FF(avcodec_get_supported_config(nullptr,
+                                            codec,
+                                            AV_CODEC_CONFIG_PIX_FORMAT,
+                                            0,
+                                            reinterpret_cast<const void**>(&pix_fmts),
+                                            &num_pix_fmts));
+            FF(av_opt_set_array(sink,
+                                "pixel_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                num_pix_fmts,
+                                AV_OPT_TYPE_PIXEL_FMT,
+                                pix_fmts));
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            // FIXME: original code never deallocates sink
+            sink = avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out");
+            if (!sink) {
+                FF_RET(AVERROR(ENOMEM), "avfilter_graph_alloc_filter");
+            }
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
             // TODO codec->profiles
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
 
@@ -243,7 +268,60 @@ struct Stream
 #else
             FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
 #endif
+#else
+            {
+                const AVSampleFormat* sample_fmts     = nullptr;
+                int                   num_sample_fmts = 0;
+                FF(avcodec_get_supported_config(nullptr,
+                                                codec,
+                                                AV_CODEC_CONFIG_SAMPLE_FORMAT,
+                                                0,
+                                                reinterpret_cast<const void**>(&sample_fmts),
+                                                &num_sample_fmts));
+                FF(av_opt_set_array(sink,
+                                    "sample_formats",
+                                    AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                    0,
+                                    num_sample_fmts,
+                                    AV_OPT_TYPE_SAMPLE_FMT,
+                                    sample_fmts));
+            }
+            {
+                const int* sample_rates     = nullptr;
+                int        num_sample_rates = 0;
+                FF(avcodec_get_supported_config(nullptr,
+                                                codec,
+                                                AV_CODEC_CONFIG_SAMPLE_RATE,
+                                                0,
+                                                reinterpret_cast<const void**>(&sample_rates),
+                                                &num_sample_rates));
+                FF(av_opt_set_array(sink,
+                                    "samplerates",
+                                    AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                    0,
+                                    num_sample_rates,
+                                    AV_OPT_TYPE_INT,
+                                    sample_rates));
+            }
+            {
+                const AVChannelLayout* channel_layouts     = nullptr;
+                int                    num_channel_layouts = 0;
+                FF(avcodec_get_supported_config(nullptr,
+                                                codec,
+                                                AV_CODEC_CONFIG_CHANNEL_LAYOUT,
+                                                0,
+                                                reinterpret_cast<const void**>(&channel_layouts),
+                                                &num_channel_layouts));
+                FF(av_opt_set_array(sink,
+                                    "channel_layouts",
+                                    AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                    0,
+                                    num_channel_layouts,
+                                    AV_OPT_TYPE_CHLAYOUT,
+                                    channel_layouts));
+            }
 
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -251,6 +329,8 @@ struct Stream
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
+        FF(avfilter_init_str(sink, nullptr));
 
         {
             const auto cur = outputs;
