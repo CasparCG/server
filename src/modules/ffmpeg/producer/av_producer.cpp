@@ -25,6 +25,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
+#include <optional>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -574,60 +575,41 @@ struct Filter
         }
 
         if (media_type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
-            const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGB24,
-                                              AV_PIX_FMT_BGR24,
-                                              AV_PIX_FMT_BGRA,
-                                              AV_PIX_FMT_ARGB,
-                                              AV_PIX_FMT_RGBA,
-                                              AV_PIX_FMT_ABGR,
-                                              AV_PIX_FMT_YUV444P,
-                                              AV_PIX_FMT_YUV422P,
-                                              AV_PIX_FMT_YUV422P10,
-                                              AV_PIX_FMT_YUV422P12,
-                                              AV_PIX_FMT_YUV420P,
-                                              AV_PIX_FMT_YUV420P10,
-                                              AV_PIX_FMT_YUV420P12,
-                                              AV_PIX_FMT_YUV410P,
-                                              AV_PIX_FMT_YUVA444P,
-                                              AV_PIX_FMT_YUVA422P,
-                                              AV_PIX_FMT_YUVA420P,
-                                              AV_PIX_FMT_UYVY422,
-                                              // bwdif needs planar rgb
-                                              AV_PIX_FMT_GBRP,
-                                              AV_PIX_FMT_GBRP10,
-                                              AV_PIX_FMT_GBRP12,
-                                              AV_PIX_FMT_GBRP16,
-                                              AV_PIX_FMT_GBRAP,
-                                              AV_PIX_FMT_GBRAP16,
-                                              AV_PIX_FMT_NONE};
-            FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            sink = create_buffersink(graph.get(),
+                                     "out",
+                                     av_opt_array_ref{
+                                         AV_PIX_FMT_RGB24,
+                                         AV_PIX_FMT_BGR24,
+                                         AV_PIX_FMT_BGRA,
+                                         AV_PIX_FMT_ARGB,
+                                         AV_PIX_FMT_RGBA,
+                                         AV_PIX_FMT_ABGR,
+                                         AV_PIX_FMT_YUV444P,
+                                         AV_PIX_FMT_YUV422P,
+                                         AV_PIX_FMT_YUV422P10,
+                                         AV_PIX_FMT_YUV422P12,
+                                         AV_PIX_FMT_YUV420P,
+                                         AV_PIX_FMT_YUV420P10,
+                                         AV_PIX_FMT_YUV420P12,
+                                         AV_PIX_FMT_YUV410P,
+                                         AV_PIX_FMT_YUVA444P,
+                                         AV_PIX_FMT_YUVA422P,
+                                         AV_PIX_FMT_YUVA420P,
+                                         AV_PIX_FMT_UYVY422,
+                                         // bwdif needs planar rgb
+                                         AV_PIX_FMT_GBRP,
+                                         AV_PIX_FMT_GBRP10,
+                                         AV_PIX_FMT_GBRP12,
+                                         AV_PIX_FMT_GBRP16,
+                                         AV_PIX_FMT_GBRAP,
+                                         AV_PIX_FMT_GBRAP16,
+                                     });
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
-            const AVSampleFormat sample_fmts[] = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
-            FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-
-            FF(av_opt_set_int(sink, "all_channel_counts", 1, AV_OPT_SEARCH_CHILDREN));
-
-            const int sample_rates[] = {format_desc.audio_sample_rate, -1};
-            FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, -1, AV_OPT_SEARCH_CHILDREN));
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            sink = create_abuffersink(graph.get(),
+                                      "out",
+                                      av_opt_array_ref{AV_SAMPLE_FMT_S32},
+                                      av_opt_array_ref{format_desc.audio_sample_rate},
+                                      std::nullopt);
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));

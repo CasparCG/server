@@ -19,11 +19,21 @@
 
 #include "frame_side_data.h"
 #include <common/array.h>
+#include <common/except.h>
 
 #include <cstdint>
 #include <memory>
 
 namespace caspar::core {
+
+bool frame_side_data_include_on_duplicate_frames(frame_side_data_type t) noexcept
+{
+    switch (t) {
+        case frame_side_data_type::a53_cc:
+            return false;
+    }
+    CASPAR_THROW_EXCEPTION(programming_error() << msg_info("Assertion Failed: invalid frame_side_data_type value"));
+}
 
 struct mutable_frame_side_data::impl
 {

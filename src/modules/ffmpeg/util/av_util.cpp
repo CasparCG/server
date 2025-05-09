@@ -1,7 +1,11 @@
 #include "av_util.h"
 #include "av_assert.h"
+#include <core/frame/frame_side_data.h>
 
 #include <common/bit_depth.h>
+#include <cstdint>
+#include <cstring>
+#include <libavutil/opt.h>
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -19,9 +23,10 @@ extern "C" {
 #pragma warning(pop)
 #endif
 
-#include <array>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
+
+#include <boost/log/utility/manipulators/dump.hpp>
 
 #include <tuple>
 
@@ -43,6 +48,50 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
+static void add_side_data(std::vector<core::mutable_frame_side_data>& out, const AVFrameSideData& in)
+{
+    auto add_no_metadata = [&](core::frame_side_data_type type) {
+        out.push_back(core::mutable_frame_side_data(type, std::vector<uint8_t>(in.data, in.data + in.size)));
+    };
+    switch (in.type) {
+        case AV_FRAME_DATA_A53_CC:
+            CASPAR_LOG(trace) << L"got A53_CC side data: " << boost::log::dump(in.data, in.size, 16);
+            add_no_metadata(core::frame_side_data_type::a53_cc);
+            break;
+        case AV_FRAME_DATA_PANSCAN:
+        case AV_FRAME_DATA_STEREO3D:
+        case AV_FRAME_DATA_MATRIXENCODING:
+        case AV_FRAME_DATA_DOWNMIX_INFO:
+        case AV_FRAME_DATA_REPLAYGAIN:
+        case AV_FRAME_DATA_DISPLAYMATRIX:
+        case AV_FRAME_DATA_AFD:
+        case AV_FRAME_DATA_MOTION_VECTORS:
+        case AV_FRAME_DATA_SKIP_SAMPLES:
+        case AV_FRAME_DATA_AUDIO_SERVICE_TYPE:
+        case AV_FRAME_DATA_MASTERING_DISPLAY_METADATA:
+        case AV_FRAME_DATA_GOP_TIMECODE:
+        case AV_FRAME_DATA_SPHERICAL:
+        case AV_FRAME_DATA_CONTENT_LIGHT_LEVEL:
+        case AV_FRAME_DATA_ICC_PROFILE:
+        case AV_FRAME_DATA_S12M_TIMECODE:
+        case AV_FRAME_DATA_DYNAMIC_HDR_PLUS:
+        case AV_FRAME_DATA_REGIONS_OF_INTEREST:
+        case AV_FRAME_DATA_VIDEO_ENC_PARAMS:
+        case AV_FRAME_DATA_SEI_UNREGISTERED:
+        case AV_FRAME_DATA_FILM_GRAIN_PARAMS:
+        case AV_FRAME_DATA_DETECTION_BBOXES:
+        case AV_FRAME_DATA_DOVI_RPU_BUFFER:
+        case AV_FRAME_DATA_DOVI_METADATA:
+        case AV_FRAME_DATA_DYNAMIC_HDR_VIVID:
+        case AV_FRAME_DATA_AMBIENT_VIEWING_ENVIRONMENT:
+        case AV_FRAME_DATA_VIDEO_HINT:
+        case AV_FRAME_DATA_LCEVC:
+        case AV_FRAME_DATA_VIEW_ID:
+            // TODO: add to core::frame_side_data_type and add metadata to core::*_frame_side_data if necessary
+            break;
+    }
+}
+
 core::mutable_frame make_frame(void*                            tag,
                                core::frame_factory&             frame_factory,
                                std::shared_ptr<AVFrame>         video,
@@ -62,6 +111,18 @@ core::mutable_frame make_frame(void*                            tag,
     auto frame = frame_factory.create_frame(tag, pix_desc);
     if (scale_mode != core::frame_geometry::scale_mode::stretch) {
         frame.geometry() = core::frame_geometry::get_default(scale_mode);
+    }
+
+    if (video) {
+        for (int i = 0; i < video->nb_side_data; i++) {
+            add_side_data(frame.side_data(), *video->side_data[i]);
+        }
+    }
+
+    if (audio) {
+        for (int i = 0; i < audio->nb_side_data; i++) {
+            add_side_data(frame.side_data(), *audio->side_data[i]);
+        }
     }
 
     tbb::parallel_invoke(
@@ -416,4 +477,170 @@ uint64_t get_channel_layout_mask_for_channels(int channel_count)
 #endif
 }
 
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0) || 1
+#define GET_SET_ATTRIBUTE(                                                                                             \
+    ty, fn_suffix, config_type, opt_type, old_config_name, new_config_name, codec_type, field, terminator)             \
+    av_opt_array_ref<ty> get_supported_##fn_suffix(const AVCodecContext* avctx, const AVCodec* codec)                  \
+    {                                                                                                                  \
+        if (!codec)                                                                                                    \
+            codec = avctx->codec;                                                                                      \
+        if (codec->type != codec_type)                                                                                 \
+            FF_RET(AVERROR(EINVAL), THROW_ON_ERROR_STR(get_supported_##fn_suffix));                                    \
+        return av_opt_array_ref<ty>::terminated(codec->field, terminator);                                             \
+    }                                                                                                                  \
+                                                                                                                       \
+    void set_##fn_suffix(AVFilterContext* target, av_opt_array_ref<ty> array_ref)                                      \
+    {                                                                                                                  \
+        FF(av_opt_set_bin(target,                                                                                      \
+                          old_config_name,                                                                             \
+                          reinterpret_cast<const uint8_t*>(array_ref.data()),                                          \
+                          sizeof(ty) * array_ref.size(),                                                               \
+                          AV_OPT_SEARCH_CHILDREN));                                                                    \
+    }
+
+#else
+#define GET_SET_ATTRIBUTE(                                                                                             \
+    ty, fn_suffix, config_type, opt_type, old_config_name, new_config_name, codec_type, field, terminator)             \
+    av_opt_array_ref<ty> get_supported_##fn_suffix(const AVCodecContext* avctx, const AVCodec* codec)                  \
+    {                                                                                                                  \
+        const ty* data = nullptr;                                                                                      \
+        int       size = 0;                                                                                            \
+        FF(avcodec_get_supported_config(avctx, codec, config_type, 0, reinterpret_cast<const void**>(&data), &size));  \
+        return av_opt_array_ref<ty>(data, size);                                                                       \
+    }                                                                                                                  \
+                                                                                                                       \
+    void set_##fn_suffix(AVFilterContext* target, av_opt_array_ref<ty> array_ref)                                      \
+    {                                                                                                                  \
+        FF(av_opt_set_array(target,                                                                                    \
+                            new_config_name,                                                                           \
+                            AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,                                             \
+                            0,                                                                                         \
+                            array_ref.size(),                                                                          \
+                            opt_type,                                                                                  \
+                            array_ref.data()));                                                                        \
+    }
+#endif
+
+GET_SET_ATTRIBUTE(AVPixelFormat,
+                  pixel_formats,
+                  AV_CODEC_CONFIG_PIX_FORMAT,
+                  AV_OPT_TYPE_PIXEL_FMT,
+                  "pix_fmts",
+                  "pixel_formats",
+                  AVMEDIA_TYPE_VIDEO,
+                  pix_fmts,
+                  AV_PIX_FMT_NONE)
+
+GET_SET_ATTRIBUTE(AVSampleFormat,
+                  sample_formats,
+                  AV_CODEC_CONFIG_SAMPLE_FORMAT,
+                  AV_OPT_TYPE_SAMPLE_FMT,
+                  "sample_fmts",
+                  "sample_formats",
+                  AVMEDIA_TYPE_AUDIO,
+                  sample_fmts,
+                  AV_SAMPLE_FMT_NONE)
+
+GET_SET_ATTRIBUTE(int,
+                  sample_rates,
+                  AV_CODEC_CONFIG_SAMPLE_RATE,
+                  AV_OPT_TYPE_INT,
+                  "sample_rates",
+                  "samplerates",
+                  AVMEDIA_TYPE_AUDIO,
+                  supported_samplerates,
+                  0)
+
+av_opt_array_ref<channel_layouts_array_element> get_supported_channel_layouts(const AVCodecContext* avctx,
+                                                                              const AVCodec*        codec)
+{
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+    if (!codec)
+        codec = avctx->codec;
+    if (codec->type != AVMEDIA_TYPE_AUDIO)
+        FF_RET(AVERROR(EINVAL), THROW_ON_ERROR_STR(get_supported_channel_layouts));
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    static constexpr AVChannelLayout terminator = {};
+    return av_opt_array_ref<channel_layouts_array_element>::terminated(codec->ch_layouts, [](const AVChannelLayout& v) {
+        return 0 == std::memcmp(&v, &terminator, sizeof(terminator));
+    });
+#else
+    return av_opt_array_ref<channel_layouts_array_element>::terminated(codec->channel_layouts, 0);
+#endif
+#else
+    const channel_layouts_array_element* data = nullptr;
+    int                                  size = 0;
+    FF(avcodec_get_supported_config(
+        avctx, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, reinterpret_cast<const void**>(&data), &size));
+    return av_opt_array_ref<channel_layouts_array_element>(data, size);
+#endif
+}
+
+void set_channel_layouts(AVFilterContext* target, av_opt_array_ref<channel_layouts_array_element> array_ref)
+{
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    // TODO: need to translate into something that can be passed via av_opt_set_*
+    // FF(av_opt_set_chlayout(sink, "ch_layouts", ch_layouts, AV_OPT_SEARCH_CHILDREN));
+#else
+    FF(av_opt_set_bin(target,
+                      "channel_layouts",
+                      reinterpret_cast<const uint8_t*>(array_ref.data()),
+                      sizeof(channel_layouts_array_element) * array_ref.size(),
+                      AV_OPT_SEARCH_CHILDREN));
+#endif
+#else
+    FF(av_opt_set_array(target,
+                        "channel_layouts",
+                        AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                        0,
+                        array_ref.size(),
+                        AV_OPT_TYPE_CHLAYOUT,
+                        array_ref.data()));
+#endif
+}
+
+channel_layouts_array_element get_channel_layout_default(int nb_channels)
+{
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+    AVChannelLayout retval{};
+    av_channel_layout_default(&retval, nb_channels);
+    return retval;
+#else
+    return av_get_default_channel_layout(nb_channels);
+#endif
+}
+
+AVFilterContext*
+create_buffersink(AVFilterGraph* graph, const char* name, std::optional<av_opt_array_ref<AVPixelFormat>> pixel_formats)
+{
+    AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("buffersink"), name));
+    if (pixel_formats) {
+        set_pixel_formats(retval, *pixel_formats);
+    }
+    FF(avfilter_init_str(retval, nullptr));
+    return retval;
+}
+
+AVFilterContext* create_abuffersink(AVFilterGraph*                                   graph,
+                                    const char*                                      name,
+                                    std::optional<av_opt_array_ref<AVSampleFormat>>  sample_formats,
+                                    std::optional<av_opt_array_ref<int>>             sample_rates,
+                                    std::optional<av_opt_array_ref<AVChannelLayout>> channel_layouts)
+{
+    AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("abuffersink"), name));
+    if (sample_formats) {
+        set_sample_formats(retval, *sample_formats);
+    }
+    if (sample_rates) {
+        set_sample_rates(retval, *sample_rates);
+    }
+    if (channel_layouts) {
+        set_channel_layouts(retval, *channel_layouts);
+    } else {
+        FF(av_opt_set_int(retval, "all_channel_counts", 1, AV_OPT_SEARCH_CHILDREN));
+    }
+    FF(avfilter_init_str(retval, nullptr));
+    return retval;
+}
 }} // namespace caspar::ffmpeg
