@@ -33,6 +33,8 @@ enum class frame_side_data_type
     a53_cc,
 };
 
+bool frame_side_data_include_on_duplicate_frames(frame_side_data_type t) noexcept;
+
 class mutable_frame_side_data final
 {
     friend class const_frame_side_data;

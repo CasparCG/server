@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <stack>
+#include <vector>
 
 namespace caspar::core {
 
@@ -33,14 +34,34 @@ struct side_data_item
     const_frame         frame; // avoid copying side_data
 };
 
+struct side_data_dedup final
+{
+    std::set<const_frame_side_data> last;
+    std::set<const_frame_side_data> cur;
+
+    void next_frame()
+    {
+        last.clear();
+        last.swap(cur);
+    }
+    bool is_duplicate_and_add(const const_frame_side_data& side_data)
+    {
+        if (!cur.insert(side_data).second)
+            return true;
+        return last.count(side_data);
+    }
+};
+
 struct side_data_mixer::impl final
 {
     std::stack<side_data_transform>     transform_stack_;
     std::vector<side_data_item>         items_;
+    side_data_dedup                     side_data_dedup_;
     spl::shared_ptr<diagnostics::graph> graph_;
     explicit impl(spl::shared_ptr<diagnostics::graph> graph)
         : graph_(std::move(graph))
     {
+        transform_stack_.push(side_data_transform());
     }
 };
 
@@ -62,6 +83,10 @@ std::vector<const_frame_side_data> side_data_mixer::mixed()
     for (auto item : impl_->items_) {
         bool has_a53_cc_side_data = false;
         for (auto side_data : item.frame.side_data()) {
+            if (!frame_side_data_include_on_duplicate_frames(side_data.type())) {
+                if (impl_->side_data_dedup_.is_duplicate_and_add(side_data))
+                    continue;
+            }
             switch (side_data.type()) {
                 case frame_side_data_type::a53_cc:
                     if (item.transform.use_closed_captions) {
@@ -79,6 +104,7 @@ std::vector<const_frame_side_data> side_data_mixer::mixed()
         has_a53_cc_source |= has_a53_cc_side_data;
     }
     impl_->items_.clear();
+    impl_->side_data_dedup_.next_frame();
     return mixed;
 }
 
