@@ -102,7 +102,7 @@
 #define GET_EPOCH_SCALER_MODE(value)                (value & 0xFFFF)
 #define GET_EPOCH_SCALER_ID(value)                  ((value & 0xFFFF0000) >> 16)
 
-/* use these macros for retreiving the temp and fan speed on epoch range of cards. */
+/* use these macros for retrieving the temp and fan speed on epoch range of cards. */
 #define EPOCH_CORE_TEMP(value)					(value & 0xFF)
 #define EPOCH_BOARD_TEMP(value)					((value>>16) & 0xFF)
 #define EPOCH_FAN_SPEED(value)					((value>>24) & 0xFF)
@@ -152,8 +152,8 @@
 #define AUDIO_CAPS_CAPTURE 						(0x00080000)
 
 #define VIDEO_CAPS_DOWNCONVERTER				(0x00100000)
-#define VIDEO_CAPS_DUALOUTPUT_422_IND_STREAM	(0x00200000)	/**<  Specifies whether the card supports Dual Indepenedent 422 output streams */
-#define VIDEO_CAPS_DUALINPUT_422_IND_STREAM		(0x00400000)	/**<  Specifies whether the card supports Dual Indepenedent 422 input streams */
+#define VIDEO_CAPS_DUALOUTPUT_422_IND_STREAM	(0x00200000)	/**<  Specifies whether the card supports Dual Independent 422 output streams */
+#define VIDEO_CAPS_DUALINPUT_422_IND_STREAM		(0x00400000)	/**<  Specifies whether the card supports Dual Independent 422 input streams */
 
 #define VIDEO_CAPS_VBI_OUTPUT					(0x00800000)	/**<  Specifies whether the card supports VBI output */
 #define VIDEO_CAPS_VBI_INPUT					(0x04000000)	/**<  Specifies whether the card supports VBI input */	
@@ -273,7 +273,7 @@ typedef enum _EBlueCardProperty
 	VIDEO_INPUT_SIGNAL_COLOR_SPACE =				5,	/**< Use this property to select color space of the signal when dual link input is set to
 														   use 4:4:4/4:4:4:4 signal format type. Possible values this property can
 														   accept is defined in the enumerator EConnectorSignalColorSpace */
-	VIDEO_MEMORY_FORMAT =							6, /**< Use this property to ser the pixel format that should be used by
+	VIDEO_MEMORY_FORMAT =							6, /**< Use this property to set the pixel format that should be used by
 															 video output channels.  Possible values this property can
 															 accept is defined in the enumerator EMemoryFormat*/
 	VIDEO_MODE =									7,	/**< Use this property to set the video mode that should be used by
@@ -307,7 +307,7 @@ typedef enum _EBlueCardProperty
 	VIDEO_PILLOR_BOX_BOTTOM =						21,	/**< DEPRECATED */
 	VIDEO_SAFE_PICTURE =							22,	/**< DEPRECATED */
 	VIDEO_SAFE_TITLE =								23,	/**< DEPRECATED */
-	VIDEO_INPUT_SIGNAL_VIDEO_MODE =					24,	/**< Use this property to retreive the video input signal information on the
+	VIDEO_INPUT_SIGNAL_VIDEO_MODE =					24,	/**< Use this property to retrieve the video input signal information on the
 															default video input channel used by that SDK object.
 															When calling SetCardProperty with a valid video mode on this property, the SDK
 															will will use this video mode "Hint" if the card buffers are set up despite there being a valid
@@ -321,7 +321,7 @@ typedef enum _EBlueCardProperty
 	VIDEO_OUTPUT_AUX_LUT =							27,	/**< DEPRECATED */
 	VIDEO_LTC =										28,	/**< DEPRECATED; To retreive/ outputting LTC information you can use the HANC decoding and encoding functions. */
 	VIDEO_GPIO =									29,
-	VIDEO_PLAYBACK_FIFO_STATUS =					30, /**< This property can be used to retreive how many frames are bufferd in the video playback fifo. */
+	VIDEO_PLAYBACK_FIFO_STATUS =					30, /**< This property can be used to retrieve how many frames are buffered in the video playback fifo. */
 	RS422_RX_BUFFER_LENGTH =						31,
 	RS422_RX_BUFFER_FLUSH =							32,
 	VIDEO_INPUT_UPDATE_TYPE =						33,	/**< Use this property to set the framestore update type that should be used by
@@ -388,11 +388,11 @@ typedef enum _EBlueCardProperty
 	VIDEO_SELECTIVE_INPUT_DMA_SRC_LINES =			VIDEO_INPUT_IMAGE_HEIGHT,	/* number of video lines to extract from source image (card memory) */
 	VIDEO_SELECTIVE_INPUT_DMA_DST_PITCH =			VIDEO_INPUT_IMAGE_PITCH,	/* pitch (bytes per line) of destination buffer (system memory) */
 	TIMECODE_RP188 =								69,	/**< this property is deprecated and no longer supported on epoch/create range of cards.*/
-	BOARD_TEMPERATURE =								70, /**<This property can be used to retreive the Board temperature, core temperature and
+	BOARD_TEMPERATURE =								70, /**<This property can be used to retrieve the Board temperature, core temperature and
 															   RPM of the Fan on epoch/create range of cards.<br/>
 															   Use the macro's EPOCH_CORE_TEMP ,EPOCH_BOARD_TEMP and EPOCH_FAN_SPEED
 															   to retireive the respective values from the property. */
-	MR2_ROUTING =									71,	/**< Use this property to control the MR2 functionlity on epoch range of cards.
+	MR2_ROUTING =									71,	/**< Use this property to control the MR2 functionality on epoch range of cards.
 															Use the following macro with this property.<br/>
 															1) EPOCH_SET_ROUTING --> for setting the source, destination and link type of the routing connection,
 															2) EPOCH_ROUTING_GET_SRC_DATA --> for getting the routing source.
@@ -425,14 +425,14 @@ typedef enum _EBlueCardProperty
 																notifies the driver of available data using video input interrupt. */
 	VIDEO_PLAYBACK_FIFO_CURRENT_FRAME_UNIQUEID =	80, /**< This property can be used to query the current unique id of
 															 the frame that is being displayed currently by the video output channel. This
-															 property is only usefull in the context of video fifo.<br/>
+															 property is only useful in the context of video fifo.<br/>
 															 You get a uniqueid when you present a frame using video_playback_present function.
 															 Alternative ways to get this information are <br/>
 															 1) using blue_wait_video_sync_async , the member current_display_frame_uniqueid contains the same information<br/>
 															 2) using wait_video_output_sync function on epoch cards, if
 															 the flag UPD_FMT_FLAG_RETURN_CURRENT_UNIQUEID is appended with
 															 either UPD_FMT_FRAME or UPD_FMT_FIELD , the return value of
-															 the function wait_video_output_sync woukd contain the current display frames uniqueid. */
+															 the function wait_video_output_sync would contain the current display frames uniqueid. */
 
 	EPOCH_DVB_ASI_INPUT_GET_PACKET_SIZE =			81,	/**< use this property to get the size of each asi transport stream packet (whether it is 188 or 204.*/
 	EPOCH_DVB_ASI_INPUT_PACKET_COUNT =				82,	/**< this property would give you the number of packets captured during the last
@@ -444,7 +444,7 @@ typedef enum _EBlueCardProperty
 																requested number of packets specified using
 																EPOCH_DVB_ASI_INPUT_LATENCY_PACKET_COUNT property. */
 	EPOCH_DVB_ASI_INPUT_AVAIL_PACKETS_IN_FIFO =		84,	/**< This property would return the number of ASI packets that has been captured into card memory, that
-															   can be retreived. This property is only valid when the video input
+															   can be retrieved. This property is only valid when the video input
 															   channel is being used in FIFO modes. */
 	EPOCH_ROUTING_SOURCE_VIDEO_MODE =				VIDEO_SCALER_MODE,	/**< Use this property to change the video mode that scaler should be set to.
 																		USe the macro SET_EPOCH_SCALER_MODE when using this property, as this macro
@@ -472,7 +472,7 @@ typedef enum _EBlueCardProperty
 	EPOCH_DVB_ASI_DUPLICATE_OUTPUT_A =				99,		/* ASI firmware only */
 	EPOCH_DVB_ASI_DUPLICATE_OUTPUT_B =				100,	/* ASI firmware only */
 	EPOCH_SCALER_HORIZONTAL_FLIP =					101,	/* see SideBySide_3D sample application */
-	EPOCH_CONNECTOR_DIRECTION =						102,	/* depricated / not supported */
+	EPOCH_CONNECTOR_DIRECTION =						102,	/* deprecated / not supported */
 	EPOCH_AUDIOOUTPUT_VALIDITY_BITS =				103,	/* ASI firmware only */
 	EPOCH_SIZEOF_DRIVER_ALLOCATED_MEMORY =			104,	/**< DEPRECATED */
 	INVALID_VIDEO_MODE_FLAG =						105,	/* returns the enum for VID_FMT_INVALID that this SDK/Driver was compiled with;
@@ -513,7 +513,7 @@ typedef enum _EBlueCardProperty
 	MUTE_AES_OUTPUT_CHANNEL =						133,	/* mute any of the AES output channels (0..7); to enable/disable mute use the SET_MUTE_AES_OUTPUT_CHANNEL macro; to query an AES output channels mute status
 																set VT.ulVal to the AES output channel number (0..7) then call QueryCardProperty(); the return value will be 1 = muted or 0 = enabled; set .vt to VT_UI4	*/
 	FORCE_SD_VBI_OUTPUT_BUFFER_TO_V210 =			134,	/* this card property forces the VBI buffer to V210 memory format in SD video modes (default for HD video modes) so that it can handle 10 bit VANC packets.
-																set 1 = force to V210 or 0 = follow video memory fomat (default); set .vt to VT_UI4; when changing this property the video output mode and video output engine need to be set again manually! */
+																set 1 = force to V210 or 0 = follow video memory format (default); set .vt to VT_UI4; when changing this property the video output mode and video output engine need to be set again manually! */
 	EMBEDDED_AUDIO_INPUT_INFO =						135,	/*	this card property returns info on how which embedded audio input channels are available (channel mask for channels 1 - 16 in lower 16 bits).
 																it also returns the data payload for each channel (1 - 16) in the upper 16 bits (0 = embedded audio, 1 = other (e.g. Dolby Digital)) */
 	OVERRIDE_OUTPUT_VPID_DEFAULT =					136,	/*	this card property should only be used for debugging purposes if the default VPID needs to be changed; it will override the output VPID that is set up by default depending on the video mode, pixel format and signal format type.
@@ -526,7 +526,7 @@ typedef enum _EBlueCardProperty
 																62..48: reserved (set to 0)
 																63: enable/disable VPID output (0 = disabled, 1 = enabled) */
     FORCE_SD_VBI_INPUT_BUFFER_TO_V210 =             137,	/* this card property forces the VBI input buffer to V210 memory format in SD video modes (default for HD video modes) so that it can handle 10 bit VANC packets.
-                                                               set 1 = force to V210 or 0 = follow video memory fomat (default); set .vt to VT_UI4; when changing this property the video input engine needs to be set again manually! */
+                                                               set 1 = force to V210 or 0 = follow video memory format (default); set .vt to VT_UI4; when changing this property the video input engine needs to be set again manually! */
     BYPASS_RELAY_ENABLE =                           138,    /* Enable/Disable the bypass relays; use MACROs BLUE_SET_ENABLE_BYPASS_RELAY(), BLUE_SET_DISABLE_BYPASS_RELAY() and BLUE_GET_BYPASS_RELAY_SETTING() to initialise the value (.vt = VT_UI4) */
     VIDEO_MODE_EXT_OUTPUT =                         139,    /* Query or set the video mode for the output channel using the _EVideoModeExt enums. */
     VIDEO_MODE_EXT_INPUT =                          140,    /* Query the current video mode on the input channel using the _EVideoModeExt enums. In case of no valid video mode present the input FIFOs can be set up for an expected video mode by setting this card property*/
@@ -1119,7 +1119,7 @@ typedef enum _MatrixColType
 	COL_KEY = 3
 }MatrixColType;
 
-/*	This enumerator can be used to set the image orienatation of the frame. */
+/*	This enumerator can be used to set the image orientation of the frame. */
 typedef enum _EImageOrientation
 {
 	ImageOrientation_Normal = 0,	/* in this configuration frame is top to bottom and left to right */
@@ -1140,7 +1140,7 @@ typedef enum _EBlueGenlockSource
 	BlueGenlockAux =    0x00100000,     /** auxiliary genlock connector on Epoch Neutron cards */
 	BlueInterlock =     0x00200000,     /** interlock connector on Epoch Neutron and Kronos cards */
 
-    /* aliases and new defintions */
+    /* aliases and new definitions */
     BlueRefSrc_FreeRunning = BlueFreeRunning,
     BlueRefSrc_RefIn =       BlueGenlockBNC,    /* genlock signal on ref in BNC connector      (Epoch/Kronos) */
     BlueRefSrc_RefInAux =    BlueGenlockAux,    /* genlock signal on ref in AUX BNC connector  (Epoch Neutron only) */

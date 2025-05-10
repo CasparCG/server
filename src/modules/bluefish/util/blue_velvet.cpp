@@ -701,7 +701,7 @@ std::wstring get_sdi_outputs(bvc_wrapper& blue)
 
 EVideoModeExt get_bluefish_video_format(core::video_format fmt)
 {
-    // TODO: add supoprt for UHD 4K formats
+    // TODO: add support for UHD 4K formats
 
     switch (fmt) {
         case core::video_format::pal:

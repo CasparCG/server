@@ -157,7 +157,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_.join();
     }
 
-    // TODO (refactor) This is wierd...
+    // TODO (refactor) This is weird...
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(mutex_);

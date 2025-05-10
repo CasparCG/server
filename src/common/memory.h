@@ -34,9 +34,9 @@ namespace caspar { namespace spl {
  * except in the case of a moved from instance.
  *
  * The default constructor will point the wrapped pointer to a default
- * contructed instance of T.
+ * constructed instance of T.
  *
- * Use the make_unique overloads for perfectly forwarding the contructor
+ * Use the make_unique overloads for perfectly forwarding the constructor
  * arguments of T and creating a unique_ptr to the created T instance.
  */
 template <typename T, typename D = std::default_delete<T>>
