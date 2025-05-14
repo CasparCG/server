@@ -41,6 +41,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 #include <cstring>
@@ -402,16 +403,23 @@ struct Stream
                     frame = std::move(frame2);
                 }
 
-                for (const core::const_frame_side_data& in_side_data : in_frame.side_data()) {
-                    switch (in_side_data.type()) {
-                        case core::frame_side_data_type::a53_cc:
-                            auto* side_data = FFMEM(av_frame_side_data_new(&frame->side_data,
-                                                                           &frame->nb_side_data,
-                                                                           AV_FRAME_DATA_A53_CC,
-                                                                           in_side_data.data().size(),
-                                                                           0));
-                            std::memcpy(side_data->data, in_side_data.data().data(), in_side_data.data().size());
-                            break;
+                auto in_side_data_opt = in_frame.side_data().get();
+
+                if (in_side_data_opt) {
+                    for (auto& in_side_data : *in_side_data_opt) {
+                        switch (in_side_data.type()) {
+                            case core::frame_side_data_type::a53_cc:
+                                CASPAR_LOG(trace)
+                                    << L"ffmpeg_consumer: got A53_CC side data: "
+                                    << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
+                                auto* side_data = FFMEM(av_frame_side_data_new(&frame->side_data,
+                                                                               &frame->nb_side_data,
+                                                                               AV_FRAME_DATA_A53_CC,
+                                                                               in_side_data.data().size(),
+                                                                               0));
+                                std::memcpy(side_data->data, in_side_data.data().data(), in_side_data.data().size());
+                                break;
+                        }
                     }
                 }
 
@@ -510,7 +518,9 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));

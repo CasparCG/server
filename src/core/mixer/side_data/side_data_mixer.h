@@ -34,7 +34,7 @@ class side_data_mixer final : public frame_visitor
     explicit side_data_mixer(spl::shared_ptr<diagnostics::graph> graph);
     ~side_data_mixer();
 
-    std::vector<const_frame_side_data> mixed();
+    frame_side_data_in_queue mixed();
 
     void push(const frame_transform& transform) override;
     void visit(const const_frame& frame) override;
