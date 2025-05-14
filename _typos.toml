@@ -1,0 +1,12 @@
+[default]
+# Ignore lines following the commment `// typos: ignore-next
+extend-ignore-re = [".*// typos: ignore-next\\n[^\\n]*\\n"]
+
+[default.extend-words]
+# NDI is a common acronym in the context of video and audio over IP
+ndi = "ndi"
+# it was seeoing NDIfoo as ND-Ifoo and turning it into ANDIfoo
+nd = "nd"
+# ANC is short for "ancillary" and is used in the bluefish drivers
+anc = "anc"
+
