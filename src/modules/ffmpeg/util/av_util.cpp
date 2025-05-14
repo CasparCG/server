@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <libavutil/opt.h>
+#include <vector>
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -48,10 +49,10 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
-static void add_side_data(std::vector<core::mutable_frame_side_data>& out, const AVFrameSideData& in)
+static void add_side_data(std::vector<core::const_frame_side_data>& out, const AVFrameSideData& in)
 {
     auto add_no_metadata = [&](core::frame_side_data_type type) {
-        out.push_back(core::mutable_frame_side_data(type, std::vector<uint8_t>(in.data, in.data + in.size)));
+        out.push_back(core::const_frame_side_data(type, std::vector<uint8_t>(in.data, in.data + in.size)));
     };
     switch (in.type) {
         case AV_FRAME_DATA_A53_CC:
@@ -92,13 +93,14 @@ static void add_side_data(std::vector<core::mutable_frame_side_data>& out, const
     }
 }
 
-core::mutable_frame make_frame(void*                            tag,
-                               core::frame_factory&             frame_factory,
-                               std::shared_ptr<AVFrame>         video,
-                               std::shared_ptr<AVFrame>         audio,
-                               core::color_space                color_space,
-                               core::frame_geometry::scale_mode scale_mode,
-                               bool                             is_straight_alpha)
+core::mutable_frame make_frame(void*                                        tag,
+                               core::frame_factory&                         frame_factory,
+                               std::shared_ptr<AVFrame>                     video,
+                               std::shared_ptr<AVFrame>                     audio,
+                               std::shared_ptr<core::frame_side_data_queue> side_data_queue,
+                               core::color_space                            color_space,
+                               core::frame_geometry::scale_mode             scale_mode,
+                               bool                                         is_straight_alpha)
 {
     std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
 
@@ -113,17 +115,22 @@ core::mutable_frame make_frame(void*                            tag,
         frame.geometry() = core::frame_geometry::get_default(scale_mode);
     }
 
+    std::vector<core::const_frame_side_data> side_data;
+
     if (video) {
         for (int i = 0; i < video->nb_side_data; i++) {
-            add_side_data(frame.side_data(), *video->side_data[i]);
+            add_side_data(side_data, *video->side_data[i]);
         }
     }
 
     if (audio) {
         for (int i = 0; i < audio->nb_side_data; i++) {
-            add_side_data(frame.side_data(), *audio->side_data[i]);
+            add_side_data(side_data, *audio->side_data[i]);
         }
     }
+
+    frame.side_data() =
+        core::frame_side_data_in_queue{side_data_queue->add_frame(std::move(side_data)), side_data_queue};
 
     tbb::parallel_invoke(
         [&]() {

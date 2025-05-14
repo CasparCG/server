@@ -19,12 +19,12 @@ class mutable_frame final
   public:
     using commit_t = std::function<std::any(std::vector<array<const std::uint8_t>>)>;
 
-    explicit mutable_frame(const void*                          tag,
-                           std::vector<array<std::uint8_t>>     image_data,
-                           array<std::int32_t>                  audio_data,
-                           const struct pixel_format_desc&      desc,
-                           std::vector<mutable_frame_side_data> side_data,
-                           commit_t                             commit = nullptr);
+    explicit mutable_frame(const void*                      tag,
+                           std::vector<array<std::uint8_t>> image_data,
+                           array<std::int32_t>              audio_data,
+                           const struct pixel_format_desc&  desc,
+                           frame_side_data_in_queue         side_data,
+                           commit_t                         commit = nullptr);
     mutable_frame(const mutable_frame&) = delete;
     mutable_frame(mutable_frame&& other) noexcept;
 
@@ -52,8 +52,8 @@ class mutable_frame final
     class frame_geometry&       geometry();
     const class frame_geometry& geometry() const;
 
-    std::vector<mutable_frame_side_data>&       side_data() noexcept;
-    const std::vector<mutable_frame_side_data>& side_data() const noexcept;
+    frame_side_data_in_queue&       side_data() noexcept;
+    const frame_side_data_in_queue& side_data() const noexcept;
 
   private:
     struct impl;
@@ -68,7 +68,7 @@ class const_frame final
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc,
-                         std::vector<const_frame_side_data>     side_data);
+                         frame_side_data_in_queue               side_data);
     const_frame(const const_frame& other);
     const_frame(mutable_frame&& other);
 
@@ -95,7 +95,7 @@ class const_frame final
 
     const class frame_geometry& geometry() const;
 
-    const std::vector<const_frame_side_data>& side_data() const noexcept;
+    const frame_side_data_in_queue& side_data() const noexcept;
 
     bool operator==(const const_frame& other) const;
     bool operator!=(const const_frame& other) const;

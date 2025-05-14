@@ -24,6 +24,7 @@
 #include "decklink_producer.h"
 
 #include "../util/util.h"
+#include "core/frame/frame_side_data.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -44,6 +45,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <memory>
 #include <optional>
 
 #ifdef _MSC_VER
@@ -458,6 +460,8 @@ class decklink_producer : public IDeckLinkInputCallback
 
     Decoder video_decoder_;
 
+    std::shared_ptr<core::frame_side_data_queue> side_data_queue_;
+
   public:
     decklink_producer(core::video_format_desc                     format_desc,
                       int                                         device_index,
@@ -753,7 +757,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 graph_->set_value("in-sync", in_sync * 2.0 + 0.5);
                 graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
 
-                auto frame = core::draw_frame(make_frame(this, *frame_factory_, av_video, av_audio, color_space));
+                auto frame = core::draw_frame(
+                    make_frame(this, *frame_factory_, av_video, av_audio, side_data_queue_, color_space));
                 auto field = core::video_field::progressive;
                 if (format_desc_.field_count == 2) {
                     field = frame_count_ % 2 == 0 ? core::video_field::a : core::video_field::b;

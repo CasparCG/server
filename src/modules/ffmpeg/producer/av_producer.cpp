@@ -4,6 +4,7 @@
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
+#include "core/frame/frame_side_data.h"
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
@@ -844,6 +845,8 @@ struct AVProducer::Impl
 
         int warning_debounce = 0;
 
+        auto side_data_queue = std::make_shared<core::frame_side_data_queue>();
+
         while (!thread_.interruption_requested()) {
             {
                 const auto seek = seek_.exchange(AV_NOPTS_VALUE);
@@ -944,8 +947,14 @@ struct AVProducer::Impl
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
             }
 
-            frame.frame = core::draw_frame(
-                make_frame(this, *frame_factory_, frame.video, frame.audio, get_color_space(frame.video), scale_mode_));
+            frame.frame = core::draw_frame(make_frame(this,
+                                                      *frame_factory_,
+                                                      frame.video,
+                                                      frame.audio,
+                                                      side_data_queue,
+                                                      get_color_space(frame.video),
+                                                      scale_mode_));
+
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);

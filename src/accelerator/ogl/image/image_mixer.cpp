@@ -341,7 +341,7 @@ struct image_mixer::impl
                                    std::move(image_data),
                                    array<int32_t>{},
                                    desc,
-                                   std::vector<core::mutable_frame_side_data>{},
+                                   core::frame_side_data_in_queue(),
                                    [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                                        auto self = weak_self.lock();
                                        if (!self) {
