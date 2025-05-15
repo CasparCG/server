@@ -65,7 +65,7 @@ FUNCTION (casparcg_add_module_project TARGET)
 	if (NOT PARSED_ARGS_HEADER_FILE)
 		set (PARSED_ARGS_HEADER_FILE "modules/${TARGET}/${TARGET}.h")
 	endif()
-	# Use default init name if nto d
+	# Use default init name if not d
 	if (NOT PARSED_ARGS_INIT_FUNCTION)
         message(FATAL_ERROR "You must provide an INIT_FUNCTION")
 	endif()

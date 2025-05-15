@@ -481,7 +481,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService(REFGUID rsid, REFIID ri
         }
     }
 
-    // TODO: The fullscreen-consumer requires that ths does NOT return an ITimerService
+    // TODO: The fullscreen-consumer requires that this does NOT return an ITimerService
     hr = QueryInterface(riid, ppvObj); // E_NOINTERFACE;
 
     return hr;
@@ -603,6 +603,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
         CASPAR_LOG(debug) << print_() << L" [activity]     " << str;
 
         // this is how templatehost 1.7 reports that a command has been received
+        // typos: ignore-next
         if (str.find(L"Command recieved") != std::wstring::npos || str.find(L"Command received") != std::wstring::npos)
             bCallSuccessful_ = true;
 

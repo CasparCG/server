@@ -103,7 +103,7 @@ void convert_frame(const core::video_format_desc& channel_format_desc,
 
         // TODO: Add support for hdr frames
 
-        // Some repetetive numbers
+        // Some repetitive numbers
         size_t byte_count_dest_line  = (size_t)decklink_format_desc.width * 4;
         size_t byte_count_src_line   = (size_t)channel_format_desc.width * 4;
         size_t byte_offset_src_line  = std::max(0, (config.src_x * 4));

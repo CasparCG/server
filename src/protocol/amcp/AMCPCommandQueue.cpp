@@ -138,7 +138,7 @@ void AMCPCommandQueue::Execute(std::shared_ptr<AMCPGroupCommand> cmd) const
             delayed_channels->emplace_back(ch.raw_channel, st, ch.lifecycle_key_);
         }
 
-        // 'execute' aka queue all comamnds
+        // 'execute' aka queue all commands
         for (auto& cmd2 : cmd->Commands()) {
             results.push_back(exec_cmd(cmd2, delayed_channels, cmd->HasClient()));
         }

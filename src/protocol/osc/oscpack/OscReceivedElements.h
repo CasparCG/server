@@ -429,7 +429,7 @@ class ReceivedMessage
 
     const char* AddressPattern() const { return addressPattern_; }
 
-    // Support for non-standad SuperCollider integer address patterns:
+    // Support for non-standard SuperCollider integer address patterns:
     bool   AddressPatternIsUInt32() const;
     uint32 AddressPatternAsUInt32() const;
 

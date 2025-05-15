@@ -54,7 +54,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 {
     try {
         CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n"
-                          << L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
+                          << L"Address:" << info->ExceptionRecord->ExceptionAddress << L"\n"
                           << L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
                           << L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
                           << L"Info:" << (unsigned __int64)info->ExceptionRecord->ExceptionInformation << L"\n"

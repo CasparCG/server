@@ -5,13 +5,13 @@
         #define IMPLEMENTATION_BLUEVELVETC_FUNC_PTR
         before including this file so that all the SDK functions are defined
         in your project. If including this header files from multiple c/c++
-        files make sure that only one c/c++ file which includs this header
+        files make sure that only one c/c++ file which includes this header
         file defines IMPLEMENTATION_BLUEVELVETC_FUNC_PTR
 
         #define IMPLEMENTATION_BLUEVELVETC_CONVERSION_FUNC_PTR
         before including this file so that all conversion functions are defined
         in your project. If including this header files from multiple c/c++
-        files make sure that only one c/c++ file which includs this header
+        files make sure that only one c/c++ file which includes this header
         file defines IMPLEMENTATION_BLUEVELVETC_CONVERSION_FUNC_PTR
 */
 
@@ -41,7 +41,7 @@
 
 typedef void* BLUEVELVETC_HANDLE;
 typedef void* BFC_SYNC_INFO;
-#define	BLUE_OK(a)      (!a)    /* Test for succcess of a method returning BErr */
+#define	BLUE_OK(a)      (!a)    /* Test for success of a method returning BErr */
 #define	BLUE_FAIL(a)    (a)     /* Test for failure of a method returning BErr */
 
 

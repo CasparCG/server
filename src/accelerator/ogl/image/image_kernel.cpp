@@ -250,7 +250,7 @@ struct image_kernel::impl
         shader_->set("blend_mode", params.blend_mode);
         shader_->set("keyer", params.keyer);
 
-        // Setup image-adjustements
+        // Setup image-adjustments
         shader_->set("invert", transforms.image_transform.invert);
 
         if (transforms.image_transform.levels.min_input > epsilon ||

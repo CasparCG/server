@@ -28,7 +28,7 @@ CasparCG 2.5.0 Stable
 ### Consumers
 ##### Improvements
 * Screen: Set size and position from AMCP
-* Image: Propogate AMCP parameters from PRINT command
+* Image: Propagate AMCP parameters from PRINT command
 
 ##### Fixes
 *
@@ -73,7 +73,7 @@ CasparCG 2.4.1 Stable
 * Fix bad config file examples
 * Fix `casparcg_auto_restart.bat` not starting scanner
 * Revert removal of tbbmalloc, due to notable performance loss on windows
-* Supress some cmake build warnings
+* Suppress some cmake build warnings
 * Build failure when doxygen installed on system
 * Build failures with ffmpeg 7.0
 * Revert RPATH linking changes
@@ -99,7 +99,7 @@ CasparCG 2.4.0 Stable
 
 ### Core
 ##### Improvements
-* Custom resultions can be specified in casparcg.config
+* Custom resolutions can be specified in casparcg.config
 * Interlaced mixer pipeline to ensure field accuracy
 * Preserve unicode characters in console input/output
 * Producers to be run at startup can be defined in casparcg.config
@@ -380,7 +380,7 @@ FFMPEG
  * FFMPEG video filter support.
  * FFMPEG audio filter support.
  * Complex FFMPEG filters (VF, AF).
- * CALL SEEK return actually seeked value.
+ * CALL SEEK return actually sought value.
  * All AMCP options are based on channel format.
  * Misc improvements, cleanup and fixes.
 

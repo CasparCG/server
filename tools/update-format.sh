@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# args needed to format inline. can be overridden to use script for otehr purposes
+# args needed to format inline. can be overridden to use script for other purposes
 CLANG_ARGS=${CLANG_ARGS:--i}
 
 SOURCE_FILES=`find ./src/ \( -name \*.cpp -type f -or -name \*.h -type f \) -not -path "./src/packages/*" -not -path "*interop*" -not -path "./src/cmake*"`

@@ -337,7 +337,7 @@ class line : public drawable
         if (tick_data_ > -0.5) {
             auto array_one = line_data_.array_one();
             auto array_two = line_data_.array_two();
-            // since boost::circular_buffer guarantees two contigous views of the buffer we can provide raw access to
+            // since boost::circular_buffer guarantees two contiguous views of the buffer we can provide raw access to
             // SFML, which can use glDrawArrays.
             target.draw(array_one.first, static_cast<unsigned int>(array_one.second), sf::LinesStrip, states);
             target.draw(array_two.first, static_cast<unsigned int>(array_two.second), sf::LinesStrip, states);

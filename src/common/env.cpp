@@ -48,7 +48,7 @@ boost::property_tree::wptree pt;
 void check_is_configured()
 {
     if (pt.empty())
-        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
+        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Environment properties has not been configured"));
 }
 
 std::wstring resolve_or_create(const std::wstring& folder)
