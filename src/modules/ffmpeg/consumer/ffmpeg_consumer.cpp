@@ -45,7 +45,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 #include <cstring>
-#include <libavutil/frame.h>
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -65,6 +64,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -412,11 +412,8 @@ struct Stream
                                 CASPAR_LOG(trace)
                                     << L"ffmpeg_consumer: got A53_CC side data: "
                                     << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
-                                auto* side_data = FFMEM(av_frame_side_data_new(&frame->side_data,
-                                                                               &frame->nb_side_data,
-                                                                               AV_FRAME_DATA_A53_CC,
-                                                                               in_side_data.data().size(),
-                                                                               0));
+                                auto* side_data = FFMEM(av_frame_new_side_data(
+                                    frame.get(), AV_FRAME_DATA_A53_CC, in_side_data.data().size()));
                                 std::memcpy(side_data->data, in_side_data.data().data(), in_side_data.data().size());
                                 break;
                         }
