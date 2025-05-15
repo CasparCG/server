@@ -5,7 +5,6 @@
 #include <common/bit_depth.h>
 #include <cstdint>
 #include <cstring>
-#include <libavutil/opt.h>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -18,6 +17,7 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 }
 #if defined(_MSC_VER)
@@ -80,14 +80,30 @@ static void add_side_data(std::vector<core::const_frame_side_data>& out, const A
         case AV_FRAME_DATA_VIDEO_ENC_PARAMS:
         case AV_FRAME_DATA_SEI_UNREGISTERED:
         case AV_FRAME_DATA_FILM_GRAIN_PARAMS:
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 73, 100)
         case AV_FRAME_DATA_DETECTION_BBOXES:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 9, 100)
         case AV_FRAME_DATA_DOVI_RPU_BUFFER:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 16, 100)
         case AV_FRAME_DATA_DOVI_METADATA:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 22, 100)
         case AV_FRAME_DATA_DYNAMIC_HDR_VIVID:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 44, 100)
         case AV_FRAME_DATA_AMBIENT_VIEWING_ENVIRONMENT:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 15, 100)
         case AV_FRAME_DATA_VIDEO_HINT:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(59, 37, 100)
         case AV_FRAME_DATA_LCEVC:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(59, 38, 100)
         case AV_FRAME_DATA_VIEW_ID:
+#endif
             // TODO: add to core::frame_side_data_type and add metadata to core::*_frame_side_data if necessary
             break;
     }
@@ -629,11 +645,11 @@ create_buffersink(AVFilterGraph* graph, const char* name, std::optional<av_opt_a
     return retval;
 }
 
-AVFilterContext* create_abuffersink(AVFilterGraph*                                   graph,
-                                    const char*                                      name,
-                                    std::optional<av_opt_array_ref<AVSampleFormat>>  sample_formats,
-                                    std::optional<av_opt_array_ref<int>>             sample_rates,
-                                    std::optional<av_opt_array_ref<AVChannelLayout>> channel_layouts)
+AVFilterContext* create_abuffersink(AVFilterGraph*                                                 graph,
+                                    const char*                                                    name,
+                                    std::optional<av_opt_array_ref<AVSampleFormat>>                sample_formats,
+                                    std::optional<av_opt_array_ref<int>>                           sample_rates,
+                                    std::optional<av_opt_array_ref<channel_layouts_array_element>> channel_layouts)
 {
     AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("abuffersink"), name));
     if (sample_formats) {
