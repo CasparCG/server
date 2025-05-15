@@ -132,6 +132,8 @@ bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
 struct side_data_transform final
 {
+    // TODO: switch to selecting a single input to take captions from,
+    // rather than enabling/disabling captions in transforms
     bool use_closed_captions = true;
 
     side_data_transform& operator*=(const side_data_transform& other);
