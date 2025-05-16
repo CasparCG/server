@@ -155,6 +155,20 @@ class transition_producer : public frame_producer
                     return "n/a";
             }
         }();
+        state_["transition/direction"] = [&]() -> std::string {
+            switch (info_.direction) {
+                case transition_direction::from_left:
+                    return "from_left";
+                case transition_direction::from_right:
+                    return "from_right";
+                case transition_direction::from_top:
+                    return "from_top";
+                case transition_direction::from_bottom:
+                    return "from_bottom";
+                default:
+                    return "n/a";
+            }
+        }();
     }
 
     draw_frame receive_impl(const core::video_field field, int nb_samples) override
@@ -280,7 +294,13 @@ class transition_producer : public frame_producer
         auto src_frame = get_src_frame();
         auto dst_frame = get_dst_frame();
         const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
-        const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
+        
+        // Get horizontal or vertical direction based on transition direction
+        const bool is_horizontal = info_.direction == transition_direction::from_left || 
+                                  info_.direction == transition_direction::from_right;
+        const double h_dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
+        const double v_dir = info_.direction == transition_direction::from_top ? 1.0 : -1.0;
+        
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
         if (info_.type == transition_type::cutfade) {
@@ -305,17 +325,34 @@ class transition_producer : public frame_producer
             src_frame.transform().image_transform.is_mix  = true;
         } 
         else if (info_.type == transition_type::slide) {
-            dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
+            if (is_horizontal) {
+                dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * h_dir;
+            } else {
+                dst_frame.transform().image_transform.fill_translation[1] = (-1.0 + delta) * v_dir;
+            }
         } 
         else if (info_.type == transition_type::push) {
-            dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * dir;
-            src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * dir;
+            if (is_horizontal) {
+                dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * h_dir;
+                src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * h_dir;
+            } else {
+                dst_frame.transform().image_transform.fill_translation[1] = (-1.0 + delta) * v_dir;
+                src_frame.transform().image_transform.fill_translation[1] = (0.0 + delta) * v_dir;
+            }
         } 
         else if (info_.type == transition_type::wipe) {
-            if (info_.direction == transition_direction::from_right) {
-                dst_frame.transform().image_transform.clip_scale[0] = delta;
+            if (is_horizontal) {
+                if (info_.direction == transition_direction::from_right) {
+                    dst_frame.transform().image_transform.clip_scale[0] = delta;
+                } else {
+                    dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
+                }
             } else {
-                dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
+                if (info_.direction == transition_direction::from_bottom) {
+                    dst_frame.transform().image_transform.clip_scale[1] = delta;
+                } else {
+                    dst_frame.transform().image_transform.clip_translation[1] = (1.0 - delta);
+                }
             }
         }
         return draw_frame::over(src_frame, dst_frame);
@@ -336,7 +373,7 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
 {
     // Using word boundaries to ensure we match complete transition names
     static const boost::wregex expr(
-        LR"(.*\b(?<TRANSITION>VFADE|FADECUT|CUTFADE|CUT|PUSH|SLIDE|WIPE|MIX)\b\s+(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
+        LR"(.*\b(?<TRANSITION>VFADE|FADECUT|CUTFADE|CUT|PUSH|SLIDE|WIPE|MIX)\b\s+(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|FROMTOP|FROMBOTTOM|LEFT|RIGHT|UP|DOWN)?.*)");
     boost::wsmatch what;
     if (!boost::regex_match(message, what, expr)) {
         return false;
@@ -373,6 +410,10 @@ bool try_match_transition(const std::wstring& message, transition_info& transiti
         transitionInfo.direction = transition_direction::from_left;
     else if (direction == L"FROMRIGHT" || direction == L"LEFT")
         transitionInfo.direction = transition_direction::from_right;
+    else if (direction == L"FROMTOP" || direction == L"DOWN")
+        transitionInfo.direction = transition_direction::from_top;
+    else if (direction == L"FROMBOTTOM" || direction == L"UP")
+        transitionInfo.direction = transition_direction::from_bottom;
 
     return true;
 }

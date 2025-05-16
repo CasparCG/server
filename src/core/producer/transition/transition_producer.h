@@ -47,6 +47,8 @@ enum class transition_direction
 {
     from_left,
     from_right,
+    from_top,
+    from_bottom,
     count
 };
 
