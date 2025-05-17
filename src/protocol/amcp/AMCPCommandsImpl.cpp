@@ -1358,18 +1358,19 @@ std::wstring mixer_grid_command(command_context& ctx)
     return L"202 MIXER OK\r\n";
 }
 
-std::future<std::wstring> mixer_use_closed_captions_command(command_context& ctx)
+std::future<std::wstring> mixer_closed_captions_priority_command(command_context& ctx)
 {
     if (ctx.parameters.empty())
-        return reply_value(ctx,
-                           [](const frame_transform& t) { return t.side_data_transform.use_closed_captions ? 1 : 0; });
+        return reply_value(ctx, [](const frame_transform& t) {
+            return static_cast<float>(t.side_data_transform.closed_captions_priority_);
+        });
 
-    transforms_applier transforms(ctx);
-    bool               value = std::stoi(ctx.parameters.at(0));
+    transforms_applier       transforms(ctx);
+    closed_captions_priority value(std::stof(ctx.parameters.at(0)));
     transforms.add(stage::transform_tuple_t(
         ctx.layer_index(),
         [=](frame_transform transform) -> frame_transform {
-            transform.side_data_transform.use_closed_captions = value;
+            transform.side_data_transform.closed_captions_priority_ = value;
             return transform;
         },
         0,
@@ -1787,7 +1788,8 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
-    repo->register_channel_command(L"Mixer Commands", L"MIXER USECLOSEDCAPTIONS", mixer_use_closed_captions_command, 0);
+    repo->register_channel_command(
+        L"Mixer Commands", L"MIXER CLOSED_CAPTIONS_PRIORITY", mixer_closed_captions_priority_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);

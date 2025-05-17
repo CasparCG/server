@@ -184,7 +184,10 @@ bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return
 
 side_data_transform& side_data_transform::operator*=(const side_data_transform& other)
 {
-    use_closed_captions &= other.use_closed_captions;
+    // use min priority, so if you lower a layer's priority, it disables all closed captions flowing through that layer.
+    if (closed_captions_priority_ > other.closed_captions_priority_) {
+        closed_captions_priority_ = other.closed_captions_priority_;
+    }
     return *this;
 }
 
@@ -200,7 +203,9 @@ side_data_transform side_data_transform::tween(double                     time,
                                                const tweener&             tween)
 {
     side_data_transform result;
-    result.use_closed_captions = dest.use_closed_captions;
+    // shouldn't tween since that can have weird effects like temporarily picking some third source while transitioning
+    // between two sources
+    result.closed_captions_priority_ = dest.closed_captions_priority_;
     static_cast<void>(time);
     static_cast<void>(source);
     static_cast<void>(duration);
@@ -210,7 +215,7 @@ side_data_transform side_data_transform::tween(double                     time,
 
 bool operator==(const side_data_transform& lhs, const side_data_transform& rhs)
 {
-    return lhs.use_closed_captions == rhs.use_closed_captions;
+    return lhs.closed_captions_priority_ == rhs.closed_captions_priority_;
 }
 
 bool operator!=(const side_data_transform& lhs, const side_data_transform& rhs) { return !(lhs == rhs); }

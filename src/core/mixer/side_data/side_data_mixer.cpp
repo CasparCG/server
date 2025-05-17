@@ -64,29 +64,40 @@ frame_side_data_in_queue side_data_mixer::mixed()
 {
     std::vector<const_frame_side_data> mixed;
 
-    // TODO: implement proper handling for mixing/switching between different a53 cc sources
+    // TODO: implement proper handling for switching between different a53 cc sources
 
-    // allow multiple a53_cc side_data from one source, but not multiple sources
-    bool has_a53_cc_source = false;
+    struct closed_captions_data_t final
+    {
+        closed_captions_priority               priority;
+        std::optional<mutable_frame_side_data> a53_cc_side_data;
+        explicit closed_captions_data_t(closed_captions_priority priority)
+            : priority(priority)
+        {
+        }
+    };
 
-    std::optional<mutable_frame_side_data> a53_cc_side_data;
+    std::optional<closed_captions_data_t> closed_captions_data;
     for (auto item : impl_->items_) {
+        bool closed_captions_enabled = false;
+        if (!closed_captions_data || item.transform.closed_captions_priority_ > closed_captions_data->priority) {
+            // picking a different higher-priority source, reset closed captions data
+            closed_captions_data    = closed_captions_data_t(item.transform.closed_captions_priority_);
+            closed_captions_enabled = true;
+        }
         auto process_side_data = [&](const const_frame_side_data& side_data, bool is_old) {
             switch (side_data.type()) {
                 case frame_side_data_type::a53_cc:
                     CASPAR_LOG(trace) << L"side_data_mixer: got A53_CC side data: "
                                       << boost::log::dump(side_data.data().data(), side_data.data().size(), 16);
-                    if (item.transform.use_closed_captions) {
-                        if (has_a53_cc_source) {
-                            impl_->graph_->set_tag(diagnostics::tag_severity::WARNING,
-                                                   "multiple-simultaneous-a53-cc-sources");
-                        } else if (a53_cc_side_data.has_value()) {
+                    if (closed_captions_enabled) {
+                        auto& a53_cc = closed_captions_data->a53_cc_side_data;
+                        if (a53_cc.has_value()) {
                             // combine the side data, a53_cc side data can just be concatenated,
                             // it will later be passed through ccrepack
-                            a53_cc_side_data->data().insert(
-                                a53_cc_side_data->data().end(), side_data.data().begin(), side_data.data().end());
+                            a53_cc->data().insert(
+                                a53_cc->data().end(), side_data.data().begin(), side_data.data().end());
                         } else {
-                            a53_cc_side_data.emplace(side_data);
+                            a53_cc.emplace(side_data);
                         }
                     }
                     break;
@@ -113,7 +124,6 @@ frame_side_data_in_queue side_data_mixer::mixed()
                 }
             }
         }
-        has_a53_cc_source |= a53_cc_side_data.has_value();
     }
     impl_->items_.clear();
 
@@ -126,8 +136,10 @@ frame_side_data_in_queue side_data_mixer::mixed()
         }
     }
 
-    if (a53_cc_side_data.has_value()) {
-        mixed.emplace_back(*std::move(a53_cc_side_data));
+    if (closed_captions_data) {
+        if (closed_captions_data->a53_cc_side_data) {
+            mixed.emplace_back(*std::move(closed_captions_data->a53_cc_side_data));
+        }
     }
 
     auto pos = impl_->output_queue_->add_frame(std::move(mixed));
@@ -142,7 +154,7 @@ void side_data_mixer::push(const frame_transform& transform)
 
 void side_data_mixer::visit(const const_frame& frame)
 {
-    if (!impl_->transform_stack_.top().use_closed_captions || !frame.side_data().queue)
+    if (!impl_->transform_stack_.top().closed_captions_priority_)
         return;
 
     impl_->items_.push_back(std::move(side_data_item{impl_->transform_stack_.top(), frame.side_data()}));
