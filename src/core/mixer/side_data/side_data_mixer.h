@@ -22,8 +22,6 @@
 #include <core/frame/frame_side_data.h>
 #include <core/frame/frame_visitor.h>
 
-#include <vector>
-
 namespace caspar::core {
 
 class side_data_mixer final : public frame_visitor
