@@ -15,6 +15,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <common/channel.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/except.h>
@@ -26,7 +27,9 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
-#include <optional>
+#include <libavcodec/codec_id.h>
+#include <libavcodec/packet.h>
+#include <libavutil/frame.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -54,7 +57,7 @@ extern "C" {
 #include <deque>
 #include <iomanip>
 #include <memory>
-#include <queue>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -98,24 +101,16 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
     return result;
 }
 
-class Decoder
+class Decoder final
 {
     Decoder(const Decoder&)            = delete;
     Decoder& operator=(const Decoder&) = delete;
 
-    AVStream*         st       = nullptr;
-    int64_t           next_pts = AV_NOPTS_VALUE;
-    std::atomic<bool> eof      = {false};
+    AVStream* st       = nullptr;
+    int64_t   next_pts = AV_NOPTS_VALUE;
 
-    std::queue<std::shared_ptr<AVPacket>> input;
-    mutable boost::mutex                  input_mutex;
-    boost::condition_variable             input_cond;
-    int                                   input_capacity = 2;
-
-    std::queue<std::shared_ptr<AVFrame>> output;
-    mutable boost::mutex                 output_mutex;
-    boost::condition_variable            output_cond;
-    int                                  output_capacity = 8;
+    Sender<std::shared_ptr<AVPacket>>  input;
+    Receiver<std::shared_ptr<AVFrame>> output;
 
     boost::thread thread;
 
@@ -124,9 +119,51 @@ class Decoder
 
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream)
+    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder = nullptr)
         : st(stream)
     {
+        auto input_channel  = channel<std::shared_ptr<AVPacket>>(2);
+        auto output_channel = channel<std::shared_ptr<AVFrame>>(8);
+
+        input  = std::move(input_channel.first);
+        output = std::move(output_channel.second);
+
+        if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608) {
+            thread = boost::thread([this,
+                                    stream,
+                                    input_receiver = std::move(input_channel.second),
+                                    output_sender  = std::move(output_channel.first)]() mutable {
+                try {
+                    while (!thread.interruption_requested()) {
+                        auto packet_opt = input_receiver.try_receive_blocking();
+                        if (!packet_opt) {
+                            break; // no sender -- we're done
+                        }
+                        auto packet = std::move(*packet_opt);
+                        if (!packet) {
+                            continue; // we don't need to do anything for a flush
+                        }
+
+                        auto  av_frame = alloc_frame();
+                        auto* side_data =
+                            FFMEM(av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, packet->size));
+                        std::memcpy(side_data->data, packet->data, packet->size);
+                        av_frame->pts          = packet->pts;
+                        av_frame->pkt_dts      = packet->dts;
+                        av_frame->time_base    = stream->time_base;
+                        av_frame->pkt_duration = packet->duration;
+                        if (output_sender.try_send_blocking(av_frame)) {
+                            break; // no receiver -- we're done
+                        }
+                    }
+                } catch (boost::thread_interrupted&) {
+                    // Do nothing...
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+            });
+            return;
+        }
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!codec) {
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
@@ -146,7 +183,12 @@ class Decoder
 
         ctx->pkt_timebase = stream->time_base;
 
+        Receiver<std::shared_ptr<AVFrame>> eia608_subtitles_in;
+
         if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+            if (eia608_subtitles_decoder) {
+                eia608_subtitles_in = std::move(eia608_subtitles_decoder->output);
+            }
             ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
             ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
         } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -166,32 +208,28 @@ class Decoder
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
-        thread = boost::thread([=]() {
+        thread = boost::thread([                    =,
+                                eia608_subtitles_in = std::move(eia608_subtitles_in),
+                                input_receiver      = std::move(input_channel.second),
+                                output_sender       = std::move(output_channel.first)]() mutable {
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
                     auto ret      = avcodec_receive_frame(ctx.get(), av_frame.get());
 
                     if (ret == AVERROR(EAGAIN)) {
-                        std::shared_ptr<AVPacket> packet;
-                        {
-                            boost::unique_lock<boost::mutex> lock(input_mutex);
-                            input_cond.wait(lock, [&]() { return !input.empty(); });
-                            packet = std::move(input.front());
-                            input.pop();
+                        auto packet_opt = input_receiver.try_receive_blocking();
+                        FF(avcodec_send_packet(ctx.get(), packet_opt.value_or(nullptr).get()));
+                        if (!packet_opt) {
+                            break; // no sender -- we're done
                         }
-                        FF(avcodec_send_packet(ctx.get(), packet.get()));
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
                         next_pts      = AV_NOPTS_VALUE;
-                        eof           = true;
-
-                        {
-                            boost::unique_lock<boost::mutex> lock(output_mutex);
-                            output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
-                            output.push(std::move(av_frame));
-                        }
+                        // we don't care if there's no receiver anymore, we're done anyway
+                        static_cast<void>(output_sender.try_send_blocking(av_frame));
+                        break; // we're done
                     } else {
                         FF_RET(ret, "avcodec_receive_frame");
 
@@ -243,17 +281,26 @@ class Decoder
                             next_pts = AV_NOPTS_VALUE;
                         }
 
-                        {
-                            boost::unique_lock<boost::mutex> lock(output_mutex);
-                            output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
-                            output.push(std::move(av_frame));
+                        if (auto eia608_subtitles_frame = eia608_subtitles_in.try_receive_blocking().value_or(nullptr);
+                            eia608_subtitles_frame) {
+                            auto side_data = av_frame_get_side_data(eia608_subtitles_frame.get(), AV_FRAME_DATA_A53_CC);
+                            if (side_data) {
+                                av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                                // TODO: move existing side data rather than copying it
+                                auto new_side_data = FFMEM(
+                                    av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, side_data->size));
+                                std::memcpy(new_side_data->data, side_data->data, side_data->size);
+                            }
+                        }
+
+                        if (output_sender.try_send_blocking(av_frame)) {
+                            break; // no receiver -- we're done
                         }
                     }
                 }
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
             } catch (...) {
-                eof = true;
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
         });
@@ -271,59 +318,28 @@ class Decoder
         }
     }
 
-    bool want_packet() const
-    {
-        if (eof) {
-            return false;
-        }
-
-        {
-            boost::lock_guard<boost::mutex> lock(input_mutex);
-            return input.size() < input_capacity;
-        }
-    }
+    bool want_packet() const { return !input.full(); }
 
     void push(std::shared_ptr<AVPacket> packet)
     {
-        if (eof) {
-            return;
-        }
-
-        {
-            boost::lock_guard<boost::mutex> lock(input_mutex);
-            input.push(std::move(packet));
-        }
-
-        input_cond.notify_all();
+        input.try_send_blocking(packet); // ignore if we fail to send
     }
 
     std::shared_ptr<AVFrame> pop()
     {
-        std::shared_ptr<AVFrame> frame;
-
-        {
-            boost::lock_guard<boost::mutex> lock(output_mutex);
-
-            if (!output.empty()) {
-                frame = std::move(output.front());
-                output.pop();
-            }
-        }
-
-        if (frame) {
-            output_cond.notify_all();
-        } else if (eof) {
-            frame = alloc_frame();
-        }
-
-        return frame;
+        auto try_receive_result = output.try_receive();
+        if (try_receive_result.closed)
+            return alloc_frame();
+        return std::move(try_receive_result.value).value_or(nullptr);
     }
 };
 
 struct Filter
 {
-    std::shared_ptr<AVFilterGraph>  graph;
-    AVFilterContext*                sink = nullptr;
+    std::shared_ptr<AVFilterGraph> graph;
+    AVFilterContext*               sink = nullptr;
+    /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
+    /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, AVFilterContext*> sources;
     std::shared_ptr<AVFrame>        frame;
     bool                            eof = false;
@@ -414,7 +430,9 @@ struct Filter
             }
         }
 
-        std::deque<unsigned> video_streams, audio_streams;
+        std::deque<unsigned>    video_streams, audio_streams;
+        std::optional<unsigned> eia608_subtitles_stream;
+        bool                    eia608_subtitles_stream_is_default = false;
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
@@ -438,6 +456,16 @@ struct Filter
                     default:
                         // ignore stream
                         break;
+                }
+            }
+
+            // if we're the video input, look for EIA-608 subtitles that can be added as side-data
+            if (st->codecpar->codec_id == AV_CODEC_ID_EIA_608 && media_type == AVMEDIA_TYPE_VIDEO) {
+                if (!eia608_subtitles_stream_is_default && (disposition & AV_DISPOSITION_DEFAULT) != 0) {
+                    eia608_subtitles_stream            = n;
+                    eia608_subtitles_stream_is_default = true;
+                } else if (!eia608_subtitles_stream) {
+                    eia608_subtitles_stream = n;
                 }
             }
         }
@@ -477,6 +505,10 @@ struct Filter
                 };
                 if (same_properties(st0, st1) && !same_properties(st0, st2))
                     filter_spec = "alphamerge," + filter_spec;
+            } else if (video_streams.empty() && eia608_subtitles_stream) {
+                // fake video input so we can add EIA-608 closed captions side data
+                video_streams.push_back(*eia608_subtitles_stream);
+                eia608_subtitles_stream = std::nullopt;
             }
         }
 
@@ -494,7 +526,8 @@ struct Filter
             for (auto cur = inputs; cur; cur = cur->next) {
                 const auto type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
 
-                unsigned stream_index = 0;
+                unsigned stream_index                    = 0;
+                Decoder* eia608_subtitles_stream_decoder = nullptr;
 
                 switch (type) {
                     case AVMEDIA_TYPE_VIDEO:
@@ -505,6 +538,12 @@ struct Filter
                         // TODO find stream based on link name
                         stream_index = video_streams.front();
                         video_streams.pop_front();
+                        if (eia608_subtitles_stream && streams.count(*eia608_subtitles_stream) == 0) {
+                            eia608_subtitles_stream_decoder =
+                                &streams.emplace(*eia608_subtitles_stream, input->streams[*eia608_subtitles_stream])
+                                     .first->second;
+                            sources.emplace(*eia608_subtitles_stream, nullptr);
+                        }
                         break;
                     case AVMEDIA_TYPE_AUDIO:
                         if (audio_streams.empty()) {
@@ -528,7 +567,20 @@ struct Filter
 
                 auto st = it->second.ctx;
 
-                if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
+                if (!st) {
+                    // fake video input so we can add EIA-608 closed captions side data
+                    AVStream* stream = input->streams[stream_index];
+
+                    auto args =
+                        (boost::format("time_base=%d/%d") % stream->time_base.num % stream->time_base.den).str();
+                    auto name = (boost::format("in_%d") % stream_index).str();
+
+                    AVFilterContext* source = nullptr;
+                    FF(avfilter_graph_create_filter(
+                        &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                    FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
+                    sources.emplace(stream_index, source);
+                } else if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
                                  st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
@@ -686,6 +738,8 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
+    /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
+    /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
     std::atomic<int64_t> start_{AV_NOPTS_VALUE};
@@ -1178,6 +1232,8 @@ struct AVProducer::Impl
 
             auto nb_requests = 0U;
             for (auto source : p.second) {
+                if (!source)
+                    continue;
                 nb_requests = std::max(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
@@ -1191,6 +1247,8 @@ struct AVProducer::Impl
             }
 
             for (auto& source : p.second) {
+                if (!source)
+                    continue;
                 if (!frame->data[0]) {
                     FF(av_buffersrc_close(source, frame->pts, 0));
                 } else {

@@ -40,6 +40,7 @@ set(HEADERS
 		array.h
 		assert.h
 		base64.h
+		channel.h
 		endian.h
 		enum_class.h
 		env.h
