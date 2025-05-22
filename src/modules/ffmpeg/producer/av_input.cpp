@@ -155,6 +155,9 @@ void Input::internal_reset()
         FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
     }
 
+    // extract closed captions stream from .mxf
+    FF(av_dict_set(&options, "eia608_extract", "1", 0));
+
     AVFormatContext* ic             = avformat_alloc_context();
     ic->interrupt_callback.callback = Input::interrupt_cb;
     ic->interrupt_callback.opaque   = this;
@@ -163,6 +166,9 @@ void Input::internal_reset()
     auto ic2 = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
+        // only used by .mxf demuxer, so it being unused for other formats is expected.
+        if (p.first == "eia608_extract")
+            continue;
         CASPAR_LOG(warning) << "av_input[" + filename_ + "]" << " Unused option " << p.first << "=" << p.second;
     }
 
