@@ -26,8 +26,8 @@
 #include "config.h"
 #include "decklink_consumer.h"
 #include "hdr_v210_strategy.h"
-#include "sdr_bgra_strategy.h"
 #include "monitor.h"
+#include "sdr_bgra_strategy.h"
 
 #include "../util/util.h"
 
@@ -297,9 +297,9 @@ class decklink_frame
 
     // IDecklinkVideoFrame
 
-    long STDMETHODCALLTYPE GetWidth() override { return static_cast<long>(format_desc_.width); }
-    long STDMETHODCALLTYPE GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE GetRowBytes() override { return static_cast<long>(row_bytes_); }
+    long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
+    long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
+    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(row_bytes_); }
     BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return pix_fmt_; }
     BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return flags_; }
 
@@ -557,14 +557,15 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
     void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
-        auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(std::move(image_data),
-                                                                                      decklink_format_desc_,
-                                                                                      nb_samples,
-                                                                                      config_.hdr,
-                                                                                      format_strategy_->get_pixel_format(),
-                                                                                      format_strategy_->get_row_bytes(decklink_format_desc_.width),
-                                                                                      core::color_space::bt709,
-                                                                                      config_.hdr_meta));
+        auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
+            new decklink_frame(std::move(image_data),
+                               decklink_format_desc_,
+                               nb_samples,
+                               config_.hdr,
+                               format_strategy_->get_pixel_format(),
+                               format_strategy_->get_row_bytes(decklink_format_desc_.width),
+                               core::color_space::bt709,
+                               config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
                                                decklink_format_desc_.duration,
@@ -936,11 +937,11 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     // Primary port
                     std::shared_ptr<void> image_data =
                         format_strategy_->convert_frame_for_port(channel_format_desc_,
-                                                               decklink_format_desc_,
-                                                               config_.primary,
-                                                               frame1,
-                                                               frame2,
-                                                               mode_->GetFieldDominance());
+                                                                 decklink_format_desc_,
+                                                                 config_.primary,
+                                                                 frame1,
+                                                                 frame2,
+                                                                 mode_->GetFieldDominance());
 
                     schedule_next_video(image_data, nb_samples, video_display_time, config_.color_space);
 
@@ -1007,10 +1008,16 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                              BMDTimeValue          display_time,
                              core::color_space     color_space)
     {
-        auto fmt = format_strategy_->get_pixel_format();
-        auto row_bytes = format_strategy_->get_row_bytes(decklink_format_desc_.width);
-        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(
-            std::move(image_data), decklink_format_desc_, nb_samples, config_.hdr, fmt, row_bytes, color_space, config_.hdr_meta));
+        auto fmt        = format_strategy_->get_pixel_format();
+        auto row_bytes  = format_strategy_->get_row_bytes(decklink_format_desc_.width);
+        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(std::move(image_data),
+                                                                                    decklink_format_desc_,
+                                                                                    nb_samples,
+                                                                                    config_.hdr,
+                                                                                    fmt,
+                                                                                    row_bytes,
+                                                                                    color_space,
+                                                                                    config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
@@ -1078,7 +1085,9 @@ struct decklink_consumer_proxy : public core::frame_consumer
         });
     }
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
