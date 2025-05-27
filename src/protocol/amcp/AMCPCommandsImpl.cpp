@@ -350,8 +350,12 @@ std::wstring load_command(command_context& ctx)
     return L"202 LOAD OK\r\n";
 }
 
+void apply_closed_captions_priority(command_context& ctx, std::wstring s);
+
 std::wstring play_command(command_context& ctx)
 {
+    std::wstring cc_priority = get_param(L"CLOSED_CAPTIONS_PRIORITY", ctx.parameters, L"");
+
     try {
         if (!ctx.parameters.empty())
             loadbg_command(ctx);
@@ -363,6 +367,10 @@ std::wstring play_command(command_context& ctx)
     }
 
     ctx.channel.stage->play(ctx.layer_index());
+
+    if (!cc_priority.empty()) {
+        apply_closed_captions_priority(ctx, std::move(cc_priority));
+    }
 
     return L"202 PLAY OK\r\n";
 }
@@ -1358,15 +1366,10 @@ std::wstring mixer_grid_command(command_context& ctx)
     return L"202 MIXER OK\r\n";
 }
 
-std::future<std::wstring> mixer_closed_captions_priority_command(command_context& ctx)
+void apply_closed_captions_priority(command_context& ctx, std::wstring s)
 {
-    if (ctx.parameters.empty())
-        return reply_value(ctx, [](const frame_transform& t) {
-            return static_cast<float>(t.side_data_transform.closed_captions_priority_);
-        });
-
     transforms_applier       transforms(ctx);
-    closed_captions_priority value(std::stof(ctx.parameters.at(0)));
+    closed_captions_priority value(std::stof(s));
     transforms.add(stage::transform_tuple_t(
         ctx.layer_index(),
         [=](frame_transform transform) -> frame_transform {
@@ -1376,6 +1379,16 @@ std::future<std::wstring> mixer_closed_captions_priority_command(command_context
         0,
         tweener(L"linear")));
     transforms.apply();
+}
+
+std::future<std::wstring> mixer_closed_captions_priority_command(command_context& ctx)
+{
+    if (ctx.parameters.empty())
+        return reply_value(ctx, [](const frame_transform& t) {
+            return static_cast<float>(t.side_data_transform.closed_captions_priority_);
+        });
+
+    apply_closed_captions_priority(ctx, ctx.parameters.at(0));
 
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
