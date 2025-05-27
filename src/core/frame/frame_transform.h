@@ -202,6 +202,8 @@ class closed_captions_priority final
 
 struct side_data_transform final
 {
+    // TODO: debug and fix so this can default to not use closed captions --
+    // some layers are getting set to prevent closed captions
     closed_captions_priority closed_captions_priority_{1};
 
     static side_data_transform identity();
