@@ -49,7 +49,7 @@ struct side_data_mixer::impl final
     explicit impl(spl::shared_ptr<diagnostics::graph> graph)
         : graph_(std::move(graph))
     {
-        transform_stack_.push(side_data_transform());
+        transform_stack_.push(side_data_transform::identity());
     }
 };
 

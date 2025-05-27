@@ -204,6 +204,8 @@ struct side_data_transform final
 {
     closed_captions_priority closed_captions_priority_;
 
+    static side_data_transform identity();
+
     side_data_transform& operator*=(const side_data_transform& other);
     side_data_transform  operator*(const side_data_transform& other) const;
 

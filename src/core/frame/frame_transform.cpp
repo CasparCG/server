@@ -182,6 +182,8 @@ bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return
 
 // side_data_transform
 
+side_data_transform side_data_transform::identity() { return side_data_transform{closed_captions_priority(1)}; }
+
 side_data_transform& side_data_transform::operator*=(const side_data_transform& other)
 {
     // use min priority, so if you lower a layer's priority, it disables all closed captions flowing through that layer.
@@ -284,5 +286,4 @@ std::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
         return {};
     }
 }
-
 }} // namespace caspar::core
