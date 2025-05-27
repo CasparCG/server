@@ -202,7 +202,7 @@ class closed_captions_priority final
 
 struct side_data_transform final
 {
-    closed_captions_priority closed_captions_priority_;
+    closed_captions_priority closed_captions_priority_{1};
 
     static side_data_transform identity();
 
