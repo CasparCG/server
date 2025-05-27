@@ -200,9 +200,18 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
 struct hdr_v210_strategy::impl final
 {
     std::vector<float> bt709{0.2126, 0.7152, 0.0722, -0.1146, -0.3854, 0.5, 0.5, -0.4542, -0.0458};
+    __m128i            black_batch;
 
   public:
-    impl() = default;
+    impl()
+    {
+        // setup black batch (6 pixels of black, encoded as v210)
+        auto      color_matrix = create_int_matrix(bt709);
+        ARGBPixel black[6];
+        memset(black, 0, sizeof(black));
+        memset(&black_batch, 0, sizeof(__m128i));
+        pack_v210(black, color_matrix, reinterpret_cast<uint32_t*>(&black_batch), 6);
+    }
 
     BMDPixelFormat get_pixel_format() { return bmdFormat10BitYUV; }
 
@@ -225,42 +234,61 @@ struct hdr_v210_strategy::impl final
         if (!frame)
             return;
 
-        int firstLine = topField ? 0 : 1;
+        int  firstLine    = topField ? 0 : 1;
+        auto color_matrix = create_int_matrix(bt709);
 
-        if (channel_format_desc.format == decklink_format_desc.format && config.src_x == 0 && config.src_y == 0 &&
-            config.region_w == 0 && config.region_h == 0 && config.dest_x == 0 && config.dest_y == 0) {
+        if (config.region_w == 0 && config.region_h == 0 && config.dest_x == 0) {
             // Fast path
 
-            auto color_matrix = create_int_matrix(bt709);
-
             // Pack R16G16B16A16 as v210
-            const int NUM_THREADS     = 8;
+            int       pixels_to_copy  = std::min(decklink_format_desc.width, channel_format_desc.width - config.src_x);
+            const int NUM_THREADS     = 6;
             auto      rows_per_thread = decklink_format_desc.height / NUM_THREADS;
-            size_t    byte_count_line = get_row_bytes(decklink_format_desc.width);
-            int       fullspeed_x     = decklink_format_desc.width / 48;
-            int       rest_x          = decklink_format_desc.width - fullspeed_x * 48;
+            size_t    dest_line_bytes = get_row_bytes(decklink_format_desc.width);
+            int       fullspeed_x_batches = pixels_to_copy / 48;
+            int       rest_x_pixels       = pixels_to_copy - fullspeed_x_batches * 48;
             tbb::parallel_for(0, NUM_THREADS, [&](int thread_index) {
-                auto start = firstLine + thread_index * rows_per_thread;
-                auto end   = (thread_index + 1) * rows_per_thread;
+                auto start_y = firstLine + thread_index * rows_per_thread;
+                auto end_y   = (thread_index + 1) * rows_per_thread;
 
-                for (int y = start; y < end; y += decklink_format_desc.field_count) {
-                    auto dest_row = reinterpret_cast<uint32_t*>(image_data.get()) + (long long)y * byte_count_line / 4;
-                    __m128i* v210_dest = reinterpret_cast<__m128i*>(dest_row);
+                for (uint64_t y = start_y; y < end_y; y += decklink_format_desc.field_count) {
+                    auto dest_row =
+                        reinterpret_cast<uint8_t*>(image_data.get()) + y * dest_line_bytes; // start of dest row
+                    __m128i* v210_dest = reinterpret_cast<__m128i*>(dest_row); // current position in dest row
 
+                    if (y < config.dest_y) {
+                        // Fill the row with black
+                        auto black_batch_count = dest_line_bytes / sizeof(__m128i);
+                        for (int i = 0; i < black_batch_count; ++i) {
+                            _mm_storeu_si128(v210_dest++, black_batch);
+                        }
+                        continue;
+                    }
+
+                    const uint64_t src_y = y - config.dest_y + config.src_y;
+
+                    if (src_y >= channel_format_desc.height) {
+                        // Fill the row with black
+                        auto black_batch_count = dest_line_bytes / sizeof(__m128i);
+                        for (int i = 0; i < black_batch_count; ++i) {
+                            _mm_storeu_si128(v210_dest++, black_batch);
+                        }
+                        continue;
+                    }
+
+                    auto src = reinterpret_cast<const ARGBPixel*>(frame.image_data(0).data()) +
+                               (src_y * channel_format_desc.width + config.src_x);
                     // Pack pixels in batches of 48
-                    for (int x = 0; x < fullspeed_x; x++) {
-                        auto src = reinterpret_cast<const uint16_t*>(
-                            frame.image_data(0).data() + ((long long)y * decklink_format_desc.width + x * 48) * 8);
-
+                    for (int batch_index_x = 0; batch_index_x < fullspeed_x_batches; batch_index_x++) {
                         const __m256i* pixeldata = reinterpret_cast<const __m256i*>(src);
 
                         __m256i luma[6];
                         __m256i chroma[6];
 
                         __m256i zero = _mm256_setzero_si256();
-                        for (int batch_index = 0; batch_index < 6; batch_index++) {
-                            __m256i p0123 = _mm256_load_si256(pixeldata + batch_index * 2);
-                            __m256i p4567 = _mm256_load_si256(pixeldata + batch_index * 2 + 1);
+                        for (int packet_index = 0; packet_index < 6; packet_index++) {
+                            __m256i p0123 = _mm256_loadu_si256(pixeldata + packet_index * 2);
+                            __m256i p4567 = _mm256_loadu_si256(pixeldata + packet_index * 2 + 1);
 
                             // shift down to 10 bit precision
                             p0123 = _mm256_srli_epi16(p0123, 6);
@@ -273,31 +301,50 @@ struct hdr_v210_strategy::impl final
                             pixel_pairs[2] = _mm256_unpacklo_epi16(p4567, zero); // pixels 4 6
                             pixel_pairs[3] = _mm256_unpackhi_epi16(p4567, zero); // pixels 5 7
 
-                            rgb_to_yuv_avx2(pixel_pairs, color_matrix, &luma[batch_index], &chroma[batch_index]);
+                            rgb_to_yuv_avx2(pixel_pairs, color_matrix, &luma[packet_index], &chroma[packet_index]);
                         }
 
                         pack_v210_avx2(luma, chroma, &v210_dest);
+
+                        src += 48; // Move to the next batch of pixels
                     }
 
                     // Pack the final pixels one by one
-                    if (rest_x > 0) {
-                        auto src = reinterpret_cast<const ARGBPixel*>(frame.image_data(0).data()) +
-                                   (y * decklink_format_desc.width + fullspeed_x * 48);
-                        auto dest = reinterpret_cast<uint32_t*>(v210_dest);
-
+                    if (rest_x_pixels > 0) {
+                        auto dest = reinterpret_cast<uint8_t*>(v210_dest);
                         // clear the remainder of the row
                         auto rest_bytes =
-                            reinterpret_cast<uint8_t*>(dest_row) + byte_count_line - reinterpret_cast<uint8_t*>(dest);
+                            reinterpret_cast<uint8_t*>(dest_row) + dest_line_bytes - reinterpret_cast<uint8_t*>(dest);
                         memset(dest, 0, rest_bytes);
 
+                        int rest_x_6pixels = (rest_x_pixels / 6) * 6; // Round down to the nearest multiple of 6
+
                         // pack pixels
-                        pack_v210(src, color_matrix, dest, rest_x);
+                        pack_v210(src, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), rest_x_6pixels);
+                        src += rest_x_6pixels;             // Move the source pointer forward
+                        v210_dest += (rest_x_6pixels / 6); // one _m128i (32x4 bits) is 6 pixels
+
+                        // // pad the rest with black pixels to fill the v210 packet
+                        int last_x_pixels = rest_x_pixels - rest_x_6pixels;
+                        if (last_x_pixels > 0) {
+                            ARGBPixel pixels[6];
+                            memset(pixels, 0, sizeof(pixels));
+                            memcpy(pixels, src, last_x_pixels * 8);
+                            pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6);
+                            v210_dest++;
+                            src += last_x_pixels;
+                        }
+                    }
+
+                    // // Fill the rest of the row with black
+                    auto bytes_written     = reinterpret_cast<uint8_t*>(v210_dest) - dest_row;
+                    auto padding_bytes     = dest_line_bytes - bytes_written;
+                    auto black_batch_count = padding_bytes / sizeof(black_batch);
+                    for (int i = 0; i < black_batch_count; ++i) {
+                        _mm_storeu_si128(v210_dest++, black_batch);
                     }
                 }
             });
-        } else {
-            // Take a sub-region
-            // TODO: Add support for hdr frames
         }
     }
 

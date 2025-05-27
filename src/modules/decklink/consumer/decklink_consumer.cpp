@@ -1146,10 +1146,12 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 
     config.hdr = (channel_info.depth != common::bit_depth::bit8);
 
-    if (config.hdr && config.primary.has_subregion_geometry()) {
+    if (config.hdr && (config.primary.dest_x != 0 || config.primary.region_w != 0 || config.primary.region_h != 0)) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
-                               << msg_info("Decklink consumer does not support hdr in combination with sub regions."));
+                               << msg_info("Decklink consumer does not support hdr in combination with non-zero "
+                                           "dest_x, width or height sub-region properties yet."));
     }
+
     if (config.hdr && config.secondaries.size() > 0) {
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
                                    "Decklink consumer does not support hdr in combination with secondary ports."));
