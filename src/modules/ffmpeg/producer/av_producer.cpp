@@ -8,6 +8,7 @@
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
+#include <boost/format/format_fwd.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
@@ -30,6 +31,8 @@
 #include <libavcodec/codec_id.h>
 #include <libavcodec/packet.h>
 #include <libavutil/frame.h>
+#include <tuple>
+#include <utility>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -119,11 +122,18 @@ class Decoder final
 
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder = nullptr)
+    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder)
         : st(stream)
     {
-        auto input_channel  = channel<std::shared_ptr<AVPacket>>(2);
-        auto output_channel = channel<std::shared_ptr<AVFrame>>(8);
+        auto debug_stream_kind = stream->codecpar->codec_id == AV_CODEC_ID_EIA_608       ? "eia-608"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO    ? "video"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO    ? "audio"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE ? "subtitle"
+                                                                                         : "unknown";
+        auto input_channel     = channel<std::shared_ptr<AVPacket>>(
+            2, channel_capacity_is_hint, (boost::format("Decoder-%i-%s-in") % stream->index % debug_stream_kind).str());
+        auto output_channel = channel<std::shared_ptr<AVFrame>>(
+            8, (boost::format("Decoder-%i-%s-out") % stream->index % debug_stream_kind).str());
 
         input  = std::move(input_channel.first);
         output = std::move(output_channel.second);
@@ -183,11 +193,16 @@ class Decoder final
 
         ctx->pkt_timebase = stream->time_base;
 
-        Receiver<std::shared_ptr<AVFrame>> eia608_subtitles_in;
+        Receiver<std::shared_ptr<AVPacket>> eia608_subtitles_in;
 
         if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (eia608_subtitles_decoder) {
-                eia608_subtitles_in = std::move(eia608_subtitles_decoder->output);
+                auto side_data_in = channel<std::shared_ptr<AVPacket>>(
+                    2,
+                    channel_capacity_is_hint,
+                    (boost::format("Decoder-%i-eia-608-side-data-in") % stream->index).str());
+                eia608_subtitles_in             = std::move(side_data_in.second);
+                eia608_subtitles_decoder->input = std::move(side_data_in.first);
             }
             ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
             ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
@@ -281,16 +296,13 @@ class Decoder final
                             next_pts = AV_NOPTS_VALUE;
                         }
 
-                        if (auto eia608_subtitles_frame = eia608_subtitles_in.try_receive_blocking().value_or(nullptr);
-                            eia608_subtitles_frame) {
-                            auto side_data = av_frame_get_side_data(eia608_subtitles_frame.get(), AV_FRAME_DATA_A53_CC);
-                            if (side_data) {
-                                av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
-                                // TODO: move existing side data rather than copying it
-                                auto new_side_data = FFMEM(
-                                    av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, side_data->size));
-                                std::memcpy(new_side_data->data, side_data->data, side_data->size);
-                            }
+                        if (auto eia608_subtitles_packet = eia608_subtitles_in.try_receive_blocking().value_or(nullptr);
+                            eia608_subtitles_packet) {
+                            av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                            auto new_side_data = FFMEM(av_frame_new_side_data(
+                                av_frame.get(), AV_FRAME_DATA_A53_CC, eia608_subtitles_packet->size));
+                            std::memcpy(
+                                new_side_data->data, eia608_subtitles_packet->data, eia608_subtitles_packet->size);
                         }
 
                         if (output_sender.try_send_blocking(av_frame)) {
@@ -540,7 +552,10 @@ struct Filter
                         video_streams.pop_front();
                         if (eia608_subtitles_stream && streams.count(*eia608_subtitles_stream) == 0) {
                             eia608_subtitles_stream_decoder =
-                                &streams.emplace(*eia608_subtitles_stream, input->streams[*eia608_subtitles_stream])
+                                &streams
+                                     .emplace(std::piecewise_construct,
+                                              std::tuple(*eia608_subtitles_stream),
+                                              std::tuple(input->streams[*eia608_subtitles_stream], nullptr))
                                      .first->second;
                             sources.emplace(*eia608_subtitles_stream, nullptr);
                         }
@@ -562,7 +577,11 @@ struct Filter
 
                 auto it = streams.find(stream_index);
                 if (it == streams.end()) {
-                    it = streams.emplace(stream_index, input->streams[stream_index]).first;
+                    it = streams
+                             .emplace(std::piecewise_construct,
+                                      std::tuple(stream_index),
+                                      std::tuple(input->streams[stream_index], eia608_subtitles_stream_decoder))
+                             .first;
                 }
 
                 auto st = it->second.ctx;

@@ -27,6 +27,13 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <string>
+
+#ifdef CASPARCG_DEBUG_CHANNEL
+#include <sstream>
+
+#include "common/log.h"
+#endif
 
 namespace caspar {
 template <typename T>
@@ -35,8 +42,18 @@ class Sender;
 template <typename T>
 class Receiver;
 
+struct channel_capacity_is_hint_t final
+{
+};
+
+inline constexpr channel_capacity_is_hint_t channel_capacity_is_hint{};
+
 template <typename T>
-std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity);
+std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity, std::string debug_name = {});
+
+template <typename T>
+std::pair<Sender<T>, Receiver<T>>
+channel(std::size_t capacity, channel_capacity_is_hint_t, std::string debug_name = {});
 
 template <typename T>
 class Receiver final
@@ -45,7 +62,11 @@ class Receiver final
     friend class Sender;
 
     template <typename T2>
-    friend std::pair<Sender<T2>, Receiver<T2>> channel(std::size_t capacity);
+    friend std::pair<Sender<T2>, Receiver<T2>> channel(std::size_t capacity, std::string debug_name);
+
+    template <typename T2>
+    friend std::pair<Sender<T2>, Receiver<T2>>
+    channel(std::size_t capacity, channel_capacity_is_hint_t, std::string debug_name);
 
   public:
     Receiver() noexcept
@@ -118,30 +139,63 @@ class Receiver final
         boost::condition_variable cond_;
         std::queue<T>             queue_;
         const std::size_t         capacity_;
-        bool                      sender_destroyed_   = false;
-        bool                      receiver_destroyed_ = false;
+        const bool                capacity_is_hint_;
+#ifdef CASPARCG_DEBUG_CHANNEL
+        const std::string debug_name_;
+#endif
+        bool sender_destroyed_   = false;
+        bool receiver_destroyed_ = false;
 
         TryReceiveResult try_receive_locked()
         {
-            if (queue_.empty())
+            if (queue_.empty()) {
+#ifdef CASPARCG_DEBUG_CHANNEL
+                CASPAR_LOG(trace) << "channel state: " << debug_name_
+                                  << ": try_receive_locked: empty, sender_destroyed_ == " << sender_destroyed_;
+#endif
                 return {std::nullopt, sender_destroyed_};
+            }
             TryReceiveResult retval{std::move(queue_.front()), false};
             queue_.pop();
             cond_.notify_all();
+#ifdef CASPARCG_DEBUG_CHANNEL
+            CASPAR_LOG(trace) << "channel state: " << debug_name_ << ": try_receive_locked: received value";
+#endif
             return retval;
         }
 
         TrySendResult try_send_locked(T&& v)
         {
-            if (queue_.size() >= capacity_ || receiver_destroyed_)
+            if ((queue_.size() >= capacity_ && !capacity_is_hint_) || receiver_destroyed_) {
+#ifdef CASPARCG_DEBUG_CHANNEL
+                CASPAR_LOG(trace) << "channel state: " << debug_name_
+                                  << ": try_send_locked: full, receiver_destroyed_ == " << receiver_destroyed_;
+#endif
                 return {std::move(v), receiver_destroyed_};
+            }
             queue_.push(std::move(v));
             cond_.notify_all();
+#ifdef CASPARCG_DEBUG_CHANNEL
+            CASPAR_LOG(trace) << "channel state: " << debug_name_ << ": try_send_locked: sent value";
+#endif
             return {std::nullopt, false};
         }
 
-        explicit State(std::size_t capacity)
+#ifdef CASPARCG_DEBUG_CHANNEL
+        static std::string make_default_debug_name(const void* p)
+        {
+            std::ostringstream os;
+            os << p;
+            return std::move(os).str();
+        }
+#endif
+
+        explicit State(std::size_t capacity, bool capacity_is_hint, std::string debug_name)
             : capacity_(capacity)
+            , capacity_is_hint_(capacity_is_hint)
+#ifdef CASPARCG_DEBUG_CHANNEL
+            , debug_name_(debug_name.empty() ? make_default_debug_name(this) : std::move(debug_name))
+#endif
         {
         }
         template <bool is_sender>
@@ -154,8 +208,14 @@ class Receiver final
                 {
                     auto lock = boost::unique_lock(state->lock_);
                     if (is_sender) {
+#ifdef CASPARCG_DEBUG_CHANNEL
+                        CASPAR_LOG(trace) << "channel state: " << state->debug_name_ << ": destroy sender";
+#endif
                         state->sender_destroyed_ = true;
                     } else {
+#ifdef CASPARCG_DEBUG_CHANNEL
+                        CASPAR_LOG(trace) << "channel state: " << state->debug_name_ << ": destroy receiver";
+#endif
                         state->receiver_destroyed_ = true;
                     }
                     if (!state->sender_destroyed_ || !state->receiver_destroyed_) {
@@ -179,7 +239,11 @@ template <typename T>
 class Sender final
 {
     template <typename T2>
-    friend std::pair<Sender<T2>, Receiver<T2>> channel(std::size_t capacity);
+    friend std::pair<Sender<T2>, Receiver<T2>> channel(std::size_t capacity, std::string debug_name);
+
+    template <typename T2>
+    friend std::pair<Sender<T2>, Receiver<T2>>
+    channel(std::size_t capacity, channel_capacity_is_hint_t, std::string debug_name);
 
   public:
     Sender() noexcept
@@ -247,10 +311,19 @@ class Sender final
 };
 
 template <typename T>
-std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity)
+std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity, std::string debug_name)
 {
     using State = typename Receiver<T>::State;
-    auto state  = new State(capacity);
+    auto state  = new State(capacity, false, std::move(debug_name));
+    return {Sender<T>(std::unique_ptr<State, typename Sender<T>::Deleter>(state)),
+            Receiver<T>(std::unique_ptr<State, typename Receiver<T>::Deleter>(state))};
+}
+
+template <typename T>
+std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity, channel_capacity_is_hint_t, std::string debug_name)
+{
+    using State = typename Receiver<T>::State;
+    auto state  = new State(capacity, true, std::move(debug_name));
     return {Sender<T>(std::unique_ptr<State, typename Sender<T>::Deleter>(state)),
             Receiver<T>(std::unique_ptr<State, typename Receiver<T>::Deleter>(state))};
 }
