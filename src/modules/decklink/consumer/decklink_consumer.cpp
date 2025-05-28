@@ -457,7 +457,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                             int                            device_sync_group)
         : config_(config)
         , output_config_(std::move(output_config))
-        , format_strategy_(new sdr_bgra_strategy())
+        , format_strategy_(create_format_strategy(config.hdr))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
@@ -1152,10 +1152,6 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                                            "dest_x, width or height sub-region properties yet."));
     }
 
-    if (config.hdr && config.secondaries.size() > 0) {
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
-                                   "Decklink consumer does not support hdr in combination with secondary ports."));
-    }
     if (config.hdr && config.primary.key_only) {
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info("Decklink consumer does not support hdr in combination with key only"));
