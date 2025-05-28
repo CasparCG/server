@@ -135,7 +135,7 @@ struct frame_side_data_in_queue final
     frame_side_data_queue::position        pos;
     std::shared_ptr<frame_side_data_queue> queue;
 
-    std::optional<std::vector<const_frame_side_data>> get() const { return queue->get(pos); }
+    std::optional<std::vector<const_frame_side_data>> get() const { return queue ? queue->get(pos) : std::nullopt; }
 };
 
 } // namespace caspar::core

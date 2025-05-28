@@ -206,11 +206,6 @@ struct side_data_transform final
     // some layers are getting set to prevent closed captions
     closed_captions_priority closed_captions_priority_{1};
 
-    static side_data_transform identity();
-
-    side_data_transform& operator*=(const side_data_transform& other);
-    side_data_transform  operator*(const side_data_transform& other) const;
-
     static side_data_transform tween(double                     time,
                                      const side_data_transform& source,
                                      const side_data_transform& dest,
