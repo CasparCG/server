@@ -182,22 +182,6 @@ bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return
 
 // side_data_transform
 
-side_data_transform side_data_transform::identity() { return side_data_transform{closed_captions_priority(1)}; }
-
-side_data_transform& side_data_transform::operator*=(const side_data_transform& other)
-{
-    // use min priority, so if you lower a layer's priority, it disables all closed captions flowing through that layer.
-    if (closed_captions_priority_ > other.closed_captions_priority_) {
-        closed_captions_priority_ = other.closed_captions_priority_;
-    }
-    return *this;
-}
-
-side_data_transform side_data_transform::operator*(const side_data_transform& other) const
-{
-    return side_data_transform(*this) *= other;
-}
-
 side_data_transform side_data_transform::tween(double                     time,
                                                const side_data_transform& source,
                                                const side_data_transform& dest,
