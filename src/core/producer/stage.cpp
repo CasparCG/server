@@ -139,9 +139,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 std::map<int, std::pair<int, int>> routed_layers;
                 for (auto& p : layers_) {
                     auto producer = std::move(p.second.foreground());
-                    if (0 == producer->name().compare(L"route")) {
+                    if (0 == producer.producer->name().compare(L"route")) {
                         try {
-                            auto rc       = spl::dynamic_pointer_cast<core::route_control>(producer);
+                            auto rc       = spl::dynamic_pointer_cast<core::route_control>(producer.producer);
                             auto srcChan  = rc->get_source_channel();
                             auto srcLayer = rc->get_source_layer();
                             routed_layers.emplace(p.first, std::make_pair(srcChan, srcLayer));
@@ -281,7 +281,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { return tweens_[index].fetch(); });
     }
 
-    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+    std::future<void> load(int index, const frame_producer_and_attrs& producer, bool preview, bool auto_play)
     {
         return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
@@ -385,25 +385,25 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { other_impl->executor_.invoke(func); });
     }
 
-    std::future<std::shared_ptr<frame_producer>> foreground(int index)
+    std::future<frame_producer_and_attrs> foreground(int index)
     {
-        return executor_.begin_invoke(
-            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).foreground(); });
+        return executor_.begin_invoke([=]() -> frame_producer_and_attrs { return get_layer(index).foreground(); });
     }
 
-    std::future<std::shared_ptr<frame_producer>> background(int index)
+    std::future<frame_producer_and_attrs> background(int index)
     {
-        return executor_.begin_invoke(
-            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).background(); });
+        return executor_.begin_invoke([=]() -> frame_producer_and_attrs { return get_layer(index).background(); });
     }
 
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
     {
-        return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
+        return flatten(
+            executor_.begin_invoke([=] { return get_layer(index).foreground().producer->call(params).share(); }));
     }
     std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)
     {
-        return flatten(executor_.begin_invoke([=] { return get_layer(index).background()->call(params).share(); }));
+        return flatten(
+            executor_.begin_invoke([=] { return get_layer(index).background().producer->call(params).share(); }));
     }
 
     std::unique_lock<std::mutex> get_lock() { return std::move(std::unique_lock<std::mutex>(lock_)); }
@@ -453,7 +453,7 @@ std::future<void> stage::apply_transform(int                                    
 std::future<void>            stage::clear_transforms(int index) { return impl_->clear_transforms(index); }
 std::future<void>            stage::clear_transforms() { return impl_->clear_transforms(); }
 std::future<frame_transform> stage::get_current_transform(int index) { return impl_->get_current_transform(index); }
-std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+std::future<void> stage::load(int index, const frame_producer_and_attrs& producer, bool preview, bool auto_play)
 {
     return impl_->load(index, producer, preview, auto_play);
 }
@@ -479,9 +479,9 @@ stage::swap_layer(int index, int other_index, const std::shared_ptr<stage_base>&
     const auto other2 = std::static_pointer_cast<stage>(other);
     return impl_->swap_layer(index, other_index, other2, swap_transforms);
 }
-std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
-std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-const stage_frames                           stage::operator()(uint64_t                                     frame_number,
+std::future<frame_producer_and_attrs> stage::foreground(int index) { return impl_->foreground(index); }
+std::future<frame_producer_and_attrs> stage::background(int index) { return impl_->background(index); }
+const stage_frames                    stage::operator()(uint64_t                                     frame_number,
                                      std::vector<int>&                            fetch_background,
                                      std::function<void(int, const layer_frame&)> routesCb)
 {
@@ -542,8 +542,7 @@ std::future<frame_transform> stage_delayed::get_current_transform(int index)
 {
     return executor_.begin_invoke([=]() { return stage_->get_current_transform(index).get(); });
 }
-std::future<void>
-stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+std::future<void> stage_delayed::load(int index, const frame_producer_and_attrs& producer, bool preview, bool auto_play)
 {
     return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
 }
@@ -596,13 +595,13 @@ stage_delayed::swap_layer(int index, int other_index, const std::shared_ptr<stag
         [=]() { return stage_->swap_layer(index, other_index, other2->stage_, swap_transforms).get(); });
 }
 
-std::future<std::shared_ptr<frame_producer>> stage_delayed::foreground(int index)
+std::future<frame_producer_and_attrs> stage_delayed::foreground(int index)
 {
-    return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return stage_->foreground(index).get(); });
+    return executor_.begin_invoke([=]() -> frame_producer_and_attrs { return stage_->foreground(index).get(); });
 }
-std::future<std::shared_ptr<frame_producer>> stage_delayed::background(int index)
+std::future<frame_producer_and_attrs> stage_delayed::background(int index)
 {
-    return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return stage_->background(index).get(); });
+    return executor_.begin_invoke([=]() -> frame_producer_and_attrs { return stage_->background(index).get(); });
 }
 
 std::future<void> stage_delayed::execute(std::function<void()> func)
