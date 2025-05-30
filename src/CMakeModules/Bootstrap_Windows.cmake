@@ -182,6 +182,7 @@ set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
 
 if (is_multi_config)
 	link_directories(${BINARY_DIR}/Release)
+    link_directories(${BINARY_DIR})
 else()
 	link_directories(${BINARY_DIR})
 endif()
