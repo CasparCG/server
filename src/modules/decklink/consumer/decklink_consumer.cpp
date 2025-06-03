@@ -25,9 +25,8 @@
 #include "common/os/thread.h"
 #include "config.h"
 #include "decklink_consumer.h"
-#include "hdr_v210_strategy.h"
+#include "format_strategy.h"
 #include "monitor.h"
-#include "sdr_bgra_strategy.h"
 
 #include "../util/util.h"
 
@@ -193,8 +192,7 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
 
 spl::shared_ptr<format_strategy> create_format_strategy(bool hdr)
 {
-    return hdr ? spl::make_shared<format_strategy, hdr_v210_strategy>()
-               : spl::make_shared<format_strategy, sdr_bgra_strategy>();
+    return hdr ? create_hdr_v210_strategy() : create_sdr_bgra_strategy();
 }
 
 enum EOTF

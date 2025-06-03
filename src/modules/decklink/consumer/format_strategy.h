@@ -56,4 +56,7 @@ class format_strategy
                                                          BMDFieldDominance              field_dominance)       = 0;
 };
 
+spl::shared_ptr<format_strategy> create_sdr_bgra_strategy();
+spl::shared_ptr<format_strategy> create_hdr_v210_strategy();
+
 }} // namespace caspar::decklink

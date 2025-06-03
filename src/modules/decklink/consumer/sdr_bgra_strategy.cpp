@@ -22,7 +22,7 @@
 
 #include "../StdAfx.h"
 
-#include "sdr_bgra_strategy.h"
+#include "format_strategy.h"
 
 #include <common/memshfl.h>
 
@@ -40,19 +40,57 @@ std::shared_ptr<void> convert_to_key_only(const std::shared_ptr<void>& image_dat
     return key_data;
 }
 
-struct sdr_bgra_strategy::impl final
+class sdr_bgra_strategy
+    : public format_strategy
+    , std::enable_shared_from_this<sdr_bgra_strategy>
 {
   public:
-    impl() = default;
+    sdr_bgra_strategy() = default;
 
-    BMDPixelFormat get_pixel_format() { return bmdFormat8BitBGRA; }
-    int            get_row_bytes(int width) { return width * 4; }
+    BMDPixelFormat get_pixel_format() override { return bmdFormat8BitBGRA; }
+    int            get_row_bytes(int width) override { return width * 4; }
 
-    std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc)
+    std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc) override
     {
         return create_aligned_buffer(format_desc.size, 64);
     }
 
+    std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+                                                 const core::video_format_desc& decklink_format_desc,
+                                                 const port_configuration&      config,
+                                                 const core::const_frame&       frame1,
+                                                 const core::const_frame&       frame2,
+                                                 BMDFieldDominance              field_dominance) override
+    {
+        std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc);
+
+        if (field_dominance != bmdProgressiveFrame) {
+            convert_frame(channel_format_desc,
+                          decklink_format_desc,
+                          config,
+                          image_data,
+                          field_dominance == bmdUpperFieldFirst,
+                          frame1);
+
+            convert_frame(channel_format_desc,
+                          decklink_format_desc,
+                          config,
+                          image_data,
+                          field_dominance != bmdUpperFieldFirst,
+                          frame2);
+
+        } else {
+            convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
+        }
+
+        if (config.key_only) {
+            image_data = convert_to_key_only(image_data, decklink_format_desc.size);
+        }
+
+        return image_data;
+    }
+
+  private:
     void convert_frame(const core::video_format_desc& channel_format_desc,
                        const core::video_format_desc& decklink_format_desc,
                        const port_configuration&      config,
@@ -79,8 +117,6 @@ struct sdr_bgra_strategy::impl final
         } else {
             // Take a sub-region
 
-            // TODO: Add support for hdr frames
-
             // Some repetetive numbers
             size_t byte_count_dest_line  = (size_t)decklink_format_desc.width * 4;
             size_t byte_count_src_line   = (size_t)channel_format_desc.width * 4;
@@ -94,11 +130,11 @@ struct sdr_bgra_strategy::impl final
             if (config.region_w > 0) // If the user chose a width, respect that
                 byte_copy_per_line = std::min(byte_copy_per_line, (size_t)config.region_w * 4);
 
-            size_t byte_pad_end_of_line =
-                std::max(((size_t)decklink_format_desc.width * 4) - byte_copy_per_line - byte_offset_dest_line, (size_t)0);
+            size_t byte_pad_end_of_line = std::max(
+                ((size_t)decklink_format_desc.width * 4) - byte_copy_per_line - byte_offset_dest_line, (size_t)0);
 
-            int copy_line_count =
-                std::min(channel_format_desc.height - y_skip_src_lines, decklink_format_desc.height - y_skip_dest_lines);
+            int copy_line_count = std::min(channel_format_desc.height - y_skip_src_lines,
+                                           decklink_format_desc.height - y_skip_dest_lines);
             if (config.region_h > 0) // If the user chose a height, respect that
                 copy_line_count = std::min(copy_line_count, config.region_h);
 
@@ -144,67 +180,11 @@ struct sdr_bgra_strategy::impl final
             }
         }
     }
-
-    std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                                 const core::video_format_desc& decklink_format_desc,
-                                                 const port_configuration&      config,
-                                                 const core::const_frame&       frame1,
-                                                 const core::const_frame&       frame2,
-                                                 BMDFieldDominance              field_dominance)
-    {
-        std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc);
-
-        if (field_dominance != bmdProgressiveFrame) {
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance == bmdUpperFieldFirst,
-                          frame1);
-
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance != bmdUpperFieldFirst,
-                          frame2);
-
-        } else {
-            convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
-        }
-
-        if (config.key_only) {
-            image_data = convert_to_key_only(image_data, decklink_format_desc.size);
-        }
-
-        return image_data;
-    }
 };
 
-sdr_bgra_strategy::sdr_bgra_strategy()
-    : impl_(new impl())
+spl::shared_ptr<format_strategy> create_sdr_bgra_strategy()
 {
-}
-
-sdr_bgra_strategy::~sdr_bgra_strategy() {}
-
-BMDPixelFormat sdr_bgra_strategy::get_pixel_format() { return impl_->get_pixel_format(); }
-int            sdr_bgra_strategy::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
-
-std::shared_ptr<void> sdr_bgra_strategy::allocate_frame_data(const core::video_format_desc& format_desc)
-{
-    return impl_->allocate_frame_data(format_desc);
-}
-std::shared_ptr<void>
-sdr_bgra_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                               const core::video_format_desc& decklink_format_desc,
-                                               const port_configuration&      config,
-                                               const core::const_frame&       frame1,
-                                               const core::const_frame&       frame2,
-                                               BMDFieldDominance              field_dominance)
-{
-    return impl_->convert_frame_for_port(
-        channel_format_desc, decklink_format_desc, config, frame1, frame2, field_dominance);
+    return spl::make_shared<format_strategy, sdr_bgra_strategy>();
 }
 
 }} // namespace caspar::decklink

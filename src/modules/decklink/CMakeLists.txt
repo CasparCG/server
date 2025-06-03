@@ -5,9 +5,7 @@ set(SOURCES
 		consumer/decklink_consumer.cpp
 		consumer/decklink_consumer.h
 		consumer/hdr_v210_strategy.cpp
-		consumer/hdr_v210_strategy.h
 		consumer/sdr_bgra_strategy.cpp
-		consumer/sdr_bgra_strategy.h
 		consumer/format_strategy.h
 		consumer/config.cpp
 		consumer/config.h

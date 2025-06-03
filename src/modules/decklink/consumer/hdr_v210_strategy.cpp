@@ -26,7 +26,7 @@
 #include <simde/x86/avx2.h>
 #endif
 
-#include "hdr_v210_strategy.h"
+#include "format_strategy.h"
 
 #include <common/memshfl.h>
 
@@ -62,10 +62,10 @@ std::vector<int32_t> create_int_matrix(const std::vector<float>& matrix)
     return int_matrix;
 };
 
-inline void rgb_to_yuv_avx2(__m256i                pixel_pairs[4],
+inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
                             const std::vector<int32_t>& color_matrix,
-                            __m256i*               luma_out,
-                            __m256i*               chroma_out)
+                            __m256i*                    luma_out,
+                            __m256i*                    chroma_out)
 {
     /* COMPUTE LUMA */
     {
@@ -83,8 +83,8 @@ inline void rgb_to_yuv_avx2(__m256i                pixel_pairs[4],
         __m256i y2_sum0123    = _mm256_hadd_epi32(y4[0], y4[1]);
         __m256i y2_sum4567    = _mm256_hadd_epi32(y4[2], y4[3]);
         __m256i y_sum01452367 = _mm256_hadd_epi32(y2_sum0123, y2_sum4567);
-        *luma_out                  = _mm256_srli_epi32(_mm256_add_epi32(y_sum01452367, y_offset),
-                                           20); // add offset and shift down to 10 bit precision
+        *luma_out             = _mm256_srli_epi32(_mm256_add_epi32(y_sum01452367, y_offset),
+                                      20); // add offset and shift down to 10 bit precision
     }
 
     /* COMPUTE CHROMA */
@@ -106,8 +106,8 @@ inline void rgb_to_yuv_avx2(__m256i                pixel_pairs[4],
         __m256i cbcr_sum02    = _mm256_hadd_epi32(cbcr4[1], cbcr4[0]);
         __m256i cbcr_sum46    = _mm256_hadd_epi32(cbcr4[3], cbcr4[2]);
         __m256i cbcr_sum_0426 = _mm256_hadd_epi32(cbcr_sum02, cbcr_sum46);
-        *chroma_out                = _mm256_srli_epi32(_mm256_add_epi32(cbcr_sum_0426, c_offset),
-                                             20); // add offset and shift down to 10 bit precision
+        *chroma_out           = _mm256_srli_epi32(_mm256_add_epi32(cbcr_sum_0426, c_offset),
+                                        20); // add offset and shift down to 10 bit precision
     }
 }
 
@@ -119,14 +119,13 @@ inline void pack_v210_avx2(__m256i luma[6], __m256i chroma[6], __m128i** v210_de
     for (int i = 0; i < 3; i++) {
         auto y16    = _mm256_packus_epi32(luma[i * 2], luma[i * 2 + 1]);
         auto cbcr16 = _mm256_packus_epi32(chroma[i * 2],
-                                               chroma[i * 2 + 1]); // cbcr0 cbcr4 cbcr8 cbcr12
-                                                                   // cbcr2 cbcr6 cbcr10 cbcr14
+                                          chroma[i * 2 + 1]); // cbcr0 cbcr4 cbcr8 cbcr12
+                                                              // cbcr2 cbcr6 cbcr10 cbcr14
         luma_16bit[i] =
             _mm256_permutevar8x32_epi32(y16,
-                                             offsets); // layout 0 1   2 3   4 5   6 7   8 9   10 11   12 13   14 15
-        chroma_16bit[i] =
-            _mm256_permutevar8x32_epi32(cbcr16,
-                                             offsets); // cbcr0 cbcr2 cbcr4 cbcr6   cbcr8 cbcr10 cbcr12 cbcr14
+                                        offsets); // layout 0 1   2 3   4 5   6 7   8 9   10 11   12 13   14 15
+        chroma_16bit[i] = _mm256_permutevar8x32_epi32(cbcr16,
+                                                      offsets); // cbcr0 cbcr2 cbcr4 cbcr6   cbcr8 cbcr10 cbcr12 cbcr14
     }
 
     __m128i chroma_mult = _mm_set_epi16(0, 0, 4, 16, 1, 4, 16, 1);
@@ -203,13 +202,15 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
     }
 }
 
-struct hdr_v210_strategy::impl final
+class hdr_v210_strategy
+    : public format_strategy
+    , std::enable_shared_from_this<hdr_v210_strategy>
 {
     std::vector<float> bt709{0.2126, 0.7152, 0.0722, -0.1146, -0.3854, 0.5, 0.5, -0.4542, -0.0458};
-    __m128i       black_batch;
+    __m128i            black_batch;
 
   public:
-    impl()
+    hdr_v210_strategy()
     {
         // setup black batch (6 pixels of black, encoded as v210)
         auto      color_matrix = create_int_matrix(bt709);
@@ -219,16 +220,52 @@ struct hdr_v210_strategy::impl final
         pack_v210(black, color_matrix, reinterpret_cast<uint32_t*>(&black_batch), 6);
     }
 
-    BMDPixelFormat get_pixel_format() { return bmdFormat10BitYUV; }
+    BMDPixelFormat get_pixel_format() override { return bmdFormat10BitYUV; }
 
-    int get_row_bytes(int width) { return ((width + 47) / 48) * 128; }
+    int get_row_bytes(int width) override { return ((width + 47) / 48) * 128; }
 
-    std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc)
+    std::shared_ptr<void> allocate_frame_data(const core::video_format_desc& format_desc) override
     {
         auto size = get_row_bytes(format_desc.width) * format_desc.height;
         return create_aligned_buffer(size, 128);
     }
 
+    std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+                                                 const core::video_format_desc& decklink_format_desc,
+                                                 const port_configuration&      config,
+                                                 const core::const_frame&       frame1,
+                                                 const core::const_frame&       frame2,
+                                                 BMDFieldDominance              field_dominance) override
+    {
+        std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc);
+
+        if (field_dominance != bmdProgressiveFrame) {
+            convert_frame(channel_format_desc,
+                          decklink_format_desc,
+                          config,
+                          image_data,
+                          field_dominance == bmdUpperFieldFirst,
+                          frame1);
+
+            convert_frame(channel_format_desc,
+                          decklink_format_desc,
+                          config,
+                          image_data,
+                          field_dominance != bmdUpperFieldFirst,
+                          frame2);
+
+        } else {
+            convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
+        }
+
+        if (config.key_only) {
+            // TODO: Add support for hdr frames
+        }
+
+        return image_data;
+    }
+
+  private:
     void convert_frame(const core::video_format_desc& channel_format_desc,
                        const core::video_format_desc& decklink_format_desc,
                        const port_configuration&      config,
@@ -353,66 +390,11 @@ struct hdr_v210_strategy::impl final
             });
         }
     }
-
-    std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                                 const core::video_format_desc& decklink_format_desc,
-                                                 const port_configuration&      config,
-                                                 const core::const_frame&       frame1,
-                                                 const core::const_frame&       frame2,
-                                                 BMDFieldDominance              field_dominance)
-    {
-        std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc);
-
-        if (field_dominance != bmdProgressiveFrame) {
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance == bmdUpperFieldFirst,
-                          frame1);
-
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance != bmdUpperFieldFirst,
-                          frame2);
-
-        } else {
-            convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
-        }
-
-        if (config.key_only) {
-            // TODO: Add support for hdr frames
-        }
-
-        return image_data;
-    }
 };
 
-hdr_v210_strategy::hdr_v210_strategy()
-    : impl_(new impl())
+spl::shared_ptr<format_strategy> create_hdr_v210_strategy()
 {
-}
-
-hdr_v210_strategy::~hdr_v210_strategy() {}
-
-BMDPixelFormat hdr_v210_strategy::get_pixel_format() { return impl_->get_pixel_format(); }
-int            hdr_v210_strategy::get_row_bytes(int width) { return impl_->get_row_bytes(width); }
-
-std::shared_ptr<void> hdr_v210_strategy::allocate_frame_data(const core::video_format_desc& format_desc)
-{
-    return impl_->allocate_frame_data(format_desc);
-}
-std::shared_ptr<void> hdr_v210_strategy::convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                                                const core::video_format_desc& decklink_format_desc,
-                                                                const port_configuration&      config,
-                                                                const core::const_frame&       frame1,
-                                                                const core::const_frame&       frame2,
-                                                                BMDFieldDominance              field_dominance)
-{
-    return impl_->convert_frame_for_port(
-        channel_format_desc, decklink_format_desc, config, frame1, frame2, field_dominance);
+    return spl::make_shared<format_strategy, hdr_v210_strategy>();
 }
 
 }} // namespace caspar::decklink
