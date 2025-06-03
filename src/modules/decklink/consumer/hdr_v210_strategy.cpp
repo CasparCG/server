@@ -21,6 +21,11 @@
 
 #include "../StdAfx.h"
 
+#ifdef USE_SIMDE
+#define SIMDE_ENABLE_NATIVE_ALIASES
+#include <simde/x86/avx2.h>
+#endif
+
 #include "hdr_v210_strategy.h"
 
 #include <common/memshfl.h>
@@ -57,10 +62,10 @@ std::vector<int32_t> create_int_matrix(const std::vector<float>& matrix)
     return int_matrix;
 };
 
-inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
+inline void rgb_to_yuv_avx2(__m256i                pixel_pairs[4],
                             const std::vector<int32_t>& color_matrix,
-                            __m256i*                    luma_out,
-                            __m256i*                    chroma_out)
+                            __m256i*               luma_out,
+                            __m256i*               chroma_out)
 {
     /* COMPUTE LUMA */
     {
@@ -78,8 +83,8 @@ inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
         __m256i y2_sum0123    = _mm256_hadd_epi32(y4[0], y4[1]);
         __m256i y2_sum4567    = _mm256_hadd_epi32(y4[2], y4[3]);
         __m256i y_sum01452367 = _mm256_hadd_epi32(y2_sum0123, y2_sum4567);
-        *luma_out             = _mm256_srli_epi32(_mm256_add_epi32(y_sum01452367, y_offset),
-                                      20); // add offset and shift down to 10 bit precision
+        *luma_out                  = _mm256_srli_epi32(_mm256_add_epi32(y_sum01452367, y_offset),
+                                           20); // add offset and shift down to 10 bit precision
     }
 
     /* COMPUTE CHROMA */
@@ -101,8 +106,8 @@ inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
         __m256i cbcr_sum02    = _mm256_hadd_epi32(cbcr4[1], cbcr4[0]);
         __m256i cbcr_sum46    = _mm256_hadd_epi32(cbcr4[3], cbcr4[2]);
         __m256i cbcr_sum_0426 = _mm256_hadd_epi32(cbcr_sum02, cbcr_sum46);
-        *chroma_out           = _mm256_srli_epi32(_mm256_add_epi32(cbcr_sum_0426, c_offset),
-                                        20); // add offset and shift down to 10 bit precision
+        *chroma_out                = _mm256_srli_epi32(_mm256_add_epi32(cbcr_sum_0426, c_offset),
+                                             20); // add offset and shift down to 10 bit precision
     }
 }
 
@@ -114,13 +119,14 @@ inline void pack_v210_avx2(__m256i luma[6], __m256i chroma[6], __m128i** v210_de
     for (int i = 0; i < 3; i++) {
         auto y16    = _mm256_packus_epi32(luma[i * 2], luma[i * 2 + 1]);
         auto cbcr16 = _mm256_packus_epi32(chroma[i * 2],
-                                          chroma[i * 2 + 1]); // cbcr0 cbcr4 cbcr8 cbcr12
-                                                              // cbcr2 cbcr6 cbcr10 cbcr14
+                                               chroma[i * 2 + 1]); // cbcr0 cbcr4 cbcr8 cbcr12
+                                                                   // cbcr2 cbcr6 cbcr10 cbcr14
         luma_16bit[i] =
             _mm256_permutevar8x32_epi32(y16,
-                                        offsets); // layout 0 1   2 3   4 5   6 7   8 9   10 11   12 13   14 15
-        chroma_16bit[i] = _mm256_permutevar8x32_epi32(cbcr16,
-                                                      offsets); // cbcr0 cbcr2 cbcr4 cbcr6   cbcr8 cbcr10 cbcr12 cbcr14
+                                             offsets); // layout 0 1   2 3   4 5   6 7   8 9   10 11   12 13   14 15
+        chroma_16bit[i] =
+            _mm256_permutevar8x32_epi32(cbcr16,
+                                             offsets); // cbcr0 cbcr2 cbcr4 cbcr6   cbcr8 cbcr10 cbcr12 cbcr14
     }
 
     __m128i chroma_mult = _mm_set_epi16(0, 0, 4, 16, 1, 4, 16, 1);
@@ -200,7 +206,7 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
 struct hdr_v210_strategy::impl final
 {
     std::vector<float> bt709{0.2126, 0.7152, 0.0722, -0.1146, -0.3854, 0.5, 0.5, -0.4542, -0.0458};
-    __m128i            black_batch;
+    __m128i       black_batch;
 
   public:
     impl()

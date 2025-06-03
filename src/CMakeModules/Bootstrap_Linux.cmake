@@ -132,9 +132,11 @@ IF (CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
     ADD_COMPILE_OPTIONS (-mavx)
     ADD_COMPILE_OPTIONS (-msse4.1)
     ADD_COMPILE_OPTIONS (-mavx2)
-ELSE ()
-    ADD_COMPILE_DEFINITIONS (USE_SIMDE)
 ENDIF ()
+
+ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
+ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
+ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 
 ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)
