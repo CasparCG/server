@@ -648,6 +648,12 @@ shared_ptr<T> make_shared()
     return shared_ptr<T>(std::make_shared<T>());
 }
 
+template <typename T, typename U>
+shared_ptr<T> make_shared()
+{
+    return shared_ptr<T>(std::make_shared<U>());
+}
+
 template <typename T, typename P0>
 shared_ptr<T> make_shared(P0&& p0)
 {

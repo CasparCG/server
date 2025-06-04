@@ -26,6 +26,8 @@
 #include "../util/device.h"
 #include "../util/texture.h"
 
+#include <boost/align/aligned_allocator.hpp>
+
 #include <common/array.h>
 #include <common/bit_depth.h>
 #include <common/future.h>
@@ -86,7 +88,7 @@ class image_renderer
                                                       const core::video_format_desc& format_desc)
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t> buffer(max_frame_size_, 0);
+            static const std::vector<uint8_t, boost::alignment::aligned_allocator<uint8_t, 32>> buffer(max_frame_size_, 0);
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
 
