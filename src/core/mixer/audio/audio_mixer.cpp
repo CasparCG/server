@@ -55,7 +55,8 @@ struct audio_mixer::impl
     monitor::state                              state_;
     std::stack<core::audio_transform>           transform_stack_;
     std::vector<audio_item>                     items_;
-    std::map<const void*, std::vector<int32_t>> audio_streams_;
+    std::map<const void*, std::vector<int32_t>> audio_streams_;    // For audio cadence handling
+    std::map<const void*, double>               previous_volumes_; // For audio transitions
     video_format_desc                           format_desc_;
     std::atomic<float>                          master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph>         graph_;
@@ -100,6 +101,8 @@ struct audio_mixer::impl
     {
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
+            previous_volumes_.clear();
+            
             format_desc_ = format_desc;
             channels_ = format_desc.audio_channels;
             
@@ -128,11 +131,11 @@ struct audio_mixer::impl
 
         auto items    = std::move(items_);
         auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
-
         auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
-        
+        std::map<const void*, double> next_volumes;
+
         for (auto& item : items) {
             auto ptr       = item.samples.data();
             auto item_size = item.samples.size();
@@ -155,11 +158,14 @@ struct audio_mixer::impl
                 }
             }
 
+            // Sample collection and volume application loop
             for (auto n = 0; n < dst_size; ++n) {
+                double sample_value = 0.0;
+                
                 if (last_ptr && n < last_size) {
-                    mixed[n] = static_cast<double>(last_ptr[n]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
-                    mixed[n] = static_cast<double>(ptr[n - last_size]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[n - last_size]);
                 } else {
                     // If we run out of samples, hold the last sample value per channel
                     int channel_pos = n % channels_;
@@ -167,8 +173,27 @@ struct audio_mixer::impl
                     if (offset < 0) {
                         offset = channel_pos;
                     }
-                    mixed[n] = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[offset]);
                 }
+                
+                double applied_volume = item.transform.volume;
+                
+                if (!item.transform.immediate_volume && std::abs(item.transform.volume - item.transform.volume) > 0.001) {
+                    size_t sample_index = n / channels_;
+                    // Simple linear ramping between previous and current volume
+                    double position = static_cast<double>(sample_index) / static_cast<double>(dst_size / channels_);
+                    position = std::min(1.0, std::max(0.0, position)); // Clamp between 0 and 1
+
+                    applied_volume = item.transform.volume + (item.transform.volume - item.transform.volume) * position;
+
+                    // Clamp to avoid overshoot beyond the intended target
+                    double low  = std::min(item.transform.volume, item.transform.volume);
+                    double high = std::max(item.transform.volume, item.transform.volume);
+                    if (applied_volume < low)  applied_volume = low;
+                    if (applied_volume > high) applied_volume = high;
+                }
+                
+                mixed[n] += sample_value * applied_volume;
             }
 
             if (has_variable_cadence_ && item.tag) {
@@ -198,7 +223,8 @@ struct audio_mixer::impl
                 }
             }
         }
-
+        
+        previous_volumes_ = std::move(next_volumes);
         audio_streams_ = std::move(next_audio_streams);
 
         auto master_volume = master_volume_.load();
