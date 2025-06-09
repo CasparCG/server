@@ -190,9 +190,9 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
     return fallback_format_desc;
 }
 
-spl::shared_ptr<format_strategy> create_format_strategy(bool hdr)
+spl::shared_ptr<format_strategy> create_format_strategy(const configuration& config)
 {
-    return hdr ? create_hdr_v210_strategy() : create_sdr_bgra_strategy();
+    return config.hdr ? create_hdr_v210_strategy(config.color_space) : create_sdr_bgra_strategy();
 }
 
 enum EOTF
@@ -455,7 +455,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                             int                            device_sync_group)
         : config_(config)
         , output_config_(std::move(output_config))
-        , format_strategy_(create_format_strategy(config.hdr))
+        , format_strategy_(create_format_strategy(config))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
@@ -562,7 +562,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                config_.hdr,
                                format_strategy_->get_pixel_format(),
                                format_strategy_->get_row_bytes(decklink_format_desc_.width),
-                               core::color_space::bt709,
+                               config_.color_space,
                                config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
@@ -638,7 +638,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
         : channel_index_(channel_index)
         , config_(config)
-        , format_strategy_(create_format_strategy(config.hdr))
+        , format_strategy_(create_format_strategy(config))
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
     {
@@ -719,7 +719,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
             std::shared_ptr<void> image_data = format_strategy_->allocate_frame_data(decklink_format_desc_);
 
-            schedule_next_video(image_data, nb_samples, video_scheduled_, config_.color_space);
+            schedule_next_video(image_data, nb_samples, video_scheduled_);
             for (auto& context : secondary_port_contexts_) {
                 context->schedule_next_video(image_data, 0, video_scheduled_);
             }
@@ -941,7 +941,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                  frame2,
                                                                  mode_->GetFieldDominance());
 
-                    schedule_next_video(image_data, nb_samples, video_display_time, config_.color_space);
+                    schedule_next_video(image_data, nb_samples, video_display_time);
 
                     if (config_.embedded_audio) {
                         schedule_next_audio(std::move(audio_data), nb_samples);
@@ -1003,8 +1003,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
     void schedule_next_video(std::shared_ptr<void> image_data,
                              int                   nb_samples,
-                             BMDTimeValue          display_time,
-                             core::color_space     color_space)
+                             BMDTimeValue          display_time)
     {
         auto fmt        = format_strategy_->get_pixel_format();
         auto row_bytes  = format_strategy_->get_row_bytes(decklink_format_desc_.width);
@@ -1014,7 +1013,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                                     config_.hdr,
                                                                                     fmt,
                                                                                     row_bytes,
-                                                                                    color_space,
+                                                                                    config_.color_space,
                                                                                     config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {

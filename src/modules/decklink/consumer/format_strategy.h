@@ -57,6 +57,6 @@ class format_strategy
 };
 
 spl::shared_ptr<format_strategy> create_sdr_bgra_strategy();
-spl::shared_ptr<format_strategy> create_hdr_v210_strategy();
+spl::shared_ptr<format_strategy> create_hdr_v210_strategy(core::color_space colorspace);
 
 }} // namespace caspar::decklink

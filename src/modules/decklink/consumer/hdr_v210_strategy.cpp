@@ -206,14 +206,33 @@ class hdr_v210_strategy
     : public format_strategy
     , std::enable_shared_from_this<hdr_v210_strategy>
 {
-    std::vector<float> bt709{0.2126, 0.7152, 0.0722, -0.1146, -0.3854, 0.5, 0.5, -0.4542, -0.0458};
-    __m128i            black_batch;
+    std::vector<float> bt709{0.212639005871510,
+                             0.715168678767756,
+                             0.072192315360734,
+                             -0.114592177555732,
+                             -0.385407822444268,
+                             0.5,
+                             0.5,
+                             -0.454155517037873,
+                             -0.045844482962127};
+    std::vector<float> bt2020{0.262700212011267,
+                              0.677998071518871,
+                              0.059301716469862,
+                              -0.139630430187157,
+                              -0.360369569812843,
+                              0.5,
+                              0.5,
+                              -0.459784529009814,
+                              -0.040215470990186};
+
+    std::vector<int32_t> color_matrix;
+    __m128i              black_batch;
 
   public:
-    hdr_v210_strategy()
+    explicit hdr_v210_strategy(core::color_space color_space)
+        : color_matrix(create_int_matrix(color_space == core::color_space::bt2020 ? bt2020 : bt709))
     {
         // setup black batch (6 pixels of black, encoded as v210)
-        auto      color_matrix = create_int_matrix(bt709);
         ARGBPixel black[6];
         memset(black, 0, sizeof(black));
         memset(&black_batch, 0, sizeof(__m128i));
@@ -277,8 +296,7 @@ class hdr_v210_strategy
         if (!frame)
             return;
 
-        int  firstLine    = topField ? 0 : 1;
-        auto color_matrix = create_int_matrix(bt709);
+        int firstLine = topField ? 0 : 1;
 
         if (config.region_w == 0 && config.region_h == 0 && config.dest_x == 0) {
             // Fast path
@@ -392,9 +410,9 @@ class hdr_v210_strategy
     }
 };
 
-spl::shared_ptr<format_strategy> create_hdr_v210_strategy()
+spl::shared_ptr<format_strategy> create_hdr_v210_strategy(core::color_space color_space)
 {
-    return spl::make_shared<format_strategy, hdr_v210_strategy>();
+    return spl::make_shared<format_strategy, hdr_v210_strategy>(color_space);
 }
 
 }} // namespace caspar::decklink
