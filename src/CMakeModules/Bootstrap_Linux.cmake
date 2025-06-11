@@ -15,6 +15,7 @@ set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
+set(ENABLE_AVX2 ON CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
@@ -130,9 +131,15 @@ IF (CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
     ADD_COMPILE_OPTIONS (-msse3)
     ADD_COMPILE_OPTIONS (-mssse3)
     ADD_COMPILE_OPTIONS (-msse4.1)
-ELSE ()
-    ADD_COMPILE_DEFINITIONS (USE_SIMDE)
+    IF (ENABLE_AVX2)
+        ADD_COMPILE_OPTIONS (-mavx)
+        ADD_COMPILE_OPTIONS (-mavx2)
+    ENDIF ()
 ENDIF ()
+
+ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
+ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
+ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 
 ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)
