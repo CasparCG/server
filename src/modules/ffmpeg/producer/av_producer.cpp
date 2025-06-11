@@ -158,9 +158,11 @@ class Decoder final
                         auto* side_data =
                             FFMEM(av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, packet->size));
                         std::memcpy(side_data->data, packet->data, packet->size);
-                        av_frame->pts          = packet->pts;
-                        av_frame->pkt_dts      = packet->dts;
-                        av_frame->time_base    = stream->time_base;
+                        av_frame->pts     = packet->pts;
+                        av_frame->pkt_dts = packet->dts;
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 10, 100)
+                        av_frame->time_base = stream->time_base;
+#endif
                         av_frame->pkt_duration = packet->duration;
                         if (output_sender.try_send_blocking(av_frame)) {
                             break; // no receiver -- we're done
