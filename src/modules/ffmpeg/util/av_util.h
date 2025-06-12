@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_MSC_VER)
+#pragma warning(push, 1)
+#endif
+
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -7,6 +11,10 @@ extern "C" {
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
