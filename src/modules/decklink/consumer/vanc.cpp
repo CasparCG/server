@@ -73,14 +73,16 @@ decklink_vanc::decklink_vanc(const vanc_configuration& config)
     }
 }
 
-std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> decklink_vanc::pop_packets()
+std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> decklink_vanc::pop_packets(bool field2)
 {
     std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> packets;
     for (auto& strategy : strategies_) {
         if (strategy->has_data()) {
             try {
-                packets.push_back(
-                    wrap_raw<com_ptr, IDeckLinkAncillaryPacket>(new decklink_vanc_packet(strategy->pop_packet())));
+                auto packet =
+                    wrap_raw<com_ptr, IDeckLinkAncillaryPacket>(new decklink_vanc_packet(strategy->pop_packet(field2)));
+                if (packet->GetDID() != 0)
+                    packets.push_back(packet);
             } catch (const std::exception& e) {
                 CASPAR_LOG(error) << "Failed to pop " << strategy->get_name() << " VANC packet: " << e.what();
             } catch (...) {

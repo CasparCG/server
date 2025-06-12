@@ -1058,6 +1058,16 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                     CASPAR_LOG(error) << print() << L" Failed to add ancillary packet.";
                 }
             }
+
+            bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
+            if (isInterlaced) {
+                auto field2_packets = vanc_->pop_packets(true);
+                for (auto& packet : field2_packets) {
+                    if (FAILED(ancillary_packets->AttachPacket(get_raw(packet)))) {
+                        CASPAR_LOG(error) << print() << L" Failed to add ancillary packet.";
+                    }
+                }
+            }
         }
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
