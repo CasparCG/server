@@ -28,8 +28,14 @@ class vanc_scte104_strategy : public decklink_vanc_strategy
         std::lock_guard<std::mutex> lock(mutex_);
         return !payload_.empty();
     }
-    virtual vanc_packet pop_packet() override
+
+    virtual vanc_packet pop_packet(bool field2) override
     {
+        if (field2) {
+            // If field2 is requested, we do not return any data.
+            return {0, 0, 0, {}};
+        }
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
