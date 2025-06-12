@@ -57,7 +57,10 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
 vanc_configuration parse_vanc_config(const boost::property_tree::wptree& vanc_tree)
 {
     vanc_configuration vanc_config;
-    vanc_config.enable = true;
+
+    vanc_config.enable            = true;
+    vanc_config.scte104_line      = vanc_tree.get(L"scte104-line", vanc_config.scte104_line);
+    vanc_config.enable_scte104    = vanc_config.scte104_line > 0;
 
     return vanc_config;
 };
