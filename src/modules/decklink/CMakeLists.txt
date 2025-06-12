@@ -18,6 +18,7 @@ set(SOURCES
 		producer/decklink_producer.h
 
 		util/util.h
+		util/base64.hpp
 
 		decklink.cpp
 		decklink.h
