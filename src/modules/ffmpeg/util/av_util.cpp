@@ -500,7 +500,7 @@ uint64_t get_channel_layout_mask_for_channels(int channel_count)
 #endif
 }
 
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0) || 1
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
 #define GET_SET_ATTRIBUTE(                                                                                             \
     ty, fn_suffix, config_type, opt_type, old_config_name, new_config_name, codec_type, field, terminator)             \
     av_opt_array_ref<ty> get_supported_##fn_suffix(const AVCodecContext* avctx, const AVCodec* codec)                  \
