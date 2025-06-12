@@ -71,6 +71,10 @@ decklink_vanc::decklink_vanc(const vanc_configuration& config)
     if (config.enable_scte104) {
         strategies_.push_back(create_scte104_strategy(config.scte104_line));
     }
+    if (config.enable_op47) {
+        strategies_.push_back(
+            create_op47_strategy(config.op47_line, config.op47_line_field2, config.op47_dummy_header));
+    }
 }
 
 std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> decklink_vanc::pop_packets(bool field2)

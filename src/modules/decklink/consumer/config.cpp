@@ -59,8 +59,12 @@ vanc_configuration parse_vanc_config(const boost::property_tree::wptree& vanc_tr
     vanc_configuration vanc_config;
 
     vanc_config.enable            = true;
+    vanc_config.op47_line         = vanc_tree.get(L"op47-line", vanc_config.op47_line);
+    vanc_config.op47_line_field2  = vanc_tree.get(L"op47-line-field2", vanc_config.op47_line_field2);
+    vanc_config.enable_op47       = vanc_config.op47_line > 0;
     vanc_config.scte104_line      = vanc_tree.get(L"scte104-line", vanc_config.scte104_line);
     vanc_config.enable_scte104    = vanc_config.scte104_line > 0;
+    vanc_config.op47_dummy_header = vanc_tree.get(L"op47-dummy-header", L"");
 
     return vanc_config;
 };
