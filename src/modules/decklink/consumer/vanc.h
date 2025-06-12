@@ -56,5 +56,7 @@ class decklink_vanc
     bool try_push_data(const std::vector<std::wstring>& params);
 };
 
+std::shared_ptr<decklink_vanc_strategy> create_scte104_strategy(uint8_t line_number);
+
 std::shared_ptr<decklink_vanc> create_vanc(const vanc_configuration& config);
 }} // namespace caspar::decklink

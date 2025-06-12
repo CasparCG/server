@@ -50,7 +50,9 @@ struct port_configuration
 
 struct vanc_configuration
 {
-    bool enable = false;
+    bool         enable         = false;
+    bool         enable_scte104 = false;
+    uint8_t      scte104_line   = 0;
 };
 
 struct hdr_meta_configuration
