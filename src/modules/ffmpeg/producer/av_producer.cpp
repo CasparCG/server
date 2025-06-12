@@ -163,7 +163,11 @@ class Decoder final
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 10, 100)
                         av_frame->time_base = stream->time_base;
 #endif
+#if LIBAVUTIL_VERSION_MAJOR < 58
                         av_frame->pkt_duration = packet->duration;
+#else
+                        av_frame->duration = packet->duration;
+#endif
                         if (output_sender.try_send_blocking(av_frame)) {
                             break; // no receiver -- we're done
                         }
