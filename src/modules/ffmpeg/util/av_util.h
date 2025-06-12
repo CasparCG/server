@@ -1,9 +1,8 @@
 #pragma once
 
-#include "core/frame/frame_side_data.h"
-#include <cstdint>
-
 extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
 #include <libavfilter/avfilter.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -11,10 +10,12 @@ extern "C" {
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/frame_side_data.h>
 #include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include <cstdint>
 #include <initializer_list>
 #include <map>
 #include <memory>
