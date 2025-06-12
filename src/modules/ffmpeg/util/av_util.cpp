@@ -514,10 +514,13 @@ uint64_t get_channel_layout_mask_for_channels(int channel_count)
                                                                                                                        \
     void set_##fn_suffix(AVFilterContext* target, av_opt_array_ref<ty> array_ref)                                      \
     {                                                                                                                  \
+        std::size_t size = sizeof(ty) * array_ref.size();                                                              \
+        if (size > static_cast<std::size_t>(INT_MAX))                                                                  \
+            CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function("set_" #fn_suffix));             \
         FF(av_opt_set_bin(target,                                                                                      \
                           old_config_name,                                                                             \
                           reinterpret_cast<const uint8_t*>(array_ref.data()),                                          \
-                          sizeof(ty) * array_ref.size(),                                                               \
+                          static_cast<int>(size),                                                                      \
                           AV_OPT_SEARCH_CHILDREN));                                                                    \
     }
 
