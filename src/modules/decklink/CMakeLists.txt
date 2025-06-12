@@ -13,6 +13,7 @@ set(SOURCES
 		consumer/vanc.cpp
 		consumer/vanc.h
 		consumer/vanc_scte104_strategy.cpp
+		consumer/vanc_op47_strategy.cpp
 
 		producer/decklink_producer.cpp
 		producer/decklink_producer.h
