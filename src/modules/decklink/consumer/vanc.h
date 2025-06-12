@@ -40,7 +40,7 @@ class decklink_vanc_strategy
     virtual ~decklink_vanc_strategy() noexcept = default;
 
     virtual bool                has_data() const                                       = 0;
-    virtual vanc_packet         pop_packet()                                           = 0;
+    virtual vanc_packet         pop_packet(bool field2)                                = 0;
     virtual bool                try_push_data(const std::vector<std::wstring>& params) = 0;
     virtual const std::wstring& get_name() const                                       = 0;
 };
@@ -52,7 +52,7 @@ class decklink_vanc
   public:
     explicit decklink_vanc(const vanc_configuration& config);
     bool                                                             has_data() const;
-    std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> pop_packets();
+    std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> pop_packets(bool field2 = false);
     bool try_push_data(const std::vector<std::wstring>& params);
 };
 
