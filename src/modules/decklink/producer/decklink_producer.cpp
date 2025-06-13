@@ -425,7 +425,7 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInpu
     BOOL           supported  = false;
 
     if (FAILED(device->DoesSupportVideoMode(
-            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, flag, &supported)))
+            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, bmdNoVideoInputConversion, flag, &actualMode, &supported)))
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info(L"Could not determine whether device supports requested video format: " +
                                            get_mode_name(mode)));
