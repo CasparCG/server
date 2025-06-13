@@ -65,6 +65,7 @@ vanc_configuration parse_vanc_config(const boost::property_tree::wptree& vanc_tr
     vanc_config.scte104_line      = vanc_tree.get(L"scte104-line", vanc_config.scte104_line);
     vanc_config.enable_scte104    = vanc_config.scte104_line > 0;
     vanc_config.op47_dummy_header = vanc_tree.get(L"op47-dummy-header", L"");
+    vanc_config.enable_a53_cc     = vanc_tree.get_optional<std::wstring>(L"a53-cc").has_value();
 
     return vanc_config;
 };
