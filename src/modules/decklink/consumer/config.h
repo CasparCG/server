@@ -53,6 +53,7 @@ struct vanc_configuration
     bool         enable           = false;
     bool         enable_op47      = false;
     bool         enable_scte104   = false;
+    bool         enable_a53_cc    = false;
     uint8_t      op47_line        = 0;
     uint8_t      op47_line_field2 = 0;
     uint8_t      scte104_line     = 0;
