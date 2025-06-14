@@ -48,6 +48,18 @@ struct port_configuration
     }
 };
 
+struct vanc_configuration
+{
+    bool         enable           = false;
+    bool         enable_op47      = false;
+    bool         enable_scte104   = false;
+    bool         enable_a53_cc    = false;
+    uint8_t      op47_line        = 0;
+    uint8_t      op47_line_field2 = 0;
+    uint8_t      scte104_line     = 0;
+    std::wstring op47_dummy_header;
+};
+
 struct hdr_meta_configuration
 {
     float min_dml  = 0.005f;
@@ -101,6 +113,8 @@ struct configuration
 
     core::color_space      color_space = core::color_space::bt709;
     hdr_meta_configuration hdr_meta;
+
+    vanc_configuration vanc;
 
     [[nodiscard]] int buffer_depth() const
     {

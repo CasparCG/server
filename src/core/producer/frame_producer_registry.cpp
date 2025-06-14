@@ -118,13 +118,14 @@ class destroy_producer_proxy : public frame_producer
     std::wstring              print() const override { return producer_->print(); }
     std::wstring              name() const override { return producer_->name(); }
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override { return producer_->call(params); }
-    void                      leading_producer(const spl::shared_ptr<frame_producer>& producer) override
+    void                      leading_producer(const frame_producer_and_attrs& producer) override
     {
         return producer_->leading_producer(producer);
     }
-    uint32_t             frame_number() const override { return producer_->frame_number(); }
-    uint32_t             nb_frames() const override { return producer_->nb_frames(); }
-    draw_frame           last_frame(const core::video_field field) override { return producer_->last_frame(field); }
+    frame_producer_and_attrs following_producer() const override { return producer_->following_producer(); }
+    uint32_t                 frame_number() const override { return producer_->frame_number(); }
+    uint32_t                 nb_frames() const override { return producer_->nb_frames(); }
+    draw_frame               last_frame(const core::video_field field) override { return producer_->last_frame(field); }
     draw_frame           first_frame(const core::video_field field) override { return producer_->first_frame(field); }
     core::monitor::state state() const override { return producer_->state(); }
     bool                 is_ready() override { return producer_->is_ready(); }

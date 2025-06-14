@@ -21,6 +21,7 @@
  */
 
 #include "../StdAfx.h"
+#include "core/frame/frame_side_data.h"
 
 #include "newtek_ndi_producer.h"
 
@@ -48,6 +49,7 @@
 #include <boost/regex.hpp>
 #include <boost/thread.hpp>
 
+#include <memory>
 #include <tbb/parallel_for.h>
 
 #include <ffmpeg/util/av_util.h>
@@ -87,6 +89,8 @@ struct newtek_ndi_producer : public core::frame_producer
     mutable std::mutex           frames_mutex_;
     core::draw_frame             last_frame_;
     executor                     executor_;
+
+    std::shared_ptr<core::frame_side_data_queue> side_data_queue_ = std::make_shared<core::frame_side_data_queue>();
 
     int cadence_counter_;
     int cadence_length_;
@@ -215,8 +219,8 @@ struct newtek_ndi_producer : public core::frame_producer
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
                 }
-                auto mframe =
-                    ffmpeg::make_frame(this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame));
+                auto mframe = ffmpeg::make_frame(
+                    this, *(frame_factory_.get()), std::move(av_frame), std::move(a_frame), side_data_queue_);
                 delete[] audio_frame_32s.p_data;
                 auto dframe = core::draw_frame(std::move(mframe));
                 {

@@ -27,6 +27,7 @@
 
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
+#include "side_data/side_data_mixer.h"
 
 #include <common/diagnostics/graph.h>
 
@@ -36,7 +37,6 @@
 #include <core/video_format.h>
 
 #include <queue>
-#include <unordered_map>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -47,6 +47,7 @@ struct mixer::impl
     int                                  channel_index_;
     spl::shared_ptr<diagnostics::graph>  graph_;
     audio_mixer                          audio_mixer_{graph_};
+    side_data_mixer                      side_data_mixer_{graph_};
     spl::shared_ptr<image_mixer>         image_mixer_;
     std::queue<std::future<const_frame>> buffer_;
 
@@ -67,31 +68,34 @@ struct mixer::impl
 
         for (auto& frame : frames) {
             frame.accept(audio_mixer_);
+            frame.accept(side_data_mixer_);
             frame.transform().image_transform.layer_depth = 1;
             frame.accept(*image_mixer_);
         }
 
-        auto image = image_mixer_->render(format_desc);
-        auto audio = audio_mixer_(format_desc, nb_samples);
+        auto image     = image_mixer_->render(format_desc);
+        auto audio     = audio_mixer_(format_desc, nb_samples);
+        auto side_data = side_data_mixer_.mixed();
 
         state_["audio"] = audio_mixer_.state();
 
         auto depth = image_mixer_->depth();
 
-        buffer_.push(std::async(std::launch::deferred,
-                                [image = std::move(image),
-                                 audio = std::move(audio),
-                                 graph = graph_,
-                                 depth,
-                                 format_desc,
-                                 tag = this]() mutable {
-                                    auto desc = pixel_format_desc(pixel_format::bgra);
-                                    desc.planes.push_back(
-                                        pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
-                                    std::vector<array<const uint8_t>> image_data;
-                                    image_data.emplace_back(std::move(image.get()));
-                                    return const_frame(tag, std::move(image_data), std::move(audio), desc);
-                                }));
+        buffer_.push(std::async(
+            std::launch::deferred,
+            [image     = std::move(image),
+             audio     = std::move(audio),
+             side_data = std::move(side_data),
+             graph     = graph_,
+             depth,
+             format_desc,
+             tag = this]() mutable {
+                auto desc = pixel_format_desc(pixel_format::bgra);
+                desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
+                std::vector<array<const uint8_t>> image_data;
+                image_data.emplace_back(std::move(image.get()));
+                return const_frame(tag, std::move(image_data), std::move(audio), desc, std::move(side_data));
+            }));
 
         if (buffer_.size() <= format_desc.field_count) {
             return const_frame{};

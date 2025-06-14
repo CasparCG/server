@@ -57,7 +57,7 @@ struct transition_info
 
 bool try_match_transition(const std::wstring& message, transition_info& transitionInfo);
 
-spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
-                                                           const transition_info&                 info);
+spl::shared_ptr<frame_producer> create_transition_producer(const frame_producer_and_attrs& destination,
+                                                           const transition_info&          info);
 
 }} // namespace caspar::core
