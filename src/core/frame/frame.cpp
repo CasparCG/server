@@ -20,6 +20,7 @@
  */
 #include "frame.h"
 
+#include "core/frame/frame_side_data.h"
 #include "geometry.h"
 #include "pixel_format.h"
 
@@ -40,6 +41,7 @@ struct mutable_frame::impl
     const void*                      tag_;
     frame_geometry                   geometry_ = frame_geometry::get_default();
     mutable_frame::commit_t          commit_;
+    frame_side_data_in_queue         side_data_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -48,11 +50,13 @@ struct mutable_frame::impl
          std::vector<array<std::uint8_t>> image_data,
          array<std::int32_t>              audio_data,
          const core::pixel_format_desc&   desc,
+         frame_side_data_in_queue         side_data,
          commit_t                         commit)
         : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
         , tag_(tag)
+        , side_data_(std::move(side_data))
         , commit_(std::move(commit))
     {
     }
@@ -62,8 +66,9 @@ mutable_frame::mutable_frame(const void*                      tag,
                              std::vector<array<std::uint8_t>> image_data,
                              array<int32_t>                   audio_data,
                              const core::pixel_format_desc&   desc,
+                             frame_side_data_in_queue         side_data,
                              commit_t                         commit)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, std::move(commit)))
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, std::move(side_data), std::move(commit)))
 {
 }
 mutable_frame::mutable_frame(mutable_frame&& other) noexcept
@@ -87,30 +92,34 @@ std::size_t                mutable_frame::height() const { return impl_->desc_.p
 const void*                mutable_frame::stream_tag() const { return impl_->tag_; }
 const frame_geometry&      mutable_frame::geometry() const { return impl_->geometry_; }
 frame_geometry&            mutable_frame::geometry() { return impl_->geometry_; }
+frame_side_data_in_queue&  mutable_frame::side_data() noexcept { return impl_->side_data_; }
+const frame_side_data_in_queue& mutable_frame::side_data() const noexcept { return impl_->side_data_; }
 
 struct const_frame::impl
 {
     std::vector<array<const std::uint8_t>> image_data_;
     array<const std::int32_t>              audio_data_;
-    core::pixel_format_desc                desc_     = core::pixel_format_desc(pixel_format::invalid);
+    core::pixel_format_desc                desc_ = core::pixel_format_desc(pixel_format::invalid);
     const void*                            tag_;
     frame_geometry                         geometry_ = frame_geometry::get_default();
     std::any                               opaque_;
+    frame_side_data_in_queue               side_data_;
 
     impl(const void*                            tag,
          std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
-         const core::pixel_format_desc&         desc)
+         const core::pixel_format_desc&         desc,
+         frame_side_data_in_queue               side_data)
         : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
         , tag_(tag)
+        , side_data_(std::move(side_data))
     {
         if (desc_.planes.size() != image_data_.size()) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
     }
-
 
     impl(mutable_frame&& other)
         : image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
@@ -119,6 +128,7 @@ struct const_frame::impl
         , desc_(std::move(other.impl_->desc_))
         , tag_(other.stream_tag())
         , geometry_(std::move(other.impl_->geometry_))
+        , side_data_(std::move(other.impl_->side_data_))
     {
         if (desc_.planes.size() != image_data_.size() && !other.impl_->commit_) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
@@ -141,8 +151,9 @@ const_frame::const_frame() {}
 const_frame::const_frame(const void*                            tag,
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
-                         const core::pixel_format_desc&         desc)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
+                         const core::pixel_format_desc&         desc,
+                         frame_side_data_in_queue               side_data)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, std::move(side_data)))
 {
 }
 const_frame::const_frame(mutable_frame&& other)
@@ -170,22 +181,25 @@ std::size_t                      const_frame::width() const { return impl_->widt
 std::size_t                      const_frame::height() const { return impl_->height(); }
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const void*                      const_frame::stream_tag() const { return impl_->tag_; }
-const_frame                      const_frame::with_tag(const void* new_tag) const {
+const_frame                      const_frame::with_tag(const void* new_tag) const
+{
     if (!impl_) {
         return const_frame();
     }
-    
+
     std::vector<array<const std::uint8_t>> image_data_copy = impl_->image_data_;
-    auto new_frame = const_frame(new_tag, std::move(image_data_copy), impl_->audio_data_, impl_->desc_);
-    
+    auto                                   new_frame =
+        const_frame(new_tag, std::move(image_data_copy), impl_->audio_data_, impl_->desc_, impl_->side_data_);
+
     new_frame.impl_->geometry_ = impl_->geometry_;
     if (impl_->opaque_.has_value()) {
         new_frame.impl_->opaque_ = impl_->opaque_;
     }
-    
+
     return new_frame;
 }
-const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
-const std::any&                  const_frame::opaque() const { return impl_->opaque_; }
+const frame_geometry&           const_frame::geometry() const { return impl_->geometry_; }
+const std::any&                 const_frame::opaque() const { return impl_->opaque_; }
+const frame_side_data_in_queue& const_frame::side_data() const noexcept { return impl_->side_data_; }
 const_frame::operator bool() const { return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
 }} // namespace caspar::core

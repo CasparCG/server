@@ -283,20 +283,23 @@ std::wstring loadbg_command(command_context& ctx)
     auto channel   = ctx.channel.raw_channel;
     bool auto_play = contains_param(L"AUTO", ctx.parameters);
 
-    try {
-        auto new_producer = ctx.static_context->producer_registry->create_producer(
-            get_producer_dependencies(channel, ctx), ctx.parameters);
+    closed_captions_priority cc_priority{get_param<float>(L"CLOSED_CAPTIONS_PRIORITY", ctx.parameters, 0)};
 
-        if (new_producer == frame_producer::empty())
+    try {
+        frame_producer_and_attrs new_producer(ctx.static_context->producer_registry->create_producer(
+                                                  get_producer_dependencies(channel, ctx), ctx.parameters),
+                                              cc_priority);
+
+        if (new_producer.producer == frame_producer::empty())
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(!ctx.parameters.empty() ? ctx.parameters[0] : L""));
 
-        spl::shared_ptr<frame_producer> transition_producer = frame_producer::empty();
-        transition_info                 transitionInfo;
-        sting_info                      stingInfo;
+        frame_producer_and_attrs transition_producer{};
+        transition_info          transitionInfo;
+        sting_info               stingInfo;
 
         if (try_match_sting(ctx.parameters, stingInfo)) {
-            transition_producer =
-                create_sting_producer(get_producer_dependencies(channel, ctx), new_producer, stingInfo);
+            transition_producer = {
+                create_sting_producer(get_producer_dependencies(channel, ctx), new_producer, stingInfo), cc_priority};
         } else {
             std::wstring message;
             for (std::wstring& parameter : ctx.parameters) {
@@ -305,7 +308,7 @@ std::wstring loadbg_command(command_context& ctx)
 
             // Try other transitions
             try_match_transition(message, transitionInfo);
-            transition_producer = create_transition_producer(new_producer, transitionInfo);
+            transition_producer = {create_transition_producer(new_producer, transitionInfo), cc_priority};
         }
 
         // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
@@ -314,7 +317,10 @@ std::wstring loadbg_command(command_context& ctx)
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
             ctx.channel.stage->load(
-                ctx.layer_index(), core::create_color_producer(channel->frame_factory(), 0), false, auto_play);
+                ctx.layer_index(),
+                frame_producer_and_attrs(core::create_color_producer(channel->frame_factory(), 0), cc_priority),
+                false,
+                auto_play);
         }
         throw;
     }
@@ -332,16 +338,22 @@ std::wstring load_command(command_context& ctx)
         // Must be a promoting load
         ctx.channel.stage->preview(ctx.layer_index());
     } else {
+        closed_captions_priority cc_priority{get_param<float>(L"CLOSED_CAPTIONS_PRIORITY", ctx.parameters, 0)};
+
         try {
-            auto new_producer = ctx.static_context->producer_registry->create_producer(
-                get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
+            frame_producer_and_attrs new_producer(
+                ctx.static_context->producer_registry->create_producer(
+                    get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters),
+                cc_priority);
             auto transition_producer = create_transition_producer(new_producer, transition_info{});
 
-            ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
+            ctx.channel.stage->load(ctx.layer_index(), {transition_producer, cc_priority}, true);
         } catch (file_not_found&) {
             if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
                 ctx.channel.stage->load(
-                    ctx.layer_index(), core::create_color_producer(ctx.channel.raw_channel->frame_factory(), 0), true);
+                    ctx.layer_index(),
+                    {core::create_color_producer(ctx.channel.raw_channel->frame_factory(), 0), cc_priority},
+                    true);
             }
             throw;
         }
@@ -350,8 +362,12 @@ std::wstring load_command(command_context& ctx)
     return L"202 LOAD OK\r\n";
 }
 
+void apply_closed_captions_priority(command_context& ctx, std::wstring s);
+
 std::wstring play_command(command_context& ctx)
 {
+    std::wstring cc_priority = get_param(L"CLOSED_CAPTIONS_PRIORITY", ctx.parameters, L"");
+
     try {
         if (!ctx.parameters.empty())
             loadbg_command(ctx);
@@ -363,6 +379,10 @@ std::wstring play_command(command_context& ctx)
     }
 
     ctx.channel.stage->play(ctx.layer_index());
+
+    if (!cc_priority.empty()) {
+        apply_closed_captions_priority(ctx, std::move(cc_priority));
+    }
 
     return L"202 PLAY OK\r\n";
 }
@@ -1358,6 +1378,33 @@ std::wstring mixer_grid_command(command_context& ctx)
     return L"202 MIXER OK\r\n";
 }
 
+void apply_closed_captions_priority(command_context& ctx, std::wstring s)
+{
+    transforms_applier       transforms(ctx);
+    closed_captions_priority value(std::stof(s));
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.side_data_transform.closed_captions_priority_ = value;
+            return transform;
+        },
+        0,
+        tweener(L"linear")));
+    transforms.apply();
+}
+
+std::future<std::wstring> mixer_closed_captions_priority_command(command_context& ctx)
+{
+    if (ctx.parameters.empty())
+        return reply_value(ctx, [](const frame_transform& t) {
+            return static_cast<float>(t.side_data_transform.closed_captions_priority_);
+        });
+
+    apply_closed_captions_priority(ctx, ctx.parameters.at(0));
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_commit_command(command_context& ctx)
 {
     transforms_applier transforms(ctx);
@@ -1407,7 +1454,7 @@ std::wstring channel_grid_command(command_context& ctx)
             auto producer = ctx.static_context->producer_registry->create_producer(
                 get_producer_dependencies(self.raw_channel, ctx),
                 L"route://" + std::to_wstring(ch.raw_channel->index()));
-            self.stage->load(index, producer, false);
+            self.stage->load(index, {producer, closed_captions_priority(1)}, false);
             self.stage->play(index);
             index++;
         }
@@ -1766,6 +1813,8 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
+    repo->register_channel_command(
+        L"Mixer Commands", L"MIXER CLOSED_CAPTIONS_PRIORITY", mixer_closed_captions_priority_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);

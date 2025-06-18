@@ -23,6 +23,7 @@
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
+#include "core/frame/frame_side_data.h"
 
 #include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
@@ -40,8 +41,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
+#include <cstring>
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -61,6 +64,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -212,46 +216,20 @@ struct Stream
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
             // TODO codec->profiles
-            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
-            // AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            // TODO codec->supported_framerates
+            sink = create_buffersink(graph.get(), "out", get_supported_pixel_formats(nullptr, codec));
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
             // TODO codec->profiles
-            FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
-
-#if FFMPEG_NEW_CHANNEL_LAYOUT
-            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
-            // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
-#else
-            FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            sink = create_abuffersink(graph.get(),
+                                      "out",
+                                      get_supported_sample_formats(nullptr, codec),
+                                      get_supported_sample_rates(nullptr, codec),
+                                      get_supported_channel_layouts(nullptr, codec));
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
-
         {
             const auto cur = outputs;
 
@@ -425,6 +403,23 @@ struct Stream
                     frame = std::move(frame2);
                 }
 
+                auto in_side_data_opt = in_frame.side_data().get();
+
+                if (in_side_data_opt) {
+                    for (auto& in_side_data : *in_side_data_opt) {
+                        switch (in_side_data.type()) {
+                            case core::frame_side_data_type::a53_cc:
+                                CASPAR_LOG(trace)
+                                    << L"ffmpeg_consumer: got A53_CC side data: "
+                                    << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
+                                auto* side_data = FFMEM(av_frame_new_side_data(
+                                    frame.get(), AV_FRAME_DATA_A53_CC, in_side_data.data().size()));
+                                std::memcpy(side_data->data, in_side_data.data().data(), in_side_data.data().size());
+                                break;
+                        }
+                    }
+                }
+
                 frame->pts = pts;
                 pts += 1;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -520,7 +515,9 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));

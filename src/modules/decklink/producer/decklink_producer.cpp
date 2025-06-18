@@ -24,6 +24,7 @@
 #include "decklink_producer.h"
 
 #include "../util/util.h"
+#include "core/frame/frame_side_data.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -44,6 +45,8 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <memory>
+#include <optional>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -220,50 +223,13 @@ struct Filter
         }
 
         if (type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
-            AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
-            FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            sink = create_buffersink(graph.get(), "out", av_opt_array_ref{pix_fmt});
         } else if (type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
-
-            AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
-            int            sample_rates[] = {format_desc.audio_sample_rate, 0};
-            FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN));
-
-#if FFMPEG_NEW_CHANNEL_LAYOUT
-            // TODO - we might want to force the filter to produce 16 channels
-            // But this segfaults (changing the property name causes it to fail with an error)
-            // As 16 channel packets are fed into the filter, with the filter set to the same, that is what we get out
-            /*
-            AVChannelLayout channel_layout = AV_CHANNEL_LAYOUT_STEREO;
-            av_channel_layout_default(&channel_layout, format_desc.audio_channels);
-
-            FF(av_opt_set_chlayout(sink, "ch_layouts", &channel_layout, AV_OPT_SEARCH_CHILDREN));
-            av_channel_layout_uninit(&channel_layout);
-             */
-#else
-            int64_t channel_layouts[] = {av_get_default_channel_layout(format_desc.audio_channels), 0};
-            FF(av_opt_set_int_list(sink, "channel_layouts", channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+            sink = create_abuffersink(graph.get(),
+                                      "out",
+                                      av_opt_array_ref{AV_SAMPLE_FMT_S32},
+                                      av_opt_array_ref{format_desc.audio_sample_rate},
+                                      av_opt_array_ref{get_channel_layout_default(format_desc.audio_channels)});
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
@@ -493,6 +459,8 @@ class decklink_producer : public IDeckLinkInputCallback
     Filter audio_filter_;
 
     Decoder video_decoder_;
+
+    std::shared_ptr<core::frame_side_data_queue> side_data_queue_;
 
   public:
     decklink_producer(core::video_format_desc                     format_desc,
@@ -789,7 +757,8 @@ class decklink_producer : public IDeckLinkInputCallback
                 graph_->set_value("in-sync", in_sync * 2.0 + 0.5);
                 graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
 
-                auto frame = core::draw_frame(make_frame(this, *frame_factory_, av_video, av_audio, color_space));
+                auto frame = core::draw_frame(
+                    make_frame(this, *frame_factory_, av_video, av_audio, side_data_queue_, color_space));
                 auto field = core::video_field::progressive;
                 if (format_desc_.field_count == 2) {
                     field = frame_count_ % 2 == 0 ? core::video_field::a : core::video_field::b;

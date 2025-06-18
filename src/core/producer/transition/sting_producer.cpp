@@ -70,13 +70,13 @@ class sting_producer : public frame_producer
 
     const sting_info info_;
 
-    spl::shared_ptr<frame_producer> dst_producer_     = frame_producer::empty();
-    spl::shared_ptr<frame_producer> src_producer_     = frame_producer::empty();
+    frame_producer_and_attrs        dst_producer_{};
+    frame_producer_and_attrs        src_producer_{};
     spl::shared_ptr<frame_producer> mask_producer_    = frame_producer::empty();
     spl::shared_ptr<frame_producer> overlay_producer_ = frame_producer::empty();
 
   public:
-    sting_producer(const spl::shared_ptr<frame_producer>& dest,
+    sting_producer(const frame_producer_and_attrs&        dest,
                    const sting_info&                      info,
                    const spl::shared_ptr<frame_producer>& mask,
                    const spl::shared_ptr<frame_producer>& overlay)
@@ -89,12 +89,12 @@ class sting_producer : public frame_producer
 
     // frame_producer
 
-    void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
+    void leading_producer(const frame_producer_and_attrs& producer) override { src_producer_ = producer; }
 
-    spl::shared_ptr<frame_producer> following_producer() const override
+    frame_producer_and_attrs following_producer() const override
     {
         auto duration = target_duration();
-        return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
+        return duration && current_frame_ >= *duration ? dst_producer_ : frame_producer_and_attrs{};
     }
 
     std::optional<int64_t> auto_play_delta() const override
@@ -127,7 +127,7 @@ class sting_producer : public frame_producer
 
         CASPAR_SCOPE_EXIT
         {
-            state_                    = dst_producer_->state();
+            state_                    = dst_producer_.producer->state();
             state_["transition/type"] = std::string("sting");
 
             if (duration)
@@ -135,25 +135,25 @@ class sting_producer : public frame_producer
         };
 
         if (duration && current_frame_ >= *duration) {
-            return dst_producer_->receive(field, nb_samples);
+            return dst_producer_.receive(field, nb_samples);
         }
 
         auto src = src_.get(field);
         if (!src) {
-            src = src_producer_->receive(field, nb_samples);
+            src = src_producer_.receive(field, nb_samples);
             src_.set(field, src);
             if (!src) {
-                src = src_producer_->last_frame(field);
+                src = src_producer_.last_frame(field);
             }
         }
 
         bool started_dst = current_frame_ >= info_.trigger_point;
         auto dst         = dst_.get(field);
         if (!dst && started_dst) {
-            dst = dst_producer_->receive(field, nb_samples);
+            dst = dst_producer_.receive(field, nb_samples);
             dst_.set(field, dst);
             if (!dst) {
-                dst = dst_producer_->last_frame(field);
+                dst = dst_producer_.last_frame(field);
             }
 
             if (!dst) { // Not ready yet
@@ -203,22 +203,22 @@ class sting_producer : public frame_producer
         return res;
     }
 
-    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_->first_frame(field); }
+    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_.first_frame(field); }
 
-    uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
+    uint32_t nb_frames() const override { return dst_producer_.producer->nb_frames(); }
 
-    uint32_t frame_number() const override { return dst_producer_->frame_number(); }
+    uint32_t frame_number() const override { return dst_producer_.producer->frame_number(); }
 
     std::wstring print() const override
     {
-        return L"transition[" + src_producer_->print() + L"=>" + dst_producer_->print() + L"]";
+        return L"transition[" + src_producer_.producer->print() + L"=>" + dst_producer_.producer->print() + L"]";
     }
 
     std::wstring name() const override { return L"transition"; }
 
     std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
-        return dst_producer_->call(params);
+        return dst_producer_.producer->call(params);
     }
 
     double get_audio_delta() const
@@ -266,12 +266,12 @@ class sting_producer : public frame_producer
 
     monitor::state state() const override { return state_; }
 
-    bool is_ready() override { return dst_producer_->is_ready(); }
+    bool is_ready() override { return dst_producer_.producer->is_ready(); }
 };
 
-spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,
-                                                      const spl::shared_ptr<frame_producer>& destination,
-                                                      sting_info&                            info)
+spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies& dependencies,
+                                                      const frame_producer_and_attrs&    destination,
+                                                      sting_info&                        info)
 {
     // Any producer which exposes a fixed duration will work here, not just ffmpeg
     auto mask_producer = dependencies.producer_registry->create_producer(dependencies, info.mask_filename);
