@@ -149,6 +149,7 @@ int               texture::width() const { return impl_->width_; }
 int               texture::height() const { return impl_->height_; }
 int               texture::stride() const { return impl_->stride_; }
 common::bit_depth texture::depth() const { return impl_->depth_; }
+void              texture::set_depth(common::bit_depth depth) { impl_->depth_ = depth; }
 int               texture::size() const { return impl_->size_; }
 int               texture::id() const { return impl_->id_; }
 

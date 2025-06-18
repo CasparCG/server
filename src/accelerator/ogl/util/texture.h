@@ -52,6 +52,7 @@ class texture final
     int               height() const;
     int               stride() const;
     common::bit_depth depth() const;
+    void              set_depth(common::bit_depth depth);
     int               size() const;
     int               id() const;
 
