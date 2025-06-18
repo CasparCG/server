@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2016 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **  
 ** Permission is hereby granted, free of charge, to any person or organization 
 ** obtaining a copy of the software and accompanying documentation (the 
@@ -38,26 +38,20 @@
 ** -LICENSE-END-
 */
 
-#ifndef BMD_DECKLINKAPI_v10_6_H
-#define BMD_DECKLINKAPI_v10_6_H
+#ifndef BMD_DECKLINKAPI_v11_5_1_H
+#define BMD_DECKLINKAPI_v11_5_1_H
 
 #include "DeckLinkAPI.h"
 
-// Type Declarations
+/* Enum BMDDeckLinkStatusID - DeckLink Status ID */
 
-/* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
+typedef uint32_t BMDDeckLinkStatusID_v11_5_1;
+enum _BMDDeckLinkStatusID_v11_5_1 {
 
-typedef uint32_t BMDDeckLinkAttributeID_c10_6;
-enum _BMDDeckLinkAttributeID_v10_6 {
+    /* Video output flags */
 
-    /* Flags */
+	bmdDeckLinkStatusDetectedVideoInputFlags_v11_5_1                     = /* 'dvif' */ 0x64766966,
 
-    BMDDeckLinkSupportsDesktopDisplay_v10_6                      = /* 'extd' */ 0x65787464,
 };
 
-typedef uint32_t BMDIdleVideoOutputOperation_v10_6;
-enum _BMDIdleVideoOutputOperation_v10_6 {
-    bmdIdleVideoOutputDesktop_v10_6                              = /* 'desk' */ 0x6465736B
-};
-
-#endif /* defined(BMD_DECKLINKAPI_v10_6_H) */
+#endif /* defined(BMD_DECKLINKAPI_v11_5_1_H) */
