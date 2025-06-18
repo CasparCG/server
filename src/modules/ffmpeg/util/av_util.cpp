@@ -129,6 +129,10 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
             return {core::pixel_format::abgr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV444P:
             return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV444P10:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit10};
+        case AV_PIX_FMT_YUV444P12:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit12};
         case AV_PIX_FMT_YUV422P:
             return {core::pixel_format::ycbcr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV422P10:
