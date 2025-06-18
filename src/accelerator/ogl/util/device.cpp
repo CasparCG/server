@@ -190,6 +190,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         if (!pool->try_pop(tex)) {
             tex = std::make_shared<texture>(width, height, stride, depth);
         }
+        tex->set_depth(depth);
 
         if (clear) {
             tex->clear();
