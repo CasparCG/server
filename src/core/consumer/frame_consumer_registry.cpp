@@ -90,10 +90,12 @@ class destroy_consumer_proxy : public frame_consumer
     {
         return consumer_->send(field, std::move(frame));
     }
-    void initialize(const video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void
+    initialize(const video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         return consumer_->initialize(format_desc, channel_info, port_index);
     }
+    std::future<bool>    call(const std::vector<std::wstring>& params) override { return consumer_->call(params); }
     std::wstring         print() const override { return consumer_->print(); }
     std::wstring         name() const override { return consumer_->name(); }
     bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
@@ -123,11 +125,13 @@ class print_consumer_proxy : public frame_consumer
     {
         return consumer_->send(field, std::move(frame));
     }
-    void initialize(const video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void
+    initialize(const video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         consumer_->initialize(format_desc, channel_info, port_index);
         CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
     }
+    std::future<bool>    call(const std::vector<std::wstring>& params) override { return consumer_->call(params); }
     std::wstring         print() const override { return consumer_->print(); }
     std::wstring         name() const override { return consumer_->name(); }
     bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
