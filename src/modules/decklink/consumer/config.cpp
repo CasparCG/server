@@ -132,7 +132,7 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
     }
 
     config.color_space   = channel_info.default_color_space;
-    auto color_space_str = ptree.get(L"color-space", L"bt709");
+    auto color_space_str = ptree.get(L"color-space", L"");
     if (!color_space_str.empty())
         config.color_space = get_color_space(color_space_str);
 
