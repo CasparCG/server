@@ -565,6 +565,8 @@ struct Filter
                                               AV_PIX_FMT_RGBA,
                                               AV_PIX_FMT_ABGR,
                                               AV_PIX_FMT_YUV444P,
+                                              AV_PIX_FMT_YUV444P10,
+                                              AV_PIX_FMT_YUV444P12,
                                               AV_PIX_FMT_YUV422P,
                                               AV_PIX_FMT_YUV422P10,
                                               AV_PIX_FMT_YUV422P12,
