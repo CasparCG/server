@@ -944,13 +944,9 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 return E_FAIL;
 
             if (vanc_) {
-                if (auto side_data = frame1.side_data().get()) {
-                    vanc_->push_frame_side_data(*side_data, false);
-                }
+                vanc_->push_frame_side_data(frame1.side_data(), false);
                 if (isInterlaced) {
-                    if (auto side_data = frame2.side_data().get()) {
-                        vanc_->push_frame_side_data(*side_data, true);
-                    }
+                    vanc_->push_frame_side_data(frame2.side_data(), true);
                 }
             }
 
