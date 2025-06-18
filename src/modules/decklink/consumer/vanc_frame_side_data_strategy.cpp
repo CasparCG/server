@@ -66,6 +66,7 @@
  */
 
 #include "common/assert.h"
+#include "core/frame/frame_side_data.h"
 #include "vanc.h"
 #include <array>
 #include <cassert>
@@ -182,6 +183,8 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
     virtual bool        has_data() const override { return true; }
     virtual vanc_packet pop_packet(bool field2) override
     {
+        if (field2)
+            return {};
         auto _lock = std::unique_lock(mutex_);
 
         std::vector<cc_data_pkt> cc_data_pkts_for_frame;
@@ -236,50 +239,69 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
 
         vanc_packet retval = {0x61, 0x01, 11, std::vector(bytes.get(), bytes.get() + byte_count)};
         CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: "
-                          << boost::log::dump(retval.data.data(), retval.data.size(), 32);
+                          << boost::log::dump(retval.data.data(), retval.data.size(), 128);
         CASPAR_LOG(trace) << L"decklink consumer: eia-608 queue size = " << eia_608_cc_data_pkts_.size()
                           << " cta-708 queue size = " << cta_708_cc_data_pkts_.size();
 
         return retval;
     }
     virtual const std::wstring& get_name() const override { return a53_cc_name; }
-    virtual void push_frame_side_data(const std::vector<core::const_frame_side_data>& side_data, bool field2) override
+    virtual void push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2) override
     {
+        if (!side_data.queue)
+            return;
+
         auto _lock = std::unique_lock(mutex_);
-        for (auto& side_data_ : side_data) {
-            if (side_data_.type() != type)
+
+        auto last_position = side_data.pos;
+        if (last_frame_side_data_in_queue.queue == side_data.queue) {
+            last_position = last_frame_side_data_in_queue.pos;
+        }
+        last_frame_side_data_in_queue = side_data;
+
+        for (auto pos = last_position + 1; pos <= side_data.pos; pos++) {
+            auto side_data_opt = side_data.queue->get(pos);
+            if (!side_data_opt)
                 continue;
-            CASPAR_LOG(trace) << L"decklink consumer: got A53_CC side data: "
-                              << boost::log::dump(side_data_.data().data(), side_data_.data().size(), 16);
-            auto& data = side_data_.data();
-            // intentionally ignore any remainder to avoid out-of-bounds access
-            std::size_t pkt_count = data.size() / cc_data_pkt{}.size();
-            for (std::size_t i = 0; i < pkt_count; i++) {
-                cc_data_pkt pkt{};
-                std::memcpy(pkt.data(), &data[i * cc_data_pkt{}.size()], cc_data_pkt{}.size());
-                // TODO: is this correct? FFmpeg doesn't agree with Wikipedia:
-                // https://en.wikipedia.org/wiki/CTA-708#Closed_Caption_Data_Packet_(cc_data_pkt)
-                switch (pkt[0] & 0x6) {
-                    case 0x0:
-                    case 0x4:
+            for (auto& side_data_ : *side_data_opt) {
+                if (side_data_.type() != type)
+                    continue;
+                CASPAR_LOG(trace) << L"decklink consumer: got A53_CC side data: "
+                                  << boost::log::dump(side_data_.data().data(), side_data_.data().size(), 16);
+                auto& data = side_data_.data();
+                // intentionally ignore any remainder to avoid out-of-bounds access
+                std::size_t pkt_count = data.size() / cc_data_pkt{}.size();
+                for (std::size_t i = 0; i < pkt_count; i++) {
+                    cc_data_pkt pkt{};
+                    std::memcpy(pkt.data(), &data[i * cc_data_pkt{}.size()], cc_data_pkt{}.size());
+
+                    // TODO: is this correct? FFmpeg doesn't agree with Wikipedia:
+                    // https://en.wikipedia.org/wiki/CTA-708#Closed_Caption_Data_Packet_(cc_data_pkt)
+
+                    /* See ANSI/CTA-708-E Sec 4.3, Table 3 */
+                    auto cc_valid = (pkt[0] & 0x04) >> 2;
+                    auto cc_type  = pkt[0] & 0x03;
+                    if (cc_type == 0x00 || cc_type == 0x01) {
+                        if (pkt[1] == 0x80 && pkt[2] == 0x80) {
+                            // ignore padding, since we end up with too much when reducing frame rate
+                            continue;
+                        }
                         eia_608_cc_data_pkts_.push(pkt);
-                        break;
-                    case 0x6:
+                    } else if (cc_valid && (cc_type == 0x02 || cc_type == 0x03)) {
                         cta_708_cc_data_pkts_.push(pkt);
-                        break;
-                    default: // ignore cta-708 cc_data_pkts with the valid bit set to 0
-                        break;
+                    }
                 }
             }
         }
     }
 
   private:
-    mutable std::mutex      mutex_;
-    std::queue<cc_data_pkt> eia_608_cc_data_pkts_;
-    std::queue<cc_data_pkt> cta_708_cc_data_pkts_;
-    const known_framerate   known_framerate_;
-    std::uint16_t           sequence_number = 0;
+    mutable std::mutex             mutex_;
+    std::queue<cc_data_pkt>        eia_608_cc_data_pkts_;
+    std::queue<cc_data_pkt>        cta_708_cc_data_pkts_;
+    const known_framerate          known_framerate_;
+    std::uint16_t                  sequence_number = 0;
+    core::frame_side_data_in_queue last_frame_side_data_in_queue{};
 };
 #endif
 

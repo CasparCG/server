@@ -20,6 +20,7 @@
  */
 
 #include "vanc.h"
+#include "core/frame/frame_side_data.h"
 #include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace decklink {
@@ -124,7 +125,7 @@ bool decklink_vanc::try_push_data(const std::vector<std::wstring>& params)
     return false;
 }
 
-void decklink_vanc::push_frame_side_data(const std::vector<core::const_frame_side_data>& side_data, bool field2)
+void decklink_vanc::push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2)
 {
     for (auto& strategy : side_data_strategies_) {
         strategy->push_frame_side_data(side_data, field2);
