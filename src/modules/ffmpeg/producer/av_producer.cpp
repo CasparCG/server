@@ -122,7 +122,7 @@ class Decoder final
 
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder)
+    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder, bool remove_a53_cc)
         : st(stream)
     {
         auto debug_stream_kind = stream->codecpar->codec_id == AV_CODEC_ID_EIA_608       ? "eia-608"
@@ -311,6 +311,10 @@ class Decoder final
                                 new_side_data->data, eia608_subtitles_packet->data, eia608_subtitles_packet->size);
                         }
 
+                        if (remove_a53_cc) {
+                            av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                        }
+
                         if (output_sender.try_send_blocking(av_frame)) {
                             break; // no receiver -- we're done
                         }
@@ -371,6 +375,7 @@ struct Filter
            AVMediaType                    media_type,
            const core::video_format_desc& format_desc)
     {
+        bool need_fps_filter = false;
         if (media_type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
@@ -382,6 +387,8 @@ struct Filter
             if (deint != "none") {
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
             }
+
+            need_fps_filter = true;
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
                             (format_desc.framerate.numerator() * format_desc.field_count) %
@@ -479,6 +486,7 @@ struct Filter
 
             // if we're the video input, look for EIA-608 subtitles that can be added as side-data
             if (st->codecpar->codec_id == AV_CODEC_ID_EIA_608 && media_type == AVMEDIA_TYPE_VIDEO) {
+                need_fps_filter = true;
                 if (!eia608_subtitles_stream_is_default && (disposition & AV_DISPOSITION_DEFAULT) != 0) {
                     eia608_subtitles_stream            = n;
                     eia608_subtitles_stream_is_default = true;
@@ -487,6 +495,22 @@ struct Filter
                 }
             }
         }
+
+        bool remove_a53_cc = false;
+#if LIBAVFILTER_VERSION_MAJOR <= 9
+        // check against version of actually-loaded library, since you might be using a
+        // different dynamic library version than the one that was compiled against.
+        if (need_fps_filter && avfilter_version() < AV_VERSION_INT(9, 8, 101)) {
+            if (media_type == AVMEDIA_TYPE_VIDEO) {
+                // only error for video stream to avoid duplicate messages
+                CASPAR_LOG(error)
+                    << "ffmpeg producer: libavfilter is too old and buggy to properly handle closed captions when "
+                       "changing frame-rate with the \"fps\" filter, you need at least libavfilter version 9.8.101"
+                       " -- disabling closed captions for ffmpeg producer";
+            }
+            remove_a53_cc = true;
+        }
+#endif
 
         if (audio_input_count == 1) {
             // TODO (fix) Use some form of stream meta data to do this.
@@ -556,12 +580,17 @@ struct Filter
                         // TODO find stream based on link name
                         stream_index = video_streams.front();
                         video_streams.pop_front();
-                        if (eia608_subtitles_stream && streams.count(*eia608_subtitles_stream) == 0) {
+                        if (remove_a53_cc) {
+                            if (input->streams[stream_index]->codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
+                                graph = nullptr;
+                                return;
+                            }
+                        } else if (eia608_subtitles_stream && streams.count(*eia608_subtitles_stream) == 0) {
                             eia608_subtitles_stream_decoder =
                                 &streams
                                      .emplace(std::piecewise_construct,
                                               std::tuple(*eia608_subtitles_stream),
-                                              std::tuple(input->streams[*eia608_subtitles_stream], nullptr))
+                                              std::tuple(input->streams[*eia608_subtitles_stream], nullptr, false))
                                      .first->second;
                             sources.emplace(*eia608_subtitles_stream, nullptr);
                         }
@@ -586,7 +615,8 @@ struct Filter
                     it = streams
                              .emplace(std::piecewise_construct,
                                       std::tuple(stream_index),
-                                      std::tuple(input->streams[stream_index], eia608_subtitles_stream_decoder))
+                                      std::tuple(
+                                          input->streams[stream_index], eia608_subtitles_stream_decoder, remove_a53_cc))
                              .first;
                 }
 
