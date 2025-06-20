@@ -145,15 +145,15 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         static known_framerate try_get(int num, int denom) noexcept
         {
             static constexpr known_framerate known_framerates[] = {
-                // {15, 1, 40, 4}, // not supported by libklvanc
-                {24, 1, 25, 3},
-                {24000, 1001, 25, 3},
-                // {25, 1, ?, ?}, // TODO: supported by libklvanc
-                {30, 1, 20, 2},
-                {30000, 1001, 20, 2},
-                // {50, 1, ?, ?}, // TODO: supported by libklvanc
-                {60, 1, 10, 1},
-                {60000, 1001, 10, 1},
+                // from Table 3 of https://pub.smpte.org/latest/st334-2/st0334-2-2015.pdf
+                {24000, 1001, 25, 3}, // cdp_frame_rate 0001
+                {24, 1, 25, 3},       // cdp_frame_rate 0010
+                {25, 1, 24, 2},       // cdp_frame_rate 0011
+                {30000, 1001, 20, 2}, // cdp_frame_rate 0100
+                {30, 1, 20, 2},       // cdp_frame_rate 0101
+                {50, 1, 12, 1},       // cdp_frame_rate 0110
+                {60000, 1001, 10, 1}, // cdp_frame_rate 0111
+                {60, 1, 10, 1},       // cdp_frame_rate 1000
             };
             static_assert(
                 [] {
@@ -313,7 +313,7 @@ decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type   
         case core::frame_side_data_type::a53_cc:
 #ifdef DECKLINK_USE_LIBKLVANC
             auto known_framerate = decklink_side_data_strategy_a53_cc::known_framerate::try_get(
-                format.framerate.numerator() * format.field_count, format.framerate.denominator());
+                format.framerate.numerator(), format.framerate.denominator());
             if (known_framerate.total_cc_data_pkts_per_frame != 0) {
                 return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate);
             }
