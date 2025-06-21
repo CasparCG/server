@@ -233,9 +233,6 @@ class sting_producer : public frame_producer
                 if (!dst) dst = dst_producer_->last_frame(field);
             }
 
-            if (current_frame_ == info_.trigger_point) {
-            }
-
             draw_frame result = (current_frame_ < info_.trigger_point ? src : dst);
 
             double audio_delta = get_audio_delta();
@@ -281,8 +278,6 @@ class sting_producer : public frame_producer
 
             if (!dst) {
                 src_.set(field, draw_frame{});
-                if (current_frame_ == info_.trigger_point) {
-                }
                 return src;
             }
         }
@@ -303,8 +298,6 @@ class sting_producer : public frame_producer
         bool mask_and_overlay_valid = mask && (!expecting_overlay || overlay);
         if (current_frame_ == 0 && !mask_and_overlay_valid) {
             src_.set(field, draw_frame{});
-            if (mask_producer_ != frame_producer::empty()) {
-            }
             return src;
         }
 
