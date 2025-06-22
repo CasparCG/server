@@ -55,7 +55,8 @@ struct audio_mixer::impl
     monitor::state                              state_;
     std::stack<core::audio_transform>           transform_stack_;
     std::vector<audio_item>                     items_;
-    std::map<const void*, std::vector<int32_t>> audio_streams_;
+    std::map<const void*, std::vector<int32_t>> audio_streams_;    // For audio cadence handling
+    std::map<const void*, double>               previous_volumes_; // For audio transitions
     video_format_desc                           format_desc_;
     std::atomic<float>                          master_volume_{1.0f};
     spl::shared_ptr<diagnostics::graph>         graph_;
@@ -100,6 +101,8 @@ struct audio_mixer::impl
     {
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
+            previous_volumes_.clear();
+            
             format_desc_ = format_desc;
             channels_ = format_desc.audio_channels;
             
@@ -128,11 +131,11 @@ struct audio_mixer::impl
 
         auto items    = std::move(items_);
         auto result   = std::vector<int32_t>(size_t(nb_samples) * channels_, 0);
-
         auto mixed = std::vector<double>(size_t(nb_samples) * channels_, 0.0f);
 
         std::map<const void*, std::vector<int32_t>> next_audio_streams;
-        
+        std::map<const void*, double> next_volumes;
+
         for (auto& item : items) {
             auto ptr       = item.samples.data();
             auto item_size = item.samples.size();
@@ -155,11 +158,24 @@ struct audio_mixer::impl
                 }
             }
 
+            // Get previous volume for this tag, defaulting to current volume
+            double previous_volume = item.transform.volume;
+            auto prev_vol_it = previous_volumes_.find(item.tag);
+            if (prev_vol_it != previous_volumes_.end()) {
+                previous_volume = prev_vol_it->second;
+            }
+            
+            // Store current volume for next frame
+            next_volumes[item.tag] = item.transform.volume;
+
+            // Sample collection and volume application loop
             for (auto n = 0; n < dst_size; ++n) {
+                double sample_value = 0.0;
+                
                 if (last_ptr && n < last_size) {
-                    mixed[n] = static_cast<double>(last_ptr[n]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
-                    mixed[n] = static_cast<double>(ptr[n - last_size]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[n - last_size]);
                 } else {
                     // If we run out of samples, hold the last sample value per channel
                     int channel_pos = n % channels_;
@@ -167,8 +183,26 @@ struct audio_mixer::impl
                     if (offset < 0) {
                         offset = channel_pos;
                     }
-                    mixed[n] = static_cast<double>(ptr[offset]) * item.transform.volume + mixed[n];
+                    sample_value = static_cast<double>(ptr[offset]);
                 }
+                
+                double applied_volume = item.transform.volume;
+                
+                // Apply sample-level volume ramping if not immediate volume and there's a volume change
+                if (!item.transform.immediate_volume && std::abs(item.transform.volume - previous_volume) > 0.001) {
+                    size_t sample_index = n / channels_;
+                    size_t total_samples = dst_size / channels_;
+                    
+                    // Calculate linear interpolation position (0.0 to 1.0)
+                    double position = total_samples > 1 ? 
+                        static_cast<double>(sample_index) / static_cast<double>(total_samples - 1) : 1.0;
+                    position = std::min(1.0, std::max(0.0, position)); // Clamp between 0 and 1
+
+                    // Linear interpolation between previous and current volume
+                    applied_volume = previous_volume + (item.transform.volume - previous_volume) * position;
+                }
+                
+                mixed[n] += sample_value * applied_volume;
             }
 
             if (has_variable_cadence_ && item.tag) {
@@ -198,7 +232,8 @@ struct audio_mixer::impl
                 }
             }
         }
-
+        
+        previous_volumes_ = std::move(next_volumes);
         audio_streams_ = std::move(next_audio_streams);
 
         auto master_volume = master_volume_.load();
