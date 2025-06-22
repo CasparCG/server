@@ -189,12 +189,21 @@ class transition_producer : public frame_producer
             return dst;
         }
 
-        // For CUT transitions, immediately complete
+        // For CUT transitions, handle based on duration
         if (info_.type == transition_type::cut) {
-            current_frame_ = info_.duration; // Force transition to complete
-            auto dst = dst_producer_->receive(field, nb_samples);
-            if (!dst) dst = dst_producer_->last_frame(field);
-            return dst;
+            if (current_frame_ >= info_.duration) {
+                // Cut now - return destination
+                auto dst = dst_producer_->receive(field, nb_samples);
+                if (!dst) dst = dst_producer_->last_frame(field);
+                current_frame_++; // Increment after processing
+                return dst;
+            } else {
+                // Not time to cut yet - return source
+                auto src = src_producer_->receive(field, nb_samples);
+                if (!src) src = src_producer_->last_frame(field);
+                current_frame_++; // Increment after processing
+                return src;
+            }
         }
 
         // Compose and progress the transition
