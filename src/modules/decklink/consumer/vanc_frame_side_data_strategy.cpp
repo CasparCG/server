@@ -72,6 +72,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -239,7 +240,11 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         std::unique_ptr<std::uint8_t[], bytes_deleter> bytes(bytes_p);
 
         vanc_packet retval = {0x61, 0x01, 9, std::vector(bytes.get(), bytes.get() + byte_count)};
-        CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: "
+        // format starting from `Line:` matches decklink `VancCapture` example, making it easier to compare
+        CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: Line "
+                          << retval.line_number << L":   DID: " << std::hex << std::setfill(L'0') << std::setw(2)
+                          << static_cast<unsigned>(retval.did) << L"; SDID: " << std::setw(2)
+                          << static_cast<unsigned>(retval.sdid) << L"; Data: "
                           << boost::log::dump(retval.data.data(), retval.data.size(), 128);
         CASPAR_LOG(trace) << L"decklink consumer: eia-608 queue size = " << eia_608_cc_data_pkts_.size()
                           << " cta-708 queue size = " << cta_708_cc_data_pkts_.size();
