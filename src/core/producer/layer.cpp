@@ -40,6 +40,8 @@ struct layer::impl
 
     bool auto_play_ = false;
     bool paused_    = false;
+    std::optional<uint32_t> foreground_length_override_;
+    std::optional<uint32_t> background_length_override_;
 
   public:
     impl(const core::video_format_desc format_desc)
@@ -55,6 +57,20 @@ struct layer::impl
     {
         background_ = std::move(producer);
         auto_play_  = auto_play;
+        background_length_override_.reset(); // Clear any previous length override
+
+        if (auto_play_ && foreground_ == frame_producer::empty()) {
+            play();
+        } else if (preview_producer) {
+            preview(true);
+        }
+    }
+
+    void load(spl::shared_ptr<frame_producer> producer, bool preview_producer, bool auto_play, std::optional<uint32_t> length)
+    {
+        background_ = std::move(producer);
+        auto_play_  = auto_play;
+        background_length_override_ = length;
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
@@ -90,6 +106,8 @@ struct layer::impl
 
             foreground_ = std::move(background_);
             background_ = frame_producer::empty();
+            foreground_length_override_ = background_length_override_;
+            background_length_override_.reset();
 
             auto_play_ = false;
         }
@@ -115,7 +133,8 @@ struct layer::impl
                 auto auto_play_delta = background_->auto_play_delta();
                 if (auto_play_delta) {
                     auto time     = static_cast<std::int64_t>(foreground_->frame_number());
-                    auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                    auto duration = foreground_length_override_ ? static_cast<std::int64_t>(*foreground_length_override_) 
+                                                             : static_cast<std::int64_t>(foreground_->nb_frames());
                     frames_left   = duration - time - *auto_play_delta;
                     if (frames_left < 1 && field != video_field::b) {
                         play();
@@ -178,6 +197,10 @@ void layer::swap(layer& other) { impl_.swap(other.impl_); }
 void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play)
 {
     return impl_->load(std::move(frame_producer), preview, auto_play);
+}
+void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play, std::optional<uint32_t> length)
+{
+    return impl_->load(std::move(frame_producer), preview, auto_play, length);
 }
 void       layer::play() { impl_->play(); }
 void       layer::preview() { impl_->preview(false); }

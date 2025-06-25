@@ -308,9 +308,16 @@ std::wstring loadbg_command(command_context& ctx)
             transition_producer = create_transition_producer(new_producer, transitionInfo);
         }
 
+        // Check for LENGTH parameter for infinite time producers
+        auto length_param = get_param(L"LENGTH", ctx.parameters, std::optional<uint32_t>{});
+        
         // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
         // initialised
-        ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
+        if (length_param) {
+            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play, length_param);
+        } else {
+            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
+        }
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
             ctx.channel.stage->load(
@@ -337,7 +344,14 @@ std::wstring load_command(command_context& ctx)
                 get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
             auto transition_producer = create_transition_producer(new_producer, transition_info{});
 
-            ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
+            // Check for LENGTH parameter for infinite time producers
+            auto length_param = get_param(L"LENGTH", ctx.parameters, std::optional<uint32_t>{});
+            
+            if (length_param) {
+                ctx.channel.stage->load(ctx.layer_index(), transition_producer, true, false, length_param);
+            } else {
+                ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
+            }
         } catch (file_not_found&) {
             if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
                 ctx.channel.stage->load(
