@@ -173,9 +173,10 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         }
     };
 
-    explicit decklink_side_data_strategy_a53_cc(known_framerate known_framerate_)
+    explicit decklink_side_data_strategy_a53_cc(known_framerate known_framerate_, const core::video_format_desc& format)
         : decklink_frame_side_data_vanc_strategy(type)
         , known_framerate_(known_framerate_)
+        , interlaced_(format.field_count != 1)
     {
         CASPAR_ENSURE(known_framerate_.total_cc_data_pkts_per_frame > known_framerate_.eia_608_cc_data_pkts_per_frame);
         CASPAR_ENSURE(known_framerate_.eia_608_cc_data_pkts_per_frame >= 1);
@@ -191,7 +192,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         cc_data_pkts_for_frame.reserve(known_framerate_.total_cc_data_pkts_per_frame);
         for (std::size_t i = 0; i < known_framerate_.eia_608_cc_data_pkts_per_frame; i++) {
             if (eia_608_cc_data_pkts_.empty()) {
-                std::uint8_t first = field2 ? 0xFD : 0xFC;
+                std::uint8_t first = (interlaced_ && cc_data_pkts_for_frame.size() >= 1) ? 0xFD : 0xFC;
                 cc_data_pkts_for_frame.push_back({first, 0x80, 0x80});
             } else {
                 cc_data_pkts_for_frame.push_back(eia_608_cc_data_pkts_.front());
@@ -300,6 +301,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
     std::queue<cc_data_pkt>        eia_608_cc_data_pkts_;
     std::queue<cc_data_pkt>        cta_708_cc_data_pkts_;
     const known_framerate          known_framerate_;
+    const bool                     interlaced_;
     std::uint16_t                  sequence_number = 0;
     core::frame_side_data_in_queue last_frame_side_data_in_queue{};
 };
@@ -315,7 +317,7 @@ decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type   
             auto known_framerate = decklink_side_data_strategy_a53_cc::known_framerate::try_get(
                 format.framerate.numerator(), format.framerate.denominator());
             if (known_framerate.total_cc_data_pkts_per_frame != 0) {
-                return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate);
+                return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate, format);
             }
             CASPAR_LOG(error) << "decklink consumer: unknown framerate for " << a53_cc_name << ": "
                               << known_framerate.framerate_num << "/" << known_framerate.framerate_denom
