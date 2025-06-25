@@ -237,7 +237,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
 
         std::unique_ptr<std::uint8_t[], bytes_deleter> bytes(bytes_p);
 
-        vanc_packet retval = {0x61, 0x01, 11, std::vector(bytes.get(), bytes.get() + byte_count)};
+        vanc_packet retval = {0x61, 0x01, 9, std::vector(bytes.get(), bytes.get() + byte_count)};
         CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: "
                           << boost::log::dump(retval.data.data(), retval.data.size(), 128);
         CASPAR_LOG(trace) << L"decklink consumer: eia-608 queue size = " << eia_608_cc_data_pkts_.size()
