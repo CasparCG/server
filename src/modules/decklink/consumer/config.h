@@ -50,14 +50,17 @@ struct port_configuration
 
 struct vanc_configuration
 {
-    bool         enable           = false;
-    bool         enable_op47      = false;
-    bool         enable_scte104   = false;
-    bool         enable_a53_cc    = false;
-    uint8_t      op47_line        = 0;
-    uint8_t      op47_line_field2 = 0;
-    uint8_t      scte104_line     = 0;
-    std::wstring op47_dummy_header;
+    bool                 enable                         = false;
+    bool                 enable_op47                    = false;
+    bool                 enable_scte104                 = false;
+    bool                 enable_a53_cc                  = false;
+    uint8_t              op47_line                      = 0;
+    uint8_t              op47_line_field2               = 0;
+    uint8_t              scte104_line                   = 0;
+    std::uint8_t         a53_cc_line                    = 9;
+    boost::rational<int> a53_cc_cdp_frame_rate          = 0;
+    std::uint16_t        a53_cc_initial_sequence_number = 0;
+    std::wstring         op47_dummy_header;
 };
 
 struct hdr_meta_configuration

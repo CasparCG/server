@@ -66,6 +66,7 @@ class decklink_frame_side_data_vanc_strategy : public decklink_vanc_strategy
     /// tries to create a `decklink_frame_side_data_vanc_strategy` instance for the specified side-data type,
     /// returns `nullptr` if there is no corresponding conversion
     static std::shared_ptr<decklink_frame_side_data_vanc_strategy> try_create(core::frame_side_data_type     type,
+                                                                              const vanc_configuration&      config,
                                                                               const core::video_format_desc& format);
 };
 

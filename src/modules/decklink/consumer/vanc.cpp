@@ -77,8 +77,8 @@ decklink_vanc::decklink_vanc(const vanc_configuration& config, const core::video
             create_op47_strategy(config.op47_line, config.op47_line_field2, config.op47_dummy_header));
     }
     if (config.enable_a53_cc) {
-        if (auto strategy =
-                decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type::a53_cc, format)) {
+        if (auto strategy = decklink_frame_side_data_vanc_strategy::try_create(
+                core::frame_side_data_type::a53_cc, config, format)) {
             strategies_.push_back(strategy);
             side_data_strategies_.push_back(std::move(strategy));
         }

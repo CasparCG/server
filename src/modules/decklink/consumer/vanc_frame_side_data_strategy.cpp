@@ -174,13 +174,20 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         }
     };
 
-    explicit decklink_side_data_strategy_a53_cc(known_framerate known_framerate_, const core::video_format_desc& format)
+    explicit decklink_side_data_strategy_a53_cc(known_framerate                known_framerate,
+                                                const vanc_configuration&      config,
+                                                const core::video_format_desc& format)
         : decklink_frame_side_data_vanc_strategy(type)
-        , known_framerate_(known_framerate_)
+        , known_framerate_(known_framerate)
         , interlaced_(format.field_count != 1)
+        , line_number_(config.a53_cc_line)
+        , cdp_frame_rate_(config.a53_cc_cdp_frame_rate == 0
+                              ? boost::rational<int>(known_framerate.framerate_num, known_framerate.framerate_denom)
+                              : config.a53_cc_cdp_frame_rate)
+        , sequence_number_(config.a53_cc_initial_sequence_number)
     {
-        CASPAR_ENSURE(known_framerate_.total_cc_data_pkts_per_frame > known_framerate_.eia_608_cc_data_pkts_per_frame);
-        CASPAR_ENSURE(known_framerate_.eia_608_cc_data_pkts_per_frame >= 1);
+        CASPAR_ENSURE(known_framerate.total_cc_data_pkts_per_frame > known_framerate.eia_608_cc_data_pkts_per_frame);
+        CASPAR_ENSURE(known_framerate.eia_608_cc_data_pkts_per_frame >= 1);
     }
     virtual bool        has_data() const override { return true; }
     virtual vanc_packet pop_packet(bool field2) override
@@ -215,7 +222,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         auto eia708_cdp = create_eia708_cdp();
         // num/denom intentionally swapped since casparcg and ffmpeg uses the reciprocal of libklvanc
         LKV_HANDLE_FLAG(klvanc_set_framerate_EIA_708B(
-            eia708_cdp.get(), known_framerate_.framerate_denom, known_framerate_.framerate_num));
+            eia708_cdp.get(), cdp_frame_rate_.denominator(), cdp_frame_rate_.numerator()));
 
         eia708_cdp->header.ccdata_present         = 1;
         eia708_cdp->header.caption_service_active = 1;
@@ -229,7 +236,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         }
 
         // intentionally wrap around at 0xFFFF
-        klvanc_finalize_EIA_708B(eia708_cdp.get(), sequence_number++);
+        klvanc_finalize_EIA_708B(eia708_cdp.get(), sequence_number_++);
 
         std::uint8_t* bytes_p    = nullptr;
         std::uint16_t byte_count = 0;
@@ -243,7 +250,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
 
         std::unique_ptr<std::uint8_t[], bytes_deleter> bytes(bytes_p);
 
-        vanc_packet retval = {0x61, 0x01, 9, std::vector(bytes.get(), bytes.get() + byte_count)};
+        vanc_packet retval = {0x61, 0x01, line_number_, std::vector(bytes.get(), bytes.get() + byte_count)};
         // format starting from `Line:` matches decklink `VancCapture` example, making it easier to compare
         CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: Line "
                           << retval.line_number << L":   DID: " << std::hex << std::setfill(L'0') << std::setw(2)
@@ -322,13 +329,16 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
     std::queue<cc_data_pkt>        cta_708_cc_data_pkts_;
     const known_framerate          known_framerate_;
     const bool                     interlaced_;
-    std::uint16_t                  sequence_number = 0;
-    core::frame_side_data_in_queue last_frame_side_data_in_queue{};
+    const std::uint8_t             line_number_;
+    const boost::rational<int>     cdp_frame_rate_;
+    std::uint16_t                  sequence_number_;
+    core::frame_side_data_in_queue last_frame_side_data_in_queue_{};
 };
 #endif
 
 std::shared_ptr<decklink_frame_side_data_vanc_strategy>
 decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type     type,
+                                                   const vanc_configuration&      config,
                                                    const core::video_format_desc& format)
 {
     switch (type) {
@@ -337,7 +347,7 @@ decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type   
             auto known_framerate = decklink_side_data_strategy_a53_cc::known_framerate::try_get(
                 format.framerate.numerator(), format.framerate.denominator());
             if (known_framerate.total_cc_data_pkts_per_frame != 0) {
-                return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate, format);
+                return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate, config, format);
             }
             CASPAR_LOG(error) << "decklink consumer: unknown framerate for " << a53_cc_name << ": "
                               << known_framerate.framerate_num << "/" << known_framerate.framerate_denom

@@ -65,7 +65,33 @@ vanc_configuration parse_vanc_config(const boost::property_tree::wptree& vanc_tr
     vanc_config.scte104_line      = vanc_tree.get(L"scte104-line", vanc_config.scte104_line);
     vanc_config.enable_scte104    = vanc_config.scte104_line > 0;
     vanc_config.op47_dummy_header = vanc_tree.get(L"op47-dummy-header", L"");
-    vanc_config.enable_a53_cc     = vanc_tree.get_optional<std::wstring>(L"a53-cc").has_value();
+    if (auto a53_cc_tree = vanc_tree.get_child_optional(L"a53-cc")) {
+        vanc_config.enable_a53_cc = true;
+        vanc_config.a53_cc_line   = a53_cc_tree->get(L"line", vanc_config.a53_cc_line);
+        struct cdp_frame_rate_translator
+        {
+            boost::optional<boost::rational<int>> get_value(const std::wstring& str) const
+            {
+                static constexpr auto decimal_frame_rates = {
+                    std::tuple{L"23.97", 24000, 1001},
+                    {L"23.976", 24000, 1001},
+                    {L"29.97", 30000, 1001},
+                    {L"59.94", 60000, 1001},
+                };
+                for (auto [s, n, d] : decimal_frame_rates) {
+                    if (str == s) {
+                        return boost::rational<int>(n, d);
+                    }
+                }
+                using translator = boost::property_tree::translator_between<std::string, boost::rational<int>>::type;
+                return translator().get_value(u8(str));
+            }
+        };
+        vanc_config.a53_cc_cdp_frame_rate =
+            a53_cc_tree->get(L"cdp-frame-rate", vanc_config.a53_cc_cdp_frame_rate, cdp_frame_rate_translator{});
+        vanc_config.a53_cc_initial_sequence_number =
+            a53_cc_tree->get(L"initial-sequence-number", vanc_config.a53_cc_initial_sequence_number);
+    }
 
     return vanc_config;
 };
