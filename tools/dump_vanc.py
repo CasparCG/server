@@ -49,7 +49,8 @@ def dump_vanc(line_num, vanc, out):
         return
     did = vanc[0]
     sdid = vanc[1]
-    print(f"Line {line_num}:   DID: {did:02x}; SDID: {sdid:02x}; Data: {vanc[3:].hex(' ')}", file=out)
+    length = vanc[2]
+    print(f"Line {line_num}:   DID: {did:02x}; SDID: {sdid:02x}; Data: {vanc[3:][:length].hex(' ')}", file=out)
 
 def dump_vanc_from_mxf_data_stream(inp, out):
     while True:
