@@ -61,7 +61,8 @@ class decklink_frame_side_data_vanc_strategy : public decklink_vanc_strategy
         static_cast<void>(params);
         return false;
     }
-    virtual void push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2) = 0;
+    virtual void push_frame_side_data(const core::frame_side_data_in_queue& field1_side_data,
+                                      const core::frame_side_data_in_queue& field2_side_data) = 0;
     /// tries to create a `decklink_frame_side_data_vanc_strategy` instance for the specified side-data type,
     /// returns `nullptr` if there is no corresponding conversion
     static std::shared_ptr<decklink_frame_side_data_vanc_strategy> try_create(core::frame_side_data_type     type,
@@ -78,7 +79,8 @@ class decklink_vanc
     bool                                                             has_data() const;
     std::vector<caspar::decklink::com_ptr<IDeckLinkAncillaryPacket>> pop_packets(bool field2 = false);
     bool try_push_data(const std::vector<std::wstring>& params);
-    void push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2);
+    void push_frame_side_data(const core::frame_side_data_in_queue& field1_side_data,
+                              const core::frame_side_data_in_queue& field2_side_data);
 };
 
 std::shared_ptr<decklink_vanc_strategy>

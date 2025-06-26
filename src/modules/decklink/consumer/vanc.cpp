@@ -125,10 +125,11 @@ bool decklink_vanc::try_push_data(const std::vector<std::wstring>& params)
     return false;
 }
 
-void decklink_vanc::push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2)
+void decklink_vanc::push_frame_side_data(const core::frame_side_data_in_queue& field1_side_data,
+                                         const core::frame_side_data_in_queue& field2_side_data)
 {
     for (auto& strategy : side_data_strategies_) {
-        strategy->push_frame_side_data(side_data, field2);
+        strategy->push_frame_side_data(field1_side_data, field2_side_data);
     }
 }
 

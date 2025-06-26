@@ -252,18 +252,29 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         return retval;
     }
     virtual const std::wstring& get_name() const override { return a53_cc_name; }
-    virtual void push_frame_side_data(const core::frame_side_data_in_queue& side_data, bool field2) override
+    virtual void                push_frame_side_data(const core::frame_side_data_in_queue& field1_side_data,
+                                                     const core::frame_side_data_in_queue& field2_side_data) override
     {
-        if (!side_data.queue)
+        if (!field1_side_data.queue && !field2_side_data.queue)
             return;
 
         auto _lock = std::unique_lock(mutex_);
 
+        push_field_side_data_locked(field1_side_data);
+        push_field_side_data_locked(field2_side_data);
+    }
+
+  private:
+    void push_field_side_data_locked(const core::frame_side_data_in_queue& side_data)
+    {
+        if (!side_data.queue)
+            return;
+
         auto last_position = side_data.pos;
-        if (last_frame_side_data_in_queue.queue == side_data.queue) {
-            last_position = last_frame_side_data_in_queue.pos;
+        if (last_frame_side_data_in_queue_.queue == side_data.queue) {
+            last_position = last_frame_side_data_in_queue_.pos;
         }
-        last_frame_side_data_in_queue = side_data;
+        last_frame_side_data_in_queue_ = side_data;
 
         for (auto pos = last_position + 1; pos <= side_data.pos; pos++) {
             auto side_data_opt = side_data.queue->get(pos);

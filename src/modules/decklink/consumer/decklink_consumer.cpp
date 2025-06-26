@@ -944,10 +944,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 return E_FAIL;
 
             if (vanc_) {
-                vanc_->push_frame_side_data(frame1.side_data(), false);
-                if (isInterlaced) {
-                    vanc_->push_frame_side_data(frame2.side_data(), true);
-                }
+                vanc_->push_frame_side_data(frame1.side_data(), frame2.side_data());
             }
 
             BMDTimeValue video_display_time = video_scheduled_;
