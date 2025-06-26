@@ -193,8 +193,12 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         cc_data_pkts_for_frame.reserve(known_framerate_.total_cc_data_pkts_per_frame);
         for (std::size_t i = 0; i < known_framerate_.eia_608_cc_data_pkts_per_frame; i++) {
             if (eia_608_cc_data_pkts_.empty()) {
-                std::uint8_t first = (interlaced_ && cc_data_pkts_for_frame.size() >= 1) ? 0xFD : 0xFC;
-                cc_data_pkts_for_frame.push_back({first, 0x80, 0x80});
+                std::size_t insert_pos = cc_data_pkts_for_frame.size();
+                if (insert_pos == 1 && cc_data_pkts_for_frame[0][0] == 0xFD) {
+                    insert_pos = 0; // put padding before packet for second frame
+                }
+                std::uint8_t first = (interlaced_ && insert_pos >= 1) ? 0xFD : 0xFC;
+                cc_data_pkts_for_frame.insert(cc_data_pkts_for_frame.begin() + insert_pos, {first, 0x80, 0x80});
             } else {
                 cc_data_pkts_for_frame.push_back(eia_608_cc_data_pkts_.front());
                 eia_608_cc_data_pkts_.pop();
