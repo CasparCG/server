@@ -9,6 +9,7 @@
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
 #include <boost/format/format_fwd.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
@@ -32,6 +33,7 @@
 #include <libavcodec/packet.h>
 #include <libavutil/frame.h>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #ifdef _MSC_VER
@@ -103,6 +105,171 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
 
     return result;
 }
+
+/// queue for A53 CC side data, needed to avoid EIA-608 and CEA-708 side data getting out of sync or split up in ffmpeg
+/// filters
+class A53CCQueue final
+{
+  public:
+    void insert_and_replace_with_key(AVFrame* frame)
+    {
+        if (auto* side_data = av_frame_get_side_data(frame, AV_FRAME_DATA_A53_CC)) {
+            auto buf = std::vector(side_data->data, side_data->data + side_data->size);
+
+            auto pos = queue_.add_frame(
+                std::vector{core::const_frame_side_data(core::frame_side_data_type::a53_cc, std::move(buf))});
+            key k(pos);
+            CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::insert_and_replace_with_key: key: "
+                              << boost::log::dump(k.data, sizeof(k.data))
+                              << "  input: " << boost::log::dump(side_data->data, side_data->size, 128);
+            av_frame_remove_side_data(frame, AV_FRAME_DATA_A53_CC);
+            side_data = FFMEM(av_frame_new_side_data(frame, AV_FRAME_DATA_A53_CC, sizeof(k.data)));
+            std::memcpy(side_data->data, k.data, sizeof(k.data));
+        }
+    }
+    void extract_by_key(AVFrame* frame)
+    {
+        if (auto* side_data = av_frame_get_side_data(frame, AV_FRAME_DATA_A53_CC)) {
+            CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::extract_by_key: input: "
+                              << boost::log::dump(side_data->data, side_data->size, 128);
+
+            auto valid_position_range = queue_.valid_position_range();
+
+            std::vector<std::uint8_t> side_data_from_queue;
+
+            auto*       p    = side_data->data;
+            std::size_t size = side_data->size;
+            while (size > 0) {
+                if (size >= A53_CC_CHUNK_SIZE) {
+                    auto cc_valid = (p[0] & 0x04) >> 2;
+                    auto cc_type  = p[0] & 0x03;
+                    if (cc_type == 0x00 || cc_type == 0x01) {
+                        if (p[1] == 0x80 && p[2] == 0x80) {
+                            // skip EIA-608 padding
+                            p += A53_CC_CHUNK_SIZE;
+                            size -= A53_CC_CHUNK_SIZE;
+                            continue;
+                        }
+                    } else if (!cc_valid) {
+                        // skip CEA-708 padding
+                        p += A53_CC_CHUNK_SIZE;
+                        size -= A53_CC_CHUNK_SIZE;
+                        continue;
+                    }
+                }
+                key k;
+                if (size >= sizeof(k.data)) {
+                    std::memcpy(k.data, p, sizeof(k.data));
+                    if (auto pos = k.pos(valid_position_range)) {
+                        if (auto cur_side_data = queue_.get(*pos)) {
+                            auto& cur_side_data_buf = (*cur_side_data)[0].data();
+                            side_data_from_queue.insert(
+                                side_data_from_queue.end(), cur_side_data_buf.begin(), cur_side_data_buf.end());
+                        }
+                        p += sizeof(k.data);
+                        size -= sizeof(k.data);
+                        continue;
+                    }
+                }
+                if (!corrupted_.exchange(true, std::memory_order_relaxed)) {
+                    CASPAR_LOG(error)
+                        << "ffmpeg producer: A53CCQueue: closed captions corrupted by ffmpeg, removing them.";
+                    break;
+                }
+            }
+            av_frame_remove_side_data(frame, AV_FRAME_DATA_A53_CC);
+            if (!side_data_from_queue.empty() && !corrupted_.load(std::memory_order_relaxed)) {
+                side_data = FFMEM(av_frame_new_side_data(frame, AV_FRAME_DATA_A53_CC, side_data_from_queue.size()));
+                std::memcpy(side_data->data, side_data_from_queue.data(), side_data_from_queue.size());
+                CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::extract_by_key: output: "
+                                  << boost::log::dump(side_data->data, side_data->size, 128);
+            }
+        }
+    }
+
+  private:
+    using position = core::frame_side_data_queue::position;
+
+    static constexpr std::uint8_t to_hex_digit(std::uint8_t v)
+    {
+        v &= 0xF;
+        if (v < 0xA)
+            return v + '0';
+        else
+            return v - 0xA + 'A';
+    }
+    static constexpr std::optional<std::uint8_t> from_hex_digit(std::uint8_t v)
+    {
+        if (v >= '0' && v <= '9') {
+            return v - '0';
+        } else if (v >= 'A' && v <= 'F') {
+            return v - 'A' + 0xA;
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    static inline constexpr std::size_t A53_CC_CHUNK_SIZE = 3;
+
+    struct key final
+    {
+        // values less than 0x20 are the shift to get a hex digit from,
+        // otherwise they are literal values.
+        // small enough that it shouldn't be split up by ffmpeg's ccfifo
+        static constexpr inline std::uint8_t data_template[][A53_CC_CHUNK_SIZE] = {
+            {0xFF, 'C', 'C'},
+            {0xFE, 'Q', ':'},
+            {0xFE, 0x0C, 0x08},
+            {0xFE, 0x04, 0x00},
+        };
+
+        std::uint8_t data[sizeof(data_template)];
+
+        constexpr explicit key(position pos) noexcept
+            : data{}
+        {
+            const std::uint8_t* tmpl = &data_template[0][0];
+            for (std::size_t i = 0; i < sizeof(data_template); i++) {
+                if (tmpl[i] < 0x20) {
+                    data[i] = to_hex_digit(pos >> tmpl[i]);
+                } else {
+                    data[i] = tmpl[i];
+                }
+            }
+        }
+        key() noexcept = default;
+        constexpr std::optional<position> pos(std::pair<position, position> valid_position_range) const noexcept
+        {
+            position pos = valid_position_range.second;
+
+            const std::uint8_t* tmpl = &data_template[0][0];
+            for (std::size_t i = 0; i < sizeof(data_template); i++) {
+                if (tmpl[i] < 0x20) {
+                    pos &= ~(static_cast<position>(0xF) << tmpl[i]);
+                    if (auto digit = from_hex_digit(data[i])) {
+                        pos |= static_cast<position>(*digit) << tmpl[i];
+                    } else {
+                        return std::nullopt;
+                    }
+                } else if (data[i] != tmpl[i]) {
+                    return std::nullopt;
+                }
+            }
+            // we store only the lower 16-bits in the key,
+            // so reconstruct the upper 16 bits by checking which one is in range.
+            for (position offset : {-1ULL << 16, 0ULL, 1ULL << 16}) {
+                position retval = pos + offset;
+                if (retval >= valid_position_range.first && retval < valid_position_range.second)
+                    return retval;
+            }
+            // none in range
+            return std::nullopt;
+        }
+    };
+
+    core::frame_side_data_queue queue_;
+    std::atomic_bool            corrupted_ = false;
+};
 
 class Decoder final
 {
@@ -313,6 +480,9 @@ class Decoder final
 
                         if (remove_a53_cc) {
                             av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                        } else if (auto* side_data = av_frame_get_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC)) {
+                            CASPAR_LOG(trace) << L"ffmpeg producer: decoded frame with A53_CC side data: "
+                                              << boost::log::dump(side_data->data, side_data->size, 16);
                         }
 
                         if (output_sender.try_send_blocking(av_frame)) {
@@ -793,6 +963,8 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
+    std::unique_ptr<A53CCQueue> a53_cc_queue_;
+
     /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
     /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, std::vector<AVFilterContext*>> sources_;
@@ -1039,7 +1211,8 @@ struct AVProducer::Impl
             const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
             if (video_filter_.frame) {
-                frame.video      = std::move(video_filter_.frame);
+                frame.video = std::move(video_filter_.frame);
+                a53_cc_queue_->extract_by_key(frame.video.get());
                 const auto tb    = av_buffersink_get_time_base(video_filter_.sink);
                 const auto fr    = av_buffersink_get_frame_rate(video_filter_.sink);
                 frame.start_time = start_time;
@@ -1301,6 +1474,8 @@ struct AVProducer::Impl
                 continue;
             }
 
+            a53_cc_queue_->insert_and_replace_with_key(frame.get());
+
             for (auto& source : p.second) {
                 if (!source)
                     continue;
@@ -1346,6 +1521,7 @@ struct AVProducer::Impl
 
     void reset(int64_t start_time)
     {
+        a53_cc_queue_ = std::make_unique<A53CCQueue>();
         video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
         audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
 
