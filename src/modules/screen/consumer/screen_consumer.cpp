@@ -113,21 +113,11 @@ struct configuration
     bool            high_bitdepth = false;
 };
 
-struct frame
-{
-    GLuint pbo   = 0;
-    GLuint tex   = 0;
-    char*  ptr   = nullptr;
-    GLsync fence = nullptr;
-};
-
 struct screen_consumer
 {
     const configuration     config_;
     core::video_format_desc format_desc_;
     int                     channel_index_;
-
-    std::vector<frame> frames_;
 
     int screen_width_  = format_desc_.width;
     int screen_height_ = format_desc_.height;
@@ -152,7 +142,7 @@ struct screen_consumer
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
-    screen_consumer(const screen_consumer&) = delete;
+    screen_consumer(const screen_consumer&)            = delete;
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
@@ -272,41 +262,6 @@ struct screen_consumer
                 shader_->set("background", 0);
                 shader_->set("window_width", screen_width_);
 
-                for (int n = 0; n < 2; ++n) {
-                    screen::frame frame;
-                    auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-                    GL(glCreateBuffers(1, &frame.pbo));
-                    auto size_multiplier = config_.high_bitdepth ? 2 : 1;
-                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size * size_multiplier, nullptr, flags));
-                    frame.ptr = reinterpret_cast<char*>(
-                        GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size * size_multiplier, flags)));
-
-                    GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-                    GL(glTextureParameteri(frame.tex,
-                                           GL_TEXTURE_MIN_FILTER,
-                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
-                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
-                                               ? GL_NEAREST
-                                               : GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex,
-                                           GL_TEXTURE_MAG_FILTER,
-                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
-                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
-                                               ? GL_NEAREST
-                                               : GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-                    GL(glTextureStorage2D(frame.tex,
-                                          1,
-                                          config_.high_bitdepth ? GL_RGBA16 : GL_RGBA8,
-                                          format_desc_.width,
-                                          format_desc_.height));
-                    GL(glClearTexImage(
-                        frame.tex, 0, GL_BGRA, config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, nullptr));
-
-                    frames_.push_back(frame);
-                }
-
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
                 GL(glViewport(
@@ -335,11 +290,6 @@ struct screen_consumer
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
                 is_running_ = false;
-            }
-            for (auto frame : frames_) {
-                GL(glUnmapNamedBuffer(frame.pbo));
-                glDeleteBuffers(1, &frame.pbo);
-                glDeleteTextures(1, &frame.tex);
             }
 
             shader_.reset();
@@ -387,48 +337,13 @@ struct screen_consumer
             return;
         }
 
-        // Upload
-        {
-            auto& frame = frames_.front();
-
-            while (frame.fence != nullptr) {
-                auto wait = glClientWaitSync(frame.fence, 0, 0);
-                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                    glDeleteSync(frame.fence);
-                    frame.fence = nullptr;
-                }
-                if (!poll()) {
-                    // TODO (fix)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
-                }
-            }
-
-            auto size_multiplier = config_.high_bitdepth ? 2 : 1;
-            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size * size_multiplier);
-
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(frame.tex,
-                                   0,
-                                   0,
-                                   0,
-                                   format_desc_.width,
-                                   format_desc_.height,
-                                   GL_BGRA,
-                                   config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
-                                   nullptr));
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-
-            frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-        }
-
         // Display
         {
-            auto& frame = frames_.back();
-
             GL(glClear(GL_COLOR_BUFFER_BIT));
 
-            GL(glActiveTexture(GL_TEXTURE0));
-            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+            if (in_frame.texture()) {
+                in_frame.texture()->bind(0);
+            }
 
             GL(glBufferData(GL_ARRAY_BUFFER,
                             static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
@@ -470,8 +385,6 @@ struct screen_consumer
         }
 
         window_.display();
-
-        std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();
