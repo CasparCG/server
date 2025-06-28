@@ -17,9 +17,10 @@ class device_context final
     void bind();
     void unbind();
 
-  private:
     struct impl;
-    std::shared_ptr<impl> impl_;
+
+  private:
+    spl::shared_ptr<impl> impl_;
 };
 
 } // namespace caspar::accelerator::ogl
