@@ -71,17 +71,20 @@ struct mixer::impl
             frame.accept(*image_mixer_);
         }
 
-        auto image = image_mixer_->render(format_desc);
-        auto audio = audio_mixer_(format_desc, nb_samples);
+        auto result  = image_mixer_->render(format_desc);
+        auto image   = std::move(std::get<0>(result));
+        auto texture = std::move(std::get<1>(result));
+        auto audio   = audio_mixer_(format_desc, nb_samples);
 
         state_["audio"] = audio_mixer_.state();
 
         auto depth = image_mixer_->depth();
 
         buffer_.push(std::async(std::launch::deferred,
-                                [image = std::move(image),
-                                 audio = std::move(audio),
-                                 graph = graph_,
+                                [image   = std::move(image),
+                                 audio   = std::move(audio),
+                                 texture = std::move(texture),
+                                 graph   = graph_,
                                  depth,
                                  format_desc,
                                  tag = this]() mutable {
@@ -90,7 +93,7 @@ struct mixer::impl
                                         pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
                                     std::vector<array<const uint8_t>> image_data;
                                     image_data.emplace_back(std::move(image.get()));
-                                    return const_frame(tag, std::move(image_data), std::move(audio), desc);
+                                    return const_frame(tag, std::move(image_data), std::move(audio), desc, texture);
                                 }));
 
         if (buffer_.size() <= format_desc.field_count) {
