@@ -69,6 +69,7 @@
 #include "core/frame/frame_side_data.h"
 #include "vanc.h"
 #include <array>
+#include <boost/rational.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -89,7 +90,7 @@ namespace caspar::decklink {
 static const std::wstring a53_cc_name = L"ATSC A/53 Closed Captions";
 
 #ifdef DECKLINK_USE_LIBKLVANC
-struct libklvanc_error_t : virtual caspar_exception
+struct libklvanc_error_t : public caspar_exception
 {
 };
 
@@ -129,65 +130,28 @@ static std::shared_ptr<klvanc_packet_eia_708b_s> create_eia708_cdp()
                                                      [](klvanc_packet_eia_708b_s* p) { klvanc_destroy_eia708_cdp(p); });
 }
 
+struct closed_captions_dont_fit : public libklvanc_error_t
+{
+};
+
 class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data_vanc_strategy
 {
-    // name from https://en.wikipedia.org/wiki/CTA-708#Closed_Caption_Data_Packet_(cc_data_pkt)
-    typedef std::array<std::uint8_t, 3> cc_data_pkt;
-    static_assert(sizeof(cc_data_pkt) == cc_data_pkt{}.size(), "cc_data_pkt must not have any padding");
-
   public:
     static constexpr inline core::frame_side_data_type type = core::frame_side_data_type::a53_cc;
-    struct known_framerate final
-    {
-        int                    framerate_num;
-        int                    framerate_denom;
-        std::uint8_t           total_cc_data_pkts_per_frame;
-        std::uint8_t           eia_608_cc_data_pkts_per_frame;
-        static known_framerate try_get(int num, int denom) noexcept
-        {
-            static constexpr known_framerate known_framerates[] = {
-                // from Table 3 of https://pub.smpte.org/latest/st334-2/st0334-2-2015.pdf
-                {24000, 1001, 25, 3}, // cdp_frame_rate 0001
-                {24, 1, 25, 3},       // cdp_frame_rate 0010
-                {25, 1, 24, 2},       // cdp_frame_rate 0011
-                {30000, 1001, 20, 2}, // cdp_frame_rate 0100
-                {30, 1, 20, 2},       // cdp_frame_rate 0101
-                {50, 1, 12, 1},       // cdp_frame_rate 0110
-                {60000, 1001, 10, 1}, // cdp_frame_rate 0111
-                {60, 1, 10, 1},       // cdp_frame_rate 1000
-            };
-            static_assert(
-                [] {
-                    for (auto i : known_framerates) {
-                        if (i.total_cc_data_pkts_per_frame > KLVANC_MAX_CC_COUNT)
-                            throw "known_framerate total_cc_data_pkts_per_frame exceeds KLVANC_MAX_CC_COUNT";
-                    }
-                    return true;
-                }(),
-                "known_framerate total_cc_data_pkts_per_frame exceeds KLVANC_MAX_CC_COUNT");
-            for (auto retval : known_framerates) {
-                if (retval.framerate_num == num && retval.framerate_denom == denom) {
-                    return retval;
-                }
-            }
-            return {num, denom};
-        }
-    };
 
-    explicit decklink_side_data_strategy_a53_cc(known_framerate                known_framerate,
+    explicit decklink_side_data_strategy_a53_cc(boost::rational<int>           frame_rate,
                                                 const vanc_configuration&      config,
                                                 const core::video_format_desc& format)
         : decklink_frame_side_data_vanc_strategy(type)
-        , known_framerate_(known_framerate)
-        , interlaced_(format.field_count != 1)
+        , a53_cc_queue_(frame_rate, format.field_count != 1)
         , line_number_(config.a53_cc_line)
-        , cdp_frame_rate_(config.a53_cc_cdp_frame_rate == 0
-                              ? boost::rational<int>(known_framerate.framerate_num, known_framerate.framerate_denom)
-                              : config.a53_cc_cdp_frame_rate)
+        , cdp_frame_rate_(config.a53_cc_cdp_frame_rate == 0 ? frame_rate : config.a53_cc_cdp_frame_rate)
         , sequence_number_(config.a53_cc_initial_sequence_number)
     {
-        CASPAR_ENSURE(known_framerate.total_cc_data_pkts_per_frame > known_framerate.eia_608_cc_data_pkts_per_frame);
-        CASPAR_ENSURE(known_framerate.eia_608_cc_data_pkts_per_frame >= 1);
+        if (a53_cc_queue_.max_frame_size() / core::a53_cc_queue::cc_data_pkt{}.size() > KLVANC_MAX_CC_COUNT) {
+            CASPAR_THROW_EXCEPTION(closed_captions_dont_fit()
+                                   << msg_info(u8(a53_cc_name) + " don't fit in libklvanc's structures"));
+        }
     }
     virtual bool        has_data() const override { return true; }
     virtual vanc_packet pop_packet(bool field2) override
@@ -196,29 +160,7 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
             return {};
         auto _lock = std::unique_lock(mutex_);
 
-        std::vector<cc_data_pkt> cc_data_pkts_for_frame;
-        cc_data_pkts_for_frame.reserve(known_framerate_.total_cc_data_pkts_per_frame);
-        for (std::size_t i = 0; i < known_framerate_.eia_608_cc_data_pkts_per_frame; i++) {
-            if (eia_608_cc_data_pkts_.empty()) {
-                std::size_t insert_pos = cc_data_pkts_for_frame.size();
-                if (insert_pos == 1 && cc_data_pkts_for_frame[0][0] == 0xFD) {
-                    insert_pos = 0; // put padding before packet for second frame
-                }
-                std::uint8_t first = (interlaced_ && insert_pos >= 1) ? 0xFD : 0xFC;
-                cc_data_pkts_for_frame.insert(cc_data_pkts_for_frame.begin() + insert_pos, {first, 0x80, 0x80});
-            } else {
-                cc_data_pkts_for_frame.push_back(eia_608_cc_data_pkts_.front());
-                eia_608_cc_data_pkts_.pop();
-            }
-        }
-        while (cc_data_pkts_for_frame.size() < known_framerate_.total_cc_data_pkts_per_frame) {
-            if (cta_708_cc_data_pkts_.empty()) {
-                cc_data_pkts_for_frame.push_back({0xFA, 0x00, 0x00});
-            } else {
-                cc_data_pkts_for_frame.push_back(cta_708_cc_data_pkts_.front());
-                cta_708_cc_data_pkts_.pop();
-            }
-        }
+        auto cc_data    = a53_cc_queue_.lock().pop_frame();
         auto eia708_cdp = create_eia708_cdp();
         // num/denom intentionally swapped since casparcg and ffmpeg uses the reciprocal of libklvanc
         LKV_HANDLE_FLAG(klvanc_set_framerate_EIA_708B(
@@ -226,13 +168,15 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
 
         eia708_cdp->header.ccdata_present         = 1;
         eia708_cdp->header.caption_service_active = 1;
-        eia708_cdp->ccdata.cc_count               = static_cast<std::uint8_t>(cc_data_pkts_for_frame.size());
-        for (std::size_t i = 0; i < cc_data_pkts_for_frame.size(); i++) {
-            if (cc_data_pkts_for_frame[i][0] & 0x04)
+        eia708_cdp->ccdata.cc_count =
+            static_cast<std::uint8_t>(cc_data.size() / core::a53_cc_queue::cc_data_pkt{}.size());
+        for (std::size_t i = 0; i < eia708_cdp->ccdata.cc_count; i++) {
+            std::size_t start = i * core::a53_cc_queue::cc_data_pkt{}.size();
+            if (cc_data[start] & 0x04)
                 eia708_cdp->ccdata.cc[i].cc_valid = 1;
-            eia708_cdp->ccdata.cc[i].cc_type    = cc_data_pkts_for_frame[i][0] & 0x03;
-            eia708_cdp->ccdata.cc[i].cc_data[0] = cc_data_pkts_for_frame[i][1];
-            eia708_cdp->ccdata.cc[i].cc_data[1] = cc_data_pkts_for_frame[i][2];
+            eia708_cdp->ccdata.cc[i].cc_type    = cc_data[start] & 0x03;
+            eia708_cdp->ccdata.cc[i].cc_data[0] = cc_data[start + 1];
+            eia708_cdp->ccdata.cc[i].cc_data[1] = cc_data[start + 2];
         }
 
         // intentionally wrap around at 0xFFFF
@@ -257,8 +201,6 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
                           << static_cast<unsigned>(retval.did) << L"; SDID: " << std::setw(2)
                           << static_cast<unsigned>(retval.sdid) << L"; Data: "
                           << boost::log::dump(retval.data.data(), retval.data.size(), 128);
-        CASPAR_LOG(trace) << L"decklink consumer: eia-608 queue size = " << eia_608_cc_data_pkts_.size()
-                          << " cta-708 queue size = " << cta_708_cc_data_pkts_.size();
 
         return retval;
     }
@@ -269,26 +211,34 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         if (!field1_side_data.queue && !field2_side_data.queue)
             return;
 
-        auto _lock = std::unique_lock(mutex_);
+        auto _lock               = std::unique_lock(mutex_);
+        auto locked_a53_cc_queue = a53_cc_queue_.lock();
 
-        push_field_side_data_locked(field1_side_data);
-        push_field_side_data_locked(field2_side_data);
+        if (field1_side_data.queue != field2_side_data.queue) {
+            push_fields_side_data_locked(field1_side_data.queue, field1_side_data.pos, locked_a53_cc_queue);
+            push_fields_side_data_locked(field2_side_data.queue, field2_side_data.pos, locked_a53_cc_queue);
+        } else {
+            push_fields_side_data_locked(
+                field1_side_data.queue, std::max(field1_side_data.pos, field2_side_data.pos), locked_a53_cc_queue);
+        }
     }
 
   private:
-    void push_field_side_data_locked(const core::frame_side_data_in_queue& side_data)
+    void push_fields_side_data_locked(const std::shared_ptr<core::frame_side_data_queue>& side_data_queue,
+                                      core::frame_side_data_queue::position               final_pos,
+                                      core::a53_cc_queue::locked&                         locked_a53_cc_queue)
     {
-        if (!side_data.queue)
+        if (!side_data_queue)
             return;
-
-        auto last_position = side_data.pos;
-        if (last_frame_side_data_in_queue_.queue == side_data.queue) {
+        auto last_position = final_pos - 1;
+        if (last_frame_side_data_in_queue_.queue == side_data_queue) {
             last_position = last_frame_side_data_in_queue_.pos;
         }
-        last_frame_side_data_in_queue_ = side_data;
+        last_frame_side_data_in_queue_.queue = side_data_queue;
+        last_frame_side_data_in_queue_.pos   = final_pos;
 
-        for (auto pos = last_position + 1; pos <= side_data.pos; pos++) {
-            auto side_data_opt = side_data.queue->get(pos);
+        for (auto pos = last_position + 1; pos <= final_pos; pos++) {
+            auto side_data_opt = side_data_queue->get(pos);
             if (!side_data_opt)
                 continue;
             for (auto& side_data_ : *side_data_opt) {
@@ -296,39 +246,14 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
                     continue;
                 CASPAR_LOG(trace) << L"decklink consumer: got A53_CC side data: "
                                   << boost::log::dump(side_data_.data().data(), side_data_.data().size(), 16);
-                auto& data = side_data_.data();
-                // intentionally ignore any remainder to avoid out-of-bounds access
-                std::size_t pkt_count = data.size() / cc_data_pkt{}.size();
-                for (std::size_t i = 0; i < pkt_count; i++) {
-                    cc_data_pkt pkt{};
-                    std::memcpy(pkt.data(), &data[i * cc_data_pkt{}.size()], cc_data_pkt{}.size());
-
-                    // TODO: is this correct? FFmpeg doesn't agree with Wikipedia:
-                    // https://en.wikipedia.org/wiki/CTA-708#Closed_Caption_Data_Packet_(cc_data_pkt)
-
-                    /* See ANSI/CTA-708-E Sec 4.3, Table 3 */
-                    auto cc_valid = (pkt[0] & 0x04) >> 2;
-                    auto cc_type  = pkt[0] & 0x03;
-                    if (cc_type == 0x00 || cc_type == 0x01) {
-                        if (pkt[1] == 0x80 && pkt[2] == 0x80) {
-                            // ignore padding, since we end up with too much when reducing frame rate
-                            continue;
-                        }
-                        eia_608_cc_data_pkts_.push(pkt);
-                    } else if (cc_valid && (cc_type == 0x02 || cc_type == 0x03)) {
-                        cta_708_cc_data_pkts_.push(pkt);
-                    }
-                }
+                locked_a53_cc_queue.push_field(side_data_.data());
             }
         }
     }
 
   private:
-    mutable std::mutex             mutex_;
-    std::queue<cc_data_pkt>        eia_608_cc_data_pkts_;
-    std::queue<cc_data_pkt>        cta_708_cc_data_pkts_;
-    const known_framerate          known_framerate_;
-    const bool                     interlaced_;
+    std::mutex                     mutex_;
+    core::a53_cc_queue             a53_cc_queue_;
     const std::uint8_t             line_number_;
     const boost::rational<int>     cdp_frame_rate_;
     std::uint16_t                  sequence_number_;
@@ -344,14 +269,13 @@ decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type   
     switch (type) {
         case core::frame_side_data_type::a53_cc:
 #ifdef DECKLINK_USE_LIBKLVANC
-            auto known_framerate = decklink_side_data_strategy_a53_cc::known_framerate::try_get(
-                format.framerate.numerator(), format.framerate.denominator());
-            if (known_framerate.total_cc_data_pkts_per_frame != 0) {
-                return std::make_shared<decklink_side_data_strategy_a53_cc>(known_framerate, config, format);
+            try {
+                return std::make_shared<decklink_side_data_strategy_a53_cc>(format.framerate, config, format);
+            } catch (closed_captions_dont_fit&) {
+                CASPAR_LOG(error) << "decklink consumer: frame-rate is too weird for " << a53_cc_name
+                                  << ", the closed captions don't fit in libklvanc's structures: " << format.framerate
+                                  << " -- disabling closed captions for output";
             }
-            CASPAR_LOG(error) << "decklink consumer: unknown framerate for " << a53_cc_name << ": "
-                              << known_framerate.framerate_num << "/" << known_framerate.framerate_denom
-                              << " -- disabling closed captions for output";
 #else
             CASPAR_LOG(warning)
                 << "decklink consumer: libklvanc is required for " << a53_cc_name

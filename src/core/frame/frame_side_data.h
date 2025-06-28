@@ -19,12 +19,16 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <utility>
 #include <vector>
+
+#include <boost/rational.hpp>
 
 namespace caspar::core {
 
@@ -36,6 +40,51 @@ enum class frame_side_data_type
 };
 
 bool frame_side_data_include_on_duplicate_frames(frame_side_data_type t) noexcept;
+
+class a53_cc_queue final
+{
+  public:
+    // name from https://en.wikipedia.org/wiki/CTA-708#Closed_Caption_Data_Packet_(cc_data_pkt)
+    typedef std::array<std::uint8_t, 3> cc_data_pkt;
+    static_assert(sizeof(cc_data_pkt) == cc_data_pkt{}.size(), "cc_data_pkt must not have any padding");
+
+    // pass in the frame rate, not to be confused with field rate
+    explicit a53_cc_queue(boost::rational<int> frame_rate, bool interlaced);
+    a53_cc_queue(const a53_cc_queue&)            = delete;
+    a53_cc_queue(a53_cc_queue&&)                 = delete;
+    a53_cc_queue& operator=(const a53_cc_queue&) = delete;
+    a53_cc_queue& operator=(a53_cc_queue&&)      = delete;
+    ~a53_cc_queue() noexcept;
+
+    boost::rational<int> frame_rate() const noexcept;
+    bool                 interlaced() const noexcept;
+    std::size_t          max_field_size() const noexcept;
+    std::size_t          max_frame_size() const noexcept;
+
+    class locked final
+    {
+      public:
+        explicit locked(a53_cc_queue& queue);
+
+        void push_field(const std::vector<std::uint8_t>& field);
+        /// get a single field worth of closed captions
+        std::vector<std::uint8_t> pop_field();
+        /// get a whole frame worth of closed captions. if interlacing is on, this gets two fields worth.
+        std::vector<std::uint8_t> pop_frame();
+
+        a53_cc_queue& queue() { return queue_; }
+
+      private:
+        a53_cc_queue&                queue_;
+        std::unique_lock<std::mutex> lock_;
+    };
+
+    locked lock() { return locked(*this); }
+
+  private:
+    struct impl;
+    std::unique_ptr<impl> impl_;
+};
 
 class const_frame_side_data;
 
