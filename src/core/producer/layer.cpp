@@ -28,6 +28,8 @@
 #include "../frame/draw_frame.h"
 #include "../video_format.h"
 
+#include <optional>
+
 namespace caspar { namespace core {
 
 struct layer::impl
@@ -119,6 +121,8 @@ struct layer::impl
     {
         foreground_ = frame_producer::empty();
         auto_play_  = false;
+        foreground_length_override_.reset();
+        background_length_override_.reset();
     }
 
     draw_frame receive(const video_field field, int nb_samples)
