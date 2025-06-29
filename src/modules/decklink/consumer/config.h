@@ -87,6 +87,12 @@ struct configuration
         disabled,
     };
 
+    enum class pixel_format_t
+    {
+        rgba,
+        yuv,
+    };
+
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
@@ -95,6 +101,7 @@ struct configuration
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
     bool                 hdr                         = false;
+    pixel_format_t       pixel_format                = pixel_format_t::rgba;
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;

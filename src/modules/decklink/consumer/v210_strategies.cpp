@@ -26,6 +26,8 @@
 #include <simde/x86/avx2.h>
 #endif
 
+#include <type_traits>
+
 #include "format_strategy.h"
 
 #include <common/memshfl.h>
@@ -153,15 +155,17 @@ inline void pack_v210_avx2(__m256i luma[6], __m256i chroma[6], __m128i** v210_de
     }
 }
 
+template <typename T = uint16_t>
 struct ARGBPixel
 {
-    uint16_t R;
-    uint16_t G;
-    uint16_t B;
-    uint16_t A;
+    T R;
+    T G;
+    T B;
+    T A;
 };
 
-void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, uint32_t* dest, int num_pixels)
+template <typename T>
+void pack_v210(const ARGBPixel<T>* src, const std::vector<int32_t>& color_matrix, uint32_t* dest, int num_pixels)
 {
     auto write_v210 = [dest, index = 0, shift = 0](uint32_t val) mutable {
         dest[index] |= ((val & 0x3FF) << shift);
@@ -202,9 +206,9 @@ void pack_v210(const ARGBPixel* src, const std::vector<int32_t>& color_matrix, u
     }
 }
 
-class hdr_v210_strategy
+class v210_strategy
     : public format_strategy
-    , std::enable_shared_from_this<hdr_v210_strategy>
+    , std::enable_shared_from_this<v210_strategy>
 {
     std::vector<float> bt709{0.212639005871510,
                              0.715168678767756,
@@ -227,13 +231,15 @@ class hdr_v210_strategy
 
     std::vector<int32_t> color_matrix;
     __m128i              black_batch;
+    uint8_t              bpc;
 
   public:
-    explicit hdr_v210_strategy(core::color_space color_space)
+    explicit v210_strategy(core::color_space color_space, uint8_t bpc)
         : color_matrix(create_int_matrix(color_space == core::color_space::bt2020 ? bt2020 : bt709))
+        , bpc(bpc)
     {
         // setup black batch (6 pixels of black, encoded as v210)
-        ARGBPixel black[6];
+        ARGBPixel<> black[6];
         memset(black, 0, sizeof(black));
         memset(&black_batch, 0, sizeof(__m128i));
         pack_v210(black, color_matrix, reinterpret_cast<uint32_t*>(&black_batch), 6);
@@ -248,7 +254,6 @@ class hdr_v210_strategy
         auto size = get_row_bytes(format_desc.width) * format_desc.height;
         return create_aligned_buffer(size, 128);
     }
-
     std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
                                                  const core::video_format_desc& decklink_format_desc,
                                                  const port_configuration&      config,
@@ -256,25 +261,40 @@ class hdr_v210_strategy
                                                  const core::const_frame&       frame2,
                                                  BMDFieldDominance              field_dominance) override
     {
+        return bpc == 1 ? do_convert_frame_for_port<uint8_t>(
+                              channel_format_desc, decklink_format_desc, config, frame1, frame2, field_dominance)
+                        : do_convert_frame_for_port<uint16_t>(
+                              channel_format_desc, decklink_format_desc, config, frame1, frame2, field_dominance);
+    }
+
+  private:
+    template <typename T>
+    std::shared_ptr<void> do_convert_frame_for_port(const core::video_format_desc& channel_format_desc,
+                                                    const core::video_format_desc& decklink_format_desc,
+                                                    const port_configuration&      config,
+                                                    const core::const_frame&       frame1,
+                                                    const core::const_frame&       frame2,
+                                                    BMDFieldDominance              field_dominance)
+    {
         std::shared_ptr<void> image_data = allocate_frame_data(decklink_format_desc);
 
         if (field_dominance != bmdProgressiveFrame) {
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance == bmdUpperFieldFirst,
-                          frame1);
+            convert_frame<T>(channel_format_desc,
+                             decklink_format_desc,
+                             config,
+                             image_data,
+                             field_dominance == bmdUpperFieldFirst,
+                             frame1);
 
-            convert_frame(channel_format_desc,
-                          decklink_format_desc,
-                          config,
-                          image_data,
-                          field_dominance != bmdUpperFieldFirst,
-                          frame2);
+            convert_frame<T>(channel_format_desc,
+                             decklink_format_desc,
+                             config,
+                             image_data,
+                             field_dominance != bmdUpperFieldFirst,
+                             frame2);
 
         } else {
-            convert_frame(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
+            convert_frame<T>(channel_format_desc, decklink_format_desc, config, image_data, true, frame1);
         }
 
         if (config.key_only) {
@@ -284,7 +304,7 @@ class hdr_v210_strategy
         return image_data;
     }
 
-  private:
+    template <typename T>
     void convert_frame(const core::video_format_desc& channel_format_desc,
                        const core::video_format_desc& decklink_format_desc,
                        const port_configuration&      config,
@@ -337,7 +357,7 @@ class hdr_v210_strategy
                         continue;
                     }
 
-                    auto src = reinterpret_cast<const ARGBPixel*>(frame.image_data(0).data()) +
+                    auto src = reinterpret_cast<const ARGBPixel<T>*>(frame.image_data(0).data()) +
                                (src_y * channel_format_desc.width + config.src_x);
                     // Pack pixels in batches of 48
                     for (int batch_index_x = 0; batch_index_x < fullspeed_x_batches; batch_index_x++) {
@@ -348,12 +368,26 @@ class hdr_v210_strategy
 
                         __m256i zero = _mm256_setzero_si256();
                         for (int packet_index = 0; packet_index < 6; packet_index++) {
-                            __m256i p0123 = _mm256_loadu_si256(pixeldata + packet_index * 2);
-                            __m256i p4567 = _mm256_loadu_si256(pixeldata + packet_index * 2 + 1);
+                            __m256i p0123, p4567;
+                            if constexpr (std::is_same<T, uint16_t>()) {
+                                p0123 = _mm256_loadu_si256(pixeldata + packet_index * 2);
+                                p4567 = _mm256_loadu_si256(pixeldata + packet_index * 2 + 1);
 
-                            // shift down to 10 bit precision
-                            p0123 = _mm256_srli_epi16(p0123, 6);
-                            p4567 = _mm256_srli_epi16(p4567, 6);
+                                // shift down to 10 bit precision
+                                p0123 = _mm256_srli_epi16(p0123, 6);
+                                p4567 = _mm256_srli_epi16(p4567, 6);
+                            } else if constexpr (std::is_same<T, uint8_t>()) {
+                                auto p01234567 = _mm256_loadu_si256(pixeldata + packet_index);
+                                auto p01452367 = _mm256_permute4x64_epi64(p01234567, 0b11011000);
+
+                                p0123 = _mm256_unpacklo_epi8(p01452367, zero);
+                                p4567 = _mm256_unpackhi_epi8(p01452367, zero);
+
+                                p0123 = _mm256_slli_epi16(p0123, 2);
+                                p4567 = _mm256_slli_epi16(p4567, 2);
+                            } else {
+                                static_assert(!std::is_same<T, T>(), "Unsupported template type for v210 conversion");
+                            }
 
                             // unpack 16 bit values to 32 bit registers, padding with zeros
                             __m256i pixel_pairs[4];
@@ -388,7 +422,7 @@ class hdr_v210_strategy
                         // // pad the rest with black pixels to fill the v210 packet
                         int last_x_pixels = rest_x_pixels - rest_x_6pixels;
                         if (last_x_pixels > 0) {
-                            ARGBPixel pixels[6];
+                            ARGBPixel<T> pixels[6];
                             memset(pixels, 0, sizeof(pixels));
                             memcpy(pixels, src, last_x_pixels * 8);
                             pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6);
@@ -410,9 +444,14 @@ class hdr_v210_strategy
     }
 };
 
+spl::shared_ptr<format_strategy> create_sdr_v210_strategy(core::color_space color_space)
+{
+    return spl::make_shared<format_strategy, v210_strategy>(color_space, 1);
+}
+
 spl::shared_ptr<format_strategy> create_hdr_v210_strategy(core::color_space color_space)
 {
-    return spl::make_shared<format_strategy, hdr_v210_strategy>(color_space);
+    return spl::make_shared<format_strategy, v210_strategy>(color_space, 2);
 }
 
 }} // namespace caspar::decklink

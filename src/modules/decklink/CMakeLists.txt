@@ -4,7 +4,7 @@ project (decklink)
 set(SOURCES
 		consumer/decklink_consumer.cpp
 		consumer/decklink_consumer.h
-		consumer/hdr_v210_strategy.cpp
+		consumer/v210_strategies.cpp
 		consumer/sdr_bgra_strategy.cpp
 		consumer/format_strategy.h
 		consumer/config.cpp

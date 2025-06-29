@@ -658,6 +658,11 @@ shared_ptr<T> make_shared(P0&& p0)
 {
     return shared_ptr<T>(std::make_shared<U>(std::forward<P0>(p0)));
 }
+template <typename T, typename U, typename P0, typename P1>
+shared_ptr<T> make_shared(P0&& p0, P1&& p1)
+{
+    return shared_ptr<T>(std::make_shared<U>(std::forward<P0>(p0), std::forward<P1>(p1)));
+}
 
 template <typename T, typename P0>
 shared_ptr<T> make_shared(P0&& p0)
