@@ -28,6 +28,9 @@
 #include "../frame/draw_frame.h"
 #include "../video_format.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <common/future.h>
 #include <optional>
 
 namespace caspar { namespace core {
@@ -40,10 +43,10 @@ struct layer::impl
     spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
     spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
 
-    bool auto_play_ = false;
-    bool paused_    = false;
-    std::optional<uint32_t> foreground_length_override_;
-    std::optional<uint32_t> background_length_override_;
+    bool                    auto_play_ = false;
+    bool                    paused_    = false;
+    std::optional<uint32_t> foreground_auto_length_override_;
+    std::optional<uint32_t> background_auto_length_override_;
 
   public:
     impl(const core::video_format_desc format_desc)
@@ -59,7 +62,7 @@ struct layer::impl
     {
         background_ = std::move(producer);
         auto_play_  = auto_play;
-        background_length_override_.reset(); // Clear any previous length override
+        background_auto_length_override_.reset(); // Clear any previous auto_length override
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
@@ -68,11 +71,14 @@ struct layer::impl
         }
     }
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview_producer, bool auto_play, std::optional<uint32_t> length)
+    void load(spl::shared_ptr<frame_producer> producer,
+              bool                            preview_producer,
+              bool                            auto_play,
+              std::optional<uint32_t>         auto_length)
     {
-        background_ = std::move(producer);
-        auto_play_  = auto_play;
-        background_length_override_ = length;
+        background_                      = std::move(producer);
+        auto_play_                       = auto_play;
+        background_auto_length_override_ = auto_length;
 
         if (auto_play_ && foreground_ == frame_producer::empty()) {
             play();
@@ -106,10 +112,10 @@ struct layer::impl
                 }
             }
 
-            foreground_ = std::move(background_);
-            background_ = frame_producer::empty();
-            foreground_length_override_ = background_length_override_;
-            background_length_override_.reset();
+            foreground_                      = std::move(background_);
+            background_                      = frame_producer::empty();
+            foreground_auto_length_override_ = background_auto_length_override_;
+            background_auto_length_override_.reset();
 
             auto_play_ = false;
         }
@@ -121,8 +127,8 @@ struct layer::impl
     {
         foreground_ = frame_producer::empty();
         auto_play_  = false;
-        foreground_length_override_.reset();
-        background_length_override_.reset();
+        foreground_auto_length_override_.reset();
+        background_auto_length_override_.reset();
     }
 
     draw_frame receive(const video_field field, int nb_samples)
@@ -137,8 +143,9 @@ struct layer::impl
                 auto auto_play_delta = background_->auto_play_delta();
                 if (auto_play_delta) {
                     auto time     = static_cast<std::int64_t>(foreground_->frame_number());
-                    auto duration = foreground_length_override_ ? static_cast<std::int64_t>(*foreground_length_override_) 
-                                                             : static_cast<std::int64_t>(foreground_->nb_frames());
+                    auto duration = foreground_auto_length_override_
+                                        ? static_cast<std::int64_t>(*foreground_auto_length_override_)
+                                        : static_cast<std::int64_t>(foreground_->nb_frames());
                     frames_left   = duration - time - *auto_play_delta;
                     if (frames_left < 1 && field != video_field::b) {
                         play();
@@ -182,6 +189,66 @@ struct layer::impl
             return draw_frame{};
         }
     }
+
+    std::future<std::wstring> call(const std::vector<std::wstring>& params)
+    {
+        if (params.empty()) {
+            return make_ready_future(std::wstring(L""));
+        }
+
+        std::wstring cmd = boost::to_upper_copy(params[0]);
+
+        // Handle layer-specific commands
+        if (cmd == L"FRAMES_LEFT") {
+            if (params.size() > 1) {
+                std::wstring value = boost::to_upper_copy(params[1]);
+                if (value == L"CLEAR" || value == L"RESET") {
+                    foreground_auto_length_override_.reset();
+                    auto_play_ = false; // Disable AUTO entirely
+                    return make_ready_future(std::wstring(L"FRAMES_LEFT CLEARED AND AUTO PLAY DISABLED"));
+                } else {
+                    // Set new countdown
+                    try {
+                        uint32_t frames_left_value       = boost::lexical_cast<uint32_t>(params[1]);
+                        uint32_t current_frame           = foreground_->frame_number();
+                        foreground_auto_length_override_ = current_frame + frames_left_value;
+
+                        // Smart AUTO enabling: if there's a background but AUTO isn't set, enable it
+                        if (!auto_play_ && background_ != frame_producer::empty()) {
+                            auto_play_ = true;
+                            return make_ready_future(std::wstring(L"FRAMES_LEFT SET TO " +
+                                                                  boost::lexical_cast<std::wstring>(frames_left_value) +
+                                                                  L" AND AUTO PLAY ENABLED"));
+                        } else {
+                            return make_ready_future(std::wstring(
+                                L"FRAMES_LEFT SET TO " + boost::lexical_cast<std::wstring>(frames_left_value)));
+                        }
+                    } catch (const boost::bad_lexical_cast&) {
+                        return make_ready_future(std::wstring(L"ERROR: Invalid frames value"));
+                    }
+                }
+            } else {
+                // Query current frames left
+                if (auto_play_ && foreground_auto_length_override_) {
+                    uint32_t current_frame = foreground_->frame_number();
+                    int32_t  frames_remaining =
+                        static_cast<int32_t>(*foreground_auto_length_override_) - static_cast<int32_t>(current_frame);
+
+                    if (background_->auto_play_delta()) {
+                        frames_remaining -= static_cast<int32_t>(*background_->auto_play_delta());
+                    }
+
+                    return make_ready_future(std::wstring(
+                        L"FRAMES_LEFT " + boost::lexical_cast<std::wstring>(std::max(0, frames_remaining))));
+                } else {
+                    return make_ready_future(std::wstring(L"AUTO PLAY NOT ACTIVE"));
+                }
+            }
+        }
+
+        // Forward all other commands to the foreground producer
+        return foreground_->call(params);
+    }
 };
 
 layer::layer(const core::video_format_desc format_desc)
@@ -202,9 +269,12 @@ void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, b
 {
     return impl_->load(std::move(frame_producer), preview, auto_play);
 }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play, std::optional<uint32_t> length)
+void layer::load(spl::shared_ptr<frame_producer> frame_producer,
+                 bool                            preview,
+                 bool                            auto_play,
+                 std::optional<uint32_t>         auto_length)
 {
-    return impl_->load(std::move(frame_producer), preview, auto_play, length);
+    return impl_->load(std::move(frame_producer), preview, auto_play, auto_length);
 }
 void       layer::play() { impl_->play(); }
 void       layer::preview() { impl_->preview(false); }
@@ -219,5 +289,6 @@ draw_frame layer::receive_background(const video_field field, int nb_samples)
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
 bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }
+std::future<std::wstring>       layer::call(const std::vector<std::wstring>& params) { return impl_->call(params); }
 core::monitor::state            layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

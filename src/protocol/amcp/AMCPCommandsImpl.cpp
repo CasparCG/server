@@ -308,18 +308,15 @@ std::wstring loadbg_command(command_context& ctx)
             transition_producer = create_transition_producer(new_producer, transitionInfo);
         }
 
-        // Check for LENGTH parameter for infinite time producers
-        std::optional<uint32_t> length_param;
-        if (contains_param(L"LENGTH", ctx.parameters)) {
-            length_param = get_param(L"LENGTH", ctx.parameters, static_cast<uint32_t>(0));
+        std::optional<uint32_t> auto_length_param;
+        if (contains_param(L"AUTO_LENGTH", ctx.parameters)) {
+            auto_length_param = get_param(L"AUTO_LENGTH", ctx.parameters, static_cast<uint32_t>(0));
         }
-        
-        // TODO - we should pass the format into load(), so that we can catch it having changed since the producer was
-        // initialised
-        if (length_param) {
-            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play, length_param);
+
+        if (auto_length_param) {
+            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play, auto_length_param);
         } else {
-            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play); // TODO: LOOP
+            ctx.channel.stage->load(ctx.layer_index(), transition_producer, false, auto_play);
         }
     } catch (file_not_found&) {
         if (contains_param(L"CLEAR_ON_404", ctx.parameters)) {
@@ -347,14 +344,13 @@ std::wstring load_command(command_context& ctx)
                 get_producer_dependencies(ctx.channel.raw_channel, ctx), ctx.parameters);
             auto transition_producer = create_transition_producer(new_producer, transition_info{});
 
-            // Check for LENGTH parameter for infinite time producers
-            std::optional<uint32_t> length_param;
-            if (contains_param(L"LENGTH", ctx.parameters)) {
-                length_param = get_param(L"LENGTH", ctx.parameters, static_cast<uint32_t>(0));
+            std::optional<uint32_t> auto_length_param;
+            if (contains_param(L"AUTO_LENGTH", ctx.parameters)) {
+                auto_length_param = get_param(L"AUTO_LENGTH", ctx.parameters, static_cast<uint32_t>(0));
             }
-            
-            if (length_param) {
-                ctx.channel.stage->load(ctx.layer_index(), transition_producer, true, false, length_param);
+
+            if (auto_length_param) {
+                ctx.channel.stage->load(ctx.layer_index(), transition_producer, true, false, auto_length_param);
             } else {
                 ctx.channel.stage->load(ctx.layer_index(), transition_producer, true);
             }

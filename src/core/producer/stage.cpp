@@ -286,9 +286,13 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
     }
 
-    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, std::optional<uint32_t> length)
+    std::future<void> load(int                                    index,
+                           const spl::shared_ptr<frame_producer>& producer,
+                           bool                                   preview,
+                           bool                                   auto_play,
+                           std::optional<uint32_t>                auto_length)
     {
-        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play, length); });
+        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play, auto_length); });
     }
 
     std::future<void> preview(int index)
@@ -404,7 +408,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
     {
-        return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
+        return flatten(executor_.begin_invoke([=] { return get_layer(index).call(params).share(); }));
     }
     std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)
     {
@@ -462,9 +466,13 @@ std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& 
 {
     return impl_->load(index, producer, preview, auto_play);
 }
-std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, std::optional<uint32_t> length)
+std::future<void> stage::load(int                                    index,
+                              const spl::shared_ptr<frame_producer>& producer,
+                              bool                                   preview,
+                              bool                                   auto_play,
+                              std::optional<uint32_t>                auto_length)
 {
-    return impl_->load(index, producer, preview, auto_play, length);
+    return impl_->load(index, producer, preview, auto_play, auto_length);
 }
 std::future<void> stage::preview(int index) { return impl_->preview(index); }
 std::future<void> stage::pause(int index) { return impl_->pause(index); }
@@ -554,12 +562,16 @@ std::future<frame_transform> stage_delayed::get_current_transform(int index)
 std::future<void>
 stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
 {
-    return executor_.begin_invoke([=] { return stage_->load(index, producer, preview, auto_play); });
+    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
 }
-std::future<void>
-stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, std::optional<uint32_t> length)
+std::future<void> stage_delayed::load(int                                    index,
+                                      const spl::shared_ptr<frame_producer>& producer,
+                                      bool                                   preview,
+                                      bool                                   auto_play,
+                                      std::optional<uint32_t>                auto_length)
 {
-    return executor_.begin_invoke([=] { return stage_->load(index, producer, preview, auto_play, length); });
+    return executor_.begin_invoke(
+        [=]() { return stage_->load(index, producer, preview, auto_play, auto_length).get(); });
 }
 std::future<void> stage_delayed::preview(int index)
 {
