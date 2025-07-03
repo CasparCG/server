@@ -39,6 +39,13 @@ find_package(OpenAL REQUIRED)
 find_package(SFML 2 COMPONENTS graphics window REQUIRED)
 find_package(X11 REQUIRED)
 
+# nlohmann/json
+FetchContent_Declare(nlohmann_json
+	URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # support for Ubuntu 22.04
 if (NOT TARGET OpenAL::OpenAL)
     add_library(OpenAL::OpenAL INTERFACE IMPORTED)
