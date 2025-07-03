@@ -108,7 +108,7 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
 
 /// queue for A53 CC side data, needed to avoid EIA-608 and CEA-708 side data getting out of sync or split up in ffmpeg
 /// filters
-class A53CCQueue final
+class SubstitutedA53CCQueue final
 {
   public:
     void insert_and_replace_with_key(AVFrame* frame)
@@ -119,7 +119,7 @@ class A53CCQueue final
             auto pos = queue_.add_frame(
                 std::vector{core::const_frame_side_data(core::frame_side_data_type::a53_cc, std::move(buf))});
             key k(pos);
-            CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::insert_and_replace_with_key: key: "
+            CASPAR_LOG(trace) << "ffmpeg producer: SubstitutedA53CCQueue::insert_and_replace_with_key: key: "
                               << boost::log::dump(k.data, sizeof(k.data))
                               << "  input: " << boost::log::dump(side_data->data, side_data->size, 128);
             av_frame_remove_side_data(frame, AV_FRAME_DATA_A53_CC);
@@ -130,7 +130,7 @@ class A53CCQueue final
     void extract_by_key(AVFrame* frame)
     {
         if (auto* side_data = av_frame_get_side_data(frame, AV_FRAME_DATA_A53_CC)) {
-            CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::extract_by_key: input: "
+            CASPAR_LOG(trace) << "ffmpeg producer: SubstitutedA53CCQueue::extract_by_key: input: "
                               << boost::log::dump(side_data->data, side_data->size, 128);
 
             auto valid_position_range = queue_.valid_position_range();
@@ -172,8 +172,8 @@ class A53CCQueue final
                     }
                 }
                 if (!corrupted_.exchange(true, std::memory_order_relaxed)) {
-                    CASPAR_LOG(error)
-                        << "ffmpeg producer: A53CCQueue: closed captions corrupted by ffmpeg, removing them.";
+                    CASPAR_LOG(error) << "ffmpeg producer: SubstitutedA53CCQueue: closed captions corrupted by ffmpeg, "
+                                         "removing them.";
                     break;
                 }
             }
@@ -181,7 +181,7 @@ class A53CCQueue final
             if (!side_data_from_queue.empty() && !corrupted_.load(std::memory_order_relaxed)) {
                 side_data = FFMEM(av_frame_new_side_data(frame, AV_FRAME_DATA_A53_CC, side_data_from_queue.size()));
                 std::memcpy(side_data->data, side_data_from_queue.data(), side_data_from_queue.size());
-                CASPAR_LOG(trace) << "ffmpeg producer: A53CCQueue::extract_by_key: output: "
+                CASPAR_LOG(trace) << "ffmpeg producer: SubstitutedA53CCQueue::extract_by_key: output: "
                                   << boost::log::dump(side_data->data, side_data->size, 128);
             }
         }
@@ -963,7 +963,7 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
-    std::unique_ptr<A53CCQueue> a53_cc_queue_;
+    std::unique_ptr<SubstitutedA53CCQueue> substituted_a53_cc_queue_;
 
     /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
     /// which may be null to indicate that the stream is used but its output is merged into a different stream
@@ -1212,7 +1212,7 @@ struct AVProducer::Impl
 
             if (video_filter_.frame) {
                 frame.video = std::move(video_filter_.frame);
-                a53_cc_queue_->extract_by_key(frame.video.get());
+                substituted_a53_cc_queue_->extract_by_key(frame.video.get());
                 const auto tb    = av_buffersink_get_time_base(video_filter_.sink);
                 const auto fr    = av_buffersink_get_frame_rate(video_filter_.sink);
                 frame.start_time = start_time;
@@ -1474,7 +1474,7 @@ struct AVProducer::Impl
                 continue;
             }
 
-            a53_cc_queue_->insert_and_replace_with_key(frame.get());
+            substituted_a53_cc_queue_->insert_and_replace_with_key(frame.get());
 
             for (auto& source : p.second) {
                 if (!source)
@@ -1521,9 +1521,9 @@ struct AVProducer::Impl
 
     void reset(int64_t start_time)
     {
-        a53_cc_queue_ = std::make_unique<A53CCQueue>();
-        video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
+        substituted_a53_cc_queue_ = std::make_unique<SubstitutedA53CCQueue>();
+        video_filter_             = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_             = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
