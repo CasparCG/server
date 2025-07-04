@@ -23,7 +23,6 @@
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
-#include "core/frame/frame_side_data.h"
 
 #include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
@@ -36,6 +35,7 @@
 
 #include <core/consumer/channel_info.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_side_data.h>
 #include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
@@ -102,6 +102,10 @@ struct Stream
 
     int64_t pts = 0;
 
+    core::a53_cc_queue             a53_cc_queue_;
+    core::frame_side_data_in_queue last_frame_side_data_in_queue_;
+    bool                           last_field_is_second_;
+
     Stream(AVFormatContext*                    oc,
            std::string                         suffix,
            AVCodecID                           codec_id,
@@ -109,6 +113,8 @@ struct Stream
            bool                                realtime,
            common::bit_depth                   depth,
            std::map<std::string, std::string>& options)
+        : a53_cc_queue_(format_desc.framerate, format_desc.field_count != 1)
+        , last_field_is_second_(a53_cc_queue_.interlaced())
     {
         std::map<std::string, std::string> stream_options;
 
@@ -403,21 +409,31 @@ struct Stream
                     frame = std::move(frame2);
                 }
 
-                auto in_side_data_opt = in_frame.side_data().get();
-
-                if (in_side_data_opt) {
-                    for (auto& in_side_data : *in_side_data_opt) {
-                        switch (in_side_data.type()) {
-                            case core::frame_side_data_type::a53_cc:
-                                CASPAR_LOG(trace)
-                                    << L"ffmpeg_consumer: got A53_CC side data: "
-                                    << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
-                                auto* side_data = FFMEM(av_frame_new_side_data(
-                                    frame.get(), AV_FRAME_DATA_A53_CC, in_side_data.data().size()));
-                                std::memcpy(side_data->data, in_side_data.data().data(), in_side_data.data().size());
-                                break;
+                auto [start, end] = in_frame.side_data().position_range_since_last(last_frame_side_data_in_queue_);
+                for (auto pos = start; pos < end; pos++) {
+                    if (auto in_side_data_opt = in_frame.side_data().queue->get(pos)) {
+                        for (auto& in_side_data : *in_side_data_opt) {
+                            switch (in_side_data.type()) {
+                                case core::frame_side_data_type::a53_cc:
+                                    CASPAR_LOG(trace)
+                                        << L"ffmpeg_consumer: queued A53_CC side data: "
+                                        << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
+                                    a53_cc_queue_.lock().push_field(in_side_data.data());
+                                    break;
+                            }
                         }
                     }
+                }
+
+                auto is_second_field  = !last_field_is_second_ && a53_cc_queue_.interlaced();
+                last_field_is_second_ = is_second_field;
+
+                if (!is_second_field) {
+                    auto a53_cc = a53_cc_queue_.lock().pop_frame();
+                    CASPAR_LOG(trace) << L"ffmpeg_consumer: unqueued A53_CC side data: "
+                                      << boost::log::dump(a53_cc.data(), a53_cc.size(), 16);
+                    auto* side_data = FFMEM(av_frame_new_side_data(frame.get(), AV_FRAME_DATA_A53_CC, a53_cc.size()));
+                    std::memcpy(side_data->data, a53_cc.data(), a53_cc.size());
                 }
 
                 frame->pts = pts;

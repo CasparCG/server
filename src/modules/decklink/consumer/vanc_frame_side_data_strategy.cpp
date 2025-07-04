@@ -214,31 +214,27 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         auto _lock               = std::unique_lock(mutex_);
         auto locked_a53_cc_queue = a53_cc_queue_.lock();
 
-        if (field1_side_data.queue != field2_side_data.queue) {
-            push_fields_side_data_locked(field1_side_data.queue, field1_side_data.pos, locked_a53_cc_queue);
-            push_fields_side_data_locked(field2_side_data.queue, field2_side_data.pos, locked_a53_cc_queue);
-        } else {
+        if (field1_side_data.queue == field2_side_data.queue) {
             push_fields_side_data_locked(
-                field1_side_data.queue, std::max(field1_side_data.pos, field2_side_data.pos), locked_a53_cc_queue);
+                std::max(field1_side_data,
+                         field1_side_data,
+                         [](const core::frame_side_data_in_queue& a, const core::frame_side_data_in_queue& b) {
+                             return a.pos < b.pos;
+                         }),
+                locked_a53_cc_queue);
+        } else {
+            push_fields_side_data_locked(field1_side_data, locked_a53_cc_queue);
+            push_fields_side_data_locked(field2_side_data, locked_a53_cc_queue);
         }
     }
 
   private:
-    void push_fields_side_data_locked(const std::shared_ptr<core::frame_side_data_queue>& side_data_queue,
-                                      core::frame_side_data_queue::position               final_pos,
-                                      core::a53_cc_queue::locked&                         locked_a53_cc_queue)
+    void push_fields_side_data_locked(const core::frame_side_data_in_queue& side_data,
+                                      core::a53_cc_queue::locked&           locked_a53_cc_queue)
     {
-        if (!side_data_queue)
-            return;
-        auto last_position = final_pos - 1;
-        if (last_frame_side_data_in_queue_.queue == side_data_queue) {
-            last_position = last_frame_side_data_in_queue_.pos;
-        }
-        last_frame_side_data_in_queue_.queue = side_data_queue;
-        last_frame_side_data_in_queue_.pos   = final_pos;
-
-        for (auto pos = last_position + 1; pos <= final_pos; pos++) {
-            auto side_data_opt = side_data_queue->get(pos);
+        auto [start, end] = side_data.position_range_since_last(last_frame_side_data_in_queue_);
+        for (auto pos = start; pos < end; pos++) {
+            auto side_data_opt = side_data.queue->get(pos);
             if (!side_data_opt)
                 continue;
             for (auto& side_data_ : *side_data_opt) {

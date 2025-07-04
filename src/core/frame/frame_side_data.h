@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -185,6 +186,38 @@ struct frame_side_data_in_queue final
     std::shared_ptr<frame_side_data_queue> queue;
 
     std::optional<std::vector<const_frame_side_data>> get() const { return queue ? queue->get(pos) : std::nullopt; }
+    /// position values in `.first <= pos < .second` are included
+    std::pair<frame_side_data_queue::position, frame_side_data_queue::position>
+    position_range_since_last(frame_side_data_queue::position& last_pos, bool last_pos_is_valid) const
+    {
+        if (!queue) {
+            last_pos = pos;
+            return {pos, pos};
+        }
+        auto [start, _] = queue->valid_position_range();
+        auto retval     = std::pair(start, pos + 1);
+        if (last_pos_is_valid) {
+            // include everything since right after `last_pos`
+            retval.first = std::max(retval.first, last_pos + 1);
+        }
+        last_pos = pos;
+        return retval;
+    }
+    /// position values in `.first <= pos < .second` are included
+    std::pair<frame_side_data_queue::position, frame_side_data_queue::position>
+    position_range_since_last(std::shared_ptr<frame_side_data_queue>& last_queue,
+                              frame_side_data_queue::position&        last_pos) const
+    {
+        bool last_pos_is_valid = last_queue == queue;
+        last_queue             = queue;
+        return position_range_since_last(last_pos, last_pos_is_valid);
+    }
+    /// position values in `.first <= pos < .second` are included
+    std::pair<frame_side_data_queue::position, frame_side_data_queue::position>
+    position_range_since_last(frame_side_data_in_queue& last) const
+    {
+        return position_range_since_last(last.queue, last.pos);
+    }
 };
 
 } // namespace caspar::core

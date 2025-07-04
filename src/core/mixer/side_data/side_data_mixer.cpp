@@ -105,20 +105,17 @@ struct side_data_mixer::impl final
             return {nullptr, std::nullopt};
 
         auto [iter, inserted] = last_queue_pos_.emplace(side_data_in_queue.queue, side_data_in_queue.pos);
-        auto [start, _]       = side_data_in_queue.queue->valid_position_range();
+        auto [start, end]     = side_data_in_queue.position_range_since_last(iter->second, !inserted);
 
         if (inserted) {
             CASPAR_LOG(trace) << L"side_data_mixer: new queue " << (void*)side_data_in_queue.queue.get();
-        } else {
-            start        = std::max(start, iter->second + 1);
-            iter->second = side_data_in_queue.pos;
         }
 
-        CASPAR_LOG(trace) << L"side_data_mixer: processing from " << start << L" to " << side_data_in_queue.pos;
+        CASPAR_LOG(trace) << L"side_data_mixer: processing from " << start << L" to " << end - 1;
 
         std::optional<mutable_frame_side_data> a53_cc_side_data;
 
-        for (auto pos = start; pos <= side_data_in_queue.pos; pos++) {
+        for (auto pos = start; pos < end; pos++) {
             if (auto side_data_for_frame = side_data_in_queue.queue->get(pos)) {
                 if (!side_data_for_frame->empty()) {
                     CASPAR_LOG(trace) << L"side_data_mixer: side data for frame at " << pos;
