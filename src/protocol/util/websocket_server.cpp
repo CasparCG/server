@@ -28,6 +28,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/beast/websocket/option.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -173,6 +174,14 @@ class websocket_amcp_session : public spl::enable_shared_from_this<websocket_amc
         auto client_connection = spl::make_shared<connection_holder>(shared_from_this());
         strategy_              = strategy_factory->create(client_connection);
 
+        // Enable permessage-deflate compression (RFC 7692) so that
+        // WebSocket clients can negotiate compressed messages during the
+        // opening handshake. This must be set before calling async_accept().
+        websocket::permessage_deflate pmd;
+        pmd.server_enable = true; // Allow the server to send compressed messages
+        pmd.client_enable = true; // Allow the server to accept compressed messages
+        ws_.set_option(pmd);
+
         // Accept the websocket handshake
         ws_.async_accept([self = shared_from_this()](beast::error_code ec) {
             if (!ec) {
@@ -295,6 +304,12 @@ class websocket_monitor_session : public spl::enable_shared_from_this<websocket_
 
     void start()
     {
+        // Enable permessage-deflate compression for monitor sessions as well
+        websocket::permessage_deflate pmd;
+        pmd.server_enable = true;
+        pmd.client_enable = true;
+        ws_.set_option(pmd);
+
         // Accept the websocket handshake
         ws_.async_accept([self = shared_from_this()](beast::error_code ec) {
             if (!ec) {
