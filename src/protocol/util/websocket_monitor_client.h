@@ -51,8 +51,6 @@ struct connection_config
     std::chrono::seconds heartbeat_interval{10}; // Send heartbeat every 10 seconds
 };
 
-class websocket_monitor_session; // forward declaration
-
 class websocket_monitor_client
 {
     websocket_monitor_client(const websocket_monitor_client&)            = delete;
@@ -90,11 +88,11 @@ class websocket_monitor_client
     // Force send full state to all connections (useful for debugging)
     void force_full_state();
 
+    // Force send full state to a specific connection
+    void request_full_state(const std::string& connection_id);
+
     // Force disconnect all connections (for clean shutdown)
     void force_disconnect_all();
-
-    void add_session(const std::string& connection_id, std::weak_ptr<websocket_monitor_session> session);
-    void remove_session(const std::string& connection_id);
 
   private:
     struct impl;

@@ -49,10 +49,12 @@ namespace caspar { namespace protocol { namespace websocket {
 // WebSocket monitor listener
 class websocket_monitor_listener : public std::enable_shared_from_this<websocket_monitor_listener>
 {
-    net::io_context&                          ioc_;
-    tcp::acceptor                             acceptor_;
-    std::shared_ptr<websocket_monitor_client> monitor_client_;
-    std::atomic<bool>                         running_{false};
+    net::io_context&                                               ioc_;
+    tcp::acceptor                                                  acceptor_;
+    std::shared_ptr<websocket_monitor_client>                      monitor_client_;
+    std::atomic<bool>                                              running_{false};
+    std::unordered_set<std::shared_ptr<websocket_monitor_session>> active_sessions_;
+    std::mutex                                                     sessions_mutex_;
 
   public:
     websocket_monitor_listener(net::io_context&                          ioc,
@@ -105,6 +107,15 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
     {
         running_ = false;
         acceptor_.close();
+
+        // Close all active sessions
+        std::lock_guard<std::mutex> lock(sessions_mutex_);
+        for (auto& session : active_sessions_) {
+            if (session) {
+                session->close();
+            }
+        }
+        active_sessions_.clear();
     }
 
   private:
@@ -126,7 +137,20 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
             }
         } else {
             // Create the session and run it
-            std::make_shared<websocket_monitor_session>(ioc_, std::move(socket), monitor_client_)->run();
+            auto session = std::make_shared<websocket_monitor_session>(
+                ioc_, std::move(socket), monitor_client_, [this](std::shared_ptr<websocket_monitor_session> session) {
+                    // Remove session from tracking when it's destroyed
+                    std::lock_guard<std::mutex> lock(sessions_mutex_);
+                    active_sessions_.erase(session);
+                });
+
+            // Track the session
+            {
+                std::lock_guard<std::mutex> lock(sessions_mutex_);
+                active_sessions_.insert(session);
+            }
+
+            session->run();
         }
 
         // Accept another connection

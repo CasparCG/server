@@ -45,32 +45,49 @@ namespace caspar { namespace protocol { namespace websocket {
 
 class websocket_monitor_session : public std::enable_shared_from_this<websocket_monitor_session>
 {
-    ws::stream<beast::tcp_stream>                ws_;
-    beast::flat_buffer                           buffer_;
-    std::shared_ptr<websocket_monitor_client>    monitor_client_;
-    std::string                                  connection_id_;
-    std::shared_ptr<void>                        subscription_token_;
-    std::atomic<bool>                            is_open_{false};
-    std::unique_ptr<boost::asio::deadline_timer> force_close_timer_;
-    boost::asio::io_context&                     io_context_;
+    ws::stream<beast::tcp_stream>                                   ws_;
+    beast::flat_buffer                                              buffer_;
+    std::shared_ptr<websocket_monitor_client>                       monitor_client_;
+    std::string                                                     connection_id_;
+    std::shared_ptr<void>                                           subscription_token_;
+    std::atomic<bool>                                               is_open_{false};
+    std::unique_ptr<boost::asio::deadline_timer>                    force_close_timer_;
+    boost::asio::io_context&                                        io_context_;
+    std::function<void(std::shared_ptr<websocket_monitor_session>)> session_removal_callback_;
 
   public:
-    explicit websocket_monitor_session(boost::asio::io_context&                  io_context,
-                                       tcp::socket&&                             socket,
-                                       std::shared_ptr<websocket_monitor_client> monitor_client)
+    explicit websocket_monitor_session(
+        boost::asio::io_context&                                        io_context,
+        tcp::socket&&                                                   socket,
+        std::shared_ptr<websocket_monitor_client>                       monitor_client,
+        std::function<void(std::shared_ptr<websocket_monitor_session>)> session_removal_callback = nullptr)
         : ws_(std::move(socket))
         , monitor_client_(std::move(monitor_client))
         , connection_id_(generate_connection_id())
         , io_context_(io_context)
+        , session_removal_callback_(std::move(session_removal_callback))
     {
     }
 
     ~websocket_monitor_session()
     {
-        if (is_open_) {
+        // Ensure we're marked as closed
+        is_open_ = false;
+
+        // Cancel any pending timers
+        if (force_close_timer_) {
+            force_close_timer_->cancel();
+        }
+
+        // Remove from monitor client if still connected
+        if (monitor_client_) {
             monitor_client_->remove_connection(connection_id_);
         }
-        monitor_client_->remove_session(connection_id_);
+
+        // Notify listener that this session is being destroyed
+        if (session_removal_callback_) {
+            session_removal_callback_(shared_from_this());
+        }
     }
 
     void run()
@@ -89,6 +106,10 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
     void send(const std::string& message)
     {
+        if (message.empty()) {
+            return; // Don't send empty messages
+        }
+
         // Post the work to the correct executor
         net::post(ws_.get_executor(), [self = shared_from_this(), message]() {
             if (self->is_open_) {
@@ -104,8 +125,15 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     {
         if (is_open_) {
             is_open_ = false;
-            monitor_client_->remove_connection(connection_id_);
-            monitor_client_->remove_session(connection_id_);
+
+            // Cancel force close timer if it exists
+            if (force_close_timer_) {
+                force_close_timer_->cancel();
+            }
+
+            if (monitor_client_) {
+                monitor_client_->remove_connection(connection_id_);
+            }
 
             // Graceful close
             ws_.async_close(ws::close_code::normal, [self = shared_from_this()](beast::error_code ec) {
@@ -117,8 +145,9 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             });
 
             // Start force close timer (1 second)
-            if (!force_close_timer_)
+            if (!force_close_timer_) {
                 force_close_timer_ = std::make_unique<boost::asio::deadline_timer>(io_context_);
+            }
             force_close_timer_->expires_from_now(boost::posix_time::seconds(1));
             force_close_timer_->async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
                 if (!ec && self->ws_.is_open()) {
@@ -154,7 +183,6 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                 self->send(message);
             }
         });
-        monitor_client_->add_session(connection_id_, weak_self);
 
         // Get subscription token
         subscription_token_ = monitor_client_->get_subscription_token(connection_id_);
@@ -179,19 +207,33 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             // Connection closed normally
             CASPAR_LOG(info) << L"WebSocket monitor session closed: " << u16(connection_id_);
             is_open_ = false;
-            monitor_client_->remove_connection(connection_id_);
+            if (monitor_client_) {
+                monitor_client_->remove_connection(connection_id_);
+            }
             return;
         }
 
         if (ec) {
             CASPAR_LOG(error) << L"WebSocket monitor session read error: " << u16(ec.message());
             is_open_ = false;
-            monitor_client_->remove_connection(connection_id_);
+            if (monitor_client_) {
+                monitor_client_->remove_connection(connection_id_);
+            }
             return;
         }
 
-        // Monitor connections are read-only, so we just ignore any incoming messages
-        // and continue reading
+        // Handle incoming messages
+        try {
+            std::string message = beast::buffers_to_string(buffer_.data());
+            if (!message.empty()) {
+                CASPAR_LOG(debug) << L"WebSocket monitor: Received message: " << u16(message);
+                handle_message(message);
+            }
+        } catch (const std::exception& e) {
+            CASPAR_LOG(error) << L"WebSocket monitor session message handling error: " << u16(e.what());
+        }
+
+        // Clear buffer and continue reading
         buffer_.consume(buffer_.size());
         do_read();
     }
@@ -203,11 +245,61 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
         if (ec) {
             CASPAR_LOG(error) << L"WebSocket monitor session write error: " << u16(ec.message());
             is_open_ = false;
-            monitor_client_->remove_connection(connection_id_);
+            if (monitor_client_) {
+                monitor_client_->remove_connection(connection_id_);
+            }
             return;
         }
 
         // Continue processing (write completed successfully)
+    }
+
+    // Handle incoming JSON messages from the client
+    void handle_message(const std::string& message)
+    {
+        try {
+            // Simple but robust JSON parsing - look for command field
+            size_t command_pos = message.find("\"command\"");
+            if (command_pos != std::string::npos) {
+                // Find the value after "command":
+                size_t colon_pos = message.find(':', command_pos);
+                if (colon_pos != std::string::npos) {
+                    // Skip whitespace and quotes
+                    size_t value_start = colon_pos + 1;
+                    while (
+                        value_start < message.length() &&
+                        (message[value_start] == ' ' || message[value_start] == '\t' || message[value_start] == '\"')) {
+                        value_start++;
+                    }
+
+                    if (value_start < message.length()) {
+                        // Check if the value starts with "request_full_state" (case insensitive)
+                        std::string value = message.substr(value_start, 19);
+                        if (value.length() == 19) {
+                            // Convert to lowercase for case-insensitive comparison
+                            std::string lower_value = value;
+                            std::transform(lower_value.begin(), lower_value.end(), lower_value.begin(), ::tolower);
+                            if (lower_value == "request_full_state") {
+                                // Request full state for this connection
+                                if (monitor_client_) {
+                                    monitor_client_->request_full_state(connection_id_);
+                                    CASPAR_LOG(info) << L"WebSocket monitor: Full state requested by connection "
+                                                     << u16(connection_id_);
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Log unknown messages at debug level to reduce noise
+            if (!message.empty() && message != "{}" && message != "null") {
+                CASPAR_LOG(debug) << L"WebSocket monitor: Received unknown message: " << u16(message);
+            }
+        } catch (const std::exception& e) {
+            CASPAR_LOG(error) << L"WebSocket monitor: Error handling message: " << u16(e.what());
+        }
     }
 };
 

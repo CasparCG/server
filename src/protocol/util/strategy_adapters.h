@@ -79,7 +79,7 @@ class delimiter_based_chunking_strategy : public protocol_strategy<CharT>
             strategy_->parse(input_.substr(0, delim_pos));
 
             input_    = std::move(input_.substr(delim_pos + delimiter_.size()));
-            delim_pos = input_.find(delimiter_);
+            delim_pos = input_.find_first_of(delimiter_);
         }
     }
 };
