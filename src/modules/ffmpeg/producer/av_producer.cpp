@@ -287,6 +287,10 @@ class Decoder final
   public:
     std::shared_ptr<AVCodecContext> ctx;
 
+    static inline constexpr int           eia608_video_width   = 16;
+    static inline constexpr int           eia608_video_height  = 16;
+    static inline constexpr AVPixelFormat eia608_video_pix_fmt = AV_PIX_FMT_RGB24;
+
     Decoder() = default;
 
     explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder, bool remove_a53_cc)
@@ -321,7 +325,19 @@ class Decoder final
                             continue; // we don't need to do anything for a flush
                         }
 
-                        auto  av_frame = alloc_frame();
+                        auto av_frame    = alloc_frame();
+                        av_frame->width  = eia608_video_width;
+                        av_frame->height = eia608_video_height;
+                        av_frame->format = eia608_video_pix_fmt;
+                        FF(av_frame_get_buffer(av_frame.get(), 1));
+                        for (int y = 0; y < av_frame->height; y++) {
+                            std::uint8_t* p = av_frame->data[0] + y * av_frame->linesize[0];
+                            for (int x = 0; x < av_frame->width; x++) {
+                                *p++ = 0;
+                                *p++ = 0;
+                                *p++ = 0;
+                            }
+                        }
                         auto* side_data =
                             FFMEM(av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, packet->size));
                         std::memcpy(side_data->data, packet->data, packet->size);
@@ -796,8 +812,10 @@ struct Filter
                     // fake video input so we can add EIA-608 closed captions side data
                     AVStream* stream = input->streams[stream_index];
 
-                    auto args =
-                        (boost::format("time_base=%d/%d") % stream->time_base.num % stream->time_base.den).str();
+                    auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") %
+                                 Decoder::eia608_video_width % Decoder::eia608_video_height %
+                                 Decoder::eia608_video_pix_fmt % stream->time_base.num % stream->time_base.den)
+                                    .str();
                     auto name = (boost::format("in_%d") % stream_index).str();
 
                     AVFilterContext* source = nullptr;
