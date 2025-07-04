@@ -5,7 +5,6 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/io_context.hpp>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>

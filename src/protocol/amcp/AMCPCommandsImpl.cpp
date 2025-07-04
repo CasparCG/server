@@ -1693,7 +1693,7 @@ std::wstring osc_subscribe_command(command_context& ctx)
     }
 
     auto subscription = ctx.static_context->osc_client->get_subscription_token(
-        udp::endpoint(address_v4::from_string(u8(ctx.client->address())), port));
+        udp::endpoint(make_address_v4(u8(ctx.client->address())), port));
 
     ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
 
