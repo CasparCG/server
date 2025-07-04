@@ -71,7 +71,7 @@ struct artnet_consumer : public core::frame_consumer
 
         std::string host_ = u8(this->config.host);
         remote_endpoint =
-            boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host_), this->config.port);
+            boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
 
         compute_fixtures();
     }

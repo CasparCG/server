@@ -321,7 +321,7 @@ struct server::impl
                 const auto port    = ptree_get<unsigned short>(predefined_client.second, L"port");
 
                 boost::system::error_code ec;
-                auto                      ipaddr = address_v4::from_string(u8(address), ec);
+                auto                      ipaddr = make_address_v4(u8(address), ec);
                 if (!ec)
                     predefined_osc_subscriptions_.push_back(
                         osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
@@ -337,7 +337,7 @@ struct server::impl
 
                     return std::make_pair(std::wstring(L"osc_subscribe"),
                                           osc_client_->get_subscription_token(
-                                              udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
+                                              udp::endpoint(make_address_v4(ipv4_address), default_port)));
                 });
     }
 
