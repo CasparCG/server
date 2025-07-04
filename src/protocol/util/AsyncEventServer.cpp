@@ -49,7 +49,7 @@ class connection : public spl::enable_shared_from_this<connection>
     using send_queue         = tbb::concurrent_queue<std::string>;
 
     const spl::shared_ptr<tcp::socket>       socket_;
-    std::shared_ptr<boost::asio::io_service> service_;
+    std::shared_ptr<boost::asio::io_context> io_context_;
     const std::wstring                       listen_port_;
     const spl::shared_ptr<connection_set>    connection_set_;
     protocol_strategy_factory<char>::ptr     protocol_factory_;
@@ -114,13 +114,13 @@ class connection : public spl::enable_shared_from_this<connection>
     };
 
   public:
-    static spl::shared_ptr<connection> create(std::shared_ptr<boost::asio::io_service>    service,
+    static spl::shared_ptr<connection> create(std::shared_ptr<boost::asio::io_context>    io_context,
                                               spl::shared_ptr<tcp::socket>                socket,
                                               const protocol_strategy_factory<char>::ptr& protocol,
                                               spl::shared_ptr<connection_set>             connection_set)
     {
         spl::shared_ptr<connection> con(
-            new connection(std::move(service), std::move(socket), std::move(protocol), std::move(connection_set)));
+            new connection(std::move(io_context), std::move(socket), std::move(protocol), std::move(connection_set)));
         con->init();
         con->read_some();
         return con;
@@ -143,13 +143,13 @@ class connection : public spl::enable_shared_from_this<connection>
     {
         send_queue_.push(std::move(data));
         auto self = shared_from_this();
-        service_->dispatch([=] { self->do_write(); });
+        boost::asio::dispatch(*io_context_, [=] { self->do_write(); });
     }
 
     void disconnect()
     {
         std::weak_ptr<connection> self = shared_from_this();
-        service_->dispatch([=] {
+        boost::asio::dispatch(*io_context_, [=] {
             auto strong = self.lock();
 
             if (strong)
@@ -197,12 +197,12 @@ class connection : public spl::enable_shared_from_this<connection>
         socket_->close(ec);
     }
 
-    connection(const std::shared_ptr<boost::asio::io_service>& service,
+    connection(const std::shared_ptr<boost::asio::io_context>& io_context,
                const spl::shared_ptr<tcp::socket>&             socket,
                const protocol_strategy_factory<char>::ptr&     protocol_factory,
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
-        , service_(service)
+        , io_context_(io_context)
         , listen_port_(socket_->is_open() ? std::to_wstring(socket_->local_endpoint().port()) : L"no-port")
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
@@ -272,17 +272,17 @@ class connection : public spl::enable_shared_from_this<connection>
 
 struct AsyncEventServer::implementation : public spl::enable_shared_from_this<implementation>
 {
-    std::shared_ptr<boost::asio::io_service> service_;
+    std::shared_ptr<boost::asio::io_context> io_context_;
     tcp::acceptor                            acceptor_;
     protocol_strategy_factory<char>::ptr     protocol_factory_;
     spl::shared_ptr<connection_set>          connection_set_;
     std::vector<lifecycle_factory_t>         lifecycle_factories_;
 
-    implementation(std::shared_ptr<boost::asio::io_service>    service,
+    implementation(std::shared_ptr<boost::asio::io_context>    io_context,
                    const protocol_strategy_factory<char>::ptr& protocol,
                    unsigned short                              port)
-        : service_(std::move(service))
-        , acceptor_(*service_, tcp::endpoint(tcp::v4(), port))
+        : io_context_(std::move(io_context))
+        , acceptor_(*io_context_, tcp::endpoint(tcp::v4(), port))
         , protocol_factory_(protocol)
     {
     }
@@ -301,7 +301,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     {
         auto conns_set = connection_set_;
 
-        service_->post([conns_set] {
+        boost::asio::post(*io_context_, [conns_set] {
             auto connections = *conns_set;
             for (auto& connection : connections)
                 connection->stop();
@@ -310,7 +310,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
     void start_accept()
     {
-        spl::shared_ptr<tcp::socket> socket(new tcp::socket(*service_));
+        spl::shared_ptr<tcp::socket> socket(new tcp::socket(*io_context_));
         acceptor_.async_accept(
             *socket, std::bind(&implementation::handle_accept, shared_from_this(), socket, std::placeholders::_1));
     }
@@ -327,7 +327,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
             if (ec)
                 CASPAR_LOG(warning) << print() << L" Failed to enable TCP keep-alive on socket";
 
-            auto conn = connection::create(service_, socket, protocol_factory_, connection_set_);
+            auto conn = connection::create(io_context_, socket, protocol_factory_, connection_set_);
             connection_set_->insert(conn);
 
             for (auto& lifecycle_factory : lifecycle_factories_) {
@@ -346,14 +346,14 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
     {
         auto self = shared_from_this();
-        service_->post([=] { self->lifecycle_factories_.push_back(factory); });
+        boost::asio::post(*io_context_, [=] { self->lifecycle_factories_.push_back(factory); });
     }
 };
 
-AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_service>    service,
+AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_context>    io_context,
                                    const protocol_strategy_factory<char>::ptr& protocol,
                                    unsigned short                              port)
-    : impl_(new implementation(std::move(service), protocol, port))
+    : impl_(new implementation(std::move(io_context), protocol, port))
 {
     impl_->start_accept();
 }

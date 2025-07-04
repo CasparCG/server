@@ -64,14 +64,14 @@ struct artnet_consumer : public core::frame_consumer
 
     explicit artnet_consumer(configuration config)
         : config(std::move(config))
-        , io_service_()
-        , socket(io_service_)
+        , io_context_()
+        , socket(io_context_)
     {
         socket.open(udp::v4());
 
         std::string host_ = u8(this->config.host);
         remote_endpoint =
-            boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host_), this->config.port);
+            boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
 
         compute_fixtures();
     }
@@ -177,7 +177,7 @@ struct artnet_consumer : public core::frame_consumer
     std::thread       thread_;
     std::atomic<bool> abort_request_{false};
 
-    io_service    io_service_;
+    io_context    io_context_;
     udp::socket   socket;
     udp::endpoint remote_endpoint;
 
