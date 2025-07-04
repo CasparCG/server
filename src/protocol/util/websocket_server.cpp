@@ -31,6 +31,7 @@
 #include <boost/beast/websocket/option.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <nlohmann/json.hpp>
 
 #include <map>
 #include <mutex>
@@ -43,57 +44,57 @@ namespace http      = beast::http;
 namespace websocket = beast::websocket;
 namespace net       = boost::asio;
 using tcp           = net::ip::tcp;
+using json          = nlohmann::json;
 
 namespace caspar { namespace IO {
 
 // Convert monitor state to JSON string
 std::string monitor_state_to_json(const core::monitor::state& state)
 {
-    boost::property_tree::wptree json_tree;
+    // Use nlohmann::json for proper UTF-8 handling
+    nlohmann::json json_tree;
 
     // Add timestamp
-    json_tree.put(
-        L"timestamp",
+    json_tree["timestamp"] =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-            .count());
+            .count();
 
     // Convert monitor state to JSON structure
     // The monitor state contains various performance and status information
-    boost::property_tree::wptree channels_tree;
+    nlohmann::json channels_tree = nlohmann::json::object();
 
     for (const auto& channel_pair : state) {
         const auto& path   = channel_pair.first;
         const auto& values = channel_pair.second;
 
-        boost::property_tree::wptree channel_tree;
+        nlohmann::json channel_tree = nlohmann::json::object();
         for (size_t i = 0; i < values.size(); ++i) {
             const auto& value = values[i];
 
             // Convert boost::variant to appropriate JSON value
             if (auto int_val = boost::get<int>(&value)) {
-                channel_tree.put(u16(path + "/" + std::to_string(i)), *int_val);
+                channel_tree[path + "/" + std::to_string(i)] = *int_val;
             } else if (auto double_val = boost::get<double>(&value)) {
-                channel_tree.put(u16(path + "/" + std::to_string(i)), *double_val);
+                channel_tree[path + "/" + std::to_string(i)] = *double_val;
             } else if (auto string_val = boost::get<std::string>(&value)) {
-                channel_tree.put(u16(path + "/" + std::to_string(i)), u16(*string_val));
+                channel_tree[path + "/" + std::to_string(i)] = *string_val;
             } else if (auto wstring_val = boost::get<std::wstring>(&value)) {
-                channel_tree.put(u16(path + "/" + std::to_string(i)), *wstring_val);
+                // Proper UTF-8 conversion for wide strings
+                channel_tree[path + "/" + std::to_string(i)] = u8(*wstring_val);
             } else if (auto bool_val = boost::get<bool>(&value)) {
-                channel_tree.put(u16(path + "/" + std::to_string(i)), *bool_val);
+                channel_tree[path + "/" + std::to_string(i)] = *bool_val;
             }
         }
 
         if (!channel_tree.empty()) {
-            channels_tree.add_child(u16(path), channel_tree);
+            channels_tree[path] = channel_tree;
         }
     }
 
-    json_tree.add_child(L"data", channels_tree);
+    json_tree["data"] = channels_tree;
 
-    // Convert to JSON string
-    std::wstringstream json_stream;
-    boost::property_tree::write_json(json_stream, json_tree, false);
-    return u8(json_stream.str());
+    // Convert to JSON string with proper UTF-8 encoding
+    return json_tree.dump();
 }
 
 // WebSocket session for AMCP connections
