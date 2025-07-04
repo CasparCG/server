@@ -43,13 +43,13 @@ class websocket_server
 {
   public:
     // Constructor for AMCP + Monitor (legacy)
-    websocket_server(std::shared_ptr<boost::asio::io_service>       service,
+    websocket_server(std::shared_ptr<boost::asio::io_context>       context,
                      const protocol_strategy_factory<wchar_t>::ptr& amcp_protocol_factory,
                      uint16_t                                       amcp_port,
                      uint16_t                                       monitor_port);
 
     // Constructor for AMCP only (new)
-    websocket_server(std::shared_ptr<boost::asio::io_service>       service,
+    websocket_server(std::shared_ptr<boost::asio::io_context>       context,
                      const protocol_strategy_factory<wchar_t>::ptr& amcp_protocol_factory,
                      uint16_t                                       amcp_port);
 

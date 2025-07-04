@@ -24,7 +24,7 @@
 
 #include <atomic>
 #include <boost/asio/deadline_timer.hpp>
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
@@ -315,7 +315,7 @@ class websocket_monitor_server
     websocket_monitor_server& operator=(const websocket_monitor_server&) = delete;
 
   public:
-    websocket_monitor_server(std::shared_ptr<boost::asio::io_service>  service,
+    websocket_monitor_server(std::shared_ptr<boost::asio::io_context>  context,
                              std::shared_ptr<websocket_monitor_client> monitor_client,
                              uint16_t                                  port);
 

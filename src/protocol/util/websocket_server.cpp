@@ -362,7 +362,7 @@ class websocket_monitor_session : public spl::enable_shared_from_this<websocket_
 
 struct websocket_server::impl : public spl::enable_shared_from_this<websocket_server::impl>
 {
-    std::shared_ptr<boost::asio::io_service> service_;
+    std::shared_ptr<boost::asio::io_context> context_;
     protocol_strategy_factory<wchar_t>::ptr  amcp_protocol_factory_;
     uint16_t                                 amcp_port_;
     uint16_t                                 monitor_port_;
@@ -375,16 +375,16 @@ struct websocket_server::impl : public spl::enable_shared_from_this<websocket_se
 
     std::mutex sessions_mutex_;
 
-    impl(std::shared_ptr<boost::asio::io_service>       service,
+    impl(std::shared_ptr<boost::asio::io_context>       context,
          const protocol_strategy_factory<wchar_t>::ptr& amcp_protocol_factory,
          uint16_t                                       amcp_port,
          uint16_t                                       monitor_port)
-        : service_(service)
+        : context_(context)
         , amcp_protocol_factory_(amcp_protocol_factory)
         , amcp_port_(amcp_port)
         , monitor_port_(monitor_port)
-        , amcp_acceptor_(*service)
-        , monitor_acceptor_(*service)
+        , amcp_acceptor_(*context)
+        , monitor_acceptor_(*context)
     {
     }
 
@@ -503,18 +503,18 @@ struct websocket_server::impl : public spl::enable_shared_from_this<websocket_se
     }
 };
 
-websocket_server::websocket_server(std::shared_ptr<boost::asio::io_service>       service,
+websocket_server::websocket_server(std::shared_ptr<boost::asio::io_context>       context,
                                    const protocol_strategy_factory<wchar_t>::ptr& amcp_protocol_factory,
                                    uint16_t                                       amcp_port,
                                    uint16_t                                       monitor_port)
-    : impl_(spl::make_shared<impl>(service, amcp_protocol_factory, amcp_port, monitor_port))
+    : impl_(spl::make_shared<impl>(context, amcp_protocol_factory, amcp_port, monitor_port))
 {
 }
 
-websocket_server::websocket_server(std::shared_ptr<boost::asio::io_service>       service,
+websocket_server::websocket_server(std::shared_ptr<boost::asio::io_context>       context,
                                    const protocol_strategy_factory<wchar_t>::ptr& amcp_protocol_factory,
                                    uint16_t                                       amcp_port)
-    : impl_(spl::make_shared<impl>(service, amcp_protocol_factory, amcp_port, 0))
+    : impl_(spl::make_shared<impl>(context, amcp_protocol_factory, amcp_port, 0))
 {
 }
 

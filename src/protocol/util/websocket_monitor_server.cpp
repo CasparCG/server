@@ -160,16 +160,16 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
 
 struct websocket_monitor_server::impl
 {
-    std::shared_ptr<boost::asio::io_service>    service_;
+    std::shared_ptr<boost::asio::io_context>    context_;
     std::shared_ptr<websocket_monitor_client>   monitor_client_;
     uint16_t                                    port_;
     std::shared_ptr<websocket_monitor_listener> listener_;
     std::atomic<bool>                           running_{false};
 
-    impl(std::shared_ptr<boost::asio::io_service>  service,
+    impl(std::shared_ptr<boost::asio::io_context>  context,
          std::shared_ptr<websocket_monitor_client> monitor_client,
          uint16_t                                  port)
-        : service_(std::move(service))
+        : context_(std::move(context))
         , monitor_client_(std::move(monitor_client))
         , port_(port)
     {
@@ -185,7 +185,7 @@ struct websocket_monitor_server::impl
             auto const endpoint = tcp::endpoint{address, port_};
 
             // Create and launch a listening port
-            listener_ = std::make_shared<websocket_monitor_listener>(*service_, endpoint, monitor_client_);
+            listener_ = std::make_shared<websocket_monitor_listener>(*context_, endpoint, monitor_client_);
             listener_->run();
 
             running_ = true;
@@ -215,10 +215,10 @@ struct websocket_monitor_server::impl
     }
 };
 
-websocket_monitor_server::websocket_monitor_server(std::shared_ptr<boost::asio::io_service>  service,
+websocket_monitor_server::websocket_monitor_server(std::shared_ptr<boost::asio::io_context>  context,
                                                    std::shared_ptr<websocket_monitor_client> monitor_client,
                                                    uint16_t                                  port)
-    : impl_(spl::make_shared<impl>(std::move(service), std::move(monitor_client), port))
+    : impl_(spl::make_shared<impl>(std::move(context), std::move(monitor_client), port))
 {
 }
 

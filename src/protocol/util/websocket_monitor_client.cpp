@@ -257,7 +257,7 @@ struct connection_state
 
 struct websocket_monitor_client::impl
 {
-    std::shared_ptr<boost::asio::io_service>                           service_;
+    std::shared_ptr<boost::asio::io_context>                           context_;
     std::mutex                                                         connections_mutex_;
     std::unordered_map<std::string, std::unique_ptr<connection_state>> connections_;
 
@@ -268,9 +268,9 @@ struct websocket_monitor_client::impl
     std::unique_ptr<boost::asio::deadline_timer> timer_;
     std::atomic<bool>                            running_{true};
 
-    explicit impl(std::shared_ptr<boost::asio::io_service> service)
-        : service_(std::move(service))
-        , timer_(std::make_unique<boost::asio::deadline_timer>(*service_))
+    explicit impl(std::shared_ptr<boost::asio::io_context> context)
+        : context_(std::move(context))
+        , timer_(std::make_unique<boost::asio::deadline_timer>(*context_))
     {
         schedule_periodic_tasks();
     }
@@ -469,8 +469,8 @@ void caspar::protocol::websocket::websocket_monitor_client::impl::force_disconne
     CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected " << connection_count << L" connections";
 }
 
-websocket_monitor_client::websocket_monitor_client(std::shared_ptr<boost::asio::io_service> service)
-    : impl_(spl::make_shared<impl>(std::move(service)))
+websocket_monitor_client::websocket_monitor_client(std::shared_ptr<boost::asio::io_context> context)
+    : impl_(spl::make_shared<impl>(std::move(context)))
 {
 }
 

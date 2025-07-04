@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 
 #include <common/memory.h>
 #include <core/monitor/monitor.h>
@@ -57,7 +57,7 @@ class websocket_monitor_client
     websocket_monitor_client& operator=(const websocket_monitor_client&) = delete;
 
   public:
-    explicit websocket_monitor_client(std::shared_ptr<boost::asio::io_service> service);
+    explicit websocket_monitor_client(std::shared_ptr<boost::asio::io_context> context);
 
     websocket_monitor_client(websocket_monitor_client&&);
 
