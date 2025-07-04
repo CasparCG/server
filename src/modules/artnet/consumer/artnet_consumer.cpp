@@ -64,8 +64,8 @@ struct artnet_consumer : public core::frame_consumer
 
     explicit artnet_consumer(configuration config)
         : config(std::move(config))
-        , io_service_()
-        , socket(io_service_)
+        , io_context_()
+        , socket(io_context_)
     {
         socket.open(udp::v4());
 
@@ -177,7 +177,7 @@ struct artnet_consumer : public core::frame_consumer
     std::thread       thread_;
     std::atomic<bool> abort_request_{false};
 
-    io_service    io_service_;
+    io_context    io_context_;
     udp::socket   socket;
     udp::endpoint remote_endpoint;
 

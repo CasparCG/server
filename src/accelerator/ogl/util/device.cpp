@@ -68,13 +68,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version_;
 
-    io_context                          service_;
-    decltype(make_work_guard(service_)) work_;
+    io_context                          io_context_;
+    decltype(make_work_guard(io_context_)) work_;
     std::thread                         thread_;
 
     impl()
         : context_(new device_context())
-        , work_(make_work_guard(service_))
+        , work_(make_work_guard(io_context_))
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -113,7 +113,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
         thread_ = std::thread([&] {
             context_->bind();
             set_thread_name(L"OpenGL Device");
-            service_.run();
+            io_context_.run();
             context_->unbind();
         });
     }
@@ -143,7 +143,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
-        boost::asio::spawn(service_,
+        boost::asio::spawn(io_context_,
                            std::move(task)
 #if BOOST_VERSION >= 108000
                                ,
@@ -164,7 +164,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
-        boost::asio::dispatch(service_, std::move(task));
+        boost::asio::dispatch(io_context_, std::move(task));
         return future;
     }
 
@@ -260,7 +260,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             GL(glFlush());
 
-            deadline_timer timer(service_);
+            deadline_timer timer(io_context_);
             for (auto n = 0; true; ++n) {
                 // TODO (perf) Smarter non-polling solution?
                 timer.expires_from_now(boost::posix_time::milliseconds(2));
@@ -408,7 +408,7 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
-void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->service_, std::move(func)); }
+void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->io_context_, std::move(func)); }
 std::wstring device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }
 std::future<void>            device::gc() { return impl_->gc(); }

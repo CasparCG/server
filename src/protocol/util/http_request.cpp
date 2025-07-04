@@ -16,15 +16,15 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
     HTTPResponse res;
 
-    asio::io_service io_service;
+    asio::io_context io_context;
 
     // Get a list of endpoints corresponding to the server name.
-    tcp::resolver           resolver(io_service);
+    tcp::resolver           resolver(io_context);
     tcp::resolver::query    query(host, port, boost::asio::ip::resolver_query_base::numeric_service);
     tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
     // Try each endpoint until we successfully establish a connection.
-    tcp::socket               socket(io_service);
+    tcp::socket               socket(io_context);
     boost::system::error_code error;
     asio::connect(socket, endpoint_iterator, error);
     if (error == asio::error::connection_refused) {

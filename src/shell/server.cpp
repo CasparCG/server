@@ -65,29 +65,29 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-std::shared_ptr<boost::asio::io_service> create_running_io_service()
+std::shared_ptr<boost::asio::io_context> create_io_context_with_running_service()
 {
-    auto service = std::make_shared<boost::asio::io_service>();
-    // To keep the io_service::run() running although no pending async
+    auto io_context = std::make_shared<boost::asio::io_context>();
+    // To keep the io_context::run() running although no pending async
     // operations are posted.
-    auto work      = std::make_shared<boost::asio::io_service::work>(*service);
-    auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
-    auto thread    = std::make_shared<std::thread>([service, weak_work] {
+    auto work      = std::make_shared<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(boost::asio::make_work_guard(*io_context));
+    auto weak_work = std::weak_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(work);
+    auto thread    = std::make_shared<std::thread>([io_context, weak_work] {
         while (auto strong = weak_work.lock()) {
             try {
-                service->run();
+                io_context->run();
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
         }
 
-        CASPAR_LOG(info) << "[asio] Global io_service uninitialized.";
+        CASPAR_LOG(info) << "[asio] Global io_context uninitialized.";
     });
 
-    return std::shared_ptr<boost::asio::io_service>(service.get(), [service, work, thread](void*) mutable {
-        CASPAR_LOG(info) << "[asio] Shutting down global io_service.";
+    return std::shared_ptr<boost::asio::io_context>(io_context.get(), [io_context, work, thread](void*) mutable {
+        CASPAR_LOG(info) << "[asio] Shutting down global io_context.";
         work.reset();
-        service->stop();
+        io_context->stop();
         if (thread->get_id() != std::this_thread::get_id())
             thread->join();
         else
@@ -97,7 +97,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 
 struct server::impl
 {
-    std::shared_ptr<boost::asio::io_service>               io_service_ = create_running_io_service();
+    std::shared_ptr<boost::asio::io_context>               io_context_ = create_io_context_with_running_service();
     video_format_repository                                video_format_repository_;
     accelerator::accelerator                               accelerator_;
     std::shared_ptr<amcp::amcp_command_repository>         amcp_command_repo_;
@@ -105,7 +105,7 @@ struct server::impl
     std::shared_ptr<amcp::command_context_factory>         amcp_context_factory_;
     std::vector<spl::shared_ptr<IO::AsyncEventServer>>     async_servers_;
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
-    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_service_);
+    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_context_);
     std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
@@ -154,8 +154,8 @@ struct server::impl
 
     ~impl()
     {
-        std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
-        io_service_.reset();
+        std::weak_ptr<boost::asio::io_context> weak_io_context = io_context_;
+        io_context_.reset();
         predefined_osc_subscriptions_.clear();
         osc_client_.reset();
 
@@ -170,7 +170,7 @@ struct server::impl
         destroy_consumers_synchronously();
         channels_->clear();
 
-        while (weak_io_service.lock())
+        while (weak_io_context.lock())
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         uninitialize_modules();
@@ -441,7 +441,7 @@ struct server::impl
 
                 try {
                     auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                        io_service_,
+                        io_context_,
                         create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
                         static_cast<short>(port));
                     async_servers_.push_back(asyncbootstrapper);
