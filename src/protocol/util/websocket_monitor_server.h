@@ -273,21 +273,27 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                     }
 
                     if (value_start < message.length()) {
-                        // Check if the value starts with "request_full_state" (case insensitive)
-                        std::string value = message.substr(value_start, 19);
-                        if (value.length() == 19) {
-                            // Convert to lowercase for case-insensitive comparison
-                            std::string lower_value = value;
-                            std::transform(lower_value.begin(), lower_value.end(), lower_value.begin(), ::tolower);
-                            if (lower_value == "request_full_state") {
-                                // Request full state for this connection
-                                if (monitor_client_) {
-                                    monitor_client_->request_full_state(connection_id_);
-                                    CASPAR_LOG(info) << L"WebSocket monitor: Full state requested by connection "
-                                                     << u16(connection_id_);
-                                }
-                                return;
+                        // Extract the command value up to the next double quote or whitespace
+                        size_t value_end = value_start;
+                        while (value_end < message.length() && message[value_end] != '"' && message[value_end] != ' ' &&
+                               message[value_end] != '\t' && message[value_end] != '\n' && message[value_end] != '\r') {
+                            ++value_end;
+                        }
+
+                        std::string value = message.substr(value_start, value_end - value_start);
+
+                        // Convert to lowercase for case-insensitive comparison
+                        std::string lower_value = value;
+                        std::transform(lower_value.begin(), lower_value.end(), lower_value.begin(), ::tolower);
+
+                        if (lower_value == "request_full_state") {
+                            // Request full state for this connection
+                            if (monitor_client_) {
+                                monitor_client_->request_full_state(connection_id_);
+                                CASPAR_LOG(info)
+                                    << L"WebSocket monitor: Full state requested by connection " << u16(connection_id_);
                             }
+                            return;
                         }
                     }
                 }
