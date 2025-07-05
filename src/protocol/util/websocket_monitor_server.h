@@ -150,9 +150,11 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
                 // No write in flight – send immediately
                 self->write_in_flight_ = true;
+                auto out               = std::make_shared<std::string>(std::move(msg));
                 self->ws_.text(true);
-                self->ws_.async_write(net::buffer(msg),
-                                      beast::bind_front_handler(&websocket_monitor_session::on_write, self));
+                self->ws_.async_write(net::buffer(*out), [self, out](beast::error_code ec, std::size_t bytes) {
+                    self->on_write(ec, bytes);
+                });
             } catch (const std::exception& e) {
                 CASPAR_LOG(error) << L"WebSocket monitor session send error: " << u16(e.what());
                 self->is_open_ = false;
@@ -369,11 +371,14 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
         // Write completed successfully – send next queued message if any
         try {
             if (!pending_msgs_.empty()) {
-                std::string next_msg = std::move(pending_msgs_.front());
+                std::string next = std::move(pending_msgs_.front());
                 pending_msgs_.pop_front();
+                auto out = std::make_shared<std::string>(std::move(next));
                 ws_.text(true);
-                ws_.async_write(net::buffer(next_msg),
-                                beast::bind_front_handler(&websocket_monitor_session::on_write, shared_from_this()));
+                ws_.async_write(net::buffer(*out),
+                                [self = shared_from_this(), out](beast::error_code ec, std::size_t bytes) {
+                                    self->on_write(ec, bytes);
+                                });
             } else {
                 write_in_flight_ = false;
             }
