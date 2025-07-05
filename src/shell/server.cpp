@@ -61,6 +61,7 @@
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <tbb/concurrent_hash_map.h>
 #include <thread>
 #include <utility>
 
@@ -119,6 +120,9 @@ struct server::impl
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
     std::function<void(bool)>                                     shutdown_server_now_;
+
+    // Lock-free monitor state using concurrent hash map
+    tbb::concurrent_hash_map<std::string, core::monitor::vector_t> monitor_data_;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -308,20 +312,37 @@ struct server::impl
                 format_desc,
                 default_color_space,
                 accelerator_.create_image_mixer(channel_id, depth),
-                [channel_id, weak_client, weak_websocket_monitor_client](core::monitor::state channel_state) {
-                    monitor::state state;
-                    state[""]["channel"][channel_id] = channel_state;
+                [this, channel_id, weak_client](core::monitor::state channel_state) {
+                    // Update this channel's data in the lock-free hash map
+                    for (const auto& [path, values] : channel_state) {
+                        std::string full_path = "channel/" + std::to_string(channel_id) + "/" + path;
 
-                    // Send to OSC client
-                    auto client = weak_client.lock();
-                    if (client) {
-                        client->send(std::move(state));
+                        // Use TBB accessor pattern for thread-safe insert/update
+                        tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+                        monitor_data_.insert(acc, full_path);
+                        acc->second = values;
                     }
 
-                    // Send to WebSocket monitor clients
-                    auto websocket_monitor_client = weak_websocket_monitor_client.lock();
-                    if (websocket_monitor_client) {
-                        websocket_monitor_client->send(state);
+                    // Build complete state for sending
+                    core::monitor::state complete_state;
+                    for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it =
+                             monitor_data_.begin();
+                         it != monitor_data_.end();
+                         ++it) {
+                        complete_state[it->first] = it->second;
+                    }
+
+                    // Send complete state to WebSocket monitor clients
+                    if (websocket_monitor_client_) {
+                        websocket_monitor_client_->send(complete_state);
+                    }
+
+                    // Send to OSC client (keep existing behavior)
+                    auto client = weak_client.lock();
+                    if (client) {
+                        monitor::state osc_state;
+                        osc_state[""]["channel"][channel_id] = channel_state;
+                        client->send(std::move(osc_state));
                     }
                 });
 
@@ -545,6 +566,30 @@ struct server::impl
             return amcp::create_char_amcp_strategy_factory(port_description, spl::make_shared_ptr(amcp_command_repo_));
 
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
+    }
+
+    void cleanup_channel_data(int channel_id)
+    {
+        // Remove all data for this channel from the monitor state
+        std::vector<std::string> keys_to_remove;
+
+        // Find all keys for this channel
+        for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it = monitor_data_.begin();
+             it != monitor_data_.end();
+             ++it) {
+            std::string channel_prefix = "channel/" + std::to_string(channel_id) + "/";
+            if (it->first.substr(0, channel_prefix.length()) == channel_prefix) {
+                keys_to_remove.push_back(it->first);
+            }
+        }
+
+        // Remove the keys
+        for (const auto& key : keys_to_remove) {
+            tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+            if (monitor_data_.find(acc, key)) {
+                monitor_data_.erase(acc);
+            }
+        }
     }
 };
 
