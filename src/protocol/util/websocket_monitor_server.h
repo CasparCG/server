@@ -144,7 +144,20 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                         self->close();
                         return;
                     }
+
+                    // Temporary debug logging of queueing behaviour
+                    if (self->pending_msgs_.empty()) {
+                        CASPAR_LOG(debug) << L"WebSocket monitor: starting to queue messages for client "
+                                          << u16(self->connection_id_);
+                    }
+
+                    // Simply queue the message; if the client stays slow the hard limit will close it
                     self->pending_msgs_.push_back(std::move(msg));
+
+                    if (self->pending_msgs_.size() % 50 == 0) {
+                        CASPAR_LOG(debug) << L"WebSocket monitor: queue size now " << self->pending_msgs_.size()
+                                          << L" for client " << u16(self->connection_id_);
+                    }
                     return;
                 }
 
