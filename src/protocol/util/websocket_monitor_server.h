@@ -30,6 +30,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <common/memory.h>
+#include <deque>
 #include <memory>
 #include <string>
 #include <thread>
@@ -49,11 +50,12 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     beast::flat_buffer                                              buffer_;
     std::shared_ptr<websocket_monitor_client>                       monitor_client_;
     std::string                                                     connection_id_;
-    std::shared_ptr<void>                                           subscription_token_;
     std::atomic<bool>                                               is_open_{false};
     std::unique_ptr<boost::asio::deadline_timer>                    force_close_timer_;
     boost::asio::io_context&                                        io_context_;
     std::function<void(std::shared_ptr<websocket_monitor_session>)> session_removal_callback_;
+    std::deque<std::string>                                         pending_msgs_;
+    bool                                                            write_in_flight_{false};
 
   public:
     explicit websocket_monitor_session(
@@ -128,23 +130,34 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             return; // Don't send empty messages
         }
 
-        // Post the work to the correct executor
-        net::post(ws_.get_executor(), [self = shared_from_this(), message]() {
+        // Post the work to the correct executor to preserve ordering
+        net::post(ws_.get_executor(), [self = shared_from_this(), msg = std::string(message)]() mutable {
             try {
-                if (self->is_open_) {
-                    self->ws_.async_write(net::buffer(message),
-                                          beast::bind_front_handler(&websocket_monitor_session::on_write, self));
+                if (!self->is_open_)
+                    return;
+
+                // If a write is currently in flight, queue the message
+                if (self->write_in_flight_) {
+                    if (self->pending_msgs_.size() >= 300) {
+                        CASPAR_LOG(warning) << L"WebSocket monitor: client " << u16(self->connection_id_)
+                                            << L" too slow (queue overflow). Closing.";
+                        self->close();
+                        return;
+                    }
+                    self->pending_msgs_.push_back(std::move(msg));
+                    return;
                 }
+
+                // No write in flight – send immediately
+                self->write_in_flight_ = true;
+                self->ws_.text(true);
+                self->ws_.async_write(net::buffer(msg),
+                                      beast::bind_front_handler(&websocket_monitor_session::on_write, self));
             } catch (const std::exception& e) {
                 CASPAR_LOG(error) << L"WebSocket monitor session send error: " << u16(e.what());
                 self->is_open_ = false;
-                if (self->monitor_client_) {
-                    try {
-                        self->monitor_client_->remove_connection(self->connection_id_);
-                    } catch (const std::exception& e2) {
-                        CASPAR_LOG(error) << L"WebSocket monitor session remove connection error: " << u16(e2.what());
-                    }
-                }
+                if (self->monitor_client_)
+                    self->monitor_client_->remove_connection(self->connection_id_);
             }
         });
     }
@@ -239,9 +252,6 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                     self->send(message);
                 }
             });
-
-            // Get subscription token
-            subscription_token_ = monitor_client_->get_subscription_token(connection_id_);
 
             CASPAR_LOG(info) << L"WebSocket monitor session connected: " << u16(connection_id_);
 
@@ -356,8 +366,21 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             return;
         }
 
-        // Continue processing (write completed successfully)
-        // Note: We don't call do_read() here because it's already called in on_read()
+        // Write completed successfully – send next queued message if any
+        try {
+            if (!pending_msgs_.empty()) {
+                std::string next_msg = std::move(pending_msgs_.front());
+                pending_msgs_.pop_front();
+                ws_.text(true);
+                ws_.async_write(net::buffer(next_msg),
+                                beast::bind_front_handler(&websocket_monitor_session::on_write, shared_from_this()));
+            } else {
+                write_in_flight_ = false;
+            }
+        } catch (const std::exception& e) {
+            CASPAR_LOG(error) << L"WebSocket monitor session queue send error: " << u16(e.what());
+            close();
+        }
     }
 
     // Handle incoming JSON messages from the client
@@ -395,7 +418,7 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                         if (lower_value == "request_full_state") {
                             // Request full state for this connection
                             if (monitor_client_) {
-                                monitor_client_->request_full_state(connection_id_);
+                                monitor_client_->force_full_state();
                                 CASPAR_LOG(info)
                                     << L"WebSocket monitor: Full state requested by connection " << u16(connection_id_);
                             }

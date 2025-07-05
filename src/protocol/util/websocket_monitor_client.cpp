@@ -21,33 +21,32 @@
 #include "../StdAfx.h"
 
 #include "websocket_monitor_client.h"
-#include "websocket_monitor_server.h"
 
 #include <common/log.h>
 #include <common/utf.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/format.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <nlohmann/json.hpp>
 
-#include <tbb/concurrent_hash_map.h>
-
-#include <algorithm>
-#include <functional>
+#include <chrono>
 #include <memory>
 #include <mutex>
-#include <sstream>
-#include <thread>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace caspar { namespace protocol { namespace websocket {
 
 using json = nlohmann::json;
 
-namespace {
-
-// Convert variant to JSON value
+// Simple JSON conversion functions
 json variant_to_json_value(const core::monitor::data_t& value)
 {
+    // nlohmann/json can handle most types automatically
     if (auto bool_val = boost::get<bool>(&value)) {
         return *bool_val;
     } else if (auto int32_val = boost::get<std::int32_t>(&value)) {
@@ -70,39 +69,33 @@ json variant_to_json_value(const core::monitor::data_t& value)
     return nullptr; // JSON null
 }
 
-// Convert OSC-style path to nested JSON structure
 void set_nested_json_value(json& root, const std::string& path, const core::monitor::vector_t& values)
 {
-    std::vector<std::string> parts;
-    boost::split(parts, path, boost::is_any_of("/"));
-
-    // Remove empty parts (from leading slash)
-    parts.erase(std::remove_if(parts.begin(), parts.end(), [](const std::string& s) { return s.empty(); }),
-                parts.end());
+    std::list<std::string> path_parts;
+    boost::split(path_parts, path, boost::is_any_of("/"));
 
     json* current = &root;
+    for (auto it = path_parts.begin(); it != path_parts.end(); ++it) {
+        if (it->empty())
+            continue;
 
-    // Navigate to the parent node, creating nodes as needed
-    for (size_t i = 0; i < parts.size() - 1; ++i) {
-        if (!current->contains(parts[i])) {
-            (*current)[parts[i]] = json::object();
-        }
-        current = &(*current)[parts[i]];
-    }
-
-    // Set the value(s)
-    if (!parts.empty()) {
-        const std::string& key = parts.back();
-        if (values.empty()) {
-            (*current)[key] = nullptr; // JSON null
-        } else if (values.size() == 1) {
-            (*current)[key] = variant_to_json_value(values[0]);
-        } else {
-            json array = json::array();
-            for (const auto& value : values) {
-                array.push_back(variant_to_json_value(value));
+        if (std::next(it) == path_parts.end()) {
+            // Leaf node - set the value
+            if (values.size() == 1) {
+                (*current)[*it] = variant_to_json_value(values[0]);
+            } else {
+                json array = json::array();
+                for (const auto& value : values) {
+                    array.push_back(variant_to_json_value(value));
+                }
+                (*current)[*it] = array;
             }
-            (*current)[key] = array;
+        } else {
+            // Intermediate node - create object if needed
+            if (!current->contains(*it)) {
+                (*current)[*it] = json::object();
+            }
+            current = &(*current)[*it];
         }
     }
 }
@@ -218,38 +211,17 @@ std::string deltas_to_json_patch(const std::vector<std::pair<std::string, core::
     return root.dump();
 }
 
-// Generate heartbeat message
-std::string generate_heartbeat()
-{
-    json root;
-    root["type"] = "heartbeat";
-    root["timestamp"] =
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-            .count();
-
-    return root.dump();
-}
-
-} // namespace
-
-struct connection_state
+// Simplified connection tracking with state for deltas
+struct connection_info
 {
     std::string                             connection_id;
     std::function<void(const std::string&)> send_callback;
-    connection_config                       config;
     core::monitor::state                    last_state;
-    std::chrono::steady_clock::time_point   last_full_state_time;
-    std::chrono::steady_clock::time_point   last_heartbeat_time;
     bool                                    needs_full_state;
 
-    connection_state(const std::string&                      id,
-                     std::function<void(const std::string&)> callback,
-                     const connection_config&                cfg)
-        : connection_id(id)
+    connection_info(std::string id, std::function<void(const std::string&)> callback)
+        : connection_id(std::move(id))
         , send_callback(std::move(callback))
-        , config(cfg)
-        , last_full_state_time(std::chrono::steady_clock::now())
-        , last_heartbeat_time(std::chrono::steady_clock::now())
         , needs_full_state(true)
     {
     }
@@ -257,83 +229,29 @@ struct connection_state
 
 struct websocket_monitor_client::impl
 {
-    std::shared_ptr<boost::asio::io_context>                           context_;
-    std::mutex                                                         connections_mutex_;
-    std::unordered_map<std::string, std::unique_ptr<connection_state>> connections_;
-
-    // Subscription management
-    tbb::concurrent_hash_map<std::string, std::weak_ptr<void>> subscriptions_;
-
-    // Timer for periodic tasks
-    std::unique_ptr<boost::asio::deadline_timer> timer_;
-    std::atomic<bool>                            running_{true};
+    std::shared_ptr<boost::asio::io_context>                          context_;
+    std::mutex                                                        connections_mutex_;
+    std::unordered_map<std::string, std::unique_ptr<connection_info>> connections_;
 
     explicit impl(std::shared_ptr<boost::asio::io_context> context)
         : context_(std::move(context))
-        , timer_(std::make_unique<boost::asio::deadline_timer>(*context_))
     {
-        schedule_periodic_tasks();
     }
 
-    ~impl()
-    {
-        // Stop the periodic timer first
-        running_ = false;
-        if (timer_) {
-            timer_->cancel();
-        }
-
-        // Clear all connections to ensure no callbacks are invoked
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        connections_.clear();
-        subscriptions_.clear();
-    }
-
-    void schedule_periodic_tasks()
-    {
-        if (!running_)
-            return;
-
-        timer_->expires_from_now(boost::posix_time::seconds(1));
-        timer_->async_wait([this](const boost::system::error_code& ec) {
-            if (!ec && running_) {
-                handle_periodic_tasks();
-                // Only schedule next task if still running
-                if (running_) {
-                    schedule_periodic_tasks();
-                }
-            }
-        });
-    }
-
-    void handle_periodic_tasks()
+    void add_connection(const std::string& connection_id, std::function<void(const std::string&)> send_callback)
     {
         std::lock_guard<std::mutex> lock(connections_mutex_);
-        auto                        now = std::chrono::steady_clock::now();
+        connections_[connection_id] = std::make_unique<connection_info>(connection_id, std::move(send_callback));
+        CASPAR_LOG(info) << L"WebSocket monitor: Added connection " << u16(connection_id) << L" ("
+                         << connections_.size() << L" total connections)";
+    }
 
-        for (auto& [id, conn] : connections_) {
-            try {
-                // Check if we need to send full state (only if interval > 0)
-                if (conn->config.full_state_interval.count() > 0 &&
-                    std::chrono::duration_cast<std::chrono::seconds>(now - conn->last_full_state_time) >=
-                        conn->config.full_state_interval) {
-                    conn->needs_full_state = true;
-                }
-
-                // Check if we need to send heartbeat
-                if (conn->config.send_heartbeat &&
-                    std::chrono::duration_cast<std::chrono::seconds>(now - conn->last_heartbeat_time) >=
-                        conn->config.heartbeat_interval) {
-                    std::string heartbeat = generate_heartbeat();
-                    conn->send_callback(heartbeat);
-                    conn->last_heartbeat_time = now;
-                }
-            } catch (const std::exception& e) {
-                CASPAR_LOG(info) << L"WebSocket monitor: Removing failed connection " << u16(id) << L": "
-                                 << u16(e.what());
-                // Connection will be removed in next iteration
-            }
-        }
+    void remove_connection(const std::string& connection_id)
+    {
+        std::lock_guard<std::mutex> lock(connections_mutex_);
+        connections_.erase(connection_id);
+        CASPAR_LOG(info) << L"WebSocket monitor: Removed connection " << u16(connection_id) << L" ("
+                         << connections_.size() << L" total connections)";
     }
 
     void send(const core::monitor::state& state)
@@ -342,27 +260,7 @@ struct websocket_monitor_client::impl
             return;
         }
 
-        // Prepare messages outside of lock to minimize lock time
-        std::string full_state_json;
-        bool        need_full_state = false;
-
-        // Check if any connection needs full state
-        {
-            std::lock_guard<std::mutex> lock(connections_mutex_);
-            for (const auto& [id, conn] : connections_) {
-                if (conn->needs_full_state) {
-                    need_full_state = true;
-                    break;
-                }
-            }
-        }
-
-        // Generate full state message if needed
-        if (need_full_state) {
-            full_state_json = monitor_state_to_osc_json(state, "full_state");
-        }
-
-        // Send to all connected clients with minimal lock time
+        // Send to all connections
         std::lock_guard<std::mutex> lock(connections_mutex_);
         auto                        it = connections_.begin();
         while (it != connections_.end()) {
@@ -371,10 +269,10 @@ struct websocket_monitor_client::impl
 
                 if (conn->needs_full_state) {
                     // Send full state
+                    std::string full_state_json = monitor_state_to_osc_json(state, "full_state");
                     conn->send_callback(full_state_json);
-                    conn->last_state           = state;
-                    conn->last_full_state_time = std::chrono::steady_clock::now();
-                    conn->needs_full_state     = false;
+                    conn->last_state       = state;
+                    conn->needs_full_state = false;
                 } else {
                     // Send delta
                     auto deltas = generate_deltas(conn->last_state, state);
@@ -394,23 +292,11 @@ struct websocket_monitor_client::impl
         }
     }
 
-    void add_connection(const std::string&                      connection_id,
-                        std::function<void(const std::string&)> send_callback,
-                        const connection_config&                config)
+    void force_disconnect_all()
     {
         std::lock_guard<std::mutex> lock(connections_mutex_);
-        connections_[connection_id] =
-            std::make_unique<connection_state>(connection_id, std::move(send_callback), config);
-        CASPAR_LOG(info) << L"WebSocket monitor: Added connection " << u16(connection_id) << L" ("
-                         << connections_.size() << L" total connections)";
-    }
-
-    void remove_connection(const std::string& connection_id)
-    {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        connections_.erase(connection_id);
-        CASPAR_LOG(info) << L"WebSocket monitor: Removed connection " << u16(connection_id) << L" ("
-                         << connections_.size() << L" total connections)";
+        connections_.clear();
+        CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected all connections";
     }
 
     void force_full_state()
@@ -421,84 +307,22 @@ struct websocket_monitor_client::impl
         }
         CASPAR_LOG(info) << L"WebSocket monitor: Forced full state for all connections";
     }
-
-    void request_full_state(const std::string& connection_id)
-    {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        auto                        it = connections_.find(connection_id);
-        if (it != connections_.end()) {
-            it->second->needs_full_state = true;
-            CASPAR_LOG(info) << L"WebSocket monitor: Requested full state for connection " << u16(connection_id);
-        } else {
-            CASPAR_LOG(warning) << L"WebSocket monitor: Connection not found for full state request: "
-                                << u16(connection_id);
-        }
-    }
-
-    void force_disconnect_all();
-
-    std::shared_ptr<void> get_subscription_token(const std::string& connection_id)
-    {
-        // Create a token that when destroyed will clean up the subscription
-        auto token = std::shared_ptr<void>(nullptr, [this, connection_id](void*) {
-            // Remove subscription when token is destroyed
-            subscriptions_.erase(connection_id);
-        });
-
-        // Store weak reference to token
-        subscriptions_.insert(std::make_pair(connection_id, token));
-
-        return token;
-    }
 };
 
-void caspar::protocol::websocket::websocket_monitor_client::impl::force_disconnect_all()
-{
-    // Stop the periodic timer first to prevent new tasks
-    running_ = false;
-    if (timer_) {
-        timer_->cancel();
-    }
-
-    // Clear all connections and subscriptions
-    std::lock_guard<std::mutex> lock(connections_mutex_);
-    auto                        connection_count = connections_.size();
-    connections_.clear();
-    subscriptions_.clear();
-
-    CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected " << connection_count << L" connections";
-}
-
 websocket_monitor_client::websocket_monitor_client(std::shared_ptr<boost::asio::io_context> context)
-    : impl_(spl::make_shared<impl>(std::move(context)))
+    : impl_(std::make_unique<impl>(std::move(context)))
 {
 }
 
-websocket_monitor_client::websocket_monitor_client(websocket_monitor_client&& other)
-    : impl_(std::move(other.impl_))
+websocket_monitor_client::~websocket_monitor_client()
 {
+    // impl_ will be automatically destroyed
 }
-
-websocket_monitor_client& websocket_monitor_client::operator=(websocket_monitor_client&& other)
-{
-    impl_ = std::move(other.impl_);
-    return *this;
-}
-
-websocket_monitor_client::~websocket_monitor_client() = default;
-
-std::shared_ptr<void> websocket_monitor_client::get_subscription_token(const std::string& connection_id)
-{
-    return impl_->get_subscription_token(connection_id);
-}
-
-void websocket_monitor_client::send(const core::monitor::state& state) { impl_->send(state); }
 
 void websocket_monitor_client::add_connection(const std::string&                      connection_id,
-                                              std::function<void(const std::string&)> send_callback,
-                                              const connection_config&                config)
+                                              std::function<void(const std::string&)> send_callback)
 {
-    impl_->add_connection(connection_id, std::move(send_callback), config);
+    impl_->add_connection(connection_id, std::move(send_callback));
 }
 
 void websocket_monitor_client::remove_connection(const std::string& connection_id)
@@ -506,13 +330,10 @@ void websocket_monitor_client::remove_connection(const std::string& connection_i
     impl_->remove_connection(connection_id);
 }
 
-void websocket_monitor_client::force_full_state() { impl_->force_full_state(); }
-
-void websocket_monitor_client::request_full_state(const std::string& connection_id)
-{
-    impl_->request_full_state(connection_id);
-}
+void websocket_monitor_client::send(const core::monitor::state& state) { impl_->send(state); }
 
 void websocket_monitor_client::force_disconnect_all() { impl_->force_disconnect_all(); }
+
+void websocket_monitor_client::force_full_state() { impl_->force_full_state(); }
 
 }}} // namespace caspar::protocol::websocket
