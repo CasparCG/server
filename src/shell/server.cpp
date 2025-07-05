@@ -60,6 +60,7 @@
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <unordered_set>
 
 #include <tbb/concurrent_hash_map.h>
 #include <thread>
@@ -307,21 +308,45 @@ struct server::impl
                 color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
             auto weak_websocket_monitor_client =
                 std::weak_ptr<protocol::websocket::websocket_monitor_client>(websocket_monitor_client_);
+
+            // Prefix for all monitor paths belonging to this channel and a cache of the currently active paths.
+            auto channel_prefix = std::string("channel/") + std::to_string(channel_id) + "/";
+            auto cached_paths   = std::make_shared<std::unordered_set<std::string>>();
+
             auto channel = spl::make_shared<video_channel>(
                 channel_id,
                 format_desc,
                 default_color_space,
                 accelerator_.create_image_mixer(channel_id, depth),
-                [this, channel_id, weak_client](core::monitor::state channel_state) {
-                    // Update this channel's data in the lock-free hash map
+                [this, channel_id, weak_client, cached_paths, channel_prefix](core::monitor::state channel_state) {
+                    // Collect the full monitor paths produced in this tick
+                    std::unordered_set<std::string> new_paths;
+
+                    // Insert or update entries for the current state
                     for (const auto& [path, values] : channel_state) {
-                        std::string full_path = "channel/" + std::to_string(channel_id) + "/" + path;
+                        std::string full_path = channel_prefix + path;
+
+                        // Remember that this path was produced now
+                        new_paths.insert(full_path);
 
                         // Use TBB accessor pattern for thread-safe insert/update
                         tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
                         monitor_data_.insert(acc, full_path);
                         acc->second = values;
                     }
+
+                    // Remove any paths that were produced previously but are absent now
+                    for (const auto& old_path : *cached_paths) {
+                        if (new_paths.find(old_path) == new_paths.end()) {
+                            tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+                            if (monitor_data_.find(acc, old_path)) {
+                                monitor_data_.erase(acc);
+                            }
+                        }
+                    }
+
+                    // Update the cached path set for the next tick
+                    *cached_paths = std::move(new_paths);
 
                     // Build complete state for sending
                     core::monitor::state complete_state;

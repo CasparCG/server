@@ -32,11 +32,14 @@
 #include <boost/property_tree/ptree.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace caspar { namespace protocol { namespace websocket {
@@ -128,23 +131,29 @@ std::vector<std::pair<std::string, core::monitor::vector_t>> generate_deltas(con
 {
     std::vector<std::pair<std::string, core::monitor::vector_t>> deltas;
 
-    // Find changed/new values
-    for (const auto& [path, new_values] : new_state) {
-        // Find the corresponding value in old_state using linear search
-        auto old_it =
-            std::find_if(old_state.begin(), old_state.end(), [&path](const auto& pair) { return pair.first == path; });
+    // Build hash maps for O(1) lookups
+    std::unordered_map<std::string, core::monitor::vector_t> old_state_map;
+    std::unordered_map<std::string, core::monitor::vector_t> new_state_map;
 
-        if (old_it == old_state.end() || old_it->second != new_values) {
+    for (const auto& [path, values] : old_state) {
+        old_state_map[path] = values;
+    }
+
+    for (const auto& [path, values] : new_state) {
+        new_state_map[path] = values;
+    }
+
+    // Find changed/new values
+    for (const auto& [path, new_values] : new_state_map) {
+        auto old_it = old_state_map.find(path);
+        if (old_it == old_state_map.end() || old_it->second != new_values) {
             deltas.emplace_back(path, new_values);
         }
     }
 
     // Find removed values (set to null/empty)
-    for (const auto& [path, old_values] : old_state) {
-        auto new_it =
-            std::find_if(new_state.begin(), new_state.end(), [&path](const auto& pair) { return pair.first == path; });
-
-        if (new_it == new_state.end()) {
+    for (const auto& [path, old_values] : old_state_map) {
+        if (new_state_map.find(path) == new_state_map.end()) {
             deltas.emplace_back(path, core::monitor::vector_t{}); // Empty vector indicates removal
         }
     }
@@ -152,63 +161,170 @@ std::vector<std::pair<std::string, core::monitor::vector_t>> generate_deltas(con
     return deltas;
 }
 
-// Convert deltas to RFC 6902 JSON Patch format
-std::string deltas_to_json_patch(const std::vector<std::pair<std::string, core::monitor::vector_t>>& deltas)
+// Convert deltas to RFC 7386 JSON Merge Patch format
+std::string deltas_to_json_merge_patch(const std::vector<std::pair<std::string, core::monitor::vector_t>>& deltas,
+                                       const std::unordered_set<std::string>& existing_prefixes)
 {
     json root;
 
-    root["type"] = "patch";
+    root["type"] = "merge_patch";
     root["timestamp"] =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
             .count();
 
-    // Build the JSON Patch array
-    json patch_array = json::array();
+    // Build the JSON Merge Patch object
+    json patch_obj = json::object();
+
+    // Helper to apply delta into patch_obj, creating intermediate objects as needed.
+    auto apply_delta_to_json = [&](const std::string& path, const core::monitor::vector_t& vals) {
+        // Parse path segments more efficiently
+        std::vector<std::string> parts;
+        parts.reserve(8); // Most paths are shallow
+
+        size_t start = 0;
+        size_t pos   = 0;
+        while ((pos = path.find('/', start)) != std::string::npos) {
+            if (pos > start) {
+                parts.push_back(path.substr(start, pos - start));
+            }
+            start = pos + 1;
+        }
+        if (start < path.length()) {
+            parts.push_back(path.substr(start));
+        }
+
+        json* current = &patch_obj;
+        for (size_t i = 0; i < parts.size(); ++i) {
+            const std::string& key = parts[i];
+
+            if (i + 1 == parts.size()) {
+                // Leaf node
+                if (vals.empty()) {
+                    // Removal represented by null in merge patch
+                    (*current)[key] = nullptr;
+                } else if (vals.size() == 1) {
+                    (*current)[key] = variant_to_json_value(vals[0]);
+                } else {
+                    json array = json::array();
+                    for (const auto& v : vals) {
+                        array.push_back(variant_to_json_value(v));
+                    }
+                    (*current)[key] = array;
+                }
+            } else {
+                // Intermediate node - ensure object exists
+                if (!current->contains(key) || !(*current)[key].is_object()) {
+                    (*current)[key] = json::object();
+                }
+                current = &(*current)[key];
+            }
+        }
+    };
+
+    // Separate removal and update deltas so we can minimise removal paths
+    std::vector<std::string>                                     removal_paths;
+    std::vector<std::pair<std::string, core::monitor::vector_t>> update_deltas;
 
     for (const auto& [path, values] : deltas) {
-        std::vector<std::string> parts;
-        boost::split(parts, path, boost::is_any_of("/"));
-
-        // Remove empty parts (from leading slash)
-        parts.erase(std::remove_if(parts.begin(), parts.end(), [](const std::string& s) { return s.empty(); }),
-                    parts.end());
-
         if (values.empty()) {
-            // Remove operation
-            json patch_op;
-            patch_op["op"]   = "remove";
-            patch_op["path"] = "/" + boost::join(parts, "/");
-            patch_array.push_back(patch_op);
+            removal_paths.push_back(path);
         } else {
-            // Add/replace operation
-            json patch_op;
-
-            // Determine if this is an add or replace operation
-            // For simplicity, we'll use "replace" for existing paths and "add" for new ones
-            // In practice, you might want to track which paths existed in the previous state
-            patch_op["op"] = "replace"; // or "add" depending on your logic
-
-            // Build the path
-            patch_op["path"] = "/" + boost::join(parts, "/");
-
-            // Set the value
-            if (values.size() == 1) {
-                patch_op["value"] = variant_to_json_value(values[0]);
-            } else {
-                json array = json::array();
-                for (const auto& value : values) {
-                    array.push_back(variant_to_json_value(value));
-                }
-                patch_op["value"] = array;
-            }
-
-            patch_array.push_back(patch_op);
+            update_deltas.emplace_back(path, values);
         }
     }
 
-    root["data"] = patch_array;
+    // Sort removal paths by length (shortest first) so that parents appear before children
+    std::sort(removal_paths.begin(), removal_paths.end(), [](const std::string& a, const std::string& b) {
+        return a.size() < b.size();
+    });
+
+    // Build a minimal set of removal paths (skip children of an already-removed parent and climb up until no updates
+    // exist under the same branch)
+    std::unordered_set<std::string> selected_removals;
+    for (std::string path : removal_paths) {
+        // Ascend until path would overlap with an update or until root
+        while (true) {
+            auto pos = path.find_last_of('/');
+            if (pos == std::string::npos) {
+                break;
+            }
+            std::string parent = path.substr(0, pos);
+
+            // If parent still exists in the new_state, we must stop here
+            if (existing_prefixes.count(parent) > 0) {
+                break;
+            }
+
+            // Otherwise we can move up one level
+            path = parent;
+        }
+
+        // Check if an ancestor is already selected to avoid duplicates
+        bool        covered  = false;
+        std::string ancestor = path;
+        while (true) {
+            auto pos = ancestor.find_last_of('/');
+            if (pos == std::string::npos) {
+                break;
+            }
+            ancestor = ancestor.substr(0, pos);
+            if (selected_removals.count(ancestor)) {
+                covered = true;
+                break;
+            }
+        }
+        if (!covered) {
+            selected_removals.insert(path);
+        }
+    }
+
+    // Apply removals (set to nullptr)
+    for (const auto& path : selected_removals) {
+        apply_delta_to_json(path, core::monitor::vector_t{});
+    }
+
+    // Apply updates
+    for (const auto& [path, values] : update_deltas) {
+        apply_delta_to_json(path, values);
+    }
+
+    root["data"] = patch_obj;
 
     return root.dump();
+}
+
+// Pre-compute all path prefixes from monitor state
+std::unordered_set<std::string> build_existing_prefixes(const core::monitor::state& state)
+{
+    std::unordered_set<std::string> prefixes;
+    prefixes.reserve(std::distance(state.begin(), state.end()) * 4); // Estimate: most paths have ~4 segments
+
+    for (const auto& [path, _] : state) {
+        std::string prefix;
+        prefix.reserve(path.length());
+
+        size_t start = 0;
+        size_t pos   = 0;
+        while ((pos = path.find('/', start)) != std::string::npos) {
+            if (pos > start) {
+                if (!prefix.empty()) {
+                    prefix += "/";
+                }
+                prefix += path.substr(start, pos - start);
+                prefixes.insert(prefix);
+            }
+            start = pos + 1;
+        }
+        if (start < path.length()) {
+            if (!prefix.empty()) {
+                prefix += "/";
+            }
+            prefix += path.substr(start);
+            prefixes.insert(prefix);
+        }
+    }
+
+    return prefixes;
 }
 
 // Simplified connection tracking with state for deltas
@@ -260,6 +376,9 @@ struct websocket_monitor_client::impl
             return;
         }
 
+        // Pre-compute existing prefixes once for all connections
+        auto existing_prefixes = build_existing_prefixes(state);
+
         // Send to all connections
         std::lock_guard<std::mutex> lock(connections_mutex_);
         auto                        it = connections_.begin();
@@ -277,7 +396,7 @@ struct websocket_monitor_client::impl
                     // Send delta
                     auto deltas = generate_deltas(conn->last_state, state);
                     if (!deltas.empty()) {
-                        std::string delta_json = deltas_to_json_patch(deltas);
+                        std::string delta_json = deltas_to_json_merge_patch(deltas, existing_prefixes);
                         conn->send_callback(delta_json);
                         conn->last_state = state;
                     }
