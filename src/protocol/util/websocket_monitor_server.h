@@ -50,12 +50,21 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     beast::flat_buffer                                              buffer_;
     std::shared_ptr<websocket_monitor_client>                       monitor_client_;
     std::string                                                     connection_id_;
+    std::string                                                     client_address_;
     std::atomic<bool>                                               is_open_{false};
     std::unique_ptr<boost::asio::deadline_timer>                    force_close_timer_;
     boost::asio::io_context&                                        io_context_;
     std::function<void(std::shared_ptr<websocket_monitor_session>)> session_removal_callback_;
-    std::deque<std::string>                                         pending_msgs_;
     bool                                                            write_in_flight_{false};
+
+    // Circuit breaker configuration
+    static constexpr int SUSTAINED_FAILURE_SECONDS = 20; // Close connection after 20 seconds of failures
+
+    // Statistics tracking
+    std::atomic<int>                      total_messages_sent_{0};
+    std::atomic<int>                      total_messages_dropped_{0};
+    std::chrono::steady_clock::time_point first_failure_time_;
+    bool                                  has_failures_{false};
 
   public:
     explicit websocket_monitor_session(
@@ -69,6 +78,14 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
         , io_context_(io_context)
         , session_removal_callback_(std::move(session_removal_callback))
     {
+        // Get client address from socket
+        try {
+            auto endpoint   = ws_.next_layer().socket().remote_endpoint();
+            client_address_ = endpoint.address().to_string() + ":" + std::to_string(endpoint.port());
+        } catch (const std::exception& e) {
+            CASPAR_LOG(error) << L"WebSocket monitor session: Failed to get client address: " << u16(e.what());
+            client_address_ = "unknown";
+        }
     }
 
     ~websocket_monitor_session()
@@ -136,28 +153,9 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                 if (!self->is_open_)
                     return;
 
-                // If a write is currently in flight, queue the message
+                // If a write is currently in flight, drop the message
                 if (self->write_in_flight_) {
-                    if (self->pending_msgs_.size() >= 300) {
-                        CASPAR_LOG(warning) << L"WebSocket monitor: client " << u16(self->connection_id_)
-                                            << L" too slow (queue overflow). Closing.";
-                        self->close();
-                        return;
-                    }
-
-                    // Temporary debug logging of queueing behaviour
-                    if (self->pending_msgs_.empty()) {
-                        CASPAR_LOG(debug) << L"WebSocket monitor: starting to queue messages for client "
-                                          << u16(self->connection_id_);
-                    }
-
-                    // Simply queue the message; if the client stays slow the hard limit will close it
-                    self->pending_msgs_.push_back(std::move(msg));
-
-                    if (self->pending_msgs_.size() % 50 == 0) {
-                        CASPAR_LOG(debug) << L"WebSocket monitor: queue size now " << self->pending_msgs_.size()
-                                          << L" for client " << u16(self->connection_id_);
-                    }
+                    self->total_messages_dropped_.fetch_add(1);
                     return;
                 }
 
@@ -208,7 +206,7 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                         CASPAR_LOG(error) << L"WebSocket monitor session close error: " << u16(ec.message());
                     } else {
                         CASPAR_LOG(info) << L"WebSocket monitor session closed gracefully: "
-                                         << u16(self->connection_id_);
+                                         << u16(self->connection_id_) << L" (" << u16(self->client_address_) << L")";
                     }
                 });
 
@@ -219,8 +217,8 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                 force_close_timer_->expires_from_now(boost::posix_time::seconds(1));
                 force_close_timer_->async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
                     if (!ec && self->ws_.is_open()) {
-                        CASPAR_LOG(warning)
-                            << L"WebSocket monitor session forcefully closed: " << u16(self->connection_id_);
+                        CASPAR_LOG(warning) << L"WebSocket monitor session forcefully closed: "
+                                            << u16(self->connection_id_) << L" (" << u16(self->client_address_) << L")";
                         self->ws_.next_layer().close();
                     }
                 });
@@ -268,7 +266,8 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                 }
             });
 
-            CASPAR_LOG(info) << L"WebSocket monitor session connected: " << u16(connection_id_);
+            CASPAR_LOG(info) << L"WebSocket monitor session connected: " << u16(connection_id_) << L" ("
+                             << u16(client_address_) << L")";
 
             // Start reading for potential close messages
             do_read();
@@ -310,7 +309,8 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
         if (ec == ws::error::closed) {
             // Connection closed normally
-            CASPAR_LOG(info) << L"WebSocket monitor session closed: " << u16(connection_id_);
+            CASPAR_LOG(info) << L"WebSocket monitor session closed: " << u16(connection_id_) << L" ("
+                             << u16(client_address_) << L")";
             is_open_ = false;
             if (monitor_client_) {
                 try {
@@ -370,35 +370,51 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
         if (ec) {
             CASPAR_LOG(error) << L"WebSocket monitor session write error: " << u16(ec.message());
-            is_open_ = false;
-            if (monitor_client_) {
-                try {
-                    monitor_client_->remove_connection(connection_id_);
-                } catch (const std::exception& e) {
-                    CASPAR_LOG(error) << L"WebSocket monitor session remove connection error: " << u16(e.what());
-                }
+
+            // Track failure timing
+            auto now = std::chrono::steady_clock::now();
+            if (!has_failures_) {
+                first_failure_time_ = now;
+                has_failures_       = true;
+                CASPAR_LOG(warning) << L"WebSocket monitor: client " << u16(connection_id_) << L" ("
+                                    << u16(client_address_)
+                                    << L") experiencing write failures - starting failure timer";
             }
+
+            // Check if we've had sustained failures for too long
+            auto failure_duration = std::chrono::duration_cast<std::chrono::seconds>(now - first_failure_time_).count();
+
+            if (failure_duration >= SUSTAINED_FAILURE_SECONDS) {
+                CASPAR_LOG(warning) << L"WebSocket monitor: client " << u16(connection_id_) << L" ("
+                                    << u16(client_address_) << L") had sustained failures for " << failure_duration
+                                    << L" seconds. Closing connection.";
+                is_open_ = false;
+                if (monitor_client_) {
+                    try {
+                        monitor_client_->remove_connection(connection_id_);
+                    } catch (const std::exception& e) {
+                        CASPAR_LOG(error) << L"WebSocket monitor session remove connection error: " << u16(e.what());
+                    }
+                }
+                return;
+            }
+
+            // Move on - don't retry failed message
+            write_in_flight_ = false;
             return;
         }
 
-        // Write completed successfully – send next queued message if any
-        try {
-            if (!pending_msgs_.empty()) {
-                std::string next = std::move(pending_msgs_.front());
-                pending_msgs_.pop_front();
-                auto out = std::make_shared<std::string>(std::move(next));
-                ws_.text(true);
-                ws_.async_write(net::buffer(*out),
-                                [self = shared_from_this(), out](beast::error_code ec, std::size_t bytes) {
-                                    self->on_write(ec, bytes);
-                                });
-            } else {
-                write_in_flight_ = false;
-            }
-        } catch (const std::exception& e) {
-            CASPAR_LOG(error) << L"WebSocket monitor session queue send error: " << u16(e.what());
-            close();
+        // Write completed successfully
+        total_messages_sent_.fetch_add(1);
+
+        // Reset failure tracking on success
+        if (has_failures_) {
+            CASPAR_LOG(info) << L"WebSocket monitor: client " << u16(connection_id_) << L" (" << u16(client_address_)
+                             << L") recovered from write failures";
+            has_failures_ = false;
         }
+
+        write_in_flight_ = false;
     }
 
     // Handle incoming JSON messages from the client
@@ -432,16 +448,6 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                         // Convert to lowercase for case-insensitive comparison
                         std::string lower_value = value;
                         std::transform(lower_value.begin(), lower_value.end(), lower_value.begin(), ::tolower);
-
-                        if (lower_value == "request_full_state") {
-                            // Request full state for this connection
-                            if (monitor_client_) {
-                                monitor_client_->force_full_state();
-                                CASPAR_LOG(info)
-                                    << L"WebSocket monitor: Full state requested by connection " << u16(connection_id_);
-                            }
-                            return;
-                        }
                     }
                 }
             }

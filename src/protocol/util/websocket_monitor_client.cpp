@@ -125,175 +125,7 @@ std::string monitor_state_to_osc_json(const core::monitor::state& state, const s
     return root.dump();
 }
 
-// Generate delta changes between two monitor states
-std::vector<std::pair<std::string, core::monitor::vector_t>> generate_deltas(const core::monitor::state& old_state,
-                                                                             const core::monitor::state& new_state)
-{
-    std::vector<std::pair<std::string, core::monitor::vector_t>> deltas;
-
-    // Build hash maps for O(1) lookups
-    std::unordered_map<std::string, core::monitor::vector_t> old_state_map;
-    std::unordered_map<std::string, core::monitor::vector_t> new_state_map;
-
-    for (const auto& [path, values] : old_state) {
-        old_state_map[path] = values;
-    }
-
-    for (const auto& [path, values] : new_state) {
-        new_state_map[path] = values;
-    }
-
-    // Find changed/new values
-    for (const auto& [path, new_values] : new_state_map) {
-        auto old_it = old_state_map.find(path);
-        if (old_it == old_state_map.end() || old_it->second != new_values) {
-            deltas.emplace_back(path, new_values);
-        }
-    }
-
-    // Find removed values (set to null/empty)
-    for (const auto& [path, old_values] : old_state_map) {
-        if (new_state_map.find(path) == new_state_map.end()) {
-            deltas.emplace_back(path, core::monitor::vector_t{}); // Empty vector indicates removal
-        }
-    }
-
-    return deltas;
-}
-
-// Convert deltas to RFC 7386 JSON Merge Patch format
-std::string deltas_to_json_merge_patch(const std::vector<std::pair<std::string, core::monitor::vector_t>>& deltas,
-                                       const std::unordered_set<std::string>& existing_prefixes)
-{
-    json root;
-
-    root["type"] = "merge_patch";
-    root["timestamp"] =
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-            .count();
-
-    // Build the JSON Merge Patch object
-    json patch_obj = json::object();
-
-    // Helper to apply delta into patch_obj, creating intermediate objects as needed.
-    auto apply_delta_to_json = [&](const std::string& path, const core::monitor::vector_t& vals) {
-        // Parse path segments more efficiently
-        std::vector<std::string> parts;
-        parts.reserve(8); // Most paths are shallow
-
-        size_t start = 0;
-        size_t pos   = 0;
-        while ((pos = path.find('/', start)) != std::string::npos) {
-            if (pos > start) {
-                parts.push_back(path.substr(start, pos - start));
-            }
-            start = pos + 1;
-        }
-        if (start < path.length()) {
-            parts.push_back(path.substr(start));
-        }
-
-        json* current = &patch_obj;
-        for (size_t i = 0; i < parts.size(); ++i) {
-            const std::string& key = parts[i];
-
-            if (i + 1 == parts.size()) {
-                // Leaf node
-                if (vals.empty()) {
-                    // Removal represented by null in merge patch
-                    (*current)[key] = nullptr;
-                } else if (vals.size() == 1) {
-                    (*current)[key] = variant_to_json_value(vals[0]);
-                } else {
-                    json array = json::array();
-                    for (const auto& v : vals) {
-                        array.push_back(variant_to_json_value(v));
-                    }
-                    (*current)[key] = array;
-                }
-            } else {
-                // Intermediate node - ensure object exists
-                if (!current->contains(key) || !(*current)[key].is_object()) {
-                    (*current)[key] = json::object();
-                }
-                current = &(*current)[key];
-            }
-        }
-    };
-
-    // Separate removal and update deltas so we can minimise removal paths
-    std::vector<std::string>                                     removal_paths;
-    std::vector<std::pair<std::string, core::monitor::vector_t>> update_deltas;
-
-    for (const auto& [path, values] : deltas) {
-        if (values.empty()) {
-            removal_paths.push_back(path);
-        } else {
-            update_deltas.emplace_back(path, values);
-        }
-    }
-
-    // Sort removal paths by length (shortest first) so that parents appear before children
-    std::sort(removal_paths.begin(), removal_paths.end(), [](const std::string& a, const std::string& b) {
-        return a.size() < b.size();
-    });
-
-    // Build a minimal set of removal paths (skip children of an already-removed parent and climb up until no updates
-    // exist under the same branch)
-    std::unordered_set<std::string> selected_removals;
-    for (std::string path : removal_paths) {
-        // Ascend until path would overlap with an update or until root
-        while (true) {
-            auto pos = path.find_last_of('/');
-            if (pos == std::string::npos) {
-                break;
-            }
-            std::string parent = path.substr(0, pos);
-
-            // If parent still exists in the new_state, we must stop here
-            if (existing_prefixes.count(parent) > 0) {
-                break;
-            }
-
-            // Otherwise we can move up one level
-            path = parent;
-        }
-
-        // Check if an ancestor is already selected to avoid duplicates
-        bool        covered  = false;
-        std::string ancestor = path;
-        while (true) {
-            auto pos = ancestor.find_last_of('/');
-            if (pos == std::string::npos) {
-                break;
-            }
-            ancestor = ancestor.substr(0, pos);
-            if (selected_removals.count(ancestor)) {
-                covered = true;
-                break;
-            }
-        }
-        if (!covered) {
-            selected_removals.insert(path);
-        }
-    }
-
-    // Apply removals (set to nullptr)
-    for (const auto& path : selected_removals) {
-        apply_delta_to_json(path, core::monitor::vector_t{});
-    }
-
-    // Apply updates
-    for (const auto& [path, values] : update_deltas) {
-        apply_delta_to_json(path, values);
-    }
-
-    root["data"] = patch_obj;
-
-    return root.dump();
-}
-
-// Pre-compute all path prefixes from monitor state
+// Pre-compute all path prefixes from monitor state (for future path-based subscriptions)
 std::unordered_set<std::string> build_existing_prefixes(const core::monitor::state& state)
 {
     std::unordered_set<std::string> prefixes;
@@ -332,13 +164,11 @@ struct connection_info
 {
     std::string                             connection_id;
     std::function<void(const std::string&)> send_callback;
-    core::monitor::state                    last_state;
-    bool                                    needs_full_state;
+    core::monitor::state                    last_state; // Keep for future path-based subscriptions
 
     connection_info(std::string id, std::function<void(const std::string&)> callback)
         : connection_id(std::move(id))
         , send_callback(std::move(callback))
-        , needs_full_state(true)
     {
     }
 };
@@ -376,8 +206,8 @@ struct websocket_monitor_client::impl
             return;
         }
 
-        // Pre-compute existing prefixes once for all connections
-        auto existing_prefixes = build_existing_prefixes(state);
+        // Always send full state for high-throughput scenarios
+        std::string full_state_json = monitor_state_to_osc_json(state, "full_state");
 
         // Send to all connections
         std::lock_guard<std::mutex> lock(connections_mutex_);
@@ -385,23 +215,8 @@ struct websocket_monitor_client::impl
         while (it != connections_.end()) {
             try {
                 auto& conn = it->second;
-
-                if (conn->needs_full_state) {
-                    // Send full state
-                    std::string full_state_json = monitor_state_to_osc_json(state, "full_state");
-                    conn->send_callback(full_state_json);
-                    conn->last_state       = state;
-                    conn->needs_full_state = false;
-                } else {
-                    // Send delta
-                    auto deltas = generate_deltas(conn->last_state, state);
-                    if (!deltas.empty()) {
-                        std::string delta_json = deltas_to_json_merge_patch(deltas, existing_prefixes);
-                        conn->send_callback(delta_json);
-                        conn->last_state = state;
-                    }
-                }
-
+                conn->send_callback(full_state_json);
+                conn->last_state = state; // Keep for future path-based subscriptions
                 ++it;
             } catch (const std::exception& e) {
                 CASPAR_LOG(info) << L"WebSocket monitor: Removing failed connection " << u16(it->first) << L": "
@@ -416,15 +231,6 @@ struct websocket_monitor_client::impl
         std::lock_guard<std::mutex> lock(connections_mutex_);
         connections_.clear();
         CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected all connections";
-    }
-
-    void force_full_state()
-    {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        for (auto& [id, conn] : connections_) {
-            conn->needs_full_state = true;
-        }
-        CASPAR_LOG(info) << L"WebSocket monitor: Forced full state for all connections";
     }
 };
 

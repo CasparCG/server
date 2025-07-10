@@ -42,9 +42,6 @@ class websocket_monitor_client
     // Simple broadcast to all connections
     void send(const core::monitor::state& state);
 
-    // Force full state for all connections (useful for debugging)
-    void force_full_state();
-
     // Force disconnect all (for shutdown)
     void force_disconnect_all();
 
