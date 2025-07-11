@@ -98,9 +98,12 @@ class websocket_monitor_client
     void update_subscription(const std::string& connection_id, const subscription_config& subscription);
 
     // Send state to all connections (filtered by their subscriptions)
+    // CRITICAL: This method is completely asynchronous and will NEVER block the calling thread
+    // All processing is posted to the IO context to ensure channel performance is not affected
     void send(const caspar::core::monitor::state& state);
 
     // Send full state to a specific connection (one-time)
+    // CRITICAL: This method is completely asynchronous and will NEVER block the calling thread
     void send_full_state_to_connection(const std::string& connection_id);
 
     // Force disconnect all (for shutdown)
