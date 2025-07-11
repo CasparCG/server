@@ -430,6 +430,11 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
     // Handle subscription command from client
     void handle_subscription_command(const std::string& json_message);
+
+    // Handle request_full_state command from client
+    void handle_request_full_state_command();
+
+  private:
 };
 
 class websocket_monitor_server

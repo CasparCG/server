@@ -612,6 +612,7 @@ struct websocket_monitor_client::impl
     std::shared_ptr<boost::asio::io_context>                          context_;
     std::mutex                                                        connections_mutex_;
     std::unordered_map<std::string, std::unique_ptr<connection_info>> connections_;
+    caspar::core::monitor::state current_state_; // Store current state for full state requests
 
     explicit impl(std::shared_ptr<boost::asio::io_context> context)
         : context_(std::move(context))
@@ -653,12 +654,19 @@ struct websocket_monitor_client::impl
     void send(const caspar::core::monitor::state& state)
     {
         if (connections_.empty()) {
+            // Still store the state even if no connections
+            std::lock_guard<std::mutex> lock(connections_mutex_);
+            current_state_ = state;
             return;
         }
 
         // Send to all connections with their subscription filters
         std::lock_guard<std::mutex> lock(connections_mutex_);
-        auto                        it = connections_.begin();
+
+        // Store current state for full state requests
+        current_state_ = state;
+
+        auto it = connections_.begin();
         while (it != connections_.end()) {
             try {
                 auto& conn = it->second;
@@ -750,6 +758,23 @@ struct websocket_monitor_client::impl
         connections_.clear();
         CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected all connections";
     }
+
+    void send_full_state_to_connection(const std::string& connection_id)
+    {
+        std::lock_guard<std::mutex> lock(connections_mutex_);
+        auto                        it = connections_.find(connection_id);
+        if (it != connections_.end()) {
+            try {
+                // Send complete state with "full_state" type
+                std::string full_state_json = monitor_state_to_osc_json(current_state_, "full_state");
+                it->second->send_callback(full_state_json);
+                CASPAR_LOG(info) << L"WebSocket monitor: Sent full state to " << u16(connection_id);
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket monitor: Failed to send full state to " << u16(connection_id) << L": "
+                                  << u16(e.what());
+            }
+        }
+    }
 };
 
 websocket_monitor_client::websocket_monitor_client(std::shared_ptr<boost::asio::io_context> context)
@@ -780,5 +805,10 @@ void websocket_monitor_client::update_subscription(const std::string&         co
 void websocket_monitor_client::send(const caspar::core::monitor::state& state) { impl_->send(state); }
 
 void websocket_monitor_client::force_disconnect_all() { impl_->force_disconnect_all(); }
+
+void websocket_monitor_client::send_full_state_to_connection(const std::string& connection_id)
+{
+    impl_->send_full_state_to_connection(connection_id);
+}
 
 }}} // namespace caspar::protocol::websocket

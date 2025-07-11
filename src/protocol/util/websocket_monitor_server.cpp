@@ -248,6 +248,12 @@ void websocket_monitor_session::handle_message(const std::string& message)
             return;
         }
 
+        // Handle request_full_state command
+        if (json_msg.contains("command") && json_msg["command"] == "request_full_state") {
+            handle_request_full_state_command();
+            return;
+        }
+
         // Log unknown messages at debug level to reduce noise
         if (!message.empty() && message != "{}" && message != "null") {
             CASPAR_LOG(debug) << L"WebSocket monitor: Received unknown message: " << u16(message);
@@ -263,11 +269,18 @@ void websocket_monitor_session::send_welcome_message()
         {"type", "welcome"},
         {"connection_id", connection_id_},
         {"message", "Welcome to CasparCG Monitor WebSocket"},
-        {"instructions", "Send a subscription command to start receiving monitor data"},
-        {"example",
-         {{"command", "subscribe"},
-          {"include", {"channel/1/*", "channel/*/mixer/volume"}},
-          {"exclude", {"channel/*/mixer/audio/*"}}}},
+        {"instructions",
+         "Send a subscription command to start receiving monitor data, or request_full_state for a one-time snapshot"},
+        {"commands",
+         {{"subscribe",
+           {{"description", "Set up ongoing filtered monitor data subscription"},
+            {"example",
+             {{"command", "subscribe"},
+              {"include", {"channel/1/*", "channel/*/mixer/audio/volume"}},
+              {"exclude", {"channel/*/mixer/audio/*"}}}}}},
+          {"request_full_state",
+           {{"description", "Get a one-time snapshot of all current monitor data"},
+            {"example", {{"command", "request_full_state"}}}}}}},
         {"supported_patterns",
          {{"wildcards", {"* (any sequence)"}},
           {"number_ranges", {"[1-9] (single digits)", "[1-20] (numbers 1 through 20)", "[!1-5] (not 1-5)"}},
@@ -343,6 +356,24 @@ void websocket_monitor_session::handle_subscription_command(const std::string& j
         // Send error response
         nlohmann::json error_response = {
             {"type", "error"}, {"message", "Failed to update subscription"}, {"error", e.what()}};
+        send(error_response.dump());
+    }
+}
+
+void websocket_monitor_session::handle_request_full_state_command()
+{
+    try {
+        if (monitor_client_) {
+            // Send full state immediately without changing subscription
+            monitor_client_->send_full_state_to_connection(connection_id_);
+            CASPAR_LOG(info) << L"WebSocket monitor: Sent full state to " << u16(connection_id_);
+        }
+    } catch (const std::exception& e) {
+        CASPAR_LOG(error) << L"WebSocket monitor: Error handling request_full_state command: " << u16(e.what());
+
+        // Send error response
+        nlohmann::json error_response = {
+            {"type", "error"}, {"message", "Failed to send full state"}, {"error", e.what()}};
         send(error_response.dump());
     }
 }

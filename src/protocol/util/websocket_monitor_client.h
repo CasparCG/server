@@ -100,6 +100,9 @@ class websocket_monitor_client
     // Send state to all connections (filtered by their subscriptions)
     void send(const caspar::core::monitor::state& state);
 
+    // Send full state to a specific connection (one-time)
+    void send_full_state_to_connection(const std::string& connection_id);
+
     // Force disconnect all (for shutdown)
     void force_disconnect_all();
 
