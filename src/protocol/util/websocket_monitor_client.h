@@ -25,9 +25,61 @@
 #include <boost/asio/io_context.hpp>
 #include <functional>
 #include <memory>
+#include <regex>
 #include <string>
+#include <vector>
 
 namespace caspar { namespace protocol { namespace websocket {
+
+// Array indexing support
+struct array_filter
+{
+    bool has_filter   = false;
+    bool single_index = false;
+    int  start        = 0;
+    int  end          = -1; // -1 means no end (single index or all)
+};
+
+// Simple wildcard path matcher with array indexing support
+class path_matcher
+{
+  public:
+    explicit path_matcher(const std::string& pattern);
+
+    // Check if a path matches this pattern
+    bool matches(const std::string& path) const;
+
+    // Get the original pattern
+    const std::string& pattern() const { return pattern_; }
+
+    // Check if this pattern has array filtering
+    bool has_array_filter() const;
+
+    // Apply array filtering to values (returns filtered values)
+    caspar::core::monitor::vector_t apply_array_filter(const caspar::core::monitor::vector_t& values) const;
+
+  private:
+    std::string  pattern_;
+    std::regex   regex_;
+    array_filter array_filter_;
+};
+
+// Subscription configuration for a client
+struct subscription_config
+{
+    std::vector<std::string> include_patterns; // Paths to include
+    std::vector<std::string> exclude_patterns; // Paths to exclude
+
+    // Check if a path should be included in this subscription
+    bool should_include(const std::string& path) const;
+
+    // Apply array filtering to values based on subscription patterns
+    caspar::core::monitor::vector_t apply_array_filters(const std::string&                     path,
+                                                        const caspar::core::monitor::vector_t& values) const;
+
+    // Check if subscription is empty (no includes)
+    bool is_empty() const { return include_patterns.empty(); }
+};
 
 class websocket_monitor_client
 {
@@ -35,12 +87,18 @@ class websocket_monitor_client
     explicit websocket_monitor_client(std::shared_ptr<boost::asio::io_context> context);
     ~websocket_monitor_client();
 
-    // Simplified connection management
-    void add_connection(const std::string& connection_id, std::function<void(const std::string&)> send_callback);
+    // Connection management with subscription support
+    void add_connection(const std::string&                      connection_id,
+                        std::function<void(const std::string&)> send_callback,
+                        const subscription_config&              subscription = subscription_config{});
+
     void remove_connection(const std::string& connection_id);
 
-    // Simple broadcast to all connections
-    void send(const core::monitor::state& state);
+    // Update subscription for existing connection
+    void update_subscription(const std::string& connection_id, const subscription_config& subscription);
+
+    // Send state to all connections (filtered by their subscriptions)
+    void send(const caspar::core::monitor::state& state);
 
     // Force disconnect all (for shutdown)
     void force_disconnect_all();

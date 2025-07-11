@@ -30,8 +30,10 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <common/memory.h>
+#include <common/utf.h>
 #include <deque>
 #include <memory>
+// nlohmann/json included in implementation file
 #include <string>
 #include <thread>
 #include <unordered_set>
@@ -269,6 +271,9 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             CASPAR_LOG(info) << L"WebSocket monitor session connected: " << u16(connection_id_) << L" ("
                              << u16(client_address_) << L")";
 
+            // Send welcome message
+            send_welcome_message();
+
             // Start reading for potential close messages
             do_read();
         } catch (const std::exception& e) {
@@ -418,48 +423,13 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     }
 
     // Handle incoming JSON messages from the client
-    void handle_message(const std::string& message)
-    {
-        try {
-            // Simple but robust JSON parsing - look for command field
-            size_t command_pos = message.find("\"command\"");
-            if (command_pos != std::string::npos) {
-                // Find the value after "command":
-                size_t colon_pos = message.find(':', command_pos);
-                if (colon_pos != std::string::npos) {
-                    // Skip whitespace and quotes
-                    size_t value_start = colon_pos + 1;
-                    while (
-                        value_start < message.length() &&
-                        (message[value_start] == ' ' || message[value_start] == '\t' || message[value_start] == '\"')) {
-                        value_start++;
-                    }
+    void handle_message(const std::string& message);
 
-                    if (value_start < message.length()) {
-                        // Extract the command value up to the next double quote or whitespace
-                        size_t value_end = value_start;
-                        while (value_end < message.length() && message[value_end] != '"' && message[value_end] != ' ' &&
-                               message[value_end] != '\t' && message[value_end] != '\n' && message[value_end] != '\r') {
-                            ++value_end;
-                        }
+    // Send welcome message to new client
+    void send_welcome_message();
 
-                        std::string value = message.substr(value_start, value_end - value_start);
-
-                        // Convert to lowercase for case-insensitive comparison
-                        std::string lower_value = value;
-                        std::transform(lower_value.begin(), lower_value.end(), lower_value.begin(), ::tolower);
-                    }
-                }
-            }
-
-            // Log unknown messages at debug level to reduce noise
-            if (!message.empty() && message != "{}" && message != "null") {
-                CASPAR_LOG(debug) << L"WebSocket monitor: Received unknown message: " << u16(message);
-            }
-        } catch (const std::exception& e) {
-            CASPAR_LOG(error) << L"WebSocket monitor: Error handling message: " << u16(e.what());
-        }
-    }
+    // Handle subscription command from client
+    void handle_subscription_command(const std::string& json_message);
 };
 
 class websocket_monitor_server
