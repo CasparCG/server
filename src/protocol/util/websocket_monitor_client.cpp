@@ -614,8 +614,12 @@ struct websocket_monitor_client::impl
     std::unordered_map<std::string, std::unique_ptr<connection_info>> connections_;
     caspar::core::monitor::state current_state_; // Store current state for full state requests
 
+    // Dedicated thread pool for WebSocket processing to avoid blocking the main IO context
+    std::shared_ptr<boost::asio::thread_pool> worker_pool_;
+
     explicit impl(std::shared_ptr<boost::asio::io_context> context)
         : context_(std::move(context))
+        , worker_pool_(std::make_shared<boost::asio::thread_pool>(2)) // 2 worker threads
     {
     }
 
@@ -654,10 +658,10 @@ struct websocket_monitor_client::impl
     void send(const caspar::core::monitor::state& state)
     {
         // CRITICAL: Never block the channel thread!
-        // Post all WebSocket work to the IO context asynchronously
+        // Post all WebSocket work to dedicated thread pool to avoid IO context conflicts
         auto state_copy = std::make_shared<caspar::core::monitor::state>(state);
 
-        context_->post([this, state_copy]() {
+        boost::asio::post(*worker_pool_, [this, state_copy]() {
             try {
                 // Store current state for full state requests (on worker thread)
                 {
@@ -669,84 +673,133 @@ struct websocket_monitor_client::impl
                     return;
                 }
 
-                // Process all connections on worker thread
-                std::lock_guard<std::mutex> lock(connections_mutex_);
-                auto                        it = connections_.begin();
-                while (it != connections_.end()) {
-                    try {
-                        auto& conn = it->second;
+                // Pre-compute common data to avoid redundant work
+                std::unordered_map<std::string, std::set<int>> connection_subscribed_layers;
+                std::unordered_map<std::string, std::set<int>> connection_channel_ids;
 
-                        // Start with a copy of the original state for modification
-                        caspar::core::monitor::state enhanced_state = *state_copy;
-
-                        // Check if this connection has specific layer subscriptions (not just wildcards)
+                // First pass: collect subscription data for all connections
+                {
+                    std::lock_guard<std::mutex> lock(connections_mutex_);
+                    for (const auto& [conn_id, conn] : connections_) {
+                        // Extract subscribed layers for this connection
                         auto subscribed_layers = extract_subscribed_layer_numbers(conn->subscription.include_patterns);
-
                         if (!subscribed_layers.empty()) {
-                            // For each subscribed layer, check if it exists in the state
-                            for (int layer_number : subscribed_layers) {
-                                if (!layer_exists_in_state(enhanced_state, layer_number)) {
-                                    // Layer doesn't exist, inject empty layer data for all channels
-                                    // We need to determine which channels to inject for
-                                    std::set<int> channel_ids;
+                            connection_subscribed_layers[conn_id] = std::move(subscribed_layers);
+                        }
 
-                                    // Extract channel IDs from the subscription patterns
-                                    for (const auto& pattern : conn->subscription.include_patterns) {
-                                        std::vector<std::string> parts;
-                                        boost::split(parts, pattern, boost::is_any_of("/"));
+                        // Extract channel IDs for this connection
+                        std::set<int> channel_ids;
+                        for (const auto& pattern : conn->subscription.include_patterns) {
+                            std::vector<std::string> parts;
+                            boost::split(parts, pattern, boost::is_any_of("/"));
 
-                                        if (parts.size() >= 2 && parts[0] == "channel") {
-                                            if (parts[1] != "*" && parts[1].find('[') == std::string::npos) {
+                            if (parts.size() >= 2 && parts[0] == "channel") {
+                                if (parts[1] != "*" && parts[1].find('[') == std::string::npos) {
+                                    try {
+                                        int channel_id = std::stoi(parts[1]);
+                                        channel_ids.insert(channel_id);
+                                    } catch (const std::exception&) {
+                                        // Not a valid number, skip
+                                    }
+                                } else {
+                                    // Wildcard or pattern for channel, use all existing channels from state
+                                    for (const auto& [path, values] : *state_copy) {
+                                        if (path.find("channel/") == 0) {
+                                            size_t start = 8; // After "channel/"
+                                            size_t end   = path.find('/', start);
+                                            if (end != std::string::npos) {
                                                 try {
-                                                    int channel_id = std::stoi(parts[1]);
+                                                    int channel_id = std::stoi(path.substr(start, end - start));
                                                     channel_ids.insert(channel_id);
                                                 } catch (const std::exception&) {
                                                     // Not a valid number, skip
                                                 }
-                                            } else {
-                                                // Wildcard or pattern for channel, use all existing channels from state
-                                                for (const auto& [path, values] : enhanced_state) {
-                                                    if (path.find("channel/") == 0) {
-                                                        size_t start = 8; // After "channel/"
-                                                        size_t end   = path.find('/', start);
-                                                        if (end != std::string::npos) {
-                                                            try {
-                                                                int channel_id =
-                                                                    std::stoi(path.substr(start, end - start));
-                                                                channel_ids.insert(channel_id);
-                                                            } catch (const std::exception&) {
-                                                                // Not a valid number, skip
-                                                            }
-                                                        }
-                                                    }
-                                                }
                                             }
                                         }
-                                    }
-
-                                    // Inject empty layer data for each channel
-                                    for (int channel_id : channel_ids) {
-                                        inject_empty_layer_data(enhanced_state, channel_id, layer_number);
                                     }
                                 }
                             }
                         }
-
-                        // Filter state based on subscription
-                        caspar::core::monitor::state filtered_state;
-                        for (const auto& [path, values] : enhanced_state) {
-                            if (conn->subscription.should_include(path)) {
-                                // Apply array filtering if needed
-                                auto filtered_values = conn->subscription.apply_array_filters(path, values);
-                                filtered_state[path] = filtered_values;
-                            }
+                        if (!channel_ids.empty()) {
+                            connection_channel_ids[conn_id] = std::move(channel_ids);
                         }
+                    }
+                }
 
-                        // Only send if there's data to send
-                        if (filtered_state.begin() != filtered_state.end()) {
-                            std::string filtered_state_json =
-                                monitor_state_to_osc_json(filtered_state, "filtered_state");
-                            conn->send_callback(filtered_state_json);
+                // Second pass: process each connection efficiently
+                std::lock_guard<std::mutex> lock(connections_mutex_);
+                auto                        it = connections_.begin();
+                while (it != connections_.end()) {
+                    try {
+                        auto&              conn    = it->second;
+                        const std::string& conn_id = it->first;
+
+                        // Start with the original state (no expensive copying)
+                        const caspar::core::monitor::state& base_state = *state_copy;
+
+                        // Check if this connection needs layer injection
+                        auto layers_it = connection_subscribed_layers.find(conn_id);
+                        if (layers_it != connection_subscribed_layers.end()) {
+                            // Create enhanced state only if needed
+                            caspar::core::monitor::state enhanced_state = base_state;
+
+                            auto channels_it = connection_channel_ids.find(conn_id);
+                            if (channels_it != connection_channel_ids.end()) {
+                                // Inject empty layer data for subscribed layers that don't exist
+                                for (int layer_number : layers_it->second) {
+                                    if (!layer_exists_in_state(enhanced_state, layer_number)) {
+                                        for (int channel_id : channels_it->second) {
+                                            inject_empty_layer_data(enhanced_state, channel_id, layer_number);
+                                        }
+                                    }
+                                }
+
+                                // Use enhanced state for filtering
+                                caspar::core::monitor::state filtered_state;
+                                for (const auto& [path, values] : enhanced_state) {
+                                    if (conn->subscription.should_include(path)) {
+                                        auto filtered_values = conn->subscription.apply_array_filters(path, values);
+                                        filtered_state[path] = filtered_values;
+                                    }
+                                }
+
+                                // Send filtered state
+                                if (filtered_state.begin() != filtered_state.end()) {
+                                    std::string filtered_state_json =
+                                        monitor_state_to_osc_json(filtered_state, "filtered_state");
+                                    conn->send_callback(filtered_state_json);
+                                }
+                            } else {
+                                // No channel IDs found, use base state
+                                caspar::core::monitor::state filtered_state;
+                                for (const auto& [path, values] : enhanced_state) {
+                                    if (conn->subscription.should_include(path)) {
+                                        auto filtered_values = conn->subscription.apply_array_filters(path, values);
+                                        filtered_state[path] = filtered_values;
+                                    }
+                                }
+
+                                if (filtered_state.begin() != filtered_state.end()) {
+                                    std::string filtered_state_json =
+                                        monitor_state_to_osc_json(filtered_state, "filtered_state");
+                                    conn->send_callback(filtered_state_json);
+                                }
+                            }
+                        } else {
+                            // No layer injection needed, use base state directly
+                            caspar::core::monitor::state filtered_state;
+                            for (const auto& [path, values] : base_state) {
+                                if (conn->subscription.should_include(path)) {
+                                    auto filtered_values = conn->subscription.apply_array_filters(path, values);
+                                    filtered_state[path] = filtered_values;
+                                }
+                            }
+
+                            if (filtered_state.begin() != filtered_state.end()) {
+                                std::string filtered_state_json =
+                                    monitor_state_to_osc_json(filtered_state, "filtered_state");
+                                conn->send_callback(filtered_state_json);
+                            }
                         }
 
                         conn->last_state = *state_copy; // Keep for future path-based subscriptions
@@ -773,8 +826,8 @@ struct websocket_monitor_client::impl
     void send_full_state_to_connection(const std::string& connection_id)
     {
         // CRITICAL: Never block any thread!
-        // Post to IO context asynchronously
-        context_->post([this, connection_id]() {
+        // Post to worker pool to avoid IO context conflicts
+        boost::asio::post(*worker_pool_, [this, connection_id]() {
             try {
                 std::lock_guard<std::mutex> lock(connections_mutex_);
                 auto                        it = connections_.find(connection_id);
