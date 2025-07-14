@@ -23,6 +23,7 @@
 #include <core/monitor/monitor.h>
 
 #include <boost/asio/io_context.hpp>
+#include <common/executor.h>
 #include <functional>
 #include <memory>
 #include <regex>
@@ -99,15 +100,25 @@ class websocket_monitor_client
 
     // Send state to all connections (filtered by their subscriptions)
     // CRITICAL: This method is completely asynchronous and will NEVER block the calling thread
-    // All processing is posted to the IO context to ensure channel performance is not affected
+    // All processing is posted to the dedicated monitor executor to ensure channel performance is not affected
     void send(const caspar::core::monitor::state& state);
 
     // Send full state to a specific connection (one-time)
     // CRITICAL: This method is completely asynchronous and will NEVER block the calling thread
     void send_full_state_to_connection(const std::string& connection_id);
 
+    // Get current accumulated state (for internal use)
+    // This is more efficient than rebuilding state from scratch
+    caspar::core::monitor::state get_current_state() const;
+
     // Force disconnect all (for shutdown)
     void force_disconnect_all();
+
+    // Shutdown coordination - call before destruction
+    void shutdown();
+
+    // Wait for all pending work to complete - call after shutdown
+    void join();
 
   private:
     struct impl;

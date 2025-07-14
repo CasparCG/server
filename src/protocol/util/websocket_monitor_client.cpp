@@ -36,12 +36,12 @@
 #include <core/monitor/monitor.h>
 #include <list>
 #include <memory>
-#include <mutex>
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <set>
 #include <sstream>
 #include <string>
+#include <tbb/concurrent_hash_map.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -597,7 +597,7 @@ struct connection_info
     std::string                             connection_id;
     std::function<void(const std::string&)> send_callback;
     subscription_config                     subscription;
-    caspar::core::monitor::state            last_state; // Keep for future path-based subscriptions
+    caspar::core::monitor::state            last_state;
 
     connection_info(std::string id, std::function<void(const std::string&)> callback, subscription_config sub)
         : connection_id(std::move(id))
@@ -609,45 +609,58 @@ struct connection_info
 
 struct websocket_monitor_client::impl
 {
-    std::shared_ptr<boost::asio::io_context>                          context_;
-    std::mutex                                                        connections_mutex_;
-    std::unordered_map<std::string, std::unique_ptr<connection_info>> connections_;
-    caspar::core::monitor::state current_state_; // Store current state for full state requests
+    std::shared_ptr<boost::asio::io_context> context_;
 
-    // Dedicated thread pool for WebSocket processing to avoid blocking the main IO context
-    std::shared_ptr<boost::asio::thread_pool> worker_pool_;
+    // Dedicated executor for monitor operations (like AMCP command queues)
+    caspar::executor monitor_executor_;
+
+    // Lock-free state storage
+    std::atomic<caspar::core::monitor::state*> current_state_{nullptr};
+
+    // Thread-safe connection management (no mutex needed)
+    tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>> connections_;
+
+    std::atomic<bool> shutdown_requested_{false};
+    std::atomic<bool> shutdown_completed_{false};
 
     explicit impl(std::shared_ptr<boost::asio::io_context> context)
         : context_(std::move(context))
-        , worker_pool_(std::make_shared<boost::asio::thread_pool>(2)) // 2 worker threads
+        , monitor_executor_(L"WebSocketMonitorExecutor")
     {
+    }
+
+    ~impl()
+    {
+        shutdown();
+        join();
     }
 
     void add_connection(const std::string&                      connection_id,
                         std::function<void(const std::string&)> send_callback,
                         const subscription_config&              subscription)
     {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        connections_[connection_id] =
-            std::make_unique<connection_info>(connection_id, std::move(send_callback), subscription);
+        tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::accessor acc;
+        connections_.insert(acc, connection_id);
+        acc->second = std::make_unique<connection_info>(connection_id, std::move(send_callback), subscription);
         CASPAR_LOG(info) << L"WebSocket monitor: Added connection " << u16(connection_id) << L" ("
                          << connections_.size() << L" total connections) with subscription";
     }
 
     void remove_connection(const std::string& connection_id)
     {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        connections_.erase(connection_id);
+        tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::accessor acc;
+        if (connections_.find(acc, connection_id)) {
+            connections_.erase(acc);
+        }
         CASPAR_LOG(info) << L"WebSocket monitor: Removed connection " << u16(connection_id) << L" ("
                          << connections_.size() << L" total connections)";
     }
 
     void update_subscription(const std::string& connection_id, const subscription_config& subscription)
     {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
-        auto                        it = connections_.find(connection_id);
-        if (it != connections_.end()) {
-            it->second->subscription = subscription;
+        tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::accessor acc;
+        if (connections_.find(acc, connection_id)) {
+            acc->second->subscription = subscription;
             CASPAR_LOG(info) << L"WebSocket monitor: Updated subscription for connection " << u16(connection_id);
         } else {
             CASPAR_LOG(warning) << L"WebSocket monitor: Connection not found for subscription update: "
@@ -657,195 +670,142 @@ struct websocket_monitor_client::impl
 
     void send(const caspar::core::monitor::state& state)
     {
-        // CRITICAL: Never block the channel thread!
-        // Post all WebSocket work to dedicated thread pool to avoid IO context conflicts
-        auto state_copy = std::make_shared<caspar::core::monitor::state>(state);
+        if (shutdown_requested_.load()) {
+            return;
+        }
 
-        boost::asio::post(*worker_pool_, [this, state_copy]() {
+        // CRITICAL: Never block the channel thread
+        // Post to dedicated executor immediately (like AMCP command queues)
+        monitor_executor_.begin_invoke([this, state]() { process_monitor_update(state); });
+    }
+
+  private:
+    void process_monitor_update(const caspar::core::monitor::state& state)
+    {
+        if (shutdown_requested_.load()) {
+            return;
+        }
+
+        // Update state atomically (lock-free)
+        auto* new_state = new caspar::core::monitor::state(state);
+        auto* old_state = current_state_.exchange(new_state);
+        delete old_state;
+
+        // Process each connection independently
+        for (tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::iterator it =
+                 connections_.begin();
+             it != connections_.end();
+             ++it) {
             try {
-                // Store current state for full state requests (on worker thread)
-                {
-                    std::lock_guard<std::mutex> lock(connections_mutex_);
-                    current_state_ = *state_copy;
-                }
-
-                if (connections_.empty()) {
-                    return;
-                }
-
-                // Pre-compute common data to avoid redundant work
-                std::unordered_map<std::string, std::set<int>> connection_subscribed_layers;
-                std::unordered_map<std::string, std::set<int>> connection_channel_ids;
-
-                // First pass: collect subscription data for all connections
-                {
-                    std::lock_guard<std::mutex> lock(connections_mutex_);
-                    for (const auto& [conn_id, conn] : connections_) {
-                        // Extract subscribed layers for this connection
-                        auto subscribed_layers = extract_subscribed_layer_numbers(conn->subscription.include_patterns);
-                        if (!subscribed_layers.empty()) {
-                            connection_subscribed_layers[conn_id] = std::move(subscribed_layers);
-                        }
-
-                        // Extract channel IDs for this connection
-                        std::set<int> channel_ids;
-                        for (const auto& pattern : conn->subscription.include_patterns) {
-                            std::vector<std::string> parts;
-                            boost::split(parts, pattern, boost::is_any_of("/"));
-
-                            if (parts.size() >= 2 && parts[0] == "channel") {
-                                if (parts[1] != "*" && parts[1].find('[') == std::string::npos) {
-                                    try {
-                                        int channel_id = std::stoi(parts[1]);
-                                        channel_ids.insert(channel_id);
-                                    } catch (const std::exception&) {
-                                        // Not a valid number, skip
-                                    }
-                                } else {
-                                    // Wildcard or pattern for channel, use all existing channels from state
-                                    for (const auto& [path, values] : *state_copy) {
-                                        if (path.find("channel/") == 0) {
-                                            size_t start = 8; // After "channel/"
-                                            size_t end   = path.find('/', start);
-                                            if (end != std::string::npos) {
-                                                try {
-                                                    int channel_id = std::stoi(path.substr(start, end - start));
-                                                    channel_ids.insert(channel_id);
-                                                } catch (const std::exception&) {
-                                                    // Not a valid number, skip
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (!channel_ids.empty()) {
-                            connection_channel_ids[conn_id] = std::move(channel_ids);
-                        }
-                    }
-                }
-
-                // Second pass: process each connection efficiently
-                std::lock_guard<std::mutex> lock(connections_mutex_);
-                auto                        it = connections_.begin();
-                while (it != connections_.end()) {
-                    try {
-                        auto&              conn    = it->second;
-                        const std::string& conn_id = it->first;
-
-                        // Start with the original state (no expensive copying)
-                        const caspar::core::monitor::state& base_state = *state_copy;
-
-                        // Check if this connection needs layer injection
-                        auto layers_it = connection_subscribed_layers.find(conn_id);
-                        if (layers_it != connection_subscribed_layers.end()) {
-                            // Create enhanced state only if needed
-                            caspar::core::monitor::state enhanced_state = base_state;
-
-                            auto channels_it = connection_channel_ids.find(conn_id);
-                            if (channels_it != connection_channel_ids.end()) {
-                                // Inject empty layer data for subscribed layers that don't exist
-                                for (int layer_number : layers_it->second) {
-                                    if (!layer_exists_in_state(enhanced_state, layer_number)) {
-                                        for (int channel_id : channels_it->second) {
-                                            inject_empty_layer_data(enhanced_state, channel_id, layer_number);
-                                        }
-                                    }
-                                }
-
-                                // Use enhanced state for filtering
-                                caspar::core::monitor::state filtered_state;
-                                for (const auto& [path, values] : enhanced_state) {
-                                    if (conn->subscription.should_include(path)) {
-                                        auto filtered_values = conn->subscription.apply_array_filters(path, values);
-                                        filtered_state[path] = filtered_values;
-                                    }
-                                }
-
-                                // Send filtered state
-                                if (filtered_state.begin() != filtered_state.end()) {
-                                    std::string filtered_state_json =
-                                        monitor_state_to_osc_json(filtered_state, "filtered_state");
-                                    conn->send_callback(filtered_state_json);
-                                }
-                            } else {
-                                // No channel IDs found, use base state
-                                caspar::core::monitor::state filtered_state;
-                                for (const auto& [path, values] : enhanced_state) {
-                                    if (conn->subscription.should_include(path)) {
-                                        auto filtered_values = conn->subscription.apply_array_filters(path, values);
-                                        filtered_state[path] = filtered_values;
-                                    }
-                                }
-
-                                if (filtered_state.begin() != filtered_state.end()) {
-                                    std::string filtered_state_json =
-                                        monitor_state_to_osc_json(filtered_state, "filtered_state");
-                                    conn->send_callback(filtered_state_json);
-                                }
-                            }
-                        } else {
-                            // No layer injection needed, use base state directly
-                            caspar::core::monitor::state filtered_state;
-                            for (const auto& [path, values] : base_state) {
-                                if (conn->subscription.should_include(path)) {
-                                    auto filtered_values = conn->subscription.apply_array_filters(path, values);
-                                    filtered_state[path] = filtered_values;
-                                }
-                            }
-
-                            if (filtered_state.begin() != filtered_state.end()) {
-                                std::string filtered_state_json =
-                                    monitor_state_to_osc_json(filtered_state, "filtered_state");
-                                conn->send_callback(filtered_state_json);
-                            }
-                        }
-
-                        conn->last_state = *state_copy; // Keep for future path-based subscriptions
-                        ++it;
-                    } catch (const std::exception& e) {
-                        CASPAR_LOG(info) << L"WebSocket monitor: Removing failed connection " << u16(it->first) << L": "
-                                         << u16(e.what());
-                        it = connections_.erase(it);
-                    }
-                }
+                process_connection_async(it->second.get(), state);
             } catch (const std::exception& e) {
-                CASPAR_LOG(error) << L"WebSocket monitor: Error in async send: " << u16(e.what());
+                CASPAR_LOG(error) << L"WebSocket monitor: Failed to process connection " << u16(it->first) << L": "
+                                  << u16(e.what());
+                tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::accessor acc;
+                if (connections_.find(acc, it->first)) {
+                    connections_.erase(acc);
+                }
             }
-        });
+        }
+    }
+
+    void process_connection_async(connection_info* conn, const caspar::core::monitor::state& state)
+    {
+        // Expensive operations happen here, not in channel thread
+        caspar::core::monitor::state filtered_state;
+
+        // Pattern matching and filtering
+        for (const auto& [path, values] : state) {
+            if (conn->subscription.should_include(path)) {
+                auto filtered_values = conn->subscription.apply_array_filters(path, values);
+                filtered_state[path] = filtered_values;
+            }
+        }
+
+        // JSON serialization
+        if (filtered_state.begin() != filtered_state.end()) {
+            std::string json = monitor_state_to_osc_json(filtered_state, "filtered_state");
+
+            // Send via IO context (non-blocking)
+            boost::asio::post(*context_, [conn, json = std::move(json)]() {
+                try {
+                    // Check if the callback is still valid before calling it
+                    if (conn && conn->send_callback) {
+                        conn->send_callback(json);
+                    }
+                } catch (const std::exception& e) {
+                    CASPAR_LOG(error) << L"WebSocket monitor: Send callback failed: " << u16(e.what());
+                }
+            });
+        }
+
+        conn->last_state = state;
+    }
+
+  public:
+    void shutdown()
+    {
+        if (!shutdown_completed_.exchange(true)) {
+            shutdown_requested_.store(true);
+            monitor_executor_.stop();
+            CASPAR_LOG(info) << L"WebSocket monitor: Shutdown requested";
+        }
+    }
+
+    void join()
+    {
+        if (!shutdown_completed_.load()) {
+            monitor_executor_.stop_and_wait();
+            CASPAR_LOG(info) << L"WebSocket monitor: All tasks completed, executor joined";
+        }
     }
 
     void force_disconnect_all()
     {
-        std::lock_guard<std::mutex> lock(connections_mutex_);
         connections_.clear();
         CASPAR_LOG(info) << L"WebSocket monitor: Force disconnected all connections";
     }
 
     void send_full_state_to_connection(const std::string& connection_id)
     {
-        // CRITICAL: Never block any thread!
-        // Post to worker pool to avoid IO context conflicts
-        boost::asio::post(*worker_pool_, [this, connection_id]() {
-            try {
-                std::lock_guard<std::mutex> lock(connections_mutex_);
-                auto                        it = connections_.find(connection_id);
-                if (it != connections_.end()) {
-                    try {
-                        // Send complete state with "full_state" type
-                        std::string full_state_json = monitor_state_to_osc_json(current_state_, "full_state");
-                        it->second->send_callback(full_state_json);
-                        CASPAR_LOG(info) << L"WebSocket monitor: Sent full state to " << u16(connection_id);
-                    } catch (const std::exception& e) {
-                        CASPAR_LOG(error) << L"WebSocket monitor: Failed to send full state to " << u16(connection_id)
-                                          << L": " << u16(e.what());
-                    }
+        if (shutdown_requested_.load()) {
+            return;
+        }
+
+        monitor_executor_.begin_invoke([this, connection_id]() {
+            auto* state = current_state_.load();
+            if (!state) {
+                return;
+            }
+
+            tbb::concurrent_hash_map<std::string, std::unique_ptr<connection_info>>::accessor acc;
+            if (connections_.find(acc, connection_id)) {
+                try {
+                    std::string full_state_json = monitor_state_to_osc_json(*state, "full_state");
+
+                    // Send via IO context (non-blocking)
+                    boost::asio::post(*context_, [conn = acc->second.get(), json = std::move(full_state_json)]() {
+                        try {
+                            // Check if the callback is still valid before calling it
+                            if (conn && conn->send_callback) {
+                                conn->send_callback(json);
+                                CASPAR_LOG(info) << L"WebSocket monitor: Sent full state to connection";
+                            }
+                        } catch (const std::exception& e) {
+                            CASPAR_LOG(error) << L"WebSocket monitor: Failed to send full state: " << u16(e.what());
+                        }
+                    });
+                } catch (const std::exception& e) {
+                    CASPAR_LOG(error) << L"WebSocket monitor: Error preparing full state: " << u16(e.what());
                 }
-            } catch (const std::exception& e) {
-                CASPAR_LOG(error) << L"WebSocket monitor: Error in async full state send: " << u16(e.what());
             }
         });
+    }
+
+    caspar::core::monitor::state get_current_state() const
+    {
+        auto* state = current_state_.load();
+        return state ? *state : caspar::core::monitor::state{};
     }
 };
 
@@ -854,7 +814,13 @@ websocket_monitor_client::websocket_monitor_client(std::shared_ptr<boost::asio::
 {
 }
 
-websocket_monitor_client::~websocket_monitor_client() = default;
+websocket_monitor_client::~websocket_monitor_client()
+{
+    if (impl_) {
+        impl_->shutdown();
+        impl_->join();
+    }
+}
 
 void websocket_monitor_client::add_connection(const std::string&                      connection_id,
                                               std::function<void(const std::string&)> send_callback,
@@ -878,9 +844,25 @@ void websocket_monitor_client::send(const caspar::core::monitor::state& state) {
 
 void websocket_monitor_client::force_disconnect_all() { impl_->force_disconnect_all(); }
 
+caspar::core::monitor::state websocket_monitor_client::get_current_state() const { return impl_->get_current_state(); }
+
 void websocket_monitor_client::send_full_state_to_connection(const std::string& connection_id)
 {
     impl_->send_full_state_to_connection(connection_id);
+}
+
+void websocket_monitor_client::shutdown()
+{
+    if (impl_) {
+        impl_->shutdown();
+    }
+}
+
+void websocket_monitor_client::join()
+{
+    if (impl_) {
+        impl_->join();
+    }
 }
 
 }}} // namespace caspar::protocol::websocket

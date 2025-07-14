@@ -25,21 +25,34 @@
 #include <common/log.h>
 #include <common/utf.h>
 
+#include <algorithm>
+#include <boost/algorithm/string.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
-#include <nlohmann/json.hpp>
-
-#include <atomic>
+#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/range/adaptor/map.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #include <chrono>
+#include <core/monitor/monitor.h>
 #include <deque>
+#include <list>
 #include <memory>
+#include <nlohmann/json.hpp>
+#include <regex>
+#include <set>
+#include <sstream>
 #include <string>
+#include <tbb/concurrent_hash_map.h>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace beast = boost::beast;
 namespace http  = beast::http;
@@ -62,6 +75,7 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     boost::asio::io_context&                                        io_context_;
     std::function<void(std::shared_ptr<websocket_monitor_session>)> session_removal_callback_;
     bool                                                            write_in_flight_{false};
+    std::atomic<bool>                                               removal_callback_called_{false};
 
     // Circuit breaker configuration
     static constexpr int SUSTAINED_FAILURE_SECONDS = 20; // Close connection after 20 seconds of failures
@@ -70,7 +84,9 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     std::atomic<int>                      total_messages_sent_{0};
     std::atomic<int>                      total_messages_dropped_{0};
     std::chrono::steady_clock::time_point first_failure_time_;
+    std::chrono::steady_clock::time_point last_drop_time_;
     bool                                  has_failures_{false};
+    bool                                  has_drops_{false};
 
   public:
     explicit websocket_monitor_session(
@@ -117,10 +133,19 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             }
         }
 
-        // Notify listener that this session is being destroyed
-        if (session_removal_callback_) {
+        // Notify listener that this session is being destroyed (only once)
+        if (session_removal_callback_ && !removal_callback_called_.exchange(true)) {
             try {
-                session_removal_callback_(shared_from_this());
+                // Post to IO context to avoid calling callback during destruction
+                boost::asio::post(io_context_, [this]() {
+                    try {
+                        if (session_removal_callback_) {
+                            session_removal_callback_(shared_from_this());
+                        }
+                    } catch (const std::exception& e) {
+                        CASPAR_LOG(error) << L"WebSocket monitor session removal callback error: " << u16(e.what());
+                    }
+                });
             } catch (const std::exception& e) {
                 CASPAR_LOG(error) << L"WebSocket monitor session removal callback error: " << u16(e.what());
             }
@@ -144,7 +169,13 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
         }));
 
         // Accept the websocket handshake
-        ws_.async_accept(beast::bind_front_handler(&websocket_monitor_session::on_accept, shared_from_this()));
+        auto weak_self = std::weak_ptr<websocket_monitor_session>(this->shared_from_this());
+        ws_.async_accept([weak_self](beast::error_code ec) {
+            auto self = weak_self.lock();
+            if (self) {
+                self->on_accept(ec);
+            }
+        });
     }
 
     void send(const std::string& message)
@@ -154,14 +185,39 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
         }
 
         // Post the work to the correct executor to preserve ordering
-        net::post(ws_.get_executor(), [self = shared_from_this(), msg = std::string(message)]() mutable {
+        auto weak_self = std::weak_ptr<websocket_monitor_session>(this->shared_from_this());
+        net::post(ws_.get_executor(), [weak_self, msg = std::string(message)]() mutable {
+            auto self = weak_self.lock();
+            if (!self)
+                return;
+
             try {
                 if (!self->is_open_)
                     return;
 
                 // If a write is currently in flight, drop the message
                 if (self->write_in_flight_) {
-                    self->total_messages_dropped_.fetch_add(1);
+                    auto dropped_count = self->total_messages_dropped_.fetch_add(1) + 1;
+
+                    // Log first drop
+                    if (!self->has_drops_) {
+                        self->has_drops_      = true;
+                        self->last_drop_time_ = std::chrono::steady_clock::now();
+                        CASPAR_LOG(warning)
+                            << L"WebSocket monitor: client " << u16(self->connection_id_) << L" ("
+                            << u16(self->client_address_) << L") dropped first message - client may be slow";
+                    } else {
+                        // Update last drop time on subsequent drops
+                        self->last_drop_time_ = std::chrono::steady_clock::now();
+                    }
+
+                    // Log periodically (every 100 drops)
+                    if (dropped_count % 100 == 0) {
+                        CASPAR_LOG(warning)
+                            << L"WebSocket monitor: client " << u16(self->connection_id_) << L" ("
+                            << u16(self->client_address_) << L") has dropped " << dropped_count << L" messages";
+                    }
+
                     return;
                 }
 
@@ -169,8 +225,11 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                 self->write_in_flight_ = true;
                 auto out               = std::make_shared<std::string>(std::move(msg));
                 self->ws_.text(true);
-                self->ws_.async_write(net::buffer(*out), [self, out](beast::error_code ec, std::size_t bytes) {
-                    self->on_write(ec, bytes);
+                self->ws_.async_write(net::buffer(*out), [weak_self, out](beast::error_code ec, std::size_t bytes) {
+                    auto self = weak_self.lock();
+                    if (self) {
+                        self->on_write(ec, bytes);
+                    }
                 });
             } catch (const std::exception& e) {
                 CASPAR_LOG(error) << L"WebSocket monitor session send error: " << u16(e.what());
@@ -207,12 +266,17 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 
             try {
                 // Graceful close
-                ws_.async_close(ws::close_code::normal, [self = shared_from_this()](beast::error_code ec) {
-                    if (ec) {
-                        CASPAR_LOG(error) << L"WebSocket monitor session close error: " << u16(ec.message());
-                    } else {
-                        CASPAR_LOG(info) << L"WebSocket monitor session closed gracefully: "
-                                         << u16(self->connection_id_) << L" (" << u16(self->client_address_) << L")";
+                auto weak_self = std::weak_ptr<websocket_monitor_session>(this->shared_from_this());
+                ws_.async_close(ws::close_code::normal, [weak_self](beast::error_code ec) {
+                    auto self = weak_self.lock();
+                    if (self) {
+                        if (ec) {
+                            CASPAR_LOG(error) << L"WebSocket monitor session close error: " << u16(ec.message());
+                        } else {
+                            CASPAR_LOG(info)
+                                << L"WebSocket monitor session closed gracefully: " << u16(self->connection_id_)
+                                << L" (" << u16(self->client_address_) << L")";
+                        }
                     }
                 });
 
@@ -221,8 +285,9 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
                     force_close_timer_ = std::make_unique<boost::asio::deadline_timer>(io_context_);
                 }
                 force_close_timer_->expires_from_now(boost::posix_time::seconds(1));
-                force_close_timer_->async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
-                    if (!ec && self->ws_.is_open()) {
+                force_close_timer_->async_wait([weak_self](const boost::system::error_code& ec) {
+                    auto self = weak_self.lock();
+                    if (self && !ec && self->ws_.is_open()) {
                         CASPAR_LOG(warning) << L"WebSocket monitor session forcefully closed: "
                                             << u16(self->connection_id_) << L" (" << u16(self->client_address_) << L")";
                         self->ws_.next_layer().close();
@@ -264,7 +329,7 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             is_open_ = true;
 
             // Register this connection with the monitor client
-            auto weak_self = std::weak_ptr<websocket_monitor_session>(shared_from_this());
+            auto weak_self = std::weak_ptr<websocket_monitor_session>(this->shared_from_this());
             monitor_client_->add_connection(connection_id_, [weak_self](const std::string& message) {
                 auto self = weak_self.lock();
                 if (self) {
@@ -298,7 +363,13 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
     {
         try {
             // Read a message into our buffer
-            ws_.async_read(buffer_, beast::bind_front_handler(&websocket_monitor_session::on_read, shared_from_this()));
+            auto weak_self = std::weak_ptr<websocket_monitor_session>(this->shared_from_this());
+            ws_.async_read(buffer_, [weak_self](beast::error_code ec, std::size_t bytes_transferred) {
+                auto self = weak_self.lock();
+                if (self) {
+                    self->on_read(ec, bytes_transferred);
+                }
+            });
         } catch (const std::exception& e) {
             CASPAR_LOG(error) << L"WebSocket monitor session do_read error: " << u16(e.what());
             is_open_ = false;
@@ -423,6 +494,22 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
             has_failures_ = false;
         }
 
+        // Reset drop tracking on successful write (only if we haven't dropped recently)
+        if (has_drops_) {
+            auto total_dropped        = total_messages_dropped_.load();
+            auto now                  = std::chrono::steady_clock::now();
+            auto time_since_last_drop = std::chrono::duration_cast<std::chrono::seconds>(now - last_drop_time_).count();
+
+            // Only mark as recovered if we haven't dropped any messages in the last 5 seconds
+            if (time_since_last_drop >= 5) {
+                CASPAR_LOG(info) << L"WebSocket monitor: client " << u16(connection_id_) << L" ("
+                                 << u16(client_address_) << L") recovered - stopped dropping messages "
+                                 << L"(total dropped: " << total_dropped << L")";
+                has_drops_ = false;
+                total_messages_dropped_.store(0); // Reset the counter
+            }
+        }
+
         write_in_flight_ = false;
     }
 
@@ -442,12 +529,12 @@ class websocket_monitor_session : public std::enable_shared_from_this<websocket_
 // WebSocket monitor listener
 class websocket_monitor_listener : public std::enable_shared_from_this<websocket_monitor_listener>
 {
-    net::io_context&                                               ioc_;
-    tcp::acceptor                                                  acceptor_;
-    std::shared_ptr<websocket_monitor_client>                      monitor_client_;
-    std::atomic<bool>                                              running_{false};
-    std::unordered_set<std::shared_ptr<websocket_monitor_session>> active_sessions_;
-    std::mutex                                                     sessions_mutex_;
+    net::io_context&                          ioc_;
+    tcp::acceptor                             acceptor_;
+    std::shared_ptr<websocket_monitor_client> monitor_client_;
+    std::atomic<bool>                         running_{false};
+    // Lock-free session tracking (no mutex needed)
+    tbb::concurrent_hash_map<std::shared_ptr<websocket_monitor_session>, bool> active_sessions_;
 
   public:
     websocket_monitor_listener(net::io_context&                          ioc,
@@ -501,11 +588,13 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
         running_ = false;
         acceptor_.close();
 
-        // Close all active sessions
-        std::lock_guard<std::mutex> lock(sessions_mutex_);
-        for (auto& session : active_sessions_) {
-            if (session) {
-                session->close();
+        // Close all active sessions (lock-free)
+        for (tbb::concurrent_hash_map<std::shared_ptr<websocket_monitor_session>, bool>::iterator it =
+                 active_sessions_.begin();
+             it != active_sessions_.end();
+             ++it) {
+            if (it->first) {
+                it->first->close();
             }
         }
         active_sessions_.clear();
@@ -518,8 +607,13 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
             return;
 
         // The new connection gets its own strand
-        acceptor_.async_accept(net::make_strand(ioc_),
-                               beast::bind_front_handler(&websocket_monitor_listener::on_accept, shared_from_this()));
+        auto weak_self = std::weak_ptr<websocket_monitor_listener>(this->shared_from_this());
+        acceptor_.async_accept(net::make_strand(ioc_), [weak_self](beast::error_code ec, tcp::socket socket) {
+            auto self = weak_self.lock();
+            if (self) {
+                self->on_accept(ec, std::move(socket));
+            }
+        });
     }
 
     void on_accept(beast::error_code ec, tcp::socket socket)
@@ -531,17 +625,25 @@ class websocket_monitor_listener : public std::enable_shared_from_this<websocket
         } else {
             // Create the session and run it
             auto session = std::make_shared<websocket_monitor_session>(
-                ioc_, std::move(socket), monitor_client_, [this](std::shared_ptr<websocket_monitor_session> session) {
-                    // Remove session from tracking when it's destroyed
-                    std::lock_guard<std::mutex> lock(sessions_mutex_);
-                    active_sessions_.erase(session);
+                ioc_,
+                std::move(socket),
+                monitor_client_,
+                [this, weak_self = std::weak_ptr<websocket_monitor_listener>(this->shared_from_this())](
+                    std::shared_ptr<websocket_monitor_session> session) {
+                    // Remove session from tracking when it's destroyed (lock-free)
+                    auto self = weak_self.lock();
+                    if (self) {
+                        tbb::concurrent_hash_map<std::shared_ptr<websocket_monitor_session>, bool>::accessor acc;
+                        if (self->active_sessions_.find(acc, session)) {
+                            self->active_sessions_.erase(acc);
+                        }
+                    }
                 });
 
-            // Track the session
-            {
-                std::lock_guard<std::mutex> lock(sessions_mutex_);
-                active_sessions_.insert(session);
-            }
+            // Track the session (lock-free)
+            tbb::concurrent_hash_map<std::shared_ptr<websocket_monitor_session>, bool>::accessor acc;
+            active_sessions_.insert(acc, session);
+            acc->second = true;
 
             session->run();
         }

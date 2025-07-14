@@ -112,7 +112,8 @@ struct server::impl
     std::vector<spl::shared_ptr<IO::AsyncEventServer>>     async_servers_;
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
     std::shared_ptr<IO::websocket_server>                  websocket_server_;
-    std::shared_ptr<protocol::websocket::websocket_monitor_client> websocket_monitor_client_;
+    std::shared_ptr<protocol::websocket::websocket_monitor_client> websocket_monitor_client_shared_;
+    std::atomic<protocol::websocket::websocket_monitor_client*>    websocket_monitor_client_{nullptr};
     std::shared_ptr<protocol::websocket::websocket_monitor_server> websocket_monitor_server_;
     std::shared_ptr<osc::client>       osc_client_ = std::make_shared<osc::client>(io_context_);
     std::vector<std::shared_ptr<void>> predefined_osc_subscriptions_;
@@ -122,8 +123,9 @@ struct server::impl
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
     std::function<void(bool)>                                     shutdown_server_now_;
 
-    // Lock-free monitor state using concurrent hash map
     tbb::concurrent_hash_map<std::string, core::monitor::vector_t> monitor_data_;
+
+    // No caching needed - we rebuild the complete state when needed
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -149,8 +151,14 @@ struct server::impl
         setup_amcp_command_repo();
         CASPAR_LOG(info) << L"Initialized command repository.";
 
-        // Create WebSocket monitor client before channels so they can reference it
-        websocket_monitor_client_ = std::make_shared<protocol::websocket::websocket_monitor_client>(io_context_);
+        // Initialize websocket monitor client (lock-free)
+        websocket_monitor_client_shared_ = std::make_shared<protocol::websocket::websocket_monitor_client>(io_context_);
+        websocket_monitor_client_.store(websocket_monitor_client_shared_.get());
+
+        // Ensure the websocket_monitor_client is fully initialized before proceeding
+        if (!websocket_monitor_client_.load()) {
+            CASPAR_LOG(error) << L"Failed to create websocket_monitor_client";
+        }
 
         auto xml_channels = setup_channels(env::properties());
         CASPAR_LOG(info) << L"Initialized channels.";
@@ -184,8 +192,37 @@ struct server::impl
         amcp_command_repo_.reset();
         amcp_context_factory_.reset();
 
+        // Shutdown websocket monitor client (lock-free)
+        auto client_ptr = websocket_monitor_client_.exchange(nullptr);
+        if (client_ptr) {
+            try {
+                client_ptr->shutdown();
+                client_ptr->join();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket monitor client shutdown error: " << u16(e.what());
+            }
+        }
+
+        // Stop websocket servers first
+        if (websocket_monitor_server_) {
+            try {
+                websocket_monitor_server_->stop();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket monitor server stop error: " << u16(e.what());
+            }
+        }
+
+        if (websocket_server_) {
+            try {
+                websocket_server_->stop();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket server stop error: " << u16(e.what());
+            }
+        }
+
+        // Reset shared pointers
+        websocket_monitor_client_shared_.reset();
         websocket_monitor_server_.reset();
-        websocket_monitor_client_.reset();
         websocket_server_.reset();
         primary_amcp_server_.reset();
         async_servers_.clear();
@@ -306,10 +343,7 @@ struct server::impl
             auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
             auto default_color_space =
                 color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
-            auto weak_websocket_monitor_client =
-                std::weak_ptr<protocol::websocket::websocket_monitor_client>(websocket_monitor_client_);
 
-            // Prefix for all monitor paths belonging to this channel and a cache of the currently active paths.
             auto channel_prefix = std::string("channel/") + std::to_string(channel_id) + "/";
             auto cached_paths   = std::make_shared<std::unordered_set<std::string>>();
 
@@ -319,23 +353,17 @@ struct server::impl
                 default_color_space,
                 accelerator_.create_image_mixer(channel_id, depth),
                 [this, channel_id, weak_client, cached_paths, channel_prefix](core::monitor::state channel_state) {
-                    // Collect the full monitor paths produced in this tick
                     std::unordered_set<std::string> new_paths;
 
-                    // Insert or update entries for the current state
                     for (const auto& [path, values] : channel_state) {
                         std::string full_path = channel_prefix + path;
-
-                        // Remember that this path was produced now
                         new_paths.insert(full_path);
 
-                        // Use TBB accessor pattern for thread-safe insert/update
                         tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
                         monitor_data_.insert(acc, full_path);
                         acc->second = values;
                     }
 
-                    // Remove any paths that were produced previously but are absent now
                     for (const auto& old_path : *cached_paths) {
                         if (new_paths.find(old_path) == new_paths.end()) {
                             tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
@@ -345,21 +373,24 @@ struct server::impl
                         }
                     }
 
-                    // Update the cached path set for the next tick
                     *cached_paths = std::move(new_paths);
 
-                    // Build complete state for sending
-                    core::monitor::state complete_state;
-                    for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it =
-                             monitor_data_.begin();
-                         it != monitor_data_.end();
-                         ++it) {
-                        complete_state[it->first] = it->second;
-                    }
-
-                    // Send complete state to WebSocket monitor clients
-                    if (websocket_monitor_client_) {
-                        websocket_monitor_client_->send(complete_state);
+                    // Send to websocket monitor client (lock-free)
+                    auto client_ptr = websocket_monitor_client_.load();
+                    if (client_ptr) {
+                        try {
+                            core::monitor::state complete_state = get_current_monitor_state();
+                            // CRITICAL: Post to IO context to avoid blocking video thread
+                            boost::asio::post(*io_context_, [client_ptr, state = std::move(complete_state)]() {
+                                try {
+                                    client_ptr->send(state);
+                                } catch (const std::exception& e) {
+                                    CASPAR_LOG(error) << L"WebSocket monitor client send error: " << u16(e.what());
+                                }
+                            });
+                        } catch (const std::exception& e) {
+                            CASPAR_LOG(error) << L"WebSocket monitor state preparation error: " << u16(e.what());
+                        }
                     }
 
                     // Send to OSC client (keep existing behavior)
@@ -550,7 +581,7 @@ struct server::impl
 
             // Create WebSocket monitor server (client already created earlier)
             websocket_monitor_server_ = std::make_shared<protocol::websocket::websocket_monitor_server>(
-                io_context_, websocket_monitor_client_, monitor_port);
+                io_context_, websocket_monitor_client_shared_, monitor_port);
 
             // Start the WebSocket monitor server
             websocket_monitor_server_->start();
@@ -575,7 +606,7 @@ struct server::impl
                 });
 
             CASPAR_LOG(info) << L"Started WebSocket servers on ports " << amcp_port << L" (AMCP) and " << monitor_port
-                             << L" (Monitor with delta updates)";
+                             << L" (Monitor)";
         } catch (const std::exception& e) {
             CASPAR_LOG(error) << L"Failed to setup WebSocket controllers: " << u16(e.what());
             // Don't throw - WebSocket is optional
@@ -595,10 +626,8 @@ struct server::impl
 
     void cleanup_channel_data(int channel_id)
     {
-        // Remove all data for this channel from the monitor state
         std::vector<std::string> keys_to_remove;
 
-        // Find all keys for this channel
         for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it = monitor_data_.begin();
              it != monitor_data_.end();
              ++it) {
@@ -608,13 +637,23 @@ struct server::impl
             }
         }
 
-        // Remove the keys
         for (const auto& key : keys_to_remove) {
             tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
             if (monitor_data_.find(acc, key)) {
                 monitor_data_.erase(acc);
             }
         }
+    }
+
+    core::monitor::state get_current_monitor_state() const
+    {
+        core::monitor::state complete_state;
+        for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it = monitor_data_.begin();
+             it != monitor_data_.end();
+             ++it) {
+            complete_state[it->first] = it->second;
+        }
+        return complete_state;
     }
 };
 
