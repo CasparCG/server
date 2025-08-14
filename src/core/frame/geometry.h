@@ -35,6 +35,16 @@ class frame_geometry
         quad
     };
 
+    enum class scale_mode
+    {
+        stretch, // default
+        fit,
+        fill,
+        original,
+        hfill,
+        vfill,
+    };
+
     struct coord
     {
         double vertex_x  = 0.0;
@@ -50,17 +60,21 @@ class frame_geometry
         bool operator==(const coord& other) const;
     };
 
-    frame_geometry(geometry_type type, std::vector<coord> data);
+    frame_geometry(geometry_type type, scale_mode, std::vector<coord> data);
 
     geometry_type             type() const;
+    scale_mode                mode() const;
     const std::vector<coord>& data() const;
 
-    static const frame_geometry& get_default();
-    static const frame_geometry& get_default_vflip();
+    static const frame_geometry get_default(scale_mode = scale_mode::stretch);
+    static const frame_geometry get_default_vflip(scale_mode = scale_mode::stretch);
 
   private:
     struct impl;
     spl::shared_ptr<impl> impl_;
 };
+
+frame_geometry::scale_mode scale_mode_from_string(const std::wstring&);
+std::wstring               scale_mode_to_string(frame_geometry::scale_mode);
 
 }} // namespace caspar::core

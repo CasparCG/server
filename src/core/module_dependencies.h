@@ -23,12 +23,15 @@
 
 #include <common/memory.h>
 
-#include "consumer/frame_consumer.h"
+#include "consumer/frame_consumer_registry.h"
 #include "producer/cg_proxy.h"
-#include "producer/frame_producer.h"
-#include "protocol/amcp/amcp_command_repository_wrapper.h"
+#include "producer/frame_producer_registry.h"
 
-namespace caspar { namespace core {
+namespace caspar::protocol::amcp {
+class amcp_command_repository_wrapper;
+}
+
+namespace caspar::core {
 
 struct module_dependencies
 {
@@ -37,16 +40,16 @@ struct module_dependencies
     const spl::shared_ptr<frame_consumer_registry>                         consumer_registry;
     const std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper> command_repository;
 
-    module_dependencies(spl::shared_ptr<cg_producer_registry>                            cg_registry,
-                        spl::shared_ptr<frame_producer_registry>                         producer_registry,
-                        spl::shared_ptr<frame_consumer_registry>                         consumer_registry,
-                        std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper> command_repository)
-        : cg_registry(std::move(cg_registry))
-        , producer_registry(std::move(producer_registry))
-        , consumer_registry(std::move(consumer_registry))
-        , command_repository(std::move(command_repository))
+    module_dependencies(const spl::shared_ptr<cg_producer_registry>&                            cg_registry,
+                        const spl::shared_ptr<frame_producer_registry>&                         producer_registry,
+                        const spl::shared_ptr<frame_consumer_registry>&                         consumer_registry,
+                        const std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper>& command_repository)
+        : cg_registry(cg_registry)
+        , producer_registry(producer_registry)
+        , consumer_registry(consumer_registry)
+        , command_repository(command_repository)
     {
     }
 };
 
-}} // namespace caspar::core
+} // namespace caspar::core

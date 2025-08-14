@@ -45,6 +45,8 @@ class mutable_frame final
 
     std::size_t height() const;
 
+    const void* stream_tag() const;
+
     class frame_geometry&       geometry();
     const class frame_geometry& geometry() const;
 
@@ -57,7 +59,8 @@ class const_frame final
 {
   public:
     const_frame();
-    explicit const_frame(std::vector<array<const std::uint8_t>> image_data,
+    explicit const_frame(const void*                            tag,
+                         std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
                          const struct pixel_format_desc&        desc);
     const_frame(const const_frame& other);
@@ -78,6 +81,9 @@ class const_frame final
     std::size_t height() const;
 
     std::size_t size() const;
+
+    const void* stream_tag() const;
+    const_frame with_tag(const void* new_tag) const;
 
     const std::any& opaque() const;
 

@@ -20,28 +20,33 @@
  */
 #pragma once
 
-#include <common/forward.h>
+namespace caspar::accelerator {
+class accelerator;
+}
+namespace caspar::accelerator::ogl {
+class device;
+}
 
-FORWARD2(caspar, accelerator, class accelerator);
-FORWARD3(caspar, accelerator, ogl, class device);
-
-FORWARD2(caspar, core, class stage);
-FORWARD2(caspar, core, class mixer);
-FORWARD2(caspar, core, class output);
-FORWARD2(caspar, core, class image_mixer);
-FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, class frame_factory);
-FORWARD2(caspar, core, class frame_producer);
-FORWARD2(caspar, core, class frame_consumer);
-FORWARD2(caspar, core, class draw_frame);
-FORWARD2(caspar, core, class mutable_frame);
-FORWARD2(caspar, core, class const_frame);
-FORWARD2(caspar, core, class video_channel);
-FORWARD2(caspar, core, struct pixel_format_desc);
-FORWARD2(caspar, core, class cg_producer_registry);
-FORWARD2(caspar, core, struct frame_transform);
-FORWARD2(caspar, core, struct write_frame_consumer);
-FORWARD2(caspar, core, struct frame_producer_dependencies);
-FORWARD2(caspar, core, struct module_dependencies);
-FORWARD2(caspar, core, class frame_producer_registry);
-FORWARD2(caspar, core, class video_format_repository);
+namespace caspar::core {
+class stage;
+class mixer;
+class output;
+class image_mixer;
+struct video_format_desc;
+class frame_factory;
+class frame_producer;
+class frame_consumer;
+class draw_frame;
+class mutable_frame;
+class const_frame;
+class video_channel;
+struct pixel_format_desc;
+struct frame_transform;
+struct frame_producer_dependencies;
+struct module_dependencies;
+class cg_producer_registry;
+class frame_producer_registry;
+class frame_consumer_registry;
+class video_format_repository;
+struct channel_info;
+} // namespace caspar::core

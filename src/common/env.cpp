@@ -25,6 +25,7 @@
 #include "except.h"
 #include "log.h"
 #include "os/filesystem.h"
+#include "ptree.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -47,7 +48,7 @@ boost::property_tree::wptree pt;
 void check_is_configured()
 {
     if (pt.empty())
-        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
+        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Environment properties has not been configured"));
 }
 
 std::wstring resolve_or_create(const std::wstring& folder)
@@ -85,21 +86,27 @@ void ensure_writable(const std::wstring& folder)
 
 void configure(const std::wstring& filename)
 {
+    initial = clean_path(boost::filesystem::initial_path().wstring());
+
+    std::wstring fullpath = filename;
+    if (!boost::filesystem::exists(fullpath)) {
+        fullpath = initial + L"/" + filename;
+    }
+
+    if (!boost::filesystem::exists(fullpath)) {
+        CASPAR_LOG(fatal) << L"### Configuration file " + filename + L" was not found. ###";
+        CASPAR_THROW_EXCEPTION(expected_user_error()
+                               << msg_info(L"Configuration file " + fullpath + L" was not found."));
+    }
+
     try {
-        initial = clean_path(boost::filesystem::initial_path().wstring());
-
-        std::wstring fullpath = filename;
-        if (!boost::filesystem::exists(fullpath)) {
-            fullpath = initial + L"/" + filename;
-        }
-
         boost::filesystem::wifstream file(fullpath);
         boost::property_tree::read_xml(file,
                                        pt,
                                        boost::property_tree::xml_parser::trim_whitespace |
                                            boost::property_tree::xml_parser::no_comments);
 
-        auto paths = pt.get_child(L"configuration.paths");
+        auto paths = ptree_get_child(pt, L"configuration.paths");
         media      = clean_path(paths.get(L"media-path", initial + L"/media/"));
 
         auto log_path_node = paths.get_child(L"log-path");
@@ -109,7 +116,7 @@ void configure(const std::wstring& filename)
         }
 
         ftemplate =
-            clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
+            clean_path(boost::filesystem::absolute(paths.get(L"template-path", initial + L"/template/")).wstring());
         data = clean_path(paths.get(L"data-path", initial + L"/data/"));
     } catch (...) {
         CASPAR_LOG(error) << L" ### Invalid configuration file. ###";

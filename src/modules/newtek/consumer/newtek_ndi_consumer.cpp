@@ -27,6 +27,7 @@
 #include <boost/thread/exceptions.hpp>
 #include <chrono>
 #include <condition_variable>
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
@@ -34,6 +35,7 @@
 
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
+#include <common/except.h>
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/param.h>
@@ -105,10 +107,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     // frame_consumer
 
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
     {
         format_desc_   = format_desc;
-        channel_index_ = channel_index;
+        channel_index_ = channel_info.index;
 
         NDIlib_send_create_t NDI_send_create_desc;
 
@@ -257,10 +259,15 @@ std::atomic<int> newtek_ndi_consumer::instances_(0);
 spl::shared_ptr<core::frame_consumer>
 create_ndi_consumer(const std::vector<std::wstring>&                         params,
                     const core::video_format_repository&                     format_repository,
-                    const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                    const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                    const core::channel_info&                                channel_info)
 {
     if (params.size() < 1 || !boost::iequals(params.at(0), L"NDI"))
         return core::frame_consumer::empty();
+
+    if (channel_info.depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Newtek NDI consumer only supports 8-bit color depth."));
+
     std::wstring name         = get_param(L"NAME", params, L"");
     bool         allow_fields = contains_param(L"ALLOW_FIELDS", params);
     return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
@@ -269,10 +276,15 @@ create_ndi_consumer(const std::vector<std::wstring>&                         par
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_ndi_consumer(const boost::property_tree::wptree&                      ptree,
                                   const core::video_format_repository&                     format_repository,
-                                  const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                  const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                  const core::channel_info&                                channel_info)
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);
+
+    if (channel_info.depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Newtek NDI consumer only supports 8-bit color depth."));
+
     return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
 }
 

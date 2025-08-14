@@ -42,6 +42,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -60,7 +61,7 @@
 #include <queue>
 #include <utility>
 
-#include "../html.h"
+#include "../util.h"
 
 namespace caspar { namespace html {
 
@@ -215,6 +216,7 @@ class html_client
 
     bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
                        CefRefPtr<CefFrame>            frame,
+                       int                            popup_id,
                        const CefString&               target_url,
                        const CefString&               target_frame_name,
                        WindowOpenDisposition          target_disposition,
@@ -563,7 +565,7 @@ spl::shared_ptr<core::frame_producer> create_cg_producer(const core::frame_produ
         format_desc.square_height = *height;
     }
 
-    return core::create_destroy_proxy(spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url));
+    return spl::make_shared<html_producer>(dependencies.frame_factory, format_desc, url);
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,

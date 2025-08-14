@@ -1,30 +1,129 @@
-CasparCG 2.4.0 (Unreleased) 
+CasparCG 2.5.0 Stable
 ==========================================
 
 ### Core
 ##### Improvements
-* Custom resultions can be specified in casparcg.config
+* Initial support for HDR. This is limited to a subset of producers and consumers at this stage.
+* Build for Windows with VS2022
+* Rework linux builds to produce ubuntu deb files
+* Update ffmpeg to 7.0
+* Reimplement mixer transforms, to handle routes correctly
+* Support more pixel formats from ffmpeg, to preserve colour accuracy better
+* Support running on headless linux
+##### Fixes
+* Build with boost 1.85/1.86
+* Only produce mixed frames on channels which have consumers
+* Routed channels not compositing correctly when channel used a MIXER KEY
+* Handle audio for fractional framerates properly
+
+### Producers
+##### Improvements
+* FFmpeg: Support loading with a scaling-mode, to configure how clips get fit into the channel
+* Image: Support loading with a scaling-mode, to configure how images get fit into the channel
+* Image: Replace freeimage with ffmpeg
+* HTML: Update CEF to 131
+##### Fixes
+* Route: Use full field rate when performing i->p channel route
+
+### Consumers
+##### Improvements
+* Screen: Set size and position from AMCP
+* Image: Propagate AMCP parameters from PRINT command
+
+##### Fixes
+*
+
+
+CasparCG 2.4.3 Stable
+==========================================
+
+### Core
+##### Fixes
+* Improve error handling for invalid config files #1571
+* Flush logs before exit #1571
+* Check audio cadence values look sane before accepting format #1588
+* Cross-channel routes from progressive to interlaced showing lots of black #1576
+* Transition: ignoring some transforms of input frames #1602
+
+### Producers
+##### Fixes
+* FFmpeg: fix crash on invalid frame header
+* Decklink: Crash with ffmpeg 7 #1582
+* HTML: Fix crash during uninit on exit
+* Image: update state during init #1601
+
+### Consumers
+##### Fixes
+* FFmpeg: set frame_rate for rtmp streams #1462
+
+
+CasparCG 2.4.2 Stable
+==========================================
+
+### Consumers
+##### Fixes
+* Decklink: fix support for driver 14.3 and later
+
+
+CasparCG 2.4.1 Stable
+==========================================
+
+### Core
+##### Fixes
+* Fix bad config file examples
+* Fix `casparcg_auto_restart.bat` not starting scanner
+* Revert removal of tbbmalloc, due to notable performance loss on windows
+* Suppress some cmake build warnings
+* Build failure when doxygen installed on system
+* Build failures with ffmpeg 7.0
+* Revert RPATH linking changes
+
+### Producers
+##### Fixes
+* FFmpeg: Ignore ndi:// urls
+* FFmpeg: Using both in and seek could result in incorrect duration
+* Route: Race condition during destruction
+* Image: Update freeimage on windows with some CVE fixes and failures with certain pngs
+* Image: Respect EXIF rotate flag
+* NDI: list local sources
+
+### Consumers
+##### Fixes
+* Decklink: subregion copy not respecting frame height
+* Decklink: subregion vertical offset
+* Decklink: subregion height limited with some formats
+
+
+CasparCG 2.4.0 Stable
+==========================================
+
+### Core
+##### Improvements
+* Custom resolutions can be specified in casparcg.config
 * Interlaced mixer pipeline to ensure field accuracy
 * Preserve unicode characters in console input/output
 * Producers to be run at startup can be defined in casparcg.config
 * Support 8K frames
+* Support 4K DCI frames
 * Remove undocumented CII and CLK protocol implementations
 * Config parameter can be an absolute system path, not just relative to the working directory
 * AMCP: Add CLEAR ALL command
 * AMCP: Command batching syntax
 * AMCP: LOAD/LOADBG/PLAY commands accept a CLEAR_ON_404 parameter, to instruct the layer to be cleared when the requested file was not found
 * AMCP: Add commands to subscribe and unsubscribe to OSC on any port number
+* AMCP: Add CALLBG command to perform CALL on background producer
 * Build: Require C++17 for building
 * Build: Support newer versions of Boost
 * Build: Support newer versions of TBB
 * Build: Disable precompiled headers for linux
 * Build: Support VS2022
 * Build: Replace nuget and locally committed dependencies with direct http downloads
+* Build: Allow configuring diag font path at build time
 * Linux: Support setting thread priorities
 * Linux: Initial ARM64 compatibility
 * Linux: Rework build to always use system boost
 * Linux: Rework build process to better support being build as a system package
-* Logging: add config option to disable logging to file and to disable column alignment 
+* Logging: add config option to disable logging to file and to disable column alignment
 * Transitions: Support additional audio fade properties for STING transition
 ##### Fixes
 * Crash upon exiting if HTML producer was running
@@ -45,6 +144,7 @@ CasparCG 2.4.0 (Unreleased)
 * FFmpeg: Allow specifying both SEEK and IN for PLAY commands
 * HTML: Update to CEF 117
 * HTML: `CALL 1-10 RELOAD` to reload a renderer
+* HTML: Expose `cache-path` setting
 * NDI: Upgrade to NDI5
 * System Audio: Allow specifying output device to use
 ##### Fixes
@@ -52,6 +152,7 @@ CasparCG 2.4.0 (Unreleased)
 * FFmpeg: Prevent loading unreadable files
 * FFmpeg: Unable to play files with unicode filenames
 * FFmpeg: Don't lowercase filter parameters
+* FFmpeg: Support parameters with name containing a dash
 * HTML: media-stream permission denied
 * HTML: Expose angle backend config field, the best backend varies depending on the templates and machine
 * HTML: Crash when multiple iframes were loaded within a renderer
@@ -200,7 +301,7 @@ General
 -------
 
  * C++14
- * Major refactoring, cleanup, optimization 
+ * Major refactoring, cleanup, optimization
    and stability improvements.
  * Removed unmaintained documentation API.
  * Removed unmaintained program options API.
@@ -241,7 +342,7 @@ MIXER
  * Proper OpenGL pipelining.
  * Blend modes are always enabled.
  * Misc cleanup and fixes.
- * Removed CPU mixer. 
+ * Removed CPU mixer.
  * Mixer always runs in progressive mode. Consumers are expected to convert to interlaced if required.
 
 IMAGE
@@ -249,17 +350,17 @@ IMAGE
  * Correctly apply alpha to base64 encoded pngs from AMCP (Julusian).
  * Unmultiply frame before writing to png (Julusian).
  * Removed scroll producer (moved to 3.0.0)
- 
+
  ROUTE
  -----
- 
+
  * Reimplemented, simplified.
  * Cross channel routing will render full stage instead of simply copying channel output.
  * Reduced overhead and latency.
 
 FFMPEG
 ------
- * Rewritten from scratch for better accuracy, stability and 
+ * Rewritten from scratch for better accuracy, stability and
     performance.
  * Update freezed frame during seeking.
  * FFMPEG 3.4.1.
@@ -279,7 +380,7 @@ FFMPEG
  * FFMPEG video filter support.
  * FFMPEG audio filter support.
  * Complex FFMPEG filters (VF, AF).
- * CALL SEEK return actually seeked value.
+ * CALL SEEK return actually sought value.
  * All AMCP options are based on channel format.
  * Misc improvements, cleanup and fixes.
 
@@ -601,7 +702,7 @@ Consumers
    * No longer provides sync to the video channel.
    * Supports NewTek NDI out of the box just by upgrading the
       Processing.AirSend library.
-  
+
 Producers
 ---------
 
@@ -934,13 +1035,13 @@ Video mixer
     even when not in use on a layer or on a channel. New <mixer /> element added
     to configuration for turning on mixer features that not everybody would want
     to pay for (performance-wise.) blend-modes also moved into this element.
- * Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so 
+ * Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so
     that gamma was interpreted as max_input and vice versa.
 
 Consumers
 ---------
- * Added support for NewTek iVGA, which enables the use of CasparCG Server 
-    fill+key output(s) as input source(s) to a NewTek TriCaster without 
+ * Added support for NewTek iVGA, which enables the use of CasparCG Server
+    fill+key output(s) as input source(s) to a NewTek TriCaster without
     requiring video card(s) in the CasparCG Server machine, or taking up inputs
     in the TriCaster. <newtek-ivga /> element in config enables iVGA on a
     channel. (Robert Nagy sponsored by NewTek)
@@ -968,8 +1069,8 @@ OSC
     path logged since last UDP send, and sends the new UDP packet (to each
     subscribing OSC receiver) with the values collected. (Robert Nagy sponsored
     by Boffins Technologies)
- * Batches as many OSC messages as possible in an OSC bundle to reduce the 
-    number of UDP packets sent. Breakup into separate packages if necessary to 
+ * Batches as many OSC messages as possible in an OSC bundle to reduce the
+    number of UDP packets sent. Breakup into separate packages if necessary to
     avoid fragmentation. (Robert Nagy sponsored by Boffins Technologies)
  * Removed usage of Microsoft Agents library (Server ran out of memory after a
     while) in favour of direct synchronous invocations.

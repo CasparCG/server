@@ -21,6 +21,10 @@
 
 #pragma once
 
+#include <boost/property_tree/ptree.hpp>
+
+#include <core/consumer/channel_info.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 namespace caspar { namespace decklink {
@@ -42,6 +46,14 @@ struct port_configuration
     {
         return src_x != 0 || src_y != 0 || region_w != 0 || region_h != 0 || dest_x != 0 || dest_y != 0;
     }
+};
+
+struct hdr_meta_configuration
+{
+    float min_dml  = 0.005f;
+    float max_dml  = 1000.0f;
+    float max_fall = 100.0f;
+    float max_cll  = 1000.0f;
 };
 
 struct configuration
@@ -82,9 +94,13 @@ struct configuration
     wait_for_reference_t wait_for_reference          = wait_for_reference_t::automatic;
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
+    bool                 hdr                         = false;
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
+
+    core::color_space      color_space = core::color_space::bt709;
+    hdr_meta_configuration hdr_meta;
 
     [[nodiscard]] int buffer_depth() const
     {
@@ -96,9 +112,11 @@ struct configuration
 };
 
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
-                               const core::video_format_repository& format_repository);
+                               const core::video_format_repository& format_repository,
+                               const core::channel_info&            channel_info);
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
-                                const core::video_format_repository& format_repository);
+                                const core::video_format_repository& format_repository,
+                                const core::channel_info&            channel_info);
 
 }} // namespace caspar::decklink

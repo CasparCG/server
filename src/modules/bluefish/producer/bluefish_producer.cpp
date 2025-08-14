@@ -286,7 +286,7 @@ struct bluefish_producer
                 return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);
             });
 
-            // Allocate a single UHD buffer for converison Buffer if we need it! .
+            // Allocate a single UHD buffer for conversion Buffer if we need it! .
             if (uhd_mode_ == 2) {
                 conversion_buffer_.resize(static_cast<int>(format_desc_.size));
             }
@@ -445,14 +445,14 @@ struct bluefish_producer
                 auto src_audio = alloc_frame();
 
                 // video
-                src_video->format                 = AV_PIX_FMT_RGB24;
-                src_video->width                  = width;
-                src_video->height                 = height;
-                src_video->interlaced_frame       = !is_progressive;
-                src_video->top_field_first        = height != 486;
-                src_video->key_frame              = 1;
-                src_video->display_picture_number = frames_captured;
-                src_video->pts                    = capture_ts;
+                src_video->format           = AV_PIX_FMT_RGB24;
+                src_video->width            = width;
+                src_video->height           = height;
+                src_video->interlaced_frame = !is_progressive;
+                src_video->top_field_first  = height != 486;
+                src_video->key_frame        = 1;
+                // src_video->display_picture_number = frames_captured;
+                src_video->pts = capture_ts;
 
                 void* video_bytes = reserved_frames_.front()->image_data();
                 if (reserved_frames_.front() && video_bytes) {
@@ -461,13 +461,17 @@ struct bluefish_producer
                 }
 
                 // Audio
-                src_audio->format      = AV_SAMPLE_FMT_S32;
-                src_audio->channels    = format_desc_.audio_channels;
+                src_audio->format = AV_SAMPLE_FMT_S32;
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                av_channel_layout_default(&src_audio->ch_layout, format_desc_.audio_channels);
+#else
+                src_audio->channels = format_desc_.audio_channels;
+#endif
                 src_audio->sample_rate = format_desc_.audio_sample_rate;
                 src_audio->nb_samples  = 0;
                 int samples_decoded    = 0;
 
-                // hmm is audio on first frame or do we need to wait till snd feild to get audio?
+                // hmm is audio on first frame or do we need to wait till snd field to get audio?
                 if (sync_format_ == UPD_FMT_FRAME || (sync_format_ == UPD_FMT_FIELD && first_frame_)) {
                     void* audio_bytes = nullptr;
                     auto  hanc_buffer = reinterpret_cast<uint8_t*>(reserved_frames_.front()->hanc_data());
@@ -480,15 +484,15 @@ struct bluefish_producer
                                                        card_type,
                                                        reinterpret_cast<unsigned int*>(hanc_buffer),
                                                        reinterpret_cast<unsigned int*>(&decoded_audio_bytes_[0]),
-                                                       src_audio->channels);
+                                                       format_desc_.audio_channels);
 
                         audio_bytes = reinterpret_cast<int32_t*>(&decoded_audio_bytes_[0]);
 
-                        samples_decoded       = no_extracted_pcm_samples / src_audio->channels;
+                        samples_decoded       = no_extracted_pcm_samples / format_desc_.audio_channels;
                         src_audio->nb_samples = samples_decoded;
                         src_audio->data[0]    = reinterpret_cast<uint8_t*>(audio_bytes);
                         src_audio->linesize[0] =
-                            src_audio->nb_samples * src_audio->channels *
+                            src_audio->nb_samples * format_desc_.audio_channels *
                             av_get_bytes_per_sample(static_cast<AVSampleFormat>(src_audio->format));
                         src_audio->pts = capture_ts;
                     }
@@ -504,7 +508,7 @@ struct bluefish_producer
                         auto audio_bytes = reinterpret_cast<uint8_t*>(&decoded_audio_bytes_[0]);
                         if (audio_bytes) {
                             src_audio->nb_samples     = remainaing_audio_samples_;
-                            int bytes_left            = remainaing_audio_samples_ * 4 * src_audio->channels;
+                            int bytes_left            = remainaing_audio_samples_ * 4 * format_desc_.audio_channels;
                             src_audio->data[0]        = audio_bytes + bytes_left;
                             src_audio->linesize[0]    = bytes_left;
                             remainaing_audio_samples_ = 0;
@@ -736,14 +740,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto length         = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
     auto in_format_desc = dependencies.format_repository.find(get_param(L"FORMAT", params, L"INVALID"));
 
-    auto producer = spl::make_shared<bluefish_producer_proxy>(dependencies.format_desc,
-                                                              dependencies.frame_factory,
-                                                              dependencies.format_repository,
-                                                              device_index,
-                                                              stream_index,
-                                                              uhd_mode,
-                                                              length);
-
-    return create_destroy_proxy(producer);
+    return spl::make_shared<bluefish_producer_proxy>(dependencies.format_desc,
+                                                     dependencies.frame_factory,
+                                                     dependencies.format_repository,
+                                                     device_index,
+                                                     stream_index,
+                                                     uhd_mode,
+                                                     length);
 }
 }} // namespace caspar::bluefish

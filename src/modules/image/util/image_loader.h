@@ -21,18 +21,17 @@
 
 #pragma once
 
+#include <ffmpeg/util/av_util.h>
+
 #include <memory>
-#include <set>
 #include <string>
 
 #include <boost/filesystem.hpp>
 
-struct FIBITMAP;
-
 namespace caspar { namespace image {
 
-std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename);
-std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size);
+std::shared_ptr<AVFrame> load_image(const std::wstring& filename);
+std::shared_ptr<AVFrame> load_from_memory(std::vector<unsigned char> image_data);
 
 bool is_valid_file(const boost::filesystem::path& filename);
 

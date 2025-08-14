@@ -34,6 +34,7 @@
 #include <common/timer.h>
 #include <common/utf.h>
 
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/frame/geometry.h>
@@ -109,6 +110,7 @@ struct configuration
     bool            borderless    = false;
     bool            always_on_top = false;
     colour_spaces   colour_space  = colour_spaces::RGB;
+    bool            high_bitdepth = false;
 };
 
 struct frame
@@ -150,7 +152,7 @@ struct screen_consumer
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
-    screen_consumer(const screen_consumer&)            = delete;
+    screen_consumer(const screen_consumer&) = delete;
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
@@ -274,9 +276,10 @@ struct screen_consumer
                     screen::frame frame;
                     auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
                     GL(glCreateBuffers(1, &frame.pbo));
-                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size, nullptr, flags));
-                    frame.ptr =
-                        reinterpret_cast<char*>(GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size, flags)));
+                    auto size_multiplier = config_.high_bitdepth ? 2 : 1;
+                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size * size_multiplier, nullptr, flags));
+                    frame.ptr = reinterpret_cast<char*>(
+                        GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size * size_multiplier, flags)));
 
                     GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
                     GL(glTextureParameteri(frame.tex,
@@ -293,8 +296,13 @@ struct screen_consumer
                                                : GL_LINEAR));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
                     GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-                    GL(glTextureStorage2D(frame.tex, 1, GL_RGBA8, format_desc_.width, format_desc_.height));
-                    GL(glClearTexImage(frame.tex, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+                    GL(glTextureStorage2D(frame.tex,
+                                          1,
+                                          config_.high_bitdepth ? GL_RGBA16 : GL_RGBA8,
+                                          format_desc_.width,
+                                          format_desc_.height));
+                    GL(glClearTexImage(
+                        frame.tex, 0, GL_BGRA, config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, nullptr));
 
                     frames_.push_back(frame);
                 }
@@ -395,11 +403,19 @@ struct screen_consumer
                 }
             }
 
-            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size);
+            auto size_multiplier = config_.high_bitdepth ? 2 : 1;
+            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size * size_multiplier);
 
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(
-                frame.tex, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, nullptr));
+            GL(glTextureSubImage2D(frame.tex,
+                                   0,
+                                   0,
+                                   0,
+                                   format_desc_.width,
+                                   format_desc_.height,
+                                   GL_BGRA,
+                                   config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
+                                   nullptr));
             GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
             frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -576,10 +592,12 @@ struct screen_consumer_proxy : public core::frame_consumer
 
     // frame_consumer
 
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         consumer_.reset();
-        consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_index);
+        consumer_ = std::make_unique<screen_consumer>(config_, format_desc, channel_info.index);
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
@@ -608,13 +626,16 @@ struct screen_consumer_proxy : public core::frame_consumer
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      const core::channel_info& channel_info)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
         return core::frame_consumer::empty();
     }
 
     configuration config;
+
+    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
 
     if (params.size() > 1) {
         try {
@@ -633,6 +654,19 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.name = get_param(L"NAME", params);
     }
 
+    if (contains_param(L"X", params)) {
+        config.screen_x = get_param(L"X", params, 0);
+    }
+    if (contains_param(L"Y", params)) {
+        config.screen_y = get_param(L"Y", params, 0);
+    }
+    if (contains_param(L"WIDTH", params)) {
+        config.screen_width = get_param(L"WIDTH", params, 0);
+    }
+    if (contains_param(L"HEIGHT", params)) {
+        config.screen_height = get_param(L"HEIGHT", params, 0);
+    }
+
     if (config.sbs_key && config.key_only) {
         CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
         config.key_only = false;
@@ -644,9 +678,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const core::channel_info&                                channel_info)
 {
     configuration config;
+
+    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
+
     config.name          = ptree.get(L"name", config.name);
     config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
     config.screen_x      = ptree.get(L"x", config.screen_x);

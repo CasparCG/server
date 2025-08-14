@@ -24,8 +24,10 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/locale.hpp>
 #include <boost/log/attributes/function.hpp>
 #include <boost/log/core.hpp>

@@ -3,36 +3,35 @@ project (decklink)
 
 set(SOURCES
 		consumer/decklink_consumer.cpp
-		consumer/frame.cpp
-		consumer/config.cpp
-		consumer/monitor.cpp
-
-		producer/decklink_producer.cpp
-
-		decklink.cpp
-)
-set(HEADERS
 		consumer/decklink_consumer.h
-		consumer/frame.h
+		consumer/hdr_v210_strategy.cpp
+		consumer/sdr_bgra_strategy.cpp
+		consumer/format_strategy.h
+		consumer/config.cpp
 		consumer/config.h
+		consumer/monitor.cpp
 		consumer/monitor.h
 
+		producer/decklink_producer.cpp
 		producer/decklink_producer.h
 
 		util/util.h
 
+		decklink.cpp
 		decklink.h
+
 		decklink_api.h
 		StdAfx.h
 )
+
 if (MSVC)
-	list(APPEND HEADERS
+	list(APPEND SOURCES
 			interop/DeckLinkAPI_i.c
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
 	)
 else()
-	list(APPEND HEADERS
+	list(APPEND SOURCES
 			linux_interop/DeckLinkAPIConfiguration.h
 			linux_interop/DeckLinkAPIDeckControl.h
 			linux_interop/DeckLinkAPIDispatch.cpp
@@ -56,12 +55,11 @@ else()
 endif ()
 
 casparcg_add_module_project(decklink
-	SOURCES ${SOURCES} ${HEADERS}
+	SOURCES ${SOURCES}
 	INIT_FUNCTION "decklink::init"
 )
 target_include_directories(decklink PRIVATE
     ..
-    ../..
     ${FFMPEG_INCLUDE_PATH}
     )
 target_precompile_headers(decklink PRIVATE "StdAfx.h")
@@ -74,11 +72,11 @@ source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 
 if (MSVC)
-	target_link_libraries(decklink
+	target_link_libraries(decklink PRIVATE
 			ffmpeg
 	)
 else()
-	target_link_libraries(decklink
+	target_link_libraries(decklink PRIVATE
 			ffmpeg
 
 			dl

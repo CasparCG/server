@@ -36,7 +36,7 @@
 #include <io.h>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
-CComModule _AtlModule;
+CComModule                               _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 extern "C" {
@@ -54,10 +54,10 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 {
     try {
         CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n"
-                          << L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
+                          << L"Address:" << info->ExceptionRecord->ExceptionAddress << L"\n"
                           << L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
                           << L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
-                          << L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
+                          << L"Info:" << (unsigned __int64)info->ExceptionRecord->ExceptionInformation << L"\n"
                           << L"Continuing execution. \n#######################";
 
         CASPAR_LOG_CURRENT_CALL_STACK();

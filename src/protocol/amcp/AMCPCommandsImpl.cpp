@@ -30,7 +30,6 @@
 #include "../util/http_request.h"
 #include "AMCPCommandQueue.h"
 #include "amcp_args.h"
-#include "amcp_command_repository.h"
 
 #include <common/env.h>
 
@@ -41,6 +40,8 @@
 #include <common/os/filesystem.h>
 #include <common/param.h>
 
+#include <core/consumer/frame_consumer.h>
+#include <core/consumer/frame_consumer_registry.h>
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
@@ -49,6 +50,7 @@
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/frame_producer_registry.h>
 #include <core/producer/stage.h>
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
@@ -471,6 +473,29 @@ std::wstring swap_command(command_context& ctx)
     return L"202 SWAP OK\r\n";
 }
 
+std::future<std::wstring> apply_command(command_context& ctx)
+{
+    const auto result = ctx.channel.raw_channel->output().call(ctx.layer_index(), ctx.parameters).share();
+
+    // TODO: because of std::async deferred timed waiting does not work
+
+    /*auto wait_res = result.wait_for(std::chrono::seconds(2));
+    if (wait_res == std::future_status::timeout)
+    CASPAR_THROW_EXCEPTION(timed_out());*/
+
+    return std::async(std::launch::deferred, [result]() -> std::wstring {
+        bool res = result.get();
+
+        std::wstringstream replyString;
+        if (res)
+            replyString << L"202 APPLY OK\r\n";
+        else
+            replyString << L"403 APPLY FAILED\r\n";
+
+        return replyString.str();
+    });
+}
+
 std::wstring add_command(command_context& ctx)
 {
     replace_placeholders(L"<CLIENT_IP_ADDRESS>", ctx.client->address(), ctx.parameters);
@@ -478,8 +503,11 @@ std::wstring add_command(command_context& ctx)
     core::diagnostics::scoped_call_context save;
     core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-    auto consumer = ctx.static_context->consumer_registry->create_consumer(
-        ctx.parameters, ctx.static_context->format_repository, get_channels(ctx));
+    auto consumer =
+        ctx.static_context->consumer_registry->create_consumer(ctx.parameters,
+                                                               ctx.static_context->format_repository,
+                                                               get_channels(ctx),
+                                                               ctx.channel.raw_channel->get_consumer_channel_info());
     ctx.channel.raw_channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
     return L"202 ADD OK\r\n";
@@ -497,7 +525,10 @@ std::wstring remove_command(command_context& ctx)
         }
 
         index = ctx.static_context->consumer_registry
-                    ->create_consumer(ctx.parameters, ctx.static_context->format_repository, get_channels(ctx))
+                    ->create_consumer(ctx.parameters,
+                                      ctx.static_context->format_repository,
+                                      get_channels(ctx),
+                                      ctx.channel.raw_channel->get_consumer_channel_info())
                     ->index();
     }
 
@@ -510,8 +541,17 @@ std::wstring remove_command(command_context& ctx)
 
 std::wstring print_command(command_context& ctx)
 {
-    ctx.channel.raw_channel->output().add(ctx.static_context->consumer_registry->create_consumer(
-        {L"IMAGE"}, ctx.static_context->format_repository, get_channels(ctx)));
+    std::vector<std::wstring> params = {L"IMAGE"};
+    if (!ctx.parameters.empty()) {
+        params.resize(ctx.parameters.size() + 1);
+        std::copy(std::cbegin(ctx.parameters), std::cend(ctx.parameters), params.begin() + 1);
+    }
+
+    ctx.channel.raw_channel->output().add(
+        ctx.static_context->consumer_registry->create_consumer(params,
+                                                               ctx.static_context->format_repository,
+                                                               get_channels(ctx),
+                                                               ctx.channel.raw_channel->get_consumer_channel_info()));
 
     return L"202 PRINT OK\r\n";
 }
@@ -1376,8 +1416,11 @@ std::wstring channel_grid_command(command_context& ctx)
     params.emplace_back(L"0");
     params.emplace_back(L"NAME");
     params.emplace_back(L"Channel Grid Window");
-    auto screen = ctx.static_context->consumer_registry->create_consumer(
-        params, ctx.static_context->format_repository, get_channels(ctx));
+    auto screen =
+        ctx.static_context->consumer_registry->create_consumer(params,
+                                                               ctx.static_context->format_repository,
+                                                               get_channels(ctx),
+                                                               ctx.channel.raw_channel->get_consumer_channel_info());
 
     self.raw_channel->output().add(screen);
 
@@ -1673,7 +1716,7 @@ std::wstring osc_subscribe_command(command_context& ctx)
     }
 
     auto subscription = ctx.static_context->osc_client->get_subscription_token(
-        udp::endpoint(address_v4::from_string(u8(ctx.client->address())), port));
+        udp::endpoint(make_address_v4(u8(ctx.client->address())), port));
 
     ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
 
@@ -1708,6 +1751,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Basic Commands", L"SWAP", swap_command, 1);
     repo->register_channel_command(L"Basic Commands", L"ADD", add_command, 1);
     repo->register_channel_command(L"Basic Commands", L"REMOVE", remove_command, 0);
+    repo->register_channel_command(L"Basic Commands", L"APPLY", apply_command, 1);
     repo->register_channel_command(L"Basic Commands", L"PRINT", print_command, 0);
     repo->register_command(L"Basic Commands", L"CLEAR ALL", clear_all_command, 0);
     repo->register_command(L"Basic Commands", L"LOG LEVEL", log_level_command, 0);

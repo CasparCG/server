@@ -172,28 +172,4 @@ struct frame_producer_dependencies
                                 const spl::shared_ptr<const cg_producer_registry>&    cg_registry);
 };
 
-using producer_factory_t = std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&,
-                                                                               const std::vector<std::wstring>&)>;
-
-class frame_producer_registry
-{
-  public:
-    frame_producer_registry();
-    void register_producer_factory(std::wstring name, const producer_factory_t& factoryr); // Not thread-safe.
-    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&,
-                                                          const std::vector<std::wstring>& params) const;
-    spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&,
-                                                          const std::wstring& params) const;
-
-  private:
-    struct impl;
-    spl::shared_ptr<impl> impl_;
-
-    frame_producer_registry(const frame_producer_registry&)            = delete;
-    frame_producer_registry& operator=(const frame_producer_registry&) = delete;
-};
-
-spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
-void                                  destroy_producers_synchronously();
-
 }} // namespace caspar::core

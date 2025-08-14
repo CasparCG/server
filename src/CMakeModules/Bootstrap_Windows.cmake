@@ -1,6 +1,15 @@
 cmake_minimum_required (VERSION 3.16)
 
 include(ExternalProject)
+include(FetchContent)
+
+if(POLICY CMP0135)
+	cmake_policy(SET CMP0135 NEW)
+endif()
+# Prefer the new boost helper
+if(POLICY CMP0167)
+	cmake_policy(SET CMP0167 NEW)
+endif()
 
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
 
@@ -25,6 +34,17 @@ function(casparcg_add_runtime_dependency_dir FILE_TO_COPY)
 		set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG_DIRS "${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG_DIRS}" "${FILE_TO_COPY}" CACHE INTERNAL "")
 	endif()
 endfunction()
+function(casparcg_add_runtime_dependency_from_target TARGET)
+	get_target_property(_runtime_lib_name ${TARGET} IMPORTED_LOCATION_RELEASE)
+	if (NOT "${_runtime_lib_name}" STREQUAL "")
+		set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "${CASPARCG_RUNTIME_DEPENDENCIES_RELEASE}" "${_runtime_lib_name}" CACHE INTERNAL "")
+	endif()
+
+	get_target_property(_runtime_lib_name ${TARGET} IMPORTED_LOCATION_DEBUG)
+	if (NOT "${_runtime_lib_name}" STREQUAL "")
+		set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG "${CASPARCG_RUNTIME_DEPENDENCIES_DEBUG}" "${_runtime_lib_name}" CACHE INTERNAL "")
+	endif()
+endfunction()
 
 casparcg_add_runtime_dependency("${PROJECT_SOURCE_DIR}/shell/casparcg.config")
 
@@ -32,21 +52,21 @@ casparcg_add_runtime_dependency("${PROJECT_SOURCE_DIR}/shell/casparcg.config")
 casparcg_add_external_project(boost)
 if (BOOST_USE_PRECOMPILED)
 	ExternalProject_Add(boost
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0-win32-x64-debug-release.zip
-	URL_HASH MD5=a10a3c92c79cde3aa4ab6e60137b54d5
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_74_0-win32-x64-debug-release.zip
+	URL_HASH MD5=8d379b0da9a5ae50a3980d2fc1a24d34
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
 	INSTALL_COMMAND ""
 	)
 	ExternalProject_Get_Property(boost SOURCE_DIR)
-	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_67")
+	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_74")
 	link_directories("${SOURCE_DIR}/lib")
 else ()
 	set(BOOST_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost-install)
 	ExternalProject_Add(boost
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_67_0.zip
-	URL_HASH MD5=6da1ba65f8d33b1d306616e5acd87f67
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_74_0.zip
+	URL_HASH MD5=df1456965493f05952b7c06205688ae9
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	BUILD_IN_SOURCE 1
 	CONFIGURE_COMMAND ./bootstrap.bat
@@ -57,10 +77,10 @@ else ()
 		--with-libraries=regex
 		--with-libraries=system
 		--with-libraries=thread
-	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT} 
+	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
-	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_67")
+	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
 	link_directories("${BOOST_INSTALL_DIR}/lib")
 endif ()
 add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
@@ -70,8 +90,8 @@ add_definitions( -DBOOST_LOCALE_HIDE_AUTO_PTR )
 # FFMPEG
 casparcg_add_external_project(ffmpeg-lib)
 ExternalProject_Add(ffmpeg-lib
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-5.1.2-full_build-shared.zip
-	URL_HASH MD5=bcb1efb68701a4b71e8a7efd9b817965
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-7.0.2-full_build-shared.7z
+	URL_HASH MD5=c5127aeed36a9a86dd3b84346be182f8
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
@@ -81,88 +101,71 @@ ExternalProject_Get_Property(ffmpeg-lib SOURCE_DIR)
 set(FFMPEG_INCLUDE_PATH "${SOURCE_DIR}/include")
 set(FFMPEG_BIN_PATH "${SOURCE_DIR}/bin")
 link_directories("${SOURCE_DIR}/lib")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-8.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-57.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-56.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-4.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-6.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-61.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-61.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-10.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-61.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-59.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-58.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-5.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
 # for scanner:
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
 
+get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+set(EXTERNAL_CMAKE_ARGS "")
+if (is_multi_config)
+	set(EXTERNAL_CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=$<CONFIG>")
+else()
+	set(EXTERNAL_CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}")
+endif ()
+
 # TBB
-casparcg_add_external_project(tbb)
-ExternalProject_Add(tbb
+FetchContent_Declare(tbb
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
 	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(tbb SOURCE_DIR)
-set(TBB_INCLUDE_PATH "${SOURCE_DIR}/include")
-set(TBB_BIN_PATH "${SOURCE_DIR}/redist/intel64/vc14")
-link_directories("${SOURCE_DIR}/lib/intel64/vc14")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12.dll" "Release")
-casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb12_debug.dll" "Debug")
+FetchContent_MakeAvailable(tbb)
+
+list(APPEND CMAKE_PREFIX_PATH ${tbb_SOURCE_DIR}/lib/cmake/tbb)
+find_package(tbb REQUIRED)
+
+casparcg_add_runtime_dependency_from_target(TBB::tbb)
+casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc)
+casparcg_add_runtime_dependency_from_target(TBB::tbbmalloc_proxy)
 
 # GLEW
-casparcg_add_external_project(glew)
-ExternalProject_Add(glew
+FetchContent_Declare(glew
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/glew/glew-2.2.0-win32.zip
 	URL_HASH MD5=1feddfe8696c192fa46a0df8eac7d4bf
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(glew SOURCE_DIR)
-set(GLEW_INCLUDE_PATH ${SOURCE_DIR}/include)
-set(GLEW_BIN_PATH ${SOURCE_DIR}/bin/Release/x64)
-link_directories(${SOURCE_DIR}/lib/Release/x64)
-add_definitions( -DGLEW_NO_GLU )
-casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
+FetchContent_MakeAvailable(glew)
+
+add_library(GLEW::glew INTERFACE IMPORTED)
+target_include_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/include)
+target_link_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/lib/Release/x64)
+target_link_libraries(GLEW::glew INTERFACE glew32)
+casparcg_add_runtime_dependency("${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
 
 # SFML
-casparcg_add_external_project(sfml)
-ExternalProject_Add(sfml
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.4.2-windows-vc14-64-bit.zip
-	URL_HASH MD5=8a2f747335fa21a7a232976daa9031ac
+FetchContent_Declare(sfml
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.6.2-windows-vc17-64-bit.zip
+	URL_HASH MD5=dee0602d6f94d1843eef4d7568d2c23d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(sfml SOURCE_DIR)
-set(SFML_INCLUDE_PATH ${SOURCE_DIR}/include)
-set(SFML_BIN_PATH "${SOURCE_DIR}/bin")
-link_directories(${SOURCE_DIR}/lib)
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-graphics-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-window-2.dll" "Release")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-d-2.dll" "Debug")
-casparcg_add_runtime_dependency("${SFML_BIN_PATH}/sfml-system-2.dll" "Release")
+FetchContent_MakeAvailable(sfml)
 
-# FREEIMAGE
-casparcg_add_external_project(freeimage)
-ExternalProject_Add(freeimage
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/freeimage/FreeImage3180Win32Win64.zip
-	URL_HASH MD5=393d3df75b14cbcb4887da1c395596e2
-	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(freeimage SOURCE_DIR)
-set(FREEIMAGE_INCLUDE_PATH "${SOURCE_DIR}/Dist/x64")
-set(FREEIMAGE_BIN_PATH "${FREEIMAGE_INCLUDE_PATH}")
-link_directories("${FREEIMAGE_INCLUDE_PATH}")
-casparcg_add_runtime_dependency("${FREEIMAGE_INCLUDE_PATH}/FreeImage.dll")
+list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
+# set(SFML_STATIC_LIBRARIES TRUE)
+find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+
+casparcg_add_runtime_dependency_from_target(sfml-graphics)
+casparcg_add_runtime_dependency_from_target(sfml-window)
+casparcg_add_runtime_dependency_from_target(sfml-system)
 
 #ZLIB
 casparcg_add_external_project(zlib)
@@ -170,28 +173,33 @@ ExternalProject_Add(zlib
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/zlib/zlib-1.3.tar.gz
 	URL_HASH MD5=60373b133d630f74f4a1f94c1185a53f
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	CMAKE_ARGS ${EXTERNAL_CMAKE_ARGS}
 	INSTALL_COMMAND ""
 )
 ExternalProject_Get_Property(zlib SOURCE_DIR)
 ExternalProject_Get_Property(zlib BINARY_DIR)
 set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
-link_directories(${BINARY_DIR}/Release)
 
-# OPENAL
-casparcg_add_external_project(openal)
-ExternalProject_Add(openal
+if (is_multi_config)
+	link_directories(${BINARY_DIR}/Release)
+else()
+	link_directories(${BINARY_DIR})
+endif()
+
+# OpenAL
+FetchContent_Declare(openal
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/openal/openal-soft-1.19.1-bin.zip
 	URL_HASH MD5=b78ef1ba26f7108e763f92df6bbc3fa5
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-	BUILD_IN_SOURCE 1
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ${CMAKE_COMMAND} -E copy bin/Win64/soft_oal.dll bin/Win64/OpenAL32.dll
-	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(openal SOURCE_DIR)
-set(OPENAL_INCLUDE_PATH "${SOURCE_DIR}/include")
-link_directories("${SOURCE_DIR}/libs/Win64")
-casparcg_add_runtime_dependency("${SOURCE_DIR}/bin/Win64/OpenAL32.dll")
+FetchContent_MakeAvailable(openal)
+file(COPY_FILE ${openal_SOURCE_DIR}/bin/Win64/soft_oal.dll ${openal_SOURCE_DIR}/bin/Win64/OpenAL32.dll)
+
+add_library(OpenAL::OpenAL INTERFACE IMPORTED)
+target_include_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/include)
+target_link_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/libs/Win64)
+target_link_libraries(OpenAL::OpenAL INTERFACE OpenAL32)
+casparcg_add_runtime_dependency("${openal_SOURCE_DIR}/bin/Win64/OpenAL32.dll")
 
 # flash template host
 casparcg_add_external_project(flashtemplatehost)
@@ -216,28 +224,42 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_117.2.5%2Bgda4c36a%2Bchromium-117.0.5938.152_windows64_minimal.tar.bz2
-		URL_HASH MD5=cff21bce81bada2a9e5f0afbec0858f0
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_windows64_minimal.tar.bz2
+		URL_HASH SHA1=864d40fb6e26a6ac8cf1003cbfcc16d35c90782e
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD
+		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
 		INSTALL_COMMAND ""
-		PATCH_COMMAND git apply ${CASPARCG_PATCH_DIR}/cef117.patch
 	)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
 	ExternalProject_Get_Property(cef BINARY_DIR)
 
-	set(CEF_INCLUDE_PATH ${SOURCE_DIR})
-	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
+    add_library(CEF::CEF INTERFACE IMPORTED)
+	add_dependencies(CEF::CEF cef)
+    target_include_directories(CEF::CEF INTERFACE
+        "${SOURCE_DIR}"
+    )
+
 	set(CEF_RESOURCE_PATH ${SOURCE_DIR}/Resources)
-	link_directories(${SOURCE_DIR}/Release)
-	link_directories(${BINARY_DIR}/libcef_dll_wrapper)
+	set(CEF_BIN_PATH ${SOURCE_DIR}/Release)
+
+	if (is_multi_config)
+	    target_link_libraries(CEF::CEF INTERFACE
+			${SOURCE_DIR}/Release/libcef.lib
+			optimized ${BINARY_DIR}/libcef_dll_wrapper/Release/libcef_dll_wrapper.lib
+			debug ${BINARY_DIR}/libcef_dll_wrapper/Debug/libcef_dll_wrapper.lib)
+	else()
+		link_directories(${SOURCE_DIR}/Release ${BINARY_DIR}/libcef_dll_wrapper)
+		target_link_libraries(CEF::CEF INTERFACE
+			libcef.lib
+			libcef_dll_wrapper.lib)
+	endif()
 
 	casparcg_add_runtime_dependency_dir("${CEF_RESOURCE_PATH}/locales")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_100_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/chrome_200_percent.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
-	
+
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
@@ -258,10 +280,12 @@ add_definitions(-D_UNICODE)
 add_definitions(-DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-D_WIN32_WINNT=0x601)
 
+# ignore boost deprecated headers, as these are often reported inside boost
+add_definitions("-DBOOST_ALLOW_DEPRECATED_HEADERS")
+
+# Ensure /EHsc is not defined as it clashes with EHa below
+string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /Ot /Gy /bigobj")
-
-if (POLICY CMP0045)
-	cmake_policy(SET CMP0045 OLD)
-endif ()
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX2 /Ot /Gy /bigobj")

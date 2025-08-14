@@ -28,8 +28,7 @@
 
 #include <common/log.h>
 
-#include <core/consumer/frame_consumer.h>
-#include <core/producer/frame_producer.h>
+#include <core/module_dependencies.h>
 
 #include <mutex>
 

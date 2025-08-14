@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <common/bit_depth.h>
 #include <memory>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -28,7 +29,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class texture final
 {
   public:
-    texture(int width, int height, int stride);
+    texture(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8);
     texture(const texture&) = delete;
     texture(texture&& other);
     ~texture();
@@ -47,11 +48,13 @@ class texture final
     void bind(int index);
     void unbind();
 
-    int width() const;
-    int height() const;
-    int stride() const;
-    int size() const;
-    int id() const;
+    int               width() const;
+    int               height() const;
+    int               stride() const;
+    common::bit_depth depth() const;
+    void              set_depth(common::bit_depth depth);
+    int               size() const;
+    int               id() const;
 
   private:
     struct impl;

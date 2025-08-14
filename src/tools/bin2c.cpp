@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         unsigned char c;
         if (fread(&c, 1, 1, f) == 0)
             break;
-        if ('\r' == c) // ignore carret return
+        if ('\r' == c) // ignore carriage return
             continue;
         printf("0x%.2X,", (int)c);
         ++n;

@@ -26,6 +26,7 @@
 
 #include "video_format.h"
 
+#include "consumer/channel_info.h"
 #include "consumer/output.h"
 #include "frame/draw_frame.h"
 #include "frame/frame.h"
@@ -53,13 +54,13 @@ struct video_channel::impl final
 {
     monitor::state state_;
 
-    const int index_;
+    const channel_info channel_info_;
 
     const spl::shared_ptr<caspar::diagnostics::graph> graph_ = [](int index) {
         core::diagnostics::scoped_call_context save;
         core::diagnostics::call_context::for_thread().video_channel = index;
         return spl::make_shared<caspar::diagnostics::graph>();
-    }(index_);
+    }(channel_info_.index);
 
     caspar::core::output         output_;
     spl::shared_ptr<image_mixer> image_mixer_;
@@ -100,10 +101,11 @@ struct video_channel::impl final
   public:
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
+         color_space                               default_color_space,
          std::unique_ptr<image_mixer>              image_mixer,
          std::function<void(core::monitor::state)> tick)
-        : index_(index)
-        , output_(graph_, format_desc, index)
+        : channel_info_(index, image_mixer->depth(), default_color_space)
+        , output_(graph_, format_desc, channel_info_)
         , image_mixer_(std::move(image_mixer))
         , mixer_(index, graph_, image_mixer_)
         , stage_(std::make_shared<core::stage>(index, graph_, format_desc))
@@ -121,7 +123,7 @@ struct video_channel::impl final
 
         thread_ = std::thread([=] {
             set_thread_realtime_priority();
-            set_thread_name(L"channel-" + std::to_wstring(index_));
+            set_thread_name(L"channel-" + std::to_wstring(channel_info_.index));
 
             while (!abort_request_) {
                 try {
@@ -152,11 +154,16 @@ struct video_channel::impl final
                     auto          stage_frames = (*stage_)(frame_counter_, background_routes, routesCb);
                     graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.hz * 0.5);
 
+                    // This is a little race prone, but at worst a new consumer will start with a frame of black
+                    bool has_consumers = output_.consumer_count() > 0;
+
                     // Mix
                     caspar::timer mix_timer;
-                    auto mixed_frame = mixer_(stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples);
+                    auto          mixed_frame =
+                        has_consumers ? mixer_(stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples)
+                                               : const_frame{};
                     auto mixed_frame2 =
-                        stage_frames.format_desc.field_count == 2
+                        has_consumers && stage_frames.format_desc.field_count == 2
                             ? mixer_(stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples)
                             : const_frame{};
                     graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.hz * 0.5);
@@ -207,7 +214,7 @@ struct video_channel::impl final
         if (!route) {
             route              = std::make_shared<core::route>();
             route->format_desc = stage_->video_format_desc(); // TODO this needs updating whenever the videomode changes
-            route->name        = std::to_wstring(index_);
+            route->name        = std::to_wstring(channel_info_.index);
             if (index != -1) {
                 route->name += L"/" + std::to_wstring(index);
             }
@@ -224,17 +231,20 @@ struct video_channel::impl final
 
     std::wstring print() const
     {
-        return L"video_channel[" + std::to_wstring(index_) + L"|" + stage_->video_format_desc().name + L"]";
+        return L"video_channel[" + std::to_wstring(channel_info_.index) + L"|" + stage_->video_format_desc().name + L"]";
     }
 
-    int index() const { return index_; }
+    int index() const { return channel_info_.index; }
+
+    channel_info get_consumer_channel_info() const { return channel_info_; }
 };
 
 video_channel::video_channel(int                                       index,
                              const core::video_format_desc&            format_desc,
+                             color_space                               default_color_space,
                              std::unique_ptr<image_mixer>              image_mixer,
                              std::function<void(core::monitor::state)> tick)
-    : impl_(new impl(index, format_desc, std::move(image_mixer), std::move(tick)))
+    : impl_(new impl(index, format_desc, default_color_space, std::move(image_mixer), std::move(tick)))
 {
 }
 video_channel::~video_channel() {}
@@ -246,7 +256,8 @@ const output&                       video_channel::output() const { return impl_
 output&                             video_channel::output() { return impl_->output_; }
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
 int                                 video_channel::index() const { return impl_->index(); }
-core::monitor::state                video_channel::state() const { return impl_->state_; }
+channel_info         video_channel::get_consumer_channel_info() const { return impl_->get_consumer_channel_info(); };
+core::monitor::state video_channel::state() const { return impl_->state_; }
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 

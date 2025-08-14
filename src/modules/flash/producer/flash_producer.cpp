@@ -581,8 +581,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
         CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));
 
     const auto url = url_from_path(filename);
-    return create_destroy_proxy(spl::make_shared<flash_producer>(
-        dependencies.frame_factory, dependencies.format_desc, url, template_host.width, template_host.height));
+    return spl::make_shared<flash_producer>(
+        dependencies.frame_factory, dependencies.format_desc, url, template_host.width, template_host.height);
 }
 
 spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies,
@@ -601,7 +601,7 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
     producer->call({L"start_rendering"}).get();
 
-    return create_destroy_proxy(producer);
+    return producer;
 }
 
 std::wstring find_template(const std::wstring& template_name)

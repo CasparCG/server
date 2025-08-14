@@ -20,6 +20,8 @@
  */
 #include "buffer.h"
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <common/gl/gl_check.h>
 
 #include <GL/glew.h>

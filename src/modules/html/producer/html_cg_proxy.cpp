@@ -31,13 +31,8 @@
 
 namespace caspar { namespace html {
 
-struct html_cg_proxy::impl
-{
-    spl::shared_ptr<core::frame_producer> producer;
-};
-
 html_cg_proxy::html_cg_proxy(const spl::shared_ptr<core::frame_producer>& producer)
-    : impl_(new impl{producer})
+    : producer_(producer)
 {
 }
 
@@ -55,20 +50,20 @@ void html_cg_proxy::add(int                 layer,
         play(layer);
 }
 
-void html_cg_proxy::remove(int layer) { impl_->producer->call({L"remove()"}); }
+void html_cg_proxy::remove(int layer) { producer_->call({L"remove()"}); }
 
-void html_cg_proxy::play(int layer) { impl_->producer->call({L"play()"}); }
+void html_cg_proxy::play(int layer) { producer_->call({L"play()"}); }
 
-void html_cg_proxy::stop(int layer) { impl_->producer->call({L"stop()"}); }
+void html_cg_proxy::stop(int layer) { producer_->call({L"stop()"}); }
 
-void html_cg_proxy::next(int layer) { impl_->producer->call({L"next()"}); }
+void html_cg_proxy::next(int layer) { producer_->call({L"next()"}); }
 
 void html_cg_proxy::update(int layer, const std::wstring& data)
 {
-    impl_->producer->call({(boost::wformat(L"update(\"%1%\")") %
-                            boost::algorithm::replace_all_copy(
-                                boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
-                               .str()});
+    producer_->call({(boost::wformat(L"update(\"%1%\")") %
+                      boost::algorithm::replace_all_copy(
+                          boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
+                         .str()});
 }
 
 std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
@@ -77,7 +72,7 @@ std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
 
     // Append empty () if no parameter list has been given
     auto javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
-    return impl_->producer->call({javascript}).get();
+    return producer_->call({javascript}).get();
 }
 
 }} // namespace caspar::html

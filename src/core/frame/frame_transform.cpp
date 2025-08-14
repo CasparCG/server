@@ -28,91 +28,6 @@
 
 namespace caspar { namespace core {
 
-// image_transform
-
-template <typename Rect>
-void transform_rect(Rect& self, const Rect& other)
-{
-    self.ul[0] += other.ul[0];
-    self.ul[1] += other.ul[1];
-    self.lr[0] *= other.lr[0];
-    self.lr[1] *= other.lr[1];
-}
-
-void transform_corners(corners& self, const corners& other)
-{
-    transform_rect(self, other);
-
-    self.ur[0] *= other.ur[0];
-    self.ur[1] += other.ur[1];
-    self.ll[0] += other.ll[0];
-    self.ll[1] *= other.ll[1];
-
-    // TODO (fix) figure out the math to compose perspective transforms correctly.
-}
-
-image_transform& image_transform::operator*=(const image_transform& other)
-{
-    opacity *= other.opacity;
-    brightness *= other.brightness;
-    contrast *= other.contrast;
-    saturation *= other.saturation;
-
-    // TODO (fix)
-    auto aspect_ratio = 1.0;
-
-    std::array<double, 2> rotated{};
-
-    auto orig_x = other.fill_translation[0];
-    auto orig_y = other.fill_translation[1] / aspect_ratio;
-    rotated[0]  = orig_x * std::cos(angle) - orig_y * std::sin(angle);
-    rotated[1]  = orig_x * std::sin(angle) + orig_y * std::cos(angle);
-    rotated[1] *= aspect_ratio;
-
-    anchor[0] += other.anchor[0] * fill_scale[0];
-    anchor[1] += other.anchor[1] * fill_scale[1];
-    fill_translation[0] += rotated[0] * fill_scale[0];
-    fill_translation[1] += rotated[1] * fill_scale[1];
-    fill_scale[0] *= other.fill_scale[0];
-    fill_scale[1] *= other.fill_scale[1];
-    clip_translation[0] += other.clip_translation[0] * clip_scale[0];
-    clip_translation[1] += other.clip_translation[1] * clip_scale[1];
-    clip_scale[0] *= other.clip_scale[0];
-    clip_scale[1] *= other.clip_scale[1];
-    angle += other.angle;
-
-    transform_rect(crop, other.crop);
-    transform_corners(perspective, other.perspective);
-
-    levels.min_input  = std::max(levels.min_input, other.levels.min_input);
-    levels.max_input  = std::min(levels.max_input, other.levels.max_input);
-    levels.min_output = std::max(levels.min_output, other.levels.min_output);
-    levels.max_output = std::min(levels.max_output, other.levels.max_output);
-    levels.gamma *= other.levels.gamma;
-    chroma.enable |= other.chroma.enable;
-    chroma.show_mask |= other.chroma.show_mask;
-    chroma.target_hue     = std::max(other.chroma.target_hue, chroma.target_hue);
-    chroma.min_saturation = std::max(other.chroma.min_saturation, chroma.min_saturation);
-    chroma.min_brightness = std::max(other.chroma.min_brightness, chroma.min_brightness);
-    chroma.hue_width      = std::max(other.chroma.hue_width, chroma.hue_width);
-    chroma.softness       = std::max(other.chroma.softness, chroma.softness);
-    chroma.spill_suppress = std::max(other.chroma.spill_suppress, chroma.spill_suppress);
-    chroma.spill_suppress_saturation =
-        std::min(other.chroma.spill_suppress_saturation, chroma.spill_suppress_saturation);
-    is_key |= other.is_key;
-    invert |= other.invert;
-    is_mix |= other.is_mix;
-    blend_mode = std::max(blend_mode, other.blend_mode);
-    layer_depth += other.layer_depth;
-
-    return *this;
-}
-
-image_transform image_transform::operator*(const image_transform& other) const
-{
-    return image_transform(*this) *= other;
-}
-
 double do_tween(double time, double source, double dest, double duration, const tweener& tween)
 {
     return tween(time, source, dest - source, duration);
@@ -216,20 +131,22 @@ bool operator==(const rectangle& lhs, const rectangle& rhs)
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
     return eq(lhs.opacity, rhs.opacity) && eq(lhs.contrast, rhs.contrast) && eq(lhs.brightness, rhs.brightness) &&
-           eq(lhs.saturation, rhs.saturation) && boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
-           boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
-           boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
-           boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
-           boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
-           lhs.is_key == rhs.is_key && lhs.invert == rhs.invert && lhs.is_mix == rhs.is_mix &&
-           lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
-           lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
-           eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
-           eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
-           eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) && eq(lhs.chroma.softness, rhs.chroma.softness) &&
-           eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
-           eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
-           lhs.perspective == rhs.perspective;
+               eq(lhs.saturation, rhs.saturation) && boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
+               boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
+               boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
+               boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
+               boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) && eq(lhs.angle, rhs.angle) &&
+               lhs.is_key == rhs.is_key && lhs.invert == rhs.invert && lhs.is_mix == rhs.is_mix &&
+               lhs.blend_mode == rhs.blend_mode && lhs.layer_depth == rhs.layer_depth &&
+               lhs.chroma.enable == rhs.chroma.enable && lhs.chroma.show_mask == rhs.chroma.show_mask &&
+               eq(lhs.chroma.target_hue, rhs.chroma.target_hue) && eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
+               eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
+               eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) &&
+               eq(lhs.chroma.softness, rhs.chroma.softness) &&
+               eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
+               eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+               lhs.perspective == rhs.perspective ||
+           lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
 bool operator!=(const image_transform& lhs, const image_transform& rhs) { return !(lhs == rhs); }
@@ -265,18 +182,6 @@ bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return
 
 // frame_transform
 frame_transform::frame_transform() = default;
-
-frame_transform& frame_transform::operator*=(const frame_transform& other)
-{
-    image_transform *= other.image_transform;
-    audio_transform *= other.audio_transform;
-    return *this;
-}
-
-frame_transform frame_transform::operator*(const frame_transform& other) const
-{
-    return frame_transform(*this) *= other;
-}
 
 frame_transform frame_transform::tween(double                 time,
                                        const frame_transform& source,

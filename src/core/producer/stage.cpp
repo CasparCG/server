@@ -173,8 +173,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                         std::find(fetch_background.begin(), fetch_background.end(), p->first) != fetch_background.end();
 
                     layer_frame res = {};
-                    if (l.second)
+                    if (l.second) {
                         res.foreground1 = draw_frame::push(layer.receive(field1, result.nb_samples), tween.fetch());
+                        res.foreground1.transform().image_transform.enable_geometry_modifiers = true;
+                    }
 
                     res.has_background = layer.has_background();
                     if (has_background_route)
@@ -182,9 +184,11 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
                     if (is_interlaced) {
                         res.is_interlaced = true;
-                        if (l.second)
+                        if (l.second) {
                             res.foreground2 =
                                 draw_frame::push(layer.receive(video_field::b, result.nb_samples), tween.fetch());
+                            res.foreground2.transform().image_transform.enable_geometry_modifiers = true;
+                        }
                         if (has_background_route)
                             res.background2 = layer.receive_background(video_field::b, result.nb_samples);
                     }
@@ -201,13 +205,16 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                         result.frames2.push_back(p.second.foreground2);
                 }
 
-                // push stage_frames to support any channel routes that have been set
-                layer_frame chan_lf   = {};
-                chan_lf.is_interlaced = is_interlaced;
-                chan_lf.foreground1   = draw_frame(result.frames);
-                if (is_interlaced)
-                    chan_lf.foreground2 = draw_frame(result.frames2);
-                routesCb(-1, chan_lf);
+                {
+                    // push stage_frames to support any channel routes that have been set
+                    layer_frame chan_lf   = {};
+                    chan_lf.is_interlaced = is_interlaced;
+                    chan_lf.foreground1   = wrap_layer_frames_for_route(result.frames);
+                    if (is_interlaced)
+                        chan_lf.foreground2 = wrap_layer_frames_for_route(result.frames2);
+
+                    routesCb(-1, chan_lf);
+                }
 
                 monitor::state state;
                 for (auto& p : layers_) {
@@ -221,6 +228,16 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
             return result;
         });
+    }
+
+    core::draw_frame wrap_layer_frames_for_route(std::vector<core::draw_frame> frames)
+    {
+        // Note: this must not mutate the vector used for the layer
+        for (auto& frame : frames) {
+            // Tell the compositor that these are layers, matching what normal rendering does
+            frame.transform().image_transform.layer_depth = 1;
+        }
+        return core::draw_frame(frames);
     }
 
     std::future<void>
@@ -464,7 +481,7 @@ stage::swap_layer(int index, int other_index, const std::shared_ptr<stage_base>&
 }
 std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
-const stage_frames stage::operator()(uint64_t                                     frame_number,
+const stage_frames                           stage::operator()(uint64_t                                     frame_number,
                                      std::vector<int>&                            fetch_background,
                                      std::function<void(int, const layer_frame&)> routesCb)
 {

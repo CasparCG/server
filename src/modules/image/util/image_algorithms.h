@@ -151,7 +151,7 @@ std::vector<std::pair<int, int>> get_line_points(int num_pixels, double angle_ra
  *
  * @param src           The source image view. Has to model the ImageView
  *                      concept and have a pixel type that models RGBAPixel.
- * @param dst           The destiation image view. Has to model the ImageView
+ * @param dst           The destination image view. Has to model the ImageView
  *                      concept and have a pixel type that models RGBAPixel.
  * @param angle_radians The angle in radians to directionally blur the image.
  * @param blur_px       The number of pixels of the blur.

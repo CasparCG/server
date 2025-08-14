@@ -22,7 +22,6 @@
 #pragma once
 
 #include <common/array.h>
-#include <common/forward.h>
 #include <common/memory.h>
 
 #include <core/frame/frame_visitor.h>
@@ -31,7 +30,9 @@
 
 #include <cstdint>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics {
+class graph;
+}
 
 namespace caspar { namespace core {
 

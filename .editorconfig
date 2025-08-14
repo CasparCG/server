@@ -7,3 +7,12 @@ indent_size = 4
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[*.diff]
+trim_trailing_whitespace = false
+
+[*.patch]
+trim_trailing_whitespace = false
+
+[debian/rules]
+indent_style = tab

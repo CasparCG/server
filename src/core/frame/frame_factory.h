@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <common/bit_depth.h>
+
 namespace caspar { namespace core {
 
 class frame_factory
@@ -33,6 +35,8 @@ class frame_factory
     frame_factory(const frame_factory&) = delete;
 
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
+    virtual class mutable_frame
+    create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, common::bit_depth depth) = 0;
 };
 
 }} // namespace caspar::core

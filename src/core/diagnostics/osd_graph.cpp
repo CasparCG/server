@@ -39,12 +39,15 @@
 #include <GL/glew.h>
 
 #include <atomic>
+#include <cstdio>
+#include <filesystem>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <tuple>
+
+namespace fs = std::filesystem;
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
@@ -62,11 +65,23 @@ sf::Color get_sfml_color(int color)
             static_cast<sf::Uint8>(color >> 0 & 255)};
 }
 
-sf::Font& get_default_font()
+auto& get_default_font()
 {
     static sf::Font DEFAULT_FONT = []() {
+        fs::path path{DIAG_FONT_PATH};
+#ifdef __linux__
+        if (!fs::exists(path)) {
+            auto cmd = "fc-match --format=%{file} " + path.string();
+            if (auto pipe = popen(cmd.data(), "r")) {
+                char buf[128];
+                path.clear();
+                while (fgets(buf, sizeof(buf), pipe))
+                    path += buf;
+            }
+        }
+#endif
         sf::Font font;
-        if (!font.loadFromFile(DIAG_FONT_PATH))
+        if (!font.loadFromFile(path.string()))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(DIAG_FONT_PATH " not found"));
         return font;
     }();
@@ -322,7 +337,7 @@ class line : public drawable
         if (tick_data_ > -0.5) {
             auto array_one = line_data_.array_one();
             auto array_two = line_data_.array_two();
-            // since boost::circular_buffer guarantees two contigous views of the buffer we can provide raw access to
+            // since boost::circular_buffer guarantees two contiguous views of the buffer we can provide raw access to
             // SFML, which can use glDrawArrays.
             target.draw(array_one.first, static_cast<unsigned int>(array_one.second), sf::LinesStrip, states);
             target.draw(array_two.first, static_cast<unsigned int>(array_two.second), sf::LinesStrip, states);

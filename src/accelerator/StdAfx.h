@@ -1,12 +1,10 @@
 #include <GL/glew.h>
-#include <SFML/Window/Context.hpp>
 #include <algorithm>
 #include <array>
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/io_context.hpp>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -17,7 +15,6 @@
 #include <common/assert.h>
 #include <common/env.h>
 #include <common/except.h>
-#include <common/forward.h>
 #include <common/future.h>
 #include <common/gl/gl_check.h>
 #include <common/memory.h>

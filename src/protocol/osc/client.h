@@ -35,7 +35,7 @@ class client
     client& operator=(const client&);
 
   public:
-    client(std::shared_ptr<boost::asio::io_context> service);
+    client(std::shared_ptr<boost::asio::io_context> context);
 
     client(client&&);
 

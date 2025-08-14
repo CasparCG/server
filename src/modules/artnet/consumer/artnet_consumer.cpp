@@ -24,22 +24,16 @@
 #undef NOMINMAX
 // ^^ This is needed to avoid a conflict between boost asio and other header files defining NOMINMAX
 
-#include <common/array.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/ptree.h>
-#include <common/utf.h>
 
-#include <core/consumer/frame_consumer.h>
-#include <core/frame/frame.h>
-#include <core/video_format.h>
+#include <core/consumer/channel_info.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/locale/encoding_utf.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-#include <cmath>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -70,19 +64,19 @@ struct artnet_consumer : public core::frame_consumer
 
     explicit artnet_consumer(configuration config)
         : config(std::move(config))
-        , io_service_()
-        , socket(io_service_)
+        , io_context_()
+        , socket(io_context_)
     {
         socket.open(udp::v4());
 
         std::string host_ = u8(this->config.host);
         remote_endpoint =
-            boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(host_), this->config.port);
+            boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
 
         compute_fixtures();
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/, int /*channel_index*/) override
+    void initialize(const core::video_format_desc& /*format_desc*/, const core::channel_info& channel_info, int port_index) override
     {
         thread_ = std::thread([this] {
             long long time      = 1000 / config.refreshRate;
@@ -183,7 +177,7 @@ struct artnet_consumer : public core::frame_consumer
     std::thread       thread_;
     std::atomic<bool> abort_request_{false};
 
-    io_service    io_service_;
+    io_context    io_context_;
     udp::socket   socket;
     udp::endpoint remote_endpoint;
 
@@ -191,7 +185,7 @@ struct artnet_consumer : public core::frame_consumer
     {
         computed_fixtures.clear();
         for (auto fixture : config.fixtures) {
-            for (int i = 0; i < fixture.fixtureCount; i++) {
+            for (unsigned short i = 0; i < fixture.fixtureCount; i++) {
                 computed_fixture computed_fixture{};
                 computed_fixture.type    = fixture.type;
                 computed_fixture.address = fixture.startAddress + i * fixture.fixtureChannels;
@@ -251,13 +245,13 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
         if (startAddress < 1)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture start address must be specified"));
 
-        f.startAddress = startAddress - 1;
+        f.startAddress = (unsigned short)startAddress - 1;
 
         int fixtureCount = xml_channel.second.get(L"fixture-count", -1);
         if (fixtureCount < 1)
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
 
-        f.fixtureCount = fixtureCount;
+        f.fixtureCount = (unsigned short)fixtureCount;
 
         std::wstring type = xml_channel.second.get(L"type", L"");
         if (type.empty())
@@ -281,7 +275,7 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
                 user_error() << msg_info(
                     L"Fixture channel count must be at least enough channels for current color mode"));
 
-        f.fixtureChannels = fixtureChannels;
+        f.fixtureChannels = (unsigned short)fixtureChannels;
 
         box b{};
 
@@ -311,9 +305,13 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const core::channel_info&                                channel_info)
 {
     configuration config;
+
+    if (channel_info.depth != common::bit_depth::bit8)
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Artnet consumer only supports 8-bit color depth."));
 
     config.universe    = ptree.get(L"universe", config.universe);
     config.host        = ptree.get(L"host", config.host);

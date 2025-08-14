@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+%:
+	dh $@ --sourcedirectory=src --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DDIAG_FONT_PATH=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf -DCASPARCG_BINARY_NAME=casparcg-server-beta
+
+# Generate and install manual page
+debian/casparcg-server-beta.1: debian/casparcg.txt2man
+	txt2man -t CASPARCG -d 2018-12-14 -s 1 debian/casparcg.txt2man > $@
+
+override_dh_installman: debian/casparcg-server-beta.1
+	dh_installman
+	$(RM) debian/casparcg-server-beta.1
+
+override_dh_gencontrol:
+	CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-131)
+	sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
+	dh_gencontrol

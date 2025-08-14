@@ -206,7 +206,11 @@ struct newtek_ndi_producer : public core::frame_producer
                 if (audio_frame.p_data != nullptr) {
                     audio_frame_32s.reference_level = 0;
                     ndi_lib_->util_audio_to_interleaved_32s_v2(&audio_frame, &audio_frame_32s);
-                    a_frame->channels    = audio_frame_32s.no_channels;
+#if FFMPEG_NEW_CHANNEL_LAYOUT
+                    av_channel_layout_default(&a_frame->ch_layout, audio_frame_32s.no_channels);
+#else
+                    a_frame->channels = audio_frame_32s.no_channels;
+#endif
                     a_frame->sample_rate = audio_frame_32s.sample_rate;
                     a_frame->nb_samples  = audio_frame_32s.no_samples;
                     a_frame->data[0]     = reinterpret_cast<uint8_t*>(audio_frame_32s.p_data);
@@ -303,8 +307,7 @@ spl::shared_ptr<core::frame_producer> create_ndi_producer(const core::frame_prod
     }
     const bool low_bandwidth = contains_param(L"LOW_BANDWIDTH", params);
 
-    auto producer = spl::make_shared<newtek_ndi_producer>(
+    return spl::make_shared<newtek_ndi_producer>(
         dependencies.frame_factory, dependencies.format_desc, name_or_url, low_bandwidth);
-    return core::create_destroy_proxy(std::move(producer));
 }
 }} // namespace caspar::newtek

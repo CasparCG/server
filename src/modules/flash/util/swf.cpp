@@ -25,7 +25,7 @@
 
 #include <common/except.h>
 
-#include <zlib.h> // Compiled into FreeImage
+#include <zlib.h>
 
 #include <fstream>
 #include <streambuf>
@@ -65,13 +65,13 @@ swf_t::header_t::header_t(const std::wstring& filename)
 
     unsigned char nbits = reinterpret_cast<unsigned char*>(uncompressed_data.data())[0];
 
-    unsigned int size = nbits >> 3; // remove overlaping 3 bits
+    unsigned int size = nbits >> 3; // remove overlapping 3 bits
 
     unsigned long dims[4]  = {};
     unsigned long neg_root = 1 << (size - 1); // numbers are signed, i.e. leftmost bit denotes -
 
     unsigned int  bi_offset = size % 8 ? 8 - size % 8 : 0; // offset of bit numbers depending on specified size
-    unsigned int  by_offset = (size + bi_offset) / 8;      // offest of bytes
+    unsigned int  by_offset = (size + bi_offset) / 8;      // offset of bytes
     unsigned long ibuf      = (unsigned long)(nbits % 8);  // actual result - starts with last 3 bits of first byte
 
     for (auto i = 0; i < 4; ++i) {

@@ -46,7 +46,6 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/fwd.h>
-#include <core/module_dependencies.h>
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <deque>

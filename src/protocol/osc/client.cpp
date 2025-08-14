@@ -65,7 +65,7 @@ struct param_visitor : public boost::static_visitor<void>
 
 struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
-    std::shared_ptr<boost::asio::io_context> service_;
+    std::shared_ptr<boost::asio::io_context> io_context_;
     udp::socket                              socket_;
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
@@ -81,9 +81,9 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::thread       thread_;
 
   public:
-    impl(std::shared_ptr<boost::asio::io_service> service)
-        : service_(std::move(service))
-        , socket_(*service_, udp::v4())
+    impl(std::shared_ptr<boost::asio::io_context> io_context)
+        : io_context_(std::move(io_context))
+        , socket_(*io_context_, udp::v4())
         , buffer_(1000000)
     {
         thread_ = std::thread([=] {
@@ -157,7 +157,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_.join();
     }
 
-    // TODO (refactor) This is wierd...
+    // TODO (refactor) This is weird...
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -197,8 +197,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     }
 };
 
-client::client(std::shared_ptr<boost::asio::io_context> service)
-    : impl_(new impl(std::move(service)))
+client::client(std::shared_ptr<boost::asio::io_context> io_context)
+    : impl_(new impl(std::move(io_context)))
 {
 }
 

@@ -54,8 +54,22 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
     return port_config;
 }
 
+core::color_space get_color_space(const std::wstring& str)
+{
+    auto color_space_str = boost::to_lower_copy(str);
+    if (color_space_str == L"bt709")
+        return core::color_space::bt709;
+    else if (color_space_str == L"bt2020")
+        return core::color_space::bt2020;
+    else if (color_space_str == L"bt601")
+        return core::color_space::bt601;
+
+    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid decklink color-space, must be bt601, bt709 or bt2020"));
+}
+
 configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
-                               const core::video_format_repository& format_repository)
+                               const core::video_format_repository& format_repository,
+                               const core::channel_info&            channel_info)
 {
     configuration config;
 
@@ -117,11 +131,25 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         }
     }
 
+    config.color_space   = channel_info.default_color_space;
+    auto color_space_str = ptree.get(L"color-space", L"");
+    if (!color_space_str.empty())
+        config.color_space = get_color_space(color_space_str);
+
+    auto hdr_metadata = ptree.get_child_optional(L"hdr-metadata");
+    if (hdr_metadata) {
+        config.hdr_meta.min_dml  = hdr_metadata->get(L"min-dml", config.hdr_meta.min_dml);
+        config.hdr_meta.max_dml  = hdr_metadata->get(L"max-dml", config.hdr_meta.max_dml);
+        config.hdr_meta.max_fall = hdr_metadata->get(L"max-fall", config.hdr_meta.max_fall);
+        config.hdr_meta.max_cll  = hdr_metadata->get(L"max-cll", config.hdr_meta.max_cll);
+    }
+
     return config;
 }
 
 configuration parse_amcp_config(const std::vector<std::wstring>&     params,
-                                const core::video_format_repository& format_repository)
+                                const core::video_format_repository& format_repository,
+                                const core::channel_info&            channel_info)
 {
     configuration config;
 
@@ -148,6 +176,8 @@ configuration parse_amcp_config(const std::vector<std::wstring>&     params,
 
     config.embedded_audio   = contains_param(L"EMBEDDED_AUDIO", params);
     config.primary.key_only = contains_param(L"KEY_ONLY", params);
+
+    config.color_space = channel_info.default_color_space;
 
     return config;
 }

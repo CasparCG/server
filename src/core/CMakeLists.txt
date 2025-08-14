@@ -3,6 +3,7 @@ project (core)
 
 set(SOURCES
 		consumer/frame_consumer.cpp
+		consumer/frame_consumer_registry.cpp
 		consumer/output.cpp
 
 		diagnostics/call_context.cpp
@@ -25,6 +26,7 @@ set(SOURCES
 
 		producer/cg_proxy.cpp
 		producer/frame_producer.cpp
+		producer/frame_producer_registry.cpp
 		producer/layer.cpp
 		producer/stage.cpp
 
@@ -33,6 +35,7 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/frame_consumer.h
+		consumer/frame_consumer_registry.h
 		consumer/output.h
 
 		diagnostics/call_context.h
@@ -63,6 +66,7 @@ set(HEADERS
 
 		producer/cg_proxy.h
 		producer/frame_producer.h
+		producer/frame_producer_registry.h
 		producer/layer.h
 		producer/stage.h
 
@@ -71,15 +75,13 @@ set(HEADERS
 		StdAfx.h
 		video_channel.h
 		video_format.h
+		consumer/channel_info.h
 )
 
 casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
-target_include_directories(core PRIVATE
-    ..
-    ${SFML_INCLUDE_PATH}
-    ${GLEW_INCLUDE_PATH}
-    )
-target_precompile_headers(core PRIVATE "StdAfx.h")
+target_include_directories(core PRIVATE ..)
+target_precompile_headers(core PRIVATE StdAfx.h)
+target_link_libraries(core PRIVATE common GLEW::glew sfml-graphics)
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
@@ -94,5 +96,3 @@ source_group(sources\\producer\\color producer/color/*)
 source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
-
-target_link_libraries(core common)

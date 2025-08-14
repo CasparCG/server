@@ -27,15 +27,10 @@
 
 #include <core/module_dependencies.h>
 
-namespace caspar { namespace html {
+namespace caspar::html {
 
-const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
-const std::string LOG_MESSAGE_NAME    = "CasparCGLog";
+bool intercept_command_line(int argc, char** argv);
+void init(const core::module_dependencies& dependencies);
+void uninit();
 
-bool              intercept_command_line(int argc, char** argv);
-void              init(const core::module_dependencies& dependencies);
-void              uninit();
-void              invoke(const std::function<void()>& func);
-std::future<void> begin_invoke(const std::function<void()>& func);
-
-}} // namespace caspar::html
+} // namespace caspar::html

@@ -1,7 +1,5 @@
 #! /bin/bash
 
-source $(dirname "$0")/image-versions
-
 GIT_HASH=$(git rev-parse --verify --short HEAD)
 
 docker build -t casparcg/server \

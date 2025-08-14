@@ -24,6 +24,7 @@
 
 #include <accelerator/accelerator.h>
 
+#include <common/bit_depth.h>
 #include <common/env.h>
 #include <common/except.h>
 #include <common/memory.h>
@@ -33,6 +34,7 @@
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
@@ -63,29 +65,29 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-std::shared_ptr<boost::asio::io_service> create_running_io_service()
+std::shared_ptr<boost::asio::io_context> create_io_context_with_running_service()
 {
-    auto service = std::make_shared<boost::asio::io_service>();
-    // To keep the io_service::run() running although no pending async
+    auto io_context = std::make_shared<boost::asio::io_context>();
+    // To keep the io_context::run() running although no pending async
     // operations are posted.
-    auto work      = std::make_shared<boost::asio::io_service::work>(*service);
-    auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
-    auto thread    = std::make_shared<std::thread>([service, weak_work] {
+    auto work      = std::make_shared<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(boost::asio::make_work_guard(*io_context));
+    auto weak_work = std::weak_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(work);
+    auto thread    = std::make_shared<std::thread>([io_context, weak_work] {
         while (auto strong = weak_work.lock()) {
             try {
-                service->run();
+                io_context->run();
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
         }
 
-        CASPAR_LOG(info) << "[asio] Global io_service uninitialized.";
+        CASPAR_LOG(info) << "[asio] Global io_context uninitialized.";
     });
 
-    return std::shared_ptr<boost::asio::io_service>(service.get(), [service, work, thread](void*) mutable {
-        CASPAR_LOG(info) << "[asio] Shutting down global io_service.";
+    return std::shared_ptr<boost::asio::io_context>(io_context.get(), [io_context, work, thread](void*) mutable {
+        CASPAR_LOG(info) << "[asio] Shutting down global io_context.";
         work.reset();
-        service->stop();
+        io_context->stop();
         if (thread->get_id() != std::this_thread::get_id())
             thread->join();
         else
@@ -95,7 +97,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 
 struct server::impl
 {
-    std::shared_ptr<boost::asio::io_service>               io_service_ = create_running_io_service();
+    std::shared_ptr<boost::asio::io_context>               io_context_ = create_io_context_with_running_service();
     video_format_repository                                video_format_repository_;
     accelerator::accelerator                               accelerator_;
     std::shared_ptr<amcp::amcp_command_repository>         amcp_command_repo_;
@@ -103,7 +105,7 @@ struct server::impl
     std::shared_ptr<amcp::command_context_factory>         amcp_context_factory_;
     std::vector<spl::shared_ptr<IO::AsyncEventServer>>     async_servers_;
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
-    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_service_);
+    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_context_);
     std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
@@ -152,8 +154,8 @@ struct server::impl
 
     ~impl()
     {
-        std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
-        io_service_.reset();
+        std::weak_ptr<boost::asio::io_context> weak_io_context = io_context_;
+        io_context_.reset();
         predefined_osc_subscriptions_.clear();
         osc_client_.reset();
 
@@ -168,7 +170,7 @@ struct server::impl
         destroy_consumers_synchronously();
         channels_->clear();
 
-        while (weak_io_service.lock())
+        while (weak_io_context.lock())
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         uninitialize_modules();
@@ -211,12 +213,12 @@ struct server::impl
                 std::vector<int> cadence;
                 int              cadence_sum = 0;
 
-                const std::wstring     cadence_str = xml_channel.second.get(L"cadence", L"");
-                std::set<std::wstring> cadence_parts;
+                const std::wstring      cadence_str = xml_channel.second.get(L"cadence", L"");
+                std::list<std::wstring> cadence_parts;
                 boost::split(cadence_parts, cadence_str, boost::is_any_of(L", "));
 
                 for (auto& cad : cadence_parts) {
-                    if (cad == L"")
+                    if (cad.empty())
                         continue;
 
                     const int c = std::stoi(cad);
@@ -224,15 +226,23 @@ struct server::impl
                     cadence_sum += c;
                 }
 
-                if (cadence.size() == 0) {
+                if (cadence.empty()) {
+                    // Attempt to calculate in the cadence for integer formats
                     const int c = static_cast<int>(48000 / (static_cast<double>(timescale) / duration) + 0.5);
                     cadence.push_back(c);
                     cadence_sum += c;
                 }
 
+                if (cadence_sum * timescale != 48000 * duration * cadence.size()) {
+                    auto samples_per_second =
+                        static_cast<double>(cadence_sum * timescale) / (duration * cadence.size());
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Incorrect cadence in video-mode " + id +
+                                                                    L". Got " + std::to_wstring(samples_per_second) +
+                                                                    L" samples per second, expected 48000"));
+                }
+
                 const auto new_format = video_format_desc(
                     video_format::custom, field_count, width, height, width, height, timescale, duration, id, cadence);
-                // TODO: verify cadence_sum to look correct
 
                 const auto existing = video_format_repository_.find(id);
                 if (existing.format != video_format::invalid)
@@ -255,15 +265,28 @@ struct server::impl
 
             auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
             auto format_desc     = video_format_repository_.find(format_desc_str);
+            auto color_depth     = xml_channel.second.get<unsigned char>(L"color-depth", 8);
+            if (color_depth != 8 && color_depth != 16)
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Invalid color-depth: " + std::to_wstring(color_depth)));
+
+            auto color_space_str = boost::to_lower_copy(xml_channel.second.get(L"color-space", L"bt709"));
+            if (color_space_str != L"bt709" && color_space_str != L"bt2020")
+                CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid color-space, must be bt709 or bt2020"));
+
             if (format_desc.format == video_format::invalid)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
             auto weak_client = std::weak_ptr<osc::client>(osc_client_);
             auto channel_id  = static_cast<int>(channels_->size() + 1);
+            auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
+            auto default_color_space =
+                color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
             auto channel =
                 spl::make_shared<video_channel>(channel_id,
                                                 format_desc,
-                                                accelerator_.create_image_mixer(channel_id),
+                                                default_color_space,
+                                                accelerator_.create_image_mixer(channel_id, depth),
                                                 [channel_id, weak_client](core::monitor::state channel_state) {
                                                     monitor::state state;
                                                     state[""]["channel"][channel_id] = channel_state;
@@ -298,7 +321,7 @@ struct server::impl
                 const auto port    = ptree_get<unsigned short>(predefined_client.second, L"port");
 
                 boost::system::error_code ec;
-                auto                      ipaddr = address_v4::from_string(u8(address), ec);
+                auto                      ipaddr = make_address_v4(u8(address), ec);
                 if (!ec)
                     predefined_osc_subscriptions_.push_back(
                         osc_client_->get_subscription_token(udp::endpoint(ipaddr, port)));
@@ -314,7 +337,7 @@ struct server::impl
 
                     return std::make_pair(std::wstring(L"osc_subscribe"),
                                           osc_client_->get_subscription_token(
-                                              udp::endpoint(address_v4::from_string(ipv4_address), default_port)));
+                                              udp::endpoint(make_address_v4(ipv4_address), default_port)));
                 });
     }
 
@@ -340,8 +363,12 @@ struct server::impl
 
                     try {
                         if (name != L"<xmlcomment>")
-                            channel.raw_channel->output().add(consumer_registry_->create_consumer(
-                                name, xml_consumer.second, video_format_repository_, channels_vec));
+                            channel.raw_channel->output().add(
+                                consumer_registry_->create_consumer(name,
+                                                                    xml_consumer.second,
+                                                                    video_format_repository_,
+                                                                    channels_vec,
+                                                                    channel.raw_channel->get_consumer_channel_info()));
                     } catch (...) {
                         CASPAR_LOG_CURRENT_EXCEPTION();
                     }
@@ -414,7 +441,7 @@ struct server::impl
 
                 try {
                     auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-                        io_service_,
+                        io_context_,
                         create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
                         static_cast<short>(port));
                     async_servers_.push_back(asyncbootstrapper);

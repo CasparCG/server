@@ -24,14 +24,14 @@
 #include "../fwd.h"
 #include "../monitor/monitor.h"
 
-#include <common/forward.h>
 #include <common/memory.h>
-
 #include <core/video_format.h>
 
 #include <memory>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics {
+class graph;
+}
 
 namespace caspar { namespace core {
 
@@ -40,7 +40,7 @@ class output final
   public:
     explicit output(const spl::shared_ptr<diagnostics::graph>& graph,
                     const video_format_desc&                   format_desc,
-                    int                                        channel_index);
+                    const core::channel_info&                  channel_info);
 
     output(const output&)            = delete;
     output& operator=(const output&) = delete;
@@ -53,6 +53,10 @@ class output final
     void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
     bool remove(const spl::shared_ptr<frame_consumer>& consumer);
     bool remove(int index);
+
+    std::future<bool> call(int index, const std::vector<std::wstring>& params);
+
+    size_t consumer_count() const;
 
     core::monitor::state state() const;
 

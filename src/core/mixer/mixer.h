@@ -21,13 +21,15 @@
 
 #pragma once
 
-#include <common/forward.h>
+#include <common/bit_depth.h>
 #include <common/memory.h>
 
 #include <core/fwd.h>
 #include <core/monitor/monitor.h>
 
-FORWARD2(caspar, diagnostics, class graph);
+namespace caspar::diagnostics {
+class graph;
+}
 
 namespace caspar { namespace core {
 
@@ -49,6 +51,8 @@ class mixer final
     mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
     core::monitor::state state() const;
+
+    common::bit_depth depth() const;
 
   private:
     struct impl;

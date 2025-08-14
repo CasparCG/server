@@ -21,24 +21,14 @@
 
 #pragma once
 
-#include "../StdAfx.h"
-
-#include "config.h"
-
-#include "../decklink_api.h"
-
-#include <core/frame/frame.h>
-#include <core/video_format.h>
+#include <ffmpeg/util/av_util.h>
 
 #include <memory>
 
-namespace caspar { namespace decklink {
+namespace caspar::image {
 
-std::shared_ptr<void> convert_frame_for_port(const core::video_format_desc& channel_format_desc,
-                                             const core::video_format_desc& decklink_format_desc,
-                                             const port_configuration&      config,
-                                             const core::const_frame&       frame1,
-                                             const core::const_frame&       frame2,
-                                             BMDFieldDominance              field_dominance);
+bool is_frame_compatible_with_mixer(const std::shared_ptr<AVFrame>& src);
 
-}} // namespace caspar::decklink
+std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src, AVPixelFormat pixFmt);
+
+} // namespace caspar::image

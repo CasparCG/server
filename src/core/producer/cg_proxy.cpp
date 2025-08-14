@@ -24,7 +24,6 @@
 #include "cg_proxy.h"
 
 #include "../diagnostics/call_context.h"
-#include "../module_dependencies.h"
 #include "../video_channel.h"
 #include "frame_producer.h"
 #include "stage.h"

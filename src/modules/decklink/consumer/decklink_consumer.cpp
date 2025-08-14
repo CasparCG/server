@@ -25,16 +25,15 @@
 #include "common/os/thread.h"
 #include "config.h"
 #include "decklink_consumer.h"
-#include "frame.h"
+#include "format_strategy.h"
 #include "monitor.h"
 
-#include "../decklink.h"
 #include "../util/util.h"
 
+#include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
 #include <core/frame/frame.h>
-#include <core/mixer/audio/audio_mixer.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 #include <common/diagnostics/graph.h>
@@ -47,7 +46,6 @@
 #include <boost/circular_buffer.hpp>
 
 #include <atomic>
-#include <common/memshfl.h>
 #include <common/prec_timer.h>
 #include <condition_variable>
 #include <future>
@@ -99,14 +97,20 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkOutp
     BMDDisplayMode actualMode = bmdModeUnknown;
     BOOL           supported  = false;
 
-    if (FAILED(device->DoesSupportVideoMode(
-            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, flag, &actualMode, &supported)))
+    auto displayMode = mode->GetDisplayMode();
+    if (FAILED(device->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+                                            displayMode,
+                                            pix_fmt,
+                                            bmdNoVideoOutputConversion,
+                                            flag,
+                                            &actualMode,
+                                            &supported)))
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info(L"Could not determine whether device supports requested video format: " +
                                            get_mode_name(mode)));
     else if (!supported)
         CASPAR_LOG(info) << L"Device may not support video-format: " << get_mode_name(mode);
-    else if (actualMode != bmdModeUnknown)
+    else if (actualMode != bmdModeUnknown && actualMode != displayMode)
         CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
 
     return mode;
@@ -191,24 +195,95 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
     return fallback_format_desc;
 }
 
-class decklink_frame : public IDeckLinkVideoFrame
+spl::shared_ptr<format_strategy> create_format_strategy(const configuration& config)
+{
+    return config.hdr ? create_hdr_v210_strategy(config.color_space) : create_sdr_bgra_strategy();
+}
+
+enum EOTF
+{
+    SDR = 0,
+    HDR = 1,
+    PQ  = 2,
+    HLG = 3
+};
+
+struct ChromaticityCoordinates
+{
+    double RedX;
+    double RedY;
+    double GreenX;
+    double GreenY;
+    double BlueX;
+    double BlueY;
+    double WhiteX;
+    double WhiteY;
+};
+
+const auto REC_709  = ChromaticityCoordinates{0.640, 0.330, 0.300, 0.600, 0.150, 0.060, 0.3127, 0.3290};
+const auto REC_2020 = ChromaticityCoordinates{0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290};
+
+class decklink_frame
+    : public IDeckLinkVideoFrame
+    , public IDeckLinkVideoFrameMetadataExtensions
 {
     core::video_format_desc format_desc_;
     std::shared_ptr<void>   data_;
     std::atomic<int>        ref_count_{0};
     int                     nb_samples_;
+    const bool              hdr_;
+    core::color_space       color_space_;
+    hdr_meta_configuration  hdr_metadata_;
+    BMDFrameFlags           flags_;
+    BMDPixelFormat          pix_fmt_;
+    int                     row_bytes_;
 
   public:
-    decklink_frame(std::shared_ptr<void> data, core::video_format_desc format_desc, int nb_samples)
+    decklink_frame(std::shared_ptr<void>         data,
+                   core::video_format_desc       format_desc,
+                   int                           nb_samples,
+                   bool                          hdr,
+                   BMDPixelFormat                pix_fmt,
+                   int                           row_bytes,
+                   core::color_space             color_space,
+                   const hdr_meta_configuration& hdr_metadata)
         : format_desc_(std::move(format_desc))
         , data_(std::move(data))
         , nb_samples_(nb_samples)
+        , hdr_(hdr)
+        , pix_fmt_(pix_fmt)
+        , row_bytes_(row_bytes)
+        , color_space_(color_space)
+        , hdr_metadata_(hdr_metadata)
+        , flags_(hdr ? bmdFrameFlagDefault | bmdFrameContainsHDRMetadata : bmdFrameFlagDefault)
     {
     }
 
     // IUnknown
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
+    {
+        if (ppv == nullptr)
+            return E_INVALIDARG;
+
+        REFIID iunknown = IID_IUnknown;
+
+        if (std::memcmp(&iid, &iunknown, sizeof(REFIID)) == 0) {
+            *ppv = this;
+            AddRef();
+        } else if (std::memcmp(&iid, &IID_IDeckLinkVideoFrame, sizeof(REFIID)) == 0) {
+            *ppv = static_cast<IDeckLinkVideoFrame*>(this);
+            AddRef();
+        } else if (hdr_ && std::memcmp(&iid, &IID_IDeckLinkVideoFrameMetadataExtensions, sizeof(REFIID)) == 0) {
+            *ppv = static_cast<IDeckLinkVideoFrameMetadataExtensions*>(this);
+            AddRef();
+        } else {
+            *ppv = nullptr;
+            return E_NOINTERFACE;
+        }
+
+        return S_OK;
+    }
 
     ULONG STDMETHODCALLTYPE AddRef() override { return ++ref_count_; }
 
@@ -227,9 +302,9 @@ class decklink_frame : public IDeckLinkVideoFrame
 
     long STDMETHODCALLTYPE           GetWidth() override { return static_cast<long>(format_desc_.width); }
     long STDMETHODCALLTYPE           GetHeight() override { return static_cast<long>(format_desc_.height); }
-    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(format_desc_.width) * 4; }
-    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return bmdFormat8BitBGRA; }
-    BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return bmdFrameFlagDefault; }
+    long STDMETHODCALLTYPE           GetRowBytes() override { return static_cast<long>(row_bytes_); }
+    BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat() override { return pix_fmt_; }
+    BMDFrameFlags STDMETHODCALLTYPE  GetFlags() override { return flags_; }
 
     HRESULT STDMETHODCALLTYPE GetBytes(void** buffer) override
     {
@@ -245,12 +320,119 @@ class decklink_frame : public IDeckLinkVideoFrame
     HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) override { return S_FALSE; }
 
     [[nodiscard]] int nb_samples() const { return nb_samples_; }
+
+    // IDeckLinkVideoFrameMetadataExtensions
+    HRESULT STDMETHODCALLTYPE GetInt(BMDDeckLinkFrameMetadataID metadataID, int64_t* value) override
+    {
+        HRESULT result = S_OK;
+
+        switch (metadataID) {
+            case bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc:
+                *value = EOTF::HLG;
+                break;
+
+            case bmdDeckLinkFrameMetadataColorspace:
+                *value = (color_space_ == core::color_space::bt2020) ? bmdColorspaceRec2020 : bmdColorspaceRec709;
+                break;
+
+            default:
+                value  = nullptr;
+                result = E_INVALIDARG;
+        }
+
+        return result;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value) override
+    {
+        const auto color_space = (color_space_ == core::color_space::bt2020) ? &REC_2020 : &REC_709;
+        HRESULT    result      = S_OK;
+
+        switch (metadataID) {
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX:
+                *value = color_space->RedX;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY:
+                *value = color_space->RedY;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX:
+                *value = color_space->GreenX;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY:
+                *value = color_space->GreenY;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX:
+                *value = color_space->BlueX;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY:
+                *value = color_space->BlueY;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRWhitePointX:
+                *value = color_space->WhiteX;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRWhitePointY:
+                *value = color_space->WhiteY;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance:
+                *value = hdr_metadata_.max_dml;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance:
+                *value = hdr_metadata_.min_dml;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel:
+                *value = hdr_metadata_.max_cll;
+                break;
+
+            case bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel:
+                *value = hdr_metadata_.max_fall;
+                break;
+
+            default:
+                value  = nullptr;
+                result = E_INVALIDARG;
+        }
+
+        return result;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetFlag(BMDDeckLinkFrameMetadataID, BOOL* value) override
+    {
+        // Not expecting GetFlag
+        *value = false;
+        return E_INVALIDARG;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetString(BMDDeckLinkFrameMetadataID, String* value) override
+    {
+        // Not expecting GetString
+        *value = nullptr;
+        return E_INVALIDARG;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetBytes(BMDDeckLinkFrameMetadataID metadataID,
+                                       void*                      buffer,
+                                       uint32_t*                  bufferSize) override
+    {
+        *bufferSize = 0;
+        return E_INVALIDARG;
+    }
 };
 
 struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 {
     const configuration                       config_;
     const port_configuration                  output_config_;
+    spl::shared_ptr<format_strategy>          format_strategy_;
     com_ptr<IDeckLink>                        decklink_      = get_device(output_config_.device_index);
     com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
     com_iface_ptr<IDeckLinkKeyer>             keyer_         = iface_cast<IDeckLinkKeyer>(decklink_, true);
@@ -265,8 +447,10 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
     const core::video_format_desc channel_format_desc_;
     const core::video_format_desc decklink_format_desc_;
-    com_ptr<IDeckLinkDisplayMode> mode_ =
-        get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
+    com_ptr<IDeckLinkDisplayMode> mode_ = get_display_mode(output_,
+                                                           decklink_format_desc_.format,
+                                                           format_strategy_->get_pixel_format(),
+                                                           bmdSupportedVideoModeDefault);
 
     decklink_secondary_port(const configuration&           config,
                             port_configuration             output_config,
@@ -276,6 +460,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                             int                            device_sync_group)
         : config_(config)
         , output_config_(std::move(output_config))
+        , format_strategy_(create_format_strategy(config))
         , device_sync_group_(device_sync_group)
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(output_config_, main_decklink_format_desc))
@@ -367,7 +552,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
             frame1 = frame;
         }
 
-        auto image_data = convert_frame_for_port(
+        auto image_data = format_strategy_->convert_frame_for_port(
             channel_format_desc_, decklink_format_desc_, output_config_, frame1, frame2, mode_->GetFieldDominance());
 
         schedule_next_video(image_data, 0, display_time);
@@ -376,7 +561,14 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
         auto packed_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
+            new decklink_frame(std::move(image_data),
+                               decklink_format_desc_,
+                               nb_samples,
+                               config_.hdr,
+                               format_strategy_->get_pixel_format(),
+                               format_strategy_->get_row_bytes(decklink_format_desc_.width),
+                               config_.color_space,
+                               config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
                                                display_time,
                                                decklink_format_desc_.duration,
@@ -404,8 +596,9 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
 
 struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 {
-    const int           channel_index_;
-    const configuration config_;
+    const int                        channel_index_;
+    const configuration              config_;
+    spl::shared_ptr<format_strategy> format_strategy_;
 
     com_ptr<IDeckLink>                        decklink_      = get_device(config_.primary.device_index);
     com_iface_ptr<IDeckLinkOutput>            output_        = iface_cast<IDeckLinkOutput>(decklink_);
@@ -439,8 +632,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     std::vector<std::unique_ptr<decklink_secondary_port>> secondary_port_contexts_;
     int                                                   device_sync_group_ = 0;
 
-    com_ptr<IDeckLinkDisplayMode> mode_ =
-        get_display_mode(output_, decklink_format_desc_.format, bmdFormat8BitBGRA, bmdSupportedVideoModeDefault);
+    com_ptr<IDeckLinkDisplayMode> mode_ = get_display_mode(output_,
+                                                           decklink_format_desc_.format,
+                                                           format_strategy_->get_pixel_format(),
+                                                           bmdSupportedVideoModeDefault);
 
     std::atomic<bool> abort_request_{false};
 
@@ -448,6 +643,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
         : channel_index_(channel_index)
         , config_(config)
+        , format_strategy_(create_format_strategy(config))
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
     {
@@ -506,6 +702,14 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         set_latency(configuration_, config.latency, print());
         set_keyer(attributes_, keyer_, config.keyer, print());
 
+        if (config.hdr) {
+            BOOL flag = FALSE;
+            if (SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsHDRMetadata, &flag)) && !flag)
+                CASPAR_LOG(error) << print() << L" Device does not support HDR metadata.";
+            if (SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsColorspaceMetadata, &flag)) && !flag)
+                CASPAR_LOG(warning) << print() << L" Device does not support colorspace metadata.";
+        }
+
         if (config.embedded_audio) {
             output_->BeginAudioPreroll();
         }
@@ -518,7 +722,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                     nb_samples);
             }
 
-            std::shared_ptr<void> image_data = create_aligned_buffer(decklink_format_desc_.size);
+            std::shared_ptr<void> image_data = format_strategy_->allocate_frame_data(decklink_format_desc_);
 
             schedule_next_video(image_data, nb_samples, video_scheduled_);
             for (auto& context : secondary_port_contexts_) {
@@ -734,12 +938,13 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             tbb::parallel_for(-1, static_cast<int>(secondary_port_contexts_.size()), [&](int i) {
                 if (i == -1) {
                     // Primary port
-                    std::shared_ptr<void> image_data = convert_frame_for_port(channel_format_desc_,
-                                                                              decklink_format_desc_,
-                                                                              config_.primary,
-                                                                              frame1,
-                                                                              frame2,
-                                                                              mode_->GetFieldDominance());
+                    std::shared_ptr<void> image_data =
+                        format_strategy_->convert_frame_for_port(channel_format_desc_,
+                                                                 decklink_format_desc_,
+                                                                 config_.primary,
+                                                                 frame1,
+                                                                 frame2,
+                                                                 mode_->GetFieldDominance());
 
                     schedule_next_video(image_data, nb_samples, video_display_time);
 
@@ -801,10 +1006,20 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
+    void schedule_next_video(std::shared_ptr<void> image_data,
+                             int                   nb_samples,
+                             BMDTimeValue          display_time)
     {
-        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(
-            new decklink_frame(std::move(image_data), decklink_format_desc_, nb_samples));
+        auto fmt        = format_strategy_->get_pixel_format();
+        auto row_bytes  = format_strategy_->get_row_bytes(decklink_format_desc_.width);
+        auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(std::move(image_data),
+                                                                                    decklink_format_desc_,
+                                                                                    nb_samples,
+                                                                                    config_.hdr,
+                                                                                    fmt,
+                                                                                    row_bytes,
+                                                                                    config_.color_space,
+                                                                                    config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
@@ -872,12 +1087,14 @@ struct decklink_consumer_proxy : public core::frame_consumer
         });
     }
 
-    void initialize(const core::video_format_desc& format_desc, int channel_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         format_desc_ = format_desc;
         executor_.invoke([=] {
             consumer_.reset();
-            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_index);
+            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_info.index);
         });
     }
 
@@ -902,13 +1119,21 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
-                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                                                      const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                                                      const core::channel_info& channel_info)
 {
     if (params.empty() || !boost::iequals(params.at(0), L"DECKLINK")) {
         return core::frame_consumer::empty();
     }
 
-    configuration config = parse_amcp_config(params, format_repository);
+    configuration config = parse_amcp_config(params, format_repository, channel_info);
+
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
+
+    if (config.hdr && config.primary.key_only) {
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+                               << msg_info("Decklink consumer does not support hdr in combination with key only"));
+    }
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }
@@ -916,9 +1141,23 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&                      ptree,
                               const core::video_format_repository&                     format_repository,
-                              const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+                              const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+                              const core::channel_info&                                channel_info)
 {
-    configuration config = parse_xml_config(ptree, format_repository);
+    configuration config = parse_xml_config(ptree, format_repository, channel_info);
+
+    config.hdr = (channel_info.depth != common::bit_depth::bit8);
+
+    if (config.hdr && (config.primary.dest_x != 0 || config.primary.region_w != 0 || config.primary.region_h != 0)) {
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+                               << msg_info("Decklink consumer does not support hdr in combination with non-zero "
+                                           "dest_x, width or height sub-region properties yet."));
+    }
+
+    if (config.hdr && config.primary.key_only) {
+        CASPAR_THROW_EXCEPTION(caspar_exception()
+                               << msg_info("Decklink consumer does not support hdr in combination with key only"));
+    }
 
     return spl::make_shared<decklink_consumer_proxy>(config);
 }

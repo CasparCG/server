@@ -8,7 +8,10 @@ uniform sampler2D	plane[4];
 uniform sampler2D	local_key;
 uniform sampler2D	layer_key;
 
-uniform bool		is_hd;
+uniform bool        is_straight_alpha;
+
+uniform mat3		color_matrix;
+uniform vec3		luma_coeff;
 uniform bool		has_local_key;
 uniform bool		has_layer_key;
 uniform int			blend_mode;
@@ -23,6 +26,7 @@ uniform float		max_input;
 uniform float		gamma;
 uniform float		min_output;
 uniform float		max_output;
+uniform float	    precision_factor[4];
 
 uniform bool		csb;
 uniform float		brt;
@@ -51,9 +55,7 @@ vec3 ContrastSaturationBrightness(vec4 color, float brt, float sat, float con)
     const float AvgLumG = 0.5;
     const float AvgLumB = 0.5;
 
-    vec3 LumCoeff = is_hd
-            ? vec3(0.0722, 0.7152, 0.2126)
-            : vec3(0.114, 0.587, 0.299);
+    vec3 LumCoeff = luma_coeff.bgr;
 
     if (color.a > 0.0)
         color.rgb /= color.a;
@@ -289,9 +291,7 @@ vec3 BlendLuminosity(vec3 base, vec3 blend)
 //      by F. van den Bergh & V. Lalioti
 // but as a pixel shader algorithm.
 //
-vec4  grey_xfer  = is_hd
-        ? vec4(0.2126, 0.7152, 0.0722, 0)
-        : vec4(0.299,  0.587,  0.114, 0);
+vec4  grey_xfer  = vec4(luma_coeff, 0);
 
 // This allows us to implement the paper's alphaMap curve in software
 // rather than a largeish array
@@ -438,32 +438,16 @@ vec4 chroma_key(vec4 c)
     return ChromaOnCustomColor(c.bgra).bgra;
 }
 
-vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)
+vec4 ycbcra_to_rgba(float Y, float Cb, float Cr, float A)
 {
-    vec4 rgba;
-    rgba.b = (1.164*(Y*255 - 16) + 1.596*(Cr*255 - 128))/255;
-    rgba.g = (1.164*(Y*255 - 16) - 0.813*(Cr*255 - 128) - 0.391*(Cb*255 - 128))/255;
-    rgba.r = (1.164*(Y*255 - 16) + 2.018*(Cb*255 - 128))/255;
-    rgba.a = A;
-    return rgba;
-}
+    const float luma_coefficient = 255.0/219.0;
+    const float chroma_coefficient = 255.0/224.0;
 
-vec4 ycbcra_to_rgba_hd(float Y, float Cb, float Cr, float A)
-{
-    vec4 rgba;
-    rgba.b = (1.164*(Y*255 - 16) + 1.793*(Cr*255 - 128))/255;
-    rgba.g = (1.164*(Y*255 - 16) - 0.534*(Cr*255 - 128) - 0.213*(Cb*255 - 128))/255;
-    rgba.r = (1.164*(Y*255 - 16) + 2.115*(Cb*255 - 128))/255;
-    rgba.a = A;
-    return rgba;
-}
+    vec3 YCbCr = vec3(Y, Cb, Cr) * 255;
+    YCbCr -= vec3(16.0, 128.0, 128.0);
+    YCbCr *= vec3(luma_coefficient, chroma_coefficient, chroma_coefficient);
 
-vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)
-{
-    if(is_hd)
-        return ycbcra_to_rgba_hd(y, cb, cr, a);
-    else
-        return ycbcra_to_rgba_sd(y, cb, cr, a);
+    return vec4(color_matrix * YCbCr / 255, A).bgra;
 }
 
 vec4 get_sample(sampler2D sampler, vec2 coords)
@@ -476,46 +460,61 @@ vec4 get_rgba_color()
     switch(pixel_format)
     {
     case 0:		//gray
-        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rrr, 1.0);
+        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rrr * precision_factor[0], 1.0);
     case 1:		//bgra,
-        return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra;
+        return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra * precision_factor[0];
     case 2:		//rgba,
-        return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba;
+        return get_sample(plane[0], TexCoord.st / TexCoord.q).rgba * precision_factor[0];
     case 3:		//argb,
-        return get_sample(plane[0], TexCoord.st / TexCoord.q).argb;
+        return get_sample(plane[0], TexCoord.st / TexCoord.q).argb * precision_factor[0];
     case 4:		//abgr,
-        return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar;
+        return get_sample(plane[0], TexCoord.st / TexCoord.q).gbar * precision_factor[0];
     case 5:		//ycbcr,
         {
-            float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
-            float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
-            float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
+            float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0];
+            float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
+            float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r * precision_factor[2];
             return ycbcra_to_rgba(y, cb, cr, 1.0);
         }
     case 6:		//ycbcra
         {
-            float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r;
-            float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r;
-            float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r;
-            float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r;
+            float y  = get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0];
+            float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
+            float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r * precision_factor[2];
+            float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r * precision_factor[3];
             return ycbcra_to_rgba(y, cb, cr, a);
         }
     case 7:		//luma
         {
-            vec3 y3 = get_sample(plane[0], TexCoord.st / TexCoord.q).rrr;
+            vec3 y3 = get_sample(plane[0], TexCoord.st / TexCoord.q).rrr * precision_factor[0];
             return vec4((y3-0.065)/0.859, 1.0);
         }
     case 8:		//bgr,
-        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).bgr, 1.0);
+        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).bgr * precision_factor[0], 1.0);
     case 9:		//rgb,
-        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb, 1.0);
+        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rgb * precision_factor[0], 1.0);
 	case 10:	// uyvy
 		{
-			float y = get_sample(plane[0], TexCoord.st / TexCoord.q).g;
-			float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).b;
-			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r;			
+			float y = get_sample(plane[0], TexCoord.st / TexCoord.q).g * precision_factor[0];
+			float cb = get_sample(plane[1], TexCoord.st / TexCoord.q).b * precision_factor[1];
+			float cr = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
 			return ycbcra_to_rgba(y, cb, cr, 1.0);
 		}
+    case 11:    // gbrp
+        {
+            float g  = get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0];
+            float b = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
+            float r = get_sample(plane[2], TexCoord.st / TexCoord.q).r * precision_factor[2];
+			return vec4(b, g, r, 1.0);
+        }
+    case 12:    // gbrap
+        {
+            float g  = get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0];
+            float b = get_sample(plane[1], TexCoord.st / TexCoord.q).r * precision_factor[1];
+            float r = get_sample(plane[2], TexCoord.st / TexCoord.q).r * precision_factor[2];
+            float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r * precision_factor[3];
+			return vec4(b, g, r, a);
+        }
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
@@ -523,6 +522,8 @@ vec4 get_rgba_color()
 void main()
 {
     vec4 color = get_rgba_color();
+    if (is_straight_alpha)
+        color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
     if(levels)

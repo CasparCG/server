@@ -27,6 +27,7 @@
 #include "../../frame/frame_transform.h"
 #include "../../monitor/monitor.h"
 #include "../frame_producer.h"
+#include "../frame_producer_registry.h"
 
 #include <common/scope_exit.h>
 
