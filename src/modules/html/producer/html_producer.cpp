@@ -376,7 +376,7 @@ class html_client
         // Stop producing if the page fails to load
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
-            frames_.push(presentation_frame());
+            frames_.push(std::make_pair(now(), core::draw_frame{}));
         }
 
         {
