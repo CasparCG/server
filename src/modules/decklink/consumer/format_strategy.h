@@ -41,7 +41,7 @@ class format_strategy
 
   public:
     format_strategy& operator=(const format_strategy&) = delete;
-    virtual ~format_strategy()                       = default;
+    virtual ~format_strategy()                         = default;
 
     format_strategy(const format_strategy&) = delete;
 
@@ -57,6 +57,7 @@ class format_strategy
 };
 
 spl::shared_ptr<format_strategy> create_sdr_bgra_strategy();
+spl::shared_ptr<format_strategy> create_sdr_v210_strategy(core::color_space colorspace);
 spl::shared_ptr<format_strategy> create_hdr_v210_strategy(core::color_space colorspace);
 
 }} // namespace caspar::decklink

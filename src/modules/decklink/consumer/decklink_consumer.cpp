@@ -192,7 +192,12 @@ core::video_format_desc get_decklink_format(const port_configuration&      confi
 
 spl::shared_ptr<format_strategy> create_format_strategy(const configuration& config)
 {
-    return config.hdr ? create_hdr_v210_strategy(config.color_space) : create_sdr_bgra_strategy();
+    if (config.hdr) {
+        return create_hdr_v210_strategy(config.color_space);
+    } else {
+        return config.pixel_format == configuration::pixel_format_t::yuv ? create_sdr_v210_strategy(config.color_space)
+                                                                         : create_sdr_bgra_strategy();
+    }
 }
 
 enum EOTF
@@ -1001,9 +1006,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         audio_scheduled_ += nb_samples; // TODO - what if there are too many/few samples in this frame?
     }
 
-    void schedule_next_video(std::shared_ptr<void> image_data,
-                             int                   nb_samples,
-                             BMDTimeValue          display_time)
+    void schedule_next_video(std::shared_ptr<void> image_data, int nb_samples, BMDTimeValue display_time)
     {
         auto fmt        = format_strategy_->get_pixel_format();
         auto row_bytes  = format_strategy_->get_row_bytes(decklink_format_desc_.width);
