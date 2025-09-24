@@ -64,7 +64,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libswscale/swscale.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -93,8 +92,6 @@ struct Stream
 
     std::shared_ptr<AVCodecContext> enc = nullptr;
     AVStream*                       st  = nullptr;
-
-    tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>> sws_;
 
     int64_t pts = 0;
 
@@ -182,7 +179,7 @@ struct Stream
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
-                const auto pix_fmt = (depth == common::bit_depth::bit8) ? AV_PIX_FMT_YUVA422P : AV_PIX_FMT_YUVA422P10;
+                const auto pix_fmt = (depth == common::bit_depth::bit8) ? AV_PIX_FMT_BGRA : AV_PIX_FMT_BGRA64LE;
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              format_desc.width % format_desc.height % pix_fmt % format_desc.duration %
@@ -340,44 +337,6 @@ struct Stream
         }
     }
 
-    std::shared_ptr<SwsContext> get_sws(int width, int height)
-    {
-        std::shared_ptr<SwsContext> sws;
-
-        if (sws_.try_pop(sws)) {
-            return sws;
-        }
-
-        sws.reset(sws_getContext(
-                      width, height, AV_PIX_FMT_BGRA, width, height, AV_PIX_FMT_YUVA422P, 0, nullptr, nullptr, nullptr),
-                  [](SwsContext* ptr) { sws_freeContext(ptr); });
-
-        if (!sws) {
-            CASPAR_THROW_EXCEPTION(caspar_exception());
-        }
-
-        int        brigthness;
-        int        contrast;
-        int        saturation;
-        int        in_full;
-        int        out_full;
-        const int* inv_table;
-        const int* table;
-
-        sws_getColorspaceDetails(
-            sws.get(), (int**)&inv_table, &in_full, (int**)&table, &out_full, &brigthness, &contrast, &saturation);
-
-        inv_table = sws_getCoefficients(AVCOL_SPC_RGB);
-        table     = sws_getCoefficients(AVCOL_SPC_BT709);
-
-        in_full  = AVCOL_RANGE_JPEG;
-        out_full = AVCOL_RANGE_MPEG;
-
-        sws_setColorspaceDetails(sws.get(), inv_table, in_full, table, out_full, brigthness, contrast, saturation);
-
-        return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
-    }
-
     void send(core::const_frame&                             in_frame,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
@@ -388,43 +347,6 @@ struct Stream
         if (in_frame) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
                 frame = make_av_video_frame(in_frame, format_desc);
-
-                {
-                    auto frame2                 = alloc_frame();
-                    frame2->sample_aspect_ratio = frame->sample_aspect_ratio;
-                    frame2->width               = frame->width;
-                    frame2->height              = frame->height;
-                    frame2->format              = AV_PIX_FMT_YUVA422P;
-                    frame2->colorspace          = AVCOL_SPC_BT709;
-                    frame2->color_primaries     = AVCOL_PRI_BT709;
-                    frame2->color_range         = AVCOL_RANGE_MPEG;
-                    frame2->color_trc           = AVCOL_TRC_BT709;
-                    av_frame_get_buffer(frame2.get(), 64);
-
-                    int h = frame->height / 8;
-                    tbb::parallel_for(0, 8, [&](int i) {
-                        auto sws = get_sws(frame->width, h);
-
-                        uint8_t* src[4] = {};
-                        src[0]          = frame->data[0] + frame->linesize[0] * (i * h);
-
-                        uint8_t* dst[4] = {};
-                        dst[0]          = frame2->data[0] + frame2->linesize[0] * (i * h);
-                        dst[1]          = frame2->data[1] + frame2->linesize[1] * (i * h);
-                        dst[2]          = frame2->data[2] + frame2->linesize[2] * (i * h);
-                        dst[3]          = frame2->data[3] + frame2->linesize[3] * (i * h);
-
-                        sws_scale(sws.get(), src, frame->linesize, 0, h, dst, frame2->linesize);
-                    });
-
-                    int i = frame->height - h;
-                    if (i > 0) {
-                        // TODO
-                    }
-
-                    frame = std::move(frame2);
-                }
-
                 frame->pts = pts;
                 pts += 1;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
