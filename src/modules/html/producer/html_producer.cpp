@@ -86,6 +86,7 @@ class html_client
     bool                                                        gpu_enabled_;
     tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
     std::atomic<bool>                                           loaded_;
+    std::atomic<bool>                                           not_found_;
     std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
     mutable std::mutex                                          frames_mutex_;
     const size_t                                                frames_max_size_ = 4;
