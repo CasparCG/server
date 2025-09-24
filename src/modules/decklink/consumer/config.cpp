@@ -97,6 +97,25 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
     }
     config.wait_for_reference_duration = ptree.get(L"wait-for-reference-duration", config.wait_for_reference_duration);
 
+    {
+        auto is_8bit              = channel_info.depth == common::bit_depth::bit8;
+        auto default_pixel_format = is_8bit ? L"rgba" : L"yuv";
+        auto pixel_format         = ptree.get(L"pixel-format", default_pixel_format);
+        if (pixel_format == L"yuv") {
+            config.pixel_format = configuration::pixel_format_t::yuv;
+        } else if (pixel_format == L"rgba") {
+            config.pixel_format = configuration::pixel_format_t::rgba;
+        } else {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid pixel format, must be rgba or yuv"));
+        }
+
+        if (channel_info.depth != common::bit_depth::bit8 &&
+            config.pixel_format == configuration::pixel_format_t::rgba) {
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info(L"The decklink consumer only supports rgba output on 8-bit channels"));
+        }
+    }
+
     config.primary = parse_output_config(ptree, format_repository);
     if (config.primary.device_index == -1)
         config.primary.device_index = 1;
