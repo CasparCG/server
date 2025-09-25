@@ -93,8 +93,6 @@ struct Stream
     std::shared_ptr<AVCodecContext> enc = nullptr;
     AVStream*                       st  = nullptr;
 
-    int64_t pts = 0;
-
     Stream(AVFormatContext*                    oc,
            std::string                         suffix,
            AVCodecID                           codec_id,
@@ -337,28 +335,28 @@ struct Stream
         }
     }
 
-    void send(core::const_frame&                             in_frame,
+    void send(std::tuple<core::const_frame, std::int64_t, std::int64_t>&    data,
               const core::video_format_desc&                 format_desc,
               std::function<void(std::shared_ptr<AVPacket>)> cb)
     {
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
 
+        const auto [in_frame, video_pts, audio_pts] = data;
+
         if (in_frame) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
                 frame = make_av_video_frame(in_frame, format_desc);
-                frame->pts = pts;
-                pts += 1;
+                frame->pts = video_pts;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
                 frame      = make_av_audio_frame(in_frame, format_desc);
-                frame->pts = pts;
-                pts += frame->nb_samples;
+                frame->pts = audio_pts;
             } else {
                 // TODO
             }
             FF(av_buffersrc_write_frame(source, frame.get()));
         } else {
-            FF(av_buffersrc_close(source, pts, 0));
+            FF(av_buffersrc_close(source, AV_NOPTS_VALUE, 0));
         }
 
         while (true) {
@@ -396,6 +394,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
     bool                    realtime_ = false;
+    std::int64_t            video_pts = 0;
+    std::int64_t            audio_pts = 0;
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -405,7 +405,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
 
-    tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
+    tbb::concurrent_bounded_queue<std::tuple<core::const_frame, std::int64_t, std::int64_t> > frame_buffer_;
     std::thread                                      frame_thread_;
 
     common::bit_depth depth_;
@@ -435,7 +435,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.push(core::const_frame{});
+            frame_buffer_.push({ core::const_frame{}, -1, -1 });
             frame_thread_.join();
         }
     }
@@ -587,15 +587,15 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
-                std::int32_t frame_number = 0;
+                std::int64_t frame_number = 0;
                 while (true) {
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
                         state_["file/frame"] = frame_number++;
                     }
 
-                    core::const_frame frame;
-                    frame_buffer_.pop(frame);
+                    std::tuple<core::const_frame, std::int64_t, std::int64_t> data;
+                    frame_buffer_.pop(data);
                     graph_->set_value("input",
                                       static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
@@ -603,17 +603,17 @@ struct ffmpeg_consumer : public core::frame_consumer
                     tbb::parallel_invoke(
                         [&] {
                             if (video_stream) {
-                                video_stream->send(frame, format_desc, packet_cb);
+                                video_stream->send(data, format_desc, packet_cb);
                             }
                         },
                         [&] {
                             if (audio_stream) {
-                                audio_stream->send(frame, format_desc, packet_cb);
+                                audio_stream->send(data, format_desc, packet_cb);
                             }
                         });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
-                    if (!frame) {
+                    if (!std::get<0>(data)) {
                         packet_buffer.push(nullptr);
                         break;
                     }
@@ -638,9 +638,13 @@ struct ffmpeg_consumer : public core::frame_consumer
             }
         }
 
-        if (!frame_buffer_.try_push(frame)) {
+        if (!frame_buffer_.try_push({ frame, video_pts, audio_pts })) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
+
+        video_pts += 1;
+        audio_pts += frame.audio_data().size() / format_desc_.audio_channels;
+
         graph_->set_value("input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
         return make_ready_future(true);
