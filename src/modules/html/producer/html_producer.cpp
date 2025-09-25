@@ -86,6 +86,7 @@ class html_client
     bool                                                        gpu_enabled_;
     tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
     std::atomic<bool>                                           loaded_;
+    std::atomic<bool>                                           not_found_;
     std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
     mutable std::mutex                                          frames_mutex_;
     const size_t                                                frames_max_size_ = 4;
@@ -122,8 +123,9 @@ class html_client
             state_["file/path"] = u8(url_);
         }
 
-        loaded_  = false;
-        closing_ = false;
+        loaded_    = false;
+        not_found_ = false;
+        closing_   = false;
     }
 
     void reload()
@@ -268,7 +270,7 @@ class html_client
                  int                   width,
                  int                   height) override
     {
-        if (closing_)
+        if (closing_ || not_found_)
             return;
 
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -361,8 +363,33 @@ class html_client
 
     CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
 
+    void OnLoadError(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame>   frame,
+                     ErrorCode             errorCode,
+                     const CefString&      errorText,
+                     const CefString&      failedUrl) override
+    {
+        not_found_ = true;
+        CASPAR_LOG(warning) << "[html_producer] " << errorText.ToString() << " while loading url: \""
+                            << failedUrl.ToString() << "\"";
+
+        // Stop producing if the page fails to load
+        {
+            std::lock_guard<std::mutex> lock(frames_mutex_);
+            frames_.push(std::make_pair(now(), core::draw_frame{}));
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            state_ = {};
+        }
+    }
+
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override
     {
+        if (not_found_)
+            return;
+
         loaded_ = true;
         execute_queued_javascript();
     }
