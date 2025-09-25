@@ -38,6 +38,7 @@
 #include <boost/log/keywords/delimiter.hpp>
 
 #include <common/diagnostics/graph.h>
+#include <common/log.h>
 
 #if defined(_MSC_VER)
 #pragma warning(push, 1) // TODO: Legacy code, just disable warnings
@@ -140,7 +141,10 @@ class AMCPProtocolStrategy
             return;
         }
 
-        CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
+        // Sanitize message for logging to prevent conversion errors
+        std::wstring sanitized_log_message = message;
+        caspar::log::replace_nonprintable(sanitized_log_message, L'?');
+        CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << sanitized_log_message << L"\\r\\n";
 
         std::wstring request_id;
         std::wstring command_name;
