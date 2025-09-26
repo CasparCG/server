@@ -111,15 +111,29 @@ struct configuration
     bool            always_on_top = false;
     colour_spaces   colour_space  = colour_spaces::RGB;
     bool            high_bitdepth = false;
+    bool            gpu_texture   = false;
 };
 
 struct frame
 {
-    GLuint pbo   = 0;
-    GLuint tex   = 0;
-    char*  ptr   = nullptr;
-    GLsync fence = nullptr;
+    GLuint                         pbo = 0;
+    GLuint                         tex = 0;
+    char*                          ptr = nullptr;
+    std::shared_ptr<core::texture> texture;
+    GLsync                         fence = nullptr;
 };
+
+struct screen_consumer;
+
+struct display_strategy
+{
+    virtual ~display_strategy() {}
+    virtual frame init_frame(const configuration& config, const core::video_format_desc& format_desc) = 0;
+    virtual void  cleanup_frame(frame& frame)                                                         = 0;
+    virtual void  do_tick(screen_consumer* self)                                                      = 0;
+};
+struct gpu_strategy;
+struct host_strategy;
 
 struct screen_consumer
 {
@@ -152,7 +166,9 @@ struct screen_consumer
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
-    screen_consumer(const screen_consumer&) = delete;
+    spl::shared_ptr<display_strategy> strategy_;
+
+    screen_consumer(const screen_consumer&)            = delete;
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:
@@ -160,7 +176,15 @@ struct screen_consumer
         : config_(config)
         , format_desc_(format_desc)
         , channel_index_(channel_index)
+        , strategy_(config.gpu_texture ? spl::make_shared<display_strategy, gpu_strategy>()
+                                       : spl::make_shared<display_strategy, host_strategy>())
     {
+        if (config_.gpu_texture) {
+            CASPAR_LOG(info) << print() << " Using GPU texture for rendering.";
+        } else {
+            CASPAR_LOG(info) << print() << " Using frame copied to host for rendering.";
+        }
+
         if (format_desc_.format == core::video_format::ntsc &&
             config_.aspect == configuration::aspect_ratio::aspect_4_3) {
             // Use default values which are 4:3.
@@ -273,38 +297,7 @@ struct screen_consumer
                 shader_->set("window_width", screen_width_);
 
                 for (int n = 0; n < 2; ++n) {
-                    screen::frame frame;
-                    auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-                    GL(glCreateBuffers(1, &frame.pbo));
-                    auto size_multiplier = config_.high_bitdepth ? 2 : 1;
-                    GL(glNamedBufferStorage(frame.pbo, format_desc_.size * size_multiplier, nullptr, flags));
-                    frame.ptr = reinterpret_cast<char*>(
-                        GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc_.size * size_multiplier, flags)));
-
-                    GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-                    GL(glTextureParameteri(frame.tex,
-                                           GL_TEXTURE_MIN_FILTER,
-                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
-                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
-                                               ? GL_NEAREST
-                                               : GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex,
-                                           GL_TEXTURE_MAG_FILTER,
-                                           (config_.colour_space == configuration::colour_spaces::datavideo_full ||
-                                            config_.colour_space == configuration::colour_spaces::datavideo_limited)
-                                               ? GL_NEAREST
-                                               : GL_LINEAR));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-                    GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-                    GL(glTextureStorage2D(frame.tex,
-                                          1,
-                                          config_.high_bitdepth ? GL_RGBA16 : GL_RGBA8,
-                                          format_desc_.width,
-                                          format_desc_.height));
-                    GL(glClearTexImage(
-                        frame.tex, 0, GL_BGRA, config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, nullptr));
-
-                    frames_.push_back(frame);
+                    frames_.push_back(strategy_->init_frame(config_, format_desc_));
                 }
 
                 GL(glDisable(GL_DEPTH_TEST));
@@ -327,6 +320,10 @@ struct screen_consumer
                                              ? "(Full Range)."
                                              : "(Limited Range).");
                 }
+
+                glClear(GL_COLOR_BUFFER_BIT);
+                window_.display();
+
                 while (is_running_) {
                     tick();
                 }
@@ -336,10 +333,9 @@ struct screen_consumer
                 CASPAR_LOG_CURRENT_EXCEPTION();
                 is_running_ = false;
             }
+
             for (auto frame : frames_) {
-                GL(glUnmapNamedBuffer(frame.pbo));
-                glDeleteBuffers(1, &frame.pbo);
-                glDeleteTextures(1, &frame.tex);
+                strategy_->cleanup_frame(frame);
             }
 
             shader_.reset();
@@ -374,100 +370,7 @@ struct screen_consumer
 
     void tick()
     {
-        core::const_frame in_frame;
-
-        while (!frame_buffer_.try_pop(in_frame) && is_running_) {
-            // TODO (fix)
-            if (!poll()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            }
-        }
-
-        if (!in_frame) {
-            return;
-        }
-
-        // Upload
-        {
-            auto& frame = frames_.front();
-
-            while (frame.fence != nullptr) {
-                auto wait = glClientWaitSync(frame.fence, 0, 0);
-                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-                    glDeleteSync(frame.fence);
-                    frame.fence = nullptr;
-                }
-                if (!poll()) {
-                    // TODO (fix)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
-                }
-            }
-
-            auto size_multiplier = config_.high_bitdepth ? 2 : 1;
-            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), format_desc_.size * size_multiplier);
-
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
-            GL(glTextureSubImage2D(frame.tex,
-                                   0,
-                                   0,
-                                   0,
-                                   format_desc_.width,
-                                   format_desc_.height,
-                                   GL_BGRA,
-                                   config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
-                                   nullptr));
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-
-            frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-        }
-
-        // Display
-        {
-            auto& frame = frames_.back();
-
-            GL(glClear(GL_COLOR_BUFFER_BIT));
-
-            GL(glActiveTexture(GL_TEXTURE0));
-            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
-
-            GL(glBufferData(GL_ARRAY_BUFFER,
-                            static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
-                            draw_coords_.data(),
-                            GL_STATIC_DRAW));
-
-            auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
-
-            auto vtx_loc = shader_->get_attrib_location("Position");
-            auto tex_loc = shader_->get_attrib_location("TexCoordIn");
-
-            GL(glEnableVertexAttribArray(vtx_loc));
-            GL(glEnableVertexAttribArray(tex_loc));
-
-            GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
-            GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
-
-            shader_->set("window_width", screen_width_);
-
-            if (config_.sbs_key) {
-                auto coords_size = static_cast<GLsizei>(draw_coords_.size());
-
-                // First half fill
-                shader_->set("key_only", false);
-                GL(glDrawArrays(GL_TRIANGLES, 0, coords_size / 2));
-
-                // Second half key
-                shader_->set("key_only", true);
-                GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
-            } else {
-                shader_->set("key_only", config_.key_only);
-                GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
-            }
-
-            GL(glDisableVertexAttribArray(vtx_loc));
-            GL(glDisableVertexAttribArray(tex_loc));
-
-            GL(glBindTexture(GL_TEXTURE_2D, 0));
-        }
+        strategy_->do_tick(this);
 
         window_.display();
 
@@ -477,11 +380,61 @@ struct screen_consumer
         tick_timer_.restart();
     }
 
+    void draw()
+    {
+        GL(glBufferData(GL_ARRAY_BUFFER,
+                        static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
+                        draw_coords_.data(),
+                        GL_STATIC_DRAW));
+
+        auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
+
+        auto vtx_loc = shader_->get_attrib_location("Position");
+        auto tex_loc = shader_->get_attrib_location("TexCoordIn");
+
+        GL(glEnableVertexAttribArray(vtx_loc));
+        GL(glEnableVertexAttribArray(tex_loc));
+
+        GL(glVertexAttribPointer(vtx_loc, 2, GL_DOUBLE, GL_FALSE, stride, nullptr));
+        GL(glVertexAttribPointer(tex_loc, 4, GL_DOUBLE, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLdouble))));
+
+        shader_->set("window_width", screen_width_);
+
+        if (config_.sbs_key) {
+            auto coords_size = static_cast<GLsizei>(draw_coords_.size());
+
+            // First half fill
+            shader_->set("key_only", false);
+            GL(glDrawArrays(GL_TRIANGLES, 0, coords_size / 2));
+
+            // Second half key
+            shader_->set("key_only", true);
+            GL(glDrawArrays(GL_TRIANGLES, coords_size / 2, coords_size / 2));
+        } else {
+            shader_->set("key_only", config_.key_only);
+            GL(glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(draw_coords_.size())));
+        }
+
+        GL(glDisableVertexAttribArray(vtx_loc));
+        GL(glDisableVertexAttribArray(tex_loc));
+        GL(glBindTexture(GL_TEXTURE_2D, 0));
+    }
+
     std::future<bool> send(core::video_field field, const core::const_frame& frame)
     {
-        if (!frame_buffer_.try_push(frame)) {
+        const int MAX_TRIES = 3;
+        int       count     = 0;
+        while (count++ < MAX_TRIES && is_running_) {
+            if (frame_buffer_.try_push(frame))
+                break;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+
+        if (count == MAX_TRIES) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
+
         return make_ready_future(is_running_.load());
     }
 
@@ -579,6 +532,180 @@ struct screen_consumer
     }
 };
 
+struct host_strategy : public display_strategy
+{
+    virtual ~host_strategy() {}
+
+    virtual frame init_frame(const configuration& config, const core::video_format_desc& format_desc) override
+    {
+        screen::frame frame;
+        auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+        GL(glCreateBuffers(1, &frame.pbo));
+        auto size_multiplier = config.high_bitdepth ? 2 : 1;
+        GL(glNamedBufferStorage(frame.pbo, format_desc.size * size_multiplier, nullptr, flags));
+        frame.ptr = reinterpret_cast<char*>(
+            GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc.size * size_multiplier, flags)));
+
+        GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
+        GL(glTextureParameteri(frame.tex,
+                               GL_TEXTURE_MIN_FILTER,
+                               (config.colour_space == configuration::colour_spaces::datavideo_full ||
+                                config.colour_space == configuration::colour_spaces::datavideo_limited)
+                                   ? GL_NEAREST
+                                   : GL_LINEAR));
+        GL(glTextureParameteri(frame.tex,
+                               GL_TEXTURE_MAG_FILTER,
+                               (config.colour_space == configuration::colour_spaces::datavideo_full ||
+                                config.colour_space == configuration::colour_spaces::datavideo_limited)
+                                   ? GL_NEAREST
+                                   : GL_LINEAR));
+        GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        GL(glTextureStorage2D(
+            frame.tex, 1, config.high_bitdepth ? GL_RGBA16 : GL_RGBA8, format_desc.width, format_desc.height));
+        GL(glClearTexImage(
+            frame.tex, 0, GL_BGRA, config.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, nullptr));
+
+        return frame;
+    }
+
+    virtual void cleanup_frame(frame& frame) override
+    {
+        GL(glUnmapNamedBuffer(frame.pbo));
+        glDeleteBuffers(1, &frame.pbo);
+        glDeleteTextures(1, &frame.tex);
+    }
+
+    virtual void do_tick(screen_consumer* self) override
+    {
+        core::const_frame in_frame;
+
+        while (!self->frame_buffer_.try_pop(in_frame) && self->is_running_) {
+            // TODO (fix)
+            if (!self->poll()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+        }
+
+        if (!in_frame) {
+            return;
+        }
+
+        // Upload
+        {
+            auto& frame = self->frames_.front();
+
+            while (frame.fence != nullptr) {
+                auto wait = glClientWaitSync(frame.fence, 0, 0);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    glDeleteSync(frame.fence);
+                    frame.fence = nullptr;
+                }
+                if (!self->poll()) {
+                    // TODO (fix)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
+            }
+
+            auto size_multiplier = self->config_.high_bitdepth ? 2 : 1;
+            std::memcpy(frame.ptr, in_frame.image_data(0).begin(), self->format_desc_.size * size_multiplier);
+
+            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, frame.pbo));
+            GL(glTextureSubImage2D(frame.tex,
+                                   0,
+                                   0,
+                                   0,
+                                   self->format_desc_.width,
+                                   self->format_desc_.height,
+                                   GL_BGRA,
+                                   self->config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
+                                   nullptr));
+            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
+
+            frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        }
+
+        // Display
+        {
+            auto& frame = self->frames_.back();
+
+            GL(glClear(GL_COLOR_BUFFER_BIT));
+
+            GL(glActiveTexture(GL_TEXTURE0));
+            GL(glBindTexture(GL_TEXTURE_2D, frame.tex));
+
+            self->draw();
+        }
+    }
+};
+
+struct gpu_strategy : public display_strategy
+{
+    virtual ~gpu_strategy() {}
+    virtual frame init_frame(const configuration& config, const core::video_format_desc& format_desc) override
+    {
+        return frame();
+    }
+    virtual void cleanup_frame(frame& frame) override
+    {
+        if (frame.fence) {
+            glDeleteSync(frame.fence);
+            frame.fence = nullptr;
+        }
+        frame.texture.reset();
+    }
+
+    virtual void do_tick(screen_consumer* self) override
+    {
+        core::const_frame in_frame;
+
+        self->poll();
+
+        while (!self->frame_buffer_.try_pop(in_frame) && self->is_running_) {
+            // TODO (fix)
+            if (!self->poll()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+        }
+
+        // Display
+        {
+            auto& frame = self->frames_.front();
+
+            while (frame.fence != nullptr && self->is_running_) {
+                auto wait = glClientWaitSync(frame.fence, 0, 0);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    glDeleteSync(frame.fence);
+                    frame.fence = nullptr;
+                    frame.texture.reset();
+                }
+
+                if (!self->poll()) {
+                    // TODO (fix)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
+            }
+
+            if (!in_frame || !self->is_running_) {
+                self->graph_->set_value("tick-time", self->tick_timer_.elapsed() * self->format_desc_.fps * 0.5);
+                self->tick_timer_.restart();
+                return;
+            }
+
+            GL(glClear(GL_COLOR_BUFFER_BIT));
+
+            if (in_frame.texture()) {
+                in_frame.texture()->bind(0);
+
+                self->draw();
+
+                frame.fence   = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+                frame.texture = in_frame.texture();
+            }
+        }
+    }
+};
+
 struct screen_consumer_proxy : public core::frame_consumer
 {
     const configuration              config_;
@@ -645,6 +772,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     }
 
     config.windowed    = !contains_param(L"FULLSCREEN", params);
+    config.gpu_texture = contains_param(L"GPU", params);
     config.key_only    = contains_param(L"KEY_ONLY", params);
     config.sbs_key     = contains_param(L"SBS_KEY", params);
     config.interactive = !contains_param(L"NON_INTERACTIVE", params);
@@ -698,6 +826,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     config.interactive   = ptree.get(L"interactive", config.interactive);
     config.borderless    = ptree.get(L"borderless", config.borderless);
     config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
+    config.gpu_texture   = ptree.get(L"gpu-texture", config.gpu_texture);
 
     auto colour_space_value = ptree.get(L"colour-space", L"RGB");
     config.colour_space     = configuration::colour_spaces::RGB;
