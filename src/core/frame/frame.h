@@ -11,6 +11,14 @@
 
 namespace caspar { namespace core {
 
+class texture
+{
+  public:
+    virtual ~texture() {}
+    virtual void bind(int index) = 0;
+    virtual void unbind()        = 0;
+};
+
 class mutable_frame final
 {
     friend class const_frame;
@@ -62,7 +70,8 @@ class const_frame final
     explicit const_frame(const void*                            tag,
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
-                         const struct pixel_format_desc&        desc);
+                         const struct pixel_format_desc&        desc,
+                         std::shared_ptr<core::texture>         texture = nullptr);
     const_frame(const const_frame& other);
     const_frame(mutable_frame&& other);
 
@@ -75,6 +84,8 @@ class const_frame final
     const array<const std::uint8_t>& image_data(std::size_t index) const;
 
     const array<const std::int32_t>& audio_data() const;
+
+    std::shared_ptr<core::texture> texture() const;
 
     std::size_t width() const;
 
