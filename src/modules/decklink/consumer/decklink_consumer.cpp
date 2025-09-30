@@ -27,6 +27,7 @@
 #include "decklink_consumer.h"
 #include "format_strategy.h"
 #include "monitor.h"
+#include "vanc.h"
 
 #include "../util/util.h"
 
@@ -232,16 +233,17 @@ class decklink_frame
     : public IDeckLinkVideoFrame
     , public IDeckLinkVideoFrameMetadataExtensions
 {
-    core::video_format_desc format_desc_;
-    std::shared_ptr<void>   data_;
-    std::atomic<int>        ref_count_{0};
-    int                     nb_samples_;
-    const bool              hdr_;
-    core::color_space       color_space_;
-    hdr_meta_configuration  hdr_metadata_;
-    BMDFrameFlags           flags_;
-    BMDPixelFormat          pix_fmt_;
-    int                     row_bytes_;
+    core::video_format_desc                      format_desc_;
+    std::shared_ptr<void>                        data_;
+    std::atomic<int>                             ref_count_{0};
+    int                                          nb_samples_;
+    const bool                                   hdr_;
+    core::color_space                            color_space_;
+    hdr_meta_configuration                       hdr_metadata_;
+    BMDFrameFlags                                flags_;
+    BMDPixelFormat                               pix_fmt_;
+    int                                          row_bytes_;
+    com_ptr<IDeckLinkVideoFrameAncillaryPackets> vanc_;
 
   public:
     decklink_frame(std::shared_ptr<void>         data,
@@ -250,6 +252,7 @@ class decklink_frame
                    bool                          hdr,
                    BMDPixelFormat                pix_fmt,
                    int                           row_bytes,
+                   bool                          vanc,
                    core::color_space             color_space,
                    const hdr_meta_configuration& hdr_metadata)
         : format_desc_(std::move(format_desc))
@@ -261,6 +264,7 @@ class decklink_frame
         , color_space_(color_space)
         , hdr_metadata_(hdr_metadata)
         , flags_(hdr ? bmdFrameFlagDefault | bmdFrameContainsHDRMetadata : bmdFrameFlagDefault)
+        , vanc_(vanc ? create_ancillary_packets() : nullptr)
     {
     }
 
@@ -282,6 +286,11 @@ class decklink_frame
         } else if (hdr_ && std::memcmp(&iid, &IID_IDeckLinkVideoFrameMetadataExtensions, sizeof(REFIID)) == 0) {
             *ppv = static_cast<IDeckLinkVideoFrameMetadataExtensions*>(this);
             AddRef();
+        } else if (vanc_ && std::memcmp(&iid, &IID_IDeckLinkVideoFrameAncillaryPackets, sizeof(REFIID)) == 0) {
+            auto raw = get_raw(vanc_);
+            raw->AddRef();
+            *ppv = raw;
+
         } else {
             *ppv = nullptr;
             return E_NOINTERFACE;
@@ -572,6 +581,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                config_.hdr,
                                format_strategy_->get_pixel_format(),
                                format_strategy_->get_row_bytes(decklink_format_desc_.width),
+                               false,
                                config_.color_space,
                                config_.hdr_meta));
         if (FAILED(output_->ScheduleVideoFrame(get_raw(packed_frame),
@@ -642,7 +652,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                            format_strategy_->get_pixel_format(),
                                                            bmdSupportedVideoModeDefault);
 
-    std::atomic<bool> abort_request_{false};
+    std::atomic<bool>              abort_request_{false};
+    std::shared_ptr<decklink_vanc> vanc_;
 
   public:
     decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
@@ -696,6 +707,19 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                                          decklink_format_desc_,
                                                                                          print(),
                                                                                          device_sync_group_));
+        }
+
+        if (config.vanc.enable) {
+            BOOL flag = TRUE;
+            attributes_->GetFlag(BMDDeckLinkVANCRequires10BitYUVVideoFrames, &flag);
+            if (flag) {
+                CASPAR_LOG(warning) << print()
+                                    << L" DeckLink hardware only supports VANC when the active picture and ancillary "
+                                       L"data are both 10-bit YUV pixel format.";
+            } else {
+                CASPAR_LOG(info) << print() << L" DeckLink hardware supports VANC.";
+                vanc_ = create_vanc(config.vanc);
+            }
         }
 
         enable_video();
@@ -818,9 +842,15 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
     void enable_video()
     {
-        if (FAILED(output_->EnableVideoOutput(mode_->GetDisplayMode(),
-                                              device_sync_group_ > 0 ? bmdVideoOutputSynchronizeToPlaybackGroup
-                                                                     : bmdVideoOutputFlagDefault))) {
+        BMDVideoOutputFlags output_flags = bmdVideoOutputFlagDefault;
+        if (device_sync_group_ > 0) {
+            output_flags = static_cast<BMDVideoOutputFlags>(output_flags | bmdVideoOutputSynchronizeToPlaybackGroup);
+        }
+        if (vanc_) {
+            output_flags = static_cast<BMDVideoOutputFlags>(output_flags | bmdVideoOutputVANC);
+        }
+
+        if (FAILED(output_->EnableVideoOutput(mode_->GetDisplayMode(), output_flags))) {
             CASPAR_THROW_EXCEPTION(caspar_exception()
                                    << msg_info(print() + L" Could not enable primary video output."));
         }
@@ -1021,8 +1051,29 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                                                                     config_.hdr,
                                                                                     fmt,
                                                                                     row_bytes,
+                                                                                    config_.vanc.enable,
                                                                                     config_.color_space,
                                                                                     config_.hdr_meta));
+
+        if (vanc_ && vanc_->has_data()) {
+            auto ancillary_packets = iface_cast<IDeckLinkVideoFrameAncillaryPackets>(fill_frame);
+            auto packets           = vanc_->pop_packets();
+            for (auto& packet : packets) {
+                if (FAILED(ancillary_packets->AttachPacket(get_raw(packet)))) {
+                    CASPAR_LOG(error) << print() << L" Failed to add ancillary packet.";
+                }
+            }
+
+            bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
+            if (isInterlaced) {
+                auto field2_packets = vanc_->pop_packets(true);
+                for (auto& packet : field2_packets) {
+                    if (FAILED(ancillary_packets->AttachPacket(get_raw(packet)))) {
+                        CASPAR_LOG(error) << print() << L" Failed to add ancillary packet.";
+                    }
+                }
+            }
+        }
         if (FAILED(output_->ScheduleVideoFrame(
                 get_raw(fill_frame), display_time, decklink_format_desc_.duration, decklink_format_desc_.time_scale))) {
             CASPAR_LOG(error) << print() << L" Failed to schedule primary video.";
@@ -1049,6 +1100,21 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         buffer_cond_.notify_all();
 
         return !abort_request_;
+    }
+
+    bool call(const std::vector<std::wstring>& params)
+    {
+        try {
+            bool result = vanc_->try_push_data(params);
+            if (!result) {
+                CASPAR_LOG(warning) << print() << L" Unknown command: " << (params.empty() ? L"N/A" : params[0]);
+            }
+
+            return result;
+        } catch (...) {
+            CASPAR_LOG(warning) << print() << L" Failed to apply: " << (params.empty() ? L"N/A" : params[0]);
+        }
+        return false;
     }
 
     [[nodiscard]] std::wstring print() const
@@ -1104,6 +1170,11 @@ struct decklink_consumer_proxy : public core::frame_consumer
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         return executor_.begin_invoke([=] { return consumer_->send(field, frame); });
+    }
+
+    std::future<bool> call(const std::vector<std::wstring>& params) override
+    {
+        return executor_.begin_invoke([=] { return consumer_->call(params); });
     }
 
     [[nodiscard]] std::wstring print() const override
