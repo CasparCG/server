@@ -36,6 +36,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/future.h>
+#include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
 
@@ -86,7 +87,6 @@ class html_client
     bool                                                        gpu_enabled_;
     tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
     std::atomic<bool>                                           loaded_;
-    std::atomic<bool>                                           not_found_;
     std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
     mutable std::mutex                                          frames_mutex_;
     const size_t                                                frames_max_size_ = 4;
@@ -123,9 +123,8 @@ class html_client
             state_["file/path"] = u8(url_);
         }
 
-        loaded_    = false;
-        not_found_ = false;
-        closing_   = false;
+        loaded_  = false;
+        closing_ = false;
     }
 
     void reload()
@@ -270,7 +269,7 @@ class html_client
                  int                   width,
                  int                   height) override
     {
-        if (closing_ || not_found_)
+        if (closing_)
             return;
 
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -342,16 +341,41 @@ class html_client
                           const CefString&      source,
                           int                   line) override
     {
-        if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
-            CASPAR_LOG(debug) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
-            CASPAR_LOG(warning) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
-            CASPAR_LOG(error) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
-            CASPAR_LOG(fatal) << print() << L" Log: " << message.ToWString();
-        else
-            CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+        try {
+            // Safely convert console message to wide string with emoji/UTF-8 handling
+            std::wstring safe_message;
+            try {
+                safe_message = message.ToWString();
+            } catch (...) {
+                // If ToWString() fails (e.g., with emojis), get as UTF-8 string and convert manually
+                std::string utf8_message = message.ToString();
+                // Replace problematic characters for logging
+                for (char c : utf8_message) {
+                    if (c >= 32 && c < 127) {
+                        safe_message += static_cast<wchar_t>(c);
+                    } else {
+                        safe_message += L'?';  // Replace non-ASCII chars with safe placeholder
+                    }
+                }
+            }
+            
+            // Apply additional sanitization for logging safety
+            caspar::log::replace_nonprintable(safe_message, L'?');
+            
+            if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
+                CASPAR_LOG(debug) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
+                CASPAR_LOG(warning) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
+                CASPAR_LOG(error) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
+                CASPAR_LOG(fatal) << print() << L" Log: " << safe_message;
+            else
+                CASPAR_LOG(info) << print() << L" Log: " << safe_message;
+        } catch (...) {
+            // Ultimate fallback if everything fails
+            CASPAR_LOG(warning) << print() << L" Log: [Message contained characters that could not be displayed safely]";
+        }
         return true;
     }
 
@@ -363,35 +387,20 @@ class html_client
 
     CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
 
-    void OnLoadError(CefRefPtr<CefBrowser> browser,
-                     CefRefPtr<CefFrame>   frame,
-                     ErrorCode             errorCode,
-                     const CefString&      errorText,
-                     const CefString&      failedUrl) override
-    {
-        not_found_ = true;
-        CASPAR_LOG(warning) << "[html_producer] " << errorText.ToString() << " while loading url: \""
-                            << failedUrl.ToString() << "\"";
-
-        // Stop producing if the page fails to load
-        {
-            std::lock_guard<std::mutex> lock(frames_mutex_);
-            frames_.push(std::make_pair(now(), core::draw_frame{}));
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            state_ = {};
-        }
-    }
-
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override
     {
-        if (not_found_)
-            return;
-
         loaded_ = true;
         execute_queued_javascript();
+    }
+
+    void OnLoadError(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame> frame,
+                     cef_errorcode_t errorCode,
+                     const CefString& errorText,
+                     const CefString& failedUrl) override
+    {
+        CASPAR_LOG(error) << print() << L" Load error: " << errorText.ToWString() 
+                         << L" (code: " << errorCode << L") for URL: " << failedUrl.ToWString();
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
@@ -420,9 +429,18 @@ class html_client
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
-            auto msg      = args->GetString(1).ToWString();
+            
+            // Safely convert renderer process message to wide string
+            std::wstring safe_msg;
+            try {
+                safe_msg = args->GetString(1).ToWString();
+                // Apply sanitization for logging safety
+                caspar::log::replace_nonprintable(safe_msg, L'?');
+            } catch (...) {
+                safe_msg = L"[Message contained characters that could not be displayed safely]";
+            }
 
-            BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << msg;
+            BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << safe_msg;
         }
 
         return false;
@@ -431,9 +449,10 @@ class html_client
     void do_execute_javascript(const std::wstring& javascript)
     {
         html::begin_invoke([=] {
-            if (browser_ != nullptr)
+            if (browser_ != nullptr && browser_->GetMainFrame() != nullptr) {
                 browser_->GetMainFrame()->ExecuteJavaScript(
                     u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
+            }
         });
     }
 
