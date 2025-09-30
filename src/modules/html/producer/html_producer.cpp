@@ -36,6 +36,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/future.h>
+#include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
 
@@ -340,16 +341,41 @@ class html_client
                           const CefString&      source,
                           int                   line) override
     {
-        if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
-            CASPAR_LOG(debug) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
-            CASPAR_LOG(warning) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
-            CASPAR_LOG(error) << print() << L" Log: " << message.ToWString();
-        else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
-            CASPAR_LOG(fatal) << print() << L" Log: " << message.ToWString();
-        else
-            CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+        try {
+            // Safely convert console message to wide string with emoji/UTF-8 handling
+            std::wstring safe_message;
+            try {
+                safe_message = message.ToWString();
+            } catch (...) {
+                // If ToWString() fails (e.g., with emojis), get as UTF-8 string and convert manually
+                std::string utf8_message = message.ToString();
+                // Replace problematic characters for logging
+                for (char c : utf8_message) {
+                    if (c >= 32 && c < 127) {
+                        safe_message += static_cast<wchar_t>(c);
+                    } else {
+                        safe_message += L'?';  // Replace non-ASCII chars with safe placeholder
+                    }
+                }
+            }
+            
+            // Apply additional sanitization for logging safety
+            caspar::log::replace_nonprintable(safe_message, L'?');
+            
+            if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
+                CASPAR_LOG(debug) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
+                CASPAR_LOG(warning) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
+                CASPAR_LOG(error) << print() << L" Log: " << safe_message;
+            else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
+                CASPAR_LOG(fatal) << print() << L" Log: " << safe_message;
+            else
+                CASPAR_LOG(info) << print() << L" Log: " << safe_message;
+        } catch (...) {
+            // Ultimate fallback if everything fails
+            CASPAR_LOG(warning) << print() << L" Log: [Message contained characters that could not be displayed safely]";
+        }
         return true;
     }
 
@@ -365,6 +391,16 @@ class html_client
     {
         loaded_ = true;
         execute_queued_javascript();
+    }
+
+    void OnLoadError(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame> frame,
+                     cef_errorcode_t errorCode,
+                     const CefString& errorText,
+                     const CefString& failedUrl) override
+    {
+        CASPAR_LOG(error) << print() << L" Load error: " << errorText.ToWString() 
+                         << L" (code: " << errorCode << L") for URL: " << failedUrl.ToWString();
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
@@ -393,9 +429,18 @@ class html_client
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
-            auto msg      = args->GetString(1).ToWString();
+            
+            // Safely convert renderer process message to wide string
+            std::wstring safe_msg;
+            try {
+                safe_msg = args->GetString(1).ToWString();
+                // Apply sanitization for logging safety
+                caspar::log::replace_nonprintable(safe_msg, L'?');
+            } catch (...) {
+                safe_msg = L"[Message contained characters that could not be displayed safely]";
+            }
 
-            BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << msg;
+            BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << safe_msg;
         }
 
         return false;
@@ -404,49 +449,9 @@ class html_client
     void do_execute_javascript(const std::wstring& javascript)
     {
         html::begin_invoke([=] {
-            try {
-                if (browser_ != nullptr && browser_->GetMainFrame() != nullptr) {
-                    // Safe UTF-8 conversion with error handling
-                    std::string utf8_javascript;
-                    try {
-                        utf8_javascript = u8(javascript);
-                    } catch (...) {
-                        // If UTF-8 conversion fails, clean the string and try again
-                        std::wstring cleaned_js;
-                        for (wchar_t c : javascript) {
-                            if (c < 128) {
-                                // Keep ASCII characters
-                                cleaned_js += c;
-                            } else if (c >= 128 && c <= 0xFFFF) {
-                                // Try to keep valid Unicode characters
-                                cleaned_js += c;
-                            } else {
-                                // Replace problematic characters
-                                cleaned_js += L'?';
-                            }
-                        }
-                        
-                        try {
-                            utf8_javascript = u8(cleaned_js);
-                        } catch (...) {
-                            // Final fallback: ASCII only
-                            for (wchar_t c : javascript) {
-                                if (c < 128) {
-                                    utf8_javascript += static_cast<char>(c);
-                                } else {
-                                    utf8_javascript += '?';
-                                }
-                            }
-                        }
-                    }
-                    
-                    browser_->GetMainFrame()->ExecuteJavaScript(
-                        utf8_javascript.c_str(), browser_->GetMainFrame()->GetURL(), 0);
-                }
-            } catch (const std::exception& e) {
-                CASPAR_LOG(error) << print() << L" JavaScript execution failed: " << caspar::u16(e.what());
-            } catch (...) {
-                CASPAR_LOG(error) << print() << L" JavaScript execution failed with unknown error";
+            if (browser_ != nullptr && browser_->GetMainFrame() != nullptr) {
+                browser_->GetMainFrame()->ExecuteJavaScript(
+                    u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
             }
         });
     }
