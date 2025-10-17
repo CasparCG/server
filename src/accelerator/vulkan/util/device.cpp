@@ -501,7 +501,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         tex->set_depth(depth);
 
         if (clear) {
-            tex->clear();
+            // TODO: implement clearing
+            // tex->clear();
         }
 
         auto ptr = tex.get();

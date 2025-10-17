@@ -3,8 +3,10 @@
 #include "ogl/image/image_mixer.h"
 #include "ogl/util/device.h"
 
+#ifdef ENABLE_VULKAN
 #include "vulkan/image/image_mixer.h"
 #include "vulkan/util/device.h"
+#endif
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -42,16 +44,17 @@ struct accelerator::impl
 
     std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth)
     {
-        if (backend_ == accelerator_backend::opengl) {
-            return std::make_unique<ogl::image_mixer>(
-                spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
+#ifdef ENABLE_VULKAN
+        if (backend_ == accelerator_backend::vulkan) {
+            return std::make_unique<vulkan::image_mixer>(
+                spl::make_shared_ptr(std::dynamic_pointer_cast<vulkan::device>(get_device())),
                 channel_id,
                 format_repository_.get_max_video_format_size(),
                 depth);
         }
-
-        return std::make_unique<vulkan::image_mixer>(
-            spl::make_shared_ptr(std::dynamic_pointer_cast<vulkan::device>(get_device())),
+#endif
+        return std::make_unique<ogl::image_mixer>(
+            spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
             channel_id,
             format_repository_.get_max_video_format_size(),
             depth);
@@ -62,19 +65,19 @@ struct accelerator::impl
         if (backend_ == accelerator_backend::invalid) {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Accelerator backend not set"));
         }
-
-        if (backend_ == accelerator_backend::opengl) {
+#ifdef ENABLE_VULKAN
+        if (backend_ == accelerator_backend::vulkan) {
             if (!device_) {
-                device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
+                device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<vulkan::device>());
             }
 
             return device_;
         }
+#endif
 
         if (!device_) {
-            device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<vulkan::device>());
+            device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
         }
-
         return device_;
     }
 };

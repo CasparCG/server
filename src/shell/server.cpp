@@ -262,8 +262,9 @@ struct server::impl
         using boost::property_tree::wptree;
         using namespace boost::asio::ip;
 
-        auto accelerator = boost::to_lower_copy(pt.get(L"configuration.accelerator", L"auto"));
+#ifdef ENABLE_VULKAN
         caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::invalid;
+        auto accelerator = boost::to_lower_copy(pt.get(L"configuration.accelerator", L"auto"));
         if (accelerator == L"auto") {
             backend = caspar::accelerator::accelerator_backend::opengl;
         } else if (accelerator == L"opengl") {
@@ -273,6 +274,9 @@ struct server::impl
         } else {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid accelerator: " + accelerator));
         }
+#else
+        caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::opengl;
+#endif
 
         accelerator_.set_backend(backend);
     }

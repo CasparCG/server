@@ -25,7 +25,9 @@ enum class accelerator_backend
 {
     invalid = 0,
     opengl,
-    vulkan
+#ifdef ENABLE_VULKAN
+    vulkan,
+#endif
 };
 
 class accelerator

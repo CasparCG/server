@@ -16,6 +16,7 @@ set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
 set(ENABLE_AVX2 ON CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
+set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
@@ -38,21 +39,24 @@ find_package(TBB REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(SFML 2 COMPONENTS graphics window REQUIRED)
 find_package(X11 REQUIRED)
-find_package(Vulkan REQUIRED)
 
-FetchContent_Declare(
-    fetch_vk_bootstrap
-    GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
-    GIT_TAG        v1.4.328 #suggest using a tag so the library doesn't update whenever new commits are pushed to a branch
+IF (ENABLE_VULKAN)
+    find_package(Vulkan REQUIRED)
+
+    FetchContent_Declare(
+        fetch_vk_bootstrap
+        GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
+        GIT_TAG        v1.4.328 #suggest using a tag so the library doesn't update whenever new commits are pushed to a branch
+        )
+    FetchContent_MakeAvailable(fetch_vk_bootstrap)
+
+    FetchContent_Declare(
+        fetch_vma
+        GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+        GIT_TAG        v3.3.0 #suggest using a tag so the library doesn't update whenever new commits are pushed to a branch
     )
-FetchContent_MakeAvailable(fetch_vk_bootstrap)
-
-FetchContent_Declare(
-    fetch_vma
-    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-    GIT_TAG        v3.3.0 #suggest using a tag so the library doesn't update whenever new commits are pushed to a branch
-)
-FetchContent_MakeAvailable(fetch_vma)
+    FetchContent_MakeAvailable(fetch_vma)
+endif()
 
 # support for Ubuntu 22.04
 if (NOT TARGET OpenAL::OpenAL)
@@ -157,7 +161,12 @@ ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
 ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 
-ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror -Wno-nonnull -Wno-nullability-completeness)
+ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)
+
+IF (ENABLE_VULKAN)
+    ADD_COMPILE_OPTIONS (-Wno-nonnull -Wno-nullability-completeness)
+ENDIF()
+
 IF (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     ADD_COMPILE_OPTIONS (-Wno-terminate)
 ELSEIF (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
