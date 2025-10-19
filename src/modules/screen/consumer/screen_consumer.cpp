@@ -67,7 +67,8 @@ namespace caspar { namespace screen {
 
 std::unique_ptr<accelerator::ogl::shader> get_shader()
 {
-    return std::make_unique<accelerator::ogl::shader>(std::string(vertex_shader), std::string(fragment_shader));
+    return std::make_unique<accelerator::ogl::shader>(std::string(reinterpret_cast<const char*>(vertex_shader)),
+                                                      std::string(reinterpret_cast<const char*>(fragment_shader)));
 }
 
 enum class stretch
@@ -152,7 +153,7 @@ struct screen_consumer
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
 
-    screen_consumer(const screen_consumer&) = delete;
+    screen_consumer(const screen_consumer&)            = delete;
     screen_consumer& operator=(const screen_consumer&) = delete;
 
   public:

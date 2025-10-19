@@ -268,6 +268,8 @@ struct server::impl
             backend = caspar::accelerator::accelerator_backend::opengl;
         } else if (accelerator == L"opengl") {
             backend = caspar::accelerator::accelerator_backend::opengl;
+        } else if (accelerator == L"vulkan") {
+            backend = caspar::accelerator::accelerator_backend::vulkan;
         } else {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid accelerator: " + accelerator));
         }
