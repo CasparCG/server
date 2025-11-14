@@ -179,12 +179,7 @@ ExternalProject_Add(zlib
 ExternalProject_Get_Property(zlib SOURCE_DIR)
 ExternalProject_Get_Property(zlib BINARY_DIR)
 set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
-
-if (is_multi_config)
-	link_directories(${BINARY_DIR}/Release)
-else()
-	link_directories(${BINARY_DIR})
-endif()
+link_directories(${BINARY_DIR})
 
 # OpenAL
 FetchContent_Declare(openal
