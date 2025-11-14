@@ -22,11 +22,12 @@
 #pragma once
 
 #include <common/bit_depth.h>
+#include <core/frame/frame.h>
 #include <memory>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-class texture final
+class texture final : public core::texture
 {
   public:
     texture(int width, int height, int stride, common::bit_depth depth = common::bit_depth::bit8);
@@ -45,8 +46,9 @@ class texture final
 
     void attach();
     void clear();
-    void bind(int index);
-    void unbind();
+
+    virtual void bind(int index) override;
+    virtual void unbind() override;
 
     int               width() const;
     int               height() const;
