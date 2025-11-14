@@ -173,11 +173,11 @@ struct wrapped_vertex
 
 static const double epsilon = 0.001;
 
-bool inline point_is_to_left_of_line(const t_point& line_1, const t_point& line_2, const t_point& vertex)
+bool inline point_is_outside_of_line(const t_point& line_1, const t_point& line_2, const t_point& vertex, bool invert_winding)
 {
-    // use a cross product to check if the point is on the right side of the line
-    return (line_2(0) - line_1(0)) * (vertex(1) - line_1(1)) - (line_2(1) - line_1(1)) * (vertex(0) - line_1(0)) <
-           -epsilon;
+    // use a cross product to check if the point is outside the crop region
+    auto cross = (line_2(0) - line_1(0)) * (vertex(1) - line_1(1)) - (line_2(1) - line_1(1)) * (vertex(0) - line_1(0));
+    return invert_winding ? cross > epsilon : cross < -epsilon;
 }
 
 // http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
@@ -347,26 +347,38 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
 
     // Perform the crop
     for (auto& crop_region : transformed_regions) {
+        // Determine the winding order of the crop region
+        // Calculate the signed area to determine if the region is clockwise or counter-clockwise
+        double signed_area = 0.0;
+        for (int l = 0; l < 4; ++l) {
+            int next_l = (l + 1) % 4;
+            signed_area += (crop_region.coords[next_l](0) - crop_region.coords[l](0)) *
+                          (crop_region.coords[next_l](1) + crop_region.coords[l](1));
+        }
+        // In screen coordinates (Y down), normal clockwise winding gives negative signed area
+        // We need to invert the test when the winding is flipped (positive signed area)
+        bool invert_winding = signed_area > 0;
+
         for (int l = 0; l < 4; ++l) {
             // Apply the crop, one edge at a time
             int     to_index   = l == 3 ? 0 : l + 1;
             t_point from_point = crop_region.coords[l];
             t_point to_point   = crop_region.coords[to_index];
 
-            std::unordered_set<size_t> points_to_left_of_line;
+            std::unordered_set<size_t> points_outside_of_line;
 
-            // Figure out which points are 'left' of the line (outside the crop region)
+            // Figure out which points are outside the crop region
             for (size_t j = 0; j < cropped_coords.size(); ++j) {
-                bool v = point_is_to_left_of_line(from_point, to_point, cropped_coords[j].vertex);
+                bool v = point_is_outside_of_line(from_point, to_point, cropped_coords[j].vertex, invert_winding);
                 if (v)
-                    points_to_left_of_line.insert(j);
+                    points_outside_of_line.insert(j);
             }
 
-            if (points_to_left_of_line.empty()) {
+            if (points_outside_of_line.empty()) {
                 // Line has no effect, skip
                 continue;
-            } else if (points_to_left_of_line.size() == cropped_coords.size()) {
-                // All are to the left, shape has no geometry
+            } else if (points_outside_of_line.size() == cropped_coords.size()) {
+                // All are outside, shape has no geometry
                 return {};
             }
 
@@ -375,7 +387,7 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
 
             // Iterate through the coords
             for (size_t j = 0; j < cropped_coords.size(); ++j) {
-                if (points_to_left_of_line.count(j) == 0) {
+                if (points_outside_of_line.count(j) == 0) {
                     new_coords.push_back(cropped_coords[j]);
                     continue;
                 }
@@ -383,15 +395,15 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
                 size_t prev_index = j == 0 ? cropped_coords.size() - 1 : j - 1;
                 size_t next_index = j == cropped_coords.size() - 1 ? 0 : j + 1;
 
-                bool prev_is_left_of_line = points_to_left_of_line.count(prev_index) == 1;
-                bool next_is_left_of_line = points_to_left_of_line.count(next_index) == 1;
+                bool prev_is_outside = points_outside_of_line.count(prev_index) == 1;
+                bool next_is_outside = points_outside_of_line.count(next_index) == 1;
 
-                if (prev_is_left_of_line && next_is_left_of_line) {
-                    // Vertex and its edges are completely left of the line, skip
+                if (prev_is_outside && next_is_outside) {
+                    // Vertex and its edges are completely outside, skip
                     continue;
                 }
 
-                if (!prev_is_left_of_line) {
+                if (!prev_is_outside) {
                     // This edge intersects the crop line, calculate the new coordinates
                     wrapped_vertex new_coord;
                     if (get_intersection_with_crop_line(to_point,
@@ -406,7 +418,7 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
                     }
                 }
 
-                if (!next_is_left_of_line) {
+                if (!next_is_outside) {
                     // This edge intersects the crop line, calculate the new coordinates
                     wrapped_vertex new_coord;
                     if (get_intersection_with_crop_line(to_point,
