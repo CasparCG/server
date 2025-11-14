@@ -124,8 +124,8 @@ endif ()
 
 # TBB
 FetchContent_Declare(tbb
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
-	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2022.3.0-win.zip
+	URL_HASH SHA256=e1b2373f25558bf47d16b4c89cf0a31e6689aaf7221400d209e8527afc7c9eee
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 )
 FetchContent_MakeAvailable(tbb)
