@@ -13,6 +13,8 @@ set(SOURCES
 
 	util/av_util.cpp
 	util/av_util.h
+	util/audio_resampler.cpp
+	util/audio_resampler.h
 	util/av_assert.h
 
 	ffmpeg.cpp
