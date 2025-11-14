@@ -18,7 +18,12 @@ casparcg_add_module_project(html
 	UNINIT_FUNCTION "html::uninit"
 	CLI_INTERCEPTOR "html::intercept_command_line"
 )
-target_link_libraries(html PRIVATE CEF::CEF)
+target_link_libraries(html PRIVATE ffmpeg CEF::CEF)
+
+target_include_directories(html PRIVATE
+    ..
+	${FFMPEG_INCLUDE_PATH}
+)
 
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
