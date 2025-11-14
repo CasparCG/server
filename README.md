@@ -17,7 +17,8 @@ System Requirements
 
 ### Windows
 
- - Only Windows 10 is supported
+ - Windows 11 is recommended
+ - Windows 10 is supported as best effort
 
 ### Linux
 
