@@ -92,25 +92,27 @@ struct const_frame::impl
 {
     std::vector<array<const std::uint8_t>> image_data_;
     array<const std::int32_t>              audio_data_;
-    core::pixel_format_desc                desc_     = core::pixel_format_desc(pixel_format::invalid);
+    core::pixel_format_desc                desc_ = core::pixel_format_desc(pixel_format::invalid);
     const void*                            tag_;
     frame_geometry                         geometry_ = frame_geometry::get_default();
     std::any                               opaque_;
+    std::shared_ptr<core::texture>         texture_;
 
     impl(const void*                            tag,
          std::vector<array<const std::uint8_t>> image_data,
          array<const std::int32_t>              audio_data,
-         const core::pixel_format_desc&         desc)
+         const core::pixel_format_desc&         desc,
+         std::shared_ptr<core::texture>         texture)
         : image_data_(std::move(image_data))
         , audio_data_(std::move(audio_data))
         , desc_(desc)
         , tag_(tag)
+        , texture_(texture)
     {
         if (desc_.planes.size() != image_data_.size()) {
             CASPAR_THROW_EXCEPTION(invalid_argument());
         }
     }
-
 
     impl(mutable_frame&& other)
         : image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
@@ -118,6 +120,7 @@ struct const_frame::impl
         , audio_data_(std::move(other.impl_->audio_data_))
         , desc_(std::move(other.impl_->desc_))
         , tag_(other.stream_tag())
+        , texture_(nullptr)
         , geometry_(std::move(other.impl_->geometry_))
     {
         if (desc_.planes.size() != image_data_.size() && !other.impl_->commit_) {
@@ -130,6 +133,8 @@ struct const_frame::impl
 
     const array<const std::uint8_t>& image_data(std::size_t index) const { return image_data_.at(index); }
 
+    std::shared_ptr<core::texture> texture() { return texture_; }
+
     std::size_t width() const { return desc_.planes.at(0).width; }
 
     std::size_t height() const { return desc_.planes.at(0).height; }
@@ -141,8 +146,9 @@ const_frame::const_frame() {}
 const_frame::const_frame(const void*                            tag,
                          std::vector<array<const std::uint8_t>> image_data,
                          array<const std::int32_t>              audio_data,
-                         const core::pixel_format_desc&         desc)
-    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc))
+                         const core::pixel_format_desc&         desc,
+                         std::shared_ptr<core::texture>         texture)
+    : impl_(new impl(tag, std::move(image_data), std::move(audio_data), desc, texture))
 {
 }
 const_frame::const_frame(mutable_frame&& other)
@@ -166,26 +172,28 @@ bool                     const_frame::operator>(const const_frame& other) const 
 const pixel_format_desc& const_frame::pixel_format_desc() const { return impl_->desc_; }
 const array<const std::uint8_t>& const_frame::image_data(std::size_t index) const { return impl_->image_data(index); }
 const array<const std::int32_t>& const_frame::audio_data() const { return impl_->audio_data_; }
+std::shared_ptr<core::texture>   const_frame::texture() const { return impl_->texture(); }
 std::size_t                      const_frame::width() const { return impl_->width(); }
 std::size_t                      const_frame::height() const { return impl_->height(); }
 std::size_t                      const_frame::size() const { return impl_->size(); }
 const void*                      const_frame::stream_tag() const { return impl_->tag_; }
-const_frame                      const_frame::with_tag(const void* new_tag) const {
+const_frame                      const_frame::with_tag(const void* new_tag) const
+{
     if (!impl_) {
         return const_frame();
     }
-    
+
     std::vector<array<const std::uint8_t>> image_data_copy = impl_->image_data_;
-    auto new_frame = const_frame(new_tag, std::move(image_data_copy), impl_->audio_data_, impl_->desc_);
-    
+    auto new_frame = const_frame(new_tag, std::move(image_data_copy), impl_->audio_data_, impl_->desc_, impl_->texture_);
+
     new_frame.impl_->geometry_ = impl_->geometry_;
     if (impl_->opaque_.has_value()) {
         new_frame.impl_->opaque_ = impl_->opaque_;
     }
-    
+
     return new_frame;
 }
-const frame_geometry&            const_frame::geometry() const { return impl_->geometry_; }
-const std::any&                  const_frame::opaque() const { return impl_->opaque_; }
+const frame_geometry& const_frame::geometry() const { return impl_->geometry_; }
+const std::any&       const_frame::opaque() const { return impl_->opaque_; }
 const_frame::operator bool() const { return impl_ != nullptr && impl_->desc_.format != core::pixel_format::invalid; }
 }} // namespace caspar::core
