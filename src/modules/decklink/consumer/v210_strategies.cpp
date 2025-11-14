@@ -419,12 +419,12 @@ class v210_strategy
                         src += rest_x_6pixels;             // Move the source pointer forward
                         v210_dest += (rest_x_6pixels / 6); // one _m128i (32x4 bits) is 6 pixels
 
-                        // // pad the rest with black pixels to fill the v210 packet
+                        // pad the rest with black pixels to fill the v210 packet
                         int last_x_pixels = rest_x_pixels - rest_x_6pixels;
                         if (last_x_pixels > 0) {
                             ARGBPixel<T> pixels[6];
                             memset(pixels, 0, sizeof(pixels));
-                            memcpy(pixels, src, last_x_pixels * 8);
+                            memcpy(pixels, src, last_x_pixels * sizeof(ARGBPixel<T>));
                             pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6);
                             v210_dest++;
                             src += last_x_pixels;
