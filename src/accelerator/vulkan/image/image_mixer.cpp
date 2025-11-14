@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright 2025
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Robert Nagy, ronag89@gmail.com
+ * Author: Niklas Andersson, niklas@niklaspandersson.se
  */
 #include "image_mixer.h"
 
@@ -24,6 +24,7 @@
 
 #include "../util/buffer.h"
 #include "../util/device.h"
+#include "../util/renderpass.h"
 #include "../util/texture.h"
 
 #include <boost/align/aligned_allocator.hpp>
@@ -39,12 +40,10 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <GL/glew.h>
-
 #include <any>
 #include <vector>
 
-namespace caspar { namespace accelerator { namespace ogl {
+namespace caspar { namespace accelerator { namespace vulkan {
 
 using future_texture = std::shared_future<std::shared_ptr<texture>>;
 
@@ -70,15 +69,15 @@ struct layer
 
 class image_renderer
 {
-    spl::shared_ptr<device> ogl_;
+    spl::shared_ptr<device> vulkan_;
     image_kernel            kernel_;
     const size_t            max_frame_size_;
     common::bit_depth       depth_;
 
   public:
-    explicit image_renderer(const spl::shared_ptr<device>& ogl, const size_t max_frame_size, common::bit_depth depth)
-        : ogl_(ogl)
-        , kernel_(ogl_)
+    explicit image_renderer(const spl::shared_ptr<device>& vulkan, const size_t max_frame_size, common::bit_depth depth)
+        : vulkan_(vulkan)
+        , kernel_(vulkan_, depth)
         , max_frame_size_(max_frame_size)
         , depth_(depth)
     {
@@ -93,13 +92,15 @@ class image_renderer
             return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
         }
 
-        return flatten(ogl_->dispatch_async(
+        return flatten(vulkan_->dispatch_async(
             [=, layers = std::move(layers)]() mutable -> std::shared_future<array<const std::uint8_t>> {
-                auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
+                auto pass   = kernel_.create_renderpass(format_desc.square_width, format_desc.square_height);
+                auto target = pass->default_attachment();
+                draw(target, std::move(layers), format_desc, pass);
 
-                draw(target_texture, std::move(layers), format_desc);
+                pass->commit();
 
-                return ogl_->copy_async(target_texture);
+                return vulkan_->copy_async(target);
             }));
     }
 
@@ -108,20 +109,22 @@ class image_renderer
   private:
     void draw(std::shared_ptr<texture>&      target_texture,
               std::vector<layer>             layers,
-              const core::video_format_desc& format_desc)
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
     {
         std::shared_ptr<texture> layer_key_texture;
 
         for (auto& layer : layers) {
-            draw(target_texture, layer.sublayers, format_desc);
-            draw(target_texture, std::move(layer), layer_key_texture, format_desc);
+            draw(target_texture, layer.sublayers, format_desc, pass);
+            draw(target_texture, std::move(layer), layer_key_texture, format_desc, pass);
         }
     }
 
     void draw(std::shared_ptr<texture>&      target_texture,
               layer                          layer,
               std::shared_ptr<texture>&      layer_key_texture,
-              const core::video_format_desc& format_desc)
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
     {
         if (layer.items.empty())
             return;
@@ -130,7 +133,7 @@ class image_renderer
         std::shared_ptr<texture> local_mix_texture;
 
         if (layer.blend_mode != core::blend_mode::normal) {
-            auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
+            auto layer_texture = pass->create_attachment();
 
             for (auto& item : layer.items)
                 draw(layer_texture,
@@ -138,10 +141,11 @@ class image_renderer
                      layer_key_texture,
                      local_key_texture,
                      local_mix_texture,
-                     format_desc);
+                     format_desc,
+                     pass);
 
-            draw(layer_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
-            draw(target_texture, std::move(layer_texture), format_desc, layer.blend_mode);
+            draw(layer_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
+            draw(target_texture, std::move(layer_texture), format_desc, pass, layer.blend_mode);
         } else // fast path
         {
             for (auto& item : layer.items)
@@ -150,9 +154,10 @@ class image_renderer
                      layer_key_texture,
                      local_key_texture,
                      local_mix_texture,
-                     format_desc);
+                     format_desc,
+                     pass);
 
-            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
+            draw(target_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
         }
 
         layer_key_texture = std::move(local_key_texture);
@@ -163,7 +168,8 @@ class image_renderer
               std::shared_ptr<texture>&      layer_key_texture,
               std::shared_ptr<texture>&      local_key_texture,
               std::shared_ptr<texture>&      local_mix_texture,
-              const core::video_format_desc& format_desc)
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
     {
         draw_params draw_params;
         draw_params.target_width  = format_desc.square_width;
@@ -182,20 +188,16 @@ class image_renderer
 
         if (draw_params.transforms.image_transform
                 .is_key) { // A key means we will use it for the next non-key item as a mask
-            local_key_texture =
-                local_key_texture ? local_key_texture
-                                  : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, depth_);
+            local_key_texture = local_key_texture ? local_key_texture : pass->create_attachment();
 
             draw_params.background = local_key_texture;
             draw_params.local_key  = nullptr;
             draw_params.layer_key  = nullptr;
 
-            kernel_.draw(std::move(draw_params));
+            pass->draw(std::move(draw_params));
         } else if (draw_params.transforms.image_transform
                        .is_mix) { // A mix means precomp the items to a texture, before drawing to the channel
-            local_mix_texture =
-                local_mix_texture ? local_mix_texture
-                                  : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, depth_);
+            local_mix_texture = local_mix_texture ? local_mix_texture : pass->create_attachment();
 
             draw_params.background = local_mix_texture;
             draw_params.local_key  = std::move(local_key_texture); // Use and reset the key
@@ -203,23 +205,24 @@ class image_renderer
 
             draw_params.keyer = keyer::additive;
 
-            kernel_.draw(std::move(draw_params));
+            pass->draw(std::move(draw_params));
         } else {
             // If there is a mix, this is the end so draw it and reset
-            draw(target_texture, std::move(local_mix_texture), format_desc, core::blend_mode::normal);
+            draw(target_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
 
             draw_params.background = target_texture;
             draw_params.local_key  = std::move(local_key_texture);
             draw_params.layer_key  = layer_key_texture;
 
-            kernel_.draw(std::move(draw_params));
+            pass->draw(std::move(draw_params));
         }
     }
 
-    void draw(std::shared_ptr<texture>&  target_texture,
-              std::shared_ptr<texture>&& source_texture,
-              core::video_format_desc    format_desc,
-              core::blend_mode           blend_mode = core::blend_mode::normal)
+    void draw(std::shared_ptr<texture>&   target_texture,
+              std::shared_ptr<texture>&&  source_texture,
+              core::video_format_desc     format_desc,
+              spl::shared_ptr<renderpass> pass,
+              core::blend_mode            blend_mode = core::blend_mode::normal)
     {
         if (!source_texture)
             return;
@@ -235,7 +238,7 @@ class image_renderer
         draw_params.background      = target_texture;
         draw_params.geometry        = core::frame_geometry::get_default();
 
-        kernel_.draw(std::move(draw_params));
+        pass->draw(std::move(draw_params));
     }
 };
 
@@ -243,7 +246,7 @@ struct image_mixer::impl
     : public core::frame_factory
     , public std::enable_shared_from_this<impl>
 {
-    spl::shared_ptr<device>      ogl_;
+    spl::shared_ptr<device>      vulkan_;
     image_renderer               renderer_;
     std::vector<draw_transforms> transform_stack_;
     std::vector<layer>           layers_; // layer/stream/items
@@ -252,12 +255,15 @@ struct image_mixer::impl
     double aspect_ratio_ = 1.0;
 
   public:
-    impl(const spl::shared_ptr<device>& ogl, const int channel_id, const size_t max_frame_size, common::bit_depth depth)
-        : ogl_(ogl)
-        , renderer_(ogl, max_frame_size, depth)
+    impl(const spl::shared_ptr<device>& device,
+         const int                      channel_id,
+         const size_t                   max_frame_size,
+         common::bit_depth              depth)
+        : vulkan_(device)
+        , renderer_(device, max_frame_size, depth)
         , transform_stack_(1)
     {
-        CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer for channel " << channel_id;
+        CASPAR_LOG(info) << L"Initialized Vulkan Accelerated GPU Image Mixer for channel " << channel_id;
     }
 
     void update_aspect_ratio(double aspect_ratio) { aspect_ratio_ = aspect_ratio; }
@@ -302,11 +308,11 @@ struct image_mixer::impl
             item.textures = *textures_ptr;
         } else {
             for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
-                item.textures.emplace_back(ogl_->copy_async(frame.image_data(n),
-                                                            item.pix_desc.planes[n].width,
-                                                            item.pix_desc.planes[n].height,
-                                                            item.pix_desc.planes[n].stride,
-                                                            item.pix_desc.planes[n].depth));
+                item.textures.emplace_back(vulkan_->copy_async(frame.image_data(n),
+                                                               item.pix_desc.planes[n].width,
+                                                               item.pix_desc.planes[n].height,
+                                                               item.pix_desc.planes[n].stride,
+                                                               item.pix_desc.planes[n].depth));
             }
         }
 
@@ -335,7 +341,7 @@ struct image_mixer::impl
         std::vector<array<std::uint8_t>> image_data;
         for (auto& plane : desc.planes) {
             auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
-            image_data.push_back(ogl_->create_array(plane.size * bytes_per_pixel));
+            image_data.push_back(vulkan_->create_array(plane.size * bytes_per_pixel));
         }
 
         std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
@@ -350,11 +356,11 @@ struct image_mixer::impl
                                        }
                                        std::vector<future_texture> textures;
                                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                                           textures.emplace_back(self->ogl_->copy_async(image_data[n],
-                                                                                        desc.planes[n].width,
-                                                                                        desc.planes[n].height,
-                                                                                        desc.planes[n].stride,
-                                                                                        desc.planes[n].depth));
+                                           textures.emplace_back(self->vulkan_->copy_async(image_data[n],
+                                                                                           desc.planes[n].width,
+                                                                                           desc.planes[n].height,
+                                                                                           desc.planes[n].stride,
+                                                                                           desc.planes[n].depth));
                                        }
                                        return std::make_shared<decltype(textures)>(std::move(textures));
                                    });
@@ -363,11 +369,11 @@ struct image_mixer::impl
     common::bit_depth depth() const { return renderer_.depth(); }
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl,
+image_mixer::image_mixer(const spl::shared_ptr<device>& vulkan,
                          const int                      channel_id,
                          const size_t                   max_frame_size,
                          common::bit_depth              depth)
-    : impl_(std::make_unique<impl>(ogl, channel_id, max_frame_size, depth))
+    : impl_(std::make_unique<impl>(vulkan, channel_id, max_frame_size, depth))
 {
 }
 image_mixer::~image_mixer() {}
@@ -391,4 +397,4 @@ image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, 
 
 common::bit_depth image_mixer::depth() const { return impl_->depth(); }
 
-}}} // namespace caspar::accelerator::ogl
+}}} // namespace caspar::accelerator::vulkan

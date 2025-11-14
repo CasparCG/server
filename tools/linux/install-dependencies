@@ -17,6 +17,7 @@ apt-get install -yq --no-install-recommends \
   perl \
   pkg-config \
   python3 \
+  xz-utils \
   zlib1g-dev \
   libexpat1-dev \
   lsb-release \

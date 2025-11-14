@@ -52,8 +52,9 @@ std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl)
         }
     };
 
-    existing_shader.reset(new shader(std::string(vertex_shader), std::string(fragment_shader)), deleter);
-
+    existing_shader.reset(new shader(std::string(reinterpret_cast<const char*>(vertex_shader)),
+                                     std::string(reinterpret_cast<const char*>(fragment_shader))),
+                          deleter);
     g_shader = existing_shader;
 
     return existing_shader;
