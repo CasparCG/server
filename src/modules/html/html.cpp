@@ -32,6 +32,7 @@
 #include <core/producer/cg_proxy.h>
 
 #include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
@@ -172,7 +173,8 @@ class renderer_application
             auto default_backend = L"gl";
 #if __unix__
             // If there is no X server, Chromium requires us to force it to the angle backend
-            if (getenv("DISPLAY") == nullptr) default_backend = L"vulkan";
+            if (getenv("DISPLAY") == nullptr)
+                default_backend = L"vulkan";
 #endif
 
             // This gives better performance on the gpu->cpu readback, but can perform worse with intense templates
@@ -237,8 +239,12 @@ void init(const core::module_dependencies& dependencies)
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
 
-        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"");
+        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"cef-cache");
         if (!cache_path.empty()) {
+            if (!boost::filesystem::path(cache_path).is_absolute()) {
+                cache_path = caspar::env::initial_folder() + L"/" + cache_path;
+            }
+            CASPAR_LOG(info) << L"[html] Using CEF cache path: " << cache_path;
             CefString(&settings.cache_path).FromWString(cache_path);
         }
 
