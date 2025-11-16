@@ -167,6 +167,10 @@ class renderer_application
 
     void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override
     {
+
+        command_line->AppendSwitchWithValue("renderer-process-limit", "20");
+        command_line->AppendSwitch("disable-dev-shm-usage");
+
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
