@@ -80,7 +80,7 @@ Before beginning, check the build options section below, to decide if you want t
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
 3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
+4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-142-dev`
 5. `mkdir build && cd build`
 6. `cmake ../src` You can add any of the build options from below to this command
 7. `cmake --build . --parallel`

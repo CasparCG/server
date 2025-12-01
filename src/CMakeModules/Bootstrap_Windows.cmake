@@ -219,8 +219,8 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_windows64_minimal.tar.bz2
-		URL_HASH SHA1=864d40fb6e26a6ac8cf1003cbfcc16d35c90782e
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_windows64_minimal.tar.bz2
+		URL_HASH SHA256=16c072a44484fe521037c74d03a339a77573b1fc0146cf44cc71e79fd0cc0198
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
 		INSTALL_COMMAND ""
@@ -255,7 +255,6 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
 
-	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")

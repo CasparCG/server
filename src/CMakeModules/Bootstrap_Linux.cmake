@@ -48,11 +48,11 @@ endif()
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-131")
+        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-142")
 
         add_library(CEF::CEF INTERFACE IMPORTED)
         target_include_directories(CEF::CEF INTERFACE
-            "/usr/include/casparcg-cef-131"
+            "/usr/include/casparcg-cef-142"
         )
         target_link_libraries(CEF::CEF INTERFACE
             "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
@@ -61,8 +61,8 @@ if (ENABLE_HTML)
     else()
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
-            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_linux64_minimal.tar.bz2
-            URL_HASH SHA1=cbe52ac3c39ef93fdc5021588e12c466e801d9af
+            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_linux64_minimal.tar.bz2
+            URL_HASH SHA256=1d89e19b2f446105f9a1fe6fdc96bced86249b5884241dcc4013b7c94dabf424
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
             CMAKE_ARGS -DUSE_SANDBOX=Off
             INSTALL_COMMAND ""
@@ -95,7 +95,6 @@ if (ENABLE_HTML)
         install(FILES ${SOURCE_DIR}/Release/libGLESv2.so TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/libvk_swiftshader.so TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/libvulkan.so.1 TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/snapshot_blob.bin TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/v8_context_snapshot.bin TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/vk_swiftshader_icd.json TYPE LIB)
     endif()
