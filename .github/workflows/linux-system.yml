@@ -56,12 +56,12 @@ jobs:
                   sudo apt-get build-dep .
 
                   # update the control file to reference the current cef version
-                  CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-131)
+                  CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-142)
                   sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
 
                   # Download required packages
                   cd ..
-                  apt-get download casparcg-cef-131=$CASPARCG_CEF_VER
+                  apt-get download casparcg-cef-142=$CASPARCG_CEF_VER
                   apt-get download casparcg-scanner
               env:
                   CI: 1
