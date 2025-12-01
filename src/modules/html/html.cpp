@@ -265,13 +265,6 @@ void init(const core::module_dependencies& dependencies)
             return html::create_cg_producer(dependencies, {filename});
         },
         false);
-
-    auto cef_version_major = std::to_wstring(cef_version_info(0));
-    auto cef_revision      = std::to_wstring(cef_version_info(1));
-    auto chrome_major      = std::to_wstring(cef_version_info(2));
-    auto chrome_minor      = std::to_wstring(cef_version_info(3));
-    auto chrome_build      = std::to_wstring(cef_version_info(4));
-    auto chrome_patch      = std::to_wstring(cef_version_info(5));
 }
 
 void uninit()
