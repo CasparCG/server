@@ -34,14 +34,14 @@ Build-Depends: cmake,
                pkg-config,
                txt2man,
                zlib1g-dev,
-               casparcg-cef-131-dev
+               casparcg-cef-142-dev
 Homepage: https://github.com/CasparCG/server/
 Vcs-Git: https://github.com/CasparCG/server.git
 Vcs-Browser: https://github.com/CasparCG/server/
 
 Package: casparcg-server-beta
 Pre-Depends: ${misc:Pre-Depends}
-Depends: fonts-liberation, casparcg-cef-131 (= @CASPARCG_CEF_VER@), ${misc:Depends}, ${shlibs:Depends}
+Depends: fonts-liberation, casparcg-cef-142 (= @CASPARCG_CEF_VER@), ${misc:Depends}, ${shlibs:Depends}
 Architecture: amd64
 Description: layered real-time video compositor to multiple outputs
  Play out professional graphics, audio and video to multiple outputs as a
