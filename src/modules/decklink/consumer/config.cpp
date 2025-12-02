@@ -30,7 +30,7 @@ port_configuration parse_output_config(const boost::property_tree::wptree&  ptre
                                        const core::video_format_repository& format_repository)
 {
     port_configuration port_config;
-    port_config.device_index = ptree.get(L"device", -1);
+    port_config.device_index = ptree.get(L"device", static_cast<int64_t>(-1));
     port_config.key_only     = ptree.get(L"key-only", port_config.key_only);
 
     auto format_desc_str = ptree.get(L"video-mode", L"");
@@ -129,7 +129,7 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         config.keyer = configuration::keyer_t::external_keyer;
 
         auto key_config         = config.primary; // Copy the primary config
-        key_config.device_index = ptree.get(L"key-device", 0);
+        key_config.device_index = ptree.get(L"key-device", static_cast<int64_t>(0));
         if (key_config.device_index == 0) {
             key_config.device_index = config.primary.device_index + 1;
         }
@@ -173,7 +173,7 @@ configuration parse_amcp_config(const std::vector<std::wstring>&     params,
     configuration config;
 
     if (params.size() > 1)
-        config.primary.device_index = std::stoi(params.at(1));
+        config.primary.device_index = std::stoll(params.at(1));
 
     if (contains_param(L"INTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::internal_keyer;
