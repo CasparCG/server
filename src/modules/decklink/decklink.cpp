@@ -58,7 +58,14 @@ std::vector<std::wstring> device_list()
         auto       pDecklinkIterator = create_iterator();
         IDeckLink* decklink;
         for (int n = 1; pDecklinkIterator->Next(&decklink) == S_OK; ++n) {
-            devices.push_back(get_model_name(decklink) + L" [" + std::to_wstring(n) + L"]");
+            auto decklink_com = wrap_raw<com_ptr>(decklink);
+            auto attributes   = iface_cast<IDeckLinkProfileAttributes>(decklink_com);
+
+            int64_t id = 0;
+            attributes->GetInt(BMDDeckLinkPersistentID, &id);
+
+            devices.push_back(get_model_name(decklink) + L" [" + std::to_wstring(n) + L"] (" + std::to_wstring(id) +
+                              L")");
             decklink->Release();
         }
     } catch (...) {
@@ -72,6 +79,14 @@ void init(const core::module_dependencies& dependencies)
     dependencies.consumer_registry->register_consumer_factory(L"Decklink Consumer", create_consumer);
     dependencies.consumer_registry->register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
     dependencies.producer_registry->register_producer_factory(L"Decklink Producer", create_producer);
+
+    auto devices = device_list();
+    if (!devices.empty()) {
+        CASPAR_LOG(info) << L"Decklink devices found:";
+        for (const auto& device : devices) {
+            CASPAR_LOG(info) << L" - " << device;
+        }
+    }
 }
 
 }} // namespace caspar::decklink

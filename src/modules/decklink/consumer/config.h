@@ -31,7 +31,7 @@ namespace caspar { namespace decklink {
 
 struct port_configuration
 {
-    int  device_index = 1;
+    int64_t  device_index = 1; // Either an index, or a persistent id
     bool key_only     = false;
 
     core::video_format_desc format;
