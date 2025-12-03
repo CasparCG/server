@@ -22,6 +22,9 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
+// Suppress Boost bind deprecation warning
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 #if defined(_MSC_VER)
 #ifndef _SCL_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS

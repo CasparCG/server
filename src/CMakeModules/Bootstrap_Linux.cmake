@@ -38,6 +38,8 @@ find_package(TBB REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(SFML 2 COMPONENTS graphics window REQUIRED)
 find_package(X11 REQUIRED)
+# nlohmann-json must be provided by the distribution package (nlohmann-json3-dev)
+find_package(nlohmann_json 3.10.0 REQUIRED)
 
 # support for Ubuntu 22.04
 if (NOT TARGET OpenAL::OpenAL)
