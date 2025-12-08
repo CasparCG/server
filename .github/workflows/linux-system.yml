@@ -84,7 +84,7 @@ jobs:
                   cp tools/linux/deb/INSTALLING dist/
 
                   # check if a release branch, or master, or a tag
-                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
+                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "v2.5.x" ]]
                   then
                     # Only proceed if we have an sftp password
                     if [ -n "${{ secrets.SFTP_PASSWORD }}" ]

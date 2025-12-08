@@ -44,9 +44,9 @@ jobs:
                   mv dist/casparcg_server.zip "$TARGET"
 
                   echo "artifactname=$TARGET" >> $GITHUB_OUTPUT
-                    
+
                   # check if a release branch, or master, or a tag
-                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
+                  if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "v2.5.x" ]]
                   then
                     # Only report if we have an sftp password
                     if [ -n "${{ secrets.SFTP_PASSWORD }}" ]
