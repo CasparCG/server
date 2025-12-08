@@ -446,12 +446,12 @@ class v210_strategy
 
 spl::shared_ptr<format_strategy> create_sdr_v210_strategy(core::color_space color_space)
 {
-    return spl::make_shared<format_strategy, v210_strategy>(color_space, 1);
+    return spl::make_shared<format_strategy, v210_strategy>(color_space, static_cast<uint8_t>(1));
 }
 
 spl::shared_ptr<format_strategy> create_hdr_v210_strategy(core::color_space color_space)
 {
-    return spl::make_shared<format_strategy, v210_strategy>(color_space, 2);
+    return spl::make_shared<format_strategy, v210_strategy>(color_space, static_cast<uint8_t>(2));
 }
 
 }} // namespace caspar::decklink

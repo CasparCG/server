@@ -689,7 +689,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         // If there are additional ports devices, then enable the sync group
         if (!config.secondaries.empty()) {
             // A unique id is needed for this group, this is simpler than a random number
-            device_sync_group_ = config.primary.device_index;
+            device_sync_group_ = static_cast<int>(config.primary.device_index);
 
             if (FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
                 device_sync_group_ = 0;
@@ -1184,7 +1184,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 
     [[nodiscard]] std::wstring name() const override { return L"decklink"; }
 
-    [[nodiscard]] int index() const override { return 300 + config_.primary.device_index; }
+    [[nodiscard]] int index() const override { return 300 + static_cast<int>(config_.primary.device_index); }
 
     [[nodiscard]] bool has_synchronization_clock() const override { return true; }
 
