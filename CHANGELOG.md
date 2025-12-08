@@ -1,6 +1,13 @@
 CasparCG 2.5.0 Stable
 ==========================================
 
+### Important
+
+We recommend running CasparCG 2.5 on CPUs which support AVX2. Officially Chrome claims to require AVX2, and it is required for some of our in-progress HDR support.
+Intel CPUs based on Haswell or later support this, which were first released to consumers in 2013, or 2014 for servers.
+
+Starting with CasparCG 2.6, this will become a requirement
+
 ### Core
 ##### Improvements
 * Initial support for HDR. This is limited to a subset of producers and consumers at this stage.
@@ -26,7 +33,7 @@ CasparCG 2.5.0 Stable
 * FFmpeg: Enable alpha for webm videos
 * Image: Support loading with a scaling-mode, to configure how images get fit into the channel
 * Image: Replace freeimage with ffmpeg
-* HTML: Update CEF to 131
+* HTML: Update CEF to 142
 * HTML: Support audio
 ##### Fixes
 * Route: Use full field rate when performing i->p channel route
@@ -39,7 +46,8 @@ CasparCG 2.5.0 Stable
 * Screen: Improve performance
 * Image: Propagate AMCP parameters from PRINT command
 * FFmpeg: Remove unnecessary forced conversion to YUVA422
-* Decklink: Support explicit yuv output
+* Decklink: Support explicit yuv output (requires AVX2)
+* Decklink: Allow selecting device by hardware persistent id
 
 ##### Fixes
 * FFmpeg: Correctly handle PTS on frame drop
