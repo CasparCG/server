@@ -52,12 +52,17 @@
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/util/tokenize.h>
+#include <protocol/util/websocket_monitor_client.h>
+#include <protocol/util/websocket_monitor_server.h>
+#include <protocol/util/websocket_server.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <unordered_set>
 
+#include <tbb/concurrent_hash_map.h>
 #include <thread>
 #include <utility>
 
@@ -70,7 +75,8 @@ std::shared_ptr<boost::asio::io_context> create_io_context_with_running_service(
     auto io_context = std::make_shared<boost::asio::io_context>();
     // To keep the io_context::run() running although no pending async
     // operations are posted.
-    auto work      = std::make_shared<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(boost::asio::make_work_guard(*io_context));
+    auto work = std::make_shared<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
+        boost::asio::make_work_guard(*io_context));
     auto weak_work = std::weak_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(work);
     auto thread    = std::make_shared<std::thread>([io_context, weak_work] {
         while (auto strong = weak_work.lock()) {
@@ -105,13 +111,21 @@ struct server::impl
     std::shared_ptr<amcp::command_context_factory>         amcp_context_factory_;
     std::vector<spl::shared_ptr<IO::AsyncEventServer>>     async_servers_;
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
-    std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_context_);
-    std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
+    std::shared_ptr<IO::websocket_server>                  websocket_server_;
+    std::shared_ptr<protocol::websocket::websocket_monitor_client> websocket_monitor_client_shared_;
+    std::atomic<protocol::websocket::websocket_monitor_client*>    websocket_monitor_client_{nullptr};
+    std::shared_ptr<protocol::websocket::websocket_monitor_server> websocket_monitor_server_;
+    std::shared_ptr<osc::client>       osc_client_ = std::make_shared<osc::client>(io_context_);
+    std::vector<std::shared_ptr<void>> predefined_osc_subscriptions_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
     spl::shared_ptr<core::frame_consumer_registry>                consumer_registry_;
     std::function<void(bool)>                                     shutdown_server_now_;
+
+    tbb::concurrent_hash_map<std::string, core::monitor::vector_t> monitor_data_;
+
+    // No caching needed - we rebuild the complete state when needed
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -131,11 +145,26 @@ struct server::impl
         setup_video_modes(env::properties());
         CASPAR_LOG(info) << L"Initialized video modes.";
 
-        auto xml_channels = setup_channels(env::properties());
-        CASPAR_LOG(info) << L"Initialized channels.";
+        // Initialize channels first to get the channels vector
+        channels_ = spl::make_shared<std::vector<protocol::amcp::channel_context>>();
 
         setup_amcp_command_repo();
         CASPAR_LOG(info) << L"Initialized command repository.";
+
+        // Initialize websocket monitor client (lock-free)
+        websocket_monitor_client_shared_ = std::make_shared<protocol::websocket::websocket_monitor_client>(io_context_);
+        websocket_monitor_client_.store(websocket_monitor_client_shared_.get());
+
+        // Ensure the websocket_monitor_client is fully initialized before proceeding
+        if (!websocket_monitor_client_.load()) {
+            CASPAR_LOG(error) << L"Failed to create websocket_monitor_client";
+        }
+
+        auto xml_channels = setup_channels(env::properties());
+        CASPAR_LOG(info) << L"Initialized channels.";
+
+        setup_websocket_controllers(env::properties());
+        CASPAR_LOG(info) << L"Initialized WebSocket servers.";
 
         module_dependencies dependencies(
             cg_registry_, producer_registry_, consumer_registry_, amcp_command_repo_wrapper_);
@@ -163,6 +192,38 @@ struct server::impl
         amcp_command_repo_.reset();
         amcp_context_factory_.reset();
 
+        // Shutdown websocket monitor client (lock-free)
+        auto client_ptr = websocket_monitor_client_.exchange(nullptr);
+        if (client_ptr) {
+            try {
+                client_ptr->shutdown();
+                client_ptr->join();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket monitor client shutdown error: " << u16(e.what());
+            }
+        }
+
+        // Stop websocket servers first
+        if (websocket_monitor_server_) {
+            try {
+                websocket_monitor_server_->stop();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket monitor server stop error: " << u16(e.what());
+            }
+        }
+
+        if (websocket_server_) {
+            try {
+                websocket_server_->stop();
+            } catch (const std::exception& e) {
+                CASPAR_LOG(error) << L"WebSocket server stop error: " << u16(e.what());
+            }
+        }
+
+        // Reset shared pointers
+        websocket_monitor_client_shared_.reset();
+        websocket_monitor_server_.reset();
+        websocket_server_.reset();
         primary_amcp_server_.reset();
         async_servers_.clear();
 
@@ -282,19 +343,64 @@ struct server::impl
             auto depth       = color_depth == 16 ? common::bit_depth::bit16 : common::bit_depth::bit8;
             auto default_color_space =
                 color_space_str == L"bt2020" ? core::color_space::bt2020 : core::color_space::bt709;
-            auto channel =
-                spl::make_shared<video_channel>(channel_id,
-                                                format_desc,
-                                                default_color_space,
-                                                accelerator_.create_image_mixer(channel_id, depth),
-                                                [channel_id, weak_client](core::monitor::state channel_state) {
-                                                    monitor::state state;
-                                                    state[""]["channel"][channel_id] = channel_state;
-                                                    auto client                      = weak_client.lock();
-                                                    if (client) {
-                                                        client->send(std::move(state));
-                                                    }
-                                                });
+
+            auto channel_prefix = std::string("channel/") + std::to_string(channel_id) + "/";
+            auto cached_paths   = std::make_shared<std::unordered_set<std::string>>();
+
+            auto channel = spl::make_shared<video_channel>(
+                channel_id,
+                format_desc,
+                default_color_space,
+                accelerator_.create_image_mixer(channel_id, depth),
+                [this, channel_id, weak_client, cached_paths, channel_prefix](core::monitor::state channel_state) {
+                    std::unordered_set<std::string> new_paths;
+
+                    for (const auto& [path, values] : channel_state) {
+                        std::string full_path = channel_prefix + path;
+                        new_paths.insert(full_path);
+
+                        tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+                        monitor_data_.insert(acc, full_path);
+                        acc->second = values;
+                    }
+
+                    for (const auto& old_path : *cached_paths) {
+                        if (new_paths.find(old_path) == new_paths.end()) {
+                            tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+                            if (monitor_data_.find(acc, old_path)) {
+                                monitor_data_.erase(acc);
+                            }
+                        }
+                    }
+
+                    *cached_paths = std::move(new_paths);
+
+                    // Send to websocket monitor client (lock-free)
+                    auto client_ptr = websocket_monitor_client_.load();
+                    if (client_ptr) {
+                        try {
+                            core::monitor::state complete_state = get_current_monitor_state();
+                            // CRITICAL: Post to IO context to avoid blocking video thread
+                            boost::asio::post(*io_context_, [client_ptr, state = std::move(complete_state)]() {
+                                try {
+                                    client_ptr->send(state);
+                                } catch (const std::exception& e) {
+                                    CASPAR_LOG(error) << L"WebSocket monitor client send error: " << u16(e.what());
+                                }
+                            });
+                        } catch (const std::exception& e) {
+                            CASPAR_LOG(error) << L"WebSocket monitor state preparation error: " << u16(e.what());
+                        }
+                    }
+
+                    // Send to OSC client (keep existing behavior)
+                    auto client = weak_client.lock();
+                    if (client) {
+                        monitor::state osc_state;
+                        osc_state[""]["channel"][channel_id] = channel_state;
+                        client->send(std::move(osc_state));
+                    }
+                });
 
             const std::wstring lifecycle_key = L"lock" + std::to_wstring(channel_id);
             channels_->emplace_back(channel, channel->stage(), lifecycle_key);
@@ -459,6 +565,54 @@ struct server::impl
         }
     }
 
+    void setup_websocket_controllers(const boost::property_tree::wptree& pt)
+    {
+        using boost::property_tree::wptree;
+
+        auto websocket_config = pt.get_child_optional(L"configuration.websocket");
+        if (!websocket_config) {
+            CASPAR_LOG(info) << L"WebSocket configuration not found, skipping WebSocket servers";
+            return;
+        }
+
+        try {
+            auto amcp_port    = websocket_config->get<uint16_t>(L"amcp-port", 5251);
+            auto monitor_port = websocket_config->get<uint16_t>(L"monitor-port", 5252);
+
+            // Create WebSocket monitor server (client already created earlier)
+            websocket_monitor_server_ = std::make_shared<protocol::websocket::websocket_monitor_server>(
+                io_context_, websocket_monitor_client_shared_, monitor_port);
+
+            // Start the WebSocket monitor server
+            websocket_monitor_server_->start();
+
+            // Create AMCP WebSocket server (without monitor functionality)
+            websocket_server_ = std::make_shared<IO::websocket_server>(
+                io_context_,
+                amcp::create_wchar_amcp_strategy_factory(L"WebSocket", spl::make_shared_ptr(amcp_command_repo_)),
+                amcp_port);
+
+            // Start the AMCP websocket server
+            websocket_server_->start();
+
+            // Add OSC lifecycle factory for WebSocket AMCP clients
+            auto default_port = pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
+            websocket_server_->add_client_lifecycle_object_factory(
+                [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
+                    using namespace boost::asio::ip;
+                    return std::make_pair(std::wstring(L"osc_subscribe"),
+                                          osc_client_->get_subscription_token(
+                                              udp::endpoint(make_address_v4(ipv4_address), default_port)));
+                });
+
+            CASPAR_LOG(info) << L"Started WebSocket servers on ports " << amcp_port << L" (AMCP) and " << monitor_port
+                             << L" (Monitor)";
+        } catch (const std::exception& e) {
+            CASPAR_LOG(error) << L"Failed to setup WebSocket controllers: " << u16(e.what());
+            // Don't throw - WebSocket is optional
+        }
+    }
+
     IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name,
                                                              const std::wstring& port_description) const
     {
@@ -468,6 +622,38 @@ struct server::impl
             return amcp::create_char_amcp_strategy_factory(port_description, spl::make_shared_ptr(amcp_command_repo_));
 
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
+    }
+
+    void cleanup_channel_data(int channel_id)
+    {
+        std::vector<std::string> keys_to_remove;
+
+        for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it = monitor_data_.begin();
+             it != monitor_data_.end();
+             ++it) {
+            std::string channel_prefix = "channel/" + std::to_string(channel_id) + "/";
+            if (it->first.substr(0, channel_prefix.length()) == channel_prefix) {
+                keys_to_remove.push_back(it->first);
+            }
+        }
+
+        for (const auto& key : keys_to_remove) {
+            tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::accessor acc;
+            if (monitor_data_.find(acc, key)) {
+                monitor_data_.erase(acc);
+            }
+        }
+    }
+
+    core::monitor::state get_current_monitor_state() const
+    {
+        core::monitor::state complete_state;
+        for (tbb::concurrent_hash_map<std::string, core::monitor::vector_t>::const_iterator it = monitor_data_.begin();
+             it != monitor_data_.end();
+             ++it) {
+            complete_state[it->first] = it->second;
+        }
+        return complete_state;
     }
 };
 

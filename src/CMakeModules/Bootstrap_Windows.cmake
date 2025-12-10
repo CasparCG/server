@@ -193,6 +193,13 @@ file(COPY_FILE ${openal_SOURCE_DIR}/bin/Win64/soft_oal.dll ${openal_SOURCE_DIR}/
 add_library(OpenAL::OpenAL INTERFACE IMPORTED)
 target_include_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/include)
 target_link_directories(OpenAL::OpenAL INTERFACE ${openal_SOURCE_DIR}/libs/Win64)
+
+# nlohmann/json
+FetchContent_Declare(nlohmann_json
+	URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+)
+FetchContent_MakeAvailable(nlohmann_json)
 target_link_libraries(OpenAL::OpenAL INTERFACE OpenAL32)
 casparcg_add_runtime_dependency("${openal_SOURCE_DIR}/bin/Win64/OpenAL32.dll")
 
@@ -280,6 +287,6 @@ add_definitions("-DBOOST_ALLOW_DEPRECATED_HEADERS")
 # Ensure /EHsc is not defined as it clashes with EHa below
 string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zi /W4 /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX2 /Ot /Gy /bigobj")

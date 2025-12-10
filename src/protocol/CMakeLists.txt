@@ -22,6 +22,9 @@ set(SOURCES
 		util/strategy_adapters.cpp
 		util/http_request.cpp
 		util/tokenize.cpp
+		util/websocket_server.cpp
+		util/websocket_monitor_client.cpp
+		util/websocket_monitor_server.cpp
 )
 
 set(HEADERS
@@ -54,6 +57,9 @@ set(HEADERS
 		util/strategy_adapters.h
 		util/http_request.h
 		util/tokenize.h
+		util/websocket_server.h
+		util/websocket_monitor_client.h
+		util/websocket_monitor_server.h
 
 		StdAfx.h
 )
@@ -73,4 +79,4 @@ source_group(sources\\osc osc/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(protocol PRIVATE common core)
+target_link_libraries(protocol PRIVATE common core nlohmann_json::nlohmann_json)

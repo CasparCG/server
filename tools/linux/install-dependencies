@@ -48,4 +48,5 @@ apt-get install -yq --no-install-recommends \
   libswscale-dev \
   libpostproc-dev \
   libswresample-dev \
+  nlohmann-json3-dev \
   libsimde-dev
