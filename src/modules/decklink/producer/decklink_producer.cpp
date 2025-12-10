@@ -592,6 +592,13 @@ class decklink_producer : public IDeckLinkInputCallback
             auto newMode = newDisplayMode->GetDisplayMode();
             auto fmt     = get_caspar_video_format(newMode);
 
+            if (fmt == input_format.format) {
+                // This gets called often if the enabled pixel format doesn't match the signal https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=144234
+                // So if the video format hasn't actually changed, then we can ignore this event.
+                // In the future we may wish to respect this in order to unpack the pixels ourselves
+                return S_OK;
+            }
+
             auto new_fmt = format_repository_.find_format(fmt);
 
             CASPAR_LOG(info) << print() << L" Input format changed from " << input_format.name << L" to "
