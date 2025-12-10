@@ -5,7 +5,7 @@ project("CasparCG Server")
 set(CONFIG_VERSION_MAJOR 2)
 set(CONFIG_VERSION_MINOR 5)
 set(CONFIG_VERSION_BUG 0)
-set(CONFIG_VERSION_TAG "Dev")
+set(CONFIG_VERSION_TAG "Stable")
 
 # support for language servers (eg, clangd or ccls)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
