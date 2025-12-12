@@ -14,8 +14,6 @@ extern "C" {
 #include <memory>
 #include <vector>
 
-#include "../defines.h"
-
 struct AVFrame;
 struct AVPacket;
 struct AVFilterContext;

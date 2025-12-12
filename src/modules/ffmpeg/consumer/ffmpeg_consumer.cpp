@@ -232,12 +232,8 @@ struct Stream
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
             // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
-#else
-            FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -296,18 +292,7 @@ struct Stream
             enc->sample_rate = av_buffersink_get_sample_rate(sink);
             enc->time_base   = st->time_base;
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             FF(av_buffersink_get_ch_layout(sink, &enc->ch_layout));
-#else
-            enc->channels       = av_buffersink_get_channels(sink);
-            enc->channel_layout = av_buffersink_get_channel_layout(sink);
-
-            if (!enc->channels) {
-                enc->channels = av_get_channel_layout_nb_channels(enc->channel_layout);
-            } else if (!enc->channel_layout) {
-                enc->channel_layout = av_get_default_channel_layout(enc->channels);
-            }
-#endif
 
         } else {
             // TODO

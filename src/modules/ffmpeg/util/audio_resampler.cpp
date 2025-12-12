@@ -1,8 +1,6 @@
 #include "audio_resampler.h"
 #include "av_assert.h"
 
-#include "../defines.h"
-
 extern "C" {
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
@@ -12,7 +10,6 @@ namespace caspar::ffmpeg {
 
 AudioResampler::AudioResampler(int sample_rate, AVSampleFormat in_sample_fmt)
 {
-#if FFMPEG_NEW_CHANNEL_LAYOUT
     AVChannelLayout channel_layout     = AV_CHANNEL_LAYOUT_7POINT1;
     AVChannelLayout channel_layout_out = AV_CHANNEL_LAYOUT_HEXADECAGONAL;
 
@@ -28,21 +25,6 @@ AudioResampler::AudioResampler(int sample_rate, AVSampleFormat in_sample_fmt)
                            nullptr));
 
     ctx = std::shared_ptr<SwrContext>(raw_ctx, [](SwrContext* ptr) { swr_free(&ptr); });
-#else
-    ctx.reset(swr_alloc_set_opts(nullptr,
-                                 AV_CH_LAYOUT_7POINT1,
-                                 AV_SAMPLE_FMT_S32,
-                                 sample_rate,
-                                 AV_CH_LAYOUT_7POINT1,
-                                 in_sample_fmt,
-                                 sample_rate,
-                                 0,
-                                 nullptr),
-              [](SwrContext* ptr) { swr_free(&ptr); });
-    if (!ctx)
-        FF_RET(AVERROR(ENOMEM), "swr_alloc_set_opts");
-
-#endif
 
     FF_RET(swr_init(ctx.get()), "swr_init");
 }

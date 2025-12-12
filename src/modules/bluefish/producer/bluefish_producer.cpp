@@ -462,11 +462,7 @@ struct bluefish_producer
 
                 // Audio
                 src_audio->format = AV_SAMPLE_FMT_S32;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
                 av_channel_layout_default(&src_audio->ch_layout, format_desc_.audio_channels);
-#else
-                src_audio->channels = format_desc_.audio_channels;
-#endif
                 src_audio->sample_rate = format_desc_.audio_sample_rate;
                 src_audio->nb_samples  = 0;
                 int samples_decoded    = 0;

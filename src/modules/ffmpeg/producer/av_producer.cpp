@@ -182,14 +182,6 @@ class Decoder
             ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
             ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
         } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-#if !(FFMPEG_NEW_CHANNEL_LAYOUT)
-            if (!ctx->channel_layout && ctx->channels) {
-                ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
-            }
-            if (!ctx->channels && ctx->channel_layout) {
-                ctx->channels = av_get_channel_layout_nb_channels(ctx->channel_layout);
-            }
-#endif
         }
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
@@ -239,11 +231,7 @@ class Decoder
                         // TODO (fix) is this always best?
                         av_frame->pts = av_frame->best_effort_timestamp;
 
-#if LIBAVUTIL_VERSION_MAJOR < 58
-                        auto duration_pts = av_frame->pkt_duration;
-#else
                         auto duration_pts = av_frame->duration;
-#endif
                         if (duration_pts <= 0) {
                             if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
 #if LIBAVCODEC_VERSION_MAJOR < 62
@@ -389,12 +377,8 @@ struct Filter
             // Find first audio stream to get a time_base for the first_pts calculation
             AVRational tb = {1, format_desc.audio_sample_rate};
             for (auto n = 0U; n < input->nb_streams; ++n) {
-                const auto st = input->streams[n];
-#if FFMPEG_NEW_CHANNEL_LAYOUT
+                const auto st             = input->streams[n];
                 const auto codec_channels = st->codecpar->ch_layout.nb_channels;
-#else
-                const auto codec_channels = st->codecpar->channels;
-#endif
                 if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && codec_channels > 0) {
                     tb = {1, st->codecpar->sample_rate};
                     break;
@@ -446,11 +430,7 @@ struct Filter
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             const auto codec_channels = st->codecpar->ch_layout.nb_channels;
-#else
-            const auto codec_channels = st->codecpar->channels;
-#endif
             if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && codec_channels == 0) {
                 continue;
             }
@@ -555,12 +535,8 @@ struct Filter
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
                     sources.emplace(index, source);
                 } else if (st->codec_type == AVMEDIA_TYPE_AUDIO) {
-#if FFMPEG_NEW_CHANNEL_LAYOUT
                     char channel_layout[128];
                     FF(av_channel_layout_describe(&st->ch_layout, channel_layout, sizeof(channel_layout)));
-#else
-                    const auto channel_layout = st->channel_layout;
-#endif
 
                     auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") %
                                  st->pkt_timebase.num % st->pkt_timebase.den % st->sample_rate %

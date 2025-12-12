@@ -19,7 +19,6 @@ set(SOURCES
 
 	ffmpeg.cpp
 	ffmpeg.h
-	defines.h
 	StdAfx.h
 )
 
