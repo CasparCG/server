@@ -195,17 +195,17 @@ class html_client
 
     bool try_pop(const core::video_field field)
     {
-        bool result = false;
+        bool                        result = false;
         std::lock_guard<std::mutex> lock(frames_mutex_);
 
         core::draw_frame audio_frame;
-        uint64_t audio_frame_timestamp = 0;
+        uint64_t         audio_frame_timestamp = 0;
 
         {
             std::lock_guard<std::mutex> audio_lock(audio_frames_mutex_);
             if (!audio_frames_.empty()) {
                 audio_frame_timestamp = audio_frames_.front().timestamp;
-                audio_frame = core::draw_frame(std::move(audio_frames_.front().frame));
+                audio_frame           = core::draw_frame(std::move(audio_frames_.front().frame));
                 audio_frames_.pop();
             }
         }
@@ -236,9 +236,9 @@ class html_client
                 }
             }
 
-            last_frame_time_ = frames_.front().timestamp;
+            last_frame_time_  = frames_.front().timestamp;
             last_video_frame_ = std::move(frames_.front().frame);
-            last_frame_      = last_video_frame_;
+            last_frame_       = last_video_frame_;
             frames_.pop();
 
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
@@ -249,7 +249,7 @@ class html_client
         if (audio_frame) {
             last_frame_time_ = audio_frame_timestamp;
             last_frame_      = core::draw_frame::over(last_video_frame_, audio_frame);
-            result = true;
+            result           = true;
         }
 
         return result;

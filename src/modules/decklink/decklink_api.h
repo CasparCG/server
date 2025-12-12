@@ -123,8 +123,8 @@ T* get_raw(const CComPtr<T>& ptr)
 
 namespace caspar { namespace decklink {
 
-using String = const char*;
-using BOOL   = bool;
+using String   = const char*;
+using BOOL     = bool;
 #define TRUE true
 #define FALSE false
 using UINT32   = uint32_t;

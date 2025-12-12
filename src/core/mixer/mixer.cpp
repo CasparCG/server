@@ -71,28 +71,28 @@ struct mixer::impl
             frame.accept(*image_mixer_);
         }
 
-        auto result  = image_mixer_->render(format_desc);
-        auto audio   = audio_mixer_(format_desc, nb_samples);
+        auto result = image_mixer_->render(format_desc);
+        auto audio  = audio_mixer_(format_desc, nb_samples);
 
         state_["audio"] = audio_mixer_.state();
 
         auto depth = image_mixer_->depth();
 
-        buffer_.push(std::async(std::launch::deferred,
-                                [result   = std::move(result),
-                                 audio   = std::move(audio),
-                                 graph   = graph_,
-                                 depth,
-                                 format_desc,
-                                 tag = this]() mutable {
-                                    auto desc = pixel_format_desc(pixel_format::bgra);
-                                    desc.planes.push_back(
-                                        pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
-                                    std::vector<array<const uint8_t>> image_data;
-                                    auto                              tuple   = std::move(result.get());
-                                    image_data.emplace_back(std::move(std::get<0>(tuple)));
-                                    return const_frame(tag, std::move(image_data), std::move(audio), desc, std::move(std::get<1>(tuple)));
-                                }));
+        buffer_.push(std::async(
+            std::launch::deferred,
+            [result = std::move(result),
+             audio  = std::move(audio),
+             graph  = graph_,
+             depth,
+             format_desc,
+             tag = this]() mutable {
+                auto desc = pixel_format_desc(pixel_format::bgra);
+                desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
+                std::vector<array<const uint8_t>> image_data;
+                auto                              tuple = std::move(result.get());
+                image_data.emplace_back(std::move(std::get<0>(tuple)));
+                return const_frame(tag, std::move(image_data), std::move(audio), desc, std::move(std::get<1>(tuple)));
+            }));
 
         if (buffer_.size() <= format_desc.field_count) {
             return const_frame{};

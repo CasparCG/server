@@ -424,8 +424,13 @@ com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInpu
     BMDDisplayMode actualMode = bmdModeUnknown;
     BOOL           supported  = false;
 
-    if (FAILED(device->DoesSupportVideoMode(
-            bmdVideoConnectionUnspecified, mode->GetDisplayMode(), pix_fmt, bmdNoVideoInputConversion, flag, &actualMode, &supported)))
+    if (FAILED(device->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+                                            mode->GetDisplayMode(),
+                                            pix_fmt,
+                                            bmdNoVideoInputConversion,
+                                            flag,
+                                            &actualMode,
+                                            &supported)))
         CASPAR_THROW_EXCEPTION(caspar_exception()
                                << msg_info(L"Could not determine whether device supports requested video format: " +
                                            get_mode_name(mode)));
@@ -593,9 +598,10 @@ class decklink_producer : public IDeckLinkInputCallback
             auto fmt     = get_caspar_video_format(newMode);
 
             if (fmt == input_format.format) {
-                // This gets called often if the enabled pixel format doesn't match the signal https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=144234
-                // So if the video format hasn't actually changed, then we can ignore this event.
-                // In the future we may wish to respect this in order to unpack the pixels ourselves
+                // This gets called often if the enabled pixel format doesn't match the signal
+                // https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=144234 So if the video format hasn't actually
+                // changed, then we can ignore this event. In the future we may wish to respect this in order to unpack
+                // the pixels ourselves
                 return S_OK;
             }
 

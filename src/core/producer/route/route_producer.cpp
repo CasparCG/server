@@ -46,10 +46,10 @@ namespace caspar { namespace core {
 
 class fix_stream_tag : public frame_visitor
 {
-    const void*                                                route_producer_ptr_;
+    const void*                                                     route_producer_ptr_;
     std::stack<std::pair<frame_transform, std::vector<draw_frame>>> frames_stack_;
-    std::optional<const_frame>                                 upd_frame_;
-    
+    std::optional<const_frame>                                      upd_frame_;
+
     fix_stream_tag(const fix_stream_tag&);
     fix_stream_tag& operator=(const fix_stream_tag&);
 
@@ -61,27 +61,27 @@ class fix_stream_tag : public frame_visitor
         frames_stack_.emplace(frame_transform{}, std::vector<draw_frame>());
     }
 
-    void push(const frame_transform& transform) {
-        frames_stack_.emplace(transform, std::vector<core::draw_frame>());
-    }
+    void push(const frame_transform& transform) { frames_stack_.emplace(transform, std::vector<core::draw_frame>()); }
 
-    void visit(const const_frame& frame) {
+    void visit(const const_frame& frame)
+    {
         // Get original tag from the frame
         const void* source_tag = frame.stream_tag();
-        
+
         // Calculate a unique but stable tag for this source
         // This calculation will always produce the same result for the same inputs
-        intptr_t base_addr = reinterpret_cast<intptr_t>(route_producer_ptr_);
+        intptr_t base_addr   = reinterpret_cast<intptr_t>(route_producer_ptr_);
         intptr_t source_addr = reinterpret_cast<intptr_t>(source_tag);
         // Use XOR to create a unique value that combines route producer and source identities
-        intptr_t unique_value = base_addr ^ source_addr ^ 0xDEADBEEF; // Constant helps avoid collisions
-        const void* unique_tag = reinterpret_cast<const void*>(unique_value);
-        
+        intptr_t    unique_value = base_addr ^ source_addr ^ 0xDEADBEEF; // Constant helps avoid collisions
+        const void* unique_tag   = reinterpret_cast<const void*>(unique_value);
+
         // Apply the tag to the frame
         upd_frame_ = frame.with_tag(unique_tag);
     }
 
-    void pop() {
+    void pop()
+    {
         auto popped = frames_stack_.top();
         frames_stack_.pop();
 
@@ -97,7 +97,8 @@ class fix_stream_tag : public frame_visitor
         }
     }
 
-    draw_frame operator()(draw_frame frame) {
+    draw_frame operator()(draw_frame frame)
+    {
         frame.accept(*this);
 
         auto popped = frames_stack_.top();
@@ -122,7 +123,7 @@ class route_producer
     caspar::timer produce_timer_;
     caspar::timer consume_timer_;
 
-    std::shared_ptr<route> route_;
+    std::shared_ptr<route>  route_;
     const video_format_desc format_desc_;
 
     std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
@@ -151,7 +152,11 @@ class route_producer
     }
 
   public:
-    route_producer(std::shared_ptr<route> route, video_format_desc format_desc, int buffer, int source_channel, int source_layer)
+    route_producer(std::shared_ptr<route> route,
+                   video_format_desc      format_desc,
+                   int                    buffer,
+                   int                    source_channel,
+                   int                    source_layer)
         : route_(route)
         , format_desc_(format_desc)
         , source_channel_(source_channel)
@@ -183,7 +188,8 @@ class route_producer
                         frame1b = core::draw_frame::push(frame1);
                     }
 
-                    // Update the tag in the frame to allow the audio mixer to distinguish between the source frame and the routed frame
+                    // Update the tag in the frame to allow the audio mixer to distinguish between the source frame and
+                    // the routed frame
                     frame1b = self->tag_fix_(frame1b);
 
                     auto frame2b = frame2;
@@ -226,12 +232,13 @@ class route_producer
     }
 
     core::video_field next_field_ = core::video_field::a;
-    draw_frame receive_impl(core::video_field field, int nb_samples) override
+    draw_frame        receive_impl(core::video_field field, int nb_samples) override
     {
         // If going i -> p, alternate between the fields
         // Note: this doesn't fix the audio if going 50i -> 25p
-        if (field == core::video_field::progressive && source_format_.field_count != 1 && format_desc_.fps >= source_format_.fps) {
-            field = next_field_;
+        if (field == core::video_field::progressive && source_format_.field_count != 1 &&
+            format_desc_.fps >= source_format_.fps) {
+            field       = next_field_;
             next_field_ = (next_field_ == core::video_field::a) ? core::video_field::b : core::video_field::a;
         }
 
@@ -308,7 +315,8 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
     }
 
     auto buffer = get_param(L"BUFFER", params, 0);
-    auto rp     = spl::make_shared<route_producer>((*channel_it)->route(layer, mode), dependencies.format_desc, buffer, channel, layer);
+    auto rp     = spl::make_shared<route_producer>(
+        (*channel_it)->route(layer, mode), dependencies.format_desc, buffer, channel, layer);
     rp->connect_slot();
     return rp;
 }

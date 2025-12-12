@@ -31,9 +31,9 @@
 
 #include <common/scope_exit.h>
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <future>
 #include <vector>
-#include <boost/algorithm/string/predicate.hpp>
 
 namespace caspar { namespace core {
 
@@ -111,7 +111,8 @@ class sting_producer : public frame_producer
             uint32_t transition_end = std::max(info_.trigger_point, overlay_duration);
 
             if (current_frame_ >= transition_end) {
-                // CASPAR_LOG(debug) << L"[sting] Cut mode transition complete at frame " << current_frame_ << L", returning dst_producer_";
+                // CASPAR_LOG(debug) << L"[sting] Cut mode transition complete at frame " << current_frame_ << L",
+                // returning dst_producer_";
                 return dst_producer_;
             }
 
@@ -119,14 +120,14 @@ class sting_producer : public frame_producer
         }
 
         auto duration = target_duration();
-        
+
         if (info_.audio_fade_duration < UINT32_MAX) {
             uint32_t audio_end = info_.audio_fade_start + info_.audio_fade_duration;
             if (current_frame_ >= audio_end) {
                 return dst_producer_;
             }
         }
-        
+
         return duration && current_frame_ >= *duration ? dst_producer_ : core::frame_producer::empty();
     }
 
@@ -144,7 +145,7 @@ class sting_producer : public frame_producer
 
             return static_cast<int64_t>(std::max(info_.trigger_point, overlay_duration));
         }
-        
+
         auto duration = static_cast<int64_t>(mask_producer_->nb_frames());
         if (duration > -1) {
             return std::optional<int64_t>(duration);
@@ -180,7 +181,7 @@ class sting_producer : public frame_producer
                 return info_.audio_fade_start + info_.audio_fade_duration;
             } else {
                 // Infinite mask and no audio fade: use a default duration (e.g., 10 seconds / 600 frames)
-                return 600; 
+                return 600;
             }
         }
 
@@ -198,8 +199,7 @@ class sting_producer : public frame_producer
         CASPAR_SCOPE_EXIT
         {
             state_                    = dst_producer_->state();
-            state_["transition/type"] = is_cut_mode_ ?
-                                        std::string("cut") : std::string("sting");
+            state_["transition/type"] = is_cut_mode_ ? std::string("cut") : std::string("sting");
 
             if (duration)
                 state_["transition/frame"] = {static_cast<int>(current_frame_), static_cast<int>(*duration)};
@@ -223,28 +223,33 @@ class sting_producer : public frame_producer
             if (!src) {
                 src = src_producer_->receive(field, nb_samples);
                 src_.set(field, src);
-                if (!src) src = src_producer_->last_frame(field);
+                if (!src)
+                    src = src_producer_->last_frame(field);
             }
 
             auto dst = dst_.get(field);
             if (!dst && current_frame_ >= info_.trigger_point) {
                 dst = dst_producer_->receive(field, nb_samples);
                 dst_.set(field, dst);
-                if (!dst) dst = dst_producer_->last_frame(field);
+                if (!dst)
+                    dst = dst_producer_->last_frame(field);
             }
 
             draw_frame result = (current_frame_ < info_.trigger_point ? src : dst);
 
             double audio_delta = get_audio_delta();
-            if (src) src.transform().audio_transform.volume = 1.0 - audio_delta;
-            if (dst) dst.transform().audio_transform.volume = audio_delta;
+            if (src)
+                src.transform().audio_transform.volume = 1.0 - audio_delta;
+            if (dst)
+                dst.transform().audio_transform.volume = audio_delta;
 
             bool has_overlay = overlay_producer_ != core::frame_producer::empty();
-            auto overlay = overlay_.get(field);
+            auto overlay     = overlay_.get(field);
             if (has_overlay && !overlay) {
                 overlay = overlay_producer_->receive(field, nb_samples);
                 overlay_.set(field, overlay);
-                if (!overlay) overlay = overlay_producer_->last_frame(field);
+                if (!overlay)
+                    overlay = overlay_producer_->last_frame(field);
             }
 
             src_.set(field, draw_frame{});
@@ -364,7 +369,7 @@ class sting_producer : public frame_producer
         if (!duration) {
             return 0;
         }
-        
+
         return audio_tweener_(current_frame_, 0.0, 1.0, static_cast<double>(*duration));
     }
 

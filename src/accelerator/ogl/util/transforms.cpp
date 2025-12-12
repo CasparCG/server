@@ -173,7 +173,10 @@ struct wrapped_vertex
 
 static const double epsilon = 0.001;
 
-bool inline point_is_outside_of_line(const t_point& line_1, const t_point& line_2, const t_point& vertex, bool invert_winding)
+bool inline point_is_outside_of_line(const t_point& line_1,
+                                     const t_point& line_2,
+                                     const t_point& vertex,
+                                     bool           invert_winding)
 {
     // use a cross product to check if the point is outside the crop region
     auto cross = (line_2(0) - line_1(0)) * (vertex(1) - line_1(1)) - (line_2(1) - line_1(1)) * (vertex(0) - line_1(0));
@@ -353,7 +356,7 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
         for (int l = 0; l < 4; ++l) {
             int next_l = (l + 1) % 4;
             signed_area += (crop_region.coords[next_l](0) - crop_region.coords[l](0)) *
-                          (crop_region.coords[next_l](1) + crop_region.coords[l](1));
+                           (crop_region.coords[next_l](1) + crop_region.coords[l](1));
         }
         // In screen coordinates (Y down), normal clockwise winding gives negative signed area
         // We need to invert the test when the winding is flipped (positive signed area)

@@ -94,24 +94,24 @@ class transition_producer : public frame_producer
         return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : core::frame_producer::empty();
     }
 
-    [[nodiscard]] std::optional<int64_t> auto_play_delta() const override 
+    [[nodiscard]] std::optional<int64_t> auto_play_delta() const override
     {
         // Return how many frames before the end to start the transition
         // Must never return 0 to avoid duplicate fields in AUTO playback
-        
+
         int64_t delta;
-        
-        switch(info_.type) {
+
+        switch (info_.type) {
             case transition_type::cut:
                 // CUT: Need full duration to show all frames
                 delta = info_.duration;
                 break;
-                
+
             case transition_type::cutfade:
                 // CUTFADE: Source is removed on first frame
                 delta = 1;
                 break;
-                
+
             case transition_type::vfade:
                 // VFADE: Source fades out by midpoint
                 delta = static_cast<int64_t>(std::floor(info_.duration / 2.0));
@@ -123,7 +123,7 @@ class transition_producer : public frame_producer
                 delta = info_.duration;
                 break;
         }
-        
+
         // Ensure we never return less than 1
         return std::max(delta, int64_t(1));
     }
@@ -185,7 +185,8 @@ class transition_producer : public frame_producer
         // If transition is complete, return destination
         if (current_frame_ >= info_.duration) {
             auto dst = dst_producer_->receive(field, nb_samples);
-            if (!dst) dst = dst_producer_->last_frame(field);
+            if (!dst)
+                dst = dst_producer_->last_frame(field);
             return dst;
         }
 
@@ -194,13 +195,15 @@ class transition_producer : public frame_producer
             if (current_frame_ >= info_.duration) {
                 // Cut now - return destination
                 auto dst = dst_producer_->receive(field, nb_samples);
-                if (!dst) dst = dst_producer_->last_frame(field);
+                if (!dst)
+                    dst = dst_producer_->last_frame(field);
                 current_frame_++; // Increment after processing
                 return dst;
             } else {
                 // Not time to cut yet - return source
                 auto src = src_producer_->receive(field, nb_samples);
-                if (!src) src = src_producer_->last_frame(field);
+                if (!src)
+                    src = src_producer_->last_frame(field);
                 current_frame_++; // Increment after processing
                 return src;
             }
@@ -233,83 +236,82 @@ class transition_producer : public frame_producer
         // Helper lambdas to get wrapped frames
         auto get_src_frame = [&]() {
             auto f = src_producer_->receive(field, nb_samples);
-            if (!f) f = src_producer_->last_frame(field);
+            if (!f)
+                f = src_producer_->last_frame(field);
             return draw_frame::push(std::move(f));
         };
         auto get_dst_frame = [&]() {
             auto f = dst_producer_->receive(field, nb_samples);
-            if (!f) f = dst_producer_->last_frame(field);
+            if (!f)
+                f = dst_producer_->last_frame(field);
             return draw_frame::push(std::move(f));
         };
 
         if (info_.type == transition_type::cut) {
             return get_dst_frame();
-        }
-        else if (info_.type == transition_type::fadecut) {
+        } else if (info_.type == transition_type::fadecut) {
             // Only use source during transition
-            auto src = get_src_frame();
-            double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
+            auto   src     = get_src_frame();
+            double delta   = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
             double opacity = info_.duration > 1 ? 1.0 - delta : 0.0;
-            src.transform().image_transform.opacity = opacity;
-            src.transform().audio_transform.volume = opacity;
+            src.transform().image_transform.opacity          = opacity;
+            src.transform().audio_transform.volume           = opacity;
             src.transform().audio_transform.immediate_volume = current_frame_ == 0;
             return src;
-        }
-        else if (info_.type == transition_type::vfade) {
-            double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
-            bool is_even_duration = (info_.duration % 2 == 0);
+        } else if (info_.type == transition_type::vfade) {
+            double delta            = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
+            bool   is_even_duration = (info_.duration % 2 == 0);
 
             if (is_even_duration) {
                 double half_step = 0.5 / (info_.duration - 1);
                 if (delta >= (0.5 - half_step) && delta < 0.5) {
-                    auto src = get_src_frame();
+                    auto src                                = get_src_frame();
                     src.transform().image_transform.opacity = 0.0;
-                    src.transform().audio_transform.volume = 0.0;
+                    src.transform().audio_transform.volume  = 0.0;
                     return src;
                 }
                 if (delta >= 0.5 && delta < (0.5 + half_step)) {
-                    auto dst = get_dst_frame();
-                    dst.transform().image_transform.opacity = 0.0;
-                    dst.transform().audio_transform.volume = 0.0;
+                    auto dst                                         = get_dst_frame();
+                    dst.transform().image_transform.opacity          = 0.0;
+                    dst.transform().audio_transform.volume           = 0.0;
                     dst.transform().audio_transform.immediate_volume = true;
                     return dst;
                 }
             }
             if (!is_even_duration && delta == 0.5) {
-                auto dst = get_dst_frame();
-                dst.transform().image_transform.opacity = 0.0;
-                dst.transform().audio_transform.volume = 0.0;
+                auto dst                                         = get_dst_frame();
+                dst.transform().image_transform.opacity          = 0.0;
+                dst.transform().audio_transform.volume           = 0.0;
                 dst.transform().audio_transform.immediate_volume = true;
                 return dst;
             } else if (delta < 0.5) {
-                auto src = get_src_frame();
-                double fade_out = 1.0 - (delta * 2.0);
+                auto   src                              = get_src_frame();
+                double fade_out                         = 1.0 - (delta * 2.0);
                 src.transform().image_transform.opacity = fade_out;
-                src.transform().audio_transform.volume = fade_out;
+                src.transform().audio_transform.volume  = fade_out;
                 return src;
             } else {
-                auto dst = get_dst_frame();
-                double fade_in = (delta - 0.5) * 2.0;
-                dst.transform().image_transform.opacity = fade_in;
-                dst.transform().audio_transform.volume = fade_in;
-                dst.transform().audio_transform.immediate_volume =
-                    is_even_duration ?
-                    (delta < 0.5 + (1.0 / (info_.duration - 1))) :
-                    (delta <= 0.5 + (1.0 / (info_.duration - 1)));
+                auto   dst                                       = get_dst_frame();
+                double fade_in                                   = (delta - 0.5) * 2.0;
+                dst.transform().image_transform.opacity          = fade_in;
+                dst.transform().audio_transform.volume           = fade_in;
+                dst.transform().audio_transform.immediate_volume = is_even_duration
+                                                                       ? (delta < 0.5 + (1.0 / (info_.duration - 1)))
+                                                                       : (delta <= 0.5 + (1.0 / (info_.duration - 1)));
                 return dst;
             }
         }
         // For all other transitions, we need both frames
-        auto src_frame = get_src_frame();
-        auto dst_frame = get_dst_frame();
-        const double delta = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
-        
+        auto         src_frame = get_src_frame();
+        auto         dst_frame = get_dst_frame();
+        const double delta     = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
+
         // Get horizontal or vertical direction based on transition direction
-        const bool is_horizontal = info_.direction == transition_direction::from_left || 
-                                  info_.direction == transition_direction::from_right;
+        const bool is_horizontal =
+            info_.direction == transition_direction::from_left || info_.direction == transition_direction::from_right;
         const double h_dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;
         const double v_dir = info_.direction == transition_direction::from_top ? 1.0 : -1.0;
-        
+
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
         if (info_.type == transition_type::cutfade) {
@@ -322,25 +324,22 @@ class transition_producer : public frame_producer
             if (info_.duration <= 1) {
                 mix = 1.0;
             }
-            dst_frame.transform().image_transform.opacity = mix;
-            dst_frame.transform().audio_transform.volume = mix;
+            dst_frame.transform().image_transform.opacity          = mix;
+            dst_frame.transform().audio_transform.volume           = mix;
             dst_frame.transform().audio_transform.immediate_volume = current_frame_ == 0;
             return dst_frame;
-        } 
-        else if (info_.type == transition_type::mix) {
+        } else if (info_.type == transition_type::mix) {
             dst_frame.transform().image_transform.opacity = delta;
             dst_frame.transform().image_transform.is_mix  = true;
             src_frame.transform().image_transform.opacity = 1.0 - delta;
             src_frame.transform().image_transform.is_mix  = true;
-        } 
-        else if (info_.type == transition_type::slide) {
+        } else if (info_.type == transition_type::slide) {
             if (is_horizontal) {
                 dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * h_dir;
             } else {
                 dst_frame.transform().image_transform.fill_translation[1] = (-1.0 + delta) * v_dir;
             }
-        } 
-        else if (info_.type == transition_type::push) {
+        } else if (info_.type == transition_type::push) {
             if (is_horizontal) {
                 dst_frame.transform().image_transform.fill_translation[0] = (-1.0 + delta) * h_dir;
                 src_frame.transform().image_transform.fill_translation[0] = (0.0 + delta) * h_dir;
@@ -348,8 +347,7 @@ class transition_producer : public frame_producer
                 dst_frame.transform().image_transform.fill_translation[1] = (-1.0 + delta) * v_dir;
                 src_frame.transform().image_transform.fill_translation[1] = (0.0 + delta) * v_dir;
             }
-        } 
-        else if (info_.type == transition_type::wipe) {
+        } else if (info_.type == transition_type::wipe) {
             if (is_horizontal) {
                 if (info_.direction == transition_direction::from_right) {
                     dst_frame.transform().image_transform.clip_scale[0] = delta;

@@ -115,8 +115,8 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
 struct audio_transform final
 {
-    double volume = 1.0;
-    bool   immediate_volume = false;  // When false, intra-frame samples are ramped from previous volume in audio mixer
+    double volume           = 1.0;
+    bool   immediate_volume = false; // When false, intra-frame samples are ramped from previous volume in audio mixer
 
     audio_transform& operator*=(const audio_transform& other);
     audio_transform  operator*(const audio_transform& other) const;

@@ -335,9 +335,9 @@ struct Stream
         }
     }
 
-    void send(std::tuple<core::const_frame, std::int64_t, std::int64_t>&    data,
-              const core::video_format_desc&                 format_desc,
-              std::function<void(std::shared_ptr<AVPacket>)> cb)
+    void send(std::tuple<core::const_frame, std::int64_t, std::int64_t>& data,
+              const core::video_format_desc&                             format_desc,
+              std::function<void(std::shared_ptr<AVPacket>)>             cb)
     {
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
@@ -346,7 +346,7 @@ struct Stream
 
         if (in_frame) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame = make_av_video_frame(in_frame, format_desc);
+                frame      = make_av_video_frame(in_frame, format_desc);
                 frame->pts = video_pts;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
                 frame      = make_av_audio_frame(in_frame, format_desc);
@@ -405,8 +405,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
 
-    tbb::concurrent_bounded_queue<std::tuple<core::const_frame, std::int64_t, std::int64_t> > frame_buffer_;
-    std::thread                                      frame_thread_;
+    tbb::concurrent_bounded_queue<std::tuple<core::const_frame, std::int64_t, std::int64_t>> frame_buffer_;
+    std::thread                                                                              frame_thread_;
 
     common::bit_depth depth_;
 
@@ -435,14 +435,16 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.push({ core::const_frame{}, -1, -1 });
+            frame_buffer_.push({core::const_frame{}, -1, -1});
             frame_thread_.join();
         }
     }
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
@@ -638,7 +640,7 @@ struct ffmpeg_consumer : public core::frame_consumer
             }
         }
 
-        if (!frame_buffer_.try_push({ frame, video_pts, audio_pts })) {
+        if (!frame_buffer_.try_push({frame, video_pts, audio_pts})) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
 

@@ -91,24 +91,23 @@ class image_renderer
             static const std::vector<uint8_t, boost::alignment::aligned_allocator<uint8_t, 32>> buffer(max_frame_size_,
                                                                                                        0);
             return make_ready_future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>(
-                { array<const std::uint8_t>(buffer.data(), format_desc.size, true), nullptr }
-            );
+                {array<const std::uint8_t>(buffer.data(), format_desc.size, true), nullptr});
         }
 
-        auto f =
-            std::move(ogl_->dispatch_async([=, layers = std::move(layers)]() mutable
-                                     -> std::tuple<std::future<array<const std::uint8_t>>, std::shared_ptr<core::texture>> {
-            auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
-            draw(target_texture, std::move(layers), format_desc);
-            return { ogl_->copy_async(target_texture), target_texture };
-        }));
+        auto f = std::move(
+            ogl_->dispatch_async([=, layers = std::move(layers)]() mutable
+                                 -> std::tuple<std::future<array<const std::uint8_t>>, std::shared_ptr<core::texture>> {
+                auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, depth_);
+                draw(target_texture, std::move(layers), format_desc);
+                return {ogl_->copy_async(target_texture), target_texture};
+            }));
 
-        return std::async(std::launch::deferred, [f = std::move(f)]() mutable
-                              -> std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>> {
-            auto tuple = std::move(f.get());
-            return { std::move(std::get<0>(tuple).get()), std::move(std::get<1>(tuple)) };
-        });
-
+        return std::async(
+            std::launch::deferred,
+            [f = std::move(f)]() mutable -> std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>> {
+                auto tuple = std::move(f.get());
+                return {std::move(std::get<0>(tuple).get()), std::move(std::get<1>(tuple))};
+            });
     }
 
     common::bit_depth depth() const { return depth_; }
