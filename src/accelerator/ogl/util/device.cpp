@@ -68,9 +68,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::wstring version_;
 
-    io_context                          io_context_;
+    io_context                             io_context_;
     decltype(make_work_guard(io_context_)) work_;
-    std::thread                         thread_;
+    std::thread                            thread_;
 
     impl()
         : context_(new device_context())
@@ -143,16 +143,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task   = task_type(std::forward<Func>(func));
         auto future = task.get_future();
-        boost::asio::spawn(io_context_,
-                           std::move(task)
-#if BOOST_VERSION >= 108000
-                               ,
-                           [](std::exception_ptr e) {
-                               if (e)
-                                   std::rethrow_exception(e);
-                           }
-#endif
-        );
+        boost::asio::spawn(io_context_, std::move(task), [](std::exception_ptr e) {
+            if (e)
+                std::rethrow_exception(e);
+        });
         return future;
     }
 
@@ -408,8 +402,8 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
-void         device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->io_context_, std::move(func)); }
-std::wstring device::version() const { return impl_->version(); }
+void device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->io_context_, std::move(func)); }
+std::wstring                 device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }
 std::future<void>            device::gc() { return impl_->gc(); }
 }}} // namespace caspar::accelerator::ogl

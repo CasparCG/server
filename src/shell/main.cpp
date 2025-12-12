@@ -46,12 +46,12 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/stacktrace.hpp>
-#include <boost/asio.hpp>
 
 #include <atomic>
 #include <thread>
@@ -64,11 +64,7 @@ namespace caspar {
 void setup_global_locale()
 {
     boost::locale::generator gen;
-#if BOOST_VERSION >= 108100
     gen.categories(boost::locale::category_t::codepage);
-#else
-    gen.categories(boost::locale::codepage_facet);
-#endif
 
     std::locale::global(gen(""));
 
@@ -92,7 +88,10 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     boost::asio::io_context io;
 
     auto restart  = false;
-    auto shutdown = [&](bool restart_) { restart = restart_; io.stop(); };
+    auto shutdown = [&](bool restart_) {
+        restart = restart_;
+        io.stop();
+    };
 
     print_info();
 
@@ -161,7 +160,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 
     // Signal handlers needs to be installed after Cef has been initialized.
     boost::asio::signal_set signals(io, SIGINT, SIGTERM);
-    signals.async_wait([&](auto, auto){ io.stop(); });
+    signals.async_wait([&](auto, auto) { io.stop(); });
 
     io.run();
 

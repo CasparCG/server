@@ -128,11 +128,7 @@ std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
     boost::locale::generator gen;
     gen.locale_cache_enabled(true);
-#if BOOST_VERSION >= 108100
     gen.categories(boost::locale::category_t::codepage);
-#else
-    gen.categories(boost::locale::codepage_facet);
-#endif
 
     std::stringstream           result_stream;
     boost::filesystem::ifstream filestream(file);
