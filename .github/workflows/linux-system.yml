@@ -12,8 +12,6 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - os: ubuntu-22.04
-                      distribution: jammy
                     - os: ubuntu-24.04
                       distribution: noble
 

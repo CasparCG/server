@@ -22,8 +22,8 @@ System Requirements
 
 ### Linux
 
- - Ubuntu 22.04 or 24.04 are recommended
- - Other distributions and releases will work but have not been tested
+ - Ubuntu 24.04 is recommended
+ - Other distributions and releases will work but you will need to compile it yourself and have not been tested
 
 Getting Started
 ---------------
