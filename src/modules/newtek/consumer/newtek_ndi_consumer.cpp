@@ -101,6 +101,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     {
         if (send_thread.joinable()) {
             send_thread.interrupt();
+            worker_cond_.notify_all();  // Wake up the thread so it can see the interrupt
             send_thread.join();
         }
     }
@@ -172,19 +173,38 @@ struct newtek_ndi_consumer : public core::frame_consumer
                 // Use steady clock to generate a near perfect NDI tick time.
                 auto frametimeUs = static_cast<int>(1000000 / format_desc_.fps);
                 auto time_point  = std::chrono::steady_clock::now();
-                time_point += std::chrono::microseconds(frametimeUs);
+                time_point += std::chrono::microseconds(frametimeUs);               
+                // Variables for frame drop tracking
+                static int drop_count = 0;
+                static auto last_warning = std::chrono::steady_clock::now();
+                
                 while (!send_thread.interruption_requested()) {
                     core::const_frame frame;
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        worker_cond_.wait(lock, [&] { return !buffer_.empty(); });
+                        worker_cond_.wait(lock, [&] { return !buffer_.empty() || send_thread.interruption_requested(); });
+                        if (send_thread.interruption_requested()) {
+                            break;
+                        }
+                         // Limit buffer to prevent memory buildup (max 8 frames)
+                        while (buffer_.size() > 8) {
+                            buffer_.pop();
+                            drop_count++;
+                        }             
+                        // Only log warning once per second to avoid spam
+                        auto now = std::chrono::steady_clock::now();
+                        if (drop_count > 0 && std::chrono::duration_cast<std::chrono::seconds>(now - last_warning).count() >= 1) {
+                            CASPAR_LOG(warning) << L"NDI dropped " << drop_count << L" frames in last second";
+                            drop_count = 0;
+                            last_warning = now;
+                        }
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
                         frame = std::move(buffer_.front());
                         buffer_.pop();
-                    }
+                    }  
                     graph_->set_value("ndi-tick", ndi_timer_.elapsed() * format_desc_.fps * 0.5);
                     ndi_timer_.restart();
-                    frame_timer_.restart();
+                    frame_timer_.restart();      
                     auto audio_data             = frame.audio_data();
                     int  audio_data_size        = static_cast<int>(audio_data.size());
                     ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
@@ -200,11 +220,13 @@ struct newtek_ndi_consumer : public core::frame_consumer
                         }
                     } else {
                         ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
-                    }
+                    }                 
                     ndi_lib_->send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
-                    frame_no_++;
+                    frame_no_++;                
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     std::this_thread::sleep_until(time_point);
+                    // Clear frame after sleep to allow NDI to finish processing
+                    frame = core::const_frame();
                     time_point += std::chrono::microseconds(frametimeUs);
                 }
             } catch (boost::thread_interrupted) {
