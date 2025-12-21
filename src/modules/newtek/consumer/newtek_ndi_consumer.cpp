@@ -57,6 +57,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     const int               instance_no_;
     const std::wstring      name_;
     const bool              allow_fields_;
+    const int               buffer_size_;
 
     core::video_format_desc              format_desc_;
     int                                  channel_index_;
@@ -80,11 +81,12 @@ struct newtek_ndi_consumer : public core::frame_consumer
     std::unique_ptr<NDIlib_send_instance_t, std::function<void(NDIlib_send_instance_t*)>> ndi_send_instance_;
 
   public:
-    newtek_ndi_consumer(std::wstring name, bool allow_fields)
+    newtek_ndi_consumer(std::wstring name, bool allow_fields, int buffer_size)
         : name_(!name.empty() ? name : default_ndi_name())
         , instance_no_(instances_++)
         , frame_no_(0)
         , allow_fields_(allow_fields)
+        , buffer_size_(buffer_size)
         , channel_index_(0)
         , executor_(L"ndi_consumer[" + std::to_wstring(instance_no_) + L"]")
     {
@@ -186,25 +188,25 @@ struct newtek_ndi_consumer : public core::frame_consumer
                         if (send_thread.interruption_requested()) {
                             break;
                         }
-                         // Limit buffer to prevent memory buildup (max 8 frames)
-                        while (buffer_.size() > 8) {
+                        // Limit buffer to prevent memory buildup
+                        while (buffer_.size() > buffer_size_) {
                             buffer_.pop();
                             drop_count++;
-                        }             
+                        }              
                         // Only log warning once per second to avoid spam
                         auto now = std::chrono::steady_clock::now();
                         if (drop_count > 0 && std::chrono::duration_cast<std::chrono::seconds>(now - last_warning).count() >= 1) {
                             CASPAR_LOG(warning) << L"NDI dropped " << drop_count << L" frames in last second";
                             drop_count = 0;
                             last_warning = now;
-                        }
+                        }        
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
                         frame = std::move(buffer_.front());
                         buffer_.pop();
-                    }  
+                    }
                     graph_->set_value("ndi-tick", ndi_timer_.elapsed() * format_desc_.fps * 0.5);
                     ndi_timer_.restart();
-                    frame_timer_.restart();      
+                    frame_timer_.restart();
                     auto audio_data             = frame.audio_data();
                     int  audio_data_size        = static_cast<int>(audio_data.size());
                     ndi_audio_frame_.no_samples = audio_data_size / format_desc_.audio_channels;
@@ -220,9 +222,9 @@ struct newtek_ndi_consumer : public core::frame_consumer
                         }
                     } else {
                         ndi_video_frame_.p_data = const_cast<uint8_t*>(frame.image_data(0).begin());
-                    }                 
+                    }
                     ndi_lib_->send_send_video_v2(*ndi_send_instance_, &ndi_video_frame_);
-                    frame_no_++;                
+                    frame_no_++;
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     std::this_thread::sleep_until(time_point);
                     // Clear frame after sleep to allow NDI to finish processing
@@ -274,6 +276,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
         core::monitor::state state;
         state["ndi/name"]         = name_;
         state["ndi/allow_fields"] = allow_fields_;
+        state["ndi/buffer_size"]  = buffer_size_;
         return state;
     }
 };
@@ -294,7 +297,8 @@ create_ndi_consumer(const std::vector<std::wstring>&                         par
 
     std::wstring name         = get_param(L"NAME", params, L"");
     bool         allow_fields = contains_param(L"ALLOW_FIELDS", params);
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    int          buffer_size  = get_param(L"BUFFER_SIZE", params, 16); 
+    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields, buffer_size);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -305,11 +309,12 @@ create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           
 {
     auto name         = ptree.get(L"name", L"");
     bool allow_fields = ptree.get(L"allow-fields", false);
+    int  buffer_size  = ptree.get(L"buffer-size", 16);
 
     if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Newtek NDI consumer only supports 8-bit color depth."));
 
-    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields);
+    return spl::make_shared<newtek_ndi_consumer>(name, allow_fields, buffer_size);
 }
 
 }} // namespace caspar::newtek
