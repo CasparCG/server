@@ -3,7 +3,6 @@
 #include <common/except.h>
 
 #include <boost/asio.hpp>
-#include <iomanip>
 #include <sstream>
 #include <string>
 
@@ -63,13 +62,11 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     std::getline(response_stream, res.status_message);
 
     if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-        // TODO
-        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid HTTP response"));
     }
 
     if (res.status_code < 200 || res.status_code >= 300) {
-        // TODO
-        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info("HTTP request failed with status " + std::to_string(res.status_code)));
     }
 
     // Read the response headers, which are terminated by a blank line.
@@ -102,21 +99,30 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     return res;
 }
 
-std::string url_encode(const std::string& str)
+// URL-encode a file path, preserving '/' and '\' as path separators.
+// Encodes special characters in each path component per RFC 3986.
+// Only unreserved characters (A-Za-z0-9-_.~) are not encoded.
+std::string url_encode_path(const std::string& path)
 {
-    std::stringstream escaped;
-    escaped.fill('0');
-    escaped << std::hex;
+    std::string result;
+    result.reserve(path.size() * 2); // Reserve space to avoid reallocations
 
-    for (auto c : str) {
-        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            escaped << c;
+    for (auto c : path) {
+        // Treat both forward slash and backslash as path separators
+        // Always output forward slash for HTTP URLs
+        if (c == '/' || c == '\\') {
+            result += '/';
+        } else if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            result += c;
         } else {
-            escaped << std::uppercase << '%' << std::setw(2) << int((unsigned char)c) << std::nouppercase;
+            // Encode special character as %XX
+            result += '%';
+            result += "0123456789ABCDEF"[(unsigned char)c >> 4];
+            result += "0123456789ABCDEF"[(unsigned char)c & 0x0F];
         }
     }
 
-    return escaped.str();
+    return result;
 }
 
 }} // namespace caspar::http
