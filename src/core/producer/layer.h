@@ -44,6 +44,8 @@ class layer final
     void swap(layer& other);
 
     void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play = false);
+    void
+    load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play, std::optional<uint32_t> auto_length);
     void play();
     void preview();
     void pause();
@@ -52,6 +54,8 @@ class layer final
 
     draw_frame receive(const video_field field, int nb_samples);
     draw_frame receive_background(const video_field field, int nb_samples);
+
+    std::future<std::wstring> call(const std::vector<std::wstring>& params);
 
     core::monitor::state state() const;
 
