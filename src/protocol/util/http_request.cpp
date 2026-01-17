@@ -1,6 +1,7 @@
 #include "http_request.h"
 
 #include <common/except.h>
+#include <common/log.h>
 
 #include <boost/asio.hpp>
 #include <sstream>
@@ -14,6 +15,9 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     using namespace boost;
 
     HTTPResponse res;
+
+    // Debug log the URL being requested
+    CASPAR_LOG(debug) << "HTTP request: GET " << path;
 
     asio::io_context io_context;
 
