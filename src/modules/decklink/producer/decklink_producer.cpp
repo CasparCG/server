@@ -791,8 +791,8 @@ class decklink_producer : public IDeckLinkInputCallback
                                         << static_cast<int>(sync_drift * 1000) << "ms), recreating filters to resync";
 
                     // Recreate filters to clear all buffered data
-                    video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
-                    audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+                    video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_, hdr_);
+                    audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_, hdr_);
 
                     in_sync_  = 0.0;
                     out_sync_ = 0.0;
