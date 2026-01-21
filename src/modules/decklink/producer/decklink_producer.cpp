@@ -552,14 +552,6 @@ class decklink_producer : public IDeckLinkInputCallback
             BMDTimeValue in_video_pts = 0LL;
             BMDTimeValue in_audio_pts = 0LL;
 
-            // If the video is delayed too much, audio only will be delivered
-            // we don't want audio only since the buffer is small and we keep avcodec
-            // very busy processing all the (unnecessary) packets. Also, because there is
-            // no audio, the sync values will be incorrect.
-            if (!audio) {
-                return S_OK;
-            }
-
             if (video) {
                 const auto flags = video->GetFlags();
                 has_signal_      = !(flags & bmdFrameHasNoInputSource);
@@ -675,6 +667,25 @@ class decklink_producer : public IDeckLinkInputCallback
                     CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
                 }
                 out_sync_ = out_sync;
+
+                // If filter output sync has drifted too far from input sync, recreate the filters to resync.
+                // This usually happens after signal loss/regain from receiving incomplete frames.
+                const double frame_duration_threshold = 1.5 / input_format.hz;
+                const double sync_drift               = std::abs(out_sync - in_sync);
+                if (sync_drift > frame_duration_threshold) {
+                    CASPAR_LOG(warning) << print() << " Excessive A/V sync drift detected ("
+                                        << static_cast<int>(sync_drift * 1000) << "ms), recreating filters to resync";
+
+                    // Recreate filters to clear all buffered data
+                    video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_);
+                    audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_);
+
+                    in_sync_  = 0.0;
+                    out_sync_ = 0.0;
+
+                    // Skip this iteration and start fresh
+                    return S_OK;
+                }
 
                 graph_->set_value("in-sync", in_sync * 2.0 + 0.5);
                 graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
