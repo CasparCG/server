@@ -27,7 +27,7 @@ jobs:
 
                   # Build a version number for this build
                   GH_REF="${GITHUB_REF##*/}"
-                  GH_REF=$(echo "$GH_REF" | sed 's/[\/]/_/g' | sed 's/ /_/g')
+                  GH_REF=$(echo "$GH_REF" | sed 's/[\/]/-/g' | sed 's/ /-/g' | sed 's/_/-/g')
 
                   VERSION_MAJOR=$(grep -oPi 'set\(CONFIG_VERSION_MAJOR \K\d+' src/CMakeLists.txt)
                   VERSION_MINOR=$(grep -oPi 'set\(CONFIG_VERSION_MINOR \K\d+' src/CMakeLists.txt)
