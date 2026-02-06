@@ -579,6 +579,27 @@ typedef struct NDIlib_v5 {
 		bool(*recv_ptz_exposure_manual_v2)(NDIlib_recv_instance_t p_instance, const float iris, const float gain, const float shutter_speed);
 		PROCESSINGNDILIB_DEPRECATED bool(*NDIlib_recv_ptz_exposure_manual_v2)(NDIlib_recv_instance_t p_instance, const float iris, const float gain, const float shutter_speed);
 	};
+
+	// Sender Advertiser API
+	union {
+		NDIlib_send_advertiser_instance_t(*send_advertiser_create)(const NDIlib_send_advertiser_create_t* p_create_settings);
+		PROCESSINGNDILIB_DEPRECATED NDIlib_send_advertiser_instance_t(*NDIlib_send_advertiser_create)(const NDIlib_send_advertiser_create_t* p_create_settings);
+	};
+
+	union {
+		void(*send_advertiser_destroy)(NDIlib_send_advertiser_instance_t p_instance);
+		PROCESSINGNDILIB_DEPRECATED void(*NDIlib_send_advertiser_destroy)(NDIlib_send_advertiser_instance_t p_instance);
+	};
+
+	union {
+		bool(*send_advertiser_add_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender, bool allow_monitoring);
+		PROCESSINGNDILIB_DEPRECATED bool(*NDIlib_send_advertiser_add_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender, bool allow_monitoring);
+	};
+
+	union {
+		bool(*send_advertiser_del_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender);
+		PROCESSINGNDILIB_DEPRECATED bool(*NDIlib_send_advertiser_del_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender);
+	};
 } NDIlib_v5;
 
 typedef struct NDIlib_v5 NDIlib_v4_5;

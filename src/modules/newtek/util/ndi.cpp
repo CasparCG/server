@@ -61,7 +61,7 @@ NDIlib_v5* load_library()
     const char* runtime_dir = getenv(NDILIB_REDIST_FOLDER);
 
 #ifdef _WIN32
-    auto module = LoadLibrary(dll_path.c_str());
+    HMODULE module = LoadLibrary(dll_path.c_str());
 
     if (!module && runtime_dir) {
         dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
@@ -77,6 +77,32 @@ NDIlib_v5* load_library()
 
     if (!NDIlib_v5_load) {
         not_installed();
+    }
+
+    ndi_lib = (NDIlib_v5*)(((const NDIlib_v5* (*)(void))NDIlib_v5_load)());
+
+    if (!ndi_lib->NDIlib_initialize()) {
+        not_initialized();
+    }
+
+    // Manually load advertiser API functions (NDI SDK 5.5+)
+    // These may not be in the base NDIlib_v5 struct returned by NDIlib_v5_load()
+    if (module) {
+        ndi_lib->send_advertiser_create =
+            (NDIlib_send_advertiser_instance_t(*)(const NDIlib_send_advertiser_create_t*))GetProcAddress(
+                module, "NDIlib_send_advertiser_create");
+        ndi_lib->send_advertiser_destroy =
+            (void(*)(NDIlib_send_advertiser_instance_t))GetProcAddress(module, "NDIlib_send_advertiser_destroy");
+        ndi_lib->send_advertiser_add_sender = (bool(*)(NDIlib_send_advertiser_instance_t, NDIlib_send_instance_t,
+                                                        bool))GetProcAddress(module, "NDIlib_send_advertiser_add_sender");
+        ndi_lib->send_advertiser_del_sender = (bool(*)(NDIlib_send_advertiser_instance_t,
+                                                        NDIlib_send_instance_t))GetProcAddress(module, "NDIlib_send_advertiser_del_sender");
+
+        if (ndi_lib->send_advertiser_create) {
+            CASPAR_LOG(info) << L"NDI Advertiser API available (SDK 5.5+)";
+        } else {
+            CASPAR_LOG(debug) << L"NDI Advertiser API not found in this SDK version";
+        }
     }
 
 #else
@@ -100,13 +126,27 @@ NDIlib_v5* load_library()
         not_installed();
     }
 
-#endif
-
     ndi_lib = (NDIlib_v5*)(NDIlib_v5_load());
 
     if (!ndi_lib->NDIlib_initialize()) {
         not_initialized();
     }
+
+    // Manually load advertiser API functions (NDI SDK 5.5+)
+    // These may not be in the base NDIlib_v5 struct returned by NDIlib_v5_load()
+    if (hNDILib) {
+        *((void**)&ndi_lib->send_advertiser_create) = dlsym(hNDILib, "NDIlib_send_advertiser_create");
+        *((void**)&ndi_lib->send_advertiser_destroy) = dlsym(hNDILib, "NDIlib_send_advertiser_destroy");
+        *((void**)&ndi_lib->send_advertiser_add_sender) = dlsym(hNDILib, "NDIlib_send_advertiser_add_sender");
+        *((void**)&ndi_lib->send_advertiser_del_sender) = dlsym(hNDILib, "NDIlib_send_advertiser_del_sender");
+
+        if (ndi_lib->send_advertiser_create) {
+            CASPAR_LOG(info) << L"NDI Advertiser API available (SDK 5.5+)";
+        } else {
+            CASPAR_LOG(debug) << L"NDI Advertiser API not found in this SDK version";
+        }
+    }
+#endif
 
     NDIlib_find_create_t find_instance_options = {};
     find_instance_options.show_local_sources   = true;
