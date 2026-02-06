@@ -143,3 +143,38 @@ void NDIlib_send_set_failover(NDIlib_send_instance_t p_instance, const NDIlib_so
 // Retrieve the source information for the given sender instance.  This pointer is valid until NDIlib_send_destroy is called.
 PROCESSINGNDILIB_API
 const NDIlib_source_t* NDIlib_send_get_source_name(NDIlib_send_instance_t p_instance);
+
+// NDI Sender Advertiser - For advertising senders to NDI Discovery Servers
+// The reference to an instance of the sender advertiser.
+struct NDIlib_send_advertiser_instance_type;
+typedef struct NDIlib_send_advertiser_instance_type* NDIlib_send_advertiser_instance_t;
+
+// The creation structure for the sender advertiser.
+typedef struct NDIlib_send_advertiser_create_t {
+	// The URL address of the NDI Discovery Server to connect to.
+	// Format: hostname:port or IP:port (default port is 5959)
+	// Can be comma-separated for multiple servers.
+	// NULL means use default NDI discovery.
+	const char* p_url_address;
+
+#if NDILIB_CPP_DEFAULT_CONSTRUCTORS
+	NDIlib_send_advertiser_create_t(const char* p_url_address_ = NULL);
+#endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
+} NDIlib_send_advertiser_create_t;
+
+// Create a new sender advertiser instance. This will return NULL if it fails.
+PROCESSINGNDILIB_API
+NDIlib_send_advertiser_instance_t NDIlib_send_advertiser_create(const NDIlib_send_advertiser_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
+
+// Destroy an existing sender advertiser instance.
+PROCESSINGNDILIB_API
+void NDIlib_send_advertiser_destroy(NDIlib_send_advertiser_instance_t p_instance);
+
+// Add a sender to the advertiser. Returns false if the sender was already registered.
+// allow_monitoring: whether to allow remote monitoring of this sender.
+PROCESSINGNDILIB_API
+bool NDIlib_send_advertiser_add_sender(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender, bool allow_monitoring);
+
+// Remove a sender from the advertiser. Returns false if the sender was not advertised.
+PROCESSINGNDILIB_API
+bool NDIlib_send_advertiser_del_sender(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender);

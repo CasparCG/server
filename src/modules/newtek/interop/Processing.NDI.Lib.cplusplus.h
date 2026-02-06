@@ -103,6 +103,9 @@ inline NDIlib_recv_recording_time_t::NDIlib_recv_recording_time_t(void)
 inline NDIlib_send_create_t::NDIlib_send_create_t(const char* p_ndi_name_, const char* p_groups_, bool clock_video_, bool clock_audio_)
 	: p_ndi_name(p_ndi_name_), p_groups(p_groups_), clock_video(clock_video_), clock_audio(clock_audio_) {}
 
+inline NDIlib_send_advertiser_create_t::NDIlib_send_advertiser_create_t(const char* p_url_address_)
+	: p_url_address(p_url_address_) {}
+
 inline NDIlib_find_create_t::NDIlib_find_create_t(bool show_local_sources_, const char* p_groups_, const char* p_extra_ips_)
 	: show_local_sources(show_local_sources_), p_groups(p_groups_), p_extra_ips(p_extra_ips_) {}
 
