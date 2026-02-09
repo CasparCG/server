@@ -50,9 +50,9 @@ const std::wstring& dll_name()
 static std::mutex                              find_instance_mutex;
 static std::shared_ptr<NDIlib_find_instance_t> find_instance;
 
-NDIlib_v5* load_library()
+NDIlib_v6* load_library()
 {
-    static NDIlib_v5* ndi_lib = nullptr;
+    static NDIlib_v6* ndi_lib = nullptr;
 
     if (ndi_lib)
         return ndi_lib;
@@ -68,41 +68,21 @@ NDIlib_v5* load_library()
         module   = LoadLibrary(dll_path.c_str());
     }
 
-    FARPROC NDIlib_v5_load = NULL;
+    FARPROC NDIlib_v6_load = NULL;
     if (module) {
         CASPAR_LOG(info) << L"Loaded " << dll_path;
         static std::shared_ptr<void> lib(module, FreeLibrary);
-        NDIlib_v5_load = GetProcAddress(module, "NDIlib_v5_load");
+        NDIlib_v6_load = GetProcAddress(module, "NDIlib_v6_load");
     }
 
-    if (!NDIlib_v5_load) {
+    if (!NDIlib_v6_load) {
         not_installed();
     }
 
-    ndi_lib = (NDIlib_v5*)(((const NDIlib_v5* (*)(void))NDIlib_v5_load)());
+    ndi_lib = (NDIlib_v6*)(((const NDIlib_v6* (*)(void))NDIlib_v6_load)());
 
     if (!ndi_lib->NDIlib_initialize()) {
         not_initialized();
-    }
-
-    // Manually load advertiser API functions (NDI SDK 5.5+)
-    // These may not be in the base NDIlib_v5 struct returned by NDIlib_v5_load()
-    if (module) {
-        ndi_lib->send_advertiser_create =
-            (NDIlib_send_advertiser_instance_t(*)(const NDIlib_send_advertiser_create_t*))GetProcAddress(
-                module, "NDIlib_send_advertiser_create");
-        ndi_lib->send_advertiser_destroy =
-            (void(*)(NDIlib_send_advertiser_instance_t))GetProcAddress(module, "NDIlib_send_advertiser_destroy");
-        ndi_lib->send_advertiser_add_sender = (bool(*)(NDIlib_send_advertiser_instance_t, NDIlib_send_instance_t,
-                                                        bool))GetProcAddress(module, "NDIlib_send_advertiser_add_sender");
-        ndi_lib->send_advertiser_del_sender = (bool(*)(NDIlib_send_advertiser_instance_t,
-                                                        NDIlib_send_instance_t))GetProcAddress(module, "NDIlib_send_advertiser_del_sender");
-
-        if (ndi_lib->send_advertiser_create) {
-            CASPAR_LOG(info) << L"NDI Advertiser API available (SDK 5.5+)";
-        } else {
-            CASPAR_LOG(debug) << L"NDI Advertiser API not found in this SDK version";
-        }
     }
 
 #else
@@ -115,36 +95,21 @@ NDIlib_v5* load_library()
     }
 
     // The main NDI entry point for dynamic loading if we got the library
-    const NDIlib_v5* (*NDIlib_v5_load)(void) = NULL;
+    const NDIlib_v6* (*NDIlib_v6_load)(void) = NULL;
     if (hNDILib) {
         CASPAR_LOG(info) << L"Loaded " << dll_path;
         static std::shared_ptr<void> lib(hNDILib, dlclose);
-        *((void**)&NDIlib_v5_load) = dlsym(hNDILib, "NDIlib_v5_load");
+        *((void**)&NDIlib_v6_load) = dlsym(hNDILib, "NDIlib_v6_load");
     }
 
-    if (!NDIlib_v5_load) {
+    if (!NDIlib_v6_load) {
         not_installed();
     }
 
-    ndi_lib = (NDIlib_v5*)(NDIlib_v5_load());
+    ndi_lib = (NDIlib_v6*)(NDIlib_v6_load());
 
     if (!ndi_lib->NDIlib_initialize()) {
         not_initialized();
-    }
-
-    // Manually load advertiser API functions (NDI SDK 5.5+)
-    // These may not be in the base NDIlib_v5 struct returned by NDIlib_v5_load()
-    if (hNDILib) {
-        *((void**)&ndi_lib->send_advertiser_create) = dlsym(hNDILib, "NDIlib_send_advertiser_create");
-        *((void**)&ndi_lib->send_advertiser_destroy) = dlsym(hNDILib, "NDIlib_send_advertiser_destroy");
-        *((void**)&ndi_lib->send_advertiser_add_sender) = dlsym(hNDILib, "NDIlib_send_advertiser_add_sender");
-        *((void**)&ndi_lib->send_advertiser_del_sender) = dlsym(hNDILib, "NDIlib_send_advertiser_del_sender");
-
-        if (ndi_lib->send_advertiser_create) {
-            CASPAR_LOG(info) << L"NDI Advertiser API available (SDK 5.5+)";
-        } else {
-            CASPAR_LOG(debug) << L"NDI Advertiser API not found in this SDK version";
-        }
     }
 #endif
 
@@ -179,6 +144,14 @@ void not_installed()
 void not_initialized()
 {
     CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Unable to initialize NDI on this system."));
+}
+
+std::string apply_default_discovery_port(std::string url)
+{
+    if (!url.empty() && url.find(':') == std::string::npos) {
+        url += ":5959";
+    }
+    return url;
 }
 
 std::wstring list_command(protocol::amcp::command_context& ctx)

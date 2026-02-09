@@ -35,6 +35,7 @@
 
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
+#include <common/env.h>
 #include <common/except.h>
 #include <common/executor.h>
 #include <common/future.h>
@@ -63,7 +64,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     core::video_format_desc              format_desc_;
     int                                  channel_index_;
-    NDIlib_v5*                           ndi_lib_;
+    NDIlib_v6*                           ndi_lib_;
     NDIlib_video_frame_v2_t              ndi_video_frame_;
     NDIlib_audio_frame_interleaved_32s_t ndi_audio_frame_;
     std::shared_ptr<uint8_t>             field_data_;
@@ -330,7 +331,9 @@ create_ndi_consumer(const std::vector<std::wstring>&                         par
     bool         use_advertiser           = contains_param(L"USE_ADVERTISER", params);
     bool         allow_monitoring         = get_param(L"ALLOW_MONITORING", params, true);
     std::wstring discovery_server_url_w   = get_param(L"DISCOVERY_SERVER", params, L"");
-    std::string  discovery_server_url     = u8(discovery_server_url_w);
+    if (discovery_server_url_w.empty())
+        discovery_server_url_w = env::properties().get(L"configuration.ndi.discovery-server", L"");
+    std::string  discovery_server_url     = ndi::apply_default_discovery_port(u8(discovery_server_url_w));
 
     return spl::make_shared<newtek_ndi_consumer>(name, allow_fields, discovery_server_url, use_advertiser, allow_monitoring);
 }
@@ -346,7 +349,9 @@ create_preconfigured_ndi_consumer(const boost::property_tree::wptree&           
     bool        use_advertiser         = ptree.get(L"use-advertiser", false);
     bool        allow_monitoring       = ptree.get(L"allow-monitoring", true);
     std::wstring discovery_server_url_w = ptree.get(L"discovery-server", L"");
-    std::string discovery_server_url   = u8(discovery_server_url_w);
+    if (discovery_server_url_w.empty())
+        discovery_server_url_w = env::properties().get(L"configuration.ndi.discovery-server", L"");
+    std::string discovery_server_url   = ndi::apply_default_discovery_port(u8(discovery_server_url_w));
 
     if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Newtek NDI consumer only supports 8-bit color depth."));
