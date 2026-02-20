@@ -42,7 +42,7 @@ class to_unicode_adapter : public protocol_strategy<char>
 
     void parse(const std::basic_string<char>& data) override
     {
-        auto utf_data = boost::locale::conv::to_utf<wchar_t>(data, codepage_);
+        auto utf_data = boost::locale::conv::to_utf<wchar_t>(data, codepage_, boost::locale::conv::skip);
 
         unicode_strategy_->parse(utf_data);
     }
@@ -73,7 +73,8 @@ class from_unicode_client_connection : public client_connection<wchar_t>
         if (data.length() < 512) {
             boost::replace_all(data, L"\n", L"\\n");
             boost::replace_all(data, L"\r", L"\\r");
-            CASPAR_LOG(info) << L"Sent message to " << client_->address() << L":" << data;
+            CASPAR_LOG(info) << L"Sent message to " << client_->address() << L":"
+                             << log::replace_nonprintable_copy(data, L'?');
         } else
             CASPAR_LOG(info) << L"Sent more than 512 bytes to " << client_->address();
     }
