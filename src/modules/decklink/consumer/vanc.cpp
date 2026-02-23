@@ -74,8 +74,8 @@ decklink_vanc::decklink_vanc(const vanc_configuration& config)
         strategies_.push_back(create_scte104_strategy(config.scte104_line));
     }
     if (config.enable_op47) {
-        strategies_.push_back(
-            create_op47_strategy(config.op47_line, config.op47_line_field2, config.op47_dummy_header));
+        strategies_.push_back(create_op47_strategy(
+            config.op47_line, config.op47_line_field2, config.op42_sd_line, config.op47_dummy_header));
     }
 }
 
