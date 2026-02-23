@@ -53,7 +53,9 @@ class decklink_vanc_packet : public IDeckLinkAncillaryPacket
     HRESULT STDMETHODCALLTYPE GetBytes(BMDAncillaryPacketFormat format, const void** data, unsigned int* size) override
     {
         if (format == bmdAncillaryPacketFormatUInt8) {
-            *data = pkt_.data.data();
+            if (data) {
+                *data = pkt_.data.data();
+            }
             *size = static_cast<unsigned int>(pkt_.data.size());
             return S_OK;
         }
