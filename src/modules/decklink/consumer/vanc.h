@@ -57,8 +57,8 @@ class decklink_vanc
 };
 
 std::shared_ptr<decklink_vanc_strategy>
-create_op47_strategy(uint8_t line_number, uint8_t line_number_2, const std::wstring& dummy_header);
-std::shared_ptr<decklink_vanc_strategy> create_scte104_strategy(uint8_t line_number);
+create_op47_strategy(uint32_t line_number, uint32_t line_number_2, uint32_t sd_line, const std::wstring& dummy_header);
+std::shared_ptr<decklink_vanc_strategy> create_scte104_strategy(uint32_t line_number);
 
 std::shared_ptr<decklink_vanc> create_vanc(const vanc_configuration& config);
 }} // namespace caspar::decklink
