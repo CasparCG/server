@@ -106,7 +106,6 @@ casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-61.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-10.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-61.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-58.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-5.dll")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
 # for scanner:
