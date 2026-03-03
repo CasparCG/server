@@ -53,9 +53,10 @@ struct vanc_configuration
     bool         enable           = false;
     bool         enable_op47      = false;
     bool         enable_scte104   = false;
-    uint8_t      op47_line        = 0;
-    uint8_t      op47_line_field2 = 0;
-    uint8_t      scte104_line     = 0;
+    uint32_t     op47_line        = 0;
+    uint32_t     op42_sd_line     = 21;
+    uint32_t     op47_line_field2 = 0;
+    uint32_t     scte104_line     = 0;
     std::wstring op47_dummy_header;
 };
 
