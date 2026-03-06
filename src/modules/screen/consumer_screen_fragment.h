@@ -1,3 +1,10 @@
+#pragma once
+
+namespace caspar { namespace screen {
+
+// Fragment shader for screen consumer with LED wall calibration support
+// Includes brightness_boost and saturation_boost uniforms for color calibration
+static const char* fragment_shader = R"shader(
 #version 450
 
 #define COLOUR_SPACE_RGB                0
@@ -18,7 +25,7 @@ uniform bool key_only;
 uniform int colour_space;
 uniform int window_width;
 
-// MERGED: Our enhancement uniforms for LED wall calibration
+// MERGED: Enhancement uniforms for LED wall calibration
 uniform float brightness_boost;
 uniform float saturation_boost;
 
@@ -63,13 +70,8 @@ void main()
         color.rgb *= brightness_boost;
         
         // Apply saturation boost
-        // Calculate luminance (grayscale value)
         float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
         vec3 gray = vec3(luminance);
-        // Interpolate between grayscale and full color based on saturation_boost
-        // saturation_boost = 1.0 → normal color
-        // saturation_boost > 1.0 → more saturated
-        // saturation_boost < 1.0 → less saturated (closer to grayscale)
         color.rgb = mix(gray, color.rgb, saturation_boost);
         
         // Clamp to valid range
@@ -78,3 +80,6 @@ void main()
     
     fragColor = color;
 }
+)shader";
+
+}} // namespace caspar::screen

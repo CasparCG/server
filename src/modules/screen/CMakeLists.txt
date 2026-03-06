@@ -4,16 +4,12 @@ project (screen)
 set(SOURCES
 	consumer/screen_consumer.cpp
 	consumer/screen_consumer.h
-
-	consumer_screen_vertex.h
-	consumer_screen_fragment.h
-
 	screen.cpp
 	screen.h
 )
 
-bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
-bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
+# bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
+# bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
 
 if (MSVC)
 else ()
@@ -28,7 +24,7 @@ casparcg_add_module_project(screen
 	INIT_FUNCTION "screen::init"
 )
 target_include_directories(screen PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${FFMPEG_INCLUDE_PATH}
 )
 target_link_libraries(screen PRIVATE accelerator ffmpeg GLEW::glew sfml-window)

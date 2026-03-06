@@ -41,6 +41,29 @@ elseif(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/../.git")
     )
 endif()
 
+# Find PortAudio library
+find_path(PORTAUDIO_INCLUDE_DIR portaudio.h
+    PATHS
+        "${CMAKE_SOURCE_DIR}/../dependencies/portaudio/include"
+        "C:/vcpkg/installed/x64-windows/include"
+)
+
+find_library(PORTAUDIO_LIBRARY 
+    NAMES portaudio portaudio_x64
+    PATHS
+        "${CMAKE_SOURCE_DIR}/../dependencies/portaudio/lib"
+        "C:/vcpkg/installed/x64-windows/lib"
+)
+
+if(PORTAUDIO_INCLUDE_DIR AND PORTAUDIO_LIBRARY)
+    message(STATUS "Found PortAudio: ${PORTAUDIO_LIBRARY}")
+    message(STATUS "PortAudio include: ${PORTAUDIO_INCLUDE_DIR}")
+    set(PORTAUDIO_FOUND TRUE)
+else()
+    message(WARNING "PortAudio not found - portaudio consumer will not be available")
+    set(PORTAUDIO_FOUND FALSE)
+endif()
+
 cmake_host_system_information(RESULT CONFIG_CPU_COUNT QUERY NUMBER_OF_PHYSICAL_CORES)
 
 include(CasparCG_Util)

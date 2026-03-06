@@ -21,21 +21,34 @@
 
 #pragma once
 
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <common/bit_depth.h>
 #include <common/memory.h>
-
 #include <core/fwd.h>
-
+#include <functional>
 #include <vector>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 namespace caspar { namespace oal {
+
+// Forward declaration of oal_consumer class
+class oal_consumer;
+
+// Interface for video-scheduled audio consumers
+class video_scheduled_audio_consumer
+{
+  public:
+    virtual ~video_scheduled_audio_consumer()           = default;
+    virtual void schedule_audio_for_frame(int64_t                     frame_number,
+                                          const std::vector<int32_t>& samples,
+                                          int                         sample_rate,
+                                          int                         channels) = 0;
+};
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>&     params,
                                                       const core::video_format_repository& format_repository,
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       const core::channel_info& channel_info);
+
 spl::shared_ptr<core::frame_consumer>
 create_preconfigured_consumer(const boost::property_tree::wptree&,
                               const core::video_format_repository&                     format_repository,
