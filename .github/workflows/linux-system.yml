@@ -8,18 +8,26 @@ on:
 
 jobs:
     build:
-        name: ${{ matrix.container || matrix.os }} (${{ matrix.distribution }})
+        name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{ matrix.distribution }})
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - os: ubuntu-24.04
                       distribution: noble
+                      arch: amd64
                       container: ""
                       apt_prefix: sudo
                       upload_artifacts: true
                     - os: ubuntu-latest
                       distribution: resolute
+                      arch: amd64
+                      container: ubuntu:26.04
+                      apt_prefix: ""
+                      upload_artifacts: false
+                    - os: ubuntu-24.04-arm
+                      distribution: resolute
+                      arch: arm64
                       container: ubuntu:26.04
                       apt_prefix: ""
                       upload_artifacts: false
