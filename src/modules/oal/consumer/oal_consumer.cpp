@@ -65,8 +65,7 @@ class device
     const std::wstring device_name_;
 
   public:
-    explicit device(std::wstring device_name)
-        : device_name_(std::move(device_name))
+    explicit device(std::wstring device_name) : device_name_(std::move(device_name))
     {
         ALCchar* deviceName = nullptr;
 
@@ -164,18 +163,6 @@ class device
     }
 };
 
-void init_device()
-{
-    static std::unique_ptr<device> instance;
-    static std::once_flag          f;
-
-    std::call_once(f, [&] {
-        std::wstring device_name =
-            env::properties().get(L"configuration.system-audio.producer.default-device-name", L"");
-        instance = std::make_unique<device>(device_name);
-    });
-}
-
 struct oal_consumer : public core::frame_consumer
 {
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -184,6 +171,7 @@ struct oal_consumer : public core::frame_consumer
 
     core::video_format_desc format_desc_;
 
+    device              device_;
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
     bool                started_  = false;
@@ -194,10 +182,8 @@ struct oal_consumer : public core::frame_consumer
     executor executor_{L"oal_consumer"};
 
   public:
-    explicit oal_consumer()
+    explicit oal_consumer(std::wstring device_name) : device_{std::move(device_name)}
     {
-        init_device();
-
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -386,10 +372,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       const core::channel_info& channel_info)
 {
-    if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
+    if (params.empty() || !(boost::iequals(params.at(0), L"AUDIO") || boost::iequals(params.at(0), L"SYSTEM-AUDIO")))
         return core::frame_consumer::empty();
 
-    return spl::make_shared<oal_consumer>();
+    return spl::make_shared<oal_consumer>(get_param(L"DEVICE_NAME", params, L""));
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -398,7 +384,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    return spl::make_shared<oal_consumer>();
+    return spl::make_shared<oal_consumer>(ptree.get(L"device-name", L""));
 }
 
 }} // namespace caspar::oal
