@@ -73,6 +73,7 @@ extern "C" {
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -471,175 +472,234 @@ struct ffmpeg_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         frame_thread_ = std::thread([=] {
-            try {
-                std::map<std::string, std::string> options;
-                {
-                    static boost::regex opt_exp("-(?<NAME>[^\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
-                    for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
-                         it != boost::sregex_iterator();
-                         ++it) {
-                        options[(*it)["NAME"].str().c_str()] =
-                            (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
-                    }
-                }
+            int                      reconnect_delay_ms                   = 1000;
+            int                      reconnect_attempts_at_current_delay  = 0;
+            static constexpr int     attempts_per_level                   = 25;
+            static constexpr int     max_reconnect_delay_ms               = 30000;
 
-                boost::filesystem::path full_path = path_;
-
-                static boost::regex prot_exp("^.+:.*");
-                if (!boost::regex_match(path_, prot_exp)) {
-                    if (!full_path.is_absolute()) {
-                        full_path = u8(env::media_folder()) + path_;
-                    }
-
-                    // TODO -y?
-                    if (boost::filesystem::exists(full_path)) {
-                        boost::filesystem::remove(full_path);
-                    }
-
-                    boost::filesystem::create_directories(full_path.parent_path());
-                }
-
-                AVFormatContext* oc = nullptr;
-
-                {
-                    std::string format;
+            while (true) {
+                try {
+                    std::map<std::string, std::string> options;
                     {
-                        const auto format_it = options.find("format");
-                        if (format_it != options.end()) {
-                            format = std::move(format_it->second);
-                            options.erase(format_it);
+                        static boost::regex opt_exp("-(?<NAME>[^\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+                        for (auto it = boost::sregex_iterator(args_.begin(), args_.end(), opt_exp);
+                             it != boost::sregex_iterator();
+                             ++it) {
+                            options[(*it)["NAME"].str().c_str()] =
+                                (*it)["VALUE"].matched ? (*it)["VALUE"].str().c_str() : "";
                         }
                     }
 
-                    FF(avformat_alloc_output_context2(
-                        &oc, nullptr, !format.empty() ? format.c_str() : nullptr, path_.c_str()));
-                }
+                    boost::filesystem::path full_path = path_;
 
-                CASPAR_SCOPE_EXIT { avformat_free_context(oc); };
+                    static boost::regex prot_exp("^.+:.*");
+                    if (!boost::regex_match(path_, prot_exp)) {
+                        if (!full_path.is_absolute()) {
+                            full_path = u8(env::media_folder()) + path_;
+                        }
 
-                std::optional<Stream> video_stream;
-                if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
-                    if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
-                        options["preset:v"] = "veryfast";
+                        // TODO -y?
+                        if (boost::filesystem::exists(full_path)) {
+                            boost::filesystem::remove(full_path);
+                        }
+
+                        boost::filesystem::create_directories(full_path.parent_path());
                     }
-                    video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
+
+                    AVFormatContext* oc = nullptr;
 
                     {
-                        std::lock_guard<std::mutex> lock(state_mutex_);
-                        state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
-                    }
-                }
-
-                std::optional<Stream> audio_stream;
-                if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
-                    audio_stream.emplace(oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, depth_, options);
-                }
-
-                if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                    // TODO (fix) interrupt_cb
-                    auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
-                    FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &dict));
-                    options = to_map(&dict);
-                }
-
-                {
-                    auto dict = to_dict(std::move(options));
-                    CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
-                    FF(avformat_write_header(oc, &dict));
-                    options = to_map(&dict);
-                }
-
-                {
-                    for (auto& p : options) {
-                        CASPAR_LOG(warning) << print() << " Unused option " << p.first << "=" << p.second;
-                    }
-                }
-
-                tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
-                packet_buffer.set_capacity(realtime_ ? 1 : 128);
-                auto packet_thread = std::thread([&] {
-                    try {
-                        CASPAR_SCOPE_EXIT
+                        std::string format;
                         {
-                            if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                                FF(avio_closep(&oc->pb));
+                            const auto format_it = options.find("format");
+                            if (format_it != options.end()) {
+                                format = std::move(format_it->second);
+                                options.erase(format_it);
                             }
-                        };
-
-                        std::map<int, int64_t> count;
-
-                        std::shared_ptr<AVPacket> pkt;
-                        while (true) {
-                            packet_buffer.pop(pkt);
-                            if (!pkt) {
-                                break;
-                            }
-                            count[pkt->stream_index] += 1;
-                            FF(av_interleaved_write_frame(oc, pkt.get()));
                         }
 
-                        auto video_st = video_stream ? video_stream->st : nullptr;
-                        auto audio_st = audio_stream ? audio_stream->st : nullptr;
+                        FF(avformat_alloc_output_context2(
+                            &oc, nullptr, !format.empty() ? format.c_str() : nullptr, path_.c_str()));
+                    }
 
-                        if ((!video_st || count[video_st->index]) && (!audio_st || count[audio_st->index])) {
-                            FF(av_write_trailer(oc));
+                    CASPAR_SCOPE_EXIT { avformat_free_context(oc); };
+
+                    std::optional<Stream> video_stream;
+                    if (oc->oformat->video_codec != AV_CODEC_ID_NONE) {
+                        if (oc->oformat->video_codec == AV_CODEC_ID_H264 &&
+                            options.find("preset:v") == options.end()) {
+                            options["preset:v"] = "veryfast";
                         }
+                        video_stream.emplace(
+                            oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
 
-                    } catch (...) {
-                        CASPAR_LOG_CURRENT_EXCEPTION();
-                        // TODO
-                        packet_buffer.abort();
+                        {
+                            std::lock_guard<std::mutex> lock(state_mutex_);
+                            state_["file/fps"] = av_q2d(av_buffersink_get_frame_rate(video_stream->sink));
+                        }
                     }
-                });
-                CASPAR_SCOPE_EXIT
-                {
-                    if (packet_thread.joinable()) {
-                        // TODO Is nullptr needed?
-                        packet_buffer.push(nullptr);
-                        packet_buffer.abort();
-                        packet_thread.join();
+
+                    std::optional<Stream> audio_stream;
+                    if (oc->oformat->audio_codec != AV_CODEC_ID_NONE) {
+                        audio_stream.emplace(
+                            oc, ":a", oc->oformat->audio_codec, format_desc, realtime_, depth_, options);
                     }
-                };
 
-                auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
+                    if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                        // TODO (fix) interrupt_cb
+                        auto dict = to_dict(std::move(options));
+                        CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
+                        FF(avio_open2(&oc->pb, full_path.string().c_str(), AVIO_FLAG_WRITE, nullptr, &dict));
+                        options = to_map(&dict);
+                    }
 
-                std::int64_t frame_number = 0;
-                while (true) {
                     {
-                        std::lock_guard<std::mutex> lock(state_mutex_);
-                        state_["file/frame"] = frame_number++;
+                        auto dict = to_dict(std::move(options));
+                        CASPAR_SCOPE_EXIT { av_dict_free(&dict); };
+                        FF(avformat_write_header(oc, &dict));
+                        options = to_map(&dict);
                     }
 
-                    std::tuple<core::const_frame, std::int64_t, std::int64_t> data;
-                    frame_buffer_.pop(data);
-                    graph_->set_value("input",
-                                      static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
+                    {
+                        for (auto& p : options) {
+                            CASPAR_LOG(warning) << print() << " Unused option " << p.first << "=" << p.second;
+                        }
+                    }
 
-                    caspar::timer frame_timer;
-                    tbb::parallel_invoke(
-                        [&] {
-                            if (video_stream) {
-                                video_stream->send(data, format_desc, packet_cb);
-                            }
-                        },
-                        [&] {
-                            if (audio_stream) {
-                                audio_stream->send(data, format_desc, packet_cb);
-                            }
-                        });
-                    graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
+                    reconnect_delay_ms                  = 1000;
+                    reconnect_attempts_at_current_delay  = 0;
 
-                    if (!std::get<0>(data)) {
-                        packet_buffer.push(nullptr);
+                    CASPAR_LOG(info) << print() << " Output connected.";
+
+                    std::atomic<bool> connection_error{false};
+
+                    tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
+                    packet_buffer.set_capacity(realtime_ ? 1 : 128);
+                    auto packet_thread = std::thread([&] {
+                        try {
+                            CASPAR_SCOPE_EXIT
+                            {
+                                if (!(oc->oformat->flags & AVFMT_NOFILE)) {
+                                    avio_closep(&oc->pb);
+                                }
+                            };
+
+                            std::map<int, int64_t> count;
+
+                            std::shared_ptr<AVPacket> pkt;
+                            while (true) {
+                                packet_buffer.pop(pkt);
+                                if (!pkt) {
+                                    break;
+                                }
+                                count[pkt->stream_index] += 1;
+                                FF(av_interleaved_write_frame(oc, pkt.get()));
+                            }
+
+                            auto video_st = video_stream ? video_stream->st : nullptr;
+                            auto audio_st = audio_stream ? audio_stream->st : nullptr;
+
+                            if ((!video_st || count[video_st->index]) && (!audio_st || count[audio_st->index])) {
+                                FF(av_write_trailer(oc));
+                            }
+
+                        } catch (...) {
+                            CASPAR_LOG(warning) << print() << L" Output write error.";
+                            connection_error = true;
+                            packet_buffer.abort();
+                        }
+                    });
+                    CASPAR_SCOPE_EXIT
+                    {
+                        if (packet_thread.joinable()) {
+                            try {
+                                packet_buffer.push(nullptr);
+                            } catch (...) {
+                            }
+                            packet_buffer.abort();
+                            packet_thread.join();
+                        }
+                    };
+
+                    auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) {
+                        packet_buffer.push(std::move(pkt));
+                    };
+
+                    std::int64_t frame_number = 0;
+                    while (true) {
+                        {
+                            std::lock_guard<std::mutex> lock(state_mutex_);
+                            state_["file/frame"] = frame_number++;
+                        }
+
+                        std::tuple<core::const_frame, std::int64_t, std::int64_t> data;
+                        frame_buffer_.pop(data);
+
+                        if (connection_error) {
+                            CASPAR_THROW_EXCEPTION(caspar_exception()
+                                                   << msg_info("Output connection error detected"));
+                        }
+
+                        graph_->set_value(
+                            "input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
+
+                        caspar::timer frame_timer;
+                        tbb::parallel_invoke(
+                            [&] {
+                                if (video_stream) {
+                                    video_stream->send(data, format_desc, packet_cb);
+                                }
+                            },
+                            [&] {
+                                if (audio_stream) {
+                                    audio_stream->send(data, format_desc, packet_cb);
+                                }
+                            });
+                        graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
+
+                        if (!std::get<0>(data)) {
+                            packet_buffer.push(nullptr);
+                            break;
+                        }
+                    }
+
+                    packet_thread.join();
+                    break;
+
+                } catch (...) {
+                    if (!realtime_) {
+                        std::lock_guard<std::mutex> lock(exception_mutex_);
+                        exception_ = std::current_exception();
                         break;
                     }
-                }
 
-                packet_thread.join();
-            } catch (...) {
-                std::lock_guard<std::mutex> lock(exception_mutex_);
-                exception_ = std::current_exception();
+                    CASPAR_LOG(warning) << print() << L" Connection lost. Reconnecting in "
+                                        << reconnect_delay_ms << L"ms...";
+
+                    bool got_sentinel = false;
+                    {
+                        std::tuple<core::const_frame, std::int64_t, std::int64_t> drain;
+                        while (frame_buffer_.try_pop(drain)) {
+                            if (!std::get<0>(drain)) {
+                                got_sentinel = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (got_sentinel) {
+                        break;
+                    }
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(reconnect_delay_ms));
+
+                    reconnect_attempts_at_current_delay++;
+                    if (reconnect_attempts_at_current_delay >= attempts_per_level) {
+                        reconnect_attempts_at_current_delay = 0;
+                        reconnect_delay_ms = std::min(reconnect_delay_ms * 2, max_reconnect_delay_ms);
+                    }
+
+                    CASPAR_LOG(info) << print() << L" Attempting reconnect...";
+                }
             }
         });
     }
