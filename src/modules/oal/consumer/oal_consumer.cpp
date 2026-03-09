@@ -79,41 +79,30 @@ class device
         ALCchar* deviceName = nullptr;
 
         if (!device_name_.empty()) {
-            ALboolean enumeration = alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
+            if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
 
-            if (enumeration == AL_FALSE) {
-                // enumeration not supported
-                CASPAR_LOG(info) << L"Unable to enumerate OpenAL devices. Using system default device";
-            } else {
-                char* s;
-
-                if (alcIsExtensionPresent(nullptr, "ALC_enumerate_all_EXT") == AL_FALSE)
-                    s = (char*)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
-                else
-                    s = (char*)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-
+                auto s = alcGetString(nullptr, alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
+                    ? ALC_ALL_DEVICES_SPECIFIER
+                    : ALC_DEVICE_SPECIFIER
+                );
                 deviceName = iterate_and_find_device(s, device_name_);
 
-                if (deviceName == nullptr) {
-                    CASPAR_LOG(warning)
-                        << L"Failed to find specified OpenAL output device. Using system default device";
-                } else {
+                if (deviceName)
                     CASPAR_LOG(debug) << L"Found specified OpenAL output device";
-                }
+                else
+                    CASPAR_LOG(warning) << L"Failed to find specified OpenAL output device. Using default device";
+            } else {
+                CASPAR_LOG(info) << L"Unable to enumerate OpenAL devices. Using default device";
             }
         }
 
         device_ = alcOpenDevice(deviceName);
-
-        if (device_ == nullptr)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
+        if (!device_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
         context_ = alcCreateContext(device_, nullptr);
+        if (!context_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
 
-        if (context_ == nullptr)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
-
-        if (alcMakeContextCurrent(context_) == ALC_FALSE)
+        if (!alcMakeContextCurrent(context_))
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
     }
 
