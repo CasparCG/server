@@ -160,11 +160,11 @@ FetchContent_MakeAvailable(sfml)
 
 list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
 # set(SFML_STATIC_LIBRARIES TRUE)
-find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+find_package(SFML 2 COMPONENTS graphics system window REQUIRED)
 
 casparcg_add_runtime_dependency_from_target(sfml-graphics)
-casparcg_add_runtime_dependency_from_target(sfml-window)
 casparcg_add_runtime_dependency_from_target(sfml-system)
+casparcg_add_runtime_dependency_from_target(sfml-window)
 
 #ZLIB
 casparcg_add_external_project(zlib)

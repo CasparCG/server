@@ -42,8 +42,7 @@ bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(accelerator PRIVATE .. ${CMAKE_CURRENT_BINARY_DIR})
 target_precompile_headers(accelerator PRIVATE StdAfx.h)
-target_link_libraries(accelerator PRIVATE common core GLEW::glew)
-target_link_libraries(accelerator PRIVATE sfml-window)
+target_link_libraries(accelerator PRIVATE common core GLEW::glew sfml-window)
 
 source_group(sources ./.*)
 source_group(sources\\cpu\\image cpu/image/.*)
