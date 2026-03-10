@@ -59,13 +59,30 @@ extern "C" {
 #pragma warning(pop)
 #endif
 
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <memory>
+#include <queue>
+#include <thread>
 #include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
 
-namespace caspar { namespace oal {
+namespace caspar::oal {
+
+using namespace std::chrono_literals;
+
+using clock = std::chrono::high_resolution_clock;
+using msec = std::chrono::milliseconds;
+
+struct audio_packet
+{
+    clock::time_point time_point;
+    std::vector<std::int16_t> samples;
+};
 
 class device
 {
@@ -169,18 +186,78 @@ struct oal_consumer : public core::frame_consumer
 
     core::video_format_desc format_desc_;
 
+    tbb::concurrent_queue<audio_packet> sched_queue_;
+    std::thread         sched_thread_;
+    std::atomic<bool>   stop_sched_thread_{false};
+    int                 sample_rate_; // used inside the thread
+
+    clock::time_point   start_time_;
+    std::atomic<std::int64_t> frame_num_{0};
+    clock::duration     delay_;
+
     device              device_;
     ALuint              source_ = 0;
-    std::vector<ALuint> buffers_;
-    bool                started_  = false;
-    int                 duration_ = 1920;
+    std::array<ALuint, 8> buffers_;
+    std::queue<ALuint>  free_;
 
-    std::shared_ptr<SwrContext> swr_;
+    struct swr_deleter { void operator()(SwrContext* p) { swr_free(&p); } };
+    std::unique_ptr<SwrContext, swr_deleter> swr_;
 
     executor executor_{L"oal_consumer"};
 
+    void start_sched_thread()
+    {
+        sched_thread_ = std::thread([this] {
+            set_thread_realtime_priority();
+            set_thread_name(L"oal-audio-sched");
+
+            while (!stop_sched_thread_) {
+                audio_packet packet;
+
+                if (!sched_queue_.try_pop(packet)) {
+                    std::this_thread::sleep_for(100us);
+                    continue;
+                }
+
+                std::this_thread::sleep_until(packet.time_point);
+                play_audio_packet(packet);
+            }
+        });
+    }
+
+    void play_audio_packet(const audio_packet& packet)
+    {
+        ALint proc = 0;
+        alGetSourcei(source_, AL_BUFFERS_PROCESSED, &proc);
+
+        while (proc--) {
+            ALuint buf;
+            alSourceUnqueueBuffers(source_, 1, &buf);
+            free_.push(buf);
+        }
+
+        if (free_.empty()) {
+            CASPAR_LOG(warning) << "Audio buffer pool exhausted - dropping packet";
+            return;
+        }
+
+        ALuint buf = free_.front();
+        free_.pop();
+
+        alBufferData(buf, AL_FORMAT_STEREO16,
+             packet.samples.data(), packet.samples.size() * sizeof(std::int16_t),
+             sample_rate_
+        );
+        alSourceQueueBuffers(source_, 1, &buf);
+
+        ALenum state = 0;
+        alGetSourcei(source_, AL_SOURCE_STATE, &state);
+        if (state != AL_PLAYING) alSourcePlay(source_);
+    }
+
   public:
-    explicit oal_consumer(std::wstring device_name) : device_{std::move(device_name)}
+    explicit oal_consumer(std::wstring device_name, clock::duration delay) :
+        device_{std::move(device_name)}, delay_{delay}
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -191,14 +268,13 @@ struct oal_consumer : public core::frame_consumer
     ~oal_consumer() override
     {
         executor_.invoke([=] {
-            if (source_ != 0u) {
+            stop_sched_thread_ = true;
+            if (sched_thread_.joinable()) sched_thread_.join();
+
+            if (source_) {
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
-            }
-
-            for (auto& buffer : buffers_) {
-                if (buffer != 0u)
-                    alDeleteBuffers(1, &buffer);
+                alDeleteBuffers(buffers_.size(), buffers_.data());
             }
         });
     }
@@ -209,144 +285,53 @@ struct oal_consumer : public core::frame_consumer
     {
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
+        start_time_    = clock::now();
+        sample_rate_   = format_desc.audio_sample_rate;
+
         graph_->set_text(print());
 
         executor_.begin_invoke([=] {
-            duration_ = *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
-            buffers_.resize(8);
-            alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
-            alGenSources(1, &source_);
+            AVChannelLayout from, to;
+            av_channel_layout_default(&from, format_desc_.audio_channels);
+            av_channel_layout_default(&to, 2); // stereo
 
-            alSourcei(source_, AL_LOOPING, AL_FALSE);
+            SwrContext* raw;
+            swr_alloc_set_opts2(&raw,
+                &to,   AV_SAMPLE_FMT_S16, sample_rate_,
+                &from, AV_SAMPLE_FMT_S32, sample_rate_,
+                0, nullptr
+            );
+            swr_.reset(raw);
+            swr_init(raw);
+
+            alGenBuffers(buffers_.size(), buffers_.data());
+            for (auto buf : buffers_) free_.push(buf);
+
+            alGenSources(1, &source_);
         });
+
+        start_sched_thread();
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
+        auto frame_num = frame_num_++;
+
         executor_.begin_invoke([=] {
-            auto dst         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            dst->format      = AV_SAMPLE_FMT_S16;
-            dst->sample_rate = format_desc_.audio_sample_rate;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
-            av_channel_layout_default(&dst->ch_layout, 2);
-#else
-            dst->channels       = 2;
-            dst->channel_layout = av_get_default_channel_layout(dst->channels);
-#endif
-            dst->nb_samples = duration_;
-            if (av_frame_get_buffer(dst.get(), 32) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-            std::memset(dst->extended_data[0], 0, dst->linesize[0]);
+            auto&& samples = frame.audio_data();
+            int num_samples = samples.size() / format_desc_.audio_channels;
 
-            if (!started_) {
-                for (ALuint& buffer : buffers_) {
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                }
+            audio_packet packet;
+            packet.samples.resize(num_samples * 2); // stereo
 
-                alSourcePlay(source_);
-                started_ = true;
+            auto from = reinterpret_cast<const std::uint8_t*>(samples.data());
+            auto to = reinterpret_cast<std::uint8_t*>(packet.samples.data());
+            swr_convert(swr_.get(), &to, num_samples, &from, num_samples);
 
-                return;
-            }
+            std::chrono::duration<double> time{frame_num / format_desc_.fps};
+            packet.time_point = start_time_ + std::chrono::duration_cast<clock::duration>(time) + delay_;
 
-            auto src         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            src->format      = AV_SAMPLE_FMT_S32;
-            src->sample_rate = format_desc_.audio_sample_rate;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
-            av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
-#else
-            src->channels       = format_desc_.audio_channels;
-            src->channel_layout = av_get_default_channel_layout(src->channels);
-#endif
-            src->nb_samples       = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
-            src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
-            src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
-
-            if (!swr_) {
-                swr_.reset(swr_alloc(), [](SwrContext* ptr) { swr_free(&ptr); });
-                if (!swr_) {
-                    CASPAR_THROW_EXCEPTION(bad_alloc());
-                }
-                if (swr_config_frame(swr_.get(), dst.get(), src.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-                if (swr_init(swr_.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-            }
-
-            if (swr_convert_frame(swr_.get(), nullptr, src.get()) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-
-            ALint processed = 0;
-            alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
-
-            auto in_duration  = swr_get_delay(swr_.get(), 48000);
-            auto out_duration = static_cast<int64_t>(processed) * duration_;
-            auto delta        = static_cast<int>(out_duration - in_duration);
-
-            ALenum state;
-            alGetSourcei(source_, AL_SOURCE_STATE, &state);
-            if (state != AL_PLAYING) {
-                while (delta > duration_) {
-                    ALuint buffer = 0;
-                    alSourceUnqueueBuffers(source_, 1, &buffer);
-                    if (buffer == 0u) {
-                        break;
-                    }
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                    delta -= duration_;
-                }
-
-                alSourcePlay(source_);
-            }
-
-            // TODO (fix)
-            // if (std::abs(delta) > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
-            //    // TODO FF error
-            //    CASPAR_THROW_EXCEPTION(invalid_argument());
-            //}
-
-            for (auto n = 0; n < processed; ++n) {
-                if (swr_get_delay(swr_.get(), 48000) < dst->nb_samples) {
-                    break;
-                }
-
-                ALuint buffer = 0;
-                alSourceUnqueueBuffers(source_, 1, &buffer);
-                if (buffer == 0u) {
-                    // TODO error
-                    break;
-                }
-
-                if (swr_convert_frame(swr_.get(), dst.get(), nullptr) != 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-
-                alBufferData(buffer,
-                             AL_FORMAT_STEREO16,
-                             dst->extended_data[0],
-                             static_cast<ALsizei>(dst->linesize[0]),
-                             dst->sample_rate);
-                alSourceQueueBuffers(source_, 1, &buffer);
-            }
+            sched_queue_.push(std::move(packet));
 
             graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
             perf_timer_.restart();
@@ -381,7 +366,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.empty() || !(boost::iequals(params.at(0), L"AUDIO") || boost::iequals(params.at(0), L"SYSTEM-AUDIO")))
         return core::frame_consumer::empty();
 
-    return spl::make_shared<oal_consumer>(get_param(L"DEVICE_NAME", params, L""));
+    auto device_name = get_param(L"DEVICE_NAME", params, L"");
+    msec delay{ get_param<int>(L"DELAY", params, 0) };
+    return spl::make_shared<oal_consumer>(std::move(device_name), delay);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -390,7 +377,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    return spl::make_shared<oal_consumer>(ptree.get(L"device-name", L""));
+    auto device_name = ptree.get(L"device-name", L"");
+    msec delay{ ptree.get<int>(L"delay", 0) };
+    return spl::make_shared<oal_consumer>(std::move(device_name), delay);
 }
 
-}} // namespace caspar::oal
+} // namespace caspar::oal
