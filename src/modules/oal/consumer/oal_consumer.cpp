@@ -244,8 +244,8 @@ struct oal_consumer : public core::frame_consumer
         ALuint buf = free_.front();
         free_.pop();
 
-        alBufferData(buf, AL_FORMAT_STEREO16,
-             packet.samples.data(), packet.samples.size() * sizeof(std::int16_t),
+        alBufferData(buf, AL_FORMAT_STEREO16, packet.samples.data(),
+             static_cast<ALsizei>(packet.samples.size() * sizeof(std::int16_t)),
              sample_rate_
         );
         alSourceQueueBuffers(source_, 1, &buf);
@@ -274,7 +274,7 @@ struct oal_consumer : public core::frame_consumer
             if (source_) {
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
-                alDeleteBuffers(buffers_.size(), buffers_.data());
+                alDeleteBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
             }
         });
     }
@@ -304,7 +304,7 @@ struct oal_consumer : public core::frame_consumer
             swr_.reset(raw);
             swr_init(raw);
 
-            alGenBuffers(buffers_.size(), buffers_.data());
+            alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
             for (auto buf : buffers_) free_.push(buf);
 
             alGenSources(1, &source_);
@@ -319,7 +319,7 @@ struct oal_consumer : public core::frame_consumer
 
         executor_.begin_invoke([=] {
             auto&& samples = frame.audio_data();
-            int num_samples = samples.size() / format_desc_.audio_channels;
+            auto num_samples = static_cast<int>(samples.size() / format_desc_.audio_channels);
 
             audio_packet packet;
             packet.samples.resize(num_samples * 2); // stereo
