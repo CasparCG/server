@@ -93,7 +93,7 @@ class device
   public:
     explicit device(std::wstring device_name) : device_name_(std::move(device_name))
     {
-        ALCchar* deviceName = nullptr;
+        const char* deviceName = nullptr;
 
         if (!device_name_.empty()) {
             if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
@@ -102,18 +102,20 @@ class device
                     ? ALC_ALL_DEVICES_SPECIFIER
                     : ALC_DEVICE_SPECIFIER
                 );
-                deviceName = iterate_and_find_device(s, device_name_);
+                if (s) deviceName = iterate_and_find_device(s, device_name_);
 
                 if (deviceName)
-                    CASPAR_LOG(debug) << L"Found specified OpenAL output device";
+                    CASPAR_LOG(info) << "Using OpenAL device: " << deviceName;
                 else
-                    CASPAR_LOG(warning) << L"Failed to find specified OpenAL output device. Using default device";
+                    CASPAR_LOG(warning) << "Specified OpenAL device not found - using default";
             } else {
-                CASPAR_LOG(info) << L"Unable to enumerate OpenAL devices. Using default device";
+                CASPAR_LOG(info) << "Unable to enumerate OpenAL devices - using default";
             }
+        } else {
+            CASPAR_LOG(info) << "Using default OpenAL device";
         }
 
-        device_ = alcOpenDevice(deviceName);
+        device_ = alcOpenDevice(static_cast<const ALchar*>(deviceName));
         if (!device_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
         context_ = alcCreateContext(device_, nullptr);
@@ -137,44 +139,28 @@ class device
     ALCdevice* get() { return device_; }
 
   private:
-    static ALCchar* iterate_and_find_device(const char* list, const std::wstring& device_name)
+    static const char* iterate_and_find_device(const char* names, const std::wstring& device_name)
     {
-        ALCchar* result = nullptr;
+        const char* found = nullptr;
 
         // generate ascii string for comparison purposes vs what openAL provides
-        std::string short_device_name = u8(device_name);
-        boost::algorithm::erase_all(short_device_name, " ");
+        auto name = u8(device_name);
+        boost::algorithm::erase_all(name, " ");
 
-        CASPAR_LOG(info) << L"------- OpenAL Device List -----";
+        CASPAR_LOG(info) << "-------- OpenAL Devices -------";
 
-        if (!list) {
-            CASPAR_LOG(info) << L"No device names found";
-        } else {
-            // iterate through all device names
-            // -> buffer contains multiple null-terminated device name strings
-            ALCchar* ptr = (ALCchar*)list;
+        // `names` contains multiple null-terminated device names
+        for (auto p = names; *p; p += strlen(p) + 1) {
+            std::string tmp_name{p};
+            CASPAR_LOG(info) << tmp_name;
 
-            while (strlen(ptr) > 0) {
-                // log each device name, so we can see what options are available
-                CASPAR_LOG(info) << ptr;
-
-                // store matching device name address if found
-                // -> device name will be empty string if not provided
-                std::string tmpStr = ptr;
-                boost::algorithm::erase_all(tmpStr, " ");
-
-                if (boost::iequals(short_device_name, tmpStr)) {
-                    result = ptr;
-                }
-
-                // point to next device name start (or null if no more device names)
-                ptr += strlen(ptr) + 1;
-            }
+            boost::algorithm::erase_all(tmp_name, " ");
+            if (boost::iequals(name, tmp_name)) found = p;
         }
 
-        CASPAR_LOG(info) << L"------ OpenAL Devices List done -----";
+        CASPAR_LOG(info) << "-------- OpenAL Devices -------";
 
-        return result;
+        return found;
     }
 };
 
@@ -263,6 +249,8 @@ struct oal_consumer : public core::frame_consumer
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         diagnostics::register_graph(graph_);
+
+        CASPAR_LOG(info) << print() << ": delay = " << std::chrono::duration_cast<msec>(delay).count() << "ms";
     }
 
     ~oal_consumer() override
