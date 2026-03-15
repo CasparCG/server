@@ -18,6 +18,9 @@ uniform bool key_only;
 uniform int colour_space;
 uniform int window_width;
 
+uniform float brightness_boost;
+uniform float saturation_boost;
+
 // rgb=0~255, y=16~235, uv=16~240
 mat3 rgb2yuv_709 = mat3(0.183f, -0.101f, 0.439f,  0.614f, -0.338f, -0.399f, 0.062f, 0.439f,-0.040f);
 
@@ -30,26 +33,36 @@ vec4 dtv_color(vec4 color)
 void main()
 {
     vec4 color = texture(background, TexCoord.xy);
-    if (key_only)
+
+    if (key_only) {
         color = vec4(color.aaa, 1);
+    } else {
+        // Apply brightness and saturation boosts before any colour space conversion
+        color.rgb *= brightness_boost;
 
-    else if (colour_space == COLOUR_SPACE_DATAVIDEO_FULL) {  // Full range 0-255
-        color = dtv_color(color);
-        float x_coord = TexCoord.x * window_width * 0.5f;
-        bool isEvenPixel = round(x_coord) - x_coord < 0.0f ;
-        vec4 color2 = dtv_color(texture(background, TexCoord.xy + (isEvenPixel ? vec2(1.0f / window_width, 0.0f) : vec2(-1.0f / window_width, 0.0f))));
-        color.s = clamp((color.s * RANGE_LIMITED) + RANGE_16 + RANGE_HALF, RANGE_16, RANGE_235);
-        color.t = clamp(((isEvenPixel ? color.t + color2.t : color.p + color2.p) * RANGE_LIMITED * 0.5f) + RANGE_HALF + 0.5f, RANGE_16, RANGE_235);
-        color.p = clamp((color.w * RANGE_LIMITED) + RANGE_16 + RANGE_HALF, RANGE_16, RANGE_235);
+        float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+        color.rgb = mix(vec3(luminance), color.rgb, saturation_boost);
 
-    } else if (colour_space == COLOUR_SPACE_DATAVIDEO_LIMITED) {  // Limited range 16-235
-        color = dtv_color(color);
-        float x_coord = TexCoord.x * window_width * 0.5f;
-        bool isEvenPixel = round(x_coord) - x_coord < 0.0f ;
-        vec4 color2 = dtv_color(texture(background, TexCoord.xy + (isEvenPixel ? vec2(1.0f / window_width, 0.0f) : vec2(-1.0f / window_width, 0.0f))));
-        color.s = clamp(color.s + RANGE_HALF, 0.0f, 1.0f);
-        color.t = clamp(((isEvenPixel ? color.t + color2.t : color.p + color2.p) * 0.5f) + RANGE_HALF + 0.5f, 0.0f, 1.0f);
-        color.p = clamp(color.w + RANGE_HALF, 0.0f, 1.0f);
+        color.rgb = clamp(color.rgb, 0.0, 1.0);
+
+        if (colour_space == COLOUR_SPACE_DATAVIDEO_FULL) {  // Full range 0-255
+            color = dtv_color(color);
+            float x_coord = TexCoord.x * window_width * 0.5f;
+            bool isEvenPixel = round(x_coord) - x_coord < 0.0f;
+            vec4 color2 = dtv_color(texture(background, TexCoord.xy + (isEvenPixel ? vec2(1.0f / window_width, 0.0f) : vec2(-1.0f / window_width, 0.0f))));
+            color.s = clamp((color.s * RANGE_LIMITED) + RANGE_16 + RANGE_HALF, RANGE_16, RANGE_235);
+            color.t = clamp(((isEvenPixel ? color.t + color2.t : color.p + color2.p) * RANGE_LIMITED * 0.5f) + RANGE_HALF + 0.5f, RANGE_16, RANGE_235);
+            color.p = clamp((color.w * RANGE_LIMITED) + RANGE_16 + RANGE_HALF, RANGE_16, RANGE_235);
+        } else if (colour_space == COLOUR_SPACE_DATAVIDEO_LIMITED) {  // Limited range 16-235
+            color = dtv_color(color);
+            float x_coord = TexCoord.x * window_width * 0.5f;
+            bool isEvenPixel = round(x_coord) - x_coord < 0.0f;
+            vec4 color2 = dtv_color(texture(background, TexCoord.xy + (isEvenPixel ? vec2(1.0f / window_width, 0.0f) : vec2(-1.0f / window_width, 0.0f))));
+            color.s = clamp(color.s + RANGE_HALF, 0.0f, 1.0f);
+            color.t = clamp(((isEvenPixel ? color.t + color2.t : color.p + color2.p) * 0.5f) + RANGE_HALF + 0.5f, 0.0f, 1.0f);
+            color.p = clamp(color.w + RANGE_HALF, 0.0f, 1.0f);
+        }
     }
+
     fragColor = color;
 }

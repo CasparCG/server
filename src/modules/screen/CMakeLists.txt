@@ -1,19 +1,19 @@
 cmake_minimum_required (VERSION 3.28)
 project (screen)
 
-set(SOURCES
-	consumer/screen_consumer.cpp
-	consumer/screen_consumer.h
-
-	consumer_screen_vertex.h
-	consumer_screen_fragment.h
-
-	screen.cpp
-	screen.h
-)
-
 bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex_shader")
 bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
+
+set(SOURCES
+    consumer/screen_consumer.cpp
+    consumer/screen_consumer.h
+    consumer/screen.vert
+    consumer/screen.frag
+    consumer_screen_vertex.h
+    consumer_screen_fragment.h
+    screen.cpp
+    screen.h
+)
 
 if (MSVC)
 else ()
@@ -28,10 +28,11 @@ casparcg_add_module_project(screen
 	INIT_FUNCTION "screen::init"
 )
 target_include_directories(screen PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${FFMPEG_INCLUDE_PATH}
 )
-target_link_libraries(screen PRIVATE accelerator ffmpeg GLEW::glew sfml-system sfml-window)
+target_link_libraries(screen PRIVATE accelerator ffmpeg GLEW::glew sfml-window)
 
 set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
