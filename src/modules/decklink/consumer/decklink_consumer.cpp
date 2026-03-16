@@ -152,8 +152,17 @@ void set_duplex(const com_iface_ptr<IDeckLinkAttributes_v10_11>&    attributes,
 void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
                const com_iface_ptr<IDeckLinkKeyer>&             decklink_keyer,
                configuration::keyer_t                           keyer,
+               core::color_space                                color_space,
                const std::wstring&                              print)
 {
+    if (color_space == core::color_space::bt2020) {
+        if (keyer == configuration::keyer_t::internal_keyer || keyer == configuration::keyer_t::external_keyer) {
+            CASPAR_LOG(warning) << print << L" Keying at BT.2020 is not supported by DeckLink devices. Disabling keyer.";
+        }
+        decklink_keyer->Disable();
+        return;
+    }
+
     if (keyer == configuration::keyer_t::internal_keyer) {
         BOOL value = true;
         if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
@@ -492,7 +501,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         }
 
         set_latency(configuration_, config.latency, print);
-        set_keyer(attributes_, keyer_, config.keyer, print);
+        set_keyer(attributes_, keyer_, config.keyer, config.color_space, print);
 
         if (device_sync_group_ > 0 &&
             FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
@@ -729,7 +738,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         set_latency(configuration_, config.latency, print());
-        set_keyer(attributes_, keyer_, config.keyer, print());
+        set_keyer(attributes_, keyer_, config.keyer, config.color_space, print());
 
         if (config.hdr) {
             BOOL flag = FALSE;
