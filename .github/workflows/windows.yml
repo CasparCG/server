@@ -44,7 +44,7 @@ jobs:
                   mv dist/casparcg_server.zip "$TARGET"
 
                   echo "artifactname=$TARGET" >> $GITHUB_OUTPUT
-                    
+
                   # check if a release branch, or master, or a tag
                   if [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "2.3.x-lts" ]]
                   then
@@ -55,10 +55,10 @@ jobs:
                     fi
                   fi
 
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               with:
-                  name: upload-artifact
                   path: ${{ steps.rename-build.outputs.artifactname }}
+                  archive: false
 
             - name: Copy single file to remote
               uses: garygrossgarten/github-action-scp@v0.8.0
