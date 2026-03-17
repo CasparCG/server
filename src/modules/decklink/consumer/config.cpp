@@ -144,7 +144,7 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
             if (!__builtin_cpu_supports("avx2")) {
 #endif
                 CASPAR_THROW_EXCEPTION(user_error()
-                                       << msg_info(L"You cpu does not support the features needed for yuv output"));
+                                       << msg_info(L"Your cpu does not support the features needed for yuv output"));
             }
         }
     }
