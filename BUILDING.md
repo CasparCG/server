@@ -96,7 +96,7 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
 
--DENABLE_AVX2=ON (Linux only, default ON) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
+-DENABLE_AVX2=ON (Linux only, default OFF) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
 
 -DDIAG_FONT_PATH - Specify an alternate path/font to use for the DIAG window. On linux, this will often want to be set to an absolute path of a font
 
