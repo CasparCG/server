@@ -140,8 +140,10 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         if (config.pixel_format != configuration::pixel_format_t::rgba) {
 #ifdef WIN32
             if (!CHECK_INSTRUCTION_SUPPORT(__IA_SUPPORT_VECTOR256, 0)) {
-#else
+#elif defined(__x86_64__) || defined(__i386__)
             if (!__builtin_cpu_supports("avx2")) {
+#else
+            if (false) {
 #endif
                 CASPAR_THROW_EXCEPTION(user_error()
                                        << msg_info(L"Your cpu does not support the features needed for yuv output"));
