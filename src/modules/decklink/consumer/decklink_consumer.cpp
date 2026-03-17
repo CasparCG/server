@@ -150,10 +150,30 @@ void set_duplex(const com_iface_ptr<IDeckLinkAttributes_v10_11>&    attributes,
 }
 
 void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
+               const com_iface_ptr<IDeckLinkOutput>&             output,
                const com_iface_ptr<IDeckLinkKeyer>&             decklink_keyer,
                configuration::keyer_t                           keyer,
+               BMDDisplayMode                                   display_mode,
+               BMDPixelFormat                                   pixel_format,
                const std::wstring&                              print)
 {
+    if (keyer == configuration::keyer_t::internal_keyer || keyer == configuration::keyer_t::external_keyer) {
+        BMDDisplayMode actualMode = bmdModeUnknown;
+        bool           supported  = false;
+        if (SUCCEEDED(output->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+                                                   display_mode,
+                                                   pixel_format,
+                                                   bmdNoVideoOutputConversion,
+                                                   bmdSupportedVideoModeKeying,
+                                                   &actualMode,
+                                                   &supported)) &&
+            !supported) {
+            CASPAR_LOG(warning) << print << L" Keying is not supported by this device for the current video mode. Disabling keyer.";
+            decklink_keyer->Disable();
+            return;
+        }
+    }
+
     if (keyer == configuration::keyer_t::internal_keyer) {
         BOOL value = true;
         if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
@@ -492,7 +512,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
         }
 
         set_latency(configuration_, config.latency, print);
-        set_keyer(attributes_, keyer_, config.keyer, print);
+        set_keyer(attributes_, output_, keyer_, config.keyer, mode_->GetDisplayMode(), format_strategy_->get_pixel_format(), print);
 
         if (device_sync_group_ > 0 &&
             FAILED(configuration_->SetInt(bmdDeckLinkConfigPlaybackGroup, device_sync_group_))) {
@@ -729,7 +749,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         set_latency(configuration_, config.latency, print());
-        set_keyer(attributes_, keyer_, config.keyer, print());
+        set_keyer(attributes_, output_, keyer_, config.keyer, mode_->GetDisplayMode(), format_strategy_->get_pixel_format(), print());
 
         if (config.hdr) {
             BOOL flag = FALSE;
