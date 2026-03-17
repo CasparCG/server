@@ -8,14 +8,35 @@ on:
 
 jobs:
     build:
+        name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{ matrix.distribution }})
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - os: ubuntu-24.04
                       distribution: noble
+                      arch: amd64
+                      container: ""
+                      apt_prefix: sudo
+                      upload_artifacts: true
+                    - os: ubuntu-latest
+                      distribution: resolute
+                      arch: amd64
+                      container: ubuntu:26.04
+                      apt_prefix: ""
+                      upload_artifacts: false
+                    - os: ubuntu-24.04-arm
+                      distribution: resolute
+                      arch: arm64
+                      container: ubuntu:26.04
+                      apt_prefix: ""
+                      upload_artifacts: false
 
         runs-on: ${{ matrix.os }}
+        container: ${{ matrix.container }}
+        defaults:
+            run:
+                shell: bash
 
         steps:
             - uses: actions/checkout@v4
@@ -41,9 +62,9 @@ jobs:
                   echo "BUILD_FILENAME=$BUILD_FILENAME" >> $GITHUB_OUTPUT
 
                   # install some needed tooling
-                  sudo apt-get update
-                  sudo apt-get -y install software-properties-common build-essential dpkg-dev debhelper devscripts
-                  sudo add-apt-repository ppa:casparcg/ppa
+                  $APT_PREFIX apt-get update
+                  $APT_PREFIX apt-get -y install software-properties-common build-essential dpkg-dev debhelper devscripts
+                  $APT_PREFIX add-apt-repository ppa:casparcg/ppa
 
                   # Put something in the changelog
                   export DEBEMAIL="builds@casparcg.com"
@@ -51,7 +72,7 @@ jobs:
                   dch -v "$BUILD_VERSION" --create -D ${{ matrix.distribution }} --package casparcg-server-beta "Build"
 
                   # Install build dependencies
-                  sudo apt-get build-dep .
+                  $APT_PREFIX apt-get -y build-dep .
 
                   # update the control file to reference the current cef version
                   CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-142)
@@ -63,6 +84,8 @@ jobs:
                   apt-get download casparcg-scanner
               env:
                   CI: 1
+                  DEBIAN_FRONTEND: noninteractive
+                  APT_PREFIX: ${{ matrix.apt_prefix }}
 
             - name: Run build
               run: |
@@ -73,6 +96,7 @@ jobs:
 
             - name: Collect artifacts
               id: artifacts
+              if: ${{ matrix.upload_artifacts }}
               run: |
                   mkdir -p dist
                   mv ../*.deb dist/
@@ -101,6 +125,7 @@ jobs:
                   CI: 1
 
             - uses: actions/upload-artifact@v4
+              if: ${{ matrix.upload_artifacts }}
               with:
                   name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
                   path: dist

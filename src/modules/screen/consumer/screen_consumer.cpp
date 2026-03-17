@@ -47,6 +47,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <thread>
+#include <tuple> // std::ignore
 #include <utility>
 #include <vector>
 
@@ -252,6 +253,23 @@ struct screen_consumer
 
         thread_ = std::thread([this] {
             try {
+#if SFML_VERSION_MAJOR >= 3
+                sf::VideoMode mode{
+                    sf::Vector2u(config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_),
+                    sf::VideoMode::getDesktopMode().bitsPerPixel
+                };
+                sf::ContextSettings settings{
+                    .depthBits         = 0,
+                    .stencilBits       = 0,
+                    .antiAliasingLevel = 0,
+                    .majorVersion      = 4,
+                    .minorVersion      = 5,
+                    .attributeFlags    = sf::ContextSettings::Attribute::Core
+                };
+                auto state = config_.windowed || config_.borderless ? sf::State::Windowed : sf::State::Fullscreen;
+                auto style = config_.borderless ? sf::Style::None : sf::Style::Default;
+                window_.create(mode, u8(print()), style, state, settings);
+#else
                 const auto    window_style = config_.borderless ? sf::Style::None
                                              : config_.windowed ? sf::Style::Resize | sf::Style::Close
                                                                 : sf::Style::Fullscreen;
@@ -262,9 +280,10 @@ struct screen_consumer
                                u8(print()),
                                window_style,
                                sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
+#endif
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
-                window_.setActive(true);
+                std::ignore = window_.setActive(true);
 
                 if (config_.always_on_top) {
 #ifdef _MSC_VER
@@ -356,6 +375,16 @@ struct screen_consumer
     bool poll()
     {
         int       count = 0;
+#if SFML_VERSION_MAJOR >= 3
+        while (const auto e = window_.pollEvent()) {
+            count++;
+            if (e->is<sf::Event::Resized>()) {
+                calculate_aspect();
+            } else if (e->is<sf::Event::Closed>()) {
+                is_running_ = false;
+            }
+        }
+#else
         sf::Event e;
         while (window_.pollEvent(e)) {
             count++;
@@ -365,6 +394,7 @@ struct screen_consumer
                 is_running_ = false;
             }
         }
+#endif
         return count > 0;
     }
 

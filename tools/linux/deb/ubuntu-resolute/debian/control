@@ -20,6 +20,7 @@ Build-Depends: cmake,
                libboost-regex-dev,
                libboost-system-dev,
                libboost-thread-dev,
+               libegl-dev,
                libicu-dev,
                libglew-dev,
                libjpeg-dev,
@@ -41,7 +42,7 @@ Vcs-Browser: https://github.com/CasparCG/server/
 Package: casparcg-server-beta
 Pre-Depends: ${misc:Pre-Depends}
 Depends: fonts-liberation, casparcg-cef-142 (= @CASPARCG_CEF_VER@), ${misc:Depends}, ${shlibs:Depends}
-Architecture: amd64
+Architecture: amd64 arm64
 Description: layered real-time video compositor to multiple outputs
  Play out professional graphics, audio and video to multiple outputs as a
  layerbased real-time compositor.

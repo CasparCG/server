@@ -4,12 +4,18 @@
 #include <common/log.h>
 
 #include <SFML/Window/Context.hpp>
+#if SFML_VERSION_MAJOR >= 3
+#include <SFML/Window/ContextSettings.hpp>
+#endif
+
+#include <tuple> // std::ignore
 
 #ifndef _MSC_VER
 #include <EGL/egl.h>
 #include <common/gl/gl_check.h>
 #include <stdlib.h>
 #endif
+
 namespace caspar::accelerator::ogl {
 
 struct device_context::impl
@@ -23,15 +29,26 @@ struct impl_sfml : public device_context::impl
     sf::Context device_;
 
     impl_sfml()
+#if SFML_VERSION_MAJOR >= 3
+        : device_(sf::ContextSettings{
+              .depthBits         = 0,
+              .stencilBits       = 0,
+              .antiAliasingLevel = 0,
+              .majorVersion      = 4,
+              .minorVersion      = 5,
+              .attributeFlags    = sf::ContextSettings::Attribute::Core
+          }, {1, 1})
+#else
         : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+#endif
     {
         CASPAR_LOG(info) << L"Initializing OpenGL Device (sfml).";
     }
 
     virtual ~impl_sfml() {}
 
-    virtual void bind() override { device_.setActive(true); }
-    virtual void unbind() override { device_.setActive(false); }
+    virtual void bind() override { std::ignore = device_.setActive(true); }
+    virtual void unbind() override { std::ignore = device_.setActive(false); }
 };
 
 #ifndef _MSC_VER
