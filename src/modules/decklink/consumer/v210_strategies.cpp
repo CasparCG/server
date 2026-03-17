@@ -21,6 +21,9 @@
 
 #include "../StdAfx.h"
 
+// Force this file to compile with avx2, as it has been crafted with intrinsics that require it.
+#pragma GCC target("avx2")
+
 #ifdef USE_SIMDE
 #define SIMDE_ENABLE_NATIVE_ALIASES
 #include <simde/x86/avx2.h>

@@ -137,13 +137,16 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
                                    << msg_info(L"The decklink consumer only supports rgba output on 8-bit channels"));
         }
 
+        if (config.pixel_format != configuration::pixel_format_t::rgba) {
 #ifdef WIN32
-        if (!CHECK_INSTRUCTION_SUPPORT(__IA_SUPPORT_VECTOR256, 0) &&
-            config.pixel_format != configuration::pixel_format_t::rgba) {
-            CASPAR_THROW_EXCEPTION(user_error()
-                                   << msg_info(L"You cpu does not support the features needed for yuv output"));
-        }
+            if (!CHECK_INSTRUCTION_SUPPORT(__IA_SUPPORT_VECTOR256, 0)) {
+#else
+            if (!__builtin_cpu_supports("avx2")) {
 #endif
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"You cpu does not support the features needed for yuv output"));
+            }
+        }
     }
 
     config.primary = parse_output_config(ptree, format_repository);
