@@ -143,3 +143,4 @@ void NDIlib_send_set_failover(NDIlib_send_instance_t p_instance, const NDIlib_so
 // Retrieve the source information for the given sender instance.  This pointer is valid until NDIlib_send_destroy is called.
 PROCESSINGNDILIB_API
 const NDIlib_source_t* NDIlib_send_get_source_name(NDIlib_send_instance_t p_instance);
+
