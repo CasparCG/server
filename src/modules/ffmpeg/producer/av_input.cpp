@@ -39,6 +39,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
+            int consecutive_enomem = 0;
+
             while (true) {
                 auto packet = alloc_packet();
 
@@ -60,16 +62,39 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     } else if (ret == AVERROR_EOF) {
                         eof_   = true;
                         packet = nullptr;
+                    } else if (ret == AVERROR(ENOMEM)) {
+                        // Transient memory allocation failure inside the demuxer; log and retry rather
+                        // than letting the exception escape and kill the read thread permanently.
+                        // Sleep briefly to give the system a chance to free memory before retrying.
+                        ++consecutive_enomem;
+                        if (consecutive_enomem == 1) {
+                            CASPAR_LOG(warning)
+                                << "av_input[" << filename_ << "] av_read_frame: out of memory, retrying";
+                        } else if (consecutive_enomem >= 20) {
+                            CASPAR_LOG(error) << "av_input[" << filename_
+                                              << "] av_read_frame: too many consecutive out-of-memory errors, aborting";
+
+                            // Pretend we reached EOF, to avoid the producer stalling expecting more packets
+                            eof_   = true;
+                            packet = nullptr;
+                            buffer_.push(std::move(packet));
+                            break;
+                        }
+                        boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
+                        continue;
                     } else {
+                        consecutive_enomem = 0;
                         FF_RET(ret, "av_read_frame");
                     }
                 }
 
+                consecutive_enomem = 0;
                 buffer_.push(std::move(packet));
                 graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
         }
     });
 }
