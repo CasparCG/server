@@ -36,8 +36,6 @@
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 
-#include <boost/algorithm/string/erase.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -50,7 +48,10 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+#include <algorithm>
+#include <cctype>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <AL/al.h>
@@ -60,107 +61,71 @@ namespace caspar { namespace oal {
 
 class device
 {
-    ALCdevice*         device_  = nullptr;
-    ALCcontext*        context_ = nullptr;
-    const std::wstring device_name_;
+    ALCdevice*  device_  = nullptr;
+    ALCcontext* context_ = nullptr;
 
   public:
-    explicit device(std::wstring device_name) : device_name_(std::move(device_name))
+    explicit device(std::wstring device_name)
     {
-        ALCchar* deviceName = nullptr;
+        auto norm = [](std::string s) {
+            s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
+            std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+            return s;
+        };
 
-        if (!device_name_.empty()) {
-            ALboolean enumeration = alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
+        std::string found_name;
 
-            if (enumeration == AL_FALSE) {
-                // enumeration not supported
-                CASPAR_LOG(info) << L"Unable to enumerate OpenAL devices. Using system default device";
-            } else {
-                char* s;
+        if (device_name.size()) {
+            if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
 
-                if (alcIsExtensionPresent(nullptr, "ALC_enumerate_all_EXT") == AL_FALSE)
-                    s = (char*)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
-                else
-                    s = (char*)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
+                auto match = norm(u8(device_name));
 
-                deviceName = iterate_and_find_device(s, device_name_);
+                auto enum_all_ext = alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT");
+                auto names = alcGetString(nullptr, enum_all_ext ? ALC_ALL_DEVICES_SPECIFIER : ALC_DEVICE_SPECIFIER);
 
-                if (deviceName == nullptr) {
-                    CASPAR_LOG(warning)
-                        << L"Failed to find specified OpenAL output device. Using system default device";
-                } else {
-                    CASPAR_LOG(debug) << L"Found specified OpenAL output device";
+                CASPAR_LOG(info) << "-------- OpenAL Devices -------";
+
+                // `names` contains multiple null-terminated device names
+                for (auto p = names; *p; p += strlen(p) + 1) {
+                    std::string found{p};
+                    CASPAR_LOG(info) << found;
+
+                    if (match == norm(found)) found_name = found;
                 }
+
+                CASPAR_LOG(info) << "-------- OpenAL Devices -------";
+
+                if (found_name.size())
+                    CASPAR_LOG(info) << "Using OpenAL device: " << found_name;
+                else
+                    CASPAR_LOG(warning) << "Specified OpenAL device not found - using default";
+            } else {
+                CASPAR_LOG(info) << "OpenAL device enumeration not supported - using default";
             }
+        } else {
+            CASPAR_LOG(info) << "Using default OpenAL device";
         }
 
-        device_ = alcOpenDevice(deviceName);
-
-        if (device_ == nullptr)
+        device_ = alcOpenDevice(found_name.size() ? found_name.data() : nullptr);
+        if (!device_)
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
         context_ = alcCreateContext(device_, nullptr);
-
-        if (context_ == nullptr)
+        if (!context_)
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
 
-        if (alcMakeContextCurrent(context_) == ALC_FALSE)
+        if (!alcMakeContextCurrent(context_))
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
     }
 
     ~device()
     {
         alcMakeContextCurrent(nullptr);
-
-        if (context_ != nullptr)
-            alcDestroyContext(context_);
-
-        if (device_ != nullptr)
-            alcCloseDevice(device_);
+        if (context_) alcDestroyContext(context_);
+        if (device_) alcCloseDevice(device_);
     }
 
     ALCdevice* get() { return device_; }
-
-  private:
-    static ALCchar* iterate_and_find_device(const char* list, const std::wstring& device_name)
-    {
-        ALCchar* result = nullptr;
-
-        // generate ascii string for comparison purposes vs what openAL provides
-        std::string short_device_name = u8(device_name);
-        boost::algorithm::erase_all(short_device_name, " ");
-
-        CASPAR_LOG(info) << L"------- OpenAL Device List -----";
-
-        if (!list) {
-            CASPAR_LOG(info) << L"No device names found";
-        } else {
-            // iterate through all device names
-            // -> buffer contains multiple null-terminated device name strings
-            ALCchar* ptr = (ALCchar*)list;
-
-            while (strlen(ptr) > 0) {
-                // log each device name, so we can see what options are available
-                CASPAR_LOG(info) << ptr;
-
-                // store matching device name address if found
-                // -> device name will be empty string if not provided
-                std::string tmpStr = ptr;
-                boost::algorithm::erase_all(tmpStr, " ");
-
-                if (boost::iequals(short_device_name, tmpStr)) {
-                    result = ptr;
-                }
-
-                // point to next device name start (or null if no more device names)
-                ptr += strlen(ptr) + 1;
-            }
-        }
-
-        CASPAR_LOG(info) << L"------ OpenAL Devices List done -----";
-
-        return result;
-    }
 };
 
 struct oal_consumer : public core::frame_consumer
