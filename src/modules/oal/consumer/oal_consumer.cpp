@@ -49,15 +49,23 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <condition_variable>
+#include <cstdint>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
 
-namespace caspar { namespace oal {
+namespace caspar::oal {
+
+using namespace std::chrono_literals;
 
 class device
 {
@@ -139,10 +147,14 @@ struct oal_consumer : public core::frame_consumer
     device              device_;
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
-    bool                started_  = false;
-    int                 duration_ = 1920;
+    std::queue<ALuint>  free_;
 
-    std::shared_ptr<SwrContext> swr_;
+    std::mutex          mutex_;
+    std::condition_variable free_cv_;
+    std::atomic<bool>   stop_{false};
+
+    struct swr_deleter { void operator()(SwrContext* p) { swr_free(&p); } };
+    std::unique_ptr<SwrContext, swr_deleter> swr_;
 
     executor executor_{L"oal_consumer"};
 
@@ -157,15 +169,16 @@ struct oal_consumer : public core::frame_consumer
 
     ~oal_consumer() override
     {
+        stop_ = true;
+        free_cv_.notify_all();
+
         executor_.invoke([=] {
-            if (source_ != 0u) {
+            if (source_) {
+                std::lock_guard guard{mutex_};
+
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
-            }
-
-            for (auto& buffer : buffers_) {
-                if (buffer != 0u)
-                    alDeleteBuffers(1, &buffer);
+                alDeleteBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
             }
         });
     }
@@ -181,137 +194,96 @@ struct oal_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         executor_.begin_invoke([=] {
-            duration_ = *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
-            buffers_.resize(8);
+            AVChannelLayout from, to;
+            av_channel_layout_default(&from, format_desc_.audio_channels);
+            av_channel_layout_default(&to, 2); // stereo
+
+            SwrContext* raw;
+            swr_alloc_set_opts2(&raw,
+                &to,   AV_SAMPLE_FMT_S16, format_desc_.audio_sample_rate,
+                &from, AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
+                0, nullptr
+            );
+            swr_.reset(raw);
+            swr_init(raw);
+
+            std::lock_guard guard{mutex_};
+
+            buffers_.resize(16);
             alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+            for (auto buf : buffers_) free_.push(buf);
+
             alGenSources(1, &source_);
 
-            alSourcei(source_, AL_LOOPING, AL_FALSE);
+            // queue one frame worth of silence to ensure there is something
+            // in the OAL queue until we get the next frame
+            std::vector<int16_t> silence(format_desc_.audio_cadence[0] * 2, 0); // stereo
+            auto buf = free_.front();
+            free_.pop();
+            alBufferData(buf, AL_FORMAT_STEREO16, silence.data(),
+                static_cast<ALsizei>(silence.size() * sizeof(std::int16_t)),
+                format_desc_.audio_sample_rate
+            );
+            alSourceQueueBuffers(source_, 1, &buf);
         });
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        executor_.begin_invoke([=] {
-            auto dst         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            dst->format      = AV_SAMPLE_FMT_S16;
-            dst->sample_rate = format_desc_.audio_sample_rate;
-            av_channel_layout_default(&dst->ch_layout, 2);
-            dst->nb_samples = duration_;
-            if (av_frame_get_buffer(dst.get(), 32) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-            std::memset(dst->extended_data[0], 0, dst->linesize[0]);
+        executor_.begin_invoke([this, frame = std::move(frame)] {
+            // resample and downmix
+            auto&& audio_in = frame.audio_data();
+            auto num_samples = static_cast<int>(audio_in.size() / format_desc_.audio_channels);
 
-            if (!started_) {
-                for (ALuint& buffer : buffers_) {
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                }
+            std::vector<std::int16_t> audio_out(num_samples * 2); // stereo
 
-                alSourcePlay(source_);
-                started_ = true;
+            auto from = reinterpret_cast<const std::uint8_t*>(audio_in.data());
+            auto to = reinterpret_cast<std::uint8_t*>(audio_out.data());
+            swr_convert(swr_.get(), &to, num_samples, &from, num_samples);
 
-                return;
-            }
+            {
+                // submit to OAL queue
+                std::unique_lock lock{mutex_};
+                free_cv_.wait(lock, [this] { return !free_.empty() || stop_; });
 
-            auto src         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            src->format      = AV_SAMPLE_FMT_S32;
-            src->sample_rate = format_desc_.audio_sample_rate;
-            av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
-            src->nb_samples       = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
-            src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
-            src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
+                auto buf = free_.front();
+                free_.pop();
+                alBufferData(buf, AL_FORMAT_STEREO16, audio_out.data(),
+                    static_cast<ALsizei>(audio_out.size() * sizeof(std::int16_t)),
+                    format_desc_.audio_sample_rate
+                );
+                alSourceQueueBuffers(source_, 1, &buf);
 
-            if (!swr_) {
-                swr_.reset(swr_alloc(), [](SwrContext* ptr) { swr_free(&ptr); });
-                if (!swr_) {
-                    CASPAR_THROW_EXCEPTION(bad_alloc());
-                }
-                if (swr_config_frame(swr_.get(), dst.get(), src.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-                if (swr_init(swr_.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-            }
-
-            if (swr_convert_frame(swr_.get(), nullptr, src.get()) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-
-            ALint processed = 0;
-            alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
-
-            auto in_duration  = swr_get_delay(swr_.get(), 48000);
-            auto out_duration = static_cast<int64_t>(processed) * duration_;
-            auto delta        = static_cast<int>(out_duration - in_duration);
-
-            ALenum state;
-            alGetSourcei(source_, AL_SOURCE_STATE, &state);
-            if (state != AL_PLAYING) {
-                while (delta > duration_) {
-                    ALuint buffer = 0;
-                    alSourceUnqueueBuffers(source_, 1, &buffer);
-                    if (buffer == 0u) {
-                        break;
-                    }
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                    delta -= duration_;
-                }
-
-                alSourcePlay(source_);
-            }
-
-            // TODO (fix)
-            // if (std::abs(delta) > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
-            //    // TODO FF error
-            //    CASPAR_THROW_EXCEPTION(invalid_argument());
-            //}
-
-            for (auto n = 0; n < processed; ++n) {
-                if (swr_get_delay(swr_.get(), 48000) < dst->nb_samples) {
-                    break;
-                }
-
-                ALuint buffer = 0;
-                alSourceUnqueueBuffers(source_, 1, &buffer);
-                if (buffer == 0u) {
-                    // TODO error
-                    break;
-                }
-
-                if (swr_convert_frame(swr_.get(), dst.get(), nullptr) != 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-
-                alBufferData(buffer,
-                             AL_FORMAT_STEREO16,
-                             dst->extended_data[0],
-                             static_cast<ALsizei>(dst->linesize[0]),
-                             dst->sample_rate);
-                alSourceQueueBuffers(source_, 1, &buffer);
+                ALenum state = 0;
+                alGetSourcei(source_, AL_SOURCE_STATE, &state);
+                if (state != AL_PLAYING) alSourcePlay(source_);
             }
 
             graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
             perf_timer_.restart();
         });
 
-        return make_ready_future(true);
+        return std::async(std::launch::deferred, [this] {
+            // wait until one buffer is done playing
+            while (!stop_) {
+                ALint done = 0;
+                {
+                    std::lock_guard guard{mutex_};
+                    alGetSourcei(source_, AL_BUFFERS_PROCESSED, &done);
+                    if (done) {
+                        ALuint buf;
+                        alSourceUnqueueBuffers(source_, 1, &buf);
+                        free_.push(buf);
+                    }
+                }
+                if (done) {
+                    free_cv_.notify_one();
+                    return true;
+                }
+                std::this_thread::sleep_for(100us);
+            }
+            return false;
+        });
     }
 
     std::wstring print() const override
@@ -321,7 +293,7 @@ struct oal_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"system-audio"; }
 
-    bool has_synchronization_clock() const override { return false; }
+    bool has_synchronization_clock() const override { return true; }
 
     int index() const override { return 500; }
 
@@ -352,4 +324,4 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     return spl::make_shared<oal_consumer>(ptree.get(L"device-name", L""));
 }
 
-}} // namespace caspar::oal
+} // namespace caspar::oal
