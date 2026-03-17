@@ -41,6 +41,13 @@ jobs:
                       container: debian:sid
                       apt_prefix: ""
                       upload_artifacts: false # Because of CEF, this is not built correctly
+                    - os: ubuntu-latest
+                      family: archlinux
+                      distribution: latest
+                      arch: amd64
+                      container: archlinux:latest
+                      apt_prefix: ""
+                      upload_artifacts: false # Not supported
 
         runs-on: ${{ matrix.os }}
         container: ${{ matrix.container }}
@@ -49,10 +56,15 @@ jobs:
                 shell: bash
 
         steps:
+            - name: Install git (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: pacman -Sy --noconfirm git
+
             - uses: actions/checkout@v6
 
             - name: Setup environment
               id: setup-env
+              if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
               run: |
                   ln -s tools/linux/deb/${{ matrix.family }}-${{ matrix.distribution }}/debian ./
 
@@ -103,6 +115,7 @@ jobs:
                   APT_PREFIX: ${{ matrix.apt_prefix }}
 
             - name: Run build
+              if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
               run: |
                   # Perform build
                   debuild -b -uc -us
@@ -111,7 +124,7 @@ jobs:
 
             - name: Collect artifacts
               id: artifacts
-              if: ${{ matrix.upload_artifacts }}
+              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
               run: |
                   mkdir -p dist
                   mv ../*.deb dist/
@@ -140,7 +153,32 @@ jobs:
                   CI: 1
 
             - uses: actions/upload-artifact@v7
-              if: ${{ matrix.upload_artifacts }}
+              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
               with:
                   name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
                   path: dist
+
+            - name: Setup environment (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: |
+                  pacman -Syu --noconfirm
+                  pacman -S --noconfirm --needed \
+                    base-devel cmake ninja pkg-config \
+                    boost ffmpeg glew libglvnd \
+                    onetbb openal sfml \
+                    libxrandr simde
+              env:
+                  CI: 1
+
+            - name: Run build (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: |
+                  cmake -B build -S src \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DDIAG_FONT_PATH="/usr/share/fonts/liberation/LiberationMono-Regular.ttf" \
+                    -DENABLE_HTML=OFF \
+                    -G Ninja
+
+                  cmake --build build
+              env:
+                  CI: 1
