@@ -159,7 +159,7 @@ void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
 {
     if (keyer == configuration::keyer_t::internal_keyer || keyer == configuration::keyer_t::external_keyer) {
         BMDDisplayMode actualMode = bmdModeUnknown;
-        bool           supported  = false;
+        BOOL           supported  = FALSE;
         if (SUCCEEDED(output->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
                                                    display_mode,
                                                    pixel_format,
