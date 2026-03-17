@@ -24,6 +24,12 @@
 #include <common/param.h>
 #include <common/ptree.h>
 
+#ifdef WIN32
+#include <isa_availability.h>
+
+#define CHECK_INSTRUCTION_SUPPORT(a, v) (__check_arch_support((a), (v)) || __check_isa_support((a), (v)))
+#endif
+
 namespace caspar { namespace decklink {
 
 port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
@@ -130,6 +136,14 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
             CASPAR_THROW_EXCEPTION(user_error()
                                    << msg_info(L"The decklink consumer only supports rgba output on 8-bit channels"));
         }
+
+#ifdef WIN32
+        if (!CHECK_INSTRUCTION_SUPPORT(__IA_SUPPORT_VECTOR256, 0) &&
+            config.pixel_format != configuration::pixel_format_t::rgba) {
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info(L"You cpu does not support the features needed for yuv output"));
+        }
+#endif
     }
 
     config.primary = parse_output_config(ptree, format_repository);

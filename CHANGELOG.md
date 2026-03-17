@@ -1,13 +1,6 @@
 CasparCG 2.5.0 Stable
 ==========================================
 
-### Important
-
-We recommend running CasparCG 2.5 on CPUs which support AVX2. Officially Chrome claims to require AVX2, and it is required for some of our in-progress HDR support.
-Intel CPUs based on Haswell or later support this, which were first released to consumers in 2013, or 2014 for servers.
-
-Starting with CasparCG 2.6, this will become a requirement
-
 ### Core
 ##### Improvements
 * Initial support for HDR. This is limited to a subset of producers and consumers at this stage.
