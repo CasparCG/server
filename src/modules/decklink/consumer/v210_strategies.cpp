@@ -21,7 +21,7 @@
 
 #include "../StdAfx.h"
 
-#ifndef WIN32
+#if !defined(WIN32) && (defined(__x86_64__) || defined(__i386__))
 // Force this file to compile with avx2, as it has been crafted with intrinsics that require it.
 #pragma GCC target("avx2")
 #endif
