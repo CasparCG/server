@@ -60,10 +60,9 @@ void html_cg_proxy::next(int layer) { producer_->call({L"next()"}); }
 
 void html_cg_proxy::update(int layer, const std::wstring& data)
 {
-    producer_->call({(boost::wformat(L"update(\"%1%\")") %
-                      boost::algorithm::replace_all_copy(
-                          boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\""))
-                         .str()});
+    auto escaped = boost::algorithm::replace_all_copy(
+        boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\"");
+    producer_->call({L"update(\"" + escaped + L"\")"});
 }
 
 std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)

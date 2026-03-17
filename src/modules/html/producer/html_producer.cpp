@@ -404,16 +404,17 @@ class html_client
                           const CefString&      source,
                           int                   line) override
     {
+        auto msg = log::replace_nonprintable_copy(message.ToWString(), L'?');
         if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
-            CASPAR_LOG(debug) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(debug) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
-            CASPAR_LOG(warning) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(warning) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
-            CASPAR_LOG(error) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(error) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
-            CASPAR_LOG(fatal) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(fatal) << print() << L" Log: " << msg;
         else
-            CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(info) << print() << L" Log: " << msg;
         return true;
     }
 
@@ -484,7 +485,7 @@ class html_client
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
-            auto msg      = args->GetString(1).ToWString();
+            auto msg = log::replace_nonprintable_copy(args->GetString(1).ToWString(), L'?');
 
             BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << msg;
         }
