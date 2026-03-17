@@ -122,6 +122,9 @@ struct newtek_ndi_consumer : public core::frame_consumer
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
 
+        // Make sure to stop the advertiser before recreating the sender
+        ndi_advertiser_instance_.reset();
+
         NDIlib_send_create_t NDI_send_create_desc;
 
         auto tmp_name                   = u8(name_);
