@@ -8,29 +8,39 @@ on:
 
 jobs:
     build:
-        name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{ matrix.distribution }})
+        name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{matrix.family}}:${{ matrix.distribution }})
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - os: ubuntu-24.04
+                      family: ubuntu
                       distribution: noble
                       arch: amd64
                       container: ""
                       apt_prefix: sudo
                       upload_artifacts: true
                     - os: ubuntu-latest
+                      family: ubuntu
                       distribution: resolute
                       arch: amd64
                       container: ubuntu:26.04
                       apt_prefix: ""
                       upload_artifacts: false
                     - os: ubuntu-24.04-arm
+                      family: ubuntu
                       distribution: resolute
                       arch: arm64
                       container: ubuntu:26.04
                       apt_prefix: ""
                       upload_artifacts: false
+                    - os: ubuntu-latest
+                      family: debian
+                      distribution: sid
+                      arch: amd64
+                      container: debian:sid
+                      apt_prefix: ""
+                      upload_artifacts: false # Because of CEF, this is not built correctly
 
         runs-on: ${{ matrix.os }}
         container: ${{ matrix.container }}
@@ -44,7 +54,7 @@ jobs:
             - name: Setup environment
               id: setup-env
               run: |
-                  ln -s tools/linux/deb/ubuntu-${{ matrix.distribution }}/debian ./
+                  ln -s tools/linux/deb/${{ matrix.family }}-${{ matrix.distribution }}/debian ./
 
                   # Build a version number for this build
                   GH_REF="${GITHUB_REF##*/}"
@@ -64,7 +74,10 @@ jobs:
                   # install some needed tooling
                   $APT_PREFIX apt-get update
                   $APT_PREFIX apt-get -y install software-properties-common build-essential dpkg-dev debhelper devscripts
-                  $APT_PREFIX add-apt-repository ppa:casparcg/ppa
+
+                  if [[ "${{ matrix.family }}" == "ubuntu" ]]; then
+                    $APT_PREFIX add-apt-repository ppa:casparcg/ppa
+                  fi
 
                   # Put something in the changelog
                   export DEBEMAIL="builds@casparcg.com"
@@ -74,14 +87,16 @@ jobs:
                   # Install build dependencies
                   $APT_PREFIX apt-get -y build-dep .
 
-                  # update the control file to reference the current cef version
-                  CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-142)
-                  sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
+                  if [[ "${{ matrix.family }}" == "ubuntu" ]]; then
+                    # update the control file to reference the current cef version
+                    CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-142)
+                    sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
 
-                  # Download required packages
-                  cd ..
-                  apt-get download casparcg-cef-142=$CASPARCG_CEF_VER
-                  apt-get download casparcg-scanner
+                    # Download required packages
+                    cd ..
+                    apt-get download casparcg-cef-142=$CASPARCG_CEF_VER
+                    apt-get download casparcg-scanner
+                  fi
               env:
                   CI: 1
                   DEBIAN_FRONTEND: noninteractive
