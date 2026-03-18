@@ -66,6 +66,13 @@
 #include "../html.h"
 #include "../util.h"
 
+#ifdef WIN32
+#include <accelerator/d3d/d3d_device.h>
+#include <accelerator/d3d/d3d_device_context.h>
+#include <accelerator/d3d/d3d_texture2d.h>
+#endif
+
+
 namespace caspar { namespace html {
 
 inline std::int_least64_t now()
@@ -144,6 +151,11 @@ class html_client
 
     CefRefPtr<CefBrowser> browser_;
 
+#ifdef WIN32
+    std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
+    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
+#endif
+
   public:
     html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
                 const spl::shared_ptr<diagnostics::graph>& graph,
@@ -157,6 +169,9 @@ class html_client
         , format_desc_(std::move(format_desc))
         , gpu_enabled_(gpu_enabled)
         , shared_texture_enable_(shared_texture_enable)
+#ifdef WIN32
+        , d3d_device_(accelerator::d3d::d3d_device::get_device())
+#endif
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -385,10 +400,55 @@ class html_client
                             const RectList&                dirtyRects,
                             const CefAcceleratedPaintInfo& info) override
     {
-        if (!shared_texture_enable_ || closing_ || not_found_)
-            return;
+         try {
+            if (!shared_texture_enable_ || closing_ || not_found_)
+                return;
 
-        CASPAR_LOG(info) << "PAINT!";
+            graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
+            paint_timer_.restart();
+            CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
+
+            if (type != PET_VIEW)
+                return;
+
+            if (d3d_shared_buffer_) {
+                if (info.shared_texture_handle != d3d_shared_buffer_->share_handle())
+                    d3d_shared_buffer_.reset();
+            }
+
+            if (!d3d_shared_buffer_) {
+                d3d_shared_buffer_ = d3d_device_->open_shared_texture(info.shared_texture_handle);
+                if (!d3d_shared_buffer_)
+                    CASPAR_LOG(error) << print() << L" could not open shared texture!";
+            }
+
+            if (d3d_shared_buffer_) {
+                core::pixel_format format = core::pixel_format::invalid;
+                if (d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
+                    format = core::pixel_format::bgra;
+                } else if (d3d_shared_buffer_->format() == DXGI_FORMAT_R8G8B8A8_UNORM) {
+                    format = core::pixel_format::rgba;
+                }
+
+                if (format != core::pixel_format::invalid) {
+                    auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, false, format);
+                    core::draw_frame dframe(std::move(frame));
+
+                    {
+                        std::lock_guard<std::mutex> lock(frames_mutex_);
+
+                        frames_.push(presentation_frame(std::move(dframe)));
+                        while (frames_.size() > 4) {
+                            frames_.pop();
+                            graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                        }
+                        graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
+                    }
+                }
+            }
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
     }
 
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override

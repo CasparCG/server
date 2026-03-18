@@ -46,6 +46,10 @@
 #include <include/cef_version.h>
 #pragma warning(pop)
 
+#ifdef WIN32
+#include <accelerator/d3d/d3d_device.h>
+#endif
+
 namespace caspar::html {
 
 std::unique_ptr<executor> g_cef_executor;
@@ -335,8 +339,14 @@ std::pair<bool, bool> is_gpu_shared_texture_enabled()
     bool       shared_texture_enable = false;
 
 #ifdef WIN32
-    shared_texture_enable = enable_gpu;
-    //&&accelerator::d3d::d3d_device::get_device();
+    if (enable_gpu) {
+        auto dev = accelerator::d3d::d3d_device::get_device();
+        if (!dev) {
+            CASPAR_LOG(warning) << L"Failed to create directX device for cef gpu acceleration";
+        } else {
+            shared_texture_enable = true;
+        }
+    }
 #else
     //shared_texture_enable = enable_gpu && true; // TODO - proper condition!
 #endif
