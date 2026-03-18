@@ -170,7 +170,7 @@ class renderer_application
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
-            auto default_backend = L"gl";
+            auto default_backend = L""; // Let CEF choose what is best
 #if __unix__
             // If there is no X server, Chromium requires us to force it to the angle backend
             if (getenv("DISPLAY") == nullptr)
