@@ -53,6 +53,7 @@ extern "C" {
 #include <cctype>
 #include <condition_variable>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -109,7 +110,6 @@ class device
     ALCdevice*  device_  = nullptr;
     ALCcontext* context_ = nullptr;
 
-  public:
     explicit device(const std::string& device_name)
     {
         auto norm = [](std::string s) {
@@ -163,6 +163,9 @@ class device
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
     }
 
+    inline static std::map<std::string, std::weak_ptr<device>> devices_;
+
+public:
     ~device()
     {
         alcMakeContextCurrent(nullptr);
@@ -170,7 +173,13 @@ class device
         if (device_) alcCloseDevice(device_);
     }
 
-    ALCdevice* get() { return device_; }
+    static std::shared_ptr<device> open(const std::string& device_name)
+    {
+        auto& weak = devices_[device_name];
+        auto shared = weak.lock();
+        if (!shared) weak = shared = std::shared_ptr<device>{new device{device_name}};
+        return shared;
+    }
 };
 
 struct oal_consumer : public core::frame_consumer
@@ -181,7 +190,7 @@ struct oal_consumer : public core::frame_consumer
 
     core::video_format_desc format_desc_;
 
-    device              device_;
+    std::shared_ptr<device> device_;
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
     std::queue<ALuint>  free_;
@@ -198,7 +207,7 @@ struct oal_consumer : public core::frame_consumer
 
   public:
     explicit oal_consumer(const std::string& device_name, const delay_value& delay) :
-        device_{device_name}, delay_{delay}
+        device_{ device::open(device_name) }, delay_{delay}
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
