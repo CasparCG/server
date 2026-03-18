@@ -64,6 +64,8 @@ extern "C" {
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#define AL_ALEXT_PROTOTYPES
+#include <AL/alext.h>
 
 namespace caspar::oal {
 
@@ -107,8 +109,11 @@ struct delay_value
 
 class device
 {
-    ALCdevice*  device_  = nullptr;
-    ALCcontext* context_ = nullptr;
+    struct device_deleter { void operator()(ALCdevice* p) { alcCloseDevice(p); } };
+    std::unique_ptr<ALCdevice, device_deleter> device_;
+
+    struct context_deleter { void operator()(ALCcontext* p) { alcDestroyContext(p); } };
+    std::unique_ptr<ALCcontext, context_deleter> context_;
 
     explicit device(const std::string& device_name)
     {
@@ -151,34 +156,37 @@ class device
             CASPAR_LOG(info) << "Using default OpenAL device";
         }
 
-        device_ = alcOpenDevice(found_name.size() ? found_name.data() : nullptr);
-        if (!device_)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
+        device_.reset(alcOpenDevice(found_name.size() ? found_name.data() : nullptr));
+        if (!device_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize device."));
 
-        context_ = alcCreateContext(device_, nullptr);
-        if (!context_)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
+        context_.reset(alcCreateContext(device_.get(), nullptr));
+        if (!context_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create context."));
 
-        if (!alcMakeContextCurrent(context_))
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
+        if (!alcIsExtensionPresent(device_.get(), "ALC_EXT_thread_local_context"))
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Device does not support ALC_EXT_thread_local_context"));
     }
 
     inline static std::map<std::string, std::weak_ptr<device>> devices_;
 
 public:
-    ~device()
-    {
-        alcMakeContextCurrent(nullptr);
-        if (context_) alcDestroyContext(context_);
-        if (device_) alcCloseDevice(device_);
-    }
-
     static std::shared_ptr<device> open(const std::string& device_name)
     {
         auto& weak = devices_[device_name];
         auto shared = weak.lock();
         if (!shared) weak = shared = std::shared_ptr<device>{new device{device_name}};
         return shared;
+    }
+
+    void activate_context()
+    {
+        if (context_.get() != alcGetThreadContext())
+            alcSetThreadContext(context_.get());
+    }
+
+    void deactivate_context()
+    {
+        if (context_.get() == alcGetThreadContext())
+            alcSetThreadContext(nullptr);
     }
 };
 
@@ -223,10 +231,13 @@ struct oal_consumer : public core::frame_consumer
         executor_.invoke([=] {
             if (source_) {
                 std::lock_guard guard{mutex_};
+                device_->activate_context();
 
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
                 alDeleteBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+
+                device_->deactivate_context();
             }
         });
     }
@@ -259,6 +270,7 @@ struct oal_consumer : public core::frame_consumer
             CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
 
             std::lock_guard guard{mutex_};
+            device_->activate_context();
 
             buffers_.resize(num_silence + 2);
             alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
@@ -302,6 +314,7 @@ struct oal_consumer : public core::frame_consumer
                 // submit to OAL queue
                 std::unique_lock lock{mutex_};
                 free_cv_.wait(lock, [this] { return !free_.empty() || stop_; });
+                device_->activate_context();
 
                 auto buf = free_.front();
                 free_.pop();
@@ -326,6 +339,8 @@ struct oal_consumer : public core::frame_consumer
                 ALint done = 0;
                 {
                     std::lock_guard guard{mutex_};
+                    device_->activate_context();
+
                     alGetSourcei(source_, AL_BUFFERS_PROCESSED, &done);
                     if (done) {
                         ALuint buf;
