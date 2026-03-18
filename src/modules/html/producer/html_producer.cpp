@@ -125,6 +125,7 @@ class html_client
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
     bool                                 gpu_enabled_;
+    bool                                 shared_texture_enable_;
     tbb::concurrent_queue<std::wstring>  javascript_before_load_;
     std::atomic<bool>                    loaded_;
     std::atomic<bool>                    not_found_;
@@ -148,12 +149,14 @@ class html_client
                 const spl::shared_ptr<diagnostics::graph>& graph,
                 core::video_format_desc                    format_desc,
                 bool                                       gpu_enabled,
+                bool                                       shared_texture_enable,
                 std::wstring                               url)
         : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
         , gpu_enabled_(gpu_enabled)
+        , shared_texture_enable_(shared_texture_enable)
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -330,7 +333,7 @@ class html_client
                  int                   width,
                  int                   height) override
     {
-        if (closing_ || not_found_)
+        if (shared_texture_enable_ || closing_ || not_found_)
             return;
 
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -375,6 +378,17 @@ class html_client
             }
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
         }
+    }
+
+    void OnAcceleratedPaint(CefRefPtr<CefBrowser>          browser,
+                            PaintElementType               type,
+                            const RectList&                dirtyRects,
+                            const CefAcceleratedPaintInfo& info) override
+    {
+        if (!shared_texture_enable_ || closing_ || not_found_)
+            return;
+
+        CASPAR_LOG(info) << "PAINT!";
     }
 
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
@@ -570,17 +584,18 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+            auto gpu = is_gpu_shared_texture_enabled();
 
-            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, gpu.first, gpu.second, url_);
 
             CefWindowInfo window_info;
             window_info.bounds.width                 = format_desc.square_width;
             window_info.bounds.height                = format_desc.square_height;
             window_info.windowless_rendering_enabled = true;
+            window_info.shared_texture_enabled       = gpu.second;
 
             CefBrowserSettings browser_settings;
-            browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
+            browser_settings.webgl = gpu.first ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
             double fps             = format_desc.fps;
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);

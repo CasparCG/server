@@ -103,10 +103,12 @@ class renderer_application
 {
     std::vector<CefRefPtr<CefV8Context>> contexts_;
     const bool                           enable_gpu_;
+    const bool                           shared_texture_;
 
   public:
-    explicit renderer_application(const bool enable_gpu)
+    explicit renderer_application(const bool enable_gpu, const bool shared_texture)
         : enable_gpu_(enable_gpu)
+        , shared_texture_(shared_texture)
     {
     }
 
@@ -218,7 +220,7 @@ bool intercept_command_line(int argc, char** argv)
     CefMainArgs main_args(argc, argv);
 #endif
 
-    return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0;
+    return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false, false)), nullptr) >= 0;
 }
 
 void init(const core::module_dependencies& dependencies)
@@ -231,7 +233,7 @@ void init(const core::module_dependencies& dependencies)
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
-        const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+        const auto gpu = is_gpu_shared_texture_enabled();
 
         CefSettings settings;
         settings.command_line_args_disabled   = false;
@@ -248,7 +250,8 @@ void init(const core::module_dependencies& dependencies)
             CefString(&settings.cache_path).FromWString(cache_path);
         }
 
-        return CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
+        return CefInitialize(
+            main_args, settings, CefRefPtr<CefApp>(new renderer_application(gpu.first, gpu.second)), nullptr);
     });
 
     if (!result) {
@@ -324,6 +327,21 @@ std::future<void> begin_invoke(const std::function<void()>& func)
         return task->future();
     }
     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
+}
+
+std::pair<bool, bool> is_gpu_shared_texture_enabled()
+{
+    const bool enable_gpu            = env::properties().get(L"configuration.html.enable-gpu", false);
+    bool       shared_texture_enable = false;
+
+#ifdef WIN32
+    shared_texture_enable = enable_gpu;
+    //&&accelerator::d3d::d3d_device::get_device();
+#else
+    //shared_texture_enable = enable_gpu && true; // TODO - proper condition!
+#endif
+
+    return std::make_pair(enable_gpu, shared_texture_enable);
 }
 
 } // namespace caspar::html
