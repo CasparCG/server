@@ -56,6 +56,7 @@ extern "C" {
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -67,13 +68,49 @@ namespace caspar::oal {
 
 using namespace std::chrono_literals;
 
+struct delay_value
+{
+    int value;
+    enum { frames, msec } type;
+
+    auto in_frames(const core::video_format_desc& desc) {
+        return (type == msec) ? static_cast<int>(value * desc.fps / 1000. + .5) : value;
+    }
+
+    static delay_value from_string(const std::string& s)
+    {
+        try {
+            std::istringstream ss{s};
+
+            int value;
+            if (!(ss >> value)) throw std::invalid_argument{"Invalid delay value"};
+
+            std::string suffix;
+            ss >> suffix;
+
+            if (suffix.size())
+            {
+                if (suffix != "ms") throw std::invalid_argument{"Invalid suffix - expected 'ms' or nothing"};
+                if (!(ss >> std::ws).eof()) throw std::invalid_argument{"Trailing garbage"};
+                return {value, msec};
+            }
+            else return {value, frames};
+
+        } catch (...) {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to parse delay " + s)
+                << nested_exception(std::current_exception())
+            );
+        }
+    }
+};
+
 class device
 {
     ALCdevice*  device_  = nullptr;
     ALCcontext* context_ = nullptr;
 
   public:
-    explicit device(std::wstring device_name)
+    explicit device(const std::string& device_name)
     {
         auto norm = [](std::string s) {
             s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
@@ -86,7 +123,7 @@ class device
         if (device_name.size()) {
             if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
 
-                auto match = norm(u8(device_name));
+                auto name = norm(device_name);
 
                 auto enum_all_ext = alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT");
                 auto names = alcGetString(nullptr, enum_all_ext ? ALC_ALL_DEVICES_SPECIFIER : ALC_DEVICE_SPECIFIER);
@@ -98,7 +135,7 @@ class device
                     std::string found{p};
                     CASPAR_LOG(info) << found;
 
-                    if (match == norm(found)) found_name = found;
+                    if (name == norm(found)) found_name = found;
                 }
 
                 CASPAR_LOG(info) << "-------- OpenAL Devices -------";
@@ -148,6 +185,7 @@ struct oal_consumer : public core::frame_consumer
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
     std::queue<ALuint>  free_;
+    delay_value         delay_;
 
     std::mutex          mutex_;
     std::condition_variable free_cv_;
@@ -159,7 +197,8 @@ struct oal_consumer : public core::frame_consumer
     executor executor_{L"oal_consumer"};
 
   public:
-    explicit oal_consumer(std::wstring device_name) : device_{std::move(device_name)}
+    explicit oal_consumer(const std::string& device_name, const delay_value& delay) :
+        device_{device_name}, delay_{delay}
     {
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -207,24 +246,35 @@ struct oal_consumer : public core::frame_consumer
             swr_.reset(raw);
             swr_init(raw);
 
+            auto num_silence = delay_.in_frames(format_desc_);
+            num_silence = std::clamp(num_silence, 1, static_cast<int>(format_desc_.fps));
+
+            CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
+
             std::lock_guard guard{mutex_};
 
-            buffers_.resize(16);
+            buffers_.resize(num_silence + 2);
             alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
-            for (auto buf : buffers_) free_.push(buf);
 
             alGenSources(1, &source_);
 
-            // queue one frame worth of silence to ensure there is something
-            // in the OAL queue until we get the next frame
-            std::vector<int16_t> silence(format_desc_.audio_cadence[0] * 2, 0); // stereo
-            auto buf = free_.front();
-            free_.pop();
-            alBufferData(buf, AL_FORMAT_STEREO16, silence.data(),
-                static_cast<ALsizei>(silence.size() * sizeof(std::int16_t)),
-                format_desc_.audio_sample_rate
-            );
-            alSourceQueueBuffers(source_, 1, &buf);
+            std::vector<std::int16_t> silence;
+            for (auto n = 0; n < buffers_.size(); ++n) {
+                auto buf = buffers_[n];
+
+                if (n < num_silence) {
+                    auto cadence = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()];
+                    silence.resize(cadence * 2); // stereo
+
+                    alBufferData(buf, AL_FORMAT_STEREO16, silence.data(),
+                        static_cast<ALsizei>(silence.size() * sizeof(std::int16_t)),
+                        format_desc_.audio_sample_rate
+                    );
+                    alSourceQueueBuffers(source_, 1, &buf);
+                } else {
+                    free_.push(buf);
+                }
+            }
         });
     }
 
@@ -312,7 +362,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.empty() || !(boost::iequals(params.at(0), L"AUDIO") || boost::iequals(params.at(0), L"SYSTEM-AUDIO")))
         return core::frame_consumer::empty();
 
-    return spl::make_shared<oal_consumer>(get_param(L"DEVICE_NAME", params, L""));
+    auto device_name = u8(get_param(L"DEVICE_NAME", params, L""));
+    auto s = u8(get_param(L"DELAY", params, L"0"));
+    return spl::make_shared<oal_consumer>(device_name, delay_value::from_string(s));
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -321,7 +373,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    return spl::make_shared<oal_consumer>(ptree.get(L"device-name", L""));
+    auto device_name = u8(ptree.get(L"device-name", L""));
+    auto s = u8(ptree.get(L"delay", L"0"));
+    return spl::make_shared<oal_consumer>(device_name, delay_value::from_string(s));
 }
 
 } // namespace caspar::oal
