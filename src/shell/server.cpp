@@ -439,11 +439,14 @@ struct server::impl
 
             if (name == L"tcp") {
                 auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
+                std::wstring host_w = xml_controller.second.get(L"host", L"");
+                auto host_utf8 = u8(host_w);
 
                 try {
                     auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
                         io_context_,
                         create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
+                        host_utf8,
                         static_cast<short>(port));
                     async_servers_.push_back(asyncbootstrapper);
 
