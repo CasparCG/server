@@ -193,7 +193,7 @@ public:
 struct oal_consumer : public core::frame_consumer
 {
     spl::shared_ptr<diagnostics::graph> graph_;
-    caspar::timer                       perf_timer_;
+    caspar::timer                       tick_timer_, frame_timer_;
     int                                 channel_index_ = -1;
 
     core::video_format_desc format_desc_;
@@ -217,9 +217,11 @@ struct oal_consumer : public core::frame_consumer
     explicit oal_consumer(const std::string& device_name, const delay_value& delay) :
         device_{ device::open(device_name) }, delay_{delay}
     {
-        graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-        graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-        graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+        using diagnostics::color;
+        graph_->set_color("tick-time",  color(0.0, 0.6, 0.9));
+        graph_->set_color("queue-size", color(0.2, 0.9, 0.9));
+        graph_->set_color("frame-time", color(0.1, 1.0, 0.1));
+        graph_->set_color("drop-out",   color(0.6, 0.3, 0.3));
         diagnostics::register_graph(graph_);
     }
 
@@ -312,6 +314,8 @@ struct oal_consumer : public core::frame_consumer
             auto to = reinterpret_cast<std::uint8_t*>(audio_out.data());
             swr_convert(swr_.get(), &to, num_samples, &from, num_samples);
 
+            double free_size;
+            bool dropout = false;
             {
                 // submit to OAL queue
                 std::unique_lock lock{mutex_};
@@ -325,14 +329,20 @@ struct oal_consumer : public core::frame_consumer
                     format_desc_.audio_sample_rate
                 );
                 alSourceQueueBuffers(source_, 1, &buf);
+                free_size = free_.size();
 
                 ALenum state = 0;
                 alGetSourcei(source_, AL_SOURCE_STATE, &state);
-                if (state != AL_PLAYING) alSourcePlay(source_);
+                if (state != AL_PLAYING) {
+                    dropout = true;
+                    alSourcePlay(source_);
+                }
             }
 
-            graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-            perf_timer_.restart();
+            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            tick_timer_.restart();
+            graph_->set_value("queue-size", 1 - free_size / buffers_.size());
+            if (dropout) graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
         });
 
         return std::async(std::launch::deferred, [this] {
@@ -352,6 +362,8 @@ struct oal_consumer : public core::frame_consumer
                 }
                 if (done) {
                     free_cv_.notify_one();
+                    graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+                    frame_timer_.restart();
                     return true;
                 }
                 std::this_thread::sleep_for(100us);
