@@ -1463,13 +1463,13 @@ std::wstring thumbnail_list_command(command_context& ctx)
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
     return make_request(
-        ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
+        ctx, "/thumbnail/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
 }
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
     return make_request(
-        ctx, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
+        ctx, "/thumbnail/generate/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
@@ -1481,7 +1481,7 @@ std::wstring thumbnail_generateall_command(command_context& ctx)
 
 std::wstring cinf_command(command_context& ctx)
 {
-    return make_request(ctx, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
+    return make_request(ctx, "/cinf/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
 }
 
 std::wstring cls_command(command_context& ctx) { return make_request(ctx, "/cls", L"501 CLS FAILED\r\n"); }
