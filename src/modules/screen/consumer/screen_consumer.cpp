@@ -53,9 +53,6 @@
 
 #if defined(_MSC_VER)
 #include <windows.h>
-
-#pragma warning(push)
-#pragma warning(disable : 4244)
 #else
 #include "../util/x11_util.h"
 #endif

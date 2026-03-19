@@ -24,11 +24,6 @@
 #include "image_algorithms.h"
 
 #include <common/except.h>
-
-#if defined(_MSC_VER)
-#pragma warning(disable : 4714) // marked as __forceinline not inlined
-#endif
-
 #include "common/scope_exit.h"
 
 #include <ffmpeg/util/av_assert.h>
@@ -39,10 +34,6 @@
 
 #include <set>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -52,9 +43,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 namespace caspar { namespace image {
 
