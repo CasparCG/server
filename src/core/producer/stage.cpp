@@ -281,9 +281,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         return executor_.begin_invoke([=] { return tweens_[index].fetch(); });
     }
 
-    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+    std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, bool live)
     {
-        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
+        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play, live); });
     }
 
     std::future<void> preview(int index)
@@ -453,9 +453,9 @@ std::future<void> stage::apply_transform(int                                    
 std::future<void>            stage::clear_transforms(int index) { return impl_->clear_transforms(index); }
 std::future<void>            stage::clear_transforms() { return impl_->clear_transforms(); }
 std::future<frame_transform> stage::get_current_transform(int index) { return impl_->get_current_transform(index); }
-std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, bool live)
 {
-    return impl_->load(index, producer, preview, auto_play);
+    return impl_->load(index, producer, preview, auto_play, live);
 }
 std::future<void> stage::preview(int index) { return impl_->preview(index); }
 std::future<void> stage::pause(int index) { return impl_->pause(index); }
@@ -543,9 +543,9 @@ std::future<frame_transform> stage_delayed::get_current_transform(int index)
     return executor_.begin_invoke([=]() { return stage_->get_current_transform(index).get(); });
 }
 std::future<void>
-stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
+stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play, bool live)
 {
-    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
+    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play, live).get(); });
 }
 std::future<void> stage_delayed::preview(int index)
 {
