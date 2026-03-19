@@ -35,6 +35,7 @@
 #include <future>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <tuple>
 #include <vector>
 
@@ -82,6 +83,11 @@ class stage_base
     virtual std::future<frame_transform> get_current_transform(int index)                                          = 0;
     virtual std::future<void>
     load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, bool auto_play = false) = 0;
+    virtual std::future<void>         load(int                                    index,
+                                           const spl::shared_ptr<frame_producer>& producer,
+                                           bool                                   preview,
+                                           bool                                   auto_play,
+                                           std::optional<uint32_t>                auto_length)                                    = 0;
     virtual std::future<void>         preview(int index)                                                           = 0;
     virtual std::future<void>         pause(int index)                                                             = 0;
     virtual std::future<void>         resume(int index)                                                            = 0;
@@ -132,6 +138,11 @@ class stage final : public stage_base
                                       const spl::shared_ptr<frame_producer>& producer,
                                       bool                                   preview   = false,
                                       bool                                   auto_play = false) override;
+    std::future<void>            load(int                                    index,
+                                      const spl::shared_ptr<frame_producer>& producer,
+                                      bool                                   preview,
+                                      bool                                   auto_play,
+                                      std::optional<uint32_t>                auto_length) override;
     std::future<void>            preview(int index) override;
     std::future<void>            pause(int index) override;
     std::future<void>            resume(int index) override;
@@ -188,6 +199,11 @@ class stage_delayed final : public stage_base
                                       const spl::shared_ptr<frame_producer>& producer,
                                       bool                                   preview   = false,
                                       bool                                   auto_play = false) override;
+    std::future<void>            load(int                                    index,
+                                      const spl::shared_ptr<frame_producer>& producer,
+                                      bool                                   preview,
+                                      bool                                   auto_play,
+                                      std::optional<uint32_t>                auto_length) override;
     std::future<void>            preview(int index) override;
     std::future<void>            pause(int index) override;
     std::future<void>            resume(int index) override;
