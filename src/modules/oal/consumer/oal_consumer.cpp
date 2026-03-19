@@ -47,6 +47,7 @@ extern "C" {
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 }
+#pragma warning(disable : 4267)
 
 #include <algorithm>
 #include <atomic>
@@ -76,8 +77,8 @@ struct delay_value
     int value;
     enum { frames, msec } type;
 
-    auto in_frames(const core::video_format_desc& desc) {
-        return (type == msec) ? static_cast<int>(value * desc.fps / 1000. + .5) : value;
+    int in_frames(const core::video_format_desc& desc) {
+        return (type == msec) ? value * desc.fps / 1000. + .5 : value;
     }
 
     static delay_value from_string(const std::string& s)
@@ -237,7 +238,7 @@ struct oal_consumer : public core::frame_consumer
 
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
-                alDeleteBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+                alDeleteBuffers(buffers_.size(), buffers_.data());
 
                 device_->deactivate_context();
             }
@@ -267,7 +268,7 @@ struct oal_consumer : public core::frame_consumer
             swr_init(raw);
 
             auto num_silence = delay_.in_frames(format_desc_);
-            num_silence = std::clamp(num_silence, 1, static_cast<int>(format_desc_.fps));
+            num_silence = std::clamp<int>(num_silence, 1, format_desc_.fps);
 
             CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
 
@@ -275,7 +276,7 @@ struct oal_consumer : public core::frame_consumer
             device_->activate_context();
 
             buffers_.resize(num_silence + 2);
-            alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+            alGenBuffers(buffers_.size(), buffers_.data());
 
             alGenSources(1, &source_);
 
@@ -288,7 +289,7 @@ struct oal_consumer : public core::frame_consumer
                     silence.resize(cadence * 2); // stereo
 
                     alBufferData(buf, AL_FORMAT_STEREO16, silence.data(),
-                        static_cast<ALsizei>(silence.size() * sizeof(std::int16_t)),
+                        silence.size() * sizeof(std::int16_t),
                         format_desc_.audio_sample_rate
                     );
                     alSourceQueueBuffers(source_, 1, &buf);
@@ -304,7 +305,7 @@ struct oal_consumer : public core::frame_consumer
         executor_.begin_invoke([this, frame = std::move(frame)] {
             // resample and downmix
             auto&& audio_in = frame.audio_data();
-            auto num_samples = static_cast<int>(audio_in.size() / format_desc_.audio_channels);
+            int num_samples = audio_in.size() / format_desc_.audio_channels;
 
             std::vector<std::int16_t> audio_out(num_samples * 2); // stereo
 
@@ -323,7 +324,7 @@ struct oal_consumer : public core::frame_consumer
                 auto buf = free_.front();
                 free_.pop();
                 alBufferData(buf, AL_FORMAT_STEREO16, audio_out.data(),
-                    static_cast<ALsizei>(audio_out.size() * sizeof(std::int16_t)),
+                    audio_out.size() * sizeof(std::int16_t),
                     format_desc_.audio_sample_rate
                 );
                 alSourceQueueBuffers(source_, 1, &buf);
