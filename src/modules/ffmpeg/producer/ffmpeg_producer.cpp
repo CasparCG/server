@@ -43,15 +43,11 @@
 
 #include <chrono>
 
-#pragma warning(push, 1)
-
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavformat/avformat.h>
 }
-
-#pragma warning(pop)
 
 namespace caspar { namespace ffmpeg {
 

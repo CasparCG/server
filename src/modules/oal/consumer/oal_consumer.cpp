@@ -42,10 +42,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -53,9 +49,6 @@ extern "C" {
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 }
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
 
 #include <memory>
 #include <vector>

@@ -23,8 +23,6 @@
 
 #include "osd_graph.h"
 
-#pragma warning(disable : 4244)
-
 #include "call_context.h"
 
 #include <common/executor.h>

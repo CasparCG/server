@@ -25,10 +25,7 @@
 #include "shlwapi.h"
 #include "winerror.h"
 
-#if defined(_MSC_VER)
 #pragma warning(disable : 4146)
-#pragma warning(disable : 4244)
-#endif
 
 #include "FlashAxContainer.h"
 #include "flash_producer.h"
