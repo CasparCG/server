@@ -29,6 +29,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
+#include <common/timespan.h>
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
@@ -56,7 +57,6 @@ extern "C" {
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -69,42 +69,6 @@ extern "C" {
 namespace caspar::oal {
 
 using namespace std::chrono_literals;
-
-struct delay_value
-{
-    int value;
-    enum { frames, msec } type;
-
-    int in_frames(const core::video_format_desc& desc) {
-        return (type == msec) ? value * desc.fps / 1000. + .5 : value;
-    }
-
-    static delay_value from_string(const std::string& s)
-    {
-        try {
-            std::istringstream ss{s};
-
-            int value;
-            if (!(ss >> value)) throw std::invalid_argument{"Invalid delay value"};
-
-            std::string suffix;
-            ss >> suffix;
-
-            if (suffix.size())
-            {
-                if (suffix != "ms") throw std::invalid_argument{"Invalid suffix - expected 'ms' or nothing"};
-                if (!(ss >> std::ws).eof()) throw std::invalid_argument{"Trailing garbage"};
-                return {value, msec};
-            }
-            else return {value, frames};
-
-        } catch (...) {
-            CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to parse delay " + s)
-                << nested_exception(std::current_exception())
-            );
-        }
-    }
-};
 
 class device
 {
@@ -196,7 +160,7 @@ struct oal_consumer : public core::frame_consumer
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
     std::queue<ALuint>  free_;
-    delay_value         delay_;
+    timespan            delay_;
 
     std::mutex          mutex_;
     std::condition_variable free_cv_;
@@ -208,7 +172,7 @@ struct oal_consumer : public core::frame_consumer
     executor executor_{L"oal_consumer"};
 
   public:
-    explicit oal_consumer(const std::string& device_name, const delay_value& delay) :
+    explicit oal_consumer(const std::string& device_name, const timespan& delay) :
         device_{ device::open(device_name) }, delay_{delay}
     {
         using diagnostics::color;
@@ -260,7 +224,7 @@ struct oal_consumer : public core::frame_consumer
             swr_.reset(raw);
             swr_init(raw);
 
-            auto num_silence = delay_.in_frames(format_desc_);
+            auto num_silence = delay_.in_frames(format_desc_.fps);
             num_silence = std::clamp<int>(num_silence, 1, format_desc_.fps);
 
             CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
@@ -392,7 +356,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
     auto device_name = u8(get_param(L"DEVICE_NAME", params, L""));
     auto s = u8(get_param(L"DELAY", params, L"0"));
-    return spl::make_shared<oal_consumer>(device_name, delay_value::from_string(s));
+    return spl::make_shared<oal_consumer>(device_name, timespan{s});
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -403,7 +367,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 {
     auto device_name = u8(ptree.get(L"device-name", L""));
     auto s = u8(ptree.get(L"delay", L"0"));
-    return spl::make_shared<oal_consumer>(device_name, delay_value::from_string(s));
+    return spl::make_shared<oal_consumer>(device_name, timespan{s});
 }
 
 } // namespace caspar::oal
