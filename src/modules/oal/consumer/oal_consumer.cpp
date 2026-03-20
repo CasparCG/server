@@ -49,9 +49,7 @@ extern "C" {
 }
 #pragma warning(disable : 4267)
 
-#include <algorithm>
 #include <atomic>
-#include <cctype>
 #include <condition_variable>
 #include <cstdint>
 #include <map>
@@ -116,49 +114,44 @@ class device
     struct context_deleter { void operator()(ALCcontext* p) { alcDestroyContext(p); } };
     std::unique_ptr<ALCcontext, context_deleter> context_;
 
-    explicit device(const std::string& device_name)
+    explicit device(std::string device_name)
     {
-        auto norm = [](std::string s) {
-            s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
-            std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-            return s;
-        };
-
-        std::string found_name;
-
-        if (device_name.size()) {
-            if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
-
-                auto name = norm(device_name);
-
-                auto enum_all_ext = alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT");
-                auto names = alcGetString(nullptr, enum_all_ext ? ALC_ALL_DEVICES_SPECIFIER : ALC_DEVICE_SPECIFIER);
-
-                CASPAR_LOG(info) << "-------- OpenAL Devices -------";
-
-                // `names` contains multiple null-terminated device names
-                for (auto p = names; *p; p += strlen(p) + 1) {
-                    std::string found{p};
-                    CASPAR_LOG(info) << found;
-
-                    if (name == norm(found)) found_name = found;
-                }
-
-                CASPAR_LOG(info) << "-------- OpenAL Devices -------";
-
-                if (found_name.size())
-                    CASPAR_LOG(info) << "Using OpenAL device: " << found_name;
-                else
-                    CASPAR_LOG(warning) << "Specified OpenAL device not found - using default";
-            } else {
-                CASPAR_LOG(info) << "OpenAL device enumeration not supported - using default";
-            }
-        } else {
-            CASPAR_LOG(info) << "Using default OpenAL device";
+        int def_device = 0, enum_devices = 0;
+        if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")) {
+            def_device = ALC_DEFAULT_ALL_DEVICES_SPECIFIER;
+            enum_devices = ALC_ALL_DEVICES_SPECIFIER;
+        } else if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
+            def_device = ALC_DEFAULT_DEVICE_SPECIFIER;
+            enum_devices = ALC_DEVICE_SPECIFIER;
         }
 
-        device_.reset(alcOpenDevice(found_name.size() ? found_name.data() : nullptr));
-        if (!device_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize device."));
+        if (device_name.empty()) {
+            if (!def_device)
+                CASPAR_THROW_EXCEPTION(not_supported() << msg_info("OpenAL device enumeration not supported"));
+
+            auto name = alcGetString(NULL, def_device);
+            if (!name || !*name)
+                CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Default OpenAL device not found"));
+
+            device_name = name;
+            CASPAR_LOG(info) << "Using default OpenAL device: " << device_name;
+        }
+
+        device_.reset(alcOpenDevice(device_name.data()));
+        if (!device_) {
+            CASPAR_LOG(info) << "-------- OpenAL Devices -------";
+
+            if (auto names = alcGetString(nullptr, enum_devices)) {
+                std::string name;
+                for (; *names; names += name.size() + 1) {
+                    name = names;
+                    CASPAR_LOG(info) << name;
+                }
+            }
+            CASPAR_LOG(info) << "-------- OpenAL Devices -------";
+
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize device."));
+        }
 
         context_.reset(alcCreateContext(device_.get(), nullptr));
         if (!context_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create context."));
