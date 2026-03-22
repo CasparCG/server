@@ -29,12 +29,7 @@
 
 #include "interop/DeckLinkAPI.h"
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
-
 #include <atlbase.h>
-
-#pragma warning(pop)
 
 namespace caspar { namespace decklink {
 
