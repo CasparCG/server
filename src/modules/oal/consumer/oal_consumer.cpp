@@ -29,6 +29,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/timer.h>
+#include <common/timespan.h>
 #include <common/utf.h>
 
 #include <core/consumer/channel_info.h>
@@ -36,16 +37,10 @@
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 
-#include <boost/algorithm/string/erase.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
 
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -53,175 +48,156 @@ extern "C" {
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 }
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+#pragma warning(disable : 4267)
 
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <map>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
 #include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#define AL_ALEXT_PROTOTYPES
+#include <AL/alext.h>
 
-namespace caspar { namespace oal {
+namespace caspar::oal {
+
+using namespace std::chrono_literals;
 
 class device
 {
-    ALCdevice*         device_  = nullptr;
-    ALCcontext*        context_ = nullptr;
-    const std::wstring device_name_;
+    struct device_deleter { void operator()(ALCdevice* p) { alcCloseDevice(p); } };
+    std::unique_ptr<ALCdevice, device_deleter> device_;
 
-  public:
-    explicit device(std::wstring device_name)
-        : device_name_(std::move(device_name))
+    struct context_deleter { void operator()(ALCcontext* p) { alcDestroyContext(p); } };
+    std::unique_ptr<ALCcontext, context_deleter> context_;
+
+    explicit device(std::string device_name)
     {
-        ALCchar* deviceName = nullptr;
-
-        if (!device_name_.empty()) {
-            ALboolean enumeration = alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
-
-            if (enumeration == AL_FALSE) {
-                // enumeration not supported
-                CASPAR_LOG(info) << L"Unable to enumerate OpenAL devices. Using system default device";
-            } else {
-                char* s;
-
-                if (alcIsExtensionPresent(nullptr, "ALC_enumerate_all_EXT") == AL_FALSE)
-                    s = (char*)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
-                else
-                    s = (char*)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-
-                deviceName = iterate_and_find_device(s, device_name_);
-
-                if (deviceName == nullptr) {
-                    CASPAR_LOG(warning)
-                        << L"Failed to find specified OpenAL output device. Using system default device";
-                } else {
-                    CASPAR_LOG(debug) << L"Found specified OpenAL output device";
-                }
-            }
+        int def_device = 0, enum_devices = 0;
+        if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")) {
+            def_device = ALC_DEFAULT_ALL_DEVICES_SPECIFIER;
+            enum_devices = ALC_ALL_DEVICES_SPECIFIER;
+        } else if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
+            def_device = ALC_DEFAULT_DEVICE_SPECIFIER;
+            enum_devices = ALC_DEVICE_SPECIFIER;
         }
 
-        device_ = alcOpenDevice(deviceName);
+        if (device_name.empty()) {
+            if (!def_device)
+                CASPAR_THROW_EXCEPTION(not_supported() << msg_info("OpenAL device enumeration not supported"));
 
-        if (device_ == nullptr)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
+            auto name = alcGetString(NULL, def_device);
+            if (!name || !*name)
+                CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Default OpenAL device not found"));
 
-        context_ = alcCreateContext(device_, nullptr);
-
-        if (context_ == nullptr)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
-
-        if (alcMakeContextCurrent(context_) == ALC_FALSE)
-            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
-    }
-
-    ~device()
-    {
-        alcMakeContextCurrent(nullptr);
-
-        if (context_ != nullptr)
-            alcDestroyContext(context_);
-
-        if (device_ != nullptr)
-            alcCloseDevice(device_);
-    }
-
-    ALCdevice* get() { return device_; }
-
-  private:
-    static ALCchar* iterate_and_find_device(const char* list, const std::wstring& device_name)
-    {
-        ALCchar* result = nullptr;
-
-        // generate ascii string for comparison purposes vs what openAL provides
-        std::string short_device_name = u8(device_name);
-        boost::algorithm::erase_all(short_device_name, " ");
-
-        CASPAR_LOG(info) << L"------- OpenAL Device List -----";
-
-        if (!list) {
-            CASPAR_LOG(info) << L"No device names found";
-        } else {
-            // iterate through all device names
-            // -> buffer contains multiple null-terminated device name strings
-            ALCchar* ptr = (ALCchar*)list;
-
-            while (strlen(ptr) > 0) {
-                // log each device name, so we can see what options are available
-                CASPAR_LOG(info) << ptr;
-
-                // store matching device name address if found
-                // -> device name will be empty string if not provided
-                std::string tmpStr = ptr;
-                boost::algorithm::erase_all(tmpStr, " ");
-
-                if (boost::iequals(short_device_name, tmpStr)) {
-                    result = ptr;
-                }
-
-                // point to next device name start (or null if no more device names)
-                ptr += strlen(ptr) + 1;
-            }
+            device_name = name;
+            CASPAR_LOG(info) << "Using default OpenAL device: " << device_name;
         }
 
-        CASPAR_LOG(info) << L"------ OpenAL Devices List done -----";
+        device_.reset(alcOpenDevice(device_name.data()));
+        if (!device_) {
+            CASPAR_LOG(info) << "-------- OpenAL Devices -------";
 
-        return result;
+            if (auto names = alcGetString(nullptr, enum_devices)) {
+                std::string name;
+                for (; *names; names += name.size() + 1) {
+                    name = names;
+                    CASPAR_LOG(info) << name;
+                }
+            }
+            CASPAR_LOG(info) << "-------- OpenAL Devices -------";
+
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize device."));
+        }
+
+        context_.reset(alcCreateContext(device_.get(), nullptr));
+        if (!context_) CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create context."));
+
+        if (!alcIsExtensionPresent(device_.get(), "ALC_EXT_thread_local_context"))
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Device does not support ALC_EXT_thread_local_context"));
+    }
+
+    inline static std::map<std::string, std::weak_ptr<device>> devices_;
+
+public:
+    static std::shared_ptr<device> open(const std::string& device_name)
+    {
+        auto& weak = devices_[device_name];
+        auto shared = weak.lock();
+        if (!shared) weak = shared = std::shared_ptr<device>{new device{device_name}};
+        return shared;
+    }
+
+    void activate_context()
+    {
+        if (context_.get() != alcGetThreadContext())
+            alcSetThreadContext(context_.get());
+    }
+
+    void deactivate_context()
+    {
+        if (context_.get() == alcGetThreadContext())
+            alcSetThreadContext(nullptr);
     }
 };
-
-void init_device()
-{
-    static std::unique_ptr<device> instance;
-    static std::once_flag          f;
-
-    std::call_once(f, [&] {
-        std::wstring device_name =
-            env::properties().get(L"configuration.system-audio.producer.default-device-name", L"");
-        instance = std::make_unique<device>(device_name);
-    });
-}
 
 struct oal_consumer : public core::frame_consumer
 {
     spl::shared_ptr<diagnostics::graph> graph_;
-    caspar::timer                       perf_timer_;
+    caspar::timer                       tick_timer_, frame_timer_;
     int                                 channel_index_ = -1;
 
     core::video_format_desc format_desc_;
 
+    std::shared_ptr<device> device_;
     ALuint              source_ = 0;
     std::vector<ALuint> buffers_;
-    bool                started_  = false;
-    int                 duration_ = 1920;
+    std::queue<ALuint>  free_;
+    timespan            delay_;
 
-    std::shared_ptr<SwrContext> swr_;
+    std::mutex          mutex_;
+    std::condition_variable free_cv_;
+    std::atomic<bool>   stop_{false};
+
+    struct swr_deleter { void operator()(SwrContext* p) { swr_free(&p); } };
+    std::unique_ptr<SwrContext, swr_deleter> swr_;
 
     executor executor_{L"oal_consumer"};
 
   public:
-    explicit oal_consumer()
+    explicit oal_consumer(const std::string& device_name, const timespan& delay) :
+        device_{ device::open(device_name) }, delay_{delay}
     {
-        init_device();
-
-        graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-        graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-        graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+        using diagnostics::color;
+        graph_->set_color("tick-time",  color(0.0, 0.6, 0.9));
+        graph_->set_color("queue-size", color(0.2, 0.9, 0.9));
+        graph_->set_color("frame-time", color(0.1, 1.0, 0.1));
+        graph_->set_color("drop-out",   color(0.6, 0.3, 0.3));
         diagnostics::register_graph(graph_);
     }
 
     ~oal_consumer() override
     {
+        stop_ = true;
+        free_cv_.notify_all();
+
         executor_.invoke([=] {
-            if (source_ != 0u) {
+            if (source_) {
+                std::lock_guard guard{mutex_};
+                device_->activate_context();
+
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
-            }
+                alDeleteBuffers(buffers_.size(), buffers_.data());
 
-            for (auto& buffer : buffers_) {
-                if (buffer != 0u)
-                    alDeleteBuffers(1, &buffer);
+                device_->deactivate_context();
             }
         });
     }
@@ -237,137 +213,121 @@ struct oal_consumer : public core::frame_consumer
         graph_->set_text(print());
 
         executor_.begin_invoke([=] {
-            duration_ = *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
-            buffers_.resize(8);
-            alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
+            AVChannelLayout from, to;
+            av_channel_layout_default(&from, format_desc_.audio_channels);
+            av_channel_layout_default(&to, 2); // stereo
+
+            SwrContext* raw;
+            swr_alloc_set_opts2(&raw,
+                &to,   AV_SAMPLE_FMT_S16, format_desc_.audio_sample_rate,
+                &from, AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
+                0, nullptr
+            );
+            swr_.reset(raw);
+            swr_init(raw);
+
+            auto num_silence = delay_.in_frames(format_desc_.fps);
+            num_silence = std::clamp<int>(num_silence, 1, format_desc_.fps);
+
+            CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
+
+            std::lock_guard guard{mutex_};
+            device_->activate_context();
+
+            buffers_.resize(num_silence + 2);
+            alGenBuffers(buffers_.size(), buffers_.data());
+
             alGenSources(1, &source_);
 
-            alSourcei(source_, AL_LOOPING, AL_FALSE);
+            std::vector<std::int16_t> silence;
+            for (auto n = 0; n < buffers_.size(); ++n) {
+                auto buf = buffers_[n];
+
+                if (n < num_silence) {
+                    auto cadence = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()];
+                    silence.resize(cadence * 2); // stereo
+
+                    alBufferData(buf, AL_FORMAT_STEREO16, silence.data(),
+                        silence.size() * sizeof(std::int16_t),
+                        format_desc_.audio_sample_rate
+                    );
+                    alSourceQueueBuffers(source_, 1, &buf);
+                } else {
+                    free_.push(buf);
+                }
+            }
         });
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        executor_.begin_invoke([=] {
-            auto dst         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            dst->format      = AV_SAMPLE_FMT_S16;
-            dst->sample_rate = format_desc_.audio_sample_rate;
-            av_channel_layout_default(&dst->ch_layout, 2);
-            dst->nb_samples = duration_;
-            if (av_frame_get_buffer(dst.get(), 32) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-            std::memset(dst->extended_data[0], 0, dst->linesize[0]);
+        executor_.begin_invoke([this, frame = std::move(frame)] {
+            // resample and downmix
+            auto&& audio_in = frame.audio_data();
+            int num_samples = audio_in.size() / format_desc_.audio_channels;
 
-            if (!started_) {
-                for (ALuint& buffer : buffers_) {
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                }
+            std::vector<std::int16_t> audio_out(num_samples * 2); // stereo
 
-                alSourcePlay(source_);
-                started_ = true;
+            auto from = reinterpret_cast<const std::uint8_t*>(audio_in.data());
+            auto to = reinterpret_cast<std::uint8_t*>(audio_out.data());
+            swr_convert(swr_.get(), &to, num_samples, &from, num_samples);
 
-                return;
-            }
+            double free_size;
+            bool dropout = false;
+            {
+                // submit to OAL queue
+                std::unique_lock lock{mutex_};
+                free_cv_.wait(lock, [this] { return !free_.empty() || stop_; });
+                device_->activate_context();
 
-            auto src         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
-            src->format      = AV_SAMPLE_FMT_S32;
-            src->sample_rate = format_desc_.audio_sample_rate;
-            av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
-            src->nb_samples       = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
-            src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
-            src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));
+                auto buf = free_.front();
+                free_.pop();
+                alBufferData(buf, AL_FORMAT_STEREO16, audio_out.data(),
+                    audio_out.size() * sizeof(std::int16_t),
+                    format_desc_.audio_sample_rate
+                );
+                alSourceQueueBuffers(source_, 1, &buf);
+                free_size = free_.size();
 
-            if (!swr_) {
-                swr_.reset(swr_alloc(), [](SwrContext* ptr) { swr_free(&ptr); });
-                if (!swr_) {
-                    CASPAR_THROW_EXCEPTION(bad_alloc());
-                }
-                if (swr_config_frame(swr_.get(), dst.get(), src.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-                if (swr_init(swr_.get()) < 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
+                ALenum state = 0;
+                alGetSourcei(source_, AL_SOURCE_STATE, &state);
+                if (state != AL_PLAYING) {
+                    dropout = true;
+                    alSourcePlay(source_);
                 }
             }
 
-            if (swr_convert_frame(swr_.get(), nullptr, src.get()) < 0) {
-                // TODO FF error
-                CASPAR_THROW_EXCEPTION(invalid_argument());
-            }
-
-            ALint processed = 0;
-            alGetSourceiv(source_, AL_BUFFERS_PROCESSED, &processed);
-
-            auto in_duration  = swr_get_delay(swr_.get(), 48000);
-            auto out_duration = static_cast<int64_t>(processed) * duration_;
-            auto delta        = static_cast<int>(out_duration - in_duration);
-
-            ALenum state;
-            alGetSourcei(source_, AL_SOURCE_STATE, &state);
-            if (state != AL_PLAYING) {
-                while (delta > duration_) {
-                    ALuint buffer = 0;
-                    alSourceUnqueueBuffers(source_, 1, &buffer);
-                    if (buffer == 0u) {
-                        break;
-                    }
-                    alBufferData(buffer,
-                                 AL_FORMAT_STEREO16,
-                                 dst->extended_data[0],
-                                 static_cast<ALsizei>(dst->linesize[0]),
-                                 dst->sample_rate);
-                    alSourceQueueBuffers(source_, 1, &buffer);
-                    delta -= duration_;
-                }
-
-                alSourcePlay(source_);
-            }
-
-            // TODO (fix)
-            // if (std::abs(delta) > duration_ && swr_set_compensation(swr_.get(), delta, 2000) < 0) {
-            //    // TODO FF error
-            //    CASPAR_THROW_EXCEPTION(invalid_argument());
-            //}
-
-            for (auto n = 0; n < processed; ++n) {
-                if (swr_get_delay(swr_.get(), 48000) < dst->nb_samples) {
-                    break;
-                }
-
-                ALuint buffer = 0;
-                alSourceUnqueueBuffers(source_, 1, &buffer);
-                if (buffer == 0u) {
-                    // TODO error
-                    break;
-                }
-
-                if (swr_convert_frame(swr_.get(), dst.get(), nullptr) != 0) {
-                    // TODO FF error
-                    CASPAR_THROW_EXCEPTION(invalid_argument());
-                }
-
-                alBufferData(buffer,
-                             AL_FORMAT_STEREO16,
-                             dst->extended_data[0],
-                             static_cast<ALsizei>(dst->linesize[0]),
-                             dst->sample_rate);
-                alSourceQueueBuffers(source_, 1, &buffer);
-            }
-
-            graph_->set_value("tick-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-            perf_timer_.restart();
+            graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+            tick_timer_.restart();
+            graph_->set_value("queue-size", 1 - free_size / buffers_.size());
+            if (dropout) graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
         });
 
-        return make_ready_future(true);
+        return std::async(std::launch::deferred, [this] {
+            // wait until one buffer is done playing
+            while (!stop_) {
+                ALint done = 0;
+                {
+                    std::lock_guard guard{mutex_};
+                    device_->activate_context();
+
+                    alGetSourcei(source_, AL_BUFFERS_PROCESSED, &done);
+                    if (done) {
+                        ALuint buf;
+                        alSourceUnqueueBuffers(source_, 1, &buf);
+                        free_.push(buf);
+                    }
+                }
+                if (done) {
+                    free_cv_.notify_one();
+                    graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+                    frame_timer_.restart();
+                    return true;
+                }
+                std::this_thread::sleep_for(100us);
+            }
+            return false;
+        });
     }
 
     std::wstring print() const override
@@ -377,7 +337,7 @@ struct oal_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"system-audio"; }
 
-    bool has_synchronization_clock() const override { return false; }
+    bool has_synchronization_clock() const override { return true; }
 
     int index() const override { return 500; }
 
@@ -393,10 +353,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       const core::channel_info& channel_info)
 {
-    if (params.empty() || !boost::iequals(params.at(0), L"AUDIO"))
+    if (params.empty() || !(boost::iequals(params.at(0), L"AUDIO") || boost::iequals(params.at(0), L"SYSTEM-AUDIO")))
         return core::frame_consumer::empty();
 
-    return spl::make_shared<oal_consumer>();
+    auto device_name = u8(get_param(L"DEVICE_NAME", params, L""));
+    auto s = u8(get_param(L"DELAY", params, L"0"));
+    return spl::make_shared<oal_consumer>(device_name, timespan{s});
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -405,7 +367,9 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    return spl::make_shared<oal_consumer>();
+    auto device_name = u8(ptree.get(L"device-name", L""));
+    auto s = u8(ptree.get(L"delay", L"0"));
+    return spl::make_shared<oal_consumer>(device_name, timespan{s});
 }
 
-}} // namespace caspar::oal
+} // namespace caspar::oal

@@ -55,19 +55,12 @@
 
 #include <mutex>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timecode.h>
 }
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
 
 using namespace caspar::ffmpeg;
 
