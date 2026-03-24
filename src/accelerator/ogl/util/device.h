@@ -55,7 +55,8 @@ class device final
     
 #ifdef WIN32
     std::shared_ptr<void>                 d3d_interop() const;
-    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride);
+    std::future<std::shared_ptr<texture>>
+    copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth);
 #endif
 
     template <typename Func>

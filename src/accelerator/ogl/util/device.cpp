@@ -296,12 +296,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 
 #ifdef WIN32
-    std::future<std::shared_ptr<texture>> copy_async(GLuint source, int width, int height, int stride)
+    std::future<std::shared_ptr<texture>>
+    copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
     {
-        // TODO - bit depth
-
         return spawn_async([=](yield_context yield) {
-            auto tex = create_texture(width, height, stride, common::bit_depth::bit8, false);
+            auto tex = create_texture(width, height, stride, depth, false);
 
             tex->copy_from(source);
 
@@ -459,9 +458,10 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 
 #ifdef WIN32
 std::shared_ptr<void>                 device::d3d_interop() const { return impl_->interop_handle_; }
-std::future<std::shared_ptr<texture>> device::copy_async(GLuint source, int width, int height, int stride)
+std::future<std::shared_ptr<texture>>
+device::copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
 {
-    return impl_->copy_async(source, width, height, stride);
+    return impl_->copy_async(source, width, height, stride, depth);
 }
 #endif
 

@@ -431,7 +431,7 @@ class html_client
                 }
 
                 if (format != core::pixel_format::invalid) {
-                    auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, false, format);
+                    auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, format, common::bit_depth::bit8);
                     core::draw_frame dframe(std::move(frame));
 
                     {

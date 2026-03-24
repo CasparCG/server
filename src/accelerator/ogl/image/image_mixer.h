@@ -56,8 +56,8 @@ class image_mixer final : public core::image_mixer
 #ifdef WIN32
     core::const_frame import_d3d_texture(const void*                                tag,
                                          const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture,
-                                         bool                                       vflip,
-                                         core::pixel_format                         format) override;
+                                         core::pixel_format                         format,
+                                         common::bit_depth                          depth) override;
 #endif
 
     void update_aspect_ratio(double aspect_ratio) override;
