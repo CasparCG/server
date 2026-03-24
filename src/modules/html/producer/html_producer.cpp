@@ -72,7 +72,6 @@
 #include <accelerator/d3d/d3d_texture2d.h>
 #endif
 
-
 namespace caspar { namespace html {
 
 inline std::int_least64_t now()
@@ -400,7 +399,7 @@ class html_client
                             const RectList&                dirtyRects,
                             const CefAcceleratedPaintInfo& info) override
     {
-         try {
+        try {
             if (!shared_texture_enable_ || closing_ || not_found_)
                 return;
 
@@ -431,7 +430,8 @@ class html_client
                 }
 
                 if (format != core::pixel_format::invalid) {
-                    auto             frame = frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, format, common::bit_depth::bit8);
+                    auto frame =
+                        frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, format, common::bit_depth::bit8);
                     core::draw_frame dframe(std::move(frame));
 
                     {
@@ -559,7 +559,7 @@ class html_client
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
-            auto msg = log::replace_nonprintable_copy(args->GetString(1).ToWString(), L'?');
+            auto msg      = log::replace_nonprintable_copy(args->GetString(1).ToWString(), L'?');
 
             BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << msg;
         }

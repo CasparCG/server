@@ -349,7 +349,8 @@ std::pair<bool, bool> is_gpu_shared_texture_enabled()
     }
 #else
     // It would be nice to support this on linux, but it needs some investigation and work
-    // Test results (March 2026) suggest that linux without shared-texture is more performant than windows with or without
+    // Test results (March 2026) suggest that linux without shared-texture is more performant than windows with or
+    // without
 #endif
 
     return std::make_pair(enable_gpu, shared_texture_enable);

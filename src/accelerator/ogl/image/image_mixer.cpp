@@ -384,7 +384,8 @@ struct image_mixer::impl
 
         // copy directx texture to gl texture
         auto gl_texture = ogl_->dispatch_sync([=] {
-            return ogl_->copy_async(d3d_texture->gl_texture_id(), d3d_texture->width(), d3d_texture->height(), 4, depth);
+            return ogl_->copy_async(
+                d3d_texture->gl_texture_id(), d3d_texture->width(), d3d_texture->height(), 4, depth);
         });
 
         // make gl texture to draw
@@ -401,7 +402,7 @@ struct image_mixer::impl
             [weak_self, texs = std::move(textures)](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
-                                           return std::any{};
+                    return std::any{};
                 }
 
                 return std::make_shared<decltype(textures)>(std::move(texs));
