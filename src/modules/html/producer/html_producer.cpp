@@ -394,6 +394,7 @@ class html_client
         }
     }
 
+#ifdef WIN32
     void OnAcceleratedPaint(CefRefPtr<CefBrowser>          browser,
                             PaintElementType               type,
                             const RectList&                dirtyRects,
@@ -450,6 +451,7 @@ class html_client
             CASPAR_LOG_CURRENT_EXCEPTION();
         }
     }
+#endif
 
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
     {
