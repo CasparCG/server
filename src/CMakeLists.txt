@@ -14,6 +14,7 @@ set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/d
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
+set(CEF_STABLE_API_VERSION 14200 CACHE STRING "CEF stable API version to target (e.g. 14200). Set to empty string to use experimental API.")
 
 set(DIAG_FONT_PATH "LiberationMono-Regular.ttf" CACHE STRING
     "Path to font that will be used to load diag font at runtime. By default

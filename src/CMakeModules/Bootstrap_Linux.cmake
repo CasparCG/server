@@ -11,9 +11,8 @@ if(POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
 endif()
 
-set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
-set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
+set(CEF_SYSTEM_PACKAGE "casparcg-cef-142" CACHE STRING "Name of the system CEF package (drives include/lib paths). Set to empty string to download CEF automatically.")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
 set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 
@@ -43,12 +42,12 @@ endif()
 find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
-    if (USE_SYSTEM_CEF)
-        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-142")
+    if (CEF_SYSTEM_PACKAGE)
+        set(CEF_LIB_PATH "/usr/lib/${CEF_SYSTEM_PACKAGE}")
 
         add_library(CEF::CEF INTERFACE IMPORTED)
         target_include_directories(CEF::CEF INTERFACE
-            "/usr/include/casparcg-cef-142"
+            "/usr/include/${CEF_SYSTEM_PACKAGE}"
         )
         target_link_libraries(CEF::CEF INTERFACE
             "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
@@ -60,7 +59,7 @@ if (ENABLE_HTML)
             URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_linux64_minimal.tar.bz2
             URL_HASH SHA256=1d89e19b2f446105f9a1fe6fdc96bced86249b5884241dcc4013b7c94dabf424
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-            CMAKE_ARGS -DUSE_SANDBOX=Off
+            CMAKE_ARGS -DUSE_SANDBOX=Off $<$<BOOL:${CEF_STABLE_API_VERSION}>:-Dapi_version=${CEF_STABLE_API_VERSION}>
             INSTALL_COMMAND ""
             BUILD_BYPRODUCTS
                 "<SOURCE_DIR>/Release/libcef.so"
@@ -93,6 +92,10 @@ if (ENABLE_HTML)
         install(FILES ${SOURCE_DIR}/Release/libvulkan.so.1 TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/v8_context_snapshot.bin TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/vk_swiftshader_icd.json TYPE LIB)
+    endif()
+
+    if (CEF_STABLE_API_VERSION)
+        target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=${CEF_STABLE_API_VERSION})
     endif()
 endif ()
 
