@@ -47,7 +47,6 @@
 #include <tbb/concurrent_queue.h>
 
 #include <thread>
-#include <tuple> // std::ignore
 #include <utility>
 #include <vector>
 
@@ -81,13 +80,6 @@ enum class stretch
 
 struct configuration
 {
-    enum class aspect_ratio
-    {
-        aspect_4_3 = 0,
-        aspect_16_9,
-        aspect_invalid,
-    };
-
     enum class colour_spaces
     {
         RGB               = 0,
@@ -95,24 +87,27 @@ struct configuration
         datavideo_limited = 2
     };
 
-    std::wstring    name          = L"Screen consumer";
-    int             screen_index  = 0;
-    int             screen_x      = 0;
-    int             screen_y      = 0;
-    int             screen_width  = 0;
-    int             screen_height = 0;
-    screen::stretch stretch       = screen::stretch::fill;
-    bool            windowed      = true;
-    bool            key_only      = false;
-    bool            sbs_key       = false;
-    aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
-    bool            vsync         = false;
-    bool            interactive   = true;
-    bool            borderless    = false;
-    bool            always_on_top = false;
-    colour_spaces   colour_space  = colour_spaces::RGB;
-    bool            high_bitdepth = false;
-    bool            gpu_texture   = false;
+    std::wstring    name             = L"Screen consumer";
+    int             screen_index     = 0;
+    int             screen_x         = 0;
+    int             screen_y         = 0;
+    int             screen_width     = 0;
+    int             screen_height    = 0;
+    screen::stretch stretch          = screen::stretch::fill;
+    bool            windowed         = true;
+    bool            high_bitdepth    = false;
+    bool            key_only         = false;
+    bool            sbs_key          = false;
+    double          aspect_ratio     = 0.0;   // 0.0 = auto (derived from format_desc square dimensions)
+    bool            enable_mipmaps   = false; // Useful when content is displayed significantly smaller than native
+    double          brightness_boost = 1.0;
+    double          saturation_boost = 1.0;
+    bool            vsync            = false;
+    bool            interactive      = true;
+    bool            borderless       = false;
+    bool            always_on_top    = false;
+    bool            gpu_texture      = false;
+    colour_spaces   colour_space     = colour_spaces::RGB;
 };
 
 struct frame
@@ -124,6 +119,50 @@ struct frame
     GLsync                         fence = nullptr;
 };
 
+// Parses aspect ratio strings. Returns 0.0 for "auto" (use format square dimensions).
+// Supports: "16:9", "4:3", "3840:1080", "3840/1080", decimal "3.555", "default" or empty.
+double parse_aspect_ratio(const std::wstring& aspect_str)
+{
+    if (aspect_str == L"default" || aspect_str.empty()) {
+        return 0.0;
+    }
+
+    // Support both ':' and '/' as width/height separators
+    auto sep_pos = aspect_str.find(L':');
+    if (sep_pos == std::wstring::npos) {
+        sep_pos = aspect_str.find(L'/');
+    }
+
+    if (sep_pos != std::wstring::npos) {
+        try {
+            double width  = std::stod(aspect_str.substr(0, sep_pos));
+            double height = std::stod(aspect_str.substr(sep_pos + 1));
+            if (height == 0.0) {
+                CASPAR_LOG(warning) << L"Invalid aspect ratio denominator in '" << aspect_str << L"', using auto.";
+                return 0.0;
+            }
+            return width / height;
+        } catch (...) {
+            CASPAR_LOG(warning) << L"Failed to parse aspect ratio '" << aspect_str << L"', using auto.";
+            return 0.0;
+        }
+    }
+
+    // Decimal format e.g. "3.555"
+    try {
+        double result = std::stod(aspect_str);
+        if (result < 0.1 || result > 10.0) {
+            CASPAR_LOG(warning) << L"Aspect ratio " << aspect_str
+                                << L" out of reasonable range (0.1-10.0), using auto.";
+            return 0.0;
+        }
+        return result;
+    } catch (...) {
+        CASPAR_LOG(warning) << L"Failed to parse aspect ratio '" << aspect_str << L"', using auto.";
+        return 0.0;
+    }
+}
+
 struct screen_consumer;
 
 struct display_strategy
@@ -133,6 +172,7 @@ struct display_strategy
     virtual void  cleanup_frame(frame& frame)                                                         = 0;
     virtual void  do_tick(screen_consumer* self)                                                      = 0;
 };
+
 struct gpu_strategy;
 struct host_strategy;
 
@@ -181,20 +221,13 @@ struct screen_consumer
                                        : spl::make_shared<display_strategy, host_strategy>())
     {
         if (config_.gpu_texture) {
-            CASPAR_LOG(info) << print() << " Using GPU texture for rendering.";
-        } else {
-            CASPAR_LOG(info) << print() << " Using frame copied to host for rendering.";
+            CASPAR_LOG(info) << print() << L" Using GPU texture strategy.";
         }
 
-        if (format_desc_.format == core::video_format::ntsc &&
-            config_.aspect == configuration::aspect_ratio::aspect_4_3) {
-            // Use default values which are 4:3.
-        } else {
-            if (config_.aspect == configuration::aspect_ratio::aspect_16_9) {
-                square_width_ = format_desc.height * 16 / 9;
-            } else if (config_.aspect == configuration::aspect_ratio::aspect_4_3) {
-                square_width_ = format_desc.height * 4 / 3;
-            }
+        // Apply explicit aspect ratio to square dimensions if provided; otherwise use format defaults.
+        if (config_.aspect_ratio != 0.0) {
+            square_width_  = static_cast<int>(format_desc.height * config_.aspect_ratio);
+            square_height_ = format_desc.height;
         }
 
         frame_buffer_.set_capacity(1);
@@ -208,87 +241,138 @@ struct screen_consumer
 #if defined(_MSC_VER)
         DISPLAY_DEVICE              d_device = {sizeof(d_device), 0};
         std::vector<DISPLAY_DEVICE> displayDevices;
+
         for (int n = 0; EnumDisplayDevices(nullptr, n, &d_device, NULL); ++n) {
             displayDevices.push_back(d_device);
+            memset(&d_device, 0, sizeof(d_device));
+            d_device.cb = sizeof(d_device);
         }
 
-        if (config_.screen_index >= displayDevices.size()) {
-            CASPAR_LOG(warning) << print() << L" Invalid screen-index: " << config_.screen_index;
+        int selected_screen_index = config_.screen_index;
+
+        if (selected_screen_index >= static_cast<int>(displayDevices.size())) {
+            CASPAR_LOG(warning) << print() << L" Invalid screen-index " << selected_screen_index << L" (only "
+                                << displayDevices.size() << L" devices available), falling back to primary display.";
+            for (size_t i = 0; i < displayDevices.size(); ++i) {
+                if (displayDevices[i].StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) {
+                    selected_screen_index = static_cast<int>(i);
+                    break;
+                }
+            }
         }
 
-        DEVMODE devmode = {};
-        if (!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode)) {
-            CASPAR_LOG(warning) << print() << L" Could not find display settings for screen-index: "
-                                << config_.screen_index;
+        if (selected_screen_index < 0 || selected_screen_index >= static_cast<int>(displayDevices.size())) {
+            selected_screen_index = 0;
         }
 
-        screen_x_      = devmode.dmPosition.x;
-        screen_y_      = devmode.dmPosition.y;
-        screen_width_  = devmode.dmPelsWidth;
-        screen_height_ = devmode.dmPelsHeight;
+        DEVMODE selectedDevMode = {};
+        BOOL    result          = EnumDisplaySettings(
+            displayDevices[selected_screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &selectedDevMode);
+
+        if (!result) {
+            result = EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &selectedDevMode);
+        }
+
+        if (result) {
+            screen_x_      = selectedDevMode.dmPosition.x;
+            screen_y_      = selectedDevMode.dmPosition.y;
+            screen_width_  = selectedDevMode.dmPelsWidth;
+            screen_height_ = selectedDevMode.dmPelsHeight;
+            CASPAR_LOG(info) << print() << L" Display " << selected_screen_index << L" ("
+                             << displayDevices[selected_screen_index].DeviceName << L"): "
+                             << screen_width_ << L"x" << screen_height_
+                             << L" at (" << screen_x_ << L"," << screen_y_ << L").";
+        } else {
+            CASPAR_LOG(error) << print() << L" Failed to get display settings, using 1920x1080 fallback.";
+            screen_x_      = 0;
+            screen_y_      = 0;
+            screen_width_  = 1920;
+            screen_height_ = 1080;
+        }
+
 #else
         if (config_.screen_index > 1) {
-            CASPAR_LOG(warning) << print() << L" Screen-index is not supported on linux";
+            CASPAR_LOG(warning) << print() << L" Screen-index is not supported on Linux.";
         }
 #endif
 
-        if (config.windowed) {
-            screen_x_ += config.screen_x;
-            screen_y_ += config.screen_y;
+        if (config_.windowed) {
+            screen_x_ += config_.screen_x;
+            screen_y_ += config_.screen_y;
 
-            if (config.screen_width > 0 && config.screen_height > 0) {
-                screen_width_  = config.screen_width;
-                screen_height_ = config.screen_height;
-            } else if (config.screen_width > 0) {
-                screen_width_  = config.screen_width;
-                screen_height_ = square_height_ * config.screen_width / square_width_;
-            } else if (config.screen_height > 0) {
-                screen_height_ = config.screen_height;
-                screen_width_  = square_width_ * config.screen_height / square_height_;
+            if (config_.screen_width > 0 && config_.screen_height > 0) {
+                screen_width_  = config_.screen_width;
+                screen_height_ = config_.screen_height;
+            } else if (config_.screen_width > 0) {
+                screen_width_  = config_.screen_width;
+                screen_height_ = square_height_ * config_.screen_width / square_width_;
+            } else if (config_.screen_height > 0) {
+                screen_height_ = config_.screen_height;
+                screen_width_  = square_width_ * config_.screen_height / square_height_;
             } else {
                 screen_width_  = square_width_;
                 screen_height_ = square_height_;
             }
+        } else {
+            if (config_.screen_width > 0 && config_.screen_height > 0) {
+                screen_width_  = config_.screen_width;
+                screen_height_ = config_.screen_height;
+                if (config_.screen_x != 0 || config_.screen_y != 0) {
+                    // Explicit position replaces device position (enables multi-display spanning)
+                    screen_x_ = config_.screen_x;
+                    screen_y_ = config_.screen_y;
+                }
+            } else if (config_.screen_width > 0) {
+                screen_width_  = config_.screen_width;
+                screen_height_ = square_height_ * config_.screen_width / square_width_;
+            } else if (config_.screen_height > 0) {
+                screen_height_ = config_.screen_height;
+                screen_width_  = square_width_ * config_.screen_height / square_height_;
+            }
         }
+
+        CASPAR_LOG(info) << print() << L" Window: " << screen_width_ << L"x" << screen_height_
+                         << L" at (" << screen_x_ << L"," << screen_y_ << L")"
+                         << (config_.windowed ? L" [windowed]" : L" [fullscreen]");
 
         thread_ = std::thread([this] {
             try {
-#if SFML_VERSION_MAJOR >= 3
-                sf::VideoMode mode{
-                    sf::Vector2u(config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_),
-                    sf::VideoMode::getDesktopMode().bitsPerPixel
-                };
-                sf::ContextSettings settings{
-                    .depthBits         = 0,
-                    .stencilBits       = 0,
-                    .antiAliasingLevel = 0,
-                    .majorVersion      = 4,
-                    .minorVersion      = 5,
-                    .attributeFlags    = sf::ContextSettings::Attribute::Core
-                };
-                auto state = config_.windowed || config_.borderless ? sf::State::Windowed : sf::State::Fullscreen;
-                auto style = config_.borderless ? sf::Style::None : sf::Style::Default;
-                window_.create(mode, u8(print()), style, state, settings);
-#else
-                const auto    window_style = config_.borderless ? sf::Style::None
-                                             : config_.windowed ? sf::Style::Resize | sf::Style::Close
-                                                                : sf::Style::Fullscreen;
-                sf::VideoMode desktop      = sf::VideoMode::getDesktopMode();
+                sf::Uint32 window_style;
+                if (config_.borderless) {
+                    window_style = sf::Style::None;
+                } else if (config_.windowed) {
+                    window_style = sf::Style::Resize | sf::Style::Close;
+                } else {
+                    // Use borderless for multi-display spanning (custom position/size), true fullscreen otherwise
+                    if ((config_.screen_width > 0 && config_.screen_width != screen_width_) ||
+                        (config_.screen_height > 0 && config_.screen_height != screen_height_) ||
+                        (config_.screen_x != 0 || config_.screen_y != 0)) {
+                        window_style = sf::Style::None;
+                    } else {
+                        window_style = sf::Style::Fullscreen;
+                    }
+                }
+
+                sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
                 sf::VideoMode mode(
                     config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_, desktop.bitsPerPixel);
                 window_.create(mode,
                                u8(print()),
                                window_style,
                                sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
-#endif
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
-                std::ignore = window_.setActive(true);
+                window_.setActive(true);
 
                 if (config_.always_on_top) {
 #ifdef _MSC_VER
                     HWND hwnd = window_.getSystemHandle();
-                    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                    if (hwnd) {
+                        if (!SetWindowPos(hwnd, HWND_TOPMOST, screen_x_, screen_y_,
+                                          screen_width_, screen_height_, SWP_SHOWWINDOW)) {
+                            CASPAR_LOG(warning) << print() << L" Failed to set always-on-top.";
+                        }
+                    }
 #else
                     window_always_on_top(window_);
 #endif
@@ -314,6 +398,17 @@ struct screen_consumer
                 shader_->use();
                 shader_->set("background", 0);
                 shader_->set("window_width", screen_width_);
+                shader_->set("brightness_boost", static_cast<float>(config_.brightness_boost));
+                shader_->set("saturation_boost", static_cast<float>(config_.saturation_boost));
+                shader_->set("colour_space", config_.colour_space);
+
+                if (config_.colour_space == configuration::colour_spaces::datavideo_full ||
+                    config_.colour_space == configuration::colour_spaces::datavideo_limited) {
+                    CASPAR_LOG(info) << print() << " Enabled colour conversion for DataVideo TC-100/TC-200 "
+                                     << (config_.colour_space == configuration::colour_spaces::datavideo_full
+                                             ? "(Full Range)."
+                                             : "(Limited Range).");
+                }
 
                 for (int n = 0; n < 2; ++n) {
                     frames_.push_back(strategy_->init_frame(config_, format_desc_));
@@ -331,20 +426,8 @@ struct screen_consumer
                     CASPAR_LOG(info) << print() << " Enabled vsync.";
                 }
 
-                shader_->set("colour_space", config_.colour_space);
-                if (config_.colour_space == configuration::colour_spaces::datavideo_full ||
-                    config_.colour_space == configuration::colour_spaces::datavideo_limited) {
-                    CASPAR_LOG(info) << print() << " Enabled colours conversion for DataVideo TC-100/TC-200 "
-                                     << (config_.colour_space == configuration::colour_spaces::datavideo_full
-                                             ? "(Full Range)."
-                                             : "(Limited Range).");
-                }
-
-                glClear(GL_COLOR_BUFFER_BIT);
-                window_.display();
-
                 while (is_running_) {
-                    tick();
+                    strategy_->do_tick(this);
                 }
             } catch (tbb::user_abort&) {
                 // Do nothing
@@ -353,7 +436,7 @@ struct screen_consumer
                 is_running_ = false;
             }
 
-            for (auto frame : frames_) {
+            for (auto& frame : frames_) {
                 strategy_->cleanup_frame(frame);
             }
 
@@ -375,16 +458,6 @@ struct screen_consumer
     bool poll()
     {
         int       count = 0;
-#if SFML_VERSION_MAJOR >= 3
-        while (const auto e = window_.pollEvent()) {
-            count++;
-            if (e->is<sf::Event::Resized>()) {
-                calculate_aspect();
-            } else if (e->is<sf::Event::Closed>()) {
-                is_running_ = false;
-            }
-        }
-#else
         sf::Event e;
         while (window_.pollEvent(e)) {
             count++;
@@ -394,24 +467,12 @@ struct screen_consumer
                 is_running_ = false;
             }
         }
-#endif
         return count > 0;
-    }
-
-    void tick()
-    {
-        strategy_->do_tick(this);
-
-        window_.display();
-
-        std::rotate(frames_.begin(), frames_.begin() + 1, frames_.end());
-
-        graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
-        tick_timer_.restart();
     }
 
     void draw()
     {
+        GL(glBindBuffer(GL_ARRAY_BUFFER, vbo_));
         GL(glBufferData(GL_ARRAY_BUFFER,
                         static_cast<GLsizeiptr>(sizeof(core::frame_geometry::coord)) * draw_coords_.size(),
                         draw_coords_.data(),
@@ -447,6 +508,7 @@ struct screen_consumer
 
         GL(glDisableVertexAttribArray(vtx_loc));
         GL(glDisableVertexAttribArray(tex_loc));
+
         GL(glBindTexture(GL_TEXTURE_2D, 0));
     }
 
@@ -457,14 +519,11 @@ struct screen_consumer
         while (count++ < MAX_TRIES && is_running_) {
             if (frame_buffer_.try_push(frame))
                 break;
-
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-
         if (count == MAX_TRIES) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
-
         return make_ready_future(is_running_.load());
     }
 
@@ -474,6 +533,14 @@ struct screen_consumer
     }
 
     std::wstring print() const { return config_.name + L" " + channel_and_format(); }
+
+    // Returns the effective aspect ratio: explicit config value, or derived from format square dimensions.
+    double effective_aspect_ratio() const
+    {
+        if (config_.aspect_ratio != 0.0)
+            return config_.aspect_ratio;
+        return static_cast<double>(square_width_) / static_cast<double>(square_height_);
+    }
 
     void calculate_aspect()
     {
@@ -515,7 +582,6 @@ struct screen_consumer
             };
         } else {
             draw_coords_ = {
-                //    vertex    texture
                 {-target_ratio.first, target_ratio.second, 0.0, 0.0}, // upper left
                 {target_ratio.first, target_ratio.second, 1.0, 0.0},  // upper right
                 {target_ratio.first, -target_ratio.second, 1.0, 1.0}, // lower right
@@ -527,21 +593,20 @@ struct screen_consumer
         }
     }
 
-    std::pair<float, float> none() const
+    std::pair<float, float> uniform() const
     {
-        float width =
-            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
-        float height = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
+        float aspect = static_cast<float>(config_.sbs_key ? effective_aspect_ratio() * 2 : effective_aspect_ratio());
+        float width  = std::min(1.0f, static_cast<float>(screen_height_) * aspect / static_cast<float>(screen_width_));
+        float height = static_cast<float>(screen_width_ * width) / static_cast<float>(screen_height_ * aspect);
 
         return std::make_pair(width, height);
     }
 
-    std::pair<float, float> uniform() const
+    std::pair<float, float> none() const
     {
-        float aspect = static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) /
-                       static_cast<float>(square_height_);
-        float width  = std::min(1.0f, static_cast<float>(screen_height_) * aspect / static_cast<float>(screen_width_));
-        float height = static_cast<float>(screen_width_ * width) / static_cast<float>(screen_height_ * aspect);
+        float aspect = static_cast<float>(config_.sbs_key ? effective_aspect_ratio() * 2 : effective_aspect_ratio());
+        float width  = aspect * static_cast<float>(format_desc_.height) / static_cast<float>(screen_width_);
+        float height = static_cast<float>(format_desc_.height) / static_cast<float>(screen_height_);
 
         return std::make_pair(width, height);
     }
@@ -550,10 +615,10 @@ struct screen_consumer
 
     std::pair<float, float> uniform_to_fill() const
     {
-        float wr =
-            static_cast<float>(config_.sbs_key ? square_width_ * 2 : square_width_) / static_cast<float>(screen_width_);
-        float hr    = static_cast<float>(square_height_) / static_cast<float>(screen_height_);
-        float r_inv = 1.0f / std::min(wr, hr);
+        float aspect = static_cast<float>(config_.sbs_key ? effective_aspect_ratio() * 2 : effective_aspect_ratio());
+        float wr     = aspect * static_cast<float>(format_desc_.height) / static_cast<float>(screen_width_);
+        float hr     = static_cast<float>(format_desc_.height) / static_cast<float>(screen_height_);
+        float r_inv  = 1.0f / std::min(wr, hr);
 
         float width  = wr * r_inv;
         float height = hr * r_inv;
@@ -569,30 +634,39 @@ struct host_strategy : public display_strategy
     virtual frame init_frame(const configuration& config, const core::video_format_desc& format_desc) override
     {
         screen::frame frame;
-        auto          flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+        auto          flags           = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+        auto          size_multiplier = config.high_bitdepth ? 2 : 1;
+
         GL(glCreateBuffers(1, &frame.pbo));
-        auto size_multiplier = config.high_bitdepth ? 2 : 1;
         GL(glNamedBufferStorage(frame.pbo, format_desc.size * size_multiplier, nullptr, flags));
         frame.ptr = reinterpret_cast<char*>(
             GL2(glMapNamedBufferRange(frame.pbo, 0, format_desc.size * size_multiplier, flags)));
 
         GL(glCreateTextures(GL_TEXTURE_2D, 1, &frame.tex));
-        GL(glTextureParameteri(frame.tex,
-                               GL_TEXTURE_MIN_FILTER,
-                               (config.colour_space == configuration::colour_spaces::datavideo_full ||
-                                config.colour_space == configuration::colour_spaces::datavideo_limited)
-                                   ? GL_NEAREST
-                                   : GL_LINEAR));
-        GL(glTextureParameteri(frame.tex,
-                               GL_TEXTURE_MAG_FILTER,
-                               (config.colour_space == configuration::colour_spaces::datavideo_full ||
-                                config.colour_space == configuration::colour_spaces::datavideo_limited)
-                                   ? GL_NEAREST
-                                   : GL_LINEAR));
+
+        const GLenum filter_mode = (config.colour_space == configuration::colour_spaces::datavideo_full ||
+                                    config.colour_space == configuration::colour_spaces::datavideo_limited)
+                                       ? GL_NEAREST
+                                       : GL_LINEAR;
+
         GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL(glTextureParameteri(frame.tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+        // Mipmaps can improve quality when content is displayed at significantly less than native resolution
+        // (e.g. high pixel-pitch LED walls). Capped at 2 levels to avoid unnecessary GPU overhead.
+        int mip_levels = 1;
+        if (config.enable_mipmaps) {
+            mip_levels = 2;
+            CASPAR_LOG(debug) << L"Screen consumer: mipmaps enabled (2 levels).";
+            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        } else {
+            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MIN_FILTER, filter_mode));
+            GL(glTextureParameteri(frame.tex, GL_TEXTURE_MAG_FILTER, filter_mode));
+        }
+
         GL(glTextureStorage2D(
-            frame.tex, 1, config.high_bitdepth ? GL_RGBA16 : GL_RGBA8, format_desc.width, format_desc.height));
+            frame.tex, mip_levels, config.high_bitdepth ? GL_RGBA16 : GL_RGBA8, format_desc.width, format_desc.height));
         GL(glClearTexImage(
             frame.tex, 0, GL_BGRA, config.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, nullptr));
 
@@ -611,7 +685,6 @@ struct host_strategy : public display_strategy
         core::const_frame in_frame;
 
         while (!self->frame_buffer_.try_pop(in_frame) && self->is_running_) {
-            // TODO (fix)
             if (!self->poll()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(2));
             }
@@ -632,7 +705,6 @@ struct host_strategy : public display_strategy
                     frame.fence = nullptr;
                 }
                 if (!self->poll()) {
-                    // TODO (fix)
                     std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 }
             }
@@ -650,8 +722,12 @@ struct host_strategy : public display_strategy
                                    GL_BGRA,
                                    self->config_.high_bitdepth ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
                                    nullptr));
-            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 
+            if (self->config_.enable_mipmaps) {
+                GL(glGenerateTextureMipmap(frame.tex));
+            }
+
+            GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
             frame.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         }
 
@@ -666,16 +742,25 @@ struct host_strategy : public display_strategy
 
             self->draw();
         }
+
+        self->window_.display();
+
+        std::rotate(self->frames_.begin(), self->frames_.begin() + 1, self->frames_.end());
+
+        self->graph_->set_value("tick-time", self->tick_timer_.elapsed() * self->format_desc_.fps * 0.5);
+        self->tick_timer_.restart();
     }
 };
 
 struct gpu_strategy : public display_strategy
 {
     virtual ~gpu_strategy() {}
+
     virtual frame init_frame(const configuration& config, const core::video_format_desc& format_desc) override
     {
         return frame();
     }
+
     virtual void cleanup_frame(frame& frame) override
     {
         if (frame.fence) {
@@ -692,7 +777,6 @@ struct gpu_strategy : public display_strategy
         self->poll();
 
         while (!self->frame_buffer_.try_pop(in_frame) && self->is_running_) {
-            // TODO (fix)
             if (!self->poll()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(2));
             }
@@ -711,7 +795,6 @@ struct gpu_strategy : public display_strategy
                 }
 
                 if (!self->poll()) {
-                    // TODO (fix)
                     std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 }
             }
@@ -733,6 +816,13 @@ struct gpu_strategy : public display_strategy
                 frame.texture = in_frame.texture();
             }
         }
+
+        self->window_.display();
+
+        std::rotate(self->frames_.begin(), self->frames_.begin() + 1, self->frames_.end());
+
+        self->graph_->set_value("tick-time", self->tick_timer_.elapsed() * self->format_desc_.fps * 0.5);
+        self->tick_timer_.restart();
     }
 };
 
@@ -746,8 +836,6 @@ struct screen_consumer_proxy : public core::frame_consumer
         : config_(std::move(config))
     {
     }
-
-    // frame_consumer
 
     void initialize(const core::video_format_desc& format_desc,
                     const core::channel_info&      channel_info,
@@ -777,6 +865,7 @@ struct screen_consumer_proxy : public core::frame_consumer
         state["screen/index"]         = config_.screen_index;
         state["screen/key_only"]      = config_.key_only;
         state["screen/always_on_top"] = config_.always_on_top;
+        state["screen/gpu_texture"]   = config_.gpu_texture;
         return state;
     }
 };
@@ -893,12 +982,18 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.stretch = screen::stretch::uniform_to_fill;
     }
 
-    auto aspect_str = ptree.get(L"aspect-ratio", L"default");
-    if (aspect_str == L"16:9") {
-        config.aspect = configuration::aspect_ratio::aspect_16_9;
-    } else if (aspect_str == L"4:3") {
-        config.aspect = configuration::aspect_ratio::aspect_4_3;
+    // Aspect ratio priority: explicit value > derived from width/height > auto (0.0, use format square dims)
+    auto aspect_str = ptree.get_optional<std::wstring>(L"aspect-ratio");
+    if (aspect_str) {
+        config.aspect_ratio = parse_aspect_ratio(*aspect_str);
+    } else if (config.screen_width > 0 && config.screen_height > 0) {
+        config.aspect_ratio = static_cast<double>(config.screen_width) / static_cast<double>(config.screen_height);
     }
+    // else: aspect_ratio remains 0.0 (auto)
+
+    config.enable_mipmaps   = ptree.get(L"enable-mipmaps", false);
+    config.brightness_boost = ptree.get(L"brightness-boost", 1.0);
+    config.saturation_boost = ptree.get(L"saturation-boost", 1.0);
 
     return spl::make_shared<screen_consumer_proxy>(config);
 }
