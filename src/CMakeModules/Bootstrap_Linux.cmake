@@ -12,7 +12,6 @@ if(POLICY CMP0167)
 endif()
 
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
-set(CEF_SYSTEM_PACKAGE "casparcg-cef-142" CACHE STRING "Name of the system CEF package (drives include/lib paths). Set to empty string to download CEF automatically.")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
 set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 
@@ -42,61 +41,7 @@ endif()
 find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
-    if (CEF_SYSTEM_PACKAGE)
-        set(CEF_LIB_PATH "/usr/lib/${CEF_SYSTEM_PACKAGE}")
-
-        add_library(CEF::CEF INTERFACE IMPORTED)
-        target_include_directories(CEF::CEF INTERFACE
-            "/usr/include/${CEF_SYSTEM_PACKAGE}"
-        )
-        target_link_libraries(CEF::CEF INTERFACE
-            "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
-            "${CEF_LIB_PATH}/libcef_dll_wrapper.a"
-        )
-    else()
-        casparcg_add_external_project(cef)
-        ExternalProject_Add(cef
-            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_linux64_minimal.tar.bz2
-            URL_HASH SHA256=1d89e19b2f446105f9a1fe6fdc96bced86249b5884241dcc4013b7c94dabf424
-            DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-            CMAKE_ARGS -DUSE_SANDBOX=Off $<$<BOOL:${CEF_STABLE_API_VERSION}>:-Dapi_version=${CEF_STABLE_API_VERSION}>
-            INSTALL_COMMAND ""
-            BUILD_BYPRODUCTS
-                "<SOURCE_DIR>/Release/libcef.so"
-                "<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
-        )
-        ExternalProject_Get_Property(cef SOURCE_DIR)
-        ExternalProject_Get_Property(cef BINARY_DIR)
-
-        add_library(CEF::CEF INTERFACE IMPORTED)
-        target_include_directories(CEF::CEF INTERFACE
-            "${SOURCE_DIR}"
-        )
-        target_link_libraries(CEF::CEF INTERFACE
-            # Note: All of these must be referenced in the BUILD_BYPRODUCTS above, to satisfy ninja
-            "${SOURCE_DIR}/Release/libcef.so"
-            "${BINARY_DIR}/libcef_dll_wrapper/libcef_dll_wrapper.a"
-        )
-
-        install(DIRECTORY ${SOURCE_DIR}/Resources/locales TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Resources/chrome_100_percent.pak TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Resources/chrome_200_percent.pak TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Resources/icudtl.dat TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Resources/resources.pak TYPE LIB)
-
-        install(FILES ${SOURCE_DIR}/Release/chrome-sandbox TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/libcef.so TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/libEGL.so TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/libGLESv2.so TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/libvk_swiftshader.so TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/libvulkan.so.1 TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/v8_context_snapshot.bin TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/vk_swiftshader_icd.json TYPE LIB)
-    endif()
-
-    if (CEF_STABLE_API_VERSION)
-        target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=${CEF_STABLE_API_VERSION})
-    endif()
+    include(CEF_Linux)
 endif ()
 
 SET (BOOST_INCLUDE_PATH "${Boost_INCLUDE_DIRS}")
