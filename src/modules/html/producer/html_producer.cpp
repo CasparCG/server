@@ -255,8 +255,32 @@ class html_client
         return result;
     }
 
+    std::int64_t channel_frame_ = 0;
+
     core::draw_frame receive(const core::video_field field)
     {
+        // Inject deterministic timing globals into the JS context.
+        // These mirror the Ultralight producer's API so templates can use
+        // the same code path regardless of which HTML engine renders them.
+        //
+        //   window.__caspar_frame   — integer frame count (increments every tick)
+        //   window.__caspar_time    — virtual time in seconds (frame / fps)
+        //   window.__caspar_tick(f) — called once per tick if defined
+        //
+        // Note: in CEF, requestAnimationFrame runs on its own wall-clock, so
+        // __caspar_tick may not align perfectly with rAF. But __caspar_frame
+        // is still authoritative for frame counting.
+        ++channel_frame_;
+        if (browser_ != nullptr && loaded_) {
+            auto js = "window.__caspar_producer='cef'"
+                     ";window.__caspar_frame=" + std::to_string(channel_frame_)
+                     + ";window.__caspar_time=" + std::to_string(
+                           static_cast<double>(channel_frame_) / format_desc_.fps)
+                     + ";if(typeof window.__caspar_tick==='function')window.__caspar_tick("
+                     + std::to_string(channel_frame_) + ");";
+            browser_->GetMainFrame()->ExecuteJavaScript(js, "", 0);
+        }
+
         if (!try_pop(field)) {
             graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
             return core::draw_frame::still(last_frame_);

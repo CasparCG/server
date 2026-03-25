@@ -24,6 +24,7 @@
 #include "ffmpeg.h"
 
 #include "consumer/ffmpeg_consumer.h"
+#include "consumer/offline_consumer.h"
 #include "producer/ffmpeg_producer.h"
 
 #include <common/log.h>
@@ -124,6 +125,9 @@ void init(const core::module_dependencies& dependencies)
 
     dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer);
     dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_consumer);
+
+    dependencies.consumer_registry->register_consumer_factory(L"Offline Consumer", create_offline_consumer);
+    dependencies.consumer_registry->register_preconfigured_consumer_factory(L"offline", create_preconfigured_offline_consumer);
 
     dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", create_producer);
 }
