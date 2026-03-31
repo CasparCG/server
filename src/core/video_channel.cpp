@@ -179,11 +179,12 @@ struct video_channel::impl final
                     state["stage"]       = stage_->state();
                     state["mixer"]       = mixer_.state();
                     state["output"]      = output_.state();
-                    state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
-                                                stage_frames.format_desc.field_count,
-                                            stage_frames.format_desc.framerate.denominator()};
-                    state["format"]      = stage_frames.format_desc.name;
-                    state_               = state;
+                    state["framerate"] =
+                        monitor::values(static_cast<std::int32_t>(stage_frames.format_desc.framerate.numerator() *
+                                                                  stage_frames.format_desc.field_count),
+                                        static_cast<std::int32_t>(stage_frames.format_desc.framerate.denominator()));
+                    state["format"] = stage_frames.format_desc.name;
+                    state_          = state;
 
                     caspar::timer osc_timer;
                     tick_(state_);

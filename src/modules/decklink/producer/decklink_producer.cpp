@@ -660,13 +660,13 @@ class decklink_producer : public IDeckLinkInputCallback
                 state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
                 state_["file/audio/channels"]    = format_desc_.audio_channels;
                 state_["file/fps"]               = format_desc_.fps;
-                state_["profiler/time"]          = {frame_timer.elapsed(), format_desc_.fps};
-                state_["buffer"]                 = {static_cast<int>(buffer_size), buffer_capacity_};
-                state_["has_signal"]             = has_signal_;
+                state_["profiler/time"]          = core::monitor::values(frame_timer.elapsed(), format_desc_.fps);
+                state_["buffer"]     = core::monitor::values(static_cast<std::int32_t>(buffer_size), buffer_capacity_);
+                state_["has_signal"] = has_signal_;
 
                 if (video) {
-                    state_["file/video/width"]  = static_cast<int>(video->GetWidth());
-                    state_["file/video/height"] = static_cast<int>(video->GetHeight());
+                    state_["file/video/width"]  = static_cast<std::int32_t>(video->GetWidth());
+                    state_["file/video/height"] = static_cast<std::int32_t>(video->GetHeight());
                 }
             }
 

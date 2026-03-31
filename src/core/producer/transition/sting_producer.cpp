@@ -202,7 +202,7 @@ class sting_producer : public frame_producer
             state_["transition/type"] = is_cut_mode_ ? std::string("cut") : std::string("sting");
 
             if (duration)
-                state_["transition/frame"] = {static_cast<int>(current_frame_), static_cast<int>(*duration)};
+                state_["transition/frame"] = monitor::values(current_frame_, *duration);
         };
 
         if (duration && current_frame_ >= *duration) {

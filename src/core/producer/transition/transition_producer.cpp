@@ -132,8 +132,9 @@ class transition_producer : public frame_producer
     {
         state_                        = dst_producer_->state();
         state_["transition/producer"] = dst_producer_->name();
-        state_["transition/frame"]    = {current_frame_, info_.duration};
-        state_["transition/type"]     = [&]() -> std::string {
+        state_["transition/frame"] =
+            monitor::values(static_cast<std::int32_t>(current_frame_), static_cast<std::int32_t>(info_.duration));
+        state_["transition/type"] = [&]() -> std::string {
             switch (info_.type) {
                 case transition_type::mix:
                     return "mix";

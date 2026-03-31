@@ -402,7 +402,7 @@ class shared_ptr
 
     T* get() const { return p_.get(); }
 
-    bool unique() const { return p_.unique(); }
+    bool unique() const { return p_.use_count() == 1; }
 
     long use_count() const { return p_.use_count(); }
 

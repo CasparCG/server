@@ -16,20 +16,23 @@ class scope_exit
     explicit scope_exit(T2&& func)
         : func_(std::forward<T2>(func))
         , valid_(true)
+        , exception_count_(std::uncaught_exceptions())
     {
     }
 
     scope_exit(scope_exit&& other)
         : func_(std::move(other.func_))
         , valid_(std::move(other.valid_))
+        , exception_count_(other.exception_count_)
     {
         other.valid_ = false;
     }
 
     scope_exit& operator=(scope_exit&& other)
     {
-        func_  = std::move(other.func_);
-        valid_ = std::move(other.valid_);
+        func_            = std::move(other.func_);
+        valid_           = std::move(other.valid_);
+        exception_count_ = other.exception_count_;
 
         other.valid_ = false;
 
@@ -42,7 +45,7 @@ class scope_exit
             if (valid_)
                 func_();
         } catch (...) {
-            if (!std::uncaught_exception())
+            if (std::uncaught_exceptions() == exception_count_)
 #pragma warning(push)
 #pragma warning(disable : 4297)
                 throw;
@@ -55,6 +58,7 @@ class scope_exit
   private:
     T    func_;
     bool valid_;
+    int  exception_count_;
 };
 
 class scope_exit_helper

@@ -423,13 +423,14 @@ struct bluefish_producer
                 std::lock_guard<std::mutex> lock(state_mutex_);
                 state_["file/name"]              = model_name_;
                 state_["file/path"]              = device_index_;
-                state_["file/video/width"]       = static_cast<long>(width);
-                state_["file/video/height"]      = static_cast<long>(height);
+                state_["file/video/width"]       = static_cast<std::int32_t>(width);
+                state_["file/video/height"]      = static_cast<std::int32_t>(height);
                 state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
                 state_["file/audio/channels"]    = format_desc_.audio_channels;
                 state_["file/fps"]               = static_cast<double>(fps);
-                state_["profiler/time"]          = {frame_timer.elapsed(), fps};
-                state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
+                state_["profiler/time"]          = core::monitor::values(frame_timer.elapsed(), fps);
+                state_["buffer"] = core::monitor::values(static_cast<std::int32_t>(frame_buffer_.size()),
+                                                         static_cast<std::int32_t>(frame_buffer_.capacity()));
             }
 
             graph_->set_value("frame-time", frame_timer.elapsed() * fps / format_desc_.field_count * 0.5);
