@@ -41,10 +41,6 @@ class AsyncEventServer
                               const std::string&                          host,
                               unsigned short                              port);
 
-    AsyncEventServer(std::shared_ptr<boost::asio::io_context>             io_context,
-                              const protocol_strategy_factory<char>::ptr& protocol,
-                              unsigned short                              port);
-
     ~AsyncEventServer();
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& lifecycle_factory);
