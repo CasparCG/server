@@ -46,7 +46,7 @@ struct lock_container::impl
                 CASPAR_LOG(info) << lifecycle_key_ << " acquired";
 
                 {
-                    std::shared_ptr<void> obj(nullptr, [=](void*) { do_release_lock(weak_ptr); });
+                    std::shared_ptr<void> obj(nullptr, [this, weak_ptr](void*) { do_release_lock(weak_ptr); });
                     conn->add_lifecycle_bound_object(lifecycle_key_, obj);
                 }
             }

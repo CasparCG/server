@@ -1,16 +1,20 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 project (decklink)
 
 set(SOURCES
 		consumer/decklink_consumer.cpp
 		consumer/decklink_consumer.h
-		consumer/hdr_v210_strategy.cpp
+		consumer/v210_strategies.cpp
 		consumer/sdr_bgra_strategy.cpp
 		consumer/format_strategy.h
 		consumer/config.cpp
 		consumer/config.h
 		consumer/monitor.cpp
 		consumer/monitor.h
+		consumer/vanc.cpp
+		consumer/vanc.h
+		consumer/vanc_scte104_strategy.cpp
+		consumer/vanc_op47_strategy.cpp
 
 		producer/decklink_producer.cpp
 		producer/decklink_producer.h

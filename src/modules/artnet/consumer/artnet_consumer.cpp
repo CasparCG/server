@@ -70,13 +70,14 @@ struct artnet_consumer : public core::frame_consumer
         socket.open(udp::v4());
 
         std::string host_ = u8(this->config.host);
-        remote_endpoint =
-            boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
+        remote_endpoint   = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
 
         compute_fixtures();
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& /*format_desc*/,
+                    const core::channel_info& channel_info,
+                    int                       port_index) override
     {
         thread_ = std::thread([this] {
             long long time      = 1000 / config.refreshRate;

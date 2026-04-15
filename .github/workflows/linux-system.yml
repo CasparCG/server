@@ -8,24 +8,79 @@ on:
 
 jobs:
     build:
+        name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{matrix.family}}:${{ matrix.distribution }})
         strategy:
             fail-fast: false
             matrix:
                 include:
-                    - os: ubuntu-22.04
-                      distribution: jammy
                     - os: ubuntu-24.04
+                      family: ubuntu
                       distribution: noble
+                      arch: amd64
+                      container: ""
+                      apt_prefix: sudo
+                      upload_artifacts: true
+                    - os: ubuntu-latest
+                      family: ubuntu
+                      distribution: resolute
+                      arch: amd64
+                      container: ubuntu:26.04
+                      apt_prefix: ""
+                      upload_artifacts: false
+                    - os: ubuntu-24.04-arm
+                      family: ubuntu
+                      distribution: resolute
+                      arch: arm64
+                      container: ubuntu:26.04
+                      apt_prefix: ""
+                      upload_artifacts: false
+                    - os: ubuntu-latest
+                      family: debian
+                      distribution: trixie
+                      arch: amd64
+                      container: debian:trixie # Debian 13
+                      apt_prefix: ""
+                      upload_artifacts: false # Because of CEF, this is not built correctly
+                    - os: ubuntu-latest
+                      family: debian
+                      distribution: sid
+                      arch: amd64
+                      container: debian:sid # Debian Testing
+                      apt_prefix: ""
+                      upload_artifacts: false # Because of CEF, this is not built correctly
+                    - os: ubuntu-latest
+                      family: debian
+                      distribution: trixie
+                      arch: amd64
+                      container: debian:trixie
+                      apt_prefix: ""
+                      upload_artifacts: false # Because of CEF, this is not built correctly
+                    - os: ubuntu-latest
+                      family: archlinux
+                      distribution: latest
+                      arch: amd64
+                      container: archlinux:latest
+                      apt_prefix: ""
+                      upload_artifacts: false # Not supported
 
         runs-on: ${{ matrix.os }}
+        container: ${{ matrix.container }}
+        defaults:
+            run:
+                shell: bash
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Install git (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: pacman -Sy --noconfirm git
+
+            - uses: actions/checkout@v6
 
             - name: Setup environment
               id: setup-env
+              if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
               run: |
-                  ln -s tools/linux/deb/ubuntu-${{ matrix.distribution }}/debian ./
+                  ln -s tools/linux/deb/${{ matrix.family }}-${{ matrix.distribution }}/debian ./
 
                   # Build a version number for this build
                   GH_REF="${GITHUB_REF##*/}"
@@ -43,9 +98,13 @@ jobs:
                   echo "BUILD_FILENAME=$BUILD_FILENAME" >> $GITHUB_OUTPUT
 
                   # install some needed tooling
-                  sudo apt-get update
-                  sudo apt-get -y install software-properties-common build-essential dpkg-dev debhelper devscripts
-                  sudo add-apt-repository ppa:casparcg/ppa
+                  $APT_PREFIX apt-get update
+                  $APT_PREFIX apt-get -y install build-essential dpkg-dev debhelper devscripts
+
+                  if [[ "${{ matrix.family }}" == "ubuntu" ]]; then
+                    $APT_PREFIX apt-get -y install software-properties-common
+                    $APT_PREFIX add-apt-repository ppa:casparcg/ppa
+                  fi
 
                   # Put something in the changelog
                   export DEBEMAIL="builds@casparcg.com"
@@ -53,20 +112,25 @@ jobs:
                   dch -v "$BUILD_VERSION" --create -D ${{ matrix.distribution }} --package casparcg-server-beta "Build"
 
                   # Install build dependencies
-                  sudo apt-get build-dep .
+                  $APT_PREFIX apt-get -y build-dep .
 
-                  # update the control file to reference the current cef version
-                  CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-131)
-                  sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
+                  if [[ "${{ matrix.family }}" == "ubuntu" ]]; then
+                    # update the control file to reference the current cef version
+                    CASPARCG_CEF_VER=$(dpkg-query -W -f='${Version}' casparcg-cef-142)
+                    sed -i "s/@CASPARCG_CEF_VER@/${CASPARCG_CEF_VER}/" debian/control
 
-                  # Download required packages
-                  cd ..
-                  apt-get download casparcg-cef-131=$CASPARCG_CEF_VER
-                  apt-get download casparcg-scanner
+                    # Download required packages
+                    cd ..
+                    apt-get download casparcg-cef-142=$CASPARCG_CEF_VER
+                    apt-get download casparcg-scanner
+                  fi
               env:
                   CI: 1
+                  DEBIAN_FRONTEND: noninteractive
+                  APT_PREFIX: ${{ matrix.apt_prefix }}
 
             - name: Run build
+              if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
               run: |
                   # Perform build
                   debuild -b -uc -us
@@ -75,6 +139,7 @@ jobs:
 
             - name: Collect artifacts
               id: artifacts
+              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
               run: |
                   mkdir -p dist
                   mv ../*.deb dist/
@@ -102,7 +167,33 @@ jobs:
               env:
                   CI: 1
 
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
+              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
               with:
                   name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
                   path: dist
+
+            - name: Setup environment (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: |
+                  pacman -Syu --noconfirm
+                  pacman -S --noconfirm --needed \
+                    base-devel cmake ninja pkg-config \
+                    boost boost-libs ffmpeg glew libglvnd \
+                    onetbb openal sfml \
+                    libxrandr simde
+              env:
+                  CI: 1
+
+            - name: Run build (archlinux)
+              if: ${{ matrix.family == 'archlinux' }}
+              run: |
+                  cmake -B build -S src \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DDIAG_FONT_PATH="/usr/share/fonts/liberation/LiberationMono-Regular.ttf" \
+                    -DENABLE_HTML=OFF \
+                    -G Ninja
+
+                  cmake --build build
+              env:
+                  CI: 1

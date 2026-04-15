@@ -1,18 +1,15 @@
 #!/bin/bash
 
 if [ -z "$DISPLAY" ]; then 
-  echo "DISPLAY is not set"
-  exit 9
+  echo "WARNING: DISPLAY is not set"
 fi
 
 if [ ! -d /tmp/.X11-unix ]; then
-  echo "X11 socket not found"
-  exit 9
+  echo "WARNING: X11 socket not found"
 fi
 
 if [ ! -f /root/.Xauthority ]; then
-  echo "Xauthority not found"
-  exit 9
+  echo "WARNING: Xauthority not found"
 fi
 
 ./run.sh

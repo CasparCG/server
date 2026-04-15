@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 project (screen)
 
 set(SOURCES
@@ -31,7 +31,7 @@ target_include_directories(screen PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${FFMPEG_INCLUDE_PATH}
 )
-target_link_libraries(screen PRIVATE accelerator ffmpeg GLEW::glew sfml-window)
+target_link_libraries(screen PRIVATE accelerator ffmpeg GLEW::glew sfml-system sfml-window)
 
 set_target_properties(screen PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)

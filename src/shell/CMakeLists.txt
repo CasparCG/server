@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 project (shell)
 
 join_list("${CASPARCG_MODULE_INCLUDE_STATEMENTS}" "\n" CASPARCG_MODULE_INCLUDE_STATEMENTS)
@@ -34,7 +34,7 @@ add_executable(casparcg ${SOURCES} ${HEADERS})
 set_target_properties(casparcg PROPERTIES
         OUTPUT_NAME "${CASPARCG_BINARY_NAME}"
     )
-target_compile_features(casparcg PRIVATE cxx_std_17)
+target_compile_features(casparcg PRIVATE cxx_std_20)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
@@ -74,6 +74,10 @@ if (MSVC)
 		avdevice.lib
 		swscale.lib
 		swresample.lib
+
+		d3d9.lib
+		d3d11.lib
+		dxgi.lib
 	)
 else ()
 	target_link_libraries(casparcg

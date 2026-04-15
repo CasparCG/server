@@ -46,6 +46,5 @@ apt-get install -yq --no-install-recommends \
   libavutil-dev \
   libavfilter-dev \
   libswscale-dev \
-  libpostproc-dev \
   libswresample-dev \
   libsimde-dev

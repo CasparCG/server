@@ -223,20 +223,25 @@ static com_ptr<IDeckLink> get_device(size_t device_index)
 {
     auto pDecklinkIterator = create_iterator();
 
-    size_t             n = 0;
-    com_ptr<IDeckLink> decklink;
-    IDeckLink*         current = nullptr;
-    while (n < device_index && pDecklinkIterator->Next(&current) == S_OK) {
-        ++n;
-        decklink = wrap_raw<com_ptr>(current);
-        current->Release();
+    IDeckLink* current = nullptr;
+    for (int n = 1; pDecklinkIterator->Next(&current) == S_OK; ++n) {
+        auto decklink = wrap_raw<com_ptr>(current, true);
+
+        // Match index
+        if (n == device_index) {
+            return decklink;
+        }
+
+        // Match persistent id
+        int64_t id         = 0;
+        auto    attributes = iface_cast<IDeckLinkProfileAttributes>(decklink);
+        attributes->GetInt(BMDDeckLinkPersistentID, &id);
+        if (id != 0 && id == static_cast<int64_t>(device_index)) {
+            return decklink;
+        }
     }
 
-    if (n != device_index || !decklink)
-        CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info("Decklink device " + std::to_string(device_index) + " not found."));
-
-    return decklink;
+    CASPAR_THROW_EXCEPTION(user_error() << msg_info("Decklink device " + std::to_string(device_index) + " not found."));
 }
 
 template <typename T>

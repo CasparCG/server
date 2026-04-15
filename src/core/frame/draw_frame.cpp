@@ -70,7 +70,7 @@ struct draw_frame::impl
         visitor.pop();
     }
 
-    bool operator==(const impl& other) { return frame_ == other.frame_ && transform_ == other.transform_; }
+    bool operator==(const impl& other) const { return frame_ == other.frame_ && transform_ == other.transform_; }
 };
 
 draw_frame::draw_frame()
@@ -163,7 +163,8 @@ draw_frame draw_frame::pop(const draw_frame& frame)
 
 draw_frame draw_frame::still(draw_frame frame)
 {
-    frame.transform().audio_transform.volume = 0.0;
+    frame.transform().audio_transform.volume           = 0.0;
+    frame.transform().audio_transform.immediate_volume = true;
     return frame;
 }
 

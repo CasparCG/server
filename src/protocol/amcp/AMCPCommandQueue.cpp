@@ -101,7 +101,7 @@ void AMCPCommandQueue::AddCommand(std::shared_ptr<AMCPGroupCommand> pCurrentComm
         return;
     }
 
-    executor_.begin_invoke([=] {
+    executor_.begin_invoke([=, this] {
         try {
             Execute(pCurrentCommand);
 

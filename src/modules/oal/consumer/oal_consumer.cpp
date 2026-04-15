@@ -31,12 +31,10 @@
 #include <common/timer.h>
 #include <common/utf.h>
 
-#include <core/consumer/frame_consumer.h>
 #include <core/consumer/channel_info.h>
+#include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
 #include <core/video_format.h>
-
-#include <modules/ffmpeg/defines.h>
 
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -215,7 +213,7 @@ struct oal_consumer : public core::frame_consumer
 
     ~oal_consumer() override
     {
-        executor_.invoke([=] {
+        executor_.invoke([this] {
             if (source_ != 0u) {
                 alSourceStop(source_);
                 alDeleteSources(1, &source_);
@@ -230,13 +228,15 @@ struct oal_consumer : public core::frame_consumer
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
         graph_->set_text(print());
 
-        executor_.begin_invoke([=] {
+        executor_.begin_invoke([this] {
             duration_ = *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
             buffers_.resize(8);
             alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
@@ -248,16 +248,11 @@ struct oal_consumer : public core::frame_consumer
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        executor_.begin_invoke([=] {
+        executor_.begin_invoke([=, this] {
             auto dst         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
             dst->format      = AV_SAMPLE_FMT_S16;
             dst->sample_rate = format_desc_.audio_sample_rate;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             av_channel_layout_default(&dst->ch_layout, 2);
-#else
-            dst->channels       = 2;
-            dst->channel_layout = av_get_default_channel_layout(dst->channels);
-#endif
             dst->nb_samples = duration_;
             if (av_frame_get_buffer(dst.get(), 32) < 0) {
                 // TODO FF error
@@ -284,12 +279,7 @@ struct oal_consumer : public core::frame_consumer
             auto src         = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
             src->format      = AV_SAMPLE_FMT_S32;
             src->sample_rate = format_desc_.audio_sample_rate;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             av_channel_layout_default(&src->ch_layout, format_desc_.audio_channels);
-#else
-            src->channels       = format_desc_.audio_channels;
-            src->channel_layout = av_get_default_channel_layout(src->channels);
-#endif
             src->nb_samples       = static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels);
             src->extended_data[0] = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(frame.audio_data().data()));
             src->linesize[0]      = static_cast<int>(frame.audio_data().size() * sizeof(int32_t));

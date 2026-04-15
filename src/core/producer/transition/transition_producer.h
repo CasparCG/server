@@ -37,6 +37,9 @@ enum class transition_type
     push,
     slide,
     wipe,
+    fadecut,
+    cutfade,
+    vfade,
     count
 };
 
@@ -44,6 +47,8 @@ enum class transition_direction
 {
     from_left,
     from_right,
+    from_top,
+    from_bottom,
     count
 };
 

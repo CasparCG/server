@@ -31,8 +31,8 @@ namespace caspar { namespace decklink {
 
 struct port_configuration
 {
-    int  device_index = 1;
-    bool key_only     = false;
+    int64_t device_index = 1; // Either an index, or a persistent id
+    bool    key_only     = false;
 
     core::video_format_desc format;
     int                     src_x    = 0;
@@ -46,6 +46,18 @@ struct port_configuration
     {
         return src_x != 0 || src_y != 0 || region_w != 0 || region_h != 0 || dest_x != 0 || dest_y != 0;
     }
+};
+
+struct vanc_configuration
+{
+    bool         enable           = false;
+    bool         enable_op47      = false;
+    bool         enable_scte104   = false;
+    uint32_t     op47_line        = 0;
+    uint32_t     op42_sd_line     = 21;
+    uint32_t     op47_line_field2 = 0;
+    uint32_t     scte104_line     = 0;
+    std::wstring op47_dummy_header;
 };
 
 struct hdr_meta_configuration
@@ -87,6 +99,12 @@ struct configuration
         disabled,
     };
 
+    enum class pixel_format_t
+    {
+        rgba,
+        yuv,
+    };
+
     bool                 embedded_audio              = false;
     keyer_t              keyer                       = keyer_t::default_keyer;
     duplex_t             duplex                      = duplex_t::default_duplex;
@@ -95,12 +113,15 @@ struct configuration
     int                  wait_for_reference_duration = 10; // seconds
     int                  base_buffer_depth           = 3;
     bool                 hdr                         = false;
+    pixel_format_t       pixel_format                = pixel_format_t::rgba;
 
     port_configuration              primary;
     std::vector<port_configuration> secondaries;
 
     core::color_space      color_space = core::color_space::bt709;
     hdr_meta_configuration hdr_meta;
+
+    vanc_configuration vanc;
 
     [[nodiscard]] int buffer_depth() const
     {

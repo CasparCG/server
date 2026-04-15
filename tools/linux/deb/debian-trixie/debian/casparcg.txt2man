@@ -1,0 +1,13 @@
+NAME
+  casparcg-server-beta - layered real-time video compositor to multiple outputs
+SYNOPSIS
+  casparcg-server-beta [path-to-config]
+DESCRIPTION
+  Play out professional graphics, audio and video to multiple outputs as a
+  layerbased real-time compositor.
+
+  If no path-to-config is provided, the default path is 'casparcg.config'.
+OPTIONS
+  There are no options.
+AUTHOR
+  Petter Reinholdtsen <pere@hungry.com> wrote this manual page.

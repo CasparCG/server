@@ -140,7 +140,8 @@ class AMCPProtocolStrategy
             return;
         }
 
-        CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
+        CASPAR_LOG(info) << L"Received message from " << client->address() << ": "
+                         << log::replace_nonprintable_copy(message, L'?') << L"\\r\\n";
 
         std::wstring request_id;
         std::wstring command_name;

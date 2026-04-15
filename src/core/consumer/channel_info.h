@@ -29,10 +29,11 @@ namespace caspar::core {
 struct channel_info
 {
     channel_info(int channel_index, common::bit_depth depth, color_space color_space)
-    : index(channel_index)
-    , depth(depth)
-    , default_color_space(color_space)
-    {}
+        : index(channel_index)
+        , depth(depth)
+        , default_color_space(color_space)
+    {
+    }
 
     int               index;
     common::bit_depth depth;

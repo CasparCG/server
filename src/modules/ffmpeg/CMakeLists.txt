@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 project (ffmpeg)
 
 set(SOURCES
@@ -13,11 +13,12 @@ set(SOURCES
 
 	util/av_util.cpp
 	util/av_util.h
+	util/audio_resampler.cpp
+	util/audio_resampler.h
 	util/av_assert.h
 
 	ffmpeg.cpp
 	ffmpeg.h
-	defines.h
 	StdAfx.h
 )
 

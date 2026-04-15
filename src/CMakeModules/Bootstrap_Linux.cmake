@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 
 include(ExternalProject)
 include(FetchContent)
@@ -15,7 +15,7 @@ set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
-set(ENABLE_AVX2 ON CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
+set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
@@ -30,29 +30,25 @@ MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 if (USE_STATIC_BOOST)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74.0 COMPONENTS system thread filesystem log_setup log locale regex date_time coroutine REQUIRED)
+find_package(Boost 1.83.0 COMPONENTS thread filesystem log_setup log locale regex date_time coroutine REQUIRED)
 find_package(FFmpeg REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
 find_package(GLEW REQUIRED)
 find_package(TBB REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(SFML 2 COMPONENTS graphics window REQUIRED)
-find_package(X11 REQUIRED)
-
-# support for Ubuntu 22.04
-if (NOT TARGET OpenAL::OpenAL)
-    add_library(OpenAL::OpenAL INTERFACE IMPORTED)
-    target_include_directories(OpenAL::OpenAL INTERFACE ${OPENAL_INCLUDE_DIR})
-    target_link_libraries(OpenAL::OpenAL INTERFACE ${OPENAL_LIBRARY})
+find_package(SFML 3 COMPONENTS Graphics System Window QUIET)
+if(NOT SFML_FOUND)
+    find_package(SFML 2 COMPONENTS graphics system window REQUIRED)
 endif()
+find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-131")
+        set(CEF_LIB_PATH "/usr/lib/casparcg-cef-142")
 
         add_library(CEF::CEF INTERFACE IMPORTED)
         target_include_directories(CEF::CEF INTERFACE
-            "/usr/include/casparcg-cef-131"
+            "/usr/include/casparcg-cef-142"
         )
         target_link_libraries(CEF::CEF INTERFACE
             "-Wl,-rpath,${CEF_LIB_PATH} ${CEF_LIB_PATH}/libcef.so"
@@ -61,8 +57,8 @@ if (ENABLE_HTML)
     else()
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
-            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_linux64_minimal.tar.bz2
-            URL_HASH SHA1=cbe52ac3c39ef93fdc5021588e12c466e801d9af
+            URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_linux64_minimal.tar.bz2
+            URL_HASH SHA256=1d89e19b2f446105f9a1fe6fdc96bced86249b5884241dcc4013b7c94dabf424
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
             CMAKE_ARGS -DUSE_SANDBOX=Off
             INSTALL_COMMAND ""
@@ -95,7 +91,6 @@ if (ENABLE_HTML)
         install(FILES ${SOURCE_DIR}/Release/libGLESv2.so TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/libvk_swiftshader.so TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/libvulkan.so.1 TYPE LIB)
-        install(FILES ${SOURCE_DIR}/Release/snapshot_blob.bin TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/v8_context_snapshot.bin TYPE LIB)
         install(FILES ${SOURCE_DIR}/Release/vk_swiftshader_icd.json TYPE LIB)
     endif()
@@ -132,14 +127,16 @@ IF (CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
     ADD_COMPILE_OPTIONS (-mssse3)
     ADD_COMPILE_OPTIONS (-msse4.1)
     IF (ENABLE_AVX2)
+        ADD_COMPILE_OPTIONS (-mfma)
         ADD_COMPILE_OPTIONS (-mavx)
         ADD_COMPILE_OPTIONS (-mavx2)
     ENDIF ()
+ELSE ()
+    ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
+    ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
+    ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ENDIF ()
 
-ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
-ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
-ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 
 ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)

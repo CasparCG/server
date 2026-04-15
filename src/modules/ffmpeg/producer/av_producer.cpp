@@ -72,6 +72,33 @@ struct Frame
     int64_t                  frame_count = 0;
 };
 
+AVPixelFormat get_pix_fmt_with_alpha(AVPixelFormat fmt)
+{
+    switch (fmt) {
+        case AV_PIX_FMT_YUV420P:
+            return AV_PIX_FMT_YUVA420P;
+        case AV_PIX_FMT_YUV422P:
+            return AV_PIX_FMT_YUVA422P;
+        case AV_PIX_FMT_YUV444P:
+            return AV_PIX_FMT_YUVA444P;
+        default:
+            break;
+    }
+    return fmt;
+}
+
+const AVCodec* get_decoder(AVCodecID codec_id)
+{
+    // enforce use of libvpx for vp8 and vp9 codecs to be able
+    // to decode webm files with alpha channel
+    const AVCodec* result = nullptr;
+    if (codec_id == AV_CODEC_ID_VP9)
+        result = avcodec_find_decoder_by_name("libvpx-vp9");
+    else if (codec_id == AV_CODEC_ID_VP8)
+        result = avcodec_find_decoder_by_name("libvpx");
+    return result != nullptr ? result : avcodec_find_decoder(codec_id);
+}
+
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
@@ -125,7 +152,8 @@ class Decoder
     explicit Decoder(AVStream* stream)
         : st(stream)
     {
-        const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
+        const auto codec = get_decoder(stream->codecpar->codec_id);
+
         if (!codec) {
             FF_RET(AVERROR_DECODER_NOT_FOUND, "avcodec_find_decoder");
         }
@@ -139,6 +167,12 @@ class Decoder
 
         FF(avcodec_parameters_to_context(ctx.get(), stream->codecpar));
 
+        if (stream->metadata != NULL) {
+            auto entry = av_dict_get(stream->metadata, "alpha_mode", NULL, AV_DICT_MATCH_CASE);
+            if (entry != NULL && entry->value != NULL && *entry->value == '1')
+                ctx->pix_fmt = get_pix_fmt_with_alpha(ctx->pix_fmt);
+        }
+
         int thread_count = env::properties().get(L"configuration.ffmpeg.producer.threads", 0);
         FF(av_opt_set_int(ctx.get(), "threads", thread_count, 0));
 
@@ -148,23 +182,11 @@ class Decoder
             ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
             ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
         } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-#if !(FFMPEG_NEW_CHANNEL_LAYOUT)
-            if (!ctx->channel_layout && ctx->channels) {
-                ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
-            }
-            if (!ctx->channels && ctx->channel_layout) {
-                ctx->channels = av_get_channel_layout_nb_channels(ctx->channel_layout);
-            }
-#endif
-        }
-
-        if (codec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
-            ctx->thread_type = FF_THREAD_SLICE;
         }
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
-        thread = boost::thread([=]() {
+        thread = boost::thread([this]() {
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
@@ -209,11 +231,7 @@ class Decoder
                         // TODO (fix) is this always best?
                         av_frame->pts = av_frame->best_effort_timestamp;
 
-#if LIBAVUTIL_VERSION_MAJOR < 58
-                        auto duration_pts = av_frame->pkt_duration;
-#else
                         auto duration_pts = av_frame->duration;
-#endif
                         if (duration_pts <= 0) {
                             if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
 #if LIBAVCODEC_VERSION_MAJOR < 62
@@ -359,12 +377,8 @@ struct Filter
             // Find first audio stream to get a time_base for the first_pts calculation
             AVRational tb = {1, format_desc.audio_sample_rate};
             for (auto n = 0U; n < input->nb_streams; ++n) {
-                const auto st = input->streams[n];
-#if FFMPEG_NEW_CHANNEL_LAYOUT
+                const auto st             = input->streams[n];
                 const auto codec_channels = st->codecpar->ch_layout.nb_channels;
-#else
-                const auto codec_channels = st->codecpar->channels;
-#endif
                 if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && codec_channels > 0) {
                     tb = {1, st->codecpar->sample_rate};
                     break;
@@ -416,11 +430,7 @@ struct Filter
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             const auto codec_channels = st->codecpar->ch_layout.nb_channels;
-#else
-            const auto codec_channels = st->codecpar->channels;
-#endif
             if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && codec_channels == 0) {
                 continue;
             }
@@ -525,12 +535,8 @@ struct Filter
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
                     sources.emplace(index, source);
                 } else if (st->codec_type == AVMEDIA_TYPE_AUDIO) {
-#if FFMPEG_NEW_CHANNEL_LAYOUT
                     char channel_layout[128];
                     FF(av_channel_layout_describe(&st->ch_layout, channel_layout, sizeof(channel_layout)));
-#else
-                    const auto channel_layout = st->channel_layout;
-#endif
 
                     auto args = (boost::format("time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%#x") %
                                  st->pkt_timebase.num % st->pkt_timebase.den % st->sample_rate %
@@ -551,8 +557,7 @@ struct Filter
         }
 
         if (media_type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out"));
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -586,24 +591,51 @@ struct Filter
                                               AV_PIX_FMT_GBRAP,
                                               AV_PIX_FMT_GBRAP16,
                                               AV_PIX_FMT_NONE};
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "pixel_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(pix_fmts) - 1,
+                                AV_OPT_TYPE_PIXEL_FMT,
+                                pix_fmts));
+#else
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
-            const AVSampleFormat sample_fmts[] = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
-            FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+            const AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
+            const int            sample_rates[] = {format_desc.audio_sample_rate, -1};
 
             FF(av_opt_set_int(sink, "all_channel_counts", 1, AV_OPT_SEARCH_CHILDREN));
 
-            const int sample_rates[] = {format_desc.audio_sample_rate, -1};
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "sample_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_fmts) - 1,
+                                AV_OPT_TYPE_SAMPLE_FMT,
+                                sample_fmts));
+            FF(av_opt_set_array(sink,
+                                "samplerates",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_rates) - 1,
+                                AV_OPT_TYPE_INT,
+                                sample_rates));
+#else
+            FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, -1, AV_OPT_SEARCH_CHILDREN));
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -611,6 +643,8 @@ struct Filter
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
+        FF(avfilter_init_str(sink, nullptr));
 
         // output
         {
@@ -755,7 +789,7 @@ struct AVProducer::Impl
 
         CASPAR_LOG(debug) << print() << " seekable: " << seekable_;
 
-        thread_ = boost::thread([=] {
+        thread_ = boost::thread([=, this] {
             try {
                 run(seek);
             } catch (boost::thread_interrupted&) {

@@ -29,8 +29,12 @@
 
 #include <boost/exception/all.hpp>
 #include <boost/throw_exception.hpp>
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <boost/stacktrace.hpp>
 
 namespace caspar {

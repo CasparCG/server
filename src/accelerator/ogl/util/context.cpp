@@ -1,23 +1,66 @@
 
 #include "context.h"
 
-#include <common/gl/gl_check.h>
 #include <common/log.h>
 
+#include <SFML/Window/Context.hpp>
+#if SFML_VERSION_MAJOR >= 3
+#include <SFML/Window/ContextSettings.hpp>
+#endif
+
+#include <tuple> // std::ignore
+
+#ifndef _MSC_VER
 #include <EGL/egl.h>
+#include <common/gl/gl_check.h>
+#include <stdlib.h>
+#endif
 
 namespace caspar::accelerator::ogl {
 
 struct device_context::impl
 {
+    virtual ~impl() {}
+    virtual void bind()   = 0;
+    virtual void unbind() = 0;
+};
+struct impl_sfml : public device_context::impl
+{
+    sf::Context device_;
+
+    impl_sfml()
+#if SFML_VERSION_MAJOR >= 3
+        : device_(sf::ContextSettings{.depthBits         = 0,
+                                      .stencilBits       = 0,
+                                      .antiAliasingLevel = 0,
+                                      .majorVersion      = 4,
+                                      .minorVersion      = 5,
+                                      .attributeFlags    = sf::ContextSettings::Attribute::Core},
+                  {1, 1})
+#else
+        : device_(sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core), 1, 1)
+#endif
+    {
+        CASPAR_LOG(info) << L"Initializing OpenGL Device (sfml).";
+    }
+
+    virtual ~impl_sfml() {}
+
+    virtual void bind() override { std::ignore = device_.setActive(true); }
+    virtual void unbind() override { std::ignore = device_.setActive(false); }
+};
+
+#ifndef _MSC_VER
+struct impl_egl : public device_context::impl
+{
     EGLDisplay eglDisplay_;
     EGLContext eglContext_;
 
-    impl()
+    impl_egl()
         : eglDisplay_(EGL_NO_DISPLAY)
         , eglContext_(EGL_NO_CONTEXT)
     {
-        CASPAR_LOG(info) << L"Initializing OpenGL Device.";
+        CASPAR_LOG(info) << L"Initializing OpenGL Device (EGL).";
 
         eglDisplay_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -56,7 +99,7 @@ struct device_context::impl
         }
     }
 
-    ~impl()
+    virtual ~impl_egl()
     {
         eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
@@ -66,15 +109,28 @@ struct device_context::impl
 
         eglTerminate(eglDisplay_);
     }
-};
 
+    virtual void bind() override { eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext_); }
+    virtual void unbind() override { eglMakeCurrent(eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT); }
+};
+#endif
+
+#ifndef _MSC_VER
 device_context::device_context()
-    : impl_(new impl())
+    : impl_(std::getenv("DISPLAY") == nullptr ? spl::make_shared<device_context::impl, impl_egl>()
+                                              : spl::make_shared<device_context::impl, impl_sfml>())
 {
 }
+#else
+device_context::device_context()
+    : impl_(new impl_sfml())
+{
+}
+#endif
+
 device_context::~device_context() {}
 
-void device_context::bind() { eglMakeCurrent(impl_->eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, impl_->eglContext_); }
-void device_context::unbind() { eglMakeCurrent(impl_->eglDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT); }
+void device_context::bind() { impl_->bind(); }
+void device_context::unbind() { impl_->unbind(); }
 
 } // namespace caspar::accelerator::ogl

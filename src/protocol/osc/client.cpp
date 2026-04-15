@@ -86,7 +86,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         , socket_(*io_context_, udp::v4())
         , buffer_(1000000)
     {
-        thread_ = std::thread([=] {
+        thread_ = std::thread([this] {
             try {
                 while (!abort_request_) {
                     core::monitor::state       bundle;

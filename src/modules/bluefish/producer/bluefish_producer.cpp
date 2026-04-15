@@ -423,11 +423,11 @@ struct bluefish_producer
                 std::lock_guard<std::mutex> lock(state_mutex_);
                 state_["file/name"]              = model_name_;
                 state_["file/path"]              = device_index_;
-                state_["file/video/width"]       = static_cast<long>(width);
-                state_["file/video/height"]      = static_cast<long>(height);
+                state_["file/video/width"]       = width;
+                state_["file/video/height"]      = height;
                 state_["file/audio/sample-rate"] = format_desc_.audio_sample_rate;
                 state_["file/audio/channels"]    = format_desc_.audio_channels;
-                state_["file/fps"]               = static_cast<double>(fps);
+                state_["file/fps"]               = fps;
                 state_["profiler/time"]          = {frame_timer.elapsed(), fps};
                 state_["buffer"]                 = {frame_buffer_.size(), frame_buffer_.capacity()};
             }
@@ -462,11 +462,7 @@ struct bluefish_producer
 
                 // Audio
                 src_audio->format = AV_SAMPLE_FMT_S32;
-#if FFMPEG_NEW_CHANNEL_LAYOUT
                 av_channel_layout_default(&src_audio->ch_layout, format_desc_.audio_channels);
-#else
-                src_audio->channels = format_desc_.audio_channels;
-#endif
                 src_audio->sample_rate = format_desc_.audio_sample_rate;
                 src_audio->nb_samples  = 0;
                 int samples_decoded    = 0;
@@ -682,7 +678,7 @@ class bluefish_producer_proxy : public core::frame_producer
         , executor_(L"bluefish_producer[" + std::to_wstring(device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
-        executor_.invoke([=] {
+        executor_.invoke([=, this] {
             core::diagnostics::call_context::for_thread() = ctx;
             producer_.reset(new bluefish_producer(
                 format_desc, device_index, stream_index, uhd_mode, frame_factory, format_repository));
@@ -691,7 +687,7 @@ class bluefish_producer_proxy : public core::frame_producer
 
     ~bluefish_producer_proxy()
     {
-        executor_.invoke([=] { producer_.reset(); });
+        executor_.invoke([=, this] { producer_.reset(); });
     }
 
     core::monitor::state state() const override { return producer_->state(); }

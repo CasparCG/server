@@ -42,7 +42,7 @@ class scope_exit
             if (valid_)
                 func_();
         } catch (...) {
-            if (!std::uncaught_exception())
+            if (!std::uncaught_exceptions())
 #pragma warning(push)
 #pragma warning(disable : 4297)
                 throw;

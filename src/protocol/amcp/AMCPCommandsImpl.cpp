@@ -63,6 +63,10 @@
 #include <future>
 #include <memory>
 
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -77,6 +81,9 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/regex.hpp>
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic pop
+#endif
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -128,11 +135,7 @@ std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
     boost::locale::generator gen;
     gen.locale_cache_enabled(true);
-#if BOOST_VERSION >= 108100
     gen.categories(boost::locale::category_t::codepage);
-#else
-    gen.categories(boost::locale::codepage_facet);
-#endif
 
     std::stringstream           result_stream;
     boost::filesystem::ifstream filestream(file);

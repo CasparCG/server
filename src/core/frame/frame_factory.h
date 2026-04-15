@@ -23,6 +23,14 @@
 
 #include <common/bit_depth.h>
 
+#ifdef WIN32
+#include <core/frame/pixel_format.h>
+#include <memory>
+namespace caspar::accelerator::d3d {
+class d3d_texture2d;
+}
+#endif
+
 namespace caspar { namespace core {
 
 class frame_factory
@@ -37,6 +45,13 @@ class frame_factory
     virtual class mutable_frame create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;
     virtual class mutable_frame
     create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, common::bit_depth depth) = 0;
+
+#ifdef WIN32
+    virtual class const_frame import_d3d_texture(const void* video_stream_tag,
+                                                 const std::shared_ptr<accelerator::d3d::d3d_texture2d>& d3d_texture,
+                                                 core::pixel_format                                      format,
+                                                 common::bit_depth                                       depth) = 0;
+#endif
 };
 
 }} // namespace caspar::core

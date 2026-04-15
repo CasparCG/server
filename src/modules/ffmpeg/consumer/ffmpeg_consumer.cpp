@@ -37,11 +37,18 @@
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic pop
+#endif
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -64,7 +71,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
-#include <libswscale/swscale.h>
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -93,10 +99,6 @@ struct Stream
 
     std::shared_ptr<AVCodecContext> enc = nullptr;
     AVStream*                       st  = nullptr;
-
-    tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>> sws_;
-
-    int64_t pts = 0;
 
     Stream(AVFormatContext*                    oc,
            std::string                         suffix,
@@ -182,7 +184,7 @@ struct Stream
                 const auto sar = boost::rational<int>(format_desc.square_width, format_desc.square_height) /
                                  boost::rational<int>(format_desc.width, format_desc.height);
 
-                const auto pix_fmt = (depth == common::bit_depth::bit8) ? AV_PIX_FMT_YUVA422P : AV_PIX_FMT_YUVA422P10;
+                const auto pix_fmt = (depth == common::bit_depth::bit8) ? AV_PIX_FMT_BGRA : AV_PIX_FMT_BGRA64LE;
 
                 auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:sar=%d/%d:frame_rate=%d/%d") %
                              format_desc.width % format_desc.height % pix_fmt % format_desc.duration %
@@ -212,8 +214,7 @@ struct Stream
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out"));
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -222,27 +223,66 @@ struct Stream
             // TODO codec->profiles
             // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
             // AV_OPT_SEARCH_CHILDREN));
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            const void* pix_fmts;
+            int         nb_pix_fmts = 0;
+            FF(avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0, &pix_fmts, &nb_pix_fmts));
+
+            FF(av_opt_set_array(sink,
+                                "pixel_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                nb_pix_fmts,
+                                AV_OPT_TYPE_PIXEL_FMT,
+                                pix_fmts));
+#else
             FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4245)
 #endif
             // TODO codec->profiles
+
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            const void* sample_fmts;
+            int         nb_sample_fmts = 0;
+            FF(avcodec_get_supported_config(
+                nullptr, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &sample_fmts, &nb_sample_fmts));
+
+            FF(av_opt_set_array(sink,
+                                "sample_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                nb_sample_fmts,
+                                AV_OPT_TYPE_SAMPLE_FMT,
+                                sample_fmts));
+
+            const void* sample_rates;
+            int         nb_sample_rates = 0;
+            FF(avcodec_get_supported_config(
+                nullptr, codec, AV_CODEC_CONFIG_SAMPLE_RATE, 0, &sample_rates, &nb_sample_rates));
+
+            FF(av_opt_set_array(sink,
+                                "samplerates",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                nb_sample_rates,
+                                AV_OPT_TYPE_INT,
+                                sample_rates));
+#else
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
+#endif
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
             // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
-#else
-            FF(av_opt_set_int_list(sink, "channel_layouts", codec->channel_layouts, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -251,6 +291,8 @@ struct Stream
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
+        FF(avfilter_init_str(sink, nullptr));
 
         {
             const auto cur = outputs;
@@ -301,18 +343,7 @@ struct Stream
             enc->sample_rate = av_buffersink_get_sample_rate(sink);
             enc->time_base   = st->time_base;
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
             FF(av_buffersink_get_ch_layout(sink, &enc->ch_layout));
-#else
-            enc->channels       = av_buffersink_get_channels(sink);
-            enc->channel_layout = av_buffersink_get_channel_layout(sink);
-
-            if (!enc->channels) {
-                enc->channels = av_get_channel_layout_nb_channels(enc->channel_layout);
-            } else if (!enc->channel_layout) {
-                enc->channel_layout = av_get_default_channel_layout(enc->channels);
-            }
-#endif
 
         } else {
             // TODO
@@ -340,103 +371,28 @@ struct Stream
         }
     }
 
-    std::shared_ptr<SwsContext> get_sws(int width, int height)
-    {
-        std::shared_ptr<SwsContext> sws;
-
-        if (sws_.try_pop(sws)) {
-            return sws;
-        }
-
-        sws.reset(sws_getContext(
-                      width, height, AV_PIX_FMT_BGRA, width, height, AV_PIX_FMT_YUVA422P, 0, nullptr, nullptr, nullptr),
-                  [](SwsContext* ptr) { sws_freeContext(ptr); });
-
-        if (!sws) {
-            CASPAR_THROW_EXCEPTION(caspar_exception());
-        }
-
-        int        brigthness;
-        int        contrast;
-        int        saturation;
-        int        in_full;
-        int        out_full;
-        const int* inv_table;
-        const int* table;
-
-        sws_getColorspaceDetails(
-            sws.get(), (int**)&inv_table, &in_full, (int**)&table, &out_full, &brigthness, &contrast, &saturation);
-
-        inv_table = sws_getCoefficients(AVCOL_SPC_RGB);
-        table     = sws_getCoefficients(AVCOL_SPC_BT709);
-
-        in_full  = AVCOL_RANGE_JPEG;
-        out_full = AVCOL_RANGE_MPEG;
-
-        sws_setColorspaceDetails(sws.get(), inv_table, in_full, table, out_full, brigthness, contrast, saturation);
-
-        return std::shared_ptr<SwsContext>(sws.get(), [this, sws](SwsContext*) { sws_.push(sws); });
-    }
-
-    void send(core::const_frame&                             in_frame,
-              const core::video_format_desc&                 format_desc,
-              std::function<void(std::shared_ptr<AVPacket>)> cb)
+    void send(std::tuple<core::const_frame, std::int64_t, std::int64_t>& data,
+              const core::video_format_desc&                             format_desc,
+              std::function<void(std::shared_ptr<AVPacket>)>             cb)
     {
         std::shared_ptr<AVFrame>  frame;
         std::shared_ptr<AVPacket> pkt;
 
+        const auto [in_frame, video_pts, audio_pts] = data;
+
         if (in_frame) {
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
-                frame = make_av_video_frame(in_frame, format_desc);
-
-                {
-                    auto frame2                 = alloc_frame();
-                    frame2->sample_aspect_ratio = frame->sample_aspect_ratio;
-                    frame2->width               = frame->width;
-                    frame2->height              = frame->height;
-                    frame2->format              = AV_PIX_FMT_YUVA422P;
-                    frame2->colorspace          = AVCOL_SPC_BT709;
-                    frame2->color_primaries     = AVCOL_PRI_BT709;
-                    frame2->color_range         = AVCOL_RANGE_MPEG;
-                    frame2->color_trc           = AVCOL_TRC_BT709;
-                    av_frame_get_buffer(frame2.get(), 64);
-
-                    int h = frame->height / 8;
-                    tbb::parallel_for(0, 8, [&](int i) {
-                        auto sws = get_sws(frame->width, h);
-
-                        uint8_t* src[4] = {};
-                        src[0]          = frame->data[0] + frame->linesize[0] * (i * h);
-
-                        uint8_t* dst[4] = {};
-                        dst[0]          = frame2->data[0] + frame2->linesize[0] * (i * h);
-                        dst[1]          = frame2->data[1] + frame2->linesize[1] * (i * h);
-                        dst[2]          = frame2->data[2] + frame2->linesize[2] * (i * h);
-                        dst[3]          = frame2->data[3] + frame2->linesize[3] * (i * h);
-
-                        sws_scale(sws.get(), src, frame->linesize, 0, h, dst, frame2->linesize);
-                    });
-
-                    int i = frame->height - h;
-                    if (i > 0) {
-                        // TODO
-                    }
-
-                    frame = std::move(frame2);
-                }
-
-                frame->pts = pts;
-                pts += 1;
+                frame      = make_av_video_frame(in_frame, format_desc);
+                frame->pts = video_pts;
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
                 frame      = make_av_audio_frame(in_frame, format_desc);
-                frame->pts = pts;
-                pts += frame->nb_samples;
+                frame->pts = audio_pts;
             } else {
                 // TODO
             }
             FF(av_buffersrc_write_frame(source, frame.get()));
         } else {
-            FF(av_buffersrc_close(source, pts, 0));
+            FF(av_buffersrc_close(source, AV_NOPTS_VALUE, 0));
         }
 
         while (true) {
@@ -474,6 +430,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     int                     channel_index_ = -1;
     core::video_format_desc format_desc_;
     bool                    realtime_ = false;
+    std::int64_t            video_pts = 0;
+    std::int64_t            audio_pts = 0;
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
@@ -483,8 +441,8 @@ struct ffmpeg_consumer : public core::frame_consumer
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
 
-    tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
-    std::thread                                      frame_thread_;
+    tbb::concurrent_bounded_queue<std::tuple<core::const_frame, std::int64_t, std::int64_t>> frame_buffer_;
+    std::thread                                                                              frame_thread_;
 
     common::bit_depth depth_;
 
@@ -513,14 +471,16 @@ struct ffmpeg_consumer : public core::frame_consumer
     ~ffmpeg_consumer()
     {
         if (frame_thread_.joinable()) {
-            frame_buffer_.push(core::const_frame{});
+            frame_buffer_.push({core::const_frame{}, -1, -1});
             frame_thread_.join();
         }
     }
 
     // frame consumer
 
-    void initialize(const core::video_format_desc& format_desc, const core::channel_info& channel_info, int port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info&      channel_info,
+                    int                            port_index) override
     {
         if (frame_thread_.joinable()) {
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
@@ -531,7 +491,7 @@ struct ffmpeg_consumer : public core::frame_consumer
 
         graph_->set_text(print());
 
-        frame_thread_ = std::thread([=] {
+        frame_thread_ = std::thread([=, this] {
             try {
                 std::map<std::string, std::string> options;
                 {
@@ -665,15 +625,15 @@ struct ffmpeg_consumer : public core::frame_consumer
 
                 auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
 
-                std::int32_t frame_number = 0;
+                std::int64_t frame_number = 0;
                 while (true) {
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
                         state_["file/frame"] = frame_number++;
                     }
 
-                    core::const_frame frame;
-                    frame_buffer_.pop(frame);
+                    std::tuple<core::const_frame, std::int64_t, std::int64_t> data;
+                    frame_buffer_.pop(data);
                     graph_->set_value("input",
                                       static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
@@ -681,17 +641,17 @@ struct ffmpeg_consumer : public core::frame_consumer
                     tbb::parallel_invoke(
                         [&] {
                             if (video_stream) {
-                                video_stream->send(frame, format_desc, packet_cb);
+                                video_stream->send(data, format_desc, packet_cb);
                             }
                         },
                         [&] {
                             if (audio_stream) {
-                                audio_stream->send(frame, format_desc, packet_cb);
+                                audio_stream->send(data, format_desc, packet_cb);
                             }
                         });
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
-                    if (!frame) {
+                    if (!std::get<0>(data)) {
                         packet_buffer.push(nullptr);
                         break;
                     }
@@ -716,9 +676,13 @@ struct ffmpeg_consumer : public core::frame_consumer
             }
         }
 
-        if (!frame_buffer_.try_push(frame)) {
+        if (!frame_buffer_.try_push({frame, video_pts, audio_pts})) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
         }
+
+        video_pts += 1;
+        audio_pts += frame.audio_data().size() / format_desc_.audio_channels;
+
         graph_->set_value("input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
         return make_ready_future(true);

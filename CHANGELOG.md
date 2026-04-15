@@ -10,28 +10,40 @@ CasparCG 2.5.0 Stable
 * Reimplement mixer transforms, to handle routes correctly
 * Support more pixel formats from ffmpeg, to preserve colour accuracy better
 * Support running on headless linux
+* Transitions: Additional behaviours
 ##### Fixes
-* Build with boost 1.85/1.86
+* Build with boost 1.85/1.86/1.87/1.88
+* Build with ffmpeg 7.1
 * Only produce mixed frames on channels which have consumers
 * Routed channels not compositing correctly when channel used a MIXER KEY
 * Handle audio for fractional framerates properly
+* Gracefully exit on SIGINT and SIGTERM
 
 ### Producers
 ##### Improvements
 * FFmpeg: Support loading with a scaling-mode, to configure how clips get fit into the channel
+* FFmpeg: Support more pixel formats without cpu conversion
+* FFmpeg: Enable alpha for webm videos
 * Image: Support loading with a scaling-mode, to configure how images get fit into the channel
 * Image: Replace freeimage with ffmpeg
-* HTML: Update CEF to 131
+* HTML: Update CEF to 142
+* HTML: Support audio
 ##### Fixes
 * Route: Use full field rate when performing i->p channel route
+* HTML: Gracefully handle page load errors
+* HTML: Always set cache path
 
 ### Consumers
 ##### Improvements
 * Screen: Set size and position from AMCP
+* Screen: Improve performance
 * Image: Propagate AMCP parameters from PRINT command
+* FFmpeg: Remove unnecessary forced conversion to YUVA422
+* Decklink: Support explicit yuv output (requires AVX2)
+* Decklink: Allow selecting device by hardware persistent id
 
 ##### Fixes
-*
+* FFmpeg: Correctly handle PTS on frame drop
 
 
 CasparCG 2.4.3 Stable

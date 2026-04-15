@@ -20,8 +20,8 @@
  */
 #include "output.h"
 
-#include "frame_consumer.h"
 #include "channel_info.h"
+#include "frame_consumer.h"
 
 #include "../frame/frame.h"
 #include "../frame/pixel_format.h"
@@ -54,7 +54,9 @@ struct output::impl
     std::optional<time_point_t> time_;
 
   public:
-    impl(const spl::shared_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const core::channel_info& channel_info)
+    impl(const spl::shared_ptr<diagnostics::graph>& graph,
+         const video_format_desc&                   format_desc,
+         const core::channel_info&                  channel_info)
         : graph_(graph)
         , channel_info_(channel_info)
         , format_desc_(format_desc)

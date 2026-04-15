@@ -32,6 +32,7 @@
 #include <core/producer/cg_proxy.h>
 
 #include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
@@ -44,6 +45,10 @@
 #include <include/cef_app.h>
 #include <include/cef_version.h>
 #pragma warning(pop)
+
+#ifdef WIN32
+#include <accelerator/d3d/d3d_device.h>
+#endif
 
 namespace caspar::html {
 
@@ -102,10 +107,12 @@ class renderer_application
 {
     std::vector<CefRefPtr<CefV8Context>> contexts_;
     const bool                           enable_gpu_;
+    const bool                           shared_texture_;
 
   public:
-    explicit renderer_application(const bool enable_gpu)
+    explicit renderer_application(const bool enable_gpu, const bool shared_texture)
         : enable_gpu_(enable_gpu)
+        , shared_texture_(shared_texture)
     {
     }
 
@@ -169,10 +176,11 @@ class renderer_application
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
-            auto default_backend = L"gl";
+            auto default_backend = L""; // Let CEF choose what is best
 #if __unix__
             // If there is no X server, Chromium requires us to force it to the angle backend
-            if (getenv("DISPLAY") == nullptr) default_backend = L"vulkan";
+            if (getenv("DISPLAY") == nullptr)
+                default_backend = L"vulkan";
 #endif
 
             // This gives better performance on the gpu->cpu readback, but can perform worse with intense templates
@@ -216,7 +224,7 @@ bool intercept_command_line(int argc, char** argv)
     CefMainArgs main_args(argc, argv);
 #endif
 
-    return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0;
+    return CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false, false)), nullptr) >= 0;
 }
 
 void init(const core::module_dependencies& dependencies)
@@ -225,11 +233,11 @@ void init(const core::module_dependencies& dependencies)
 
     CefMainArgs main_args;
     g_cef_executor = std::make_unique<executor>(L"cef");
-    g_cef_executor->invoke([&] {
+    bool result    = g_cef_executor->invoke([&] {
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
-        const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+        const auto gpu = is_gpu_shared_texture_enabled();
 
         CefSettings settings;
         settings.command_line_args_disabled   = false;
@@ -237,13 +245,24 @@ void init(const core::module_dependencies& dependencies)
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
 
-        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"");
+        auto cache_path = env::properties().get(L"configuration.html.cache-path", L"cef-cache");
         if (!cache_path.empty()) {
+            if (!boost::filesystem::path(cache_path).is_absolute()) {
+                cache_path = caspar::env::initial_folder() + L"/" + cache_path;
+            }
+            CASPAR_LOG(info) << L"[html] Using CEF cache path: " << cache_path;
             CefString(&settings.cache_path).FromWString(cache_path);
         }
 
-        CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
+        return CefInitialize(
+            main_args, settings, CefRefPtr<CefApp>(new renderer_application(gpu.first, gpu.second)), nullptr);
     });
+
+    if (!result) {
+        CASPAR_LOG(error) << "[html] Failed to initialize CEF";
+        return;
+    }
+
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(
         L"html",
@@ -253,13 +272,6 @@ void init(const core::module_dependencies& dependencies)
             return html::create_cg_producer(dependencies, {filename});
         },
         false);
-
-    auto cef_version_major = std::to_wstring(cef_version_info(0));
-    auto cef_revision      = std::to_wstring(cef_version_info(1));
-    auto chrome_major      = std::to_wstring(cef_version_info(2));
-    auto chrome_minor      = std::to_wstring(cef_version_info(3));
-    auto chrome_build      = std::to_wstring(cef_version_info(4));
-    auto chrome_patch      = std::to_wstring(cef_version_info(5));
 }
 
 void uninit()
@@ -319,6 +331,29 @@ std::future<void> begin_invoke(const std::function<void()>& func)
         return task->future();
     }
     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
+}
+
+std::pair<bool, bool> is_gpu_shared_texture_enabled()
+{
+    const bool enable_gpu            = env::properties().get(L"configuration.html.enable-gpu", false);
+    bool       shared_texture_enable = false;
+
+#ifdef WIN32
+    if (enable_gpu) {
+        auto dev = accelerator::d3d::d3d_device::get_device();
+        if (!dev) {
+            CASPAR_LOG(warning) << L"Failed to create directX device for cef gpu acceleration";
+        } else {
+            shared_texture_enable = true;
+        }
+    }
+#else
+    // It would be nice to support this on linux, but it needs some investigation and work
+    // Test results (March 2026) suggest that linux without shared-texture is more performant than windows with or
+    // without
+#endif
+
+    return std::make_pair(enable_gpu, shared_texture_enable);
 }
 
 } // namespace caspar::html

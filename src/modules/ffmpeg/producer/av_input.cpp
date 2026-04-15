@@ -35,12 +35,15 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
 
     buffer_.set_capacity(256);
-    thread_ = boost::thread([=] {
+    thread_ = boost::thread([this] {
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
+            int consecutive_enomem = 0;
+
             while (true) {
                 auto packet = alloc_packet();
+                int  ret    = 0;
 
                 {
                     std::unique_lock<std::mutex> lock(ic_mutex_);
@@ -51,25 +54,52 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     }
 
                     // TODO (perf) Non blocking av_read_frame when possible.
-                    auto ret = av_read_frame(ic_.get(), packet.get());
-
-                    if (ret == AVERROR_EXIT) {
-                        break;
-                    } else if (ret == AVERROR(EAGAIN)) {
-                        boost::this_thread::yield();
-                    } else if (ret == AVERROR_EOF) {
-                        eof_   = true;
-                        packet = nullptr;
-                    } else {
-                        FF_RET(ret, "av_read_frame");
-                    }
+                    ret = av_read_frame(ic_.get(), packet.get());
                 }
 
+                if (abort_request_) {
+                    break;
+                }
+
+                if (ret == AVERROR_EXIT) {
+                    break;
+                } else if (ret == AVERROR(EAGAIN)) {
+                    boost::this_thread::yield();
+                    continue;
+                } else if (ret == AVERROR_EOF) {
+                    eof_   = true;
+                    packet = nullptr;
+                } else if (ret == AVERROR(ENOMEM)) {
+                    // Transient memory allocation failure inside the demuxer; log and retry rather
+                    // than letting the exception escape and kill the read thread permanently.
+                    // Sleep briefly to give the system a chance to free memory before retrying.
+                    ++consecutive_enomem;
+                    if (consecutive_enomem == 1) {
+                        CASPAR_LOG(warning) << "av_input[" << filename_ << "] av_read_frame: out of memory, retrying";
+                    } else if (consecutive_enomem >= 20) {
+                        CASPAR_LOG(error) << "av_input[" << filename_
+                                          << "] av_read_frame: too many consecutive out-of-memory errors, aborting";
+
+                        // Pretend we reached EOF, to avoid the producer stalling expecting more packets
+                        eof_   = true;
+                        packet = nullptr;
+                        buffer_.push(std::move(packet));
+                        break;
+                    }
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
+                    continue;
+                } else {
+                    consecutive_enomem = 0;
+                    FF_RET(ret, "av_read_frame");
+                }
+
+                consecutive_enomem = 0;
                 buffer_.push(std::move(packet));
                 graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
             }
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
         }
     });
 }
@@ -126,12 +156,8 @@ void Input::internal_reset()
 
     static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = {L"dshow", L"v4l2", L"iec61883"};
 
-#if LIBAVFORMAT_VERSION_MAJOR >= 59
     const AVInputFormat* input_format = nullptr;
-#else
-    AVInputFormat* input_format = nullptr;
-#endif
-    auto url_parts = caspar::protocol_split(u16(filename_));
+    auto                 url_parts    = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
         FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
         FF(av_dict_set(&options, "reconnect", "1", 0));

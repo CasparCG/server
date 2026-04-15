@@ -120,7 +120,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                                   std::vector<int>&                            fetch_background,
                                   std::function<void(int, const layer_frame&)> routesCb)
     {
-        return executor_.invoke([=] {
+        return executor_.invoke([=, this] {
             std::map<int, layer_frame> frames;
             stage_frames               result = {};
 
@@ -243,7 +243,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::future<void>
     apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
     {
-        return executor_.begin_invoke([=] {
+        return executor_.begin_invoke([=, this] {
             for (auto& transform : transforms) {
                 auto& tween = tweens_[std::get<0>(transform)];
                 auto  src   = tween.fetch();
@@ -259,7 +259,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                                       unsigned int                   mix_duration,
                                       const tweener&                 tween)
     {
-        return executor_.begin_invoke([=] {
+        return executor_.begin_invoke([=, this] {
             auto src       = tweens_[index].fetch();
             auto dst       = transform(src);
             tweens_[index] = tweened_transform(src, dst, mix_duration, tween);
@@ -268,57 +268,57 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::future<void> clear_transforms(int index)
     {
-        return executor_.begin_invoke([=] { tweens_.erase(index); });
+        return executor_.begin_invoke([=, this] { tweens_.erase(index); });
     }
 
     std::future<void> clear_transforms()
     {
-        return executor_.begin_invoke([=] { tweens_.clear(); });
+        return executor_.begin_invoke([=, this] { tweens_.clear(); });
     }
 
     std::future<frame_transform> get_current_transform(int index)
     {
-        return executor_.begin_invoke([=] { return tweens_[index].fetch(); });
+        return executor_.begin_invoke([=, this] { return tweens_[index].fetch(); });
     }
 
     std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
     {
-        return executor_.begin_invoke([=] { get_layer(index).load(producer, preview, auto_play); });
+        return executor_.begin_invoke([=, this] { get_layer(index).load(producer, preview, auto_play); });
     }
 
     std::future<void> preview(int index)
     {
-        return executor_.begin_invoke([=] { get_layer(index).preview(); });
+        return executor_.begin_invoke([=, this] { get_layer(index).preview(); });
     }
 
     std::future<void> pause(int index)
     {
-        return executor_.begin_invoke([=] { get_layer(index).pause(); });
+        return executor_.begin_invoke([=, this] { get_layer(index).pause(); });
     }
 
     std::future<void> resume(int index)
     {
-        return executor_.begin_invoke([=] { get_layer(index).resume(); });
+        return executor_.begin_invoke([=, this] { get_layer(index).resume(); });
     }
 
     std::future<void> play(int index)
     {
-        return executor_.begin_invoke([=] { get_layer(index).play(); });
+        return executor_.begin_invoke([=, this] { get_layer(index).play(); });
     }
 
     std::future<void> stop(int index)
     {
-        return executor_.begin_invoke([=] { get_layer(index).stop(); });
+        return executor_.begin_invoke([=, this] { get_layer(index).stop(); });
     }
 
     std::future<void> clear(int index)
     {
-        return executor_.begin_invoke([=] { layers_.erase(index); });
+        return executor_.begin_invoke([=, this] { layers_.erase(index); });
     }
 
     std::future<void> clear()
     {
-        return executor_.begin_invoke([=] { layers_.clear(); });
+        return executor_.begin_invoke([=, this] { layers_.clear(); });
     }
 
     std::future<void> swap_layers(const std::shared_ptr<stage>& other, bool swap_transforms)
@@ -329,7 +329,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
             return make_ready_future();
         }
 
-        auto func = [=] {
+        auto func = [=, this] {
             auto layers       = layers_ | boost::adaptors::map_values;
             auto other_layers = other_impl->layers_ | boost::adaptors::map_values;
 
@@ -344,7 +344,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::future<void> swap_layer(int index, int other_index, bool swap_transforms)
     {
-        return executor_.begin_invoke([=] {
+        return executor_.begin_invoke([=, this] {
             std::swap(get_layer(index), get_layer(other_index));
 
             if (swap_transforms)
@@ -358,7 +358,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
         if (other_impl.get() == this)
             return swap_layer(index, other_index, swap_transforms);
-        auto func = [=] {
+        auto func = [=, this] {
             auto& my_layer    = get_layer(index);
             auto& other_layer = other_impl->get_layer(other_index);
 
@@ -379,31 +379,33 @@ struct stage::impl : public std::enable_shared_from_this<impl>
         auto other_impl = other->impl_;
 
         if (other_impl->channel_index_ < channel_index_) {
-            return other_impl->executor_.begin_invoke([=] { executor_.invoke(func); });
+            return other_impl->executor_.begin_invoke([=, this] { executor_.invoke(func); });
         }
 
-        return executor_.begin_invoke([=] { other_impl->executor_.invoke(func); });
+        return executor_.begin_invoke([=, this] { other_impl->executor_.invoke(func); });
     }
 
     std::future<std::shared_ptr<frame_producer>> foreground(int index)
     {
         return executor_.begin_invoke(
-            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).foreground(); });
+            [=, this]() -> std::shared_ptr<frame_producer> { return get_layer(index).foreground(); });
     }
 
     std::future<std::shared_ptr<frame_producer>> background(int index)
     {
         return executor_.begin_invoke(
-            [=]() -> std::shared_ptr<frame_producer> { return get_layer(index).background(); });
+            [=, this]() -> std::shared_ptr<frame_producer> { return get_layer(index).background(); });
     }
 
     std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
     {
-        return flatten(executor_.begin_invoke([=] { return get_layer(index).foreground()->call(params).share(); }));
+        return flatten(
+            executor_.begin_invoke([=, this] { return get_layer(index).foreground()->call(params).share(); }));
     }
     std::future<std::wstring> callbg(int index, const std::vector<std::wstring>& params)
     {
-        return flatten(executor_.begin_invoke([=] { return get_layer(index).background()->call(params).share(); }));
+        return flatten(
+            executor_.begin_invoke([=, this] { return get_layer(index).background()->call(params).share(); }));
     }
 
     std::unique_lock<std::mutex> get_lock() { return std::move(std::unique_lock<std::mutex>(lock_)); }
@@ -416,7 +418,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
     std::future<void> video_format_desc(const core::video_format_desc& format_desc)
     {
-        return executor_.begin_invoke([=] {
+        return executor_.begin_invoke([=, this] {
             {
                 std::lock_guard<std::mutex> lock(format_desc_mutex_);
                 format_desc_ = format_desc;
@@ -506,20 +508,20 @@ stage_delayed::stage_delayed(std::shared_ptr<stage>& st, int index)
     , stage_(st)
 {
     // Start the executor blocked on a future that will complete when we are ready for it to execute
-    executor_.begin_invoke([=]() -> void { waiter_.get_future().get(); });
+    executor_.begin_invoke([=, this]() -> void { waiter_.get_future().get(); });
 }
 
 std::future<std::wstring> stage_delayed::call(int index, const std::vector<std::wstring>& params)
 {
-    return executor_.begin_invoke([=]() -> std::wstring { return stage_->call(index, params).get(); });
+    return executor_.begin_invoke([=, this]() -> std::wstring { return stage_->call(index, params).get(); });
 }
 std::future<std::wstring> stage_delayed::callbg(int index, const std::vector<std::wstring>& params)
 {
-    return executor_.begin_invoke([=]() -> std::wstring { return stage_->callbg(index, params).get(); });
+    return executor_.begin_invoke([=, this]() -> std::wstring { return stage_->callbg(index, params).get(); });
 }
 std::future<void> stage_delayed::apply_transforms(const std::vector<stage_delayed::transform_tuple_t>& transforms)
 {
-    return executor_.begin_invoke([=]() { return stage_->apply_transforms(transforms).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->apply_transforms(transforms).get(); });
 }
 std::future<void>
 stage_delayed::apply_transform(int                                                                index,
@@ -528,61 +530,62 @@ stage_delayed::apply_transform(int                                              
                                const tweener&                                                     tween)
 {
     return executor_.begin_invoke(
-        [=]() { return stage_->apply_transform(index, transform, mix_duration, tween).get(); });
+        [=, this]() { return stage_->apply_transform(index, transform, mix_duration, tween).get(); });
 }
 std::future<void> stage_delayed::clear_transforms(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->clear_transforms(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->clear_transforms(index).get(); });
 }
 std::future<void> stage_delayed::clear_transforms()
 {
-    return executor_.begin_invoke([=]() { return stage_->clear_transforms().get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->clear_transforms().get(); });
 }
 std::future<frame_transform> stage_delayed::get_current_transform(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->get_current_transform(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->get_current_transform(index).get(); });
 }
 std::future<void>
 stage_delayed::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, bool auto_play)
 {
-    return executor_.begin_invoke([=]() { return stage_->load(index, producer, preview, auto_play).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->load(index, producer, preview, auto_play).get(); });
 }
 std::future<void> stage_delayed::preview(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->preview(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->preview(index).get(); });
 }
 std::future<void> stage_delayed::pause(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->pause(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->pause(index).get(); });
 }
 std::future<void> stage_delayed::resume(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->resume(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->resume(index).get(); });
 }
 std::future<void> stage_delayed::play(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->play(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->play(index).get(); });
 }
 std::future<void> stage_delayed::stop(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->stop(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->stop(index).get(); });
 }
 std::future<void> stage_delayed::clear(int index)
 {
-    return executor_.begin_invoke([=]() { return stage_->clear(index).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->clear(index).get(); });
 }
 std::future<void> stage_delayed::clear()
 {
-    return executor_.begin_invoke([=]() { return stage_->clear().get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->clear().get(); });
 }
 std::future<void> stage_delayed::swap_layers(const std::shared_ptr<stage_base>& other, bool swap_transforms)
 {
     const auto other2 = std::static_pointer_cast<stage_delayed>(other);
-    return executor_.begin_invoke([=]() { return stage_->swap_layers(other2->stage_, swap_transforms).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->swap_layers(other2->stage_, swap_transforms).get(); });
 }
 std::future<void> stage_delayed::swap_layer(int index, int other_index, bool swap_transforms)
 {
-    return executor_.begin_invoke([=]() { return stage_->swap_layer(index, other_index, swap_transforms).get(); });
+    return executor_.begin_invoke(
+        [=, this]() { return stage_->swap_layer(index, other_index, swap_transforms).get(); });
 }
 std::future<void>
 stage_delayed::swap_layer(int index, int other_index, const std::shared_ptr<stage_base>& other, bool swap_transforms)
@@ -593,21 +596,23 @@ stage_delayed::swap_layer(int index, int other_index, const std::shared_ptr<stag
     other2->executor_.begin_invoke([]() {});
 
     return executor_.begin_invoke(
-        [=]() { return stage_->swap_layer(index, other_index, other2->stage_, swap_transforms).get(); });
+        [=, this]() { return stage_->swap_layer(index, other_index, other2->stage_, swap_transforms).get(); });
 }
 
 std::future<std::shared_ptr<frame_producer>> stage_delayed::foreground(int index)
 {
-    return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return stage_->foreground(index).get(); });
+    return executor_.begin_invoke(
+        [=, this]() -> std::shared_ptr<frame_producer> { return stage_->foreground(index).get(); });
 }
 std::future<std::shared_ptr<frame_producer>> stage_delayed::background(int index)
 {
-    return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer> { return stage_->background(index).get(); });
+    return executor_.begin_invoke(
+        [=, this]() -> std::shared_ptr<frame_producer> { return stage_->background(index).get(); });
 }
 
 std::future<void> stage_delayed::execute(std::function<void()> func)
 {
-    return executor_.begin_invoke([=]() { return stage_->execute(func).get(); });
+    return executor_.begin_invoke([=, this]() { return stage_->execute(func).get(); });
 }
 
 }} // namespace caspar::core

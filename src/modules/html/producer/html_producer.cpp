@@ -39,11 +39,18 @@
 #include <common/os/filesystem.h>
 #include <common/timer.h>
 
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
+#if defined(__GNUC__) && __GNUC__ == 14
+#pragma GCC diagnostic pop
+#endif
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
@@ -61,13 +68,60 @@
 #include <queue>
 #include <utility>
 
+#include <ffmpeg/util/audio_resampler.h>
+
+#include "../html.h"
 #include "../util.h"
 
+#ifdef WIN32
+#include <accelerator/d3d/d3d_device.h>
+#include <accelerator/d3d/d3d_device_context.h>
+#include <accelerator/d3d/d3d_texture2d.h>
+#endif
+
 namespace caspar { namespace html {
+
+inline std::int_least64_t now()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::high_resolution_clock::now().time_since_epoch())
+        .count();
+}
+
+struct presentation_frame
+{
+    std::int_least64_t timestamp;
+    core::draw_frame   frame;
+
+    explicit presentation_frame(core::draw_frame frame = {}, std::int_least64_t ts = now()) noexcept
+        : timestamp(ts)
+        , frame(std::move(frame))
+    {
+    }
+
+    presentation_frame(presentation_frame&& other) noexcept
+        : timestamp(other.timestamp)
+        , frame(std::move(other.frame))
+    {
+    }
+
+    presentation_frame(const presentation_frame&)            = delete;
+    presentation_frame& operator=(const presentation_frame&) = delete;
+
+    presentation_frame& operator=(presentation_frame&& rhs) noexcept
+    {
+        timestamp = rhs.timestamp;
+        frame     = std::move(rhs.frame);
+        return *this;
+    }
+
+    ~presentation_frame() {}
+};
 
 class html_client
     : public CefClient
     , public CefRenderHandler
+    , public CefAudioHandler
     , public CefLifeSpanHandler
     , public CefLoadHandler
     , public CefDisplayHandler
@@ -81,32 +135,49 @@ class html_client
     caspar::timer                       paint_timer_;
     caspar::timer                       test_timer_;
 
-    spl::shared_ptr<core::frame_factory>                        frame_factory_;
-    core::video_format_desc                                     format_desc_;
-    bool                                                        gpu_enabled_;
-    tbb::concurrent_queue<std::wstring>                         javascript_before_load_;
-    std::atomic<bool>                                           loaded_;
-    std::queue<std::pair<std::int_least64_t, core::draw_frame>> frames_;
-    mutable std::mutex                                          frames_mutex_;
-    const size_t                                                frames_max_size_ = 4;
-    std::atomic<bool>                                           closing_;
+    spl::shared_ptr<core::frame_factory> frame_factory_;
+    core::video_format_desc              format_desc_;
+    bool                                 gpu_enabled_;
+    bool                                 shared_texture_enable_;
+    tbb::concurrent_queue<std::wstring>  javascript_before_load_;
+    std::atomic<bool>                    loaded_;
+    std::atomic<bool>                    not_found_;
+    std::queue<presentation_frame>       frames_;
+    std::queue<presentation_frame>       audio_frames_;
+    mutable std::mutex                   frames_mutex_;
+    mutable std::mutex                   audio_frames_mutex_;
+    const size_t                         frames_max_size_ = 4;
+    std::atomic<bool>                    closing_;
 
+    std::unique_ptr<ffmpeg::AudioResampler> audioResampler_;
+
+    core::draw_frame   last_video_frame_;
     core::draw_frame   last_frame_;
     std::int_least64_t last_frame_time_;
 
     CefRefPtr<CefBrowser> browser_;
+
+#ifdef WIN32
+    std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
+    std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
+#endif
 
   public:
     html_client(spl::shared_ptr<core::frame_factory>       frame_factory,
                 const spl::shared_ptr<diagnostics::graph>& graph,
                 core::video_format_desc                    format_desc,
                 bool                                       gpu_enabled,
+                bool                                       shared_texture_enable,
                 std::wstring                               url)
         : url_(std::move(url))
         , graph_(graph)
         , frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
         , gpu_enabled_(gpu_enabled)
+        , shared_texture_enable_(shared_texture_enable)
+#ifdef WIN32
+        , d3d_device_(accelerator::d3d::d3d_device::get_device())
+#endif
     {
         graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -122,13 +193,14 @@ class html_client
             state_["file/path"] = u8(url_);
         }
 
-        loaded_  = false;
-        closing_ = false;
+        loaded_    = false;
+        not_found_ = false;
+        closing_   = false;
     }
 
     void reload()
     {
-        html::begin_invoke([=] {
+        html::begin_invoke([this] {
             if (browser_ != nullptr)
                 browser_->Reload();
         });
@@ -138,7 +210,7 @@ class html_client
     {
         closing_ = true;
 
-        html::invoke([=] {
+        html::invoke([this] {
             if (browser_ != nullptr) {
                 browser_->GetHost()->CloseBrowser(true);
             }
@@ -147,7 +219,20 @@ class html_client
 
     bool try_pop(const core::video_field field)
     {
+        bool                        result = false;
         std::lock_guard<std::mutex> lock(frames_mutex_);
+
+        core::draw_frame audio_frame;
+        uint64_t         audio_frame_timestamp = 0;
+
+        {
+            std::lock_guard<std::mutex> audio_lock(audio_frames_mutex_);
+            if (!audio_frames_.empty()) {
+                audio_frame_timestamp = audio_frames_.front().timestamp;
+                audio_frame           = core::draw_frame(std::move(audio_frames_.front().frame));
+                audio_frames_.pop();
+            }
+        }
 
         if (!frames_.empty()) {
             /*
@@ -168,35 +253,43 @@ class html_client
 
                 // Check if the sole buffered frame is too young to have a partner field generated (with a tolerance)
                 auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
-                auto front_frame_is_too_young = (now_time - frames_.front().first) < time_per_frame;
+                auto front_frame_is_too_young = (now_time - frames_.front().timestamp) < time_per_frame;
 
                 if (follows_gap_in_frames && front_frame_is_too_young) {
                     return false;
                 }
             }
 
-            last_frame_time_ = frames_.front().first;
-            last_frame_      = std::move(frames_.front().second);
+            last_frame_time_  = frames_.front().timestamp;
+            last_video_frame_ = std::move(frames_.front().frame);
+            last_frame_       = last_video_frame_;
             frames_.pop();
 
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
 
-            return true;
+            result = true;
         }
 
-        return false;
+        if (audio_frame) {
+            last_frame_time_ = audio_frame_timestamp;
+            last_frame_      = core::draw_frame::over(last_video_frame_, audio_frame);
+            result           = true;
+        }
+
+        return result;
     }
 
     core::draw_frame receive(const core::video_field field)
     {
         if (!try_pop(field)) {
             graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
+            return core::draw_frame::still(last_frame_);
+        } else {
+            return last_frame_;
         }
-
-        return last_frame_;
     }
 
-    core::draw_frame last_frame() const { return last_frame_; }
+    core::draw_frame last_frame() const { return core::draw_frame::still(last_frame_); }
 
     bool is_ready() const
     {
@@ -247,13 +340,6 @@ class html_client
     }
 
   private:
-    std::int_least64_t now()
-    {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::high_resolution_clock::now().time_since_epoch())
-            .count();
-    }
-
     void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override
     {
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
@@ -268,7 +354,7 @@ class html_client
                  int                   width,
                  int                   height) override
     {
-        if (closing_)
+        if (shared_texture_enable_ || closing_ || not_found_)
             return;
 
         graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -304,14 +390,75 @@ class html_client
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
 
-            frames_.push(std::make_pair(now(), core::draw_frame(std::move(frame))));
-            while (frames_.size() > 4) {
+            core::draw_frame new_frame = core::draw_frame(std::move(frame));
+
+            frames_.push(presentation_frame(std::move(new_frame)));
+            while (frames_.size() > frames_max_size_) {
                 frames_.pop();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
             graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
         }
     }
+
+#ifdef WIN32
+    void OnAcceleratedPaint(CefRefPtr<CefBrowser>          browser,
+                            PaintElementType               type,
+                            const RectList&                dirtyRects,
+                            const CefAcceleratedPaintInfo& info) override
+    {
+        try {
+            if (!shared_texture_enable_ || closing_ || not_found_)
+                return;
+
+            graph_->set_value("browser-tick-time", paint_timer_.elapsed() * format_desc_.fps * 0.5);
+            paint_timer_.restart();
+            CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
+
+            if (type != PET_VIEW)
+                return;
+
+            if (d3d_shared_buffer_) {
+                if (info.shared_texture_handle != d3d_shared_buffer_->share_handle())
+                    d3d_shared_buffer_.reset();
+            }
+
+            if (!d3d_shared_buffer_) {
+                d3d_shared_buffer_ = d3d_device_->open_shared_texture(info.shared_texture_handle);
+                if (!d3d_shared_buffer_)
+                    CASPAR_LOG(error) << print() << L" could not open shared texture!";
+            }
+
+            if (d3d_shared_buffer_) {
+                core::pixel_format format = core::pixel_format::invalid;
+                if (d3d_shared_buffer_->format() == DXGI_FORMAT_B8G8R8A8_UNORM) {
+                    format = core::pixel_format::bgra;
+                } else if (d3d_shared_buffer_->format() == DXGI_FORMAT_R8G8B8A8_UNORM) {
+                    format = core::pixel_format::rgba;
+                }
+
+                if (format != core::pixel_format::invalid) {
+                    auto frame =
+                        frame_factory_->import_d3d_texture(this, d3d_shared_buffer_, format, common::bit_depth::bit8);
+                    core::draw_frame dframe(std::move(frame));
+
+                    {
+                        std::lock_guard<std::mutex> lock(frames_mutex_);
+
+                        frames_.push(presentation_frame(std::move(dframe)));
+                        while (frames_.size() > 4) {
+                            frames_.pop();
+                            graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                        }
+                        graph_->set_value("buffered-frames", (double)frames_.size() / frames_max_size_);
+                    }
+                }
+            }
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
+    }
+#endif
 
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
     {
@@ -340,20 +487,23 @@ class html_client
                           const CefString&      source,
                           int                   line) override
     {
+        auto msg = log::replace_nonprintable_copy(message.ToWString(), L'?');
         if (level == cef_log_severity_t::LOGSEVERITY_DEBUG)
-            CASPAR_LOG(debug) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(debug) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_WARNING)
-            CASPAR_LOG(warning) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(warning) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_ERROR)
-            CASPAR_LOG(error) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(error) << print() << L" Log: " << msg;
         else if (level == cef_log_severity_t::LOGSEVERITY_FATAL)
-            CASPAR_LOG(fatal) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(fatal) << print() << L" Log: " << msg;
         else
-            CASPAR_LOG(info) << print() << L" Log: " << message.ToWString();
+            CASPAR_LOG(info) << print() << L" Log: " << msg;
         return true;
     }
 
     CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
+
+    CefRefPtr<CefAudioHandler> GetAudioHandler() override { return this; }
 
     CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
 
@@ -361,8 +511,33 @@ class html_client
 
     CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
 
+    void OnLoadError(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame>   frame,
+                     ErrorCode             errorCode,
+                     const CefString&      errorText,
+                     const CefString&      failedUrl) override
+    {
+        not_found_ = true;
+        CASPAR_LOG(warning) << "[html_producer] " << errorText.ToString() << " while loading url: \""
+                            << failedUrl.ToString() << "\"";
+
+        // Stop producing if the page fails to load
+        {
+            std::lock_guard<std::mutex> lock(frames_mutex_);
+            frames_.push(presentation_frame());
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            state_ = {};
+        }
+    }
+
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override
     {
+        if (not_found_)
+            return;
+
         loaded_ = true;
         execute_queued_javascript();
     }
@@ -380,7 +555,7 @@ class html_client
 
             {
                 std::lock_guard<std::mutex> lock(frames_mutex_);
-                frames_.push(std::make_pair(now(), core::draw_frame::empty()));
+                frames_.push(presentation_frame());
             }
 
             {
@@ -393,7 +568,7 @@ class html_client
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
-            auto msg      = args->GetString(1).ToWString();
+            auto msg      = log::replace_nonprintable_copy(args->GetString(1).ToWString(), L'?');
 
             BOOST_LOG_SEV(log::logger::get(), severity) << print() << L" [renderer_process] " << msg;
         }
@@ -401,9 +576,44 @@ class html_client
         return false;
     }
 
+    bool GetAudioParameters(CefRefPtr<CefBrowser> browser, CefAudioParameters& params) override
+    {
+        params.channel_layout    = CEF_CHANNEL_LAYOUT_7_1;
+        params.sample_rate       = format_desc_.audio_sample_rate;
+        params.frames_per_buffer = format_desc_.audio_cadence[0];
+        return format_desc_.audio_cadence.size() == 1; // TODO - handle 59.94
+    }
+
+    void OnAudioStreamStarted(CefRefPtr<CefBrowser> browser, const CefAudioParameters& params, int channels) override
+    {
+        audioResampler_ = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
+    }
+    void OnAudioStreamPacket(CefRefPtr<CefBrowser> browser, const float** data, int samples, int64_t pts) override
+    {
+        if (!audioResampler_)
+            return;
+
+        auto audio       = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
+        auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
+
+        {
+            std::lock_guard<std::mutex> lock(audio_frames_mutex_);
+            while (audio_frames_.size() >= frames_max_size_) {
+                audio_frames_.pop();
+            }
+            audio_frames_.push(presentation_frame(core::draw_frame(std::move(audio_frame))));
+        }
+    }
+    void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override { audioResampler_ = nullptr; }
+    void OnAudioStreamError(CefRefPtr<CefBrowser> browser, const CefString& message) override
+    {
+        CASPAR_LOG(info) << "[html_producer] OnAudioStreamError: \"" << message.ToString() << "\"";
+        audioResampler_ = nullptr;
+    }
+
     void do_execute_javascript(const std::wstring& javascript)
     {
-        html::begin_invoke([=] {
+        html::begin_invoke([this, javascript] {
             if (browser_ != nullptr)
                 browser_->GetMainFrame()->ExecuteJavaScript(
                     u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
@@ -443,17 +653,18 @@ class html_producer : public core::frame_producer
         , url_(url)
     {
         html::invoke([&] {
-            const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+            auto gpu = is_gpu_shared_texture_enabled();
 
-            client_ = new html_client(frame_factory, graph_, format_desc, enable_gpu, url_);
+            client_ = new html_client(frame_factory, graph_, format_desc, gpu.first, gpu.second, url_);
 
             CefWindowInfo window_info;
             window_info.bounds.width                 = format_desc.square_width;
             window_info.bounds.height                = format_desc.square_height;
             window_info.windowless_rendering_enabled = true;
+            window_info.shared_texture_enabled       = gpu.second;
 
             CefBrowserSettings browser_settings;
-            browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
+            browser_settings.webgl = gpu.first ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
             double fps             = format_desc.fps;
             browser_settings.windowless_frame_rate = int(ceil(fps));
             CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr, nullptr);

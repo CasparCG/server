@@ -1,4 +1,4 @@
-FROM docker.io/buildpack-deps:jammy AS build-casparcg
+FROM docker.io/buildpack-deps:noble AS build-casparcg
 	ADD tools/linux/install-dependencies /
 
 	RUN apt-get update && /install-dependencies
@@ -17,26 +17,31 @@ FROM docker.io/buildpack-deps:jammy AS build-casparcg
 
 	RUN cmake --build .
 
-    RUN cmake --install . --prefix staging
+	RUN cmake --install . --prefix staging
 
 	# Find a better way to copy deps
 	RUN ln -s /build/staging /staging && \
-		/source/shell/copy_deps.sh /staging/bin/casparcg /staging/lib
+		/source/shell/copy_deps.sh /build/shell/casparcg /staging/lib
 
-FROM docker.io/nvidia/opengl:1.2-glvnd-devel-ubuntu22.04
+FROM docker.io/ubuntu:noble
 	COPY --from=build-casparcg /staging /opt/casparcg
 
 	RUN set -ex; \
 			apt-get update; \
 			DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \
-            tzdata \
+			tzdata \
 			libc++1 \
 			libnss3 \
 			fontconfig \
+			libglvnd0 \
+			libgl1 \
+			libglx0 \
+			libegl1 \
+			libgles2 \
 			; \
 			rm -rf /var/lib/apt/lists/*
 
 	WORKDIR /opt/casparcg
-
+	RUN chmod 755 run.sh
 	ADD tools/linux/run_docker.sh ./
 	CMD ["./run_docker.sh"]

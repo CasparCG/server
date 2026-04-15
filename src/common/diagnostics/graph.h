@@ -70,7 +70,7 @@ class graph_sink
 
   public:
     graph_sink() = default;
-    virtual ~graph_sink(){};
+    virtual ~graph_sink() {};
     virtual void activate()                                              = 0;
     virtual void set_text(const std::wstring& value)                     = 0;
     virtual void set_value(const std::string& name, double value)        = 0;

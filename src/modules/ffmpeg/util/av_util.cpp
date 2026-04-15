@@ -83,12 +83,7 @@ core::mutable_frame make_frame(void*                            tag,
                 const int channel_count = 16;
                 frame.audio_data()      = std::vector<int32_t>(audio->nb_samples * channel_count, 0);
 
-#if FFMPEG_NEW_CHANNEL_LAYOUT
                 auto source_channel_count = audio->ch_layout.nb_channels;
-#else
-                auto source_channel_count = audio->channels;
-#endif
-
                 if (source_channel_count == channel_count) {
                     std::memcpy(frame.audio_data().data(),
                                 reinterpret_cast<int32_t*>(audio->data[0]),
@@ -226,22 +221,13 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
         case core::pixel_format::ycbcr:
         case core::pixel_format::ycbcra: {
             // Find chroma height
-            // av_image_fill_plane_sizes is not available until ffmpeg 4.4, but we still need to support ffmpeg 4.2, so
-            // we fall back to calling av_image_fill_pointers with a NULL image buffer. We can't unconditionally use
-            // av_image_fill_pointers because it will not accept a NULL buffer on ffmpeg >= 5.0.
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 56, 100)
             size_t    sizes[4];
             ptrdiff_t linesizes1[4];
             for (int i = 0; i < 4; i++)
                 linesizes1[i] = linesizes[i];
             av_image_fill_plane_sizes(sizes, pix_fmt, height, linesizes1);
             auto size2 = static_cast<int>(sizes[1]);
-#else
-            uint8_t* dummy_pict_data[4];
-            av_image_fill_pointers(dummy_pict_data, pix_fmt, height, NULL, linesizes);
-            auto size2 = static_cast<int>(dummy_pict_data[2] - dummy_pict_data[1]);
-#endif
-            auto h2 = size2 / linesizes[1];
+            auto h2    = size2 / linesizes[1];
 
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
             desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1], h2, 1, depth));
@@ -363,12 +349,7 @@ std::shared_ptr<AVFrame> make_av_audio_frame(const core::const_frame& frame, con
     const auto& buffer = frame.audio_data();
 
     // TODO (fix) Use sample_format_desc.
-#if FFMPEG_NEW_CHANNEL_LAYOUT
     av_channel_layout_default(&av_frame->ch_layout, format_desc.audio_channels);
-#else
-    av_frame->channels       = format_desc.audio_channels;
-    av_frame->channel_layout = av_get_default_channel_layout(av_frame->channels);
-#endif
     av_frame->sample_rate = format_desc.audio_sample_rate;
     av_frame->format      = AV_SAMPLE_FMT_S32;
     av_frame->nb_samples  = static_cast<int>(buffer.size() / format_desc.audio_channels);
@@ -408,16 +389,12 @@ std::map<std::string, std::string> to_map(AVDictionary** dict)
 
 uint64_t get_channel_layout_mask_for_channels(int channel_count)
 {
-#if FFMPEG_NEW_CHANNEL_LAYOUT
     AVChannelLayout layout = AV_CHANNEL_LAYOUT_STEREO;
     av_channel_layout_default(&layout, channel_count);
     uint64_t channel_layout = layout.u.mask;
     av_channel_layout_uninit(&layout);
 
     return channel_layout;
-#else
-    return av_get_default_channel_layout(channel_count);
-#endif
 }
 
 }} // namespace caspar::ffmpeg

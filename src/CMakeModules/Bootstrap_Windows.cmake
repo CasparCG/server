@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.28)
 
 include(ExternalProject)
 include(FetchContent)
@@ -52,21 +52,21 @@ casparcg_add_runtime_dependency("${PROJECT_SOURCE_DIR}/shell/casparcg.config")
 casparcg_add_external_project(boost)
 if (BOOST_USE_PRECOMPILED)
 	ExternalProject_Add(boost
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_74_0-win32-x64-debug-release.zip
-	URL_HASH MD5=8d379b0da9a5ae50a3980d2fc1a24d34
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_83_0-win32-x64-debug-release.zip
+	URL_HASH MD5=0b9990a24259867c8c04ae30c423f86b
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
 	INSTALL_COMMAND ""
 	)
 	ExternalProject_Get_Property(boost SOURCE_DIR)
-	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_74")
+	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_83")
 	link_directories("${SOURCE_DIR}/lib")
 else ()
 	set(BOOST_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost-install)
 	ExternalProject_Add(boost
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_74_0.zip
-	URL_HASH MD5=df1456965493f05952b7c06205688ae9
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/boost/boost_1_83_0.zip
+	URL_HASH MD5=03d5aea72401ffed848cb5daf8cd2b9b
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	BUILD_IN_SOURCE 1
 	CONFIGURE_COMMAND ./bootstrap.bat
@@ -80,7 +80,7 @@ else ()
 	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
-	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
+	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_83")
 	link_directories("${BOOST_INSTALL_DIR}/lib")
 endif ()
 add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
@@ -124,8 +124,8 @@ endif ()
 
 # TBB
 FetchContent_Declare(tbb
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2021.1.1-win.zip
-	URL_HASH MD5=51bf49044d477dea67670abd92f8814c
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/tbb/oneapi-tbb-2022.3.0-win.zip
+	URL_HASH SHA256=e1b2373f25558bf47d16b4c89cf0a31e6689aaf7221400d209e8527afc7c9eee
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 )
 FetchContent_MakeAvailable(tbb)
@@ -161,11 +161,11 @@ FetchContent_MakeAvailable(sfml)
 
 list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
 # set(SFML_STATIC_LIBRARIES TRUE)
-find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+find_package(SFML 2 COMPONENTS graphics system window REQUIRED)
 
 casparcg_add_runtime_dependency_from_target(sfml-graphics)
-casparcg_add_runtime_dependency_from_target(sfml-window)
 casparcg_add_runtime_dependency_from_target(sfml-system)
+casparcg_add_runtime_dependency_from_target(sfml-window)
 
 #ZLIB
 casparcg_add_external_project(zlib)
@@ -179,12 +179,7 @@ ExternalProject_Add(zlib
 ExternalProject_Get_Property(zlib SOURCE_DIR)
 ExternalProject_Get_Property(zlib BINARY_DIR)
 set(ZLIB_INCLUDE_PATH "${SOURCE_DIR};${BINARY_DIR}")
-
-if (is_multi_config)
-	link_directories(${BINARY_DIR}/Release)
-else()
-	link_directories(${BINARY_DIR})
-endif()
+link_directories(${BINARY_DIR})
 
 # OpenAL
 FetchContent_Declare(openal
@@ -224,8 +219,8 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_131.4.1%2Bg437feba%2Bchromium-131.0.6778.265_windows64_minimal.tar.bz2
-		URL_HASH SHA1=864d40fb6e26a6ac8cf1003cbfcc16d35c90782e
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_windows64_minimal.tar.bz2
+		URL_HASH SHA256=16c072a44484fe521037c74d03a339a77573b1fc0146cf44cc71e79fd0cc0198
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
 		INSTALL_COMMAND ""
@@ -260,7 +255,6 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/resources.pak")
 	casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
 
-	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/v8_context_snapshot.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")
@@ -288,4 +282,4 @@ string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX2 /Ot /Gy /bigobj")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX /Ot /Gy /bigobj")

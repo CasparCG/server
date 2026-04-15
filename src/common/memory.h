@@ -402,8 +402,6 @@ class shared_ptr
 
     T* get() const { return p_.get(); }
 
-    bool unique() const { return p_.unique(); }
-
     long use_count() const { return p_.use_count(); }
 
     void swap(shared_ptr& other) { p_.swap(other.p_); }
@@ -657,6 +655,11 @@ template <typename T, typename U, typename P0>
 shared_ptr<T> make_shared(P0&& p0)
 {
     return shared_ptr<T>(std::make_shared<U>(std::forward<P0>(p0)));
+}
+template <typename T, typename U, typename P0, typename P1>
+shared_ptr<T> make_shared(P0&& p0, P1&& p1)
+{
+    return shared_ptr<T>(std::make_shared<U>(std::forward<P0>(p0), std::forward<P1>(p1)));
 }
 
 template <typename T, typename P0>

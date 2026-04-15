@@ -2,7 +2,7 @@ Installation from Graphical User Interface
 
     Double click on the casparcg-cef package. Click the install
     button and follow the prompts. This can then be repeated for
-    the casparcg-server and casparcg-scanner packages if desired. 
+    the casparcg-server and casparcg-scanner packages if desired.
 
 Installation from Command Line
 
@@ -18,8 +18,8 @@ Running
 
     You will need to run both:
 
-        # casparcg-scanner casparcg.config 
-    
+        # casparcg-scanner --caspar.config casparcg.config
+
     and
 
         # casparcg-server-beta casparcg.config
@@ -27,4 +27,3 @@ Running
     with the same config file and potentially working directory (if the config file uses relative paths).
 
     The server needs to be run as a normal user inside a running x11 server. The scanner can be run as a system service.
-    

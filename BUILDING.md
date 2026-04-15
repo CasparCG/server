@@ -80,7 +80,7 @@ Before beginning, check the build options section below, to decide if you want t
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
 3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-131-dev`
+4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-142-dev`
 5. `mkdir build && cd build`
 6. `cmake ../src` You can add any of the build options from below to this command
 7. `cmake --build . --parallel`
@@ -96,7 +96,7 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
 
--DENABLE_AVX2=ON (Linux only, default ON) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
+-DENABLE_AVX2=ON (Linux only, default OFF) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
 
 -DDIAG_FONT_PATH - Specify an alternate path/font to use for the DIAG window. On linux, this will often want to be set to an absolute path of a font
 
