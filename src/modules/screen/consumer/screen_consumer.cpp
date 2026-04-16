@@ -416,8 +416,7 @@ struct screen_consumer
 
                 GL(glDisable(GL_DEPTH_TEST));
                 GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-                GL(glViewport(
-                    0, 0, config_.sbs_key ? format_desc_.width * 2 : format_desc_.width, format_desc_.height));
+                GL(glViewport(0, 0, screen_width_, screen_height_));
 
                 calculate_aspect();
 
