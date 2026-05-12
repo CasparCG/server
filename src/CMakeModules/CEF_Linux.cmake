@@ -48,6 +48,8 @@ if(CEF_USE_FIND_PACKAGE)
         CEF::Library
         "-Wl,-rpath,${_cef_lib_dir}"
     )
+    # cmake install strips the RPATH from the built binary unless we explicity set it in INSTALL_RPATH
+    SET(CMAKE_INSTALL_RPATH _cef_lib_dir)
     # Fedora's CEF headers (145+) use C++20 features (concepts, <=>). Propagate
     # the requirement so any target linking CEF::CEF is compiled with C++20.
     target_compile_features(CEF::CEF INTERFACE cxx_std_20)
