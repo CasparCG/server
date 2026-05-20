@@ -47,6 +47,7 @@ extern "C" {
 #include <array>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -74,11 +75,14 @@ struct sub_fixture
     unsigned short address;
 };
 
-// One group corresponds to one <fixture> in config: a chain of N sub-fixtures sharing a box.
-// sws_scale produces a 1 x N BGRA strip in `output`, one pixel per sub-fixture.
+// One group corresponds to one <fixture> in config: a cols x rows grid of sub-fixtures
+// sharing a box. sws_scale produces a cols x rows BGRA image in `output`, one pixel per
+// sub-fixture in row-major order.
 struct computed_fixture_group
 {
     box                         source_box{};
+    int                         cols   = 1;
+    int                         rows   = 1;
     int                         crop_x = 0;
     int                         crop_y = 0;
     int                         crop_w = 0;
@@ -161,7 +165,7 @@ struct artnet_consumer : public core::frame_consumer
                         int                 src_lines[1] = {src_linesize_};
 
                         std::uint8_t* dst_data[1]  = {group.output.data()};
-                        int           dst_lines[1] = {(int)(group.sub_fixtures.size() * 4)};
+                        int           dst_lines[1] = {group.cols * 4};
 
                         sws_scale(group.sws.get(), src_data, src_lines, 0, group.crop_h, dst_data, dst_lines);
 
@@ -262,12 +266,16 @@ struct artnet_consumer : public core::frame_consumer
         for (const auto& fx : config.fixtures) {
             computed_fixture_group group;
             group.source_box = fx.fixtureBox;
-            group.sub_fixtures.reserve(fx.fixtureCount);
+            group.cols       = fx.fixtureCols;
+            group.rows       = fx.fixtureRows;
+
+            int total = (int)fx.fixtureCols * (int)fx.fixtureRows;
+            group.sub_fixtures.reserve(total);
 
             int pos     = fx.startAddress;
             int dropped = 0;
 
-            for (unsigned short i = 0; i < fx.fixtureCount; i++) {
+            for (int i = 0; i < total; i++) {
                 // If this sub-fixture would straddle a universe boundary, push it
                 // forward to the next boundary so it lives entirely in one universe.
                 int slot_start = pos / 512;
@@ -276,7 +284,7 @@ struct artnet_consumer : public core::frame_consumer
                     pos = slot_end * 512;
 
                 if (pos + fx.fixtureChannels > capacity) {
-                    dropped = fx.fixtureCount - i;
+                    dropped = total - i;
                     break;
                 }
 
@@ -322,12 +330,11 @@ struct artnet_consumer : public core::frame_consumer
             return;
         }
 
-        int dst_w = (int)group.sub_fixtures.size();
         group.sws.reset(sws_getContext(group.crop_w,
                                        group.crop_h,
                                        AV_PIX_FMT_BGRA,
-                                       dst_w,
-                                       1,
+                                       group.cols,
+                                       group.rows,
                                        AV_PIX_FMT_BGRA,
                                        SWS_AREA,
                                        nullptr,
@@ -341,7 +348,7 @@ struct artnet_consumer : public core::frame_consumer
         if (!group.sws)
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("artnet: failed to create SwsContext"));
 
-        group.output.assign(dst_w * 4, 0);
+        group.output.assign(group.cols * group.rows * 4, 0);
     }
 
     void send_dmx_data(const std::uint8_t* data, std::size_t length, int physical_universe)
@@ -394,11 +401,29 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
 
         f.startAddress = (unsigned short)startAddress - 1;
 
-        int fixtureCount = xml_channel.second.get(L"fixture-count", -1);
-        if (fixtureCount < 1)
+        std::wstring count_str = xml_channel.second.get(L"fixture-count", std::wstring());
+        if (count_str.empty())
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be specified"));
 
-        f.fixtureCount = (unsigned short)fixtureCount;
+        int cols = 0;
+        int rows = 1;
+        try {
+            size_t x_pos = count_str.find(L'x');
+            if (x_pos != std::wstring::npos) {
+                cols = std::stoi(count_str.substr(0, x_pos));
+                rows = std::stoi(count_str.substr(x_pos + 1));
+            } else {
+                cols = std::stoi(count_str);
+            }
+        } catch (...) {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be 'N' or 'WxH'"));
+        }
+
+        if (cols < 1 || rows < 1)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture count must be at least 1 in each dimension"));
+
+        f.fixtureCols = (unsigned short)cols;
+        f.fixtureRows = (unsigned short)rows;
 
         std::wstring type = xml_channel.second.get(L"type", L"");
         if (type.empty())

@@ -44,7 +44,8 @@ struct fixture
 {
     FixtureType    type;
     unsigned short startAddress;    // DMX address of the first channel in the fixture
-    unsigned short fixtureCount;    // number of fixtures in the chain, dividing along the width
+    unsigned short fixtureCols;     // columns in the fixture grid (dividing along the width)
+    unsigned short fixtureRows;     // rows in the fixture grid (dividing along the height)
     unsigned short fixtureChannels; // number of channels per fixture
 
     box fixtureBox;
