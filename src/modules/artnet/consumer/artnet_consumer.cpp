@@ -29,11 +29,23 @@
 #include <common/ptree.h>
 
 #include <core/consumer/channel_info.h>
+#include <core/frame/frame.h>
+#include <core/video_format.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+extern "C" {
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavutil/pixfmt.h>
+#include <libswscale/swscale.h>
+}
+
+#include <algorithm>
+#include <cstring>
+#include <memory>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -54,14 +66,32 @@ struct configuration
     std::vector<fixture> fixtures;
 };
 
+struct sub_fixture
+{
+    FixtureType    type;
+    unsigned short address;
+};
+
+// One group corresponds to one <fixture> in config: a chain of N sub-fixtures sharing a box.
+// sws_scale produces a 1 x N BGRA strip in `output`, one pixel per sub-fixture.
+struct computed_fixture_group
+{
+    box                         source_box{};
+    int                         crop_x = 0;
+    int                         crop_y = 0;
+    int                         crop_w = 0;
+    int                         crop_h = 0;
+    std::shared_ptr<SwsContext> sws;
+    std::vector<std::uint8_t>   output;
+    std::vector<sub_fixture>    sub_fixtures;
+};
+
 struct artnet_consumer : public core::frame_consumer
 {
-    const configuration           config;
-    std::vector<computed_fixture> computed_fixtures;
+    const configuration                 config;
+    std::vector<computed_fixture_group> fixture_groups;
 
   public:
-    // frame_consumer
-
     explicit artnet_consumer(configuration config)
         : config(std::move(config))
         , io_context_()
@@ -72,13 +102,20 @@ struct artnet_consumer : public core::frame_consumer
         std::string host_ = u8(this->config.host);
         remote_endpoint   = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(host_), this->config.port);
 
-        compute_fixtures();
+        build_fixture_groups();
     }
 
-    void initialize(const core::video_format_desc& /*format_desc*/,
-                    const core::channel_info& channel_info,
-                    int                       port_index) override
+    void initialize(const core::video_format_desc& format_desc,
+                    const core::channel_info& /*channel_info*/,
+                    int /*port_index*/) override
     {
+        src_width_    = format_desc.width;
+        src_height_   = format_desc.height;
+        src_linesize_ = src_width_ * 4;
+
+        for (auto& group : fixture_groups)
+            setup_group_sws(group);
+
         thread_ = std::thread([this] {
             long long time      = 1000 / config.refreshRate;
             auto      last_send = std::chrono::system_clock::now();
@@ -98,34 +135,57 @@ struct artnet_consumer : public core::frame_consumer
 
                     frame_mutex_.lock();
                     auto frame = last_frame_;
-
                     frame_mutex_.unlock();
                     if (!frame)
-                        continue; // No frame available
+                        continue;
 
-                    uint8_t dmx_data[512];
-                    memset(dmx_data, 0, 512);
+                    if ((int)frame.width() != src_width_ || (int)frame.height() != src_height_)
+                        continue;
 
-                    for (auto computed_fixture : computed_fixtures) {
-                        auto     color = average_color(frame, computed_fixture.rectangle);
-                        uint8_t* ptr   = dmx_data + computed_fixture.address;
+                    std::uint8_t dmx_data[512];
+                    std::memset(dmx_data, 0, sizeof(dmx_data));
 
-                        switch (computed_fixture.type) {
-                            case FixtureType::DIMMER:
-                                ptr[0] = (uint8_t)(0.279 * color.r + 0.547 * color.g + 0.106 * color.b);
-                                break;
-                            case FixtureType::RGB:
-                                ptr[0] = color.r;
-                                ptr[1] = color.g;
-                                ptr[2] = color.b;
-                                break;
-                            case FixtureType::RGBW:
-                                uint8_t w = std::min(std::min(color.r, color.g), color.b);
-                                ptr[0]    = color.r - w;
-                                ptr[1]    = color.g - w;
-                                ptr[2]    = color.b - w;
-                                ptr[3]    = w;
-                                break;
+                    const std::uint8_t* src = frame.image_data(0).data();
+
+                    for (auto& group : fixture_groups) {
+                        if (!group.sws)
+                            continue;
+
+                        const std::uint8_t* crop_src    = src + group.crop_y * src_linesize_ + group.crop_x * 4;
+                        const std::uint8_t* src_data[1] = {crop_src};
+                        int                 src_lines[1] = {src_linesize_};
+
+                        std::uint8_t* dst_data[1]  = {group.output.data()};
+                        int           dst_lines[1] = {(int)(group.sub_fixtures.size() * 4)};
+
+                        sws_scale(group.sws.get(), src_data, src_lines, 0, group.crop_h, dst_data, dst_lines);
+
+                        for (size_t i = 0; i < group.sub_fixtures.size(); i++) {
+                            const auto&         sf = group.sub_fixtures[i];
+                            const std::uint8_t* px = group.output.data() + i * 4;
+                            std::uint8_t        b  = px[0];
+                            std::uint8_t        g  = px[1];
+                            std::uint8_t        r  = px[2];
+
+                            std::uint8_t* ptr = dmx_data + sf.address;
+                            switch (sf.type) {
+                                case FixtureType::DIMMER:
+                                    ptr[0] = (std::uint8_t)(0.279 * r + 0.547 * g + 0.106 * b);
+                                    break;
+                                case FixtureType::RGB:
+                                    ptr[0] = r;
+                                    ptr[1] = g;
+                                    ptr[2] = b;
+                                    break;
+                                case FixtureType::RGBW: {
+                                    std::uint8_t w = std::min({r, g, b});
+                                    ptr[0]         = r - w;
+                                    ptr[1]         = g - w;
+                                    ptr[2]         = b - w;
+                                    ptr[3]         = w;
+                                    break;
+                                }
+                            }
                         }
                     }
 
@@ -161,7 +221,10 @@ struct artnet_consumer : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
-        state["artnet/computed-fixtures"] = computed_fixtures.size();
+        std::size_t          total = 0;
+        for (const auto& g : fixture_groups)
+            total += g.sub_fixtures.size();
+        state["artnet/computed-fixtures"] = total;
         state["artnet/fixtures"]          = config.fixtures.size();
         state["artnet/universe"]          = config.universe;
         state["artnet/host"]              = config.host;
@@ -178,23 +241,68 @@ struct artnet_consumer : public core::frame_consumer
     std::thread       thread_;
     std::atomic<bool> abort_request_{false};
 
+    int src_width_    = 0;
+    int src_height_   = 0;
+    int src_linesize_ = 0;
+
     io_context    io_context_;
     udp::socket   socket;
     udp::endpoint remote_endpoint;
 
-    void compute_fixtures()
+    void build_fixture_groups()
     {
-        computed_fixtures.clear();
-        for (auto fixture : config.fixtures) {
-            for (unsigned short i = 0; i < fixture.fixtureCount; i++) {
-                computed_fixture computed_fixture{};
-                computed_fixture.type    = fixture.type;
-                computed_fixture.address = fixture.startAddress + i * fixture.fixtureChannels;
-
-                computed_fixture.rectangle = compute_rect(fixture.fixtureBox, i, fixture.fixtureCount);
-                computed_fixtures.push_back(computed_fixture);
+        fixture_groups.clear();
+        for (const auto& fx : config.fixtures) {
+            computed_fixture_group group;
+            group.source_box = fx.fixtureBox;
+            group.sub_fixtures.reserve(fx.fixtureCount);
+            for (unsigned short i = 0; i < fx.fixtureCount; i++) {
+                sub_fixture sf{};
+                sf.type    = fx.type;
+                sf.address = fx.startAddress + i * fx.fixtureChannels;
+                group.sub_fixtures.push_back(sf);
             }
+            fixture_groups.push_back(std::move(group));
         }
+    }
+
+    void setup_group_sws(computed_fixture_group& group)
+    {
+        int x0 = std::max(0, (int)group.source_box.x);
+        int y0 = std::max(0, (int)group.source_box.y);
+        int x1 = std::min(src_width_, (int)(group.source_box.x + group.source_box.width));
+        int y1 = std::min(src_height_, (int)(group.source_box.y + group.source_box.height));
+
+        group.crop_x = x0;
+        group.crop_y = y0;
+        group.crop_w = x1 - x0;
+        group.crop_h = y1 - y0;
+
+        if (group.crop_w <= 0 || group.crop_h <= 0 || group.sub_fixtures.empty()) {
+            CASPAR_LOG(warning) << L"artnet: fixture box is empty or outside the channel; skipping.";
+            return;
+        }
+
+        int dst_w = (int)group.sub_fixtures.size();
+        group.sws.reset(sws_getContext(group.crop_w,
+                                       group.crop_h,
+                                       AV_PIX_FMT_BGRA,
+                                       dst_w,
+                                       1,
+                                       AV_PIX_FMT_BGRA,
+                                       SWS_AREA,
+                                       nullptr,
+                                       nullptr,
+                                       nullptr),
+                        [](SwsContext* p) {
+                            if (p)
+                                sws_freeContext(p);
+                        });
+
+        if (!group.sws)
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("artnet: failed to create SwsContext"));
+
+        group.output.assign(dst_w * 4, 0);
     }
 
     void send_dmx_data(const std::uint8_t* data, std::size_t length)
