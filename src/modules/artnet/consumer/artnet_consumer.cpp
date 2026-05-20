@@ -81,6 +81,7 @@ struct sub_fixture
 struct computed_fixture_group
 {
     box                         source_box{};
+    fixture_flux                flux;
     int                         cols   = 1;
     int                         rows   = 1;
     int                         crop_x = 0;
@@ -176,21 +177,29 @@ struct artnet_consumer : public core::frame_consumer
                             std::uint8_t        g  = px[1];
                             std::uint8_t        r  = px[2];
 
+                            auto clamp_u8 = [](float v) -> std::uint8_t {
+                                if (v <= 0.0f)
+                                    return 0;
+                                if (v >= 255.0f)
+                                    return 255;
+                                return (std::uint8_t)v;
+                            };
+
                             switch (sf.type) {
                                 case FixtureType::DIMMER:
                                     write_dmx(sf.address, (std::uint8_t)(0.279 * r + 0.547 * g + 0.106 * b));
                                     break;
                                 case FixtureType::RGB:
-                                    write_dmx(sf.address + 0, r);
-                                    write_dmx(sf.address + 1, g);
-                                    write_dmx(sf.address + 2, b);
+                                    write_dmx(sf.address + 0, clamp_u8(r / group.flux.r));
+                                    write_dmx(sf.address + 1, clamp_u8(g / group.flux.g));
+                                    write_dmx(sf.address + 2, clamp_u8(b / group.flux.b));
                                     break;
                                 case FixtureType::RGBW: {
-                                    std::uint8_t w = std::min({r, g, b});
-                                    write_dmx(sf.address + 0, (std::uint8_t)(r - w));
-                                    write_dmx(sf.address + 1, (std::uint8_t)(g - w));
-                                    write_dmx(sf.address + 2, (std::uint8_t)(b - w));
-                                    write_dmx(sf.address + 3, w);
+                                    float w_perc = (float)std::min({r, g, b});
+                                    write_dmx(sf.address + 0, clamp_u8((r - w_perc) / group.flux.r));
+                                    write_dmx(sf.address + 1, clamp_u8((g - w_perc) / group.flux.g));
+                                    write_dmx(sf.address + 2, clamp_u8((b - w_perc) / group.flux.b));
+                                    write_dmx(sf.address + 3, clamp_u8(w_perc / group.flux.w));
                                     break;
                                 }
                             }
@@ -266,6 +275,7 @@ struct artnet_consumer : public core::frame_consumer
         for (const auto& fx : config.fixtures) {
             computed_fixture_group group;
             group.source_box = fx.fixtureBox;
+            group.flux       = fx.flux;
             group.cols       = fx.fixtureCols;
             group.rows       = fx.fixtureRows;
 
@@ -448,6 +458,16 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
                     L"Fixture channel count must be at least enough channels for current color mode"));
 
         f.fixtureChannels = (unsigned short)fixtureChannels;
+
+        if (auto flux_child = xml_channel.second.get_child_optional(L"flux")) {
+            f.flux.r = flux_child->get(L"r", 1.0f);
+            f.flux.g = flux_child->get(L"g", 1.0f);
+            f.flux.b = flux_child->get(L"b", 1.0f);
+            f.flux.w = flux_child->get(L"w", 1.0f);
+
+            if (f.flux.r <= 0.0f || f.flux.g <= 0.0f || f.flux.b <= 0.0f || f.flux.w <= 0.0f)
+                CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture <flux> values must be positive"));
+        }
 
         if (xml_channel.second.get_optional<float>(L"rotation"))
             CASPAR_LOG(warning)

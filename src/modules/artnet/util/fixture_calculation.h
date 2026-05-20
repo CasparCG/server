@@ -40,6 +40,16 @@ struct box
     float height;
 };
 
+struct fixture_flux
+{
+    // Relative luminous output per unit DMX value, per LED. Used to compensate when LEDs of
+    // different colors don't share the same brightness curve (typical of cheap RGBW strips).
+    float r = 1.0f;
+    float g = 1.0f;
+    float b = 1.0f;
+    float w = 1.0f;
+};
+
 struct fixture
 {
     FixtureType    type;
@@ -48,7 +58,8 @@ struct fixture
     unsigned short fixtureRows;     // rows in the fixture grid (dividing along the height)
     unsigned short fixtureChannels; // number of channels per fixture
 
-    box fixtureBox;
+    fixture_flux flux;
+    box          fixtureBox;
 };
 
 }} // namespace caspar::artnet
