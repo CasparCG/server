@@ -44,6 +44,7 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <memory>
 #include <thread>
@@ -57,9 +58,10 @@ namespace caspar { namespace artnet {
 
 struct configuration
 {
-    int            universe = 0;
-    std::wstring   host     = L"127.0.0.1";
-    unsigned short port     = 6454;
+    // Ordered list of physical universes. Flat address [i*512, (i+1)*512) maps to universes[i].
+    std::vector<int> universes = {0};
+    std::wstring     host      = L"127.0.0.1";
+    unsigned short   port      = 6454;
 
     int refreshRate = 10;
 
@@ -90,6 +92,7 @@ struct artnet_consumer : public core::frame_consumer
 {
     const configuration                 config;
     std::vector<computed_fixture_group> fixture_groups;
+    std::vector<std::array<std::uint8_t, 512>> dmx_buffers_;
 
   public:
     explicit artnet_consumer(configuration config)
@@ -112,6 +115,8 @@ struct artnet_consumer : public core::frame_consumer
         src_width_    = format_desc.width;
         src_height_   = format_desc.height;
         src_linesize_ = src_width_ * 4;
+
+        dmx_buffers_.assign(config.universes.size(), {});
 
         for (auto& group : fixture_groups)
             setup_group_sws(group);
@@ -142,8 +147,8 @@ struct artnet_consumer : public core::frame_consumer
                     if ((int)frame.width() != src_width_ || (int)frame.height() != src_height_)
                         continue;
 
-                    std::uint8_t dmx_data[512];
-                    std::memset(dmx_data, 0, sizeof(dmx_data));
+                    for (auto& buf : dmx_buffers_)
+                        std::memset(buf.data(), 0, buf.size());
 
                     const std::uint8_t* src = frame.image_data(0).data();
 
@@ -167,29 +172,29 @@ struct artnet_consumer : public core::frame_consumer
                             std::uint8_t        g  = px[1];
                             std::uint8_t        r  = px[2];
 
-                            std::uint8_t* ptr = dmx_data + sf.address;
                             switch (sf.type) {
                                 case FixtureType::DIMMER:
-                                    ptr[0] = (std::uint8_t)(0.279 * r + 0.547 * g + 0.106 * b);
+                                    write_dmx(sf.address, (std::uint8_t)(0.279 * r + 0.547 * g + 0.106 * b));
                                     break;
                                 case FixtureType::RGB:
-                                    ptr[0] = r;
-                                    ptr[1] = g;
-                                    ptr[2] = b;
+                                    write_dmx(sf.address + 0, r);
+                                    write_dmx(sf.address + 1, g);
+                                    write_dmx(sf.address + 2, b);
                                     break;
                                 case FixtureType::RGBW: {
                                     std::uint8_t w = std::min({r, g, b});
-                                    ptr[0]         = r - w;
-                                    ptr[1]         = g - w;
-                                    ptr[2]         = b - w;
-                                    ptr[3]         = w;
+                                    write_dmx(sf.address + 0, (std::uint8_t)(r - w));
+                                    write_dmx(sf.address + 1, (std::uint8_t)(g - w));
+                                    write_dmx(sf.address + 2, (std::uint8_t)(b - w));
+                                    write_dmx(sf.address + 3, w);
                                     break;
                                 }
                             }
                         }
                     }
 
-                    send_dmx_data(dmx_data, 512);
+                    for (size_t i = 0; i < dmx_buffers_.size(); i++)
+                        send_dmx_data(dmx_buffers_[i].data(), 512, config.universes[i]);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
                 }
@@ -226,7 +231,7 @@ struct artnet_consumer : public core::frame_consumer
             total += g.sub_fixtures.size();
         state["artnet/computed-fixtures"] = total;
         state["artnet/fixtures"]          = config.fixtures.size();
-        state["artnet/universe"]          = config.universe;
+        state["artnet/universe-count"]    = config.universes.size();
         state["artnet/host"]              = config.host;
         state["artnet/port"]              = config.port;
         state["artnet/refresh-rate"]      = config.refreshRate;
@@ -252,18 +257,52 @@ struct artnet_consumer : public core::frame_consumer
     void build_fixture_groups()
     {
         fixture_groups.clear();
+        int capacity = (int)config.universes.size() * 512;
+
         for (const auto& fx : config.fixtures) {
             computed_fixture_group group;
             group.source_box = fx.fixtureBox;
             group.sub_fixtures.reserve(fx.fixtureCount);
+
+            int pos     = fx.startAddress;
+            int dropped = 0;
+
             for (unsigned short i = 0; i < fx.fixtureCount; i++) {
+                // If this sub-fixture would straddle a universe boundary, push it
+                // forward to the next boundary so it lives entirely in one universe.
+                int slot_start = pos / 512;
+                int slot_end   = (pos + fx.fixtureChannels - 1) / 512;
+                if (slot_end != slot_start)
+                    pos = slot_end * 512;
+
+                if (pos + fx.fixtureChannels > capacity) {
+                    dropped = fx.fixtureCount - i;
+                    break;
+                }
+
                 sub_fixture sf{};
                 sf.type    = fx.type;
-                sf.address = fx.startAddress + i * fx.fixtureChannels;
+                sf.address = pos;
                 group.sub_fixtures.push_back(sf);
+
+                pos += fx.fixtureChannels;
             }
-            fixture_groups.push_back(std::move(group));
+
+            if (dropped > 0)
+                CASPAR_LOG(warning) << L"artnet: dropped " << dropped
+                                    << L" sub-fixtures from chain (exceeds configured universe capacity).";
+
+            if (!group.sub_fixtures.empty())
+                fixture_groups.push_back(std::move(group));
         }
+    }
+
+    void write_dmx(int flat_addr, std::uint8_t value)
+    {
+        int slot   = flat_addr / 512;
+        int offset = flat_addr % 512;
+        if (slot >= 0 && slot < (int)dmx_buffers_.size())
+            dmx_buffers_[slot][offset] = value;
     }
 
     void setup_group_sws(computed_fixture_group& group)
@@ -305,12 +344,10 @@ struct artnet_consumer : public core::frame_consumer
         group.output.assign(dst_w * 4, 0);
     }
 
-    void send_dmx_data(const std::uint8_t* data, std::size_t length)
+    void send_dmx_data(const std::uint8_t* data, std::size_t length, int physical_universe)
     {
-        int universe = this->config.universe;
-
-        std::uint8_t hUni = (universe >> 8) & 0xff;
-        std::uint8_t lUni = universe & 0xff;
+        std::uint8_t hUni = (physical_universe >> 8) & 0xff;
+        std::uint8_t lUni = physical_universe & 0xff;
 
         std::uint8_t hLen = (length >> 8) & 0xff;
         std::uint8_t lLen = (length & 0xff);
@@ -334,7 +371,7 @@ struct artnet_consumer : public core::frame_consumer
 
         boost::system::error_code err;
         socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);
-        CASPAR_LOG(trace) << "Sent DMX data to Artnet, universe: " << universe;
+        CASPAR_LOG(trace) << "Sent DMX data to Artnet, universe: " << physical_universe;
         if (err)
             CASPAR_THROW_EXCEPTION(io_error() << msg_info(err.message()));
     }
@@ -461,7 +498,26 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     if (channel_info.depth != common::bit_depth::bit8)
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Artnet consumer only supports 8-bit color depth."));
 
-    config.universe    = ptree.get(L"universe", config.universe);
+    auto universes_child   = ptree.get_child_optional(L"universes");
+    auto single_universe   = ptree.get_optional<int>(L"universe");
+
+    if (universes_child && single_universe)
+        CASPAR_THROW_EXCEPTION(
+            user_error() << msg_info(L"Specify either <universe> or <universes>, not both."));
+
+    if (universes_child) {
+        config.universes.clear();
+        for (auto& xml_u : ptree | witerate_children(L"universes") | welement_context_iteration) {
+            ptree_verify_element_name(xml_u, L"universe");
+            config.universes.push_back(xml_u.second.get_value<int>());
+        }
+        if (config.universes.empty())
+            CASPAR_THROW_EXCEPTION(
+                user_error() << msg_info(L"<universes> must contain at least one <universe>."));
+    } else if (single_universe) {
+        config.universes = {*single_universe};
+    }
+
     config.host        = ptree.get(L"host", config.host);
     config.port        = ptree.get(L"port", config.port);
     config.refreshRate = ptree.get(L"refresh-rate", config.refreshRate);
