@@ -90,7 +90,7 @@ struct artnet_consumer : public core::frame_consumer
                     long long                     elapsed_ms =
                         std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_seconds).count();
 
-                    long long sleep_time = time - elapsed_ms * 1000;
+                    long long sleep_time = time - elapsed_ms;
                     if (sleep_time > 0)
                         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 
@@ -226,6 +226,7 @@ struct artnet_consumer : public core::frame_consumer
 
         boost::system::error_code err;
         socket.send_to(boost::asio::buffer(buffer), remote_endpoint, 0, err);
+        CASPAR_LOG(trace) << "Sent DMX data to Artnet, universe: " << universe;
         if (err)
             CASPAR_THROW_EXCEPTION(io_error() << msg_info(err.message()));
     }
@@ -278,23 +279,61 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
 
         f.fixtureChannels = (unsigned short)fixtureChannels;
 
+        if (xml_channel.second.get_optional<float>(L"rotation"))
+            CASPAR_LOG(warning)
+                << L"artnet: fixture <rotation> is no longer supported and will be ignored. "
+                   L"Use the mixer ROTATION command on the source channel instead.";
+
+        // Position can be given as center (<x>/<y>), top-left edge (<left>/<top>), or
+        // bottom-right edge (<right>/<bottom>). Size is taken from <width>/<height>, or
+        // derived from <left>+<right> / <top>+<bottom> when the explicit size is omitted.
+        // Center takes priority, then left/top, then right/bottom.
+        auto width_opt  = xml_channel.second.get_optional<float>(L"width");
+        auto height_opt = xml_channel.second.get_optional<float>(L"height");
+        auto cx         = xml_channel.second.get_optional<float>(L"x");
+        auto left       = xml_channel.second.get_optional<float>(L"left");
+        auto right      = xml_channel.second.get_optional<float>(L"right");
+        auto cy         = xml_channel.second.get_optional<float>(L"y");
+        auto top        = xml_channel.second.get_optional<float>(L"top");
+        auto bottom     = xml_channel.second.get_optional<float>(L"bottom");
+
+        bool derive_width  = !width_opt && !cx && left && right;
+        bool derive_height = !height_opt && !cy && top && bottom;
+
         box b{};
+        b.width  = derive_width ? *right - *left : width_opt.value_or(0.0f);
+        b.height = derive_height ? *bottom - *top : height_opt.value_or(0.0f);
 
-        auto x = xml_channel.second.get(L"x", 0.0f);
-        auto y = xml_channel.second.get(L"y", 0.0f);
+        if (((cx ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0)) > 1 && !derive_width)
+            CASPAR_LOG(warning)
+                << L"artnet: fixture has conflicting horizontal specifiers. "
+                   L"Use one of <x>/<left>/<right> with <width>, or <left>+<right>. "
+                   L"Using <x> if present, otherwise <left>, otherwise <right>.";
 
-        b.x = x;
-        b.y = y;
+        if (((cy ? 1 : 0) + (top ? 1 : 0) + (bottom ? 1 : 0)) > 1 && !derive_height)
+            CASPAR_LOG(warning)
+                << L"artnet: fixture has conflicting vertical specifiers. "
+                   L"Use one of <y>/<top>/<bottom> with <height>, or <top>+<bottom>. "
+                   L"Using <y> if present, otherwise <top>, otherwise <bottom>.";
 
-        auto width  = xml_channel.second.get(L"width", 0.0f);
-        auto height = xml_channel.second.get(L"height", 0.0f);
+        if (cx)
+            b.x = *cx - b.width / 2.0f;
+        else if (left)
+            b.x = *left;
+        else if (right)
+            b.x = *right - b.width;
+        else
+            b.x = 0.0f;
 
-        b.width  = width;
-        b.height = height;
+        if (cy)
+            b.y = *cy - b.height / 2.0f;
+        else if (top)
+            b.y = *top;
+        else if (bottom)
+            b.y = *bottom - b.height;
+        else
+            b.y = 0.0f;
 
-        auto rotation = xml_channel.second.get(L"rotation", 0.0f);
-
-        b.rotation   = rotation;
         f.fixtureBox = b;
 
         fixtures.push_back(f);

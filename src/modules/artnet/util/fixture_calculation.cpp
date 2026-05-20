@@ -21,67 +21,26 @@
 
 #include "fixture_calculation.h"
 
-#define M_PI 3.14159265358979323846 /* pi */
-
 namespace caspar { namespace artnet {
 
 rect compute_rect(box fixtureBox, int index, int count)
 {
-    // Calculates the corners of a rectangle that is part of a fixture
+    // Calculates the corners of an axis-aligned rectangle that is part of a fixture chain
     // The count represents how many fixtures exist in the box and the index which one to calculate
 
-    auto f_count = (float)count;
-    auto f_index = (float)index;
+    float fixture_width = fixtureBox.width / (float)count;
 
-    float x = fixtureBox.x;
-    float y = fixtureBox.y;
+    float x0 = fixtureBox.x + (float)index * fixture_width;
+    float x1 = x0 + fixture_width;
+    float y0 = fixtureBox.y;
+    float y1 = y0 + fixtureBox.height;
 
-    float width  = fixtureBox.width;
-    float height = fixtureBox.height;
-
-    float  rotation = fixtureBox.rotation;
-    double angle    = M_PI * rotation / 180.0f;
-
-    double sin_ = sin(angle);
-    double cos_ = cos(angle);
-
-    // Half width and height of the rectangle for this fixture
-    float hx = width / (2 * f_count);
-    float hy = height / 2.0f;
-
-    // Offset distance from the center of the box to the center of the fixture
-    float od = (2 * f_index - f_count + 1) * hx;
-
-    // Center of the fixture
-    double ox = x + od * cos_;
-    double oy = y + od * sin_;
-
-    // Calculate the corners of the rectangle, by offsetting the center with the half width and height
-    // in the direction of the corners and the box's rotation
-
-    point p1{
-        static_cast<float>(ox + -hx * cos_ + -hy * -sin_),
-        static_cast<float>(oy + -hx * sin_ + -hy * cos_),
+    return rect{
+        {x0, y0},
+        {x1, y0},
+        {x1, y1},
+        {x0, y1},
     };
-
-    point p2{
-        static_cast<float>(ox + hx * cos_ + -hy * -sin_),
-        static_cast<float>(oy + hx * sin_ + -hy * cos_),
-    };
-
-    point p3{
-        static_cast<float>(ox + hx * cos_ + hy * -sin_),
-        static_cast<float>(oy + hx * sin_ + hy * cos_),
-    };
-
-    point p4{
-        static_cast<float>(ox + -hx * cos_ + hy * -sin_),
-        static_cast<float>(oy + -hx * sin_ + hy * cos_),
-    };
-
-    rect rectangle{p1, p2, p3, p4};
-
-    return rectangle;
 }
 
 color average_color(const core::const_frame& frame, rect& rectangle)

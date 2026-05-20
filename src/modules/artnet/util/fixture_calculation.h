@@ -66,13 +66,12 @@ struct color
 
 struct box
 {
+    // top-left corner
     float x;
     float y;
 
     float width;
     float height;
-
-    float rotation; // degrees
 };
 
 struct fixture
