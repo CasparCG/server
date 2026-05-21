@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <bit> // std::endian
 #include <concepts>
 #include <cstddef> // std::size_t
 #include <type_traits>
@@ -96,6 +97,20 @@ constexpr auto swap_byte_order(V val)
 #endif
 
     return static_cast<V>(result);
+}
+
+constexpr auto little_endian(std::integral auto val)
+{
+    if constexpr (std::endian::native == std::endian::big)
+        return swap_byte_order(val);
+    else return val;
+}
+
+constexpr auto big_endian(std::integral auto val)
+{
+    if constexpr (std::endian::native == std::endian::little)
+        return swap_byte_order(val);
+    else return val;
 }
 
 } // namespace caspar
