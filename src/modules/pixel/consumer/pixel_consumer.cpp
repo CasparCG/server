@@ -135,6 +135,11 @@ public:
         p.r -= y, p.g -= y, p.b -= y;
         return std::array{p.r, p.g, p.b, y};
     }
+
+    constexpr auto to_rgbx(pixel p) const
+    {
+        return std::array{p.r, p.g, p.b, level{0}};
+    }
 };
 
 ////////////////////
@@ -246,6 +251,8 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
         config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgb(pix)) sink.push(c); };
     else if (type == "rgbw")
         config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgbw(pix)) sink.push(c); };
+    else if (type == "rgbx")
+        config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgbx(pix)) sink.push(c); };
     else CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unsupported or unspecified pixel type."));
 
     return spl::make_shared<pixel_consumer>(config);
