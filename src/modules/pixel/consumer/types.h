@@ -30,6 +30,6 @@ struct coef { float r, g, b, w; };
 using level = std::uint8_t;
 struct pixel { level b, g, r, a; };
 
-enum pixel_type { mono, rgb, rgbw, rgbx };
+enum pixel_type { luma, rgb, rgbw, rgbx };
 
 }

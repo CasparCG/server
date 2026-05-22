@@ -85,7 +85,7 @@ public:
 
             switch (type_)
             {
-                case mono: sink_.push(pix | grade(&color_grader::to_luma)); break;
+                case luma: sink_.push(pix | grade(&color_grader::to_luma)); break;
                 case rgb : sink_.push(pix | grade(&color_grader::to_rgb )); break;
                 case rgbw: sink_.push(pix | grade(&color_grader::to_rgbw)); break;
                 case rgbx: sink_.push(pix | grade(&color_grader::to_rgbx)); break;
@@ -144,7 +144,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     artdmx_sink sink{ u8(host), port, universe, --address };
 
     static const std::unordered_map<std::wstring, pixel_type> types{
-        { L"mono", mono },
+        { L"luma", luma },
         { L"rgb" , rgb  },
         { L"rgbw", rgbw },
         { L"rgbx", rgbx },
