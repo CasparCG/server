@@ -31,6 +31,9 @@
 #include <string_view>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 4267)
+
 namespace caspar::pixel {
 
 namespace asio = boost::asio;
@@ -86,8 +89,8 @@ public:
                 .length = big_endian<std::uint16_t>(payload.size()),
             };
             socket_.send(std::array{
-                boost::asio::buffer(&head, sizeof(head)),
-                boost::asio::buffer(payload)
+                asio::buffer(&head, sizeof(head)),
+                asio::buffer(payload)
             }, 0);
         };
 
