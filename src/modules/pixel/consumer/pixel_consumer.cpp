@@ -116,29 +116,50 @@ public:
 ////////////////////
 class color_grader
 {
+    // coef
+    float cr_ = 1, cg_ = 1, cb_ = 1, cw_ = 1;
+
+    static constexpr auto round(float v) { return std::clamp<level>(v + 0.5f, 0, 255); }
+
 public:
+    constexpr color_grader() = default;
+    constexpr color_grader(float cr, float cg, float cb, float cw)
+    {
+        // normalize on rgb, and scale w
+        auto min = std::min({ cr, cg, cb });
+        cr_ = min / cr;
+        cg_ = min / cg;
+        cb_ = min / cb;
+        cw_ = min / cw;
+    }
+
     constexpr auto to_y(pixel p) const
     {
         // standard luma weights
-        auto y = 0.5f + 0.2126f * p.r + 0.7152f * p.g + 0.0722f * p.b;
-        return std::clamp<level>(y, 0, 255);
+        auto y = (0.2126f * cr_* p.r) + (0.7152f * cg_* p.g) + (0.0722f * cb_* p.b);
+        return round(y);
     }
 
     constexpr auto to_rgb(pixel p) const
     {
-        return std::array{p.r, p.g, p.b};
+        return std::array{ round(cr_* p.r), round(cg_* p.g), round(cb_* p.b) };
     }
 
     constexpr auto to_rgbw(pixel p) const
     {
-        auto y = std::min({p.r, p.g, p.b});
-        p.r -= y, p.g -= y, p.b -= y;
-        return std::array{p.r, p.g, p.b, y};
+        auto fr = cr_* p.r;
+        auto fg = cg_* p.g;
+        auto fb = cb_* p.b;
+
+        auto fy = std::min({ fr, fg, fb });
+        auto fw = cw_* fy;
+
+        return std::array{ round(fr - fy), round(fg - fy), round(fb - fy), round(fw) };
     }
 
     constexpr auto to_rgbx(pixel p) const
     {
-        return std::array{p.r, p.g, p.b, level{0}};
+        return std::array{ round(cr_* p.r), round(cg_* p.g), round(cb_* p.b), level{0} };
     }
 };
 
@@ -254,6 +275,14 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     else if (type == "rgbx")
         config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgbx(pix)) sink.push(c); };
     else CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unsupported or unspecified pixel type."));
+
+    auto cr = ptree.get(L"coef.r", 1.0f);
+    auto cg = ptree.get(L"coef.g", 1.0f);
+    auto cb = ptree.get(L"coef.b", 1.0f);
+    auto cw = ptree.get(L"coef.w", 1.0f);
+    if (0 >= std::min({ cr, cg, cb, cw }))
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info("Invalid color correction coefficient(s)."));
+    config.grader = color_grader{cr, cg, cb, cw};
 
     return spl::make_shared<pixel_consumer>(config);
 }
