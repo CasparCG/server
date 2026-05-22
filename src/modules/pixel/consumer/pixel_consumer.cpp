@@ -116,14 +116,18 @@ public:
 ////////////////////
 class color_grader
 {
-    // coef
-    float cr_ = 1, cg_ = 1, cb_ = 1, cw_ = 1;
+    float cr_, cg_, cb_, cw_;
+    std::array<level, 256> gm_;
+
+    constexpr auto grade(pixel p) const {
+        return std::tuple{ cr_ * gm_[p.r], cg_ * gm_[p.g], cb_ * gm_[p.b] };
+    }
 
     static constexpr auto round(float v) { return std::clamp<level>(v + 0.5f, 0, 255); }
 
 public:
     constexpr color_grader() = default;
-    constexpr color_grader(float cr, float cg, float cb, float cw)
+    constexpr color_grader(float cr, float cg, float cb, float cw, float gamma)
     {
         // normalize on rgb, and scale w
         auto min = std::min({ cr, cg, cb });
@@ -131,35 +135,34 @@ public:
         cg_ = min / cg;
         cb_ = min / cb;
         cw_ = min / cw;
+
+        for (auto i = 0; i < 256; ++i) gm_[i] = round(255.0f * std::pow(i / 255.0f, gamma));
     }
 
     constexpr auto to_y(pixel p) const
     {
+        auto [ r, g, b ] = grade(p);
         // standard luma weights
-        auto y = (0.2126f * cr_* p.r) + (0.7152f * cg_* p.g) + (0.0722f * cb_* p.b);
-        return round(y);
+        return round(0.2126f * r + 0.7152f * g + 0.0722f * b);
     }
 
     constexpr auto to_rgb(pixel p) const
     {
-        return std::array{ round(cr_* p.r), round(cg_* p.g), round(cb_* p.b) };
+        auto [ r, g, b ] = grade(p);
+        return std::array{ round(r), round(g), round(b) };
     }
 
     constexpr auto to_rgbw(pixel p) const
     {
-        auto fr = cr_* p.r;
-        auto fg = cg_* p.g;
-        auto fb = cb_* p.b;
-
-        auto fy = std::min({ fr, fg, fb });
-        auto fw = cw_* fy;
-
-        return std::array{ round(fr - fy), round(fg - fy), round(fb - fy), round(fw) };
+        auto [ r, g, b ] = grade(p);
+        auto y = std::min({ r, g, b });
+        return std::array{ round(r - y), round(g - y), round(b - y), round(cw_ * y) };
     }
 
     constexpr auto to_rgbx(pixel p) const
     {
-        return std::array{ round(cr_* p.r), round(cg_* p.g), round(cb_* p.b), level{0} };
+        auto [ r, g, b ] = grade(p);
+        return std::array{ round(r), round(g), round(b), level{} };
     }
 };
 
@@ -282,7 +285,11 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     auto cw = ptree.get(L"coef.w", 1.0f);
     if (0 >= std::min({ cr, cg, cb, cw }))
         CASPAR_THROW_EXCEPTION(user_error() << msg_info("Invalid color correction coefficient(s)."));
-    config.grader = color_grader{cr, cg, cb, cw};
+
+    auto gamma = ptree.get(L"gamma", 1.0f);
+    if (gamma < 0.1f || gamma > 10.0f) CASPAR_THROW_EXCEPTION(user_error() << msg_info("Invalid gamma."));
+
+    config.grader = color_grader{cr, cg, cb, cw, 1};
 
     return spl::make_shared<pixel_consumer>(config);
 }
