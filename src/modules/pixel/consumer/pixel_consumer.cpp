@@ -49,9 +49,9 @@ using namespace boost::asio::ip;
 namespace caspar::pixel {
 
 ////////////////////
-struct bgra { std::uint8_t b, g, r, a; };
+using level = std::uint8_t;
+struct pixel { level b, g, r, a; };
 
-////////////////////
 class artdmx_sink
 {
 #pragma pack(push,1)
@@ -69,7 +69,7 @@ class artdmx_sink
     head_;
 #pragma pack(pop)
 
-    std::vector<std::uint8_t> payload_;
+    std::vector<level> payload_;
 
     std::uint16_t universe_;
     udp::socket& socket_;
@@ -100,7 +100,7 @@ public:
 
     ~artdmx_sink() { if (payload_.size()) send(); }
 
-    void push(std::uint8_t val)
+    void push(level val)
     {
         if (universe_ < 32768) {
             payload_.push_back(val);
@@ -113,38 +113,41 @@ public:
     }
 };
 
-inline void push_mono(artdmx_sink& sink, const bgra& pix)
+////////////////////
+class color_grader
 {
-    // standard luma weights
-    int y = 0.5f + 0.2126f * pix.r + 0.7152f * pix.g + 0.0722f * pix.b;
-    sink.push(std::clamp(y, 0, 255));
-}
+public:
+    constexpr auto to_y(pixel p) const
+    {
+        // standard luma weights
+        auto y = 0.5f + 0.2126f * p.r + 0.7152f * p.g + 0.0722f * p.b;
+        return std::clamp<level>(y, 0, 255);
+    }
 
-inline void push_rgb(artdmx_sink& sink, const bgra& pix)
-{
-    sink.push(pix.r);
-    sink.push(pix.g);
-    sink.push(pix.b);
-}
+    constexpr auto to_rgb(pixel p) const
+    {
+        return std::array{p.r, p.g, p.b};
+    }
 
-void push_rgbw(artdmx_sink& sink, const bgra& pix)
-{
-    auto y = std::min({pix.r, pix.g, pix.b});
-    sink.push(pix.r - y);
-    sink.push(pix.g - y);
-    sink.push(pix.b - y);
-    sink.push(y);
-}
+    constexpr auto to_rgbw(pixel p) const
+    {
+        auto y = std::min({p.r, p.g, p.b});
+        p.r -= y, p.g -= y, p.b -= y;
+        return std::array{p.r, p.g, p.b, y};
+    }
+};
 
 ////////////////////
 struct configuration
 {
     std::uint16_t universe;
     std::uint16_t address;
+
     std::string   host;
     std::uint16_t port;
 
-    std::function<void(artdmx_sink&, const bgra&)> fn_push;
+    color_grader  grader;
+    std::function<void(artdmx_sink&, const color_grader&, pixel)> pusher;
 };
 
 struct pixel_consumer : public core::frame_consumer
@@ -180,11 +183,11 @@ struct pixel_consumer : public core::frame_consumer
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         executor_.begin_invoke([this, frame = std::move(frame)]{
-            auto pix = std::bit_cast<const bgra*>(frame.image_data(0).data());
-            auto size = frame.image_data(0).size() / sizeof(bgra);
+            auto pix = std::bit_cast<const pixel*>(frame.image_data(0).data());
+            auto size = frame.image_data(0).size() / sizeof(pixel);
 
             artdmx_sink sink{config_.universe, config_.address, socket_};
-            for (std::size_t i = 0; i < size; ++i) config_.fn_push(sink, pix[i]);
+            for (std::size_t i = 0; i < size; ++i) config_.pusher(sink, config_.grader, pix[i]);
         });
 
         return make_ready_future(true);
@@ -238,11 +241,11 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
 
     auto type = tolower(u8(ptree.get(L"type", L"")));
     if (type == "mono")
-        config.fn_push = &push_mono;
+        config.pusher = [](auto& sink, auto& grader, auto pix){ sink.push(grader.to_y(pix)); };
     else if (type == "rgb")
-        config.fn_push = &push_rgb;
+        config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgb(pix)) sink.push(c); };
     else if (type == "rgbw")
-        config.fn_push = &push_rgbw;
+        config.pusher = [](auto& sink, auto& grader, auto pix){ for (auto c : grader.to_rgbw(pix)) sink.push(c); };
     else CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unsupported or unspecified pixel type."));
 
     return spl::make_shared<pixel_consumer>(config);
