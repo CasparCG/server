@@ -40,6 +40,9 @@
 #include <utility>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 4267)
+
 using namespace boost::asio;
 using namespace boost::asio::ip;
 
