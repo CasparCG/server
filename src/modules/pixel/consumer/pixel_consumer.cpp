@@ -27,6 +27,7 @@
 #include "common/except.h"
 #include "common/executor.h"
 #include "common/future.h"
+#include "common/log.h"
 
 #include "core/consumer/channel_info.h"
 #include "core/consumer/frame_consumer.h"
@@ -35,6 +36,8 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include <cctype>
+#include <chrono>
+#include <exception>
 #include <locale>
 #include <ranges>
 #include <span>
@@ -44,6 +47,9 @@
 #include <utility>
 
 namespace caspar::pixel {
+
+using namespace std::chrono_literals;
+using steady_clock = std::chrono::steady_clock;
 
 struct pixel_consumer : public core::frame_consumer
 {
@@ -55,6 +61,9 @@ struct pixel_consumer : public core::frame_consumer
 
     int channel_index_ = -1;
     core::video_format_desc format_desc_;
+
+    bool failed_ = false;
+    steady_clock::time_point since_;
 
 public:
     pixel_consumer(artdmx_sink sink, color_grader grader, pixel_type type) :
@@ -83,12 +92,23 @@ public:
                 return transform([this, fn](pixel p) { return (grader_.*fn)(p); }) | join;
             };
 
-            switch (type_)
-            {
-                case luma: sink_.push(pix | grade(&color_grader::to_luma)); break;
-                case rgb : sink_.push(pix | grade(&color_grader::to_rgb )); break;
-                case rgbw: sink_.push(pix | grade(&color_grader::to_rgbw)); break;
-                case rgbx: sink_.push(pix | grade(&color_grader::to_rgbx)); break;
+            try {
+                switch (type_)
+                {
+                    case luma: sink_.push(pix | grade(&color_grader::to_luma)); break;
+                    case rgb : sink_.push(pix | grade(&color_grader::to_rgb )); break;
+                    case rgbw: sink_.push(pix | grade(&color_grader::to_rgbw)); break;
+                    case rgbx: sink_.push(pix | grade(&color_grader::to_rgbx)); break;
+                }
+
+                if (failed_ && steady_clock::now() > since_ + 3s) {
+                    CASPAR_LOG(info) << print() << ": Connection restored";
+                    failed_ = false;
+                }
+            } catch (const std::exception& e) {
+                if (!failed_) CASPAR_LOG(error) << print() << ": " << e.what();
+                failed_ = true;
+                since_ = steady_clock::now();
             }
         });
 
