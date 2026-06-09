@@ -170,9 +170,10 @@ struct dmf_mxl_producer : public core::frame_producer
     mxlFlowReader     vFlow_;
     mxlFlowConfigInfo vFlowConf_;
 
-    std::string vFlowLabel;
-    int         width;
-    int         height;
+    std::string       vFlowLabel;
+    int               width;
+    int               height;
+    core::color_space colorspace;
 
     mxlFlowReader     aFlow_;
     mxlFlowConfigInfo aFlowConf_;
@@ -217,7 +218,6 @@ struct dmf_mxl_producer : public core::frame_producer
         , executor_(print())
         , cadence_counter_(0)
     {
-        // @todo - init mxl
         instance_ = mxlCreateInstance(u8(domain_).c_str(), NULL);
         if (instance_ == nullptr) {
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("failed to create mxl instance"));
@@ -250,9 +250,12 @@ struct dmf_mxl_producer : public core::frame_producer
     {
         executor_.stop();
 
-        // @todo - destroy mxl
         if (vFlow_ != nullptr) {
             mxlReleaseFlowReader(instance_, vFlow_);
+        }
+
+        if (aFlow_ != nullptr) {
+            mxlReleaseFlowReader(instance_, aFlow_);
         }
 
         mxlDestroyInstance(instance_);
@@ -310,7 +313,7 @@ struct dmf_mxl_producer : public core::frame_producer
             flow_ts_ += frame_dur_;
 
             // start with empty frame
-            auto mut_frame = make_frame(this, *frame_factory_, NULL, NULL, core::color_space::bt709);
+            auto mut_frame = make_frame(this, *frame_factory_, NULL, NULL, colorspace);
 
             if (vFlow_ != nullptr) {
                 // replace frame with video frame
@@ -334,7 +337,7 @@ struct dmf_mxl_producer : public core::frame_producer
                         auto src = video_decoder_.decode(payload, grainInfo.grainSize);
 
                         if (src) {
-                            mut_frame = make_frame(this, *frame_factory_, src, NULL, core::color_space::bt709);
+                            mut_frame = make_frame(this, *frame_factory_, src, NULL, colorspace);
                         } else {
                             CASPAR_LOG(info) << L"[mxl] could not make frame, no src";
                         }
@@ -453,8 +456,17 @@ struct dmf_mxl_producer : public core::frame_producer
             vFlowLabel = boost::json::value_to<std::string>(flowDef.at("label"));
             width      = boost::json::value_to<int>(flowDef.at("frame_width"));
             height     = boost::json::value_to<int>(flowDef.at("frame_height"));
+
+            auto const col_space = boost::json::value_to<std::string>(flowDef.at("colorspace"));
+            if (boost::iequals(col_space, "BT601")) {
+                colorspace = core::color_space::bt601;
+            } else if (boost::iequals(col_space, "BT2020")) {
+                colorspace = core::color_space::bt2020;
+            } else {
+                colorspace = core::color_space::bt709;
+            }
+
             // @todo - interlaced sources
-            // @todo - follow colour space
             // @todo - support v210a
 
             CASPAR_LOG(info) << L"[mxl] [video] opening flow " + flowId;

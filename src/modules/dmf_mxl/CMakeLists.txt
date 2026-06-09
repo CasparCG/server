@@ -4,7 +4,6 @@ project (dmf_mxl)
 # @todo - make more portable:
 set(MXL_SDK_PREFIX "$ENV{HOME}/Documents/devProjects/mxl/install/Linux-Clang-Release/" CACHE PATH "Path to MXL SDK")
 LIST (APPEND CMAKE_PREFIX_PATH "${MXL_SDK_PREFIX}")
-# set(CMAKE_PREFIX_PATH "${MXL_SDK_PREFIX}" ${CMAKE_PREFIX_PATH})
 message(STATUS "CMAKE_PREFIX_PATH is: ${CMAKE_PREFIX_PATH}")
 
 find_package(mxl CONFIG REQUIRED)
@@ -16,6 +15,11 @@ set(SOURCES
 
 		producer/dmf_mxl_producer.cpp
 		producer/dmf_mxl_producer.h
+
+		consumer/dmf_mxl_consumer.cpp
+		consumer/dmf_mxl_consumer.h
+		consumer/v210.cpp
+		consumer/v210.h
 
 		StdAfx.h
 )

@@ -19,25 +19,30 @@
  * Author: Mint de Wit mint@araminta.dev
  */
 
-#include "dmf_mxl.h"
+#pragma once
 
-#include "consumer/dmf_mxl_consumer.h"
-#include "producer/dmf_mxl_producer.h"
-
-#define WIN32_LEAN_AND_MEAN
-
-#include <core/consumer/frame_consumer.h>
-
-#include <common/utf.h>
+#include <tbb/scalable_allocator.h>
 
 namespace caspar { namespace dmf_mxl {
 
-void init(const core::module_dependencies& dependencies)
+template <typename T = uint16_t>
+struct ARGBPixel
 {
-    dependencies.producer_registry->register_producer_factory(L"MXL Producer", create_mxl_producer);
+    T R;
+    T G;
+    T B;
+    T A;
+};
 
-    dependencies.consumer_registry->register_consumer_factory(L"MXL Consumer", create_mxl_consumer);
-    dependencies.consumer_registry->register_preconfigured_consumer_factory(L"mxl", create_preconfigured_mxl_consumer);
-}
+// template <typename T = uint16_t>
+// void row_to_v210(ARGBPixel<T> const* src, int pixel_count, const std::vector<int32_t>& color_matrix, __m128i* dest);
+void do_row_to_v210(ARGBPixel<uint8_t> const*   src,
+                    int                         pixel_count,
+                    const std::vector<int32_t>& color_matrix,
+                    __m128i*                    dest);
+void do_row_to_v210(ARGBPixel<uint16_t> const*  src,
+                    int                         pixel_count,
+                    const std::vector<int32_t>& color_matrix,
+                    __m128i*                    dest);
 
 }} // namespace caspar::dmf_mxl
