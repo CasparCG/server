@@ -106,9 +106,9 @@ struct mxl_consumer : public core::frame_consumer
 
     mxlInstance   instance_;
     std::wstring  vId_;
-    mxlFlowWriter vWriter_;
+    mxlFlowWriter vWriter_ = nullptr;
     std::wstring  aId_;
-    mxlFlowWriter aWriter_;
+    mxlFlowWriter aWriter_    = nullptr;
     uint64_t      last_index_ = MXL_UNDEFINED_INDEX;
 
   public:
@@ -131,8 +131,12 @@ struct mxl_consumer : public core::frame_consumer
 
     ~mxl_consumer()
     {
-        mxlReleaseFlowWriter(instance_, vWriter_);
-        mxlReleaseFlowWriter(instance_, aWriter_);
+        if (vWriter_ != nullptr) {
+            mxlReleaseFlowWriter(instance_, vWriter_);
+        }
+        if (aWriter_ != nullptr) {
+            mxlReleaseFlowWriter(instance_, aWriter_);
+        }
         mxlDestroyInstance(instance_);
 
         if (frame_thread_.joinable()) {
@@ -226,7 +230,6 @@ struct mxl_consumer : public core::frame_consumer
         }
     }
 
-    // @todo - add avx2 like decklink has
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         return executor_.begin_invoke([=, this] {
