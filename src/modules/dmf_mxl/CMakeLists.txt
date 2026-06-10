@@ -42,4 +42,5 @@ target_link_libraries(dmf_mxl
     PRIVATE
     mxl::mxl
 	ffmpeg
+	nlohmann_json::nlohmann_json
 )

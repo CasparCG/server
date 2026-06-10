@@ -48,10 +48,10 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
-#include <boost/json.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
-#include <boost/thread.hpp>
+#include <nlohmann/json.hpp>
+#include <regex>
 
 #include <ffmpeg/util/av_assert.h>
 #include <ffmpeg/util/av_util.h>
@@ -446,18 +446,18 @@ struct dmf_mxl_producer : public core::frame_producer
     void initialize_flow(std::wstring flowId)
     {
         auto flowDef   = read_flow_desc(flowId);
-        auto mediaType = boost::json::value_to<std::string>(flowDef.at("media_type"));
+        auto mediaType = flowDef.at("media_type").get<std::string>();
 
         if (boost::equals(mediaType, "video/v210")) {
             if (vFlow_ != nullptr) {
                 return;
             }
 
-            vFlowLabel = boost::json::value_to<std::string>(flowDef.at("label"));
-            width      = boost::json::value_to<int>(flowDef.at("frame_width"));
-            height     = boost::json::value_to<int>(flowDef.at("frame_height"));
+            vFlowLabel = flowDef.at("label").get<std::string>();
+            width      = flowDef.at("frame_width").get<int>();
+            height     = flowDef.at("frame_height").get<int>();
 
-            auto const col_space = boost::json::value_to<std::string>(flowDef.at("colorspace"));
+            auto const col_space = flowDef.at("colorspace").get<std::string>();
             if (boost::iequals(col_space, "BT601")) {
                 colorspace = core::color_space::bt601;
             } else if (boost::iequals(col_space, "BT2020")) {
@@ -499,8 +499,8 @@ struct dmf_mxl_producer : public core::frame_producer
                 return;
             }
 
-            aFlowLabel        = boost::json::value_to<std::string>(flowDef.at("label"));
-            aFlowChannelCount = boost::json::value_to<uint>(flowDef.at("channel_count"));
+            aFlowLabel        = flowDef.at("label").get<std::string>();
+            aFlowChannelCount = flowDef.at("channel_count").get<uint>();
 
             CASPAR_LOG(info) << L"[mxl] [audio] opening flow " + flowId;
 
@@ -534,7 +534,7 @@ struct dmf_mxl_producer : public core::frame_producer
     }
 
   private:
-    boost::json::value read_flow_desc(std::wstring flowId)
+    nlohmann::json read_flow_desc(std::wstring flowId)
     {
         char fourKBuffer[4096];
         auto fourKBufferSize    = sizeof(fourKBuffer);
@@ -544,7 +544,7 @@ struct dmf_mxl_producer : public core::frame_producer
             CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"failed to get mxl flow definition for " + flowId));
         }
 
-        return boost::json::parse(fourKBuffer);
+        return nlohmann::json::parse(fourKBuffer);
     }
 
     core::draw_frame last_frame(const core::video_field field) override
@@ -589,10 +589,10 @@ spl::shared_ptr<core::frame_producer> create_mxl_producer(const core::frame_prod
     const bool mxl_url     = boost::algorithm::istarts_with(name_or_url, L"mxl:");
 
     if (mxl_url) {
-        boost::wregex expression(L"^mxl://([^/]+)?(/[^?]+)\\?id=([^&]+)(?:&id=([^&]+))?");
+        std::wregex expression(L"^mxl://([^/]+)?(/[^?]+)\\?id=([^&]+)(?:&id=([^&]+))?");
 
-        boost::match_results<std::wstring::const_iterator> match;
-        if (regex_search(name_or_url, match, expression)) {
+        std::wsmatch match;
+        if (std::regex_search(name_or_url, match, expression)) {
             std::wstring authority(match[1].first, match[1].second);
             std::wstring domain(match[2].first, match[2].second);
             std::wstring id1(match[3].first, match[3].second);

@@ -38,8 +38,8 @@
 #include <core/frame/frame.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/json.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <nlohmann/json.hpp>
 #include <tbb/parallel_for.h>
 
 namespace caspar { namespace dmf_mxl {
@@ -161,7 +161,7 @@ struct mxl_consumer : public core::frame_consumer
         }
 
         if (!vId_.empty()) {
-            const boost::json::value vFlowDefValue = {
+            const nlohmann::json vFlowDefValue = {
                 {"id", u8(vId_)},
                 {"label", "CasparCG Ch " + std::to_string(channel_index_) + " (V)"},
                 {"description", "CasparCG Channel " + std::to_string(channel_index_) + " Video Flow"},
@@ -191,9 +191,9 @@ struct mxl_consumer : public core::frame_consumer
                       {"bit_depth", 10}},
                  }},
 
-                {"parents", boost::json::array{}}};
+                {"parents", nlohmann::json::array()}};
 
-            const auto vFlowDef = boost::json::serialize(vFlowDefValue);
+            const auto vFlowDef = vFlowDefValue.dump();
             CASPAR_LOG(debug) << "[mxl] [video] " << vFlowDef;
 
             bool wasCreated;
@@ -205,7 +205,7 @@ struct mxl_consumer : public core::frame_consumer
         }
 
         if (!aId_.empty()) {
-            const boost::json::value aFlowDefValue = {
+            const nlohmann::json aFlowDefValue = {
                 {"id", u8(aId_)},
                 {"description", "CasparCG Channel " + std::to_string(channel_index_) + " Audio Flow"},
                 {"label", "CasparCG Ch " + std::to_string(channel_index_) + " (A)"},
@@ -217,9 +217,9 @@ struct mxl_consumer : public core::frame_consumer
                 {"channel_count", format_desc_.audio_channels},
                 {"bit_depth", 32},
 
-                {"parents", boost::json::array{}}};
+                {"parents", nlohmann::json::array()}};
 
-            const auto aFlowDef = boost::json::serialize(aFlowDefValue);
+            const auto aFlowDef = aFlowDefValue.dump();
             CASPAR_LOG(debug) << "[mxl] [audio] " << aFlowDef;
 
             bool wasCreated;
