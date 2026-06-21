@@ -73,6 +73,24 @@ struct rectangle final
     std::array<double, 2> lr = {1.0, 1.0};
 };
 
+// ACES-based per-layer color management (MIXER COLORSPACE).
+// Transfer:    0=linear,1=srgb,2=rec709,3=pq(st2084),4=hlg,5=logc3(arri),6=slog3(sony)
+// Gamut:       0=bt709,1=bt2020,2=dcip3_d65,3=aces_ap0,4=aces_ap1(acescg),5=arri_wg3,6=sgamut3_cine
+// Tonemapping: 0=none,1=reinhard,2=aces_filmic,3=aces_rrt_approx,
+//              4=aces_rrt_709,5=aces_rrt_p3,6=aces_rrt_2020_pq
+struct color_grade final
+{
+    bool  enable          = false;
+    int   input_transfer  = 0;
+    int   input_gamut     = 0;
+    int   tone_mapping    = 0;
+    int   output_gamut    = 0;
+    int   output_transfer = 0;
+    float exposure        = 1.0f;
+};
+
+bool operator==(const color_grade& lhs, const color_grade& rhs);
+bool operator!=(const color_grade& lhs, const color_grade& rhs);
 /// An inclusive range for a grading parameter, and the clamp that enforces it.
 struct grade_range final
 {
@@ -150,6 +168,7 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    core::color_grade     color_grade;
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

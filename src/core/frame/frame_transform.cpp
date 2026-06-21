@@ -103,6 +103,13 @@ image_transform image_transform::tween(double                 time,
         do_tween(time, source.chroma.spill_suppress_saturation, dest.chroma.spill_suppress_saturation, duration, tween);
     result.chroma.enable    = dest.chroma.enable;
     result.chroma.show_mask = dest.chroma.show_mask;
+    result.color_grade      = dest.color_grade;
+    result.color_grade.exposure =
+        static_cast<float>(do_tween(time,
+                                    static_cast<double>(source.color_grade.exposure),
+                                    static_cast<double>(dest.color_grade.exposure),
+                                    duration,
+                                    tween));
     result.is_key           = source.is_key || dest.is_key;
     result.invert           = source.invert || dest.invert;
     result.is_mix           = source.is_mix || dest.is_mix;
@@ -152,6 +159,16 @@ bool operator==(const rectangle& lhs, const rectangle& rhs)
     return boost::range::equal(lhs.ul, rhs.ul, eq) && boost::range::equal(lhs.lr, rhs.lr, eq);
 }
 
+bool operator==(const color_grade& lhs, const color_grade& rhs)
+{
+    return lhs.enable == rhs.enable && lhs.input_transfer == rhs.input_transfer &&
+           lhs.input_gamut == rhs.input_gamut && lhs.tone_mapping == rhs.tone_mapping &&
+           lhs.output_gamut == rhs.output_gamut && lhs.output_transfer == rhs.output_transfer &&
+           eq(lhs.exposure, rhs.exposure);
+}
+
+bool operator!=(const color_grade& lhs, const color_grade& rhs) { return !(lhs == rhs); }
+
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
     return eq(lhs.opacity, rhs.opacity) && eq(lhs.contrast, rhs.contrast) && eq(lhs.brightness, rhs.brightness) &&
@@ -169,6 +186,7 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+               lhs.perspective == rhs.perspective && lhs.color_grade == rhs.color_grade ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
                boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
