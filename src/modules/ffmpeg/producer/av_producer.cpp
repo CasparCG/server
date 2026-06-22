@@ -419,7 +419,7 @@ struct Filter
             }
         }
 
-        std::deque<unsigned> video_streams, audio_streams;
+        std::deque<AVStream*> video_streams, audio_streams;
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
@@ -429,11 +429,11 @@ struct Filter
             if (!disposition || disposition == AV_DISPOSITION_DEFAULT) {
                 switch (st->codecpar->codec_type) {
                     case AVMEDIA_TYPE_VIDEO:
-                        video_streams.push_back(n);
+                        video_streams.push_back(st);
                         break;
                     case AVMEDIA_TYPE_AUDIO:
                         if (codec_channels > 0) {
-                            audio_streams.push_back(n);
+                            audio_streams.push_back(st);
                         }
                         break;
                     default:
@@ -452,13 +452,13 @@ struct Filter
         }
 
         if (video_input_count == 1) {
-            std::stable_sort(video_streams.begin(), video_streams.end(), [&](unsigned lhs, unsigned rhs) {
-                return input->streams[lhs]->codecpar->height > input->streams[rhs]->codecpar->height;
+            std::stable_sort(video_streams.begin(), video_streams.end(), [&](AVStream* lhs, AVStream* rhs) {
+                return lhs->codecpar->height > rhs->codecpar->height;
             });
 
-            auto same_properties = [&input](unsigned lhs_stream_index, unsigned rhs_stream_index) {
-                auto lcp = input->streams[lhs_stream_index]->codecpar;
-                auto rcp = input->streams[rhs_stream_index]->codecpar;
+            auto same_properties = [](AVStream* lhs, AVStream* rhs) {
+                auto lcp = lhs->codecpar;
+                auto rcp = rhs->codecpar;
                 return lcp->width == rcp->width && lcp->height == rcp->height &&
                        lcp->sample_aspect_ratio.num == rcp->sample_aspect_ratio.num &&
                        lcp->sample_aspect_ratio.den == rcp->sample_aspect_ratio.den &&
@@ -488,7 +488,7 @@ struct Filter
             for (auto cur = inputs; cur; cur = cur->next) {
                 const auto type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
 
-                unsigned stream_index = 0;
+                AVStream* stream;
 
                 switch (type) {
                     case AVMEDIA_TYPE_VIDEO:
@@ -497,7 +497,7 @@ struct Filter
                             return;
                         }
                         // TODO find stream based on link name
-                        stream_index = video_streams.front();
+                        stream = video_streams.front();
                         video_streams.pop_front();
                         break;
                     case AVMEDIA_TYPE_AUDIO:
@@ -506,7 +506,7 @@ struct Filter
                             return;
                         }
                         // TODO find stream based on link name
-                        stream_index = audio_streams.front();
+                        stream = audio_streams.front();
                         audio_streams.pop_front();
                         break;
                     default:
@@ -515,9 +515,9 @@ struct Filter
                                                << msg_info_t("only video and audio filters supported"));
                 }
 
-                auto it = streams.find(stream_index);
+                auto it = streams.find(stream->index);
                 if (it == streams.end()) {
-                    it = streams.emplace(stream_index, input->streams[stream_index]).first;
+                    it = streams.emplace(stream->index, stream).first;
                 }
 
                 auto st = it->second.ctx;
@@ -526,7 +526,7 @@ struct Filter
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
                                  st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
-                    auto name = (boost::format("in_%d") % stream_index).str();
+                    auto name = (boost::format("in_%d") % stream->index).str();
 
                     if (st->sample_aspect_ratio.num > 0 && st->sample_aspect_ratio.den > 0) {
                         args +=
@@ -542,7 +542,7 @@ struct Filter
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-                    sources.emplace(stream_index, source);
+                    sources.emplace(stream->index, source);
                 } else if (st->codec_type == AVMEDIA_TYPE_AUDIO) {
                     char channel_layout[128];
                     FF(av_channel_layout_describe(&st->ch_layout, channel_layout, sizeof(channel_layout)));
@@ -551,13 +551,13 @@ struct Filter
                                  st->pkt_timebase.num % st->pkt_timebase.den % st->sample_rate %
                                  av_get_sample_fmt_name(st->sample_fmt) % channel_layout)
                                     .str();
-                    auto name = (boost::format("in_%d") % stream_index).str();
+                    auto name = (boost::format("in_%d") % stream->index).str();
 
                     AVFilterContext* source = nullptr;
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-                    sources.emplace(stream_index, source);
+                    sources.emplace(stream->index, source);
                 } else {
                     CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
                                                             << msg_info_t("invalid filter input media type"));
