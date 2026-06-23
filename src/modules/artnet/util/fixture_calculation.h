@@ -60,6 +60,10 @@ struct fixture
 
     fixture_flux flux;
     box          fixtureBox;
+
+    float rotation; // radians, clockwise, about box center
+    bool  mirror_x;
+    bool  mirror_y;
 };
 
 }} // namespace caspar::artnet

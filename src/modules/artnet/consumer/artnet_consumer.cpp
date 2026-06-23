@@ -45,6 +45,7 @@ extern "C" {
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -56,6 +57,10 @@ using namespace boost::asio;
 using namespace boost::asio::ip;
 
 namespace caspar { namespace artnet {
+
+static const float PI     = 3.141592653589793f;
+static const float TWO_PI = 6.283185307179586f;
+static const int ROTATION_SUPERSAMPLE = 4;
 
 struct configuration
 {
@@ -91,6 +96,11 @@ struct computed_fixture_group
     std::shared_ptr<SwsContext> sws;
     std::vector<std::uint8_t>   output;
     std::vector<sub_fixture>    sub_fixtures;
+
+    float rotation = 0.0f; // radians
+    bool  mirror_x = false;
+    bool  mirror_y = false;
+    bool  rotated  = false;
 };
 
 struct artnet_consumer : public core::frame_consumer
@@ -161,48 +171,40 @@ struct artnet_consumer : public core::frame_consumer
                         if (!group.sws)
                             continue;
 
-                        const std::uint8_t* crop_src    = src + group.crop_y * src_linesize_ + group.crop_x * 4;
-                        const std::uint8_t* src_data[1] = {crop_src};
-                        int                 src_lines[1] = {src_linesize_};
+                        const std::uint8_t* src_ptr;
+                        int                 src_stride;
+                        int                 src_h;
 
-                        std::uint8_t* dst_data[1]  = {group.output.data()};
-                        int           dst_lines[1] = {group.cols * 4};
+                        if (group.rotated) {
+                            auto [w, h] = rotated_dims(group);
+                            fill_rotated_temp(group, src, w, h);
+                            src_ptr    = rotated_temp_.data();
+                            src_stride = w * 4;
+                            src_h      = h;
+                        } else {
+                            src_ptr    = src + group.crop_y * src_linesize_ + group.crop_x * 4;
+                            src_stride = src_linesize_;
+                            src_h      = group.crop_h;
+                        }
 
-                        sws_scale(group.sws.get(), src_data, src_lines, 0, group.crop_h, dst_data, dst_lines);
+                        const std::uint8_t* sws_src[1]        = {src_ptr};
+                        int                 sws_src_stride[1] = {src_stride};
+                        std::uint8_t*       sws_dst[1]        = {group.output.data()};
+                        int                 sws_dst_stride[1] = {group.cols * 4};
+                        sws_scale(group.sws.get(), sws_src, sws_src_stride, 0, src_h, sws_dst, sws_dst_stride);
 
                         for (size_t i = 0; i < group.sub_fixtures.size(); i++) {
-                            const auto&         sf = group.sub_fixtures[i];
-                            const std::uint8_t* px = group.output.data() + i * 4;
-                            std::uint8_t        b  = px[0];
-                            std::uint8_t        g  = px[1];
-                            std::uint8_t        r  = px[2];
+                            const auto& sf  = group.sub_fixtures[i];
+                            int         col = (int)(i % (size_t)group.cols);
+                            int         row = (int)(i / (size_t)group.cols);
 
-                            auto clamp_u8 = [](float v) -> std::uint8_t {
-                                if (v <= 0.0f)
-                                    return 0;
-                                if (v >= 255.0f)
-                                    return 255;
-                                return (std::uint8_t)v;
-                            };
+                            // Mirroring is applied in the output grid's space, i.e. after any rotation has
+                            // been baked into the resampled image: rotate-then-mirror, not mirror-then-rotate.
+                            int src_col = group.mirror_x ? group.cols - 1 - col : col;
+                            int src_row = group.mirror_y ? group.rows - 1 - row : row;
 
-                            switch (sf.type) {
-                                case FixtureType::DIMMER:
-                                    write_dmx(sf.address, (std::uint8_t)(0.279 * r + 0.547 * g + 0.106 * b));
-                                    break;
-                                case FixtureType::RGB:
-                                    write_dmx(sf.address + 0, clamp_u8(r / group.flux.r));
-                                    write_dmx(sf.address + 1, clamp_u8(g / group.flux.g));
-                                    write_dmx(sf.address + 2, clamp_u8(b / group.flux.b));
-                                    break;
-                                case FixtureType::RGBW: {
-                                    float w_perc = (float)std::min({r, g, b});
-                                    write_dmx(sf.address + 0, clamp_u8((r - w_perc) / group.flux.r));
-                                    write_dmx(sf.address + 1, clamp_u8((g - w_perc) / group.flux.g));
-                                    write_dmx(sf.address + 2, clamp_u8((b - w_perc) / group.flux.b));
-                                    write_dmx(sf.address + 3, clamp_u8(w_perc / group.flux.w));
-                                    break;
-                                }
-                            }
+                            const std::uint8_t* px = group.output.data() + (src_row * group.cols + src_col) * 4;
+                            write_fixture_dmx(sf, px[2], px[1], px[0], group.flux);
                         }
                     }
 
@@ -263,6 +265,9 @@ struct artnet_consumer : public core::frame_consumer
     int src_height_   = 0;
     int src_linesize_ = 0;
 
+    // Scratch buffer for the rotated path, shared across groups
+    std::vector<std::uint8_t> rotated_temp_;
+
     io_context    io_context_;
     udp::socket   socket;
     udp::endpoint remote_endpoint;
@@ -278,6 +283,15 @@ struct artnet_consumer : public core::frame_consumer
             group.flux       = fx.flux;
             group.cols       = fx.fixtureCols;
             group.rows       = fx.fixtureRows;
+
+            float rot = std::fmod(fx.rotation, TWO_PI);
+            if (rot >  PI) rot -= TWO_PI;
+            if (rot < -PI) rot += TWO_PI;
+
+            group.rotation = rot;
+            group.mirror_x = fx.mirror_x;
+            group.mirror_y = fx.mirror_y;
+            group.rotated  = std::abs(rot) > 1e-5f;
 
             int total = (int)fx.fixtureCols * (int)fx.fixtureRows;
             group.sub_fixtures.reserve(total);
@@ -315,6 +329,112 @@ struct artnet_consumer : public core::frame_consumer
         }
     }
 
+    void sample_bilinear(const std::uint8_t* src, float x, float y, std::uint8_t* dst)
+    {
+        int   left   = (int)std::floor(x);
+        int   top    = (int)std::floor(y);
+        float frac_x = x - (float)left;
+        float frac_y = y - (float)top;
+
+        // A rotated box's corners reach beyond its bounds (and the frame), so extend the edge pixel
+        // rather than read out of bounds. This is the sampler's edge behaviour, not box clipping.
+        int x0 = std::clamp(left, 0, src_width_ - 1),  x1 = std::clamp(left + 1, 0, src_width_ - 1);
+        int y0 = std::clamp(top,  0, src_height_ - 1), y1 = std::clamp(top + 1,  0, src_height_ - 1);
+
+        const std::uint8_t* top_left     = src + y0 * src_linesize_ + x0 * 4;
+        const std::uint8_t* top_right    = src + y0 * src_linesize_ + x1 * 4;
+        const std::uint8_t* bottom_left  = src + y1 * src_linesize_ + x0 * 4;
+        const std::uint8_t* bottom_right = src + y1 * src_linesize_ + x1 * 4;
+
+        const float w_top_left     = (1.0f - frac_x) * (1.0f - frac_y);
+        const float w_top_right    = frac_x           * (1.0f - frac_y);
+        const float w_bottom_left  = (1.0f - frac_x) * frac_y;
+        const float w_bottom_right = frac_x           * frac_y;
+
+        for (int ch = 0; ch < 3; ch++)
+            dst[ch] = (std::uint8_t)(top_left[ch] * w_top_left +
+                                     top_right[ch] * w_top_right +
+                                     bottom_left[ch] * w_bottom_left +
+                                     bottom_right[ch] * w_bottom_right +
+                                     0.5f);
+        dst[3] = 255;
+    }
+
+    static std::pair<int, int> rotated_dims(const computed_fixture_group& group)
+    {
+        int w = std::min(group.cols * ROTATION_SUPERSAMPLE, (int)std::round(group.source_box.width));
+        int h = std::min(group.rows * ROTATION_SUPERSAMPLE, (int)std::round(group.source_box.height));
+        return {std::max(1, w), std::max(1, h)};
+    }
+
+    void fill_rotated_temp(const computed_fixture_group& group, const std::uint8_t* src, int dst_w, int dst_h)
+    {
+        rotated_temp_.resize((size_t)dst_w * dst_h * 4);
+        const box& src_box = group.source_box;
+
+        const float cos_r  = std::cos(group.rotation);
+        const float sin_r  = std::sin(group.rotation);
+        const float step_x = src_box.width  / (float)dst_w;
+        const float step_y = src_box.height / (float)dst_h;
+
+        const float center_x = src_box.x + src_box.width  * 0.5f;
+        const float center_y = src_box.y + src_box.height * 0.5f;
+
+        // Walk the grid as an affine map rather than recomputing the rotation per pixel: advancing
+        // one column adds a fixed (col_dx, col_dy) to the source sample point. The per-row start is
+        // still computed exactly, so float error can't accumulate beyond a single row's width.
+        const float col_dx = cos_r * step_x;
+        const float col_dy = sin_r * step_x;
+        const float off_x0 = 0.5f * step_x - src_box.width * 0.5f; // column-0 offset from center
+
+        std::uint8_t* dst = rotated_temp_.data();
+        for (int y = 0; y < dst_h; y++) {
+            const float off_y = ((float)y + 0.5f) * step_y - src_box.height * 0.5f;
+            float       sample_x = center_x + off_x0 * cos_r - off_y * sin_r;
+            float       sample_y = center_y + off_x0 * sin_r + off_y * cos_r;
+            for (int x = 0; x < dst_w; x++) {
+                sample_bilinear(src, sample_x, sample_y, dst);
+                sample_x += col_dx;
+                sample_y += col_dy;
+                dst += 4;
+            }
+        }
+    }
+
+    void write_fixture_dmx(const sub_fixture& sf,
+                           std::uint8_t        r,
+                           std::uint8_t        g,
+                           std::uint8_t        b,
+                           const fixture_flux& flux)
+    {
+        auto clamp_u8 = [](float v) -> std::uint8_t {
+            v = std::round(v);
+            if (v <= 0.0f)
+                return 0;
+            if (v >= 255.0f)
+                return 255;
+            return (std::uint8_t)v;
+        };
+        switch (sf.type) {
+            case FixtureType::DIMMER:
+                write_dmx(sf.address, clamp_u8(0.279f * r + 0.547f * g + 0.106f * b));
+                break;
+            case FixtureType::RGB:
+                write_dmx(sf.address + 0, clamp_u8(r / flux.r));
+                write_dmx(sf.address + 1, clamp_u8(g / flux.g));
+                write_dmx(sf.address + 2, clamp_u8(b / flux.b));
+                break;
+            case FixtureType::RGBW: {
+                float w_perc = (float)std::min({r, g, b});
+                write_dmx(sf.address + 0, clamp_u8((r - w_perc) / flux.r));
+                write_dmx(sf.address + 1, clamp_u8((g - w_perc) / flux.g));
+                write_dmx(sf.address + 2, clamp_u8((b - w_perc) / flux.b));
+                write_dmx(sf.address + 3, clamp_u8(w_perc / flux.w));
+                break;
+            }
+        }
+    }
+
     void write_dmx(int flat_addr, std::uint8_t value)
     {
         int slot   = flat_addr / 512;
@@ -323,25 +443,67 @@ struct artnet_consumer : public core::frame_consumer
             dmx_buffers_[slot][offset] = value;
     }
 
+    // Pull any edge that falls outside the frame back to the nearest in-frame point, warning once
+    // if that happens. After this the box is guaranteed to sit within [0, width] x [0, height].
+    void clamp_box_to_frame(box& b)
+    {
+        float left   = std::clamp(b.x, 0.0f, (float)src_width_);
+        float top    = std::clamp(b.y, 0.0f, (float)src_height_);
+        float right  = std::clamp(b.x + b.width, 0.0f, (float)src_width_);
+        float bottom = std::clamp(b.y + b.height, 0.0f, (float)src_height_);
+
+        if (left != b.x || top != b.y || right != b.x + b.width || bottom != b.y + b.height)
+            CASPAR_LOG(warning) << L"artnet: fixture box extends outside the frame; "
+                                   L"clamping to the nearest point inside it.";
+
+        b.x      = left;
+        b.y      = top;
+        b.width  = right - left;
+        b.height = bottom - top;
+    }
+
     void setup_group_sws(computed_fixture_group& group)
     {
-        int x0 = std::max(0, (int)group.source_box.x);
-        int y0 = std::max(0, (int)group.source_box.y);
-        int x1 = std::min(src_width_, (int)(group.source_box.x + group.source_box.width));
-        int y1 = std::min(src_height_, (int)(group.source_box.y + group.source_box.height));
+        if (group.sub_fixtures.empty()) {
+            CASPAR_LOG(warning) << L"artnet: fixture group has no sub-fixtures; skipping.";
+            return;
+        }
 
-        group.crop_x = x0;
-        group.crop_y = y0;
-        group.crop_w = x1 - x0;
-        group.crop_h = y1 - y0;
+        // Confine the box to the frame once, so both paths below operate on an in-frame box and
+        // there is no axis-aligned vs. rotated difference in how out-of-frame areas are handled.
+        clamp_box_to_frame(group.source_box);
 
-        if (group.crop_w <= 0 || group.crop_h <= 0 || group.sub_fixtures.empty()) {
+        const box& b = group.source_box;
+        if (b.width <= 0.0f || b.height <= 0.0f) {
             CASPAR_LOG(warning) << L"artnet: fixture box is empty or outside the channel; skipping.";
             return;
         }
 
-        group.sws.reset(sws_getContext(group.crop_w,
-                                       group.crop_h,
+        // Rotated boxes are resampled into a scratch buffer first; axis-aligned boxes take the
+        // cheap direct-crop path.
+        int sws_src_w = 0, sws_src_h = 0;
+
+        if (group.rotated) {
+            auto [w, h] = rotated_dims(group);
+            sws_src_w   = w;
+            sws_src_h   = h;
+        } else {
+            group.crop_x = (int)std::round(b.x);
+            group.crop_y = (int)std::round(b.y);
+            group.crop_w = (int)std::round(b.x + b.width) - group.crop_x;
+            group.crop_h = (int)std::round(b.y + b.height) - group.crop_y;
+
+            if (group.crop_w <= 0 || group.crop_h <= 0) {
+                CASPAR_LOG(warning) << L"artnet: fixture box is smaller than a pixel; skipping.";
+                return;
+            }
+
+            sws_src_w = group.crop_w;
+            sws_src_h = group.crop_h;
+        }
+
+        group.sws.reset(sws_getContext(sws_src_w,
+                                       sws_src_h,
                                        AV_PIX_FMT_BGRA,
                                        group.cols,
                                        group.rows,
@@ -469,10 +631,11 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture <flux> values must be positive"));
         }
 
-        if (xml_channel.second.get_optional<float>(L"rotation"))
-            CASPAR_LOG(warning)
-                << L"artnet: fixture <rotation> is no longer supported and will be ignored. "
-                   L"Use the mixer ROTATION command on the source channel instead.";
+        if (auto rot_deg = xml_channel.second.get_optional<float>(L"rotation"))
+            f.rotation = *rot_deg * PI / 180.0f;
+
+        f.mirror_x = xml_channel.second.get(L"mirror-x", false);
+        f.mirror_y = xml_channel.second.get(L"mirror-y", false);
 
         // Position can be given as center (<x>/<y>), top-left edge (<left>/<top>), or
         // bottom-right edge (<right>/<bottom>). Size is taken from <width>/<height>, or
