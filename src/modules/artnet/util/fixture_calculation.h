@@ -66,6 +66,7 @@ struct fixture
     int            universe;        // Art-Net universe; grids that overflow 512 ch spill to universe+1
 
     fixture_flux flux;
+    float        brightness; // overall output multiplier, 0..1
     box          fixtureBox;
 
     float rotation; // radians, clockwise, about box center

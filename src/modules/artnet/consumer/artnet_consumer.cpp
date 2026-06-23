@@ -102,10 +102,11 @@ struct computed_fixture_group
     std::vector<std::uint8_t>   output;
     std::vector<sub_fixture>    sub_fixtures;
 
-    float rotation = 0.0f; // radians
-    bool  mirror_x = false;
-    bool  mirror_y = false;
-    bool  rotated  = false;
+    float brightness = 1.0f;
+    float rotation   = 0.0f; // radians
+    bool  mirror_x   = false;
+    bool  mirror_y   = false;
+    bool  rotated    = false;
 };
 
 struct artnet_consumer : public core::frame_consumer
@@ -204,7 +205,7 @@ struct artnet_consumer : public core::frame_consumer
                             int src_row = group.mirror_y ? group.rows - 1 - row : row;
 
                             const std::uint8_t* px = group.output.data() + (src_row * group.cols + src_col) * 4;
-                            write_fixture_dmx(sf, px[2], px[1], px[0], group.flux);
+                            write_fixture_dmx(sf, px[2], px[1], px[0], group.flux, group.brightness);
                         }
                     }
 
@@ -295,6 +296,7 @@ struct artnet_consumer : public core::frame_consumer
             computed_fixture_group group;
             group.source_box = fx.fixtureBox;
             group.flux       = fx.flux;
+            group.brightness = fx.brightness;
             group.cols       = fx.fixtureCols;
             group.rows       = fx.fixtureRows;
 
@@ -411,10 +413,11 @@ struct artnet_consumer : public core::frame_consumer
                            std::uint8_t        r,
                            std::uint8_t        g,
                            std::uint8_t        b,
-                           const fixture_flux& flux)
+                           const fixture_flux& flux,
+                           float               brightness)
     {
-        auto clamp_u8 = [](float v) -> std::uint8_t {
-            v = std::round(v);
+        auto clamp_u8 = [brightness](float v) -> std::uint8_t {
+            v = std::round(v * brightness);
             if (v <= 0.0f)
                 return 0;
             if (v >= 255.0f)
@@ -662,6 +665,10 @@ std::vector<fixture> get_fixtures_ptree(const boost::property_tree::wptree& ptre
             if (f.flux.r <= 0.0f || f.flux.g <= 0.0f || f.flux.b <= 0.0f || f.flux.w <= 0.0f)
                 CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture <flux> values must be positive"));
         }
+
+        f.brightness = xml_channel.second.get(L"brightness", 1.0f);
+        if (f.brightness < 0.0f || f.brightness > 1.0f)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Fixture <brightness> must be between 0.0 and 1.0"));
 
         if (auto rot_deg = xml_channel.second.get_optional<float>(L"rotation"))
             f.rotation = *rot_deg * PI / 180.0f;
