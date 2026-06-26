@@ -18,8 +18,6 @@ set(SOURCES
 
 		consumer/dmf_mxl_consumer.cpp
 		consumer/dmf_mxl_consumer.h
-		consumer/v210.cpp
-		consumer/v210.h
 
 		StdAfx.h
 )
@@ -36,6 +34,7 @@ target_precompile_headers(dmf_mxl PRIVATE "StdAfx.h")
 
 set_target_properties(dmf_mxl PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
+source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
 target_link_libraries(dmf_mxl

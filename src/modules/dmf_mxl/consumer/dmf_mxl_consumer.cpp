@@ -22,7 +22,6 @@
 #include "dmf_mxl_consumer.h"
 
 #include "../StdAfx.h"
-#include "./v210.h"
 
 #include <mxl/flow.h>
 #include <mxl/flowinfo.h>
@@ -42,58 +41,12 @@
 #include <nlohmann/json.hpp>
 #include <tbb/parallel_for.h>
 
+#include <common/v210.h>
+
 namespace caspar { namespace dmf_mxl {
-
-std::vector<int32_t> create_int_matrix(const std::vector<float>& matrix)
-{
-    static const float LumaRangeWidth   = 876.f * (1024.f / 1023.f);
-    static const float ChromaRangeWidth = 896.f * (1024.f / 1023.f);
-
-    std::vector<float> color_matrix_f(matrix);
-
-    color_matrix_f[0] *= LumaRangeWidth;
-    color_matrix_f[1] *= LumaRangeWidth;
-    color_matrix_f[2] *= LumaRangeWidth;
-
-    color_matrix_f[3] *= ChromaRangeWidth;
-    color_matrix_f[4] *= ChromaRangeWidth;
-    color_matrix_f[5] *= ChromaRangeWidth;
-    color_matrix_f[6] *= ChromaRangeWidth;
-    color_matrix_f[7] *= ChromaRangeWidth;
-    color_matrix_f[8] *= ChromaRangeWidth;
-
-    std::vector<int32_t> int_matrix(color_matrix_f.size());
-
-    transform(color_matrix_f.cbegin(), color_matrix_f.cend(), int_matrix.begin(), [](const float& f) {
-        return (int32_t)round(f * 1024.f);
-    });
-
-    return int_matrix;
-};
 
 struct mxl_consumer : public core::frame_consumer
 {
-    std::vector<float> bt709{0.212639005871510,
-                             0.715168678767756,
-                             0.072192315360734,
-                             -0.114592177555732,
-                             -0.385407822444268,
-                             0.5,
-                             0.5,
-                             -0.454155517037873,
-                             -0.045844482962127};
-    std::vector<float> bt2020{0.262700212011267,
-                              0.677998071518871,
-                              0.059301716469862,
-                              -0.139630430187157,
-                              -0.360369569812843,
-                              0.5,
-                              0.5,
-                              -0.459784529009814,
-                              -0.040215470990186};
-
-    std::vector<int32_t> color_matrix;
-
     spl::shared_ptr<diagnostics::graph> graph_;
     caspar::timer                       frame_timer_;
     core::video_format_desc             format_desc_;
@@ -101,8 +54,7 @@ struct mxl_consumer : public core::frame_consumer
 
     std::thread frame_thread_;
 
-    int  channel_index_ = -1;
-    bool hdr_           = false;
+    int channel_index_ = -1;
 
     mxlInstance   instance_;
     std::wstring  vId_;
@@ -111,10 +63,11 @@ struct mxl_consumer : public core::frame_consumer
     mxlFlowWriter aWriter_    = nullptr;
     uint64_t      last_index_ = MXL_UNDEFINED_INDEX;
 
+    spl::shared_ptr<v210::v210_output> v210_out_ = v210::create_v210_output(core::color_space::bt709, 1);
+
   public:
     explicit mxl_consumer(std::wstring video, std::wstring audio)
-        : color_matrix(create_int_matrix(bt709))
-        , vId_(video)
+        : vId_(video)
         , aId_(audio)
         , executor_(L"mxl_consumer")
     {
@@ -154,10 +107,11 @@ struct mxl_consumer : public core::frame_consumer
 
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
-        hdr_           = channel_info.depth != common::bit_depth::bit8;
 
-        if (channel_info.default_color_space == core::color_space::bt2020) {
-            color_matrix = create_int_matrix(bt2020);
+        if (channel_info.depth != common::bit_depth::bit8 ||
+            channel_info.default_color_space != core::color_space::bt2020) {
+            v210_out_ = v210::create_v210_output(channel_info.default_color_space,
+                                                 channel_info.depth == common::bit_depth::bit8 ? 1 : 2);
         }
 
         if (!vId_.empty()) {
@@ -293,31 +247,13 @@ struct mxl_consumer : public core::frame_consumer
 
                 try {
                     // write v210 into the mxl grain...
-                    size_t    dest_line_bytes = ((format_desc_.width + 47) / 48) * 128;
-                    const int NUM_THREADS     = 6;
-                    auto      rows_per_thread = format_desc_.height / NUM_THREADS;
-
-                    tbb::parallel_for(0, NUM_THREADS, [&](int thread_index) {
-                        auto start_y = thread_index * rows_per_thread;
-                        auto end_y   = (thread_index + 1) * rows_per_thread;
-
-                        for (uint64_t y = start_y; y < end_y; y++) {
-                            auto     dest_row  = mxlBuffer + y * dest_line_bytes;
-                            __m128i* v210_dest = reinterpret_cast<__m128i*>(dest_row);
-
-                            if (hdr_) {
-                                auto src = (reinterpret_cast<const ARGBPixel<uint16_t>*>(frame.image_data(0).data()) +
-                                            (y * format_desc_.width));
-
-                                do_row_to_v210(src, format_desc_.width, color_matrix, v210_dest);
-                            } else {
-                                auto src = (reinterpret_cast<const ARGBPixel<uint8_t>*>(frame.image_data(0).data()) +
-                                            (y * format_desc_.width));
-
-                                do_row_to_v210(src, format_desc_.width, color_matrix, v210_dest);
-                            }
-                        }
-                    });
+                    v210_out_->convert_frame(format_desc_,
+                                             format_desc_,
+                                             v210::output_region{},
+                                             std::shared_ptr<void>(mxlBuffer, [](void*) {}),
+                                             frame,
+                                             frame,
+                                             0);
 
                     gInfo.validSlices = format_desc_.height;
 
