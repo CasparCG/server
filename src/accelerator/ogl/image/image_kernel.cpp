@@ -86,6 +86,7 @@ struct image_kernel::impl
     spl::shared_ptr<shader> shader_;
     GLuint                  vao_;
     GLuint                  vbo_;
+    int                     frame_counter_ = 0;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -268,6 +269,19 @@ struct image_kernel::impl
                          static_cast<float>(params.target_height));
         } else {
             shader_->set("sharpen_enable", false);
+        }
+
+        // Film grain
+        if (std::abs(transforms.image_transform.grain_intensity) > epsilon) {
+            shader_->set("grain_enable", true);
+            shader_->set("grain_intensity", static_cast<float>(transforms.image_transform.grain_intensity));
+            shader_->set("grain_size", static_cast<float>(transforms.image_transform.grain_size));
+            shader_->set("grain_frame", frame_counter_++);
+            shader_->set("target_size",
+                         static_cast<float>(params.target_width),
+                         static_cast<float>(params.target_height));
+        } else {
+            shader_->set("grain_enable", false);
         }
 
         // Setup blend_func

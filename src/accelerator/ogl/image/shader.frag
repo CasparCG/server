@@ -89,6 +89,11 @@ uniform bool		sharpen_enable;
 uniform float		sharpen_amount;
 uniform float		sharpen_radius;
 
+uniform bool		grain_enable;
+uniform float		grain_intensity;
+uniform float		grain_size;
+uniform int			grain_frame; // animated per frame for temporal variation
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -794,6 +799,23 @@ vec3 apply_sharpen(vec2 uv, vec3 center_col, float amount, float rad)
     return center_col + (center_col - blur_avg) * amount;
 }
 
+float grain_hash(vec2 p, int frame_seed)
+{
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + float(frame_seed) * 0.00137);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 apply_film_grain(vec3 c, vec2 uv, float intensity, float size_val, int frame_seed)
+{
+    vec2  grain_uv = uv * target_size / max(size_val, 0.5);
+    float noise    = grain_hash(grain_uv, frame_seed) * 2.0 - 1.0; // -1..+1
+    float lum      = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float response = smoothstep(0.0, 0.15, lum) * (1.0 - smoothstep(0.8, 1.0, lum));
+    c += vec3(noise * intensity * response);
+    return c;
+}
+
 void main()
 {
     vec2 uv    = TexCoord.st / TexCoord.q;
@@ -832,5 +854,7 @@ void main()
         color = 1.0 - color;
     if (blend_mode >= 0)
         color = blend(color);
+    if (grain_enable)
+        color.rgb = apply_film_grain(color.rgb, uv, grain_intensity, grain_size, grain_frame);
     fragColor = color.bgra;
 }

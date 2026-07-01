@@ -116,6 +116,9 @@ image_transform image_transform::tween(double                 time,
     result.sharpen_amount = do_tween(time, source.sharpen_amount, dest.sharpen_amount, duration, tween);
     result.sharpen_radius = do_tween(time, source.sharpen_radius, dest.sharpen_radius, duration, tween);
 
+    result.grain_intensity = do_tween(time, source.grain_intensity, dest.grain_intensity, duration, tween);
+    result.grain_size      = do_tween(time, source.grain_size, dest.grain_size, duration, tween);
+
     result.is_key           = source.is_key || dest.is_key;
     result.invert           = source.invert || dest.invert;
     result.is_mix           = source.is_mix || dest.is_mix;
@@ -186,6 +189,8 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.blur.radius, rhs.blur.radius) && lhs.blur.type == rhs.blur.type &&
                eq(lhs.blur.angle, rhs.blur.angle) && boost::range::equal(lhs.blur.center, rhs.blur.center, eq) &&
                eq(lhs.blur.tilt_y, rhs.blur.tilt_y) && eq(lhs.blur.tilt_h, rhs.blur.tilt_h) &&
+               eq(lhs.sharpen_amount, rhs.sharpen_amount) && eq(lhs.sharpen_radius, rhs.sharpen_radius) &&
+               eq(lhs.grain_intensity, rhs.grain_intensity) && eq(lhs.grain_size, rhs.grain_size) ||
                eq(lhs.sharpen_amount, rhs.sharpen_amount) && eq(lhs.sharpen_radius, rhs.sharpen_radius) ||
                eq(lhs.blur.tilt_y, rhs.blur.tilt_y) && eq(lhs.blur.tilt_h, rhs.blur.tilt_h) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&

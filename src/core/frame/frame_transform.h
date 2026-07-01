@@ -173,6 +173,8 @@ struct image_transform final
     core::blur_config     blur;
     double                sharpen_amount = 0.0;
     double                sharpen_radius = 1.0;
+    double                grain_intensity = 0.0;
+    double                grain_size      = 1.0;
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

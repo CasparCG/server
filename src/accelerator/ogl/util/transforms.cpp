@@ -77,6 +77,9 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.sharpen_amount += other.sharpen_amount;
     if (other.sharpen_radius != 1.0)
         self.sharpen_radius = other.sharpen_radius;
+    self.grain_intensity += other.grain_intensity;
+    if (other.grain_size != 1.0)
+        self.grain_size = other.grain_size;
 
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
