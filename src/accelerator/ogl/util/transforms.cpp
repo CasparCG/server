@@ -71,6 +71,9 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.is_mix |= other.is_mix;
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
+    if (other.blur.enable) {
+        self.blur = other.blur;
+    }
 
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate

@@ -43,6 +43,13 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
+uniform bool		blur_enable;
+uniform float		blur_radius;
+uniform int			blur_type; // 0=gaussian, 1=box, 2=directional, 3=zoom, 4=tilt_shift, 5=lens
+uniform float		blur_angle;
+uniform vec2		blur_center;
+uniform vec2		blur_tilt;
+uniform vec2		target_size;
 // White balance (temperature / tint)
 uniform bool		white_balance;
 uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
@@ -664,9 +671,117 @@ vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
     return c;
 }
 
+vec4 get_blurred_color(vec2 uv)
+{
+    if (!blur_enable || blur_radius < 0.5)
+        return get_rgba_color(uv);
+
+    vec2  texelSize   = 1.0 / target_size;
+    vec4  totalColor  = vec4(0.0);
+    float totalWeight = 0.0;
+
+    // GAUSSIAN BLUR (2D spiral with Gaussian weights)
+    if (blur_type == 0)
+    {
+        int   iSamples = int(clamp(blur_radius * 3.0, 16.0, 120.0));
+        float sigma    = blur_radius / 2.0;
+        for (int i = 0; i < iSamples; i++) {
+            float t      = float(i) / max(float(iSamples - 1), 1.0);
+            float radius = sqrt(t) * blur_radius;
+            float theta  = float(i) * 2.39996323; // golden angle
+            vec2  offset = vec2(cos(theta), sin(theta)) * radius * texelSize;
+            float weight = exp(-(radius * radius) / (2.0 * sigma * sigma));
+            totalColor  += get_rgba_color(uv + offset) * weight;
+            totalWeight += weight;
+        }
+    }
+    // BOX BLUR
+    else if (blur_type == 1)
+    {
+        int   steps    = min(int(blur_radius), 6);
+        float stepSize = blur_radius / max(float(steps), 1.0);
+        for (int y = -steps; y <= steps; y++) {
+            for (int x = -steps; x <= steps; x++) {
+                vec2 offset = vec2(float(x), float(y)) * stepSize * texelSize;
+                totalColor  += get_rgba_color(uv + offset);
+                totalWeight += 1.0;
+            }
+        }
+    }
+    // DIRECTIONAL BLUR (motion blur)
+    else if (blur_type == 2)
+    {
+        float angleRad = radians(blur_angle);
+        vec2  dir      = vec2(cos(angleRad), sin(angleRad));
+        int   iSamples = int(clamp(blur_radius * 2.0, 16.0, 100.0));
+        for (int i = 0; i < iSamples; i++) {
+            float t      = (float(i) / max(float(iSamples - 1), 1.0)) - 0.5;
+            vec2  offset = dir * (t * blur_radius * 2.0 * texelSize);
+            totalColor  += get_rgba_color(uv + offset);
+            totalWeight += 1.0;
+        }
+    }
+    // ZOOM BLUR
+    else if (blur_type == 3)
+    {
+        vec2  center   = blur_center;
+        vec2  toPixel  = uv - center;
+        float strength = blur_radius * 0.01;
+        int   iSamples = int(clamp(blur_radius * 2.0, 16.0, 100.0));
+        for (int i = 0; i < iSamples; i++) {
+            float scale  = 1.0 - strength * (float(i) / max(float(iSamples - 1), 1.0));
+            totalColor  += get_rgba_color(center + toPixel * scale);
+            totalWeight += 1.0;
+        }
+    }
+    // TILT-SHIFT
+    else if (blur_type == 4)
+    {
+        float angleRad    = radians(blur_angle);
+        vec2  normal      = vec2(sin(angleRad), cos(angleRad));
+        float dist        = abs(dot(uv - blur_center, normal) - (blur_tilt.x - 0.5));
+        float focus_width = blur_tilt.y;
+        float blurAmount  = smoothstep(focus_width * 0.5, focus_width * 0.5 + 0.2, dist) * blur_radius;
+        if (blurAmount < 0.5)
+            return get_rgba_color(uv);
+        int iSamples = int(clamp(blurAmount * 2.0, 16.0, 100.0));
+        for (int i = 0; i < iSamples; i++) {
+            float t      = float(i) / max(float(iSamples - 1), 1.0);
+            float radius = sqrt(t) * blurAmount;
+            float theta  = float(i) * 2.39996323;
+            vec2  offset = vec2(cos(theta), sin(theta)) * radius * texelSize;
+            totalColor  += get_rgba_color(uv + offset);
+            totalWeight += 1.0;
+        }
+    }
+    // LENS (cinematic bokeh)
+    else if (blur_type == 5)
+    {
+        float noise        = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+        float dither_theta = noise * 6.2831853;
+        int   iSamples     = int(clamp(blur_radius * 8.0, 32.0, 400.0));
+        for (int i = 0; i < iSamples; i++) {
+            float t      = float(i) / max(float(iSamples - 1), 1.0);
+            float radius = sqrt(t) * blur_radius;
+            float theta  = dither_theta + float(i) * 2.39996323;
+            vec2  offset = vec2(cos(theta), sin(theta)) * radius * texelSize;
+            vec4  col    = get_rgba_color(uv + offset);
+            float lum    = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+            float weight = 1.0 + pow(max(lum - 0.3, 0.0), 3.0) * 15.0;
+            weight      *= mix(0.3, 1.0, t);
+            totalColor  += col * weight;
+            totalWeight += weight;
+        }
+    }
+
+    if (totalWeight > 0.0)
+        return totalColor / totalWeight;
+    return get_rgba_color(uv);
+}
+
 void main()
 {
-    vec4 color = get_rgba_color(TexCoord.st / TexCoord.q);
+    vec4 color = get_blurred_color(TexCoord.st / TexCoord.q);
     if (is_straight_alpha)
         color.rgb *= color.a;
     if (chroma)

@@ -1470,6 +1470,82 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+core::blur_type get_blur_type(const std::wstring& str)
+{
+    if (boost::iequals(str, L"box"))
+        return core::blur_type::box;
+    if (boost::iequals(str, L"directional"))
+        return core::blur_type::directional;
+    if (boost::iequals(str, L"zoom"))
+        return core::blur_type::zoom;
+    if (boost::iequals(str, L"tilt_shift") || boost::iequals(str, L"tilt-shift"))
+        return core::blur_type::tilt_shift;
+    if (boost::iequals(str, L"lens"))
+        return core::blur_type::lens;
+    return core::blur_type::gaussian;
+}
+
+std::wstring get_blur_type_string(core::blur_type type)
+{
+    switch (type) {
+        case core::blur_type::box:
+            return L"box";
+        case core::blur_type::directional:
+            return L"directional";
+        case core::blur_type::zoom:
+            return L"zoom";
+        case core::blur_type::tilt_shift:
+            return L"tilt_shift";
+        case core::blur_type::lens:
+            return L"lens";
+        case core::blur_type::gaussian:
+        default:
+            return L"gaussian";
+    }
+}
+
+std::future<std::wstring> mixer_blur_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto blur = transform2.get().image_transform.blur;
+            return L"201 MIXER OK\r\n" + std::to_wstring(blur.radius) + L" " + get_blur_type_string(blur.type) + L" " +
+                   std::to_wstring(blur.angle) + L" " + std::to_wstring(blur.center[0]) + L" " +
+                   std::to_wstring(blur.center[1]) + L" " + std::to_wstring(blur.tilt_y) + L" " +
+                   std::to_wstring(blur.tilt_h) + L"\r\n";
+        });
+    }
+
+    transforms_applier transforms(ctx);
+    core::blur_config  blur;
+
+    // Format: MIXER 1-10 BLUR <radius> [type] [angle] [center_x] [center_y] [tilt_y] [tilt_h] [duration] [tween]
+    blur.enable = std::stod(ctx.parameters.at(0)) > 0.001; // Enable if radius > 0
+    blur.radius = std::stod(ctx.parameters.at(0));
+    blur.type   = ctx.parameters.size() > 1 ? get_blur_type(ctx.parameters[1]) : core::blur_type::gaussian;
+    blur.angle  = ctx.parameters.size() > 2 ? std::stod(ctx.parameters[2]) : 0.0;
+    blur.center = {ctx.parameters.size() > 3 ? std::stod(ctx.parameters[3]) : 0.5,
+                   ctx.parameters.size() > 4 ? std::stod(ctx.parameters[4]) : 0.5};
+    blur.tilt_y = ctx.parameters.size() > 5 ? std::stod(ctx.parameters[5]) : 0.5;
+    blur.tilt_h = ctx.parameters.size() > 6 ? std::stod(ctx.parameters[6]) : 0.2;
+
+    int          duration = ctx.parameters.size() > 7 ? std::stoi(ctx.parameters[7]) : 0;
+    std::wstring tween    = ctx.parameters.size() > 8 ? ctx.parameters[8] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.blur = blur;
+            return transform;
+        },
+        duration,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2139,6 +2215,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER BLUR", mixer_blur_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

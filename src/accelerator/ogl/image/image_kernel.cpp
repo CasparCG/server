@@ -239,6 +239,25 @@ struct image_kernel::impl
             shader_->set("chroma", false);
         }
 
+        // Blur
+        if (transforms.image_transform.blur.enable) {
+            shader_->set("blur_enable", true);
+            shader_->set("blur_radius", static_cast<float>(transforms.image_transform.blur.radius));
+            shader_->set("blur_type", static_cast<int>(transforms.image_transform.blur.type));
+            shader_->set("blur_angle", static_cast<float>(transforms.image_transform.blur.angle));
+            shader_->set("blur_center",
+                         static_cast<float>(transforms.image_transform.blur.center[0]),
+                         static_cast<float>(transforms.image_transform.blur.center[1]));
+            shader_->set("blur_tilt",
+                         static_cast<float>(transforms.image_transform.blur.tilt_y),
+                         static_cast<float>(transforms.image_transform.blur.tilt_h));
+            shader_->set("target_size",
+                         static_cast<float>(params.target_width),
+                         static_cast<float>(params.target_height));
+        } else {
+            shader_->set("blur_enable", false);
+        }
+
         // Setup blend_func
 
         if (transforms.image_transform.is_key) {

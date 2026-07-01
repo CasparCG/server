@@ -73,6 +73,26 @@ struct rectangle final
     std::array<double, 2> lr = {1.0, 1.0};
 };
 
+enum class blur_type : int
+{
+    gaussian    = 0,
+    box         = 1,
+    directional = 2,
+    zoom        = 3,
+    tilt_shift  = 4,
+    lens        = 5
+};
+
+struct blur_config final
+{
+    bool                  enable = false;
+    double                radius = 0.0;
+    blur_type             type   = blur_type::gaussian;
+    double                angle  = 0.0;
+    std::array<double, 2> center = {0.5, 0.5};
+    double                tilt_y = 0.5;
+    double                tilt_h = 0.2;
+};
 /// An inclusive range for a grading parameter, and the clamp that enforces it.
 struct grade_range final
 {
@@ -150,6 +170,7 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    core::blur_config     blur;
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel
