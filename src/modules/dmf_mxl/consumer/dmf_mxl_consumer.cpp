@@ -58,17 +58,20 @@ struct mxl_consumer : public core::frame_consumer
 
     mxlInstance   instance_;
     std::wstring  vId_;
+    bool          alpha_;
     mxlFlowWriter vWriter_ = nullptr;
     std::wstring  aId_;
     mxlFlowWriter aWriter_    = nullptr;
     uint64_t      last_index_ = MXL_UNDEFINED_INDEX;
 
-    spl::shared_ptr<v210::v210_output> v210_out_ = v210::create_v210_output(core::color_space::bt709, 1);
+    spl::shared_ptr<v210::v210_output> v210_out_;
 
   public:
-    explicit mxl_consumer(std::wstring video, std::wstring audio)
+    explicit mxl_consumer(std::wstring video, std::wstring audio, bool alpha)
         : vId_(video)
+        , alpha_(alpha)
         , aId_(audio)
+        , v210_out_(v210::create_v210_output(core::color_space::bt709, 1, alpha))
         , executor_(L"mxl_consumer")
     {
         instance_ = mxlCreateInstance(u8(L"/dev/shm/mxl").c_str(), NULL);
@@ -109,9 +112,9 @@ struct mxl_consumer : public core::frame_consumer
         channel_index_ = channel_info.index;
 
         if (channel_info.depth != common::bit_depth::bit8 ||
-            channel_info.default_color_space != core::color_space::bt2020) {
-            v210_out_ = v210::create_v210_output(channel_info.default_color_space,
-                                                 channel_info.depth == common::bit_depth::bit8 ? 1 : 2);
+            channel_info.default_color_space != core::color_space::bt709) {
+            v210_out_ = v210::create_v210_output(
+                channel_info.default_color_space, channel_info.depth == common::bit_depth::bit8 ? 1 : 2, alpha_);
         }
 
         if (!vId_.empty()) {
@@ -122,7 +125,8 @@ struct mxl_consumer : public core::frame_consumer
                 {"tags", {{"urn:x-nmos:tag:grouphint/v1.0", {"casparcg:Video"}}}},
 
                 {"format", "urn:x-nmos:format:video"},
-                {"media_type", "video/v210"},
+                // {"media_type", "video/v210"},
+                {"media_type", alpha_ ? "video/v210a" : "video/v210"},
                 {"grain_rate",
                  {{"numerator", format_desc_.framerate.numerator()},
                   {"denominator", format_desc_.framerate.denominator()}}},
@@ -244,6 +248,8 @@ struct mxl_consumer : public core::frame_consumer
                     CASPAR_LOG(warning) << "[mxl_consumer] Failed to open grain at index " << last_index_;
                     return false;
                 }
+
+                CASPAR_LOG(trace) << "[mxl_consumer] Opened grain with size=" << gInfo.grainSize;
 
                 try {
                     // write v210 into the mxl grain...
@@ -396,12 +402,13 @@ create_mxl_consumer(const std::vector<std::wstring>&                         par
 
     std::wstring video = get_param(L"VIDEO", params, L"");
     std::wstring audio = get_param(L"AUDIO", params, L"");
+    bool         alpha = contains_param(L"ALPHA", params);
 
     if (video.empty() && audio.empty()) {
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("MXL Consumer must have at least one flow"));
     }
 
-    return spl::make_shared<mxl_consumer>(video, audio);
+    return spl::make_shared<mxl_consumer>(video, audio, alpha);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -412,8 +419,9 @@ create_preconfigured_mxl_consumer(const boost::property_tree::wptree&           
 {
     auto video = ptree.get(L"video", L"");
     auto audio = ptree.get(L"audio", L"");
+    auto alpha = ptree.get(L"alpha", true);
 
-    return spl::make_shared<mxl_consumer>(video, audio);
+    return spl::make_shared<mxl_consumer>(video, audio, alpha);
 }
 
 }} // namespace caspar::dmf_mxl

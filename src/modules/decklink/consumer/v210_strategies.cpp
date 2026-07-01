@@ -51,7 +51,7 @@ class v210_strategy
 
   public:
     explicit v210_strategy(core::color_space color_space, uint8_t bpc)
-        : output_(v210::create_v210_output(color_space, bpc))
+        : output_(v210::create_v210_output(color_space, bpc, false))
     {
     }
 

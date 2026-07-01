@@ -171,7 +171,11 @@ struct ARGBPixel
 };
 
 template <typename T>
-void pack_v210(const ARGBPixel<T>* src, const std::vector<int32_t>& color_matrix, uint32_t* dest, int num_pixels)
+void pack_v210(const ARGBPixel<T>*         src,
+               const std::vector<int32_t>& color_matrix,
+               uint32_t*                   dest,
+               int                         num_pixels,
+               bool                        straight_alpha)
 {
     auto write_v210 = [dest, index = 0, shift = 0](uint32_t val) mutable {
         dest[index] |= ((val & 0x3FF) << shift);
@@ -184,15 +188,26 @@ void pack_v210(const ARGBPixel<T>* src, const std::vector<int32_t>& color_matrix
     };
 
     for (int x = 0; x < num_pixels; ++x, ++src) {
-        uint32_t r, g, b;
+        uint32_t r, g, b, a;
         if constexpr (std::is_same<T, uint16_t>()) {
             r = src->R >> 6;
             g = src->G >> 6;
             b = src->B >> 6;
+            a = src->A >> 6;
         } else if constexpr (std::is_same<T, uint8_t>()) {
             r = src->R << 2;
             g = src->G << 2;
             b = src->B << 2;
+            a = src->A << 2;
+        }
+
+        // convert for straight alpha
+        if (straight_alpha && a != 0) {
+            int const factor = 1024 << 10;
+            int const coeff  = factor / a;
+            r                = (r * coeff) >> 10;
+            g                = (g * coeff) >> 10;
+            b                = (b * coeff) >> 10;
         }
 
         if (x % 2 == 0) {
@@ -248,17 +263,19 @@ class v210_conv
     std::vector<int32_t> color_matrix;
     __m128i              black_batch;
     uint8_t              bpc;
+    bool                 straight_alpha;
 
   public:
-    explicit v210_conv(core::color_space color_space, uint8_t bpc)
+    explicit v210_conv(core::color_space color_space, uint8_t bpc, bool straight_alpha)
         : color_matrix(create_int_matrix(color_space == core::color_space::bt2020 ? bt2020 : bt709))
         , bpc(bpc)
+        , straight_alpha(straight_alpha)
     {
         // setup black batch (6 pixels of black, encoded as v210)
         ARGBPixel<> black[6];
         memset(black, 0, sizeof(black));
         memset(&black_batch, 0, sizeof(__m128i));
-        pack_v210(black, color_matrix, reinterpret_cast<uint32_t*>(&black_batch), 6);
+        pack_v210(black, color_matrix, reinterpret_cast<uint32_t*>(&black_batch), 6, false);
     }
 
     void convert_frame(const core::video_format_desc& channel_format_desc,
@@ -288,6 +305,7 @@ class v210_conv
 
   private:
     int get_row_bytes(int width) { return ((width + 47) / 48) * 128; }
+    int get_row_bytes_alpha(int width) { return ((width + 2) / 3) * 4; }
 
     // Fill count 6-pixel groups with black
     inline void fill_black_groups(__m128i*& dest, int count) const
@@ -295,6 +313,14 @@ class v210_conv
         for (int i = 0; i < count; ++i) {
             _mm_storeu_si128(dest++, black_batch);
         }
+    }
+
+    // Fill count 24-pixel groups with transparency
+    inline void fill_transparent_groups(uint32_t*& dest, int count) const
+    {
+        // 256bits is 32 bytes
+        memset(dest, 0, count * 32);
+        dest += 8;
     }
 
     // Convert 48 pixels using AVX2 SIMD
@@ -334,6 +360,22 @@ class v210_conv
             pixel_pairs[2] = _mm256_unpacklo_epi16(p4567, zero);
             pixel_pairs[3] = _mm256_unpackhi_epi16(p4567, zero);
 
+            if (straight_alpha) {
+                // convert to straight alpha
+                int const factor = 1024 << 10;
+                for (int i = 0; i < 4; i++) {
+                    int const a1       = _mm256_extract_epi32(pixel_pairs[i], 3);
+                    int const a2       = _mm256_extract_epi32(pixel_pairs[i], 7);
+                    int const a1_coeff = a1 == 0 ? 1024 : factor / a1;
+                    int const a2_coeff = a2 == 0 ? 1024 : factor / a2;
+
+                    __m256i y_coeff = _mm256_set_epi32(
+                        a1_coeff, a1_coeff, a1_coeff, a1_coeff, a2_coeff, a2_coeff, a2_coeff, a2_coeff);
+                    __m256i res    = _mm256_mullo_epi32(pixel_pairs[i], y_coeff);
+                    pixel_pairs[i] = _mm256_srli_epi32(res, 10);
+                }
+            }
+
             rgb_to_yuv_avx2(pixel_pairs, color_matrix, &luma[packet_index], &chroma[packet_index]);
         }
 
@@ -350,7 +392,7 @@ class v210_conv
 
         if (full_6pixel_groups > 0) {
             int pixels_in_groups = full_6pixel_groups * 6;
-            pack_v210(src, color_matrix, reinterpret_cast<uint32_t*>(dest), pixels_in_groups);
+            pack_v210(src, color_matrix, reinterpret_cast<uint32_t*>(dest), pixels_in_groups, straight_alpha);
             dest += full_6pixel_groups;
             src += pixels_in_groups;
             pixel_count -= pixels_in_groups;
@@ -361,10 +403,80 @@ class v210_conv
             ARGBPixel<T> pixels[6];
             memset(pixels, 0, sizeof(pixels));
             memcpy(pixels, src, pixel_count * sizeof(ARGBPixel<T>));
-            pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(dest), 6);
+            pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(dest), 6, straight_alpha);
             dest++;
             src += pixel_count;
         }
+    }
+
+    // Pack 48 pixels of alpha using AVX2 SIMD
+    template <typename T>
+    inline void pack_48_alpha_avx2(const ARGBPixel<T>*& src, __m256i*& dest) const
+    {
+        const __m256i* pixeldata = reinterpret_cast<const __m256i*>(src);
+
+        if constexpr (std::is_same<T, uint16_t>()) {
+            for (int j = 0; j < 2; j++) {
+                auto result = _mm256_setzero_si256();
+                for (int i = 0; i < 6; i++) {
+                    auto padding = i > 2 ? 0 : 2;
+
+                    auto group = _mm256_loadu_si256(pixeldata++);
+                    auto alpha =
+                        _mm256_slli_epi64(_mm256_srli_epi64(_mm256_slli_epi64(group, 6), 54), 2 + padding + i * 10);
+
+                    result = _mm256_hadd_epi32(alpha, result);
+                }
+
+                // _mm256_store_si256(dest++, result);
+                memcpy(dest, &result, 32);
+                dest++;
+            }
+        } else if constexpr (std::is_same<T, uint8_t>()) {
+            for (int j = 0; j < 2; j++) {
+                auto result = _mm256_setzero_si256();
+                for (int i = 0; i < 3; i++) {
+                    auto group = _mm256_loadu_si256(pixeldata++);
+                    auto alpha = _mm256_slli_epi32(_mm256_srli_epi32(group, 24), 2 + i * 10);
+
+                    result = _mm256_add_epi32(alpha, result);
+                }
+
+                // _mm256_store_si256(dest++, result);
+                memcpy(dest, &result, 32);
+                dest++;
+            }
+        } else {
+            static_assert(!std::is_same<T, T>(), "Unsupported template type for v210 conversion");
+        }
+    }
+
+    // Convert remaining pixels (less than 48) using scalar code
+    template <typename T>
+    inline void pack_alpha(const ARGBPixel<T>* src, uint32_t*& dest, int pixel_count) const
+    {
+        auto write_alpha = [dest, index = 0, shift = 0](uint32_t val) mutable {
+            dest[index] |= ((val & 0x3FF) << shift);
+
+            shift += 10;
+            if (shift >= 30) {
+                index++;
+                shift = 0;
+            }
+        };
+
+        for (auto i = 0; i < pixel_count; i++) {
+            uint32_t a;
+            if constexpr (std::is_same<T, uint16_t>()) {
+                a = (src + i)->A >> 6;
+            } else if constexpr (std::is_same<T, uint8_t>()) {
+                a = (src + i)->A << 2;
+            }
+
+            write_alpha(a);
+        }
+
+        dest += (pixel_count + 2) / 3;
     }
 
     template <typename T>
@@ -378,9 +490,17 @@ class v210_conv
         if (!frame)
             return;
 
-        int    firstLine            = topField ? 0 : 1;
-        size_t dest_line_bytes      = get_row_bytes(output_format_desc.width);
-        int    black_groups_per_row = static_cast<int>(dest_line_bytes / sizeof(__m128i));
+        int    firstLine                  = topField ? 0 : 1;
+        size_t dest_line_bytes            = get_row_bytes(output_format_desc.width);
+        size_t dest_alpha_line_bytes      = get_row_bytes_alpha(output_format_desc.width);
+        int    black_groups_per_row       = static_cast<int>(dest_line_bytes / sizeof(__m128i));
+        int    transparent_groups_per_row = static_cast<int>(dest_line_bytes / 32);
+
+        // CASPAR_LOG(trace) << "[v210_conv] Line bytes=" << dest_line_bytes
+        //                   << ", alpha line bytes=" << dest_alpha_line_bytes;
+
+        // CASPAR_LOG(trace) << "[v210_conv] black_groups_per_row=" << black_groups_per_row
+        //                   << ", transparent_groups_per_row=" << transparent_groups_per_row;
 
         // Calculate effective region dimensions
         int region_w = region.region_w > 0 ? region.region_w : channel_format_desc.width - region.src_x;
@@ -397,11 +517,23 @@ class v210_conv
         int max_y_content = region.dest_y + lines_to_copy;
 
         // Calculate dest_x alignment for v210 (6 pixels per group)
-        int black_groups_start   = region.dest_x / 6;
-        int partial_black_pixels = region.dest_x - black_groups_start * 6;
+        int black_groups_start         = region.dest_x / 6;
+        int partial_black_pixels       = region.dest_x - black_groups_start * 6;
+        int transparent_groups_start   = region.dest_x / 24;
+        int partial_transparent_pixels = region.dest_x - transparent_groups_start * 24;
 
-        const int NUM_THREADS     = 6;
-        auto      rows_per_thread = output_format_desc.height / NUM_THREADS;
+        // CASPAR_LOG(trace) << "[v210_conv] black_groups_start= " << black_groups_start
+        //                   << ", partial_black_pixels= " << partial_black_pixels
+        //                   << ", transparent_groups_start= " << transparent_groups_start
+        //                   << ", partial_transparent_pixels= " << partial_transparent_pixels;
+
+        const int NUM_THREADS = 6;
+        // const int NUM_THREADS     = 1;
+        auto rows_per_thread = output_format_desc.height / NUM_THREADS;
+
+        auto alpha_dest_plane =
+            straight_alpha ? reinterpret_cast<uint8_t*>(image_data.get()) + output_format_desc.height * dest_line_bytes
+                           : NULL;
 
         tbb::parallel_for(0, NUM_THREADS, [&](int thread_index) {
             auto start_y = firstLine + thread_index * rows_per_thread;
@@ -410,18 +542,33 @@ class v210_conv
             for (uint64_t y = start_y; y < end_y; y += output_format_desc.field_count) {
                 auto     dest_row  = reinterpret_cast<uint8_t*>(image_data.get()) + y * dest_line_bytes;
                 __m128i* v210_dest = reinterpret_cast<__m128i*>(dest_row);
+                auto     alpha_dest =
+                    straight_alpha ? reinterpret_cast<uint32_t*>(alpha_dest_plane + y * dest_alpha_line_bytes) : NULL;
 
                 // Check if this row is outside the content region
                 if (y < region.dest_y || y >= max_y_content) {
                     fill_black_groups(v210_dest, black_groups_per_row);
+                    if (straight_alpha) {
+                        // CASPAR_LOG(trace)
+                        //     << "[v210_conv] y=" << y
+                        //     << " fill_transparent_groups(outside content region)=" << transparent_groups_per_row;
+                        fill_transparent_groups(alpha_dest, transparent_groups_per_row);
+                    }
                     continue;
                 }
 
                 const uint64_t src_y = y - region.dest_y + region.src_y;
 
                 // Fill the start of the row with black (complete 6-pixel groups)
-                fill_black_groups(v210_dest, black_groups_start);
-
+                if (black_groups_start > 0) {
+                    fill_black_groups(v210_dest, black_groups_start);
+                    if (straight_alpha) {
+                        // CASPAR_LOG(trace) << "[v210_conv] y=" << y
+                        //                   << " fill_transparent_groups(fill start of row)=" <<
+                        //                   transparent_groups_start;
+                        fill_transparent_groups(alpha_dest, transparent_groups_start);
+                    }
+                }
                 int content_pixels_written = 0;
 
                 // Handle partial black group at start (if dest_x is not aligned to 6 pixels)
@@ -439,7 +586,11 @@ class v210_conv
                         pixels[partial_black_pixels + i] = src[i];
                     }
 
-                    pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6);
+                    if (straight_alpha) {
+                        // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(partial black at start)=" << 6;
+                        pack_alpha(pixels, alpha_dest, 6);
+                    }
+                    pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6, straight_alpha);
                     v210_dest++;
                     content_pixels_written = content_in_packet;
                 }
@@ -447,18 +598,36 @@ class v210_conv
                 // Pack the main content pixels
                 int remaining_content = pixels_to_copy - content_pixels_written;
                 if (remaining_content > 0) {
-                    auto src = reinterpret_cast<const ARGBPixel<T>*>(frame.image_data(0).data()) +
-                               (src_y * channel_format_desc.width + region.src_x + content_pixels_written);
+                    auto     src = reinterpret_cast<const ARGBPixel<T>*>(frame.image_data(0).data()) +
+                                   (src_y * channel_format_desc.width + region.src_x + content_pixels_written);
+                    __m256i* alpha_dest_avx2 = straight_alpha ? reinterpret_cast<__m256i*>(alpha_dest) : NULL;
 
                     // Process 48-pixel batches with AVX2
                     int fullspeed_batches = remaining_content / 48;
+
+                    // if (straight_alpha) {
+                    //     // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(main)=" << fullspeed_batches *
+                    //     // 48;
+                    //     pack_alpha(src, alpha_dest, fullspeed_batches * 48);
+                    // }
+
                     for (int batch = 0; batch < fullspeed_batches; ++batch) {
+                        if (straight_alpha) {
+                            // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_48_alpha x=" << batch * 48;
+                            pack_48_alpha_avx2(src, alpha_dest_avx2);
+                            alpha_dest += 16;
+                        }
                         convert_48_pixels_avx2(src, v210_dest);
                     }
 
                     // Process remaining content pixels (less than 48)
                     int rest_content = remaining_content - fullspeed_batches * 48;
                     if (rest_content > 0) {
+                        if (straight_alpha) {
+                            // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(rest_content)=" <<
+                            // rest_content;
+                            pack_alpha(src, alpha_dest, rest_content);
+                        }
                         convert_remaining_pixels(src, v210_dest, rest_content);
                     }
                 }
@@ -473,9 +642,9 @@ class v210_conv
     }
 };
 
-spl::shared_ptr<v210_output> create_v210_output(core::color_space colorspace, uint8_t bpc)
+spl::shared_ptr<v210_output> create_v210_output(core::color_space colorspace, uint8_t bpc, bool straight_alpha)
 {
-    return spl::make_shared<v210_conv>(colorspace, bpc);
+    return spl::make_shared<v210_conv>(colorspace, bpc, straight_alpha);
 }
 
 }} // namespace caspar::v210

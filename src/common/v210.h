@@ -62,6 +62,6 @@ class v210_output
                                uint8_t                        interlaced) = 0;
 };
 
-spl::shared_ptr<v210_output> create_v210_output(core::color_space colorspace, uint8_t bpc);
+spl::shared_ptr<v210_output> create_v210_output(core::color_space colorspace, uint8_t bpc, bool straight_alpha);
 
 }} // namespace caspar::v210
