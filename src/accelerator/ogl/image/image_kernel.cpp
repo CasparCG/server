@@ -258,6 +258,18 @@ struct image_kernel::impl
             shader_->set("blur_enable", false);
         }
 
+        // Sharpen
+        if (std::abs(transforms.image_transform.sharpen_amount) > epsilon) {
+            shader_->set("sharpen_enable", true);
+            shader_->set("sharpen_amount", static_cast<float>(transforms.image_transform.sharpen_amount));
+            shader_->set("sharpen_radius", static_cast<float>(transforms.image_transform.sharpen_radius));
+            shader_->set("target_size",
+                         static_cast<float>(params.target_width),
+                         static_cast<float>(params.target_height));
+        } else {
+            shader_->set("sharpen_enable", false);
+        }
+
         // Setup blend_func
 
         if (transforms.image_transform.is_key) {

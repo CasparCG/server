@@ -85,6 +85,10 @@ uniform vec3		cdl_offset;
 uniform vec3		cdl_power;
 uniform float		cdl_saturation;
 
+uniform bool		sharpen_enable;
+uniform float		sharpen_amount;
+uniform float		sharpen_radius;
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -779,9 +783,23 @@ vec4 get_blurred_color(vec2 uv)
     return get_rgba_color(uv);
 }
 
+vec3 apply_sharpen(vec2 uv, vec3 center_col, float amount, float rad)
+{
+    vec2 ts = 1.0 / target_size * rad;
+    vec3 n  = get_rgba_color(uv + vec2( 0.0, -ts.y)).rgb;
+    vec3 s  = get_rgba_color(uv + vec2( 0.0,  ts.y)).rgb;
+    vec3 e  = get_rgba_color(uv + vec2( ts.x,  0.0)).rgb;
+    vec3 w  = get_rgba_color(uv + vec2(-ts.x,  0.0)).rgb;
+    vec3 blur_avg = (n + s + e + w) * 0.25;
+    return center_col + (center_col - blur_avg) * amount;
+}
+
 void main()
 {
-    vec4 color = get_blurred_color(TexCoord.st / TexCoord.q);
+    vec2 uv    = TexCoord.st / TexCoord.q;
+    vec4 color = get_blurred_color(uv);
+    if (sharpen_enable)
+        color.rgb = apply_sharpen(uv, color.rgb, sharpen_amount, sharpen_radius);
     if (is_straight_alpha)
         color.rgb *= color.a;
     if (chroma)
