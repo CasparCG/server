@@ -35,6 +35,7 @@
 
 #include <core/consumer/channel_info.h>
 #include <core/frame/frame.h>
+#include <core/frame/frame_side_data.h>
 #include <core/video_format.h>
 
 #if defined(__GNUC__) && __GNUC__ == 14
@@ -44,11 +45,13 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 #if defined(__GNUC__) && __GNUC__ == 14
 #pragma GCC diagnostic pop
 #endif
+#include <cstring>
 
 #include <boost/crc.hpp>
 
@@ -59,6 +62,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -88,6 +92,10 @@ struct Stream
     std::shared_ptr<AVCodecContext> enc = nullptr;
     AVStream*                       st  = nullptr;
 
+    core::a53_cc_queue             a53_cc_queue_;
+    core::frame_side_data_in_queue last_frame_side_data_in_queue_;
+    bool                           last_field_is_second_;
+
     Stream(AVFormatContext*                    oc,
            std::string                         suffix,
            AVCodecID                           codec_id,
@@ -95,6 +103,8 @@ struct Stream
            bool                                realtime,
            common::bit_depth                   depth,
            std::map<std::string, std::string>& options)
+        : a53_cc_queue_(format_desc.framerate, format_desc.field_count != 1)
+        , last_field_is_second_(a53_cc_queue_.interlaced())
     {
         std::map<std::string, std::string> stream_options;
 
@@ -202,72 +212,20 @@ struct Stream
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out"));
-
             // TODO codec->profiles
-            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
-            // AV_OPT_SEARCH_CHILDREN));
-#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
-            const void* pix_fmts;
-            int         nb_pix_fmts = 0;
-            FF(avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0, &pix_fmts, &nb_pix_fmts));
-
-            FF(av_opt_set_array(sink,
-                                "pixel_formats",
-                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
-                                0,
-                                nb_pix_fmts,
-                                AV_OPT_TYPE_PIXEL_FMT,
-                                pix_fmts));
-#else
-            FF(av_opt_set_int_list(sink, "pix_fmts", codec->pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-#endif
-
+            // TODO codec->supported_framerates
+            sink = create_buffersink(graph.get(), "out", get_supported_pixel_formats(nullptr, codec));
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
             // TODO codec->profiles
-
-#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
-            const void* sample_fmts;
-            int         nb_sample_fmts = 0;
-            FF(avcodec_get_supported_config(
-                nullptr, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &sample_fmts, &nb_sample_fmts));
-
-            FF(av_opt_set_array(sink,
-                                "sample_formats",
-                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
-                                0,
-                                nb_sample_fmts,
-                                AV_OPT_TYPE_SAMPLE_FMT,
-                                sample_fmts));
-
-            const void* sample_rates;
-            int         nb_sample_rates = 0;
-            FF(avcodec_get_supported_config(
-                nullptr, codec, AV_CODEC_CONFIG_SAMPLE_RATE, 0, &sample_rates, &nb_sample_rates));
-
-            FF(av_opt_set_array(sink,
-                                "samplerates",
-                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
-                                0,
-                                nb_sample_rates,
-                                AV_OPT_TYPE_INT,
-                                sample_rates));
-#else
-            FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
-
-            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
-            // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
-
+            sink = create_abuffersink(graph.get(),
+                                      "out",
+                                      get_supported_sample_formats(nullptr, codec),
+                                      get_supported_sample_rates(nullptr, codec),
+                                      get_supported_channel_layouts(nullptr, codec));
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
-
-        FF(avfilter_init_str(sink, nullptr));
-
         {
             const auto cur = outputs;
 
@@ -358,6 +316,33 @@ struct Stream
             if (enc->codec_type == AVMEDIA_TYPE_VIDEO) {
                 frame      = make_av_video_frame(in_frame, format_desc);
                 frame->pts = video_pts;
+
+                auto [start, end] = in_frame.side_data().position_range_since_last(last_frame_side_data_in_queue_);
+                for (auto pos = start; pos < end; pos++) {
+                    if (auto in_side_data_opt = in_frame.side_data().queue->get(pos)) {
+                        for (auto& in_side_data : *in_side_data_opt) {
+                            switch (in_side_data.type()) {
+                                case core::frame_side_data_type::a53_cc:
+                                    CASPAR_LOG(trace)
+                                        << L"ffmpeg_consumer: queued A53_CC side data: "
+                                        << boost::log::dump(in_side_data.data().data(), in_side_data.data().size(), 16);
+                                    a53_cc_queue_.lock().push_field(in_side_data.data());
+                                    break;
+                            }
+                        }
+                    }
+                }
+
+                auto is_second_field  = !last_field_is_second_ && a53_cc_queue_.interlaced();
+                last_field_is_second_ = is_second_field;
+
+                if (!is_second_field) {
+                    auto a53_cc = a53_cc_queue_.lock().pop_frame();
+                    CASPAR_LOG(trace) << L"ffmpeg_consumer: unqueued A53_CC side data: "
+                                      << boost::log::dump(a53_cc.data(), a53_cc.size(), 16);
+                    auto* side_data = FFMEM(av_frame_new_side_data(frame.get(), AV_FRAME_DATA_A53_CC, a53_cc.size()));
+                    std::memcpy(side_data->data, a53_cc.data(), a53_cc.size());
+                }
             } else if (enc->codec_type == AVMEDIA_TYPE_AUDIO) {
                 frame      = make_av_audio_frame(in_frame, format_desc);
                 frame->pts = audio_pts;

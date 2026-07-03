@@ -43,6 +43,8 @@ endif()
 
 cmake_host_system_information(RESULT CONFIG_CPU_COUNT QUERY NUMBER_OF_PHYSICAL_CORES)
 
+find_package(Libklvanc 1.0)
+
 include(CasparCG_Util)
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generated/version.h")
 

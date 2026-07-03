@@ -738,7 +738,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                                        L"data are both 10-bit YUV pixel format.";
             } else {
                 CASPAR_LOG(info) << print() << L" DeckLink hardware supports VANC.";
-                vanc_ = create_vanc(config.vanc);
+                vanc_ = create_vanc(config.vanc, decklink_format_desc_);
             }
         }
 
@@ -968,13 +968,17 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             core::const_frame frame2;
 
             bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
-            if (mode_->GetFieldDominance() != bmdProgressiveFrame) {
+            if (isInterlaced) {
                 // If the main is not progressive, then pop the second frame
                 frame2 = pop();
             }
 
             if (abort_request_)
                 return E_FAIL;
+
+            if (vanc_) {
+                vanc_->push_frame_side_data(frame1.side_data(), frame2.side_data());
+            }
 
             BMDTimeValue video_display_time = video_scheduled_;
             video_scheduled_ += decklink_format_desc_.duration;

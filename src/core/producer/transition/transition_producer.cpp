@@ -42,16 +42,16 @@ class transition_producer : public frame_producer
 
     const transition_info info_;
 
-    spl::shared_ptr<frame_producer> dst_producer_ = frame_producer::empty();
-    spl::shared_ptr<frame_producer> src_producer_ = frame_producer::empty();
-    bool                            dst_is_ready_ = false;
+    frame_producer_and_attrs dst_producer_{};
+    frame_producer_and_attrs src_producer_{};
+    bool                     dst_is_ready_ = false;
 
   public:
-    transition_producer(const spl::shared_ptr<frame_producer>& dest, transition_info info)
+    transition_producer(const frame_producer_and_attrs& dest, transition_info info)
         : info_(std::move(info))
         , dst_producer_(dest)
     {
-        dst_is_ready_ = dst_producer_->is_ready();
+        dst_is_ready_ = dst_producer_.producer->is_ready();
         update_state();
     }
 
@@ -60,9 +60,9 @@ class transition_producer : public frame_producer
     void update_is_ready(const core::video_field field)
     {
         // Ensure a frame has been attempted
-        dst_producer_->first_frame(field);
+        dst_producer_.producer->first_frame(field);
 
-        dst_is_ready_ = dst_producer_->is_ready();
+        dst_is_ready_ = dst_producer_.producer->is_ready();
     }
 
     core::draw_frame last_frame(const core::video_field field) override
@@ -72,11 +72,11 @@ class transition_producer : public frame_producer
         update_is_ready(field);
 
         if (!dst_is_ready_) {
-            return src_producer_->last_frame(field);
+            return src_producer_.last_frame(field);
         }
 
-        auto src = src_producer_->last_frame(field);
-        auto dst = dst_producer_->last_frame(field);
+        auto src = src_producer_.last_frame(field);
+        auto dst = dst_producer_.last_frame(field);
 
         if (dst && current_frame_ >= info_.duration) {
             return dst;
@@ -85,13 +85,13 @@ class transition_producer : public frame_producer
         }
     }
 
-    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_->first_frame(field); }
+    core::draw_frame first_frame(const core::video_field field) override { return dst_producer_.first_frame(field); }
 
-    void leading_producer(const spl::shared_ptr<frame_producer>& producer) override { src_producer_ = producer; }
+    void leading_producer(const frame_producer_and_attrs& producer) override { src_producer_ = producer; }
 
-    [[nodiscard]] spl::shared_ptr<frame_producer> following_producer() const override
+    [[nodiscard]] frame_producer_and_attrs following_producer() const override
     {
-        return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : core::frame_producer::empty();
+        return current_frame_ >= info_.duration && dst_is_ready_ ? dst_producer_ : frame_producer_and_attrs{};
     }
 
     [[nodiscard]] std::optional<int64_t> auto_play_delta() const override
@@ -130,8 +130,8 @@ class transition_producer : public frame_producer
 
     void update_state()
     {
-        state_                        = dst_producer_->state();
-        state_["transition/producer"] = dst_producer_->name();
+        state_                        = dst_producer_.producer->state();
+        state_["transition/producer"] = dst_producer_.producer->name();
         state_["transition/frame"]    = {current_frame_, info_.duration};
         state_["transition/type"]     = [&]() -> std::string {
             switch (info_.type) {
@@ -179,14 +179,14 @@ class transition_producer : public frame_producer
 
         // If destination is not ready, always use source (don't start any transition)
         if (!dst_is_ready_) {
-            return src_producer_->receive(field, nb_samples);
+            return src_producer_.receive(field, nb_samples);
         }
 
         // If transition is complete, return destination
         if (current_frame_ >= info_.duration) {
-            auto dst = dst_producer_->receive(field, nb_samples);
+            auto dst = dst_producer_.receive(field, nb_samples);
             if (!dst)
-                dst = dst_producer_->last_frame(field);
+                dst = dst_producer_.last_frame(field);
             return dst;
         }
 
@@ -194,16 +194,16 @@ class transition_producer : public frame_producer
         if (info_.type == transition_type::cut) {
             if (current_frame_ >= info_.duration) {
                 // Cut now - return destination
-                auto dst = dst_producer_->receive(field, nb_samples);
+                auto dst = dst_producer_.receive(field, nb_samples);
                 if (!dst)
-                    dst = dst_producer_->last_frame(field);
+                    dst = dst_producer_.last_frame(field);
                 current_frame_++; // Increment after processing
                 return dst;
             } else {
                 // Not time to cut yet - return source
-                auto src = src_producer_->receive(field, nb_samples);
+                auto src = src_producer_.receive(field, nb_samples);
                 if (!src)
-                    src = src_producer_->last_frame(field);
+                    src = src_producer_.last_frame(field);
                 current_frame_++; // Increment after processing
                 return src;
             }
@@ -215,35 +215,35 @@ class transition_producer : public frame_producer
         return result;
     }
 
-    [[nodiscard]] uint32_t nb_frames() const override { return dst_producer_->nb_frames(); }
+    [[nodiscard]] uint32_t nb_frames() const override { return dst_producer_.producer->nb_frames(); }
 
-    [[nodiscard]] uint32_t frame_number() const override { return dst_producer_->frame_number(); }
+    [[nodiscard]] uint32_t frame_number() const override { return dst_producer_.producer->frame_number(); }
 
     [[nodiscard]] std::wstring print() const override
     {
-        return L"transition[" + src_producer_->print() + L"=>" + dst_producer_->print() + L"]";
+        return L"transition[" + src_producer_.producer->print() + L"=>" + dst_producer_.producer->print() + L"]";
     }
 
     [[nodiscard]] std::wstring name() const override { return L"transition"; }
 
     [[nodiscard]] std::future<std::wstring> call(const std::vector<std::wstring>& params) override
     {
-        return dst_producer_->call(params);
+        return dst_producer_.producer->call(params);
     }
 
     [[nodiscard]] draw_frame compose(const core::video_field field, int nb_samples) const
     {
         // Helper lambdas to get wrapped frames
         auto get_src_frame = [&]() {
-            auto f = src_producer_->receive(field, nb_samples);
+            auto f = src_producer_.producer->receive(field, nb_samples);
             if (!f)
-                f = src_producer_->last_frame(field);
+                f = src_producer_.producer->last_frame(field);
             return draw_frame::push(std::move(f));
         };
         auto get_dst_frame = [&]() {
-            auto f = dst_producer_->receive(field, nb_samples);
+            auto f = dst_producer_.producer->receive(field, nb_samples);
             if (!f)
-                f = dst_producer_->last_frame(field);
+                f = dst_producer_.producer->last_frame(field);
             return draw_frame::push(std::move(f));
         };
 
@@ -367,11 +367,11 @@ class transition_producer : public frame_producer
 
     [[nodiscard]] core::monitor::state state() const override { return state_; }
 
-    bool is_ready() override { return dst_producer_->is_ready(); }
+    bool is_ready() override { return dst_producer_.producer->is_ready(); }
 };
 
-spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr<frame_producer>& destination,
-                                                           const transition_info&                 info)
+spl::shared_ptr<frame_producer> create_transition_producer(const frame_producer_and_attrs& destination,
+                                                           const transition_info&          info)
 {
     return spl::make_shared<transition_producer>(destination, info);
 }
