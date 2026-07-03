@@ -167,6 +167,8 @@ struct bluefish_producer
     const core::video_format_repository  format_repository_;
     std::vector<uint8_t>                 conversion_buffer_;
 
+    std::shared_ptr<core::frame_side_data_queue> side_data_queue_ = std::make_shared<core::frame_side_data_queue>();
+
     tbb::concurrent_bounded_queue<core::draw_frame> frame_buffer_;
     std::exception_ptr                              exception_;
 
@@ -238,9 +240,9 @@ struct bluefish_producer
 
             blue_->get_card_property32(VIDEO_MODE_EXT_INPUT, &mode_);
             format_desc_   = get_format_desc(format_repository,
-                                           *blue_,
-                                           static_cast<EVideoModeExt>(mode_),
-                                           static_cast<EMemoryFormat>(memory_format_on_card_));
+                                             *blue_,
+                                             static_cast<EVideoModeExt>(mode_),
+                                             static_cast<EMemoryFormat>(memory_format_on_card_));
             audio_cadence_ = format_desc_.audio_cadence;
 
             if (format_desc_.size == 0) {
@@ -513,7 +515,8 @@ struct bluefish_producer
                 }
 
                 // pass to caspar
-                auto frame = core::draw_frame(make_frame(this, *frame_factory_, src_video, src_audio));
+                auto frame =
+                    core::draw_frame(make_frame(this, *frame_factory_, src_video, src_audio, side_data_queue_));
                 if (!frame_buffer_.try_push(frame)) {
                     core::draw_frame dummy;
                     frame_buffer_.try_pop(dummy);

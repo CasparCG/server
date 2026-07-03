@@ -23,6 +23,7 @@
 
 #include "../fwd.h"
 #include "../monitor/monitor.h"
+#include "core/frame/frame_transform.h"
 
 #include <common/except.h>
 #include <common/memory.h>
@@ -39,6 +40,35 @@
 #include <vector>
 
 namespace caspar { namespace core {
+
+class frame_producer;
+
+struct frame_producer_and_attrs final
+{
+    spl::shared_ptr<frame_producer> producer;
+    closed_captions_priority        cc_priority;
+    frame_producer_and_attrs();
+    frame_producer_and_attrs(spl::shared_ptr<frame_producer> producer, closed_captions_priority cc_priority)
+        : producer(producer)
+        , cc_priority(cc_priority)
+    {
+    }
+
+    draw_frame apply_attrs(draw_frame frame)
+    {
+        if (!frame)
+            return frame;
+        frame_transform t;
+        t.side_data_transform.closed_captions_priority_ = cc_priority;
+        return draw_frame::push(std::move(frame), t);
+    }
+
+    draw_frame receive(const video_field field, int nb_samples);
+
+    draw_frame last_frame(const video_field field);
+
+    draw_frame first_frame(const video_field field);
+};
 
 class frame_producer
 {
@@ -103,9 +133,9 @@ class frame_producer
         }
         return core::draw_frame::still(first_frame_);
     }
-    virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
-    virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
-    virtual std::optional<int64_t>          auto_play_delta() const { return {}; }
+    virtual void                     leading_producer(const frame_producer_and_attrs&) {}
+    virtual frame_producer_and_attrs following_producer() const { return frame_producer_and_attrs(); }
+    virtual std::optional<int64_t>   auto_play_delta() const { return {}; }
 
     /**
      * Some producers take a couple of frames before they produce frames.
