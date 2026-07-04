@@ -428,6 +428,7 @@ class v210_conv
                     result = _mm256_hadd_epi32(alpha, result);
                 }
 
+                // below segfaults, hence the memcpy
                 // _mm256_store_si256(dest++, result);
                 memcpy(dest, &result, 32);
                 dest++;
@@ -451,10 +452,13 @@ class v210_conv
         }
     }
 
-    // Convert remaining pixels (less than 48) using scalar code
+    // Pack alpha pixels using scalar code
     template <typename T>
-    inline void pack_alpha(const ARGBPixel<T>* src, uint32_t*& dest, int pixel_count) const
+    inline void pack_alpha(const ARGBPixel<T>* src, uint32_t*& dest, int pixel_count, int y) const
     {
+        auto const size = (pixel_count + 2) / 3;
+        memset(dest, 0, size * 4);
+
         auto write_alpha = [dest, index = 0, shift = 0](uint32_t val) mutable {
             dest[index] |= ((val & 0x3FF) << shift);
 
@@ -476,7 +480,7 @@ class v210_conv
             write_alpha(a);
         }
 
-        dest += (pixel_count + 2) / 3;
+        dest += size;
     }
 
     template <typename T>
@@ -495,12 +499,6 @@ class v210_conv
         size_t dest_alpha_line_bytes      = get_row_bytes_alpha(output_format_desc.width);
         int    black_groups_per_row       = static_cast<int>(dest_line_bytes / sizeof(__m128i));
         int    transparent_groups_per_row = static_cast<int>(dest_line_bytes / 32);
-
-        // CASPAR_LOG(trace) << "[v210_conv] Line bytes=" << dest_line_bytes
-        //                   << ", alpha line bytes=" << dest_alpha_line_bytes;
-
-        // CASPAR_LOG(trace) << "[v210_conv] black_groups_per_row=" << black_groups_per_row
-        //                   << ", transparent_groups_per_row=" << transparent_groups_per_row;
 
         // Calculate effective region dimensions
         int region_w = region.region_w > 0 ? region.region_w : channel_format_desc.width - region.src_x;
@@ -522,14 +520,8 @@ class v210_conv
         int transparent_groups_start   = region.dest_x / 24;
         int partial_transparent_pixels = region.dest_x - transparent_groups_start * 24;
 
-        // CASPAR_LOG(trace) << "[v210_conv] black_groups_start= " << black_groups_start
-        //                   << ", partial_black_pixels= " << partial_black_pixels
-        //                   << ", transparent_groups_start= " << transparent_groups_start
-        //                   << ", partial_transparent_pixels= " << partial_transparent_pixels;
-
-        const int NUM_THREADS = 6;
-        // const int NUM_THREADS     = 1;
-        auto rows_per_thread = output_format_desc.height / NUM_THREADS;
+        const int NUM_THREADS     = 6;
+        auto      rows_per_thread = output_format_desc.height / NUM_THREADS;
 
         auto alpha_dest_plane =
             straight_alpha ? reinterpret_cast<uint8_t*>(image_data.get()) + output_format_desc.height * dest_line_bytes
@@ -549,9 +541,6 @@ class v210_conv
                 if (y < region.dest_y || y >= max_y_content) {
                     fill_black_groups(v210_dest, black_groups_per_row);
                     if (straight_alpha) {
-                        // CASPAR_LOG(trace)
-                        //     << "[v210_conv] y=" << y
-                        //     << " fill_transparent_groups(outside content region)=" << transparent_groups_per_row;
                         fill_transparent_groups(alpha_dest, transparent_groups_per_row);
                     }
                     continue;
@@ -563,9 +552,6 @@ class v210_conv
                 if (black_groups_start > 0) {
                     fill_black_groups(v210_dest, black_groups_start);
                     if (straight_alpha) {
-                        // CASPAR_LOG(trace) << "[v210_conv] y=" << y
-                        //                   << " fill_transparent_groups(fill start of row)=" <<
-                        //                   transparent_groups_start;
                         fill_transparent_groups(alpha_dest, transparent_groups_start);
                     }
                 }
@@ -587,8 +573,7 @@ class v210_conv
                     }
 
                     if (straight_alpha) {
-                        // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(partial black at start)=" << 6;
-                        pack_alpha(pixels, alpha_dest, 6);
+                        pack_alpha(pixels, alpha_dest, 6, y);
                     }
                     pack_v210(pixels, color_matrix, reinterpret_cast<uint32_t*>(v210_dest), 6, straight_alpha);
                     v210_dest++;
@@ -605,15 +590,8 @@ class v210_conv
                     // Process 48-pixel batches with AVX2
                     int fullspeed_batches = remaining_content / 48;
 
-                    // if (straight_alpha) {
-                    //     // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(main)=" << fullspeed_batches *
-                    //     // 48;
-                    //     pack_alpha(src, alpha_dest, fullspeed_batches * 48);
-                    // }
-
                     for (int batch = 0; batch < fullspeed_batches; ++batch) {
                         if (straight_alpha) {
-                            // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_48_alpha x=" << batch * 48;
                             pack_48_alpha_avx2(src, alpha_dest_avx2);
                             alpha_dest += 16;
                         }
@@ -624,9 +602,7 @@ class v210_conv
                     int rest_content = remaining_content - fullspeed_batches * 48;
                     if (rest_content > 0) {
                         if (straight_alpha) {
-                            // CASPAR_LOG(trace) << "[v210_conv] y=" << y << " pack_alpha(rest_content)=" <<
-                            // rest_content;
-                            pack_alpha(src, alpha_dest, rest_content);
+                            pack_alpha(src, alpha_dest, rest_content, y);
                         }
                         convert_remaining_pixels(src, v210_dest, rest_content);
                     }

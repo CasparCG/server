@@ -49,7 +49,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/regex.hpp>
 #include <nlohmann/json.hpp>
 #include <regex>
 
@@ -70,6 +69,7 @@ extern "C" {
 }
 
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_invoke.h>
 
 using namespace caspar::ffmpeg;
 
@@ -170,10 +170,12 @@ struct dmf_mxl_producer : public core::frame_producer
     mxlFlowReader     vFlow_;
     mxlFlowConfigInfo vFlowConf_;
 
-    std::string       vFlowLabel;
-    int               width;
-    int               height;
-    core::color_space colorspace;
+    std::string             vFlowLabel;
+    int                     width;
+    int                     height;
+    bool                    alpha;
+    core::color_space       colorspace;
+    core::pixel_format_desc pix_fmt_desc;
 
     mxlFlowReader     aFlow_;
     mxlFlowConfigInfo aFlowConf_;
@@ -313,105 +315,141 @@ struct dmf_mxl_producer : public core::frame_producer
             flow_ts_ += frame_dur_;
 
             // start with empty frame
-            auto mut_frame = make_frame(this, *frame_factory_, NULL, NULL, colorspace);
+            auto frame2 = frame_factory_->create_frame(this, pix_fmt_desc, common::bit_depth::bit10);
 
-            if (vFlow_ != nullptr) {
-                // replace frame with video frame
-                mxlFlowRuntimeInfo info;
-                if (auto const ret = mxlFlowReaderGetRuntimeInfo(vFlow_, &info); ret != MXL_STATUS_OK) {
-                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("failed to get vflow runtime info"));
-                }
+            tbb::parallel_invoke(
+                [&]() {
+                    if (vFlow_ != nullptr) {
+                        // add video to frame
+                        mxlFlowRuntimeInfo info;
+                        if (auto const ret = mxlFlowReaderGetRuntimeInfo(vFlow_, &info); ret != MXL_STATUS_OK) {
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("failed to get vflow runtime info"));
+                        }
 
-                mxlGrainInfo grainInfo;
-                uint8_t*     payload;
+                        mxlGrainInfo grainInfo;
+                        uint8_t*     payload;
 
-                auto latency = mxlGetTime() - mxlIndexToTimestamp(&vFlowConf_.common.grainRate, info.headIndex);
-                update_latency(latency);
+                        auto latency = mxlGetTime() - mxlIndexToTimestamp(&vFlowConf_.common.grainRate, info.headIndex);
+                        update_latency(latency);
 
-                vFlowIndex_ = mxlTimestampToIndex(&vFlowConf_.common.grainRate, flow_ts_);
+                        vFlowIndex_ = mxlTimestampToIndex(&vFlowConf_.common.grainRate, flow_ts_);
 
-                auto const ret = mxlFlowReaderGetGrain(vFlow_, vFlowIndex_, 10000000, &grainInfo, &payload);
-                if (ret == MXL_STATUS_OK) {
-                    if (grainInfo.validSlices >= grainInfo.totalSlices) {
-                        // vFlowIndex_++;
-                        auto src = video_decoder_.decode(payload, grainInfo.grainSize);
+                        auto const ret = mxlFlowReaderGetGrain(vFlow_, vFlowIndex_, 10000000, &grainInfo, &payload);
+                        if (ret == MXL_STATUS_OK) {
+                            if (grainInfo.validSlices >= grainInfo.totalSlices) {
+                                uint32_t const key_line_size = alpha ? ((width + 2) / 3) * 4 : 0;
+                                uint32_t const v_size        = grainInfo.grainSize - key_line_size * height;
+                                auto           src           = video_decoder_.decode(payload, v_size);
 
-                        if (src) {
-                            mut_frame = make_frame(this, *frame_factory_, src, NULL, colorspace);
+                                if (src) {
+                                    // for yuv planes:
+                                    for (int n = 0; n < 3; ++n) {
+                                        tbb::parallel_for(0, pix_fmt_desc.planes[n].height, [&](int y) {
+                                            std::memcpy(frame2.image_data(n).begin() +
+                                                            y * pix_fmt_desc.planes[n].linesize,
+                                                        src->data[n] + y * src->linesize[n],
+                                                        pix_fmt_desc.planes[n].linesize);
+                                        });
+                                    }
+
+                                    if (alpha) {
+                                        // unpack the alpha plane
+                                        tbb::parallel_for(0, height, [&](int y) {
+                                            auto src_line_start = v_size + key_line_size * y;
+                                            auto src_line       = reinterpret_cast<uint32_t*>(payload + src_line_start);
+                                            auto dest_line_start = y * pix_fmt_desc.planes[3].linesize;
+                                            auto dest_line = reinterpret_cast<uint16_t*>(frame2.image_data(3).begin() +
+                                                                                         dest_line_start);
+
+                                            auto shift = 0;
+                                            for (int x = 0; x < width; x++) {
+                                                auto pixel   = (src_line[0] >> shift) & 0x3ff;
+                                                dest_line[x] = static_cast<uint16_t>(pixel);
+
+                                                shift += 10;
+                                                if (shift > 20) {
+                                                    shift = 0;
+                                                    src_line++;
+                                                }
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    CASPAR_LOG(info) << L"[mxl] could not make frame, no src";
+                                }
+                            }
+                        } else if (ret == MXL_ERR_OUT_OF_RANGE_TOO_LATE || ret == MXL_ERR_OUT_OF_RANGE_TOO_EARLY) {
+                            CASPAR_LOG(warning) << "[mxl] video status=" << ret << ", headIndex=" << info.headIndex;
                         } else {
-                            CASPAR_LOG(info) << L"[mxl] could not make frame, no src";
+                            CASPAR_LOG(warning) << L"[mxl] read status " + std::to_wstring(ret) + L", vFlowIndex=" +
+                                                       std::to_wstring(vFlowIndex_) + L", info.headIndex=" +
+                                                       std::to_wstring(info.headIndex);
+                            // return last_frame_;
                         }
                     }
-                } else if (ret == MXL_ERR_OUT_OF_RANGE_TOO_LATE || ret == MXL_ERR_OUT_OF_RANGE_TOO_EARLY) {
-                    CASPAR_LOG(warning) << "[mxl] video status=" << ret << ", headIndex=" << info.headIndex;
-                } else {
-                    CASPAR_LOG(warning) << L"[mxl] read status " + std::to_wstring(ret) + L", vFlowIndex=" +
-                                               std::to_wstring(vFlowIndex_) + L", info.headIndex=" +
-                                               std::to_wstring(info.headIndex);
-                    return last_frame_;
-                }
-            }
-
-            if (aFlow_ != nullptr) {
-                // add audio to the frame
-                mxlFlowRuntimeInfo info;
-                if (auto const ret = mxlFlowReaderGetRuntimeInfo(aFlow_, &info); ret != MXL_STATUS_OK) {
-                    CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("failed to get aflow runtime info"));
-                }
-
-                auto latency =
-                    mxlGetTime() - mxlIndexToTimestamp(&aFlowConf_.common.grainRate, info.headIndex) + frame_dur_ns;
-                update_latency(latency);
-
-                // aFlowIndex_ marks the end of the frame...
-                aFlowIndex_ = mxlTimestampToIndex(&aFlowConf_.common.grainRate, flow_ts_) + nb_samples - 1;
-
-                mxlWrappedMultiBufferSlice payload;
-                auto const ret = mxlFlowReaderGetSamples(aFlow_, aFlowIndex_, nb_samples, frame_dur_ns / 2, &payload);
-                if (ret == MXL_STATUS_OK) {
-                    // aFlowIndex_ += nb_samples;
-                    mut_frame.audio_data() = std::vector<int32_t>(nb_samples * format_desc_.audio_channels, 0);
-                    auto dest              = mut_frame.audio_data().data();
-
-                    size_t const channels         = payload.count;
-                    size_t const strideBytes      = payload.stride;
-                    size_t const fragment0Samples = payload.base.fragments[0].size / sizeof(float);
-                    size_t const fragment1Samples = payload.base.fragments[1].size / sizeof(float);
-
-                    for (size_t channel = 0;
-                         channel < std::min(static_cast<int>(channels), format_desc_.audio_channels);
-                         ++channel) {
-                        size_t const         channelOffset = channel * strideBytes;
-                        uint8_t const* const channelBase0 =
-                            (uint8_t const*)(payload.base.fragments[0].pointer) + channelOffset;
-                        uint8_t const* const channelBase1 =
-                            (uint8_t const*)(payload.base.fragments[1].pointer) + channelOffset;
-
-                        float const* const firstSlice  = (float const*)(channelBase0);
-                        float const* const secondSlice = (float const*)(channelBase1);
-
-                        // Process the first fragment (may already contain the entire window).
-                        for (size_t i = 0; i < fragment0Samples; ++i) {
-                            dest[i * format_desc_.audio_channels + channel] =
-                                static_cast<int32_t>(firstSlice[i] * std::numeric_limits<int32_t>::max());
+                },
+                [&]() {
+                    if (aFlow_ != nullptr) {
+                        // add audio to the frame
+                        mxlFlowRuntimeInfo info;
+                        if (auto const ret = mxlFlowReaderGetRuntimeInfo(aFlow_, &info); ret != MXL_STATUS_OK) {
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("failed to get aflow runtime info"));
                         }
 
-                        // Only needed when the window wrapped around the ring buffer.
-                        for (size_t i = 0; i < fragment1Samples; ++i) {
-                            dest[(fragment0Samples + i) * format_desc_.audio_channels + channel] =
-                                static_cast<int32_t>(secondSlice[i] * std::numeric_limits<int32_t>::max());
+                        auto latency = mxlGetTime() -
+                                       mxlIndexToTimestamp(&aFlowConf_.common.grainRate, info.headIndex) + frame_dur_ns;
+                        update_latency(latency);
+
+                        // aFlowIndex_ marks the end of the frame...
+                        aFlowIndex_ = mxlTimestampToIndex(&aFlowConf_.common.grainRate, flow_ts_) + nb_samples - 1;
+
+                        mxlWrappedMultiBufferSlice payload;
+                        auto const                 ret =
+                            mxlFlowReaderGetSamples(aFlow_, aFlowIndex_, nb_samples, frame_dur_ns / 2, &payload);
+                        if (ret == MXL_STATUS_OK) {
+                            // aFlowIndex_ += nb_samples;
+                            frame2.audio_data() = std::vector<int32_t>(nb_samples * format_desc_.audio_channels, 0);
+                            auto dest           = frame2.audio_data().data();
+
+                            size_t const channels         = payload.count;
+                            size_t const strideBytes      = payload.stride;
+                            size_t const fragment0Samples = payload.base.fragments[0].size / sizeof(float);
+                            size_t const fragment1Samples = payload.base.fragments[1].size / sizeof(float);
+
+                            for (size_t channel = 0;
+                                 channel < std::min(static_cast<int>(channels), format_desc_.audio_channels);
+                                 ++channel) {
+                                size_t const         channelOffset = channel * strideBytes;
+                                uint8_t const* const channelBase0 =
+                                    (uint8_t const*)(payload.base.fragments[0].pointer) + channelOffset;
+                                uint8_t const* const channelBase1 =
+                                    (uint8_t const*)(payload.base.fragments[1].pointer) + channelOffset;
+
+                                float const* const firstSlice  = (float const*)(channelBase0);
+                                float const* const secondSlice = (float const*)(channelBase1);
+
+                                // Process the first fragment (may already contain the entire window).
+                                for (size_t i = 0; i < fragment0Samples; ++i) {
+                                    dest[i * format_desc_.audio_channels + channel] =
+                                        static_cast<int32_t>(firstSlice[i] * std::numeric_limits<int32_t>::max());
+                                }
+
+                                // Only needed when the window wrapped around the ring buffer.
+                                for (size_t i = 0; i < fragment1Samples; ++i) {
+                                    dest[(fragment0Samples + i) * format_desc_.audio_channels + channel] =
+                                        static_cast<int32_t>(secondSlice[i] * std::numeric_limits<int32_t>::max());
+                                }
+                            }
+                        } else if (ret == MXL_ERR_OUT_OF_RANGE_TOO_LATE || ret == MXL_ERR_OUT_OF_RANGE_TOO_EARLY) {
+                            CASPAR_LOG(warning) << "[mxl] audio status=" << ret << ", headIndex=" << info.headIndex
+                                                << ", latency=" << latency_;
+                        } else {
+                            CASPAR_LOG(info) << L"[mxl] failed to read audio " + std::to_wstring(ret);
                         }
                     }
-                } else if (ret == MXL_ERR_OUT_OF_RANGE_TOO_LATE || ret == MXL_ERR_OUT_OF_RANGE_TOO_EARLY) {
-                    CASPAR_LOG(warning) << "[mxl] audio status=" << ret << ", headIndex=" << info.headIndex;
-                } else {
-                    CASPAR_LOG(info) << L"[mxl] failed to read audio " + std::to_wstring(ret);
-                }
-            }
+                });
 
-            auto frame = core::draw_frame(std::move(mut_frame));
-            auto field = core::video_field::progressive; // @todo - support interlaced flows
-
+            auto frame  = core::draw_frame(std::move(frame2));
             last_frame_ = frame;
 
             graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
@@ -448,7 +486,7 @@ struct dmf_mxl_producer : public core::frame_producer
         auto flowDef   = read_flow_desc(flowId);
         auto mediaType = flowDef.at("media_type").get<std::string>();
 
-        if (boost::equals(mediaType, "video/v210")) {
+        if (boost::equals(mediaType, "video/v210") || boost::equals(mediaType, "video/v210a")) {
             if (vFlow_ != nullptr) {
                 return;
             }
@@ -456,6 +494,7 @@ struct dmf_mxl_producer : public core::frame_producer
             vFlowLabel = flowDef.at("label").get<std::string>();
             width      = flowDef.at("frame_width").get<int>();
             height     = flowDef.at("frame_height").get<int>();
+            alpha      = boost::equals(mediaType, "video/v210a");
 
             auto const col_space = flowDef.at("colorspace").get<std::string>();
             if (boost::iequals(col_space, "BT601")) {
@@ -466,8 +505,20 @@ struct dmf_mxl_producer : public core::frame_producer
                 colorspace = core::color_space::bt709;
             }
 
+            pix_fmt_desc =
+                core::pixel_format_desc(alpha ? core::pixel_format::ycbcra : core::pixel_format::ycbcr, colorspace);
+            pix_fmt_desc.is_straight_alpha = alpha ? true : false;
+            pix_fmt_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 1, common::bit_depth::bit10));
+            pix_fmt_desc.planes.push_back(
+                core::pixel_format_desc::plane(width / 2, height, 1, common::bit_depth::bit10));
+            pix_fmt_desc.planes.push_back(
+                core::pixel_format_desc::plane(width / 2, height, 1, common::bit_depth::bit10));
+            if (alpha) {
+                pix_fmt_desc.planes.push_back(
+                    core::pixel_format_desc::plane(width, height, 1, common::bit_depth::bit10));
+            }
+
             // @todo - interlaced sources
-            // @todo - support v210a
 
             CASPAR_LOG(info) << L"[mxl] [video] opening flow " + flowId;
 
