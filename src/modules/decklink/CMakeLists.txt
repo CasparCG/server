@@ -87,8 +87,3 @@ else()
 			dl
 	)
 endif ()
-
-if(Libklvanc_FOUND)
-	target_compile_definitions(decklink PRIVATE DECKLINK_USE_LIBKLVANC)
-	target_link_libraries(decklink PRIVATE Libklvanc::Libklvanc)
-endif()

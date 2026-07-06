@@ -66,74 +66,48 @@
  */
 
 #include "common/assert.h"
+#include "common/scope_exit.h"
 #include "core/frame/frame_side_data.h"
+#include "ffmpeg/util/av_assert.h"
+#include "ffmpeg/util/av_util.h"
 #include "vanc.h"
-#include <array>
+#include <boost/format.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/rational.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <libavcodec/codec_id.h>
+#include <libavcodec/packet.h>
+#include <libavutil/avutil.h>
+#include <libavutil/error.h>
+#include <libavutil/rational.h>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 
-#include <boost/log/utility/manipulators/dump.hpp>
+extern "C" {
+#include <libavcodec/version.h>
+}
 
-#ifdef DECKLINK_USE_LIBKLVANC
-#include "vanc-eia_708b.h"
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(62, 10, 100)
+#define DECKLINK_USE_FFMPEG_VANC 1
+#endif
+
+#ifdef DECKLINK_USE_FFMPEG_VANC
+extern "C" {
+#include <libavcodec/bsf.h>
+#include <libavcodec/smpte_436m.h>
+#include <libavutil/opt.h>
+}
 #endif
 
 namespace caspar::decklink {
 
 static const std::wstring a53_cc_name = L"ATSC A/53 Closed Captions";
 
-#ifdef DECKLINK_USE_LIBKLVANC
-struct libklvanc_error_t : public caspar_exception
-{
-};
-
-using libklvanc_errn_info = boost::error_info<struct tag_libklvanc_errn_info, int>;
-
-#define THROW_ON_ERROR_STR_(call) #call
-#define THROW_ON_ERROR_STR(call) THROW_ON_ERROR_STR_(call)
-
-#define LKV_RET_ERR(ret, func)                                                                                         \
-    if (ret < 0) {                                                                                                     \
-        CASPAR_THROW_EXCEPTION(libklvanc_error_t() << boost::errinfo_api_function(func) << libklvanc_errn_info(ret)    \
-                                                   << boost::errinfo_errno(-(ret)));                                   \
-    }
-
-#define LKV_RET_FLAG(ret, func)                                                                                        \
-    if (ret < 0) {                                                                                                     \
-        CASPAR_THROW_EXCEPTION(libklvanc_error_t() << boost::errinfo_api_function(func));                              \
-    }
-
-#define LKV_HANDLE_ERR(call)                                                                                           \
-    [&] {                                                                                                              \
-        auto ret = call;                                                                                               \
-        LKV_RET_ERR(ret, THROW_ON_ERROR_STR(call));                                                                    \
-    }()
-
-#define LKV_HANDLE_FLAG(call)                                                                                          \
-    [&] {                                                                                                              \
-        auto ret = call;                                                                                               \
-        LKV_RET_FLAG(ret, THROW_ON_ERROR_STR(call));                                                                   \
-    }()
-
-static std::shared_ptr<klvanc_packet_eia_708b_s> create_eia708_cdp()
-{
-    klvanc_packet_eia_708b_s* retval = nullptr;
-    LKV_HANDLE_ERR(klvanc_create_eia708_cdp(&retval));
-    return std::shared_ptr<klvanc_packet_eia_708b_s>(retval,
-                                                     [](klvanc_packet_eia_708b_s* p) { klvanc_destroy_eia708_cdp(p); });
-}
-
-struct closed_captions_dont_fit : public libklvanc_error_t
-{
-};
-
+#ifdef DECKLINK_USE_FFMPEG_VANC
 class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data_vanc_strategy
 {
   public:
@@ -147,11 +121,34 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         , line_number_(config.a53_cc_line)
         , cdp_frame_rate_(config.a53_cc_cdp_frame_rate == 0 ? frame_rate : config.a53_cc_cdp_frame_rate)
         , sequence_number_(config.a53_cc_initial_sequence_number)
+        , packet_(ffmpeg::alloc_packet())
     {
-        if (a53_cc_queue_.max_frame_size() / core::a53_cc_queue::cc_data_pkt{}.size() > KLVANC_MAX_CC_COUNT) {
-            CASPAR_THROW_EXCEPTION(closed_captions_dont_fit()
-                                   << msg_info(u8(a53_cc_name) + " don't fit in libklvanc's structures"));
-        }
+        auto bsf = av_bsf_get_by_name("eia608_to_smpte436m");
+        CASPAR_ENSURE(bsf);
+        AVBSFContext* ctx = nullptr;
+        FF(av_bsf_alloc(bsf, &ctx));
+        eia608_to_smpte436m_context_ = std::shared_ptr<AVBSFContext>(ctx, [](AVBSFContext* ctx) { av_bsf_free(&ctx); });
+
+        eia608_to_smpte436m_context_->time_base_in       = AVRational{frame_rate.numerator(), frame_rate.denominator()};
+        eia608_to_smpte436m_context_->par_in->codec_type = AVMEDIA_TYPE_SUBTITLE;
+        eia608_to_smpte436m_context_->par_in->codec_id   = AV_CODEC_ID_EIA_608;
+
+        AVDictionary* options = nullptr;
+        CASPAR_SCOPE_EXIT { av_dict_free(&options); };
+        FF(av_dict_set_int(&options, "line_number", config.a53_cc_line, 0));
+        FF(av_dict_set(&options, "wrapping_type", "vanc_frame", 0));
+        FF(av_dict_set(&options, "sample_coding", "8bit_luma", 0));
+        FF(av_dict_set_int(&options, "initial_cdp_sequence_cntr", config.a53_cc_initial_sequence_number, 0));
+        FF(av_dict_set(
+            &options,
+            "cdp_frame_rate",
+            (boost::format("%d/%d") % cdp_frame_rate_.numerator() % cdp_frame_rate_.denominator()).str().c_str(),
+            0));
+        FF(av_opt_set_dict(eia608_to_smpte436m_context_->priv_data, &options));
+
+        FF(av_bsf_init(eia608_to_smpte436m_context_.get()));
+
+        CASPAR_ENSURE(eia608_to_smpte436m_context_->par_out->codec_id == AV_CODEC_ID_SMPTE_436M_ANC);
     }
     virtual bool        has_data() const override { return true; }
     virtual vanc_packet pop_packet(bool field2) override
@@ -161,47 +158,52 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
         auto _lock = std::unique_lock(mutex_);
 
         auto cc_data    = a53_cc_queue_.lock().pop_frame();
-        auto eia708_cdp = create_eia708_cdp();
-        // num/denom intentionally swapped since casparcg and ffmpeg uses the reciprocal of libklvanc
-        LKV_HANDLE_FLAG(klvanc_set_framerate_EIA_708B(
-            eia708_cdp.get(), cdp_frame_rate_.denominator(), cdp_frame_rate_.numerator()));
-
-        eia708_cdp->header.ccdata_present         = 1;
-        eia708_cdp->header.caption_service_active = 1;
-        eia708_cdp->ccdata.cc_count =
-            static_cast<std::uint8_t>(cc_data.size() / core::a53_cc_queue::cc_data_pkt{}.size());
-        for (std::size_t i = 0; i < eia708_cdp->ccdata.cc_count; i++) {
-            std::size_t start = i * core::a53_cc_queue::cc_data_pkt{}.size();
-            if (cc_data[start] & 0x04)
-                eia708_cdp->ccdata.cc[i].cc_valid = 1;
-            eia708_cdp->ccdata.cc[i].cc_type    = cc_data[start] & 0x03;
-            eia708_cdp->ccdata.cc[i].cc_data[0] = cc_data[start + 1];
-            eia708_cdp->ccdata.cc[i].cc_data[1] = cc_data[start + 2];
+        FF(av_new_packet(packet_.get(), cc_data.size()));
+        memcpy(packet_->data, cc_data.data(), cc_data.size());
+        int ret = av_bsf_send_packet(eia608_to_smpte436m_context_.get(), packet_.get());
+        if (ret < 0) {
+            av_packet_unref(packet_.get());
         }
-
-        // intentionally wrap around at 0xFFFF
-        klvanc_finalize_EIA_708B(eia708_cdp.get(), sequence_number_++);
-
-        std::uint8_t* bytes_p    = nullptr;
-        std::uint16_t byte_count = 0;
-
-        LKV_HANDLE_ERR(klvanc_convert_EIA_708B_to_packetBytes(eia708_cdp.get(), &bytes_p, &byte_count));
-
-        struct bytes_deleter final
-        {
-            void operator()(std::uint8_t* bytes) const noexcept { free(bytes); }
-        };
-
-        std::unique_ptr<std::uint8_t[], bytes_deleter> bytes(bytes_p);
-
-        vanc_packet retval = {0x61, 0x01, line_number_, std::vector(bytes.get(), bytes.get() + byte_count)};
+        FF_RET(ret, "av_bsf_send_packet");
+        std::vector<vanc_packet> retval_packets;
+        // make sure to call av_bsf_receive_packet until it stops returning packets as required by ffmpeg
+        for (;;) {
+            ret = av_bsf_receive_packet(eia608_to_smpte436m_context_.get(), packet_.get());
+            if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
+                break;
+            }
+            FF_RET(ret, "av_bsf_receive_packet");
+            CASPAR_SCOPE_EXIT { av_packet_unref(packet_.get()); };
+            AVSmpte436mAncIterator iter;
+            FF(av_smpte_436m_anc_iter_init(&iter, packet_->data, packet_->size));
+            for (;;) {
+                AVSmpte436mCodedAnc anc_436m;
+                ret = av_smpte_436m_anc_iter_next(&iter, &anc_436m);
+                if (ret == AVERROR_EOF) {
+                    break;
+                }
+                FF_RET(ret, "av_smpte_436m_anc_iter_next");
+                AVSmpte291mAnc8bit anc_291m;
+                FF(av_smpte_291m_anc_8bit_decode(&anc_291m,
+                                                 anc_436m.payload_sample_coding,
+                                                 anc_436m.payload_sample_count,
+                                                 anc_436m.payload,
+                                                 nullptr));
+                retval_packets.push_back(
+                    {.did         = anc_291m.did,
+                     .sdid        = anc_291m.sdid_or_dbn,
+                     .line_number = line_number_,
+                     .data        = std::vector(anc_291m.payload, anc_291m.payload + anc_291m.data_count)});
+            }
+        }
+        CASPAR_ENSURE(retval_packets.size() == 1);
+        auto retval = std::move(retval_packets[0]);
         // format starting from `Line:` matches decklink `VancCapture` example, making it easier to compare
         CASPAR_LOG(trace) << L"decklink consumer: generated VANC packet from A53_CC side data: Line "
                           << retval.line_number << L":   DID: " << std::hex << std::setfill(L'0') << std::setw(2)
                           << static_cast<unsigned>(retval.did) << L"; SDID: " << std::setw(2)
                           << static_cast<unsigned>(retval.sdid) << L"; Data: "
                           << boost::log::dump(retval.data.data(), retval.data.size(), 128);
-
         return retval;
     }
     virtual const std::wstring& get_name() const override { return a53_cc_name; }
@@ -254,6 +256,8 @@ class decklink_side_data_strategy_a53_cc final : public decklink_frame_side_data
     const boost::rational<int>     cdp_frame_rate_;
     std::uint16_t                  sequence_number_;
     core::frame_side_data_in_queue last_frame_side_data_in_queue_{};
+    std::shared_ptr<AVBSFContext>  eia608_to_smpte436m_context_;
+    std::shared_ptr<AVPacket>      packet_;
 };
 #endif
 
@@ -264,18 +268,11 @@ decklink_frame_side_data_vanc_strategy::try_create(core::frame_side_data_type   
 {
     switch (type) {
         case core::frame_side_data_type::a53_cc:
-#ifdef DECKLINK_USE_LIBKLVANC
-            try {
-                return std::make_shared<decklink_side_data_strategy_a53_cc>(format.framerate, config, format);
-            } catch (closed_captions_dont_fit&) {
-                CASPAR_LOG(error) << "decklink consumer: frame-rate is too weird for " << a53_cc_name
-                                  << ", the closed captions don't fit in libklvanc's structures: " << format.framerate
-                                  << " -- disabling closed captions for output";
-            }
+#ifdef DECKLINK_USE_FFMPEG_VANC
+            return std::make_shared<decklink_side_data_strategy_a53_cc>(format.framerate, config, format);
 #else
-            CASPAR_LOG(warning)
-                << "decklink consumer: libklvanc is required for " << a53_cc_name
-                << " but libklvanc was not compiled into casparcg -- disabling closed captions for output";
+            CASPAR_LOG(warning) << "decklink consumer: ffmpeg >= 8.0 is required for " << a53_cc_name
+                                << " -- disabling closed captions for output";
 #endif
             return nullptr;
     }

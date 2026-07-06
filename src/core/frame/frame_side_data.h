@@ -36,7 +36,11 @@ namespace caspar::core {
 /** inspired by FFmpeg's `AVFrameSideDataType` */
 enum class frame_side_data_type
 {
-    /** ATSC A53 Part 4 Closed Captions */
+    /** ATSC A53 Part 4 Closed Captions
+
+    FIXME: CasparCG should probably be passing something equivalent to FFmpeg's AVSmpte436mCodedAnc around instead of
+    just the A53 CC data, since that retains a lot more information that's annoying to reconstruct and may be incorrect
+    */
     a53_cc,
 };
 
