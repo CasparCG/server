@@ -400,6 +400,7 @@ struct image_mixer::impl
             std::vector<array<uint8_t>>{},
             array<int32_t>{},
             desc,
+            core::frame_side_data_in_queue(),
             [weak_self, texs = std::move(textures)](std::vector<array<const std::uint8_t>> image_data) -> std::any {
                 auto self = weak_self.lock();
                 if (!self) {
