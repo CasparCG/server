@@ -8,7 +8,6 @@
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
-#include <boost/format/format_fwd.hpp>
 #include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
