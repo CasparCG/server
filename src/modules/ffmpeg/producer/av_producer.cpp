@@ -283,7 +283,7 @@ class SubstitutedA53CCQueue final
             }
             // we store only the lower 16-bits in the key,
             // so reconstruct the upper 16 bits by checking which one is in range.
-            for (position offset : {-1ULL << 16, 0ULL, 1ULL << 16}) {
+            for (position offset : {-1 << 16, 0, 1 << 16}) {
                 position retval = pos + offset;
                 if (retval >= valid_position_range.first && retval < valid_position_range.second)
                     return retval;
