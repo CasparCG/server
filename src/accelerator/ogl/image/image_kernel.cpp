@@ -329,6 +329,24 @@ struct image_kernel::impl
             shader_->set("tonebalance_enable", false);
         }
 
+        // Split toning (independent shadow / highlight tint)
+        {
+            const auto& sc = transforms.image_transform.split_shadow_color;
+            const auto& hc = transforms.image_transform.split_highlight_color;
+            bool        split_active =
+                std::abs(sc[0]) > epsilon || std::abs(sc[1]) > epsilon || std::abs(sc[2]) > epsilon ||
+                std::abs(hc[0]) > epsilon || std::abs(hc[1]) > epsilon || std::abs(hc[2]) > epsilon;
+            if (split_active) {
+                shader_->set("split_tone_enable", true);
+                // Upload swapped to BGR order so .r affects displayed Blue, .b affects displayed Red.
+                shader_->set("split_shadow_color", sc[2], sc[1], sc[0]);
+                shader_->set("split_highlight_color", hc[2], hc[1], hc[0]);
+                shader_->set("split_balance", static_cast<float>(transforms.image_transform.split_balance));
+            } else {
+                shader_->set("split_tone_enable", false);
+            }
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

@@ -88,6 +88,14 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     // Tone balance: additive
     self.shadows    += other.shadows;
     self.highlights += other.highlights;
+
+    // Split toning: additive colours, balance override if non-default
+    for (int i = 0; i < 3; ++i) {
+        self.split_shadow_color[i]    += other.split_shadow_color[i];
+        self.split_highlight_color[i] += other.split_highlight_color[i];
+    }
+    if (other.split_balance != 0.5)
+        self.split_balance = other.split_balance;
 }
 
 bool is_default_perspective(const core::corners& perspective)

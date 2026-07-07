@@ -1281,6 +1281,64 @@ std::future<std::wstring> mixer_tonebalance_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// MIXER SPLITTONE shad_r shad_g shad_b hi_r hi_g hi_b [balance] [duration tween]
+// MIXER SPLITTONE RESET
+std::future<std::wstring> mixer_splittone_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            auto f = [](double v) { return std::to_wstring(v); };
+            return L"201 MIXER OK\r\n" + f(t.split_shadow_color[0]) + L" " + f(t.split_shadow_color[1]) + L" " +
+                   f(t.split_shadow_color[2]) + L" " + f(t.split_highlight_color[0]) + L" " +
+                   f(t.split_highlight_color[1]) + L" " + f(t.split_highlight_color[2]) + L" " + f(t.split_balance) +
+                   L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"RESET")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.split_shadow_color    = {0.0, 0.0, 0.0};
+                t.image_transform.split_highlight_color = {0.0, 0.0, 0.0};
+                t.image_transform.split_balance         = 0.5;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    transforms_applier transforms(ctx);
+    double       sr    = std::stod(ctx.parameters.at(0));
+    double       sg    = std::stod(ctx.parameters.at(1));
+    double       sb    = std::stod(ctx.parameters.at(2));
+    double       hr    = std::stod(ctx.parameters.at(3));
+    double       hg    = std::stod(ctx.parameters.at(4));
+    double       hb    = std::stod(ctx.parameters.at(5));
+    double       bal   = ctx.parameters.size() > 6 ? std::stod(ctx.parameters[6]) : 0.5;
+    int          dur   = ctx.parameters.size() > 7 ? std::stoi(ctx.parameters[7]) : 0;
+    std::wstring tween = ctx.parameters.size() > 8 ? ctx.parameters[8] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.split_shadow_color    = {sr, sg, sb};
+            transform.image_transform.split_highlight_color = {hr, hg, hb};
+            transform.image_transform.split_balance         = bal;
+            return transform;
+        },
+        dur,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1937,6 +1995,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER GAIN", mixer_gain_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER HUESHIFT", mixer_hueshift_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER TONEBALANCE", mixer_tonebalance_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER SPLITTONE", mixer_splittone_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);

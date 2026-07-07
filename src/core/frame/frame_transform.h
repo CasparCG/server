@@ -104,6 +104,9 @@ struct image_transform final
     double                hue_shift = 0.0; // global hue rotation, degrees -180..+180
     double                shadows    = 0.0; // tonal balance: shadow region lift/cut -1..+1
     double                highlights = 0.0; // tonal balance: highlight region lift/cut -1..+1
+    std::array<double, 3> split_shadow_color    = {0.0, 0.0, 0.0}; // split tone: shadow tint RGB
+    std::array<double, 3> split_highlight_color = {0.0, 0.0, 0.0}; // split tone: highlight tint RGB
+    double                split_balance         = 0.5;             // split tone: crossover 0..1
 
     bool             is_key      = false;
     bool             invert      = false;

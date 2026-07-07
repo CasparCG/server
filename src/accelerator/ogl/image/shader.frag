@@ -63,6 +63,12 @@ uniform bool		tonebalance_enable;
 uniform float		tb_shadows;    // -1..+1
 uniform float		tb_highlights; // -1..+1
 
+// Split toning (independent shadow / highlight tint)
+uniform bool		split_tone_enable;
+uniform vec3		split_shadow_color;
+uniform vec3		split_highlight_color;
+uniform float		split_balance; // crossover 0..1
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -589,6 +595,19 @@ vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
     return c;
 }
 
+// ---- Split Toning ----
+// Luminance-based tint: additive colour offsets for shadows and highlights,
+// with a crossover controlled by bal.
+vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
+{
+    float lum     = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float shad_mk = 1.0 - smoothstep(bal - 0.3, bal + 0.3, lum);
+    float hi_mk   = smoothstep(bal - 0.3, bal + 0.3, lum);
+    c += shad_col * shad_mk;
+    c += hi_col   * hi_mk;
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -604,6 +623,8 @@ void main()
         color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
     if (tonebalance_enable)
         color.rgb = apply_tone_balance(color.rgb, tb_shadows, tb_highlights);
+    if (split_tone_enable)
+        color.rgb = apply_split_tone(color.rgb, split_shadow_color, split_highlight_color, split_balance);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)
