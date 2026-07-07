@@ -43,6 +43,9 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
+// Gamut compression (ACES 1.3 Reference Gamut Compress)
+uniform bool		gamut_compress_enable;
+uniform vec3		gc_limit; // .r=yellow(B) .g=magenta(G) .b=cyan(R) in BGR order
 // White balance (temperature / tint)
 uniform bool		white_balance;
 uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
@@ -664,6 +667,26 @@ vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
     return c;
 }
 
+// ---- Gamut Compression (ACES 1.3 Reference Gamut Compress) ----
+// Compresses out-of-gamut values toward the achromatic axis using a smooth
+// toe function.  Operates per-channel on the distance from achromatic.
+vec3 apply_gamut_compress(vec3 c, vec3 lim)
+{
+    float achromatic = max(max(c.r, c.g), max(c.b, 0.0));
+    if (achromatic <= 0.0)
+        return c;
+    vec3  dist = (achromatic - c) / abs(achromatic);
+    float thr  = 0.815;
+    for (int i = 0; i < 3; ++i) {
+        if (dist[i] > thr && lim[i] > 1.0001) {
+            float nd = (dist[i] - thr) / (lim[i] - thr);
+            float cd = nd / (1.0 + nd);
+            dist[i]  = thr + cd * (lim[i] - thr);
+        }
+    }
+    return achromatic - dist * abs(achromatic);
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -671,6 +694,8 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    if (gamut_compress_enable)
+        color.rgb = apply_gamut_compress(color.rgb, gc_limit);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)

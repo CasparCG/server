@@ -109,6 +109,10 @@ image_transform image_transform::tween(double                 time,
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;
 
+    result.gamut_compress = dest.gamut_compress;
+    result.gc_cyan    = do_tween(time, source.gc_cyan, dest.gc_cyan, duration, tween);
+    result.gc_magenta = do_tween(time, source.gc_magenta, dest.gc_magenta, duration, tween);
+    result.gc_yellow  = do_tween(time, source.gc_yellow, dest.gc_yellow, duration, tween);
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
     for (int i = 0; i < 3; ++i) {
@@ -169,6 +173,9 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+               lhs.perspective == rhs.perspective && lhs.gamut_compress == rhs.gamut_compress &&
+               eq(lhs.gc_cyan, rhs.gc_cyan) && eq(lhs.gc_magenta, rhs.gc_magenta) &&
+               eq(lhs.gc_yellow, rhs.gc_yellow) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
                boost::range::equal(lhs.midtone, rhs.midtone, eq) &&

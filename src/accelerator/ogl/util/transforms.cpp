@@ -72,6 +72,13 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
 
+    // Gamut compression
+    if (other.gamut_compress) {
+        self.gamut_compress = true;
+        self.gc_cyan        = other.gc_cyan;
+        self.gc_magenta     = other.gc_magenta;
+        self.gc_yellow      = other.gc_yellow;
+    }
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
     // against). Two layers at the edge of legal would otherwise reach a value no single

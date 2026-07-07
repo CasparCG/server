@@ -1470,6 +1470,40 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+std::future<std::wstring> mixer_gamutcompress_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            return L"201 MIXER OK\r\n" + std::to_wstring(t.gamut_compress ? 1 : 0) + L" " +
+                   std::to_wstring(t.gc_cyan) + L" " + std::to_wstring(t.gc_magenta) + L" " +
+                   std::to_wstring(t.gc_yellow) + L"\r\n";
+        });
+    }
+
+    transforms_applier transforms(ctx);
+    bool   enable  = std::stoi(ctx.parameters.at(0)) != 0;
+    double cyan    = ctx.parameters.size() > 1 ? std::stod(ctx.parameters[1]) : 1.147;
+    double magenta = ctx.parameters.size() > 2 ? std::stod(ctx.parameters[2]) : 1.264;
+    double yellow  = ctx.parameters.size() > 3 ? std::stod(ctx.parameters[3]) : 1.312;
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.gamut_compress = enable;
+            transform.image_transform.gc_cyan        = cyan;
+            transform.image_transform.gc_magenta     = magenta;
+            transform.image_transform.gc_yellow      = yellow;
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2139,6 +2173,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER GAMUTCOMPRESS", mixer_gamutcompress_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

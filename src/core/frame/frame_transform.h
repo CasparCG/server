@@ -150,6 +150,10 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    bool                  gamut_compress = false; // ACES 1.3 reference gamut compress
+    double                gc_cyan    = 1.147;     // cyan limit
+    double                gc_magenta = 1.264;     // magenta limit
+    double                gc_yellow  = 1.312;     // yellow limit
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

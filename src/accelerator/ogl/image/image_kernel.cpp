@@ -376,6 +376,18 @@ struct image_kernel::impl
             }
         }
 
+        // Gamut compression (ACES 1.3 Reference Gamut Compress)
+        if (transforms.image_transform.gamut_compress) {
+            shader_->set("gamut_compress_enable", true);
+            // BGR order: .r=Blue(yellow), .g=Green(magenta), .b=Red(cyan)
+            shader_->set("gc_limit",
+                         static_cast<float>(transforms.image_transform.gc_yellow),
+                         static_cast<float>(transforms.image_transform.gc_magenta),
+                         static_cast<float>(transforms.image_transform.gc_cyan));
+        } else {
+            shader_->set("gamut_compress_enable", false);
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));
