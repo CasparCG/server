@@ -58,6 +58,11 @@ uniform vec3		lmg_gain;    // highlight multiplier per channel, default vec3(1)
 uniform bool		hue_shift_enable;
 uniform float		hue_shift_degrees; // -180..+180
 
+// Tonal balance (shadows / highlights separation)
+uniform bool		tonebalance_enable;
+uniform float		tb_shadows;    // -1..+1
+uniform float		tb_highlights; // -1..+1
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -571,6 +576,19 @@ vec3 apply_hue_shift(vec3 c, float degrees)
     return hsv2rgb(hsv) * peak;
 }
 
+// ---- Tonal Balance (Shadows / Highlights separation) ----
+// Soft luminance-based masks drive additive offsets.  No clamping so HDR
+// headroom is preserved for downstream tonemapping.
+vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
+{
+    float lum         = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float shadow_mask = 1.0 - smoothstep(0.0, 0.6, lum);
+    float hl_mask     = smoothstep(0.4, 1.0, lum);
+    c += vec3(shadows    * 0.5 * shadow_mask);
+    c += vec3(highlights * 0.5 * hl_mask);
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -584,6 +602,8 @@ void main()
         color.rgb = apply_lmg(color.rgb, lmg_lift, lmg_midtone, lmg_gain);
     if (hue_shift_enable)
         color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
+    if (tonebalance_enable)
+        color.rgb = apply_tone_balance(color.rgb, tb_shadows, tb_highlights);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

@@ -84,6 +84,10 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
 
     // Hue shift: additive
     self.hue_shift += other.hue_shift;
+
+    // Tone balance: additive
+    self.shadows    += other.shadows;
+    self.highlights += other.highlights;
 }
 
 bool is_default_perspective(const core::corners& perspective)

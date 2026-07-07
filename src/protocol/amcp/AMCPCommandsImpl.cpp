@@ -1250,6 +1250,37 @@ std::future<std::wstring> mixer_hueshift_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// MIXER TONEBALANCE shadows highlights [duration tween]
+std::future<std::wstring> mixer_tonebalance_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            return L"201 MIXER OK\r\n" + std::to_wstring(t.shadows) + L" " + std::to_wstring(t.highlights) + L"\r\n";
+        });
+    }
+
+    transforms_applier transforms(ctx);
+    double       shadows    = std::stod(ctx.parameters.at(0));
+    double       highlights = std::stod(ctx.parameters.at(1));
+    int          duration   = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
+    std::wstring tween      = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.shadows    = shadows;
+            transform.image_transform.highlights = highlights;
+            return transform;
+        },
+        duration,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1905,6 +1936,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER MIDTONE", mixer_midtone_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GAIN", mixer_gain_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER HUESHIFT", mixer_hueshift_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER TONEBALANCE", mixer_tonebalance_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);

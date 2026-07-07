@@ -319,6 +319,16 @@ struct image_kernel::impl
             shader_->set("hue_shift_enable", false);
         }
 
+        // Tonal balance (shadows / highlights)
+        if (std::abs(transforms.image_transform.shadows) > epsilon ||
+            std::abs(transforms.image_transform.highlights) > epsilon) {
+            shader_->set("tonebalance_enable", true);
+            shader_->set("tb_shadows", static_cast<float>(transforms.image_transform.shadows));
+            shader_->set("tb_highlights", static_cast<float>(transforms.image_transform.highlights));
+        } else {
+            shader_->set("tonebalance_enable", false);
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

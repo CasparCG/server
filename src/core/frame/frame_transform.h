@@ -102,6 +102,8 @@ struct image_transform final
     std::array<double, 3> midtone = {1.0, 1.0, 1.0}; // midtone power per channel (DaVinci "gamma")
     std::array<double, 3> gain    = {1.0, 1.0, 1.0}; // highlight multiplier per channel
     double                hue_shift = 0.0; // global hue rotation, degrees -180..+180
+    double                shadows    = 0.0; // tonal balance: shadow region lift/cut -1..+1
+    double                highlights = 0.0; // tonal balance: highlight region lift/cut -1..+1
 
     bool             is_key      = false;
     bool             invert      = false;

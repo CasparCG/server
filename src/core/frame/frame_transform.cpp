@@ -117,6 +117,8 @@ image_transform image_transform::tween(double                 time,
         result.gain[i]    = do_tween(time, source.gain[i], dest.gain[i], duration, tween);
     }
     result.hue_shift = do_tween(time, source.hue_shift, dest.hue_shift, duration, tween);
+    result.shadows    = do_tween(time, source.shadows, dest.shadows, duration, tween);
+    result.highlights = do_tween(time, source.highlights, dest.highlights, duration, tween);
 
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -157,7 +159,8 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
                boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
-               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) ||
+               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) &&
+               eq(lhs.shadows, rhs.shadows) && eq(lhs.highlights, rhs.highlights) ||
            lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
