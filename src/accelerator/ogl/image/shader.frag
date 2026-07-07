@@ -43,6 +43,11 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
+// White balance (temperature / tint)
+uniform bool		white_balance;
+uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
+uniform float		wb_tint;        // -1 magenta .. +1 green
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -519,6 +524,21 @@ vec4 get_rgba_color()
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
+// ---- White Balance ----
+// temp: -1=cool (blue), +1=warm (orange); tint_val: -1=magenta, +1=green.
+// Diagonal gain matrix, no clamping so HDR headroom is preserved.
+// Note: working colour is in BGR order (c.r=displayed Blue, c.b=displayed Red).
+vec3 apply_white_balance(vec3 c, float temp, float tint_val)
+{
+    float r_gain = 1.0 + temp     * 0.20; // warm -> more red
+    float g_gain = 1.0 + tint_val * 0.10; // tint -> more green
+    float b_gain = 1.0 - temp     * 0.20; // warm -> less blue
+    c.r *= b_gain; // .r = Blue in BGR convention
+    c.g *= g_gain;
+    c.b *= r_gain; // .b = Red in BGR convention
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -526,6 +546,8 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    if (white_balance)
+        color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

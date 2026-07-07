@@ -70,6 +70,10 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.is_mix |= other.is_mix;
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
+
+    // White balance: additive
+    self.temperature += other.temperature;
+    self.tint        += other.tint;
 }
 
 bool is_default_perspective(const core::corners& perspective)

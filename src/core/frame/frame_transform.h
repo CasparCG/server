@@ -96,6 +96,8 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    double                temperature = 0.0; // white balance: -1 cool .. +1 warm
+    double                tint        = 0.0; // white balance: -1 magenta .. +1 green
 
     bool             is_key      = false;
     bool             invert      = false;

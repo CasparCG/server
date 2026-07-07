@@ -280,6 +280,16 @@ struct image_kernel::impl
             shader_->set("csb", false);
         }
 
+        // White balance (temperature / tint)
+        if (std::abs(transforms.image_transform.temperature) > epsilon ||
+            std::abs(transforms.image_transform.tint) > epsilon) {
+            shader_->set("white_balance", true);
+            shader_->set("wb_temperature", static_cast<float>(transforms.image_transform.temperature));
+            shader_->set("wb_tint", static_cast<float>(transforms.image_transform.tint));
+        } else {
+            shader_->set("white_balance", false);
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));
