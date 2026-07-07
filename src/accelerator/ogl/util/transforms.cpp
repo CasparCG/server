@@ -74,6 +74,13 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     // White balance: additive
     self.temperature += other.temperature;
     self.tint        += other.tint;
+
+    // Lift/Midtone/Gain: additive lift, multiplicative midtone+gain
+    for (int i = 0; i < 3; ++i) {
+        self.lift[i]    += other.lift[i];
+        self.midtone[i] *= other.midtone[i];
+        self.gain[i]    *= other.gain[i];
+    }
 }
 
 bool is_default_perspective(const core::corners& perspective)

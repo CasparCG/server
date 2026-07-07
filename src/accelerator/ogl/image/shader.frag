@@ -48,6 +48,12 @@ uniform bool		white_balance;
 uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
 uniform float		wb_tint;        // -1 magenta .. +1 green
 
+// Lift / Midtone / Gain (3-way primary colour corrector)
+uniform bool		lmg_enable;
+uniform vec3		lmg_lift;    // shadow offset per channel, default vec3(0)
+uniform vec3		lmg_midtone; // midtone power per channel,  default vec3(1)
+uniform vec3		lmg_gain;    // highlight multiplier per channel, default vec3(1)
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -539,6 +545,16 @@ vec3 apply_white_balance(vec3 c, float temp, float tint_val)
     return c;
 }
 
+// ---- Lift / Midtone / Gain (3-way colour corrector) ----
+// out = pow(max(c * gain + lift, 0.0), 1.0 / midtone).
+// No upper clamp so HDR values pass through; negatives clamped for pow() safety.
+vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
+{
+    c = max(c * gain + lift, vec3(0.0));
+    c = pow(c, max(vec3(0.01), 1.0 / midtone));
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -548,6 +564,8 @@ void main()
         color = chroma_key(color);
     if (white_balance)
         color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
+    if (lmg_enable)
+        color.rgb = apply_lmg(color.rgb, lmg_lift, lmg_midtone, lmg_gain);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

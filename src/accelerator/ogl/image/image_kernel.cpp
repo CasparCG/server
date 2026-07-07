@@ -290,6 +290,27 @@ struct image_kernel::impl
             shader_->set("white_balance", false);
         }
 
+        // Lift / Midtone / Gain (per-channel 3-way colour corrector)
+        {
+            const auto& lift    = transforms.image_transform.lift;
+            const auto& midtone = transforms.image_transform.midtone;
+            const auto& gain    = transforms.image_transform.gain;
+            bool        lmg_active =
+                std::abs(lift[0]) > epsilon || std::abs(lift[1]) > epsilon || std::abs(lift[2]) > epsilon ||
+                std::abs(midtone[0] - 1.0) > epsilon || std::abs(midtone[1] - 1.0) > epsilon ||
+                std::abs(midtone[2] - 1.0) > epsilon || std::abs(gain[0] - 1.0) > epsilon ||
+                std::abs(gain[1] - 1.0) > epsilon || std::abs(gain[2] - 1.0) > epsilon;
+            if (lmg_active) {
+                shader_->set("lmg_enable", true);
+                // Upload swapped to BGR order so .r affects displayed Blue, .b affects displayed Red.
+                shader_->set("lmg_lift", lift[2], lift[1], lift[0]);
+                shader_->set("lmg_midtone", midtone[2], midtone[1], midtone[0]);
+                shader_->set("lmg_gain", gain[2], gain[1], gain[0]);
+            } else {
+                shader_->set("lmg_enable", false);
+            }
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

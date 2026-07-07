@@ -1161,6 +1161,67 @@ std::future<std::wstring> mixer_whitebalance_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// Shared implementation for the three per-channel (R G B) grade wheels.
+template <typename Getter, typename Setter>
+std::future<std::wstring>
+mixer_rgb_triple_command(command_context& ctx, const Getter& getter, const Setter& setter)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2, getter]() -> std::wstring {
+            auto arr = getter(transform2.get().image_transform);
+            return L"201 MIXER OK\r\n" + std::to_wstring(arr[0]) + L" " + std::to_wstring(arr[1]) + L" " +
+                   std::to_wstring(arr[2]) + L"\r\n";
+        });
+    }
+
+    transforms_applier transforms(ctx);
+    double       r        = std::stod(ctx.parameters.at(0));
+    double       g        = std::stod(ctx.parameters.at(1));
+    double       b        = std::stod(ctx.parameters.at(2));
+    int          duration = ctx.parameters.size() > 3 ? std::stoi(ctx.parameters[3]) : 0;
+    std::wstring tween    = ctx.parameters.size() > 4 ? ctx.parameters[4] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            setter(transform.image_transform, r, g, b);
+            return transform;
+        },
+        duration,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
+// MIXER LIFT r g b [duration tween] -- per-channel shadow offset
+std::future<std::wstring> mixer_lift_command(command_context& ctx)
+{
+    return mixer_rgb_triple_command(
+        ctx,
+        [](const image_transform& t) { return t.lift; },
+        [](image_transform& t, double r, double g, double b) { t.lift = {r, g, b}; });
+}
+
+// MIXER MIDTONE r g b [duration tween] -- per-channel midtone power (DaVinci "gamma" wheel)
+std::future<std::wstring> mixer_midtone_command(command_context& ctx)
+{
+    return mixer_rgb_triple_command(
+        ctx,
+        [](const image_transform& t) { return t.midtone; },
+        [](image_transform& t, double r, double g, double b) { t.midtone = {r, g, b}; });
+}
+
+// MIXER GAIN r g b [duration tween] -- per-channel highlight multiplier
+std::future<std::wstring> mixer_gain_command(command_context& ctx)
+{
+    return mixer_rgb_triple_command(
+        ctx,
+        [](const image_transform& t) { return t.gain; },
+        [](image_transform& t, double r, double g, double b) { t.gain = {r, g, b}; });
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1812,6 +1873,9 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CONTRAST", mixer_contrast_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER LEVELS", mixer_levels_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER WHITEBALANCE", mixer_whitebalance_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER LIFT", mixer_lift_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER MIDTONE", mixer_midtone_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER GAIN", mixer_gain_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);

@@ -98,6 +98,9 @@ struct image_transform final
     core::chroma          chroma;
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
+    std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel
+    std::array<double, 3> midtone = {1.0, 1.0, 1.0}; // midtone power per channel (DaVinci "gamma")
+    std::array<double, 3> gain    = {1.0, 1.0, 1.0}; // highlight multiplier per channel
 
     bool             is_key      = false;
     bool             invert      = false;

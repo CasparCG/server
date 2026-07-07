@@ -111,6 +111,11 @@ image_transform image_transform::tween(double                 time,
 
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
+    for (int i = 0; i < 3; ++i) {
+        result.lift[i]    = do_tween(time, source.lift[i], dest.lift[i], duration, tween);
+        result.midtone[i] = do_tween(time, source.midtone[i], dest.midtone[i], duration, tween);
+        result.gain[i]    = do_tween(time, source.gain[i], dest.gain[i], duration, tween);
+    }
 
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -149,7 +154,9 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
-               eq(lhs.tint, rhs.tint) ||
+               eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
+               boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
+               boost::range::equal(lhs.gain, rhs.gain, eq) ||
            lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
