@@ -96,6 +96,14 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     }
     if (other.split_balance != 0.5)
         self.split_balance = other.split_balance;
+
+    // ASC CDL: slope/power multiplicative, offset additive, saturation multiplicative
+    for (int i = 0; i < 3; ++i) {
+        self.cdl_slope[i]  *= other.cdl_slope[i];
+        self.cdl_offset[i] += other.cdl_offset[i];
+        self.cdl_power[i]  *= other.cdl_power[i];
+    }
+    self.cdl_saturation *= other.cdl_saturation;
 }
 
 bool is_default_perspective(const core::corners& perspective)

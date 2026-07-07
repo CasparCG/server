@@ -347,6 +347,29 @@ struct image_kernel::impl
             }
         }
 
+        // ASC CDL (Slope/Offset/Power)
+        {
+            const auto& s  = transforms.image_transform.cdl_slope;
+            const auto& o  = transforms.image_transform.cdl_offset;
+            const auto& p  = transforms.image_transform.cdl_power;
+            double      cs = transforms.image_transform.cdl_saturation;
+            bool        cdl_active =
+                std::abs(s[0] - 1.0) > epsilon || std::abs(s[1] - 1.0) > epsilon || std::abs(s[2] - 1.0) > epsilon ||
+                std::abs(o[0]) > epsilon || std::abs(o[1]) > epsilon || std::abs(o[2]) > epsilon ||
+                std::abs(p[0] - 1.0) > epsilon || std::abs(p[1] - 1.0) > epsilon || std::abs(p[2] - 1.0) > epsilon ||
+                std::abs(cs - 1.0) > epsilon;
+            if (cdl_active) {
+                shader_->set("cdl_enable", true);
+                // Upload swapped to BGR working order (.r=Blue, .b=Red).
+                shader_->set("cdl_slope", s[2], s[1], s[0]);
+                shader_->set("cdl_offset", o[2], o[1], o[0]);
+                shader_->set("cdl_power", p[2], p[1], p[0]);
+                shader_->set("cdl_saturation", static_cast<float>(cs));
+            } else {
+                shader_->set("cdl_enable", false);
+            }
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

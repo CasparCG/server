@@ -107,6 +107,10 @@ struct image_transform final
     std::array<double, 3> split_shadow_color    = {0.0, 0.0, 0.0}; // split tone: shadow tint RGB
     std::array<double, 3> split_highlight_color = {0.0, 0.0, 0.0}; // split tone: highlight tint RGB
     double                split_balance         = 0.5;             // split tone: crossover 0..1
+    std::array<double, 3> cdl_slope      = {1.0, 1.0, 1.0}; // ASC CDL slope
+    std::array<double, 3> cdl_offset     = {0.0, 0.0, 0.0}; // ASC CDL offset
+    std::array<double, 3> cdl_power      = {1.0, 1.0, 1.0}; // ASC CDL power
+    double                cdl_saturation = 1.0;             // ASC CDL saturation
 
     bool             is_key      = false;
     bool             invert      = false;

@@ -69,6 +69,13 @@ uniform vec3		split_shadow_color;
 uniform vec3		split_highlight_color;
 uniform float		split_balance; // crossover 0..1
 
+// ASC CDL (Slope / Offset / Power)
+uniform bool		cdl_enable;
+uniform vec3		cdl_slope;
+uniform vec3		cdl_offset;
+uniform vec3		cdl_power;
+uniform float		cdl_saturation;
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -608,6 +615,17 @@ vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
     return c;
 }
 
+// ---- ASC CDL (Slope/Offset/Power) ----
+// Industry-standard primary grade: out = pow(max(in * slope + offset, 0), power),
+// followed by a saturation adjustment.
+vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
+{
+    c = pow(max(c * slope + off, vec3(0.0)), pwr);
+    float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = mix(vec3(lum), c, sat_val);
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -615,6 +633,8 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    if (cdl_enable)
+        color.rgb = apply_cdl(color.rgb, cdl_slope, cdl_offset, cdl_power, cdl_saturation);
     if (white_balance)
         color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
     if (lmg_enable)

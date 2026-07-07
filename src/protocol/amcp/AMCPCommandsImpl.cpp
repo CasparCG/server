@@ -1339,6 +1339,69 @@ std::future<std::wstring> mixer_splittone_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// MIXER CDL sR sG sB oR oG oB pR pG pB [saturation] [duration tween]  -- ASC CDL (Slope/Offset/Power)
+// MIXER CDL RESET
+std::future<std::wstring> mixer_cdl_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            auto f = [](double v) { return std::to_wstring(v); };
+            return L"201 MIXER OK\r\n" + f(t.cdl_slope[0]) + L" " + f(t.cdl_slope[1]) + L" " + f(t.cdl_slope[2]) +
+                   L" " + f(t.cdl_offset[0]) + L" " + f(t.cdl_offset[1]) + L" " + f(t.cdl_offset[2]) + L" " +
+                   f(t.cdl_power[0]) + L" " + f(t.cdl_power[1]) + L" " + f(t.cdl_power[2]) + L" " +
+                   f(t.cdl_saturation) + L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"RESET")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.cdl_slope      = {1.0, 1.0, 1.0};
+                t.image_transform.cdl_offset     = {0.0, 0.0, 0.0};
+                t.image_transform.cdl_power      = {1.0, 1.0, 1.0};
+                t.image_transform.cdl_saturation = 1.0;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    transforms_applier transforms(ctx);
+    double       sR  = std::stod(ctx.parameters.at(0));
+    double       sG  = std::stod(ctx.parameters.at(1));
+    double       sB  = std::stod(ctx.parameters.at(2));
+    double       oR  = std::stod(ctx.parameters.at(3));
+    double       oG  = std::stod(ctx.parameters.at(4));
+    double       oB  = std::stod(ctx.parameters.at(5));
+    double       pR  = std::stod(ctx.parameters.at(6));
+    double       pG  = std::stod(ctx.parameters.at(7));
+    double       pB  = std::stod(ctx.parameters.at(8));
+    double       sat = ctx.parameters.size() > 9 ? std::stod(ctx.parameters[9]) : 1.0;
+    int          dur = ctx.parameters.size() > 10 ? std::stoi(ctx.parameters[10]) : 0;
+    std::wstring tw  = ctx.parameters.size() > 11 ? ctx.parameters[11] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.cdl_slope      = {sR, sG, sB};
+            transform.image_transform.cdl_offset     = {oR, oG, oB};
+            transform.image_transform.cdl_power      = {pR, pG, pB};
+            transform.image_transform.cdl_saturation = sat;
+            return transform;
+        },
+        dur,
+        tw));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1996,6 +2059,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER HUESHIFT", mixer_hueshift_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER TONEBALANCE", mixer_tonebalance_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER SPLITTONE", mixer_splittone_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CDL", mixer_cdl_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER FILL", mixer_fill_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLIP", mixer_clip_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER ANCHOR", mixer_anchor_command, 0);
