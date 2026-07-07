@@ -54,6 +54,10 @@ uniform vec3		lmg_lift;    // shadow offset per channel, default vec3(0)
 uniform vec3		lmg_midtone; // midtone power per channel,  default vec3(1)
 uniform vec3		lmg_gain;    // highlight multiplier per channel, default vec3(1)
 
+// Hue shift
+uniform bool		hue_shift_enable;
+uniform float		hue_shift_degrees; // -180..+180
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -555,6 +559,18 @@ vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
     return c;
 }
 
+// ---- Hue Shift ----
+// Rotate hue in HSV space.  Extract peak luminance, normalise, rotate, re-scale
+// so HDR values (>1.0) are preserved.
+vec3 apply_hue_shift(vec3 c, float degrees)
+{
+    float peak = max(max(c.r, c.g), max(c.b, 0.0001));
+    vec3  norm = c / peak;
+    vec3  hsv  = rgb2hsv(clamp(norm, 0.0, 1.0));
+    hsv.x      = fract(hsv.x + degrees / 360.0);
+    return hsv2rgb(hsv) * peak;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -566,6 +582,8 @@ void main()
         color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
     if (lmg_enable)
         color.rgb = apply_lmg(color.rgb, lmg_lift, lmg_midtone, lmg_gain);
+    if (hue_shift_enable)
+        color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

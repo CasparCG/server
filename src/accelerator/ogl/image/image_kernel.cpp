@@ -311,6 +311,14 @@ struct image_kernel::impl
             }
         }
 
+        // Hue shift
+        if (std::abs(transforms.image_transform.hue_shift) > epsilon) {
+            shader_->set("hue_shift_enable", true);
+            shader_->set("hue_shift_degrees", static_cast<float>(transforms.image_transform.hue_shift));
+        } else {
+            shader_->set("hue_shift_enable", false);
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));
