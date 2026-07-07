@@ -149,6 +149,24 @@ image_transform image_transform::tween(double                 time,
     result.qual_sat_offset  = do_tween(time, source.qual_sat_offset, dest.qual_sat_offset, duration, tween);
     result.qual_hue_offset  = do_tween(time, source.qual_hue_offset, dest.qual_hue_offset, duration, tween);
 
+    auto rl = [&](double s, double d) { return do_tween(time, s, d, duration, tween); };
+    result.per_channel_levels.enable       = dest.per_channel_levels.enable;
+    result.per_channel_levels.r.min_input  = rl(source.per_channel_levels.r.min_input, dest.per_channel_levels.r.min_input);
+    result.per_channel_levels.r.max_input  = rl(source.per_channel_levels.r.max_input, dest.per_channel_levels.r.max_input);
+    result.per_channel_levels.r.gamma      = rl(source.per_channel_levels.r.gamma, dest.per_channel_levels.r.gamma);
+    result.per_channel_levels.r.min_output = rl(source.per_channel_levels.r.min_output, dest.per_channel_levels.r.min_output);
+    result.per_channel_levels.r.max_output = rl(source.per_channel_levels.r.max_output, dest.per_channel_levels.r.max_output);
+    result.per_channel_levels.g.min_input  = rl(source.per_channel_levels.g.min_input, dest.per_channel_levels.g.min_input);
+    result.per_channel_levels.g.max_input  = rl(source.per_channel_levels.g.max_input, dest.per_channel_levels.g.max_input);
+    result.per_channel_levels.g.gamma      = rl(source.per_channel_levels.g.gamma, dest.per_channel_levels.g.gamma);
+    result.per_channel_levels.g.min_output = rl(source.per_channel_levels.g.min_output, dest.per_channel_levels.g.min_output);
+    result.per_channel_levels.g.max_output = rl(source.per_channel_levels.g.max_output, dest.per_channel_levels.g.max_output);
+    result.per_channel_levels.b.min_input  = rl(source.per_channel_levels.b.min_input, dest.per_channel_levels.b.min_input);
+    result.per_channel_levels.b.max_input  = rl(source.per_channel_levels.b.max_input, dest.per_channel_levels.b.max_input);
+    result.per_channel_levels.b.gamma      = rl(source.per_channel_levels.b.gamma, dest.per_channel_levels.b.gamma);
+    result.per_channel_levels.b.min_output = rl(source.per_channel_levels.b.min_output, dest.per_channel_levels.b.min_output);
+    result.per_channel_levels.b.max_output = rl(source.per_channel_levels.b.max_output, dest.per_channel_levels.b.max_output);
+
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
 
@@ -192,6 +210,23 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.qual_min_sat, rhs.qual_min_sat) && eq(lhs.qual_max_sat, rhs.qual_max_sat) &&
                eq(lhs.qual_min_lum, rhs.qual_min_lum) && eq(lhs.qual_max_lum, rhs.qual_max_lum) &&
                eq(lhs.qual_softness, rhs.qual_softness) && eq(lhs.qual_exposure, rhs.qual_exposure) &&
+               eq(lhs.qual_sat_offset, rhs.qual_sat_offset) && eq(lhs.qual_hue_offset, rhs.qual_hue_offset) &&
+               lhs.per_channel_levels.enable == rhs.per_channel_levels.enable &&
+               eq(lhs.per_channel_levels.r.min_input, rhs.per_channel_levels.r.min_input) &&
+               eq(lhs.per_channel_levels.r.max_input, rhs.per_channel_levels.r.max_input) &&
+               eq(lhs.per_channel_levels.r.gamma, rhs.per_channel_levels.r.gamma) &&
+               eq(lhs.per_channel_levels.r.min_output, rhs.per_channel_levels.r.min_output) &&
+               eq(lhs.per_channel_levels.r.max_output, rhs.per_channel_levels.r.max_output) &&
+               eq(lhs.per_channel_levels.g.min_input, rhs.per_channel_levels.g.min_input) &&
+               eq(lhs.per_channel_levels.g.max_input, rhs.per_channel_levels.g.max_input) &&
+               eq(lhs.per_channel_levels.g.gamma, rhs.per_channel_levels.g.gamma) &&
+               eq(lhs.per_channel_levels.g.min_output, rhs.per_channel_levels.g.min_output) &&
+               eq(lhs.per_channel_levels.g.max_output, rhs.per_channel_levels.g.max_output) &&
+               eq(lhs.per_channel_levels.b.min_input, rhs.per_channel_levels.b.min_input) &&
+               eq(lhs.per_channel_levels.b.max_input, rhs.per_channel_levels.b.max_input) &&
+               eq(lhs.per_channel_levels.b.gamma, rhs.per_channel_levels.b.gamma) &&
+               eq(lhs.per_channel_levels.b.min_output, rhs.per_channel_levels.b.min_output) &&
+               eq(lhs.per_channel_levels.b.max_output, rhs.per_channel_levels.b.max_output) ||
                eq(lhs.qual_sat_offset, rhs.qual_sat_offset) && eq(lhs.qual_hue_offset, rhs.qual_hue_offset) ||
                eq(lhs.gc_yellow, rhs.gc_yellow) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&

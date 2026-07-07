@@ -1572,6 +1572,71 @@ std::future<std::wstring> mixer_qualifier_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+std::future<std::wstring> mixer_rgblevels_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto t2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [t2]() -> std::wstring {
+            const auto& rl = t2.get().image_transform.per_channel_levels;
+            if (!rl.enable)
+                return L"201 MIXER OK\r\nDISABLED\r\n";
+            auto f   = [](double v) { return std::to_wstring(v); };
+            auto row = [&](const core::rgb_levels_channel& c) {
+                return f(c.min_input) + L" " + f(c.max_input) + L" " + f(c.gamma) + L" " + f(c.min_output) + L" " +
+                       f(c.max_output);
+            };
+            return L"201 MIXER OK\r\n" + row(rl.r) + L" " + row(rl.g) + L" " + row(rl.b) + L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"RESET")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.per_channel_levels = core::rgb_levels{};
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    transforms_applier transforms(ctx);
+    core::rgb_levels rl;
+    rl.enable       = true;
+    rl.r.min_input  = std::stod(ctx.parameters.at(0));
+    rl.r.max_input  = std::stod(ctx.parameters.at(1));
+    rl.r.gamma      = std::stod(ctx.parameters.at(2));
+    rl.r.min_output = std::stod(ctx.parameters.at(3));
+    rl.r.max_output = std::stod(ctx.parameters.at(4));
+    rl.g.min_input  = std::stod(ctx.parameters.at(5));
+    rl.g.max_input  = std::stod(ctx.parameters.at(6));
+    rl.g.gamma      = std::stod(ctx.parameters.at(7));
+    rl.g.min_output = std::stod(ctx.parameters.at(8));
+    rl.g.max_output = std::stod(ctx.parameters.at(9));
+    rl.b.min_input  = std::stod(ctx.parameters.at(10));
+    rl.b.max_input  = std::stod(ctx.parameters.at(11));
+    rl.b.gamma      = std::stod(ctx.parameters.at(12));
+    rl.b.min_output = std::stod(ctx.parameters.at(13));
+    rl.b.max_output = std::stod(ctx.parameters.at(14));
+    int          duration = ctx.parameters.size() > 15 ? std::stoi(ctx.parameters[15]) : 0;
+    std::wstring tween    = ctx.parameters.size() > 16 ? ctx.parameters[16] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.per_channel_levels = rl;
+            return transform;
+        },
+        duration,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2243,6 +2308,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GAMUTCOMPRESS", mixer_gamutcompress_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER QUALIFIER", mixer_qualifier_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER RGBLEVELS", mixer_rgblevels_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

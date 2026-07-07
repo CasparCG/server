@@ -405,6 +405,32 @@ struct image_kernel::impl
             shader_->set("qualifier_enable", false);
         }
 
+        // Per-channel RGB levels
+        {
+            const auto& rl = transforms.image_transform.per_channel_levels;
+            if (rl.enable) {
+                shader_->set("rgb_levels_enable", true);
+                // BGR order: index [0]=Blue, [1]=Green, [2]=Red -> upload user's channels swapped.
+                shader_->set("rgb_levels_min_input[0]", static_cast<float>(rl.b.min_input));
+                shader_->set("rgb_levels_min_input[1]", static_cast<float>(rl.g.min_input));
+                shader_->set("rgb_levels_min_input[2]", static_cast<float>(rl.r.min_input));
+                shader_->set("rgb_levels_max_input[0]", static_cast<float>(rl.b.max_input));
+                shader_->set("rgb_levels_max_input[1]", static_cast<float>(rl.g.max_input));
+                shader_->set("rgb_levels_max_input[2]", static_cast<float>(rl.r.max_input));
+                shader_->set("rgb_levels_gamma[0]", static_cast<float>(rl.b.gamma));
+                shader_->set("rgb_levels_gamma[1]", static_cast<float>(rl.g.gamma));
+                shader_->set("rgb_levels_gamma[2]", static_cast<float>(rl.r.gamma));
+                shader_->set("rgb_levels_min_output[0]", static_cast<float>(rl.b.min_output));
+                shader_->set("rgb_levels_min_output[1]", static_cast<float>(rl.g.min_output));
+                shader_->set("rgb_levels_min_output[2]", static_cast<float>(rl.r.min_output));
+                shader_->set("rgb_levels_max_output[0]", static_cast<float>(rl.b.max_output));
+                shader_->set("rgb_levels_max_output[1]", static_cast<float>(rl.g.max_output));
+                shader_->set("rgb_levels_max_output[2]", static_cast<float>(rl.r.max_output));
+            } else {
+                shader_->set("rgb_levels_enable", false);
+            }
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

@@ -59,6 +59,23 @@ struct levels final
     double max_output = 1.0;
 };
 
+struct rgb_levels_channel final
+{
+    double min_input  = 0.0;
+    double max_input  = 1.0;
+    double gamma      = 1.0;
+    double min_output = 0.0;
+    double max_output = 1.0;
+};
+
+struct rgb_levels final
+{
+    bool               enable = false;
+    rgb_levels_channel r;
+    rgb_levels_channel g;
+    rgb_levels_channel b;
+};
+
 struct corners final
 {
     std::array<double, 2> ul = {0.0, 0.0};
@@ -165,6 +182,7 @@ struct image_transform final
     double                qual_exposure    = 0.0;   // exposure offset for qualified region
     double                qual_sat_offset  = 0.0;   // saturation offset for qualified region
     double                qual_hue_offset  = 0.0;   // hue offset for qualified region (degrees)
+    core::rgb_levels      per_channel_levels;       // independent per-channel levels
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel
