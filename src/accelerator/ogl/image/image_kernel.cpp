@@ -388,6 +388,23 @@ struct image_kernel::impl
             shader_->set("gamut_compress_enable", false);
         }
 
+        // Secondary qualifier (HSL key + grade)
+        if (transforms.image_transform.qualifier_enable) {
+            shader_->set("qualifier_enable", true);
+            shader_->set("qual_target_hue", static_cast<float>(transforms.image_transform.qual_target_hue));
+            shader_->set("qual_hue_width", static_cast<float>(transforms.image_transform.qual_hue_width));
+            shader_->set("qual_min_sat", static_cast<float>(transforms.image_transform.qual_min_sat));
+            shader_->set("qual_max_sat", static_cast<float>(transforms.image_transform.qual_max_sat));
+            shader_->set("qual_min_lum", static_cast<float>(transforms.image_transform.qual_min_lum));
+            shader_->set("qual_max_lum", static_cast<float>(transforms.image_transform.qual_max_lum));
+            shader_->set("qual_softness", static_cast<float>(transforms.image_transform.qual_softness));
+            shader_->set("qual_exposure", static_cast<float>(transforms.image_transform.qual_exposure));
+            shader_->set("qual_sat_offset", static_cast<float>(transforms.image_transform.qual_sat_offset));
+            shader_->set("qual_hue_offset", static_cast<float>(transforms.image_transform.qual_hue_offset));
+        } else {
+            shader_->set("qualifier_enable", false);
+        }
+
         // Setup drawing area
 
         GL(glViewport(0, 0, params.background->width(), params.background->height()));

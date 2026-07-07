@@ -81,6 +81,19 @@ uniform vec3		cdl_offset;
 uniform vec3		cdl_power;
 uniform float		cdl_saturation;
 
+// Secondary qualifier (HSL key + grade)
+uniform bool		qualifier_enable;
+uniform float		qual_target_hue;
+uniform float		qual_hue_width;
+uniform float		qual_min_sat;
+uniform float		qual_max_sat;
+uniform float		qual_min_lum;
+uniform float		qual_max_lum;
+uniform float		qual_softness;
+uniform float		qual_exposure;
+uniform float		qual_sat_offset;
+uniform float		qual_hue_offset;
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -687,6 +700,37 @@ vec3 apply_gamut_compress(vec3 c, vec3 lim)
     return achromatic - dist * abs(achromatic);
 }
 
+// ---- Secondary Qualifier (HSL key + grade) ----
+// Isolates a colour range and applies exposure/saturation/hue corrections only
+// to the qualified pixels, using soft masks for smooth transitions.
+vec3 apply_qualifier(vec3 c, float tgt_hue, float hue_w, float min_s, float max_s,
+                     float min_l, float max_l, float soft, float exp_off,
+                     float sat_off, float hue_off)
+{
+    vec3  hsv      = rgb2hsv(clamp(c, 0.0, 1.0));
+    float hue_dist = AngleDiff(hsv.x, tgt_hue) * 2.0;
+    float hue_mask = 1.0 - smoothstep(hue_w - soft, hue_w + soft, hue_dist);
+    float sat_mask = smoothstep(min_s - soft, min_s + soft, hsv.y) *
+                     (1.0 - smoothstep(max_s - soft, max_s + soft, hsv.y));
+    float lum_mask = smoothstep(min_l - soft, min_l + soft, hsv.z) *
+                     (1.0 - smoothstep(max_l - soft, max_l + soft, hsv.z));
+    float mask     = hue_mask * sat_mask * lum_mask;
+    if (mask < 0.001)
+        return c;
+    vec3 graded = c;
+    graded *= (1.0 + exp_off);
+    float glum = dot(graded, vec3(0.2126, 0.7152, 0.0722));
+    graded     = mix(vec3(glum), graded, 1.0 + sat_off);
+    if (abs(hue_off) > 0.01) {
+        // HDR-safe hue rotation: normalise by peak, rotate, re-scale.
+        float peak = max(max(graded.r, graded.g), max(graded.b, 0.0001));
+        vec3  ghsv = rgb2hsv(clamp(graded / peak, 0.0, 1.0));
+        ghsv.x     = fract(ghsv.x + hue_off / 360.0);
+        graded     = hsv2rgb(ghsv) * peak;
+    }
+    return mix(c, graded, mask);
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -696,6 +740,10 @@ void main()
         color = chroma_key(color);
     if (gamut_compress_enable)
         color.rgb = apply_gamut_compress(color.rgb, gc_limit);
+    if (qualifier_enable)
+        color.rgb = apply_qualifier(color.rgb, qual_target_hue, qual_hue_width,
+                                    qual_min_sat, qual_max_sat, qual_min_lum, qual_max_lum,
+                                    qual_softness, qual_exposure, qual_sat_offset, qual_hue_offset);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)

@@ -1504,6 +1504,74 @@ std::future<std::wstring> mixer_gamutcompress_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+std::future<std::wstring> mixer_qualifier_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            if (!t.qualifier_enable)
+                return L"201 MIXER OK\r\nDISABLED\r\n";
+            auto f = [](double v) { return std::to_wstring(v); };
+            return L"201 MIXER OK\r\n" + f(t.qual_target_hue) + L" " + f(t.qual_hue_width) + L" " +
+                   f(t.qual_min_sat) + L" " + f(t.qual_max_sat) + L" " + f(t.qual_min_lum) + L" " +
+                   f(t.qual_max_lum) + L" " + f(t.qual_softness) + L" " + f(t.qual_exposure) + L" " +
+                   f(t.qual_sat_offset) + L" " + f(t.qual_hue_offset) + L"\r\n";
+        });
+    }
+
+    // Single param "0" = disable
+    if (ctx.parameters.size() == 1 && ctx.parameters.at(0) == L"0") {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.qualifier_enable = false;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    transforms_applier transforms(ctx);
+    double       tgt_hue  = std::stod(ctx.parameters.at(0));
+    double       hue_w    = std::stod(ctx.parameters.at(1));
+    double       min_sat  = std::stod(ctx.parameters.at(2));
+    double       max_sat  = std::stod(ctx.parameters.at(3));
+    double       min_lum  = std::stod(ctx.parameters.at(4));
+    double       max_lum  = std::stod(ctx.parameters.at(5));
+    double       softness = std::stod(ctx.parameters.at(6));
+    double       exp_off  = std::stod(ctx.parameters.at(7));
+    double       sat_off  = std::stod(ctx.parameters.at(8));
+    double       hue_off  = std::stod(ctx.parameters.at(9));
+    int          duration = ctx.parameters.size() > 10 ? std::stoi(ctx.parameters[10]) : 0;
+    std::wstring tween    = ctx.parameters.size() > 11 ? ctx.parameters[11] : L"linear";
+
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.qualifier_enable = true;
+            transform.image_transform.qual_target_hue  = tgt_hue;
+            transform.image_transform.qual_hue_width   = hue_w;
+            transform.image_transform.qual_min_sat     = min_sat;
+            transform.image_transform.qual_max_sat     = max_sat;
+            transform.image_transform.qual_min_lum     = min_lum;
+            transform.image_transform.qual_max_lum     = max_lum;
+            transform.image_transform.qual_softness    = softness;
+            transform.image_transform.qual_exposure    = exp_off;
+            transform.image_transform.qual_sat_offset  = sat_off;
+            transform.image_transform.qual_hue_offset  = hue_off;
+            return transform;
+        },
+        duration,
+        tween));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2174,6 +2242,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GAMUTCOMPRESS", mixer_gamutcompress_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER QUALIFIER", mixer_qualifier_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

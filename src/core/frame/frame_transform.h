@@ -154,6 +154,17 @@ struct image_transform final
     double                gc_cyan    = 1.147;     // cyan limit
     double                gc_magenta = 1.264;     // magenta limit
     double                gc_yellow  = 1.312;     // yellow limit
+    bool                  qualifier_enable = false; // secondary HSL qualifier
+    double                qual_target_hue  = 0.0;   // 0..1 (hue angle / 360)
+    double                qual_hue_width   = 0.1;   // 0..0.5
+    double                qual_min_sat     = 0.2;   // 0..1
+    double                qual_max_sat     = 1.0;   // 0..1
+    double                qual_min_lum     = 0.0;   // 0..1
+    double                qual_max_lum     = 1.0;   // 0..1
+    double                qual_softness    = 0.1;   // feather width
+    double                qual_exposure    = 0.0;   // exposure offset for qualified region
+    double                qual_sat_offset  = 0.0;   // saturation offset for qualified region
+    double                qual_hue_offset  = 0.0;   // hue offset for qualified region (degrees)
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

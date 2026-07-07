@@ -137,6 +137,18 @@ image_transform image_transform::tween(double                 time,
     }
     result.cdl_saturation = do_tween(time, source.cdl_saturation, dest.cdl_saturation, duration, tween);
 
+    result.qualifier_enable = dest.qualifier_enable;
+    result.qual_target_hue  = do_tween(time, source.qual_target_hue, dest.qual_target_hue, duration, tween);
+    result.qual_hue_width   = do_tween(time, source.qual_hue_width, dest.qual_hue_width, duration, tween);
+    result.qual_min_sat     = do_tween(time, source.qual_min_sat, dest.qual_min_sat, duration, tween);
+    result.qual_max_sat     = do_tween(time, source.qual_max_sat, dest.qual_max_sat, duration, tween);
+    result.qual_min_lum     = do_tween(time, source.qual_min_lum, dest.qual_min_lum, duration, tween);
+    result.qual_max_lum     = do_tween(time, source.qual_max_lum, dest.qual_max_lum, duration, tween);
+    result.qual_softness    = do_tween(time, source.qual_softness, dest.qual_softness, duration, tween);
+    result.qual_exposure    = do_tween(time, source.qual_exposure, dest.qual_exposure, duration, tween);
+    result.qual_sat_offset  = do_tween(time, source.qual_sat_offset, dest.qual_sat_offset, duration, tween);
+    result.qual_hue_offset  = do_tween(time, source.qual_hue_offset, dest.qual_hue_offset, duration, tween);
+
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
 
@@ -175,6 +187,12 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
                lhs.perspective == rhs.perspective && lhs.gamut_compress == rhs.gamut_compress &&
                eq(lhs.gc_cyan, rhs.gc_cyan) && eq(lhs.gc_magenta, rhs.gc_magenta) &&
+               eq(lhs.gc_yellow, rhs.gc_yellow) && lhs.qualifier_enable == rhs.qualifier_enable &&
+               eq(lhs.qual_target_hue, rhs.qual_target_hue) && eq(lhs.qual_hue_width, rhs.qual_hue_width) &&
+               eq(lhs.qual_min_sat, rhs.qual_min_sat) && eq(lhs.qual_max_sat, rhs.qual_max_sat) &&
+               eq(lhs.qual_min_lum, rhs.qual_min_lum) && eq(lhs.qual_max_lum, rhs.qual_max_lum) &&
+               eq(lhs.qual_softness, rhs.qual_softness) && eq(lhs.qual_exposure, rhs.qual_exposure) &&
+               eq(lhs.qual_sat_offset, rhs.qual_sat_offset) && eq(lhs.qual_hue_offset, rhs.qual_hue_offset) ||
                eq(lhs.gc_yellow, rhs.gc_yellow) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
