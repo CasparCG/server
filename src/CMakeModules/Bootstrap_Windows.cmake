@@ -272,7 +272,10 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT c
 add_definitions(-DUNICODE)
 add_definitions(-D_UNICODE)
 add_definitions(-DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-D_WIN32_WINNT=0x601)
+add_definitions(-D_WIN32_WINNT=0x0A00) # Minimum windows 10
+
+# TODO: recompile boost to avoid this
+add_compile_definitions(BOOST_USE_WINAPI_VERSION=0x0601)  # Boost ABI: must match prebuilt deps
 
 # ignore boost deprecated headers, as these are often reported inside boost
 add_definitions("-DBOOST_ALLOW_DEPRECATED_HEADERS")

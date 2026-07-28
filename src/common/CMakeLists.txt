@@ -19,6 +19,7 @@ if (MSVC)
 
 			os/windows/filesystem.cpp
 			os/windows/prec_timer.cpp
+			os/windows/process.cpp
 			os/windows/thread.cpp
 			os/windows/windows.h
 	)

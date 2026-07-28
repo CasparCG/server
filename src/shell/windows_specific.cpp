@@ -48,6 +48,8 @@ _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
 _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 }
 
+#include <common/os/windows/process.h>
+
 namespace caspar {
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -67,6 +69,20 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+void setup_process_scheduling()
+{
+    // Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
+    static struct inc_prec
+    {
+        inc_prec() { timeBeginPeriod(1); }
+        ~inc_prec() { timeEndPeriod(1); }
+    } inc_prec;
+
+    // Stop the OS taking back the resolution requested above when no window is visible. CEF paces
+    // audio off a timer rather than a device clock, so its subprocesses need this too.
+    disable_process_power_throttling();
+}
+
 void setup_prerequisites()
 {
     // Enable utf8 console input and output
@@ -74,13 +90,6 @@ void setup_prerequisites()
     _setmode(_fileno(stdin), _O_U16TEXT);
 
     SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
-
-    // Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
-    static struct inc_prec
-    {
-        inc_prec() { timeBeginPeriod(1); }
-        ~inc_prec() { timeEndPeriod(1); }
-    } inc_prec;
 }
 
 void change_icon(const HICON hNewIcon)
