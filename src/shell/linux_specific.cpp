@@ -30,6 +30,11 @@
 
 namespace caspar {
 
+void setup_process_scheduling()
+{
+    // Nothing to do, linux does not throttle background processes like this.
+}
+
 void setup_prerequisites()
 {
     // Enable utf8 console input and output

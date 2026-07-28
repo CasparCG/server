@@ -192,6 +192,10 @@ int main(int argc, char** argv)
 {
     using namespace caspar;
 
+    // Before the interceptors, as the CEF subprocesses return from there without reaching the rest
+    // of main and need the same scheduling guarantees as the browser process.
+    setup_process_scheduling();
+
     if (intercept_command_line_args(argc, argv))
         return 0;
 
