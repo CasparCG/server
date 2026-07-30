@@ -722,13 +722,24 @@ vec3 apply_curves(vec3 c)
 // A=sat-vs-sat multiplier (indexed by saturation).
 vec3 apply_hue_curves(vec3 c)
 {
-    vec3 hsv     = rgb2hsv(clamp(c, 0.0, 1.0));
+    // `c` is BGR-ordered at this point: get_rgba_color() swizzles to .bgra on
+    // the way in and main() writes fragColor = color.bgra on the way out, so the
+    // two cancel for a straight pass-through but everything in between sees blue
+    // in the red slot. rgb2hsv treats the first component as red regardless, and
+    // exchanging red and blue mirrors the hue wheel, so an unswizzled call here
+    // delivers the negation of the requested offset -- +0.25 comes out as -0.25.
+    // Only 0.0 and 0.5 look right, being their own negations.
+    //
+    // ContrastSaturationBrightness already accounts for this ordering with
+    // luma_coeff.bgr; this does the same. Saturation and value are unchanged by
+    // the exchange, so only hue-vs-hue was affected.
+    vec3 hsv     = rgb2hsv(clamp(c.bgr, 0.0, 1.0));
     vec4 offsets = texture(hue_curve_tex, vec2(hsv.x, 0.5));
     hsv.x = fract(hsv.x + offsets.r);
     hsv.y *= offsets.g;
     vec4 sat_offsets = texture(hue_curve_tex, vec2(hsv.y, 0.5));
     hsv.y *= sat_offsets.a;
-    vec3 result = hsv2rgb(hsv);
+    vec3 result = hsv2rgb(hsv).bgr;
     result += offsets.b;
     return result;
 }
