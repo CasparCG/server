@@ -115,6 +115,7 @@ image_transform image_transform::tween(double                 time,
                                                         static_cast<double>(dest.lut3d_strength),
                                                         duration,
                                                         tween));
+    result.curves         = dest.curves; // snap to destination (control-point sets cannot interpolate)
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
     for (int i = 0; i < 3; ++i) {
@@ -176,6 +177,21 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
                lhs.perspective == rhs.perspective && lhs.lut3d.get() == rhs.lut3d.get() &&
+               eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) &&
+               lhs.curves.enable == rhs.curves.enable &&
+               [&]() {
+                   auto cc_eq = [](const core::curve_channel& a, const core::curve_channel& b) {
+                       if (a.count != b.count)
+                           return false;
+                       for (int i = 0; i < a.count; ++i)
+                           if (std::abs(a.points[i].x - b.points[i].x) >= 5e-8 ||
+                               std::abs(a.points[i].y - b.points[i].y) >= 5e-8)
+                               return false;
+                       return true;
+                   };
+                   return cc_eq(lhs.curves.master, rhs.curves.master) && cc_eq(lhs.curves.red, rhs.curves.red) &&
+                          cc_eq(lhs.curves.green, rhs.curves.green) && cc_eq(lhs.curves.blue, rhs.curves.blue);
+               }() ||
                eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&

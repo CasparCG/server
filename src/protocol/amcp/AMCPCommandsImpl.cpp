@@ -1568,6 +1568,97 @@ static std::shared_ptr<const core::lut3d_data> parse_cube_file(const std::wstrin
     return lut;
 }
 
+std::future<std::wstring> mixer_curves_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto t2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [t2]() -> std::wstring {
+            const auto& cv = t2.get().image_transform.curves;
+            if (!cv.enable)
+                return L"201 MIXER OK\r\nDISABLED\r\n";
+            auto dump = [](const core::curve_channel& c) -> std::wstring {
+                std::wstring s;
+                for (int i = 0; i < c.count; ++i)
+                    s += std::to_wstring(c.points[i].x) + L" " + std::to_wstring(c.points[i].y) + L" ";
+                return s;
+            };
+            return L"201 MIXER OK\r\nMASTER " + dump(cv.master) + L"\r\nR " + dump(cv.red) + L"\r\nG " +
+                   dump(cv.green) + L"\r\nB " + dump(cv.blue) + L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"RESET")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.curves = core::tone_curves{};
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    const std::wstring& ch_str = ctx.parameters.at(0);
+    int                 ch     = -1;
+    if (boost::iequals(ch_str, L"MASTER"))
+        ch = 0;
+    else if (boost::iequals(ch_str, L"R") || boost::iequals(ch_str, L"RED"))
+        ch = 1;
+    else if (boost::iequals(ch_str, L"G") || boost::iequals(ch_str, L"GREEN"))
+        ch = 2;
+    else if (boost::iequals(ch_str, L"B") || boost::iequals(ch_str, L"BLUE"))
+        ch = 3;
+
+    if (ch < 0)
+        return make_ready_future<std::wstring>(L"400 ERROR\r\n");
+
+    if (ctx.parameters.size() == 1) {
+        auto t2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [t2, ch]() -> std::wstring {
+            const auto&                cv = t2.get().image_transform.curves;
+            const core::curve_channel& cc = (ch == 0) ? cv.master : (ch == 1) ? cv.red : (ch == 2) ? cv.green : cv.blue;
+            std::wstring               s  = L"201 MIXER OK\r\n";
+            for (int i = 0; i < cc.count; ++i)
+                s += std::to_wstring(cc.points[i].x) + L" " + std::to_wstring(cc.points[i].y) + L" ";
+            return s + L"\r\n";
+        });
+    }
+
+    int n_params = static_cast<int>(ctx.parameters.size()) - 1;
+    if (n_params < 4 || n_params % 2 != 0 || n_params / 2 > 16)
+        return make_ready_future<std::wstring>(L"400 ERROR\r\n");
+
+    core::curve_channel new_cc;
+    new_cc.count = n_params / 2;
+    for (int i = 0; i < new_cc.count; ++i) {
+        new_cc.points[i].x = std::stod(ctx.parameters.at(1 + i * 2));
+        new_cc.points[i].y = std::stod(ctx.parameters.at(2 + i * 2));
+    }
+
+    transforms_applier transforms(ctx);
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            auto& cv  = transform.image_transform.curves;
+            cv.enable = true;
+            switch (ch) {
+                case 0: cv.master = new_cc; break;
+                case 1: cv.red = new_cc; break;
+                case 2: cv.green = new_cc; break;
+                case 3: cv.blue = new_cc; break;
+            }
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2238,6 +2329,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER LUT3D", mixer_lut3d_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER CURVES", mixer_curves_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

@@ -39,6 +39,9 @@
 
 #include <array>
 #include <cmath>
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 namespace caspar::accelerator::ogl {
 
@@ -78,6 +81,77 @@ bool is_outside_screen(const std::vector<core::frame_geometry::coord>& coords)
            boost::algorithm::all_of(y_coords, &is_above_screen) || boost::algorithm::all_of(y_coords, &is_below_screen);
 }
 
+// Builds a 256-entry 1D LUT from control points using Fritsch-Carlson monotone
+// cubic Hermite interpolation. Guarantees no overshoot (safe for colour values).
+// If fewer than 2 points, returns a linear identity LUT.
+static std::array<float, 256> build_curve_lut(const core::curve_channel& cc)
+{
+    std::array<float, 256> lut;
+    if (cc.count < 2) {
+        for (int i = 0; i < 256; ++i)
+            lut[i] = i / 255.0f;
+        return lut;
+    }
+    std::vector<std::pair<double, double>> pts;
+    pts.reserve(cc.count);
+    for (int i = 0; i < cc.count; ++i)
+        pts.push_back({cc.points[i].x, cc.points[i].y});
+    std::sort(pts.begin(), pts.end());
+
+    int                 n = static_cast<int>(pts.size());
+    std::vector<double> dx(n - 1), dy(n - 1), delta(n - 1), m(n);
+    for (int i = 0; i < n - 1; ++i) {
+        dx[i]    = pts[i + 1].first - pts[i].first;
+        dy[i]    = pts[i + 1].second - pts[i].second;
+        delta[i] = (dx[i] > 1e-10) ? dy[i] / dx[i] : 0.0;
+    }
+    m[0]     = delta[0];
+    m[n - 1] = delta[n - 2];
+    for (int i = 1; i < n - 1; ++i)
+        m[i] = (delta[i - 1] + delta[i]) * 0.5;
+    for (int i = 0; i < n - 1; ++i) {
+        if (std::abs(delta[i]) < 1e-10) {
+            m[i] = m[i + 1] = 0.0;
+            continue;
+        }
+        double a = m[i] / delta[i];
+        double b = m[i + 1] / delta[i];
+        double h = std::sqrt(a * a + b * b);
+        if (h > 3.0) {
+            m[i] *= 3.0 / h;
+            m[i + 1] *= 3.0 / h;
+        }
+    }
+    for (int k = 0; k < 256; ++k) {
+        double t = k / 255.0;
+        if (t <= pts.front().first) {
+            lut[k] = static_cast<float>(std::max(0.0, std::min(1.0, pts.front().second)));
+            continue;
+        }
+        if (t >= pts.back().first) {
+            lut[k] = static_cast<float>(std::max(0.0, std::min(1.0, pts.back().second)));
+            continue;
+        }
+        int seg = 0;
+        for (int i = 0; i < n - 2; ++i)
+            if (t >= pts[i].first && t < pts[i + 1].first) {
+                seg = i;
+                break;
+            }
+        double h_  = dx[seg];
+        double t_  = (h_ > 1e-10) ? (t - pts[seg].first) / h_ : 0.0;
+        double t2  = t_ * t_;
+        double t3  = t2 * t_;
+        double h00 = 2 * t3 - 3 * t2 + 1;
+        double h10 = t3 - 2 * t2 + t_;
+        double h01 = -2 * t3 + 3 * t2;
+        double h11 = t3 - t2;
+        double val = h00 * pts[seg].second + h10 * h_ * m[seg] + h01 * pts[seg + 1].second + h11 * h_ * m[seg + 1];
+        lut[k]     = static_cast<float>(std::max(0.0, std::min(1.0, val)));
+    }
+    return lut;
+}
+
 static const double epsilon = 0.001;
 
 struct image_kernel::impl
@@ -88,6 +162,7 @@ struct image_kernel::impl
     GLuint                  vbo_;
     GLuint                  lut3d_tex_id_   = 0;
     const core::lut3d_data* lut3d_data_ptr_ = nullptr; // tracks which LUT data is uploaded
+    GLuint                  curve_lut_tex_id_ = 0;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -106,6 +181,8 @@ struct image_kernel::impl
             GL(glDeleteBuffers(1, &vbo_));
             if (lut3d_tex_id_)
                 GL(glDeleteTextures(1, &lut3d_tex_id_));
+            if (curve_lut_tex_id_)
+                GL(glDeleteTextures(1, &curve_lut_tex_id_));
         });
     }
 
@@ -399,6 +476,39 @@ struct image_kernel::impl
                 shader_->set("lut3d_enable", false);
                 if (lut3d_tex_id_ && !lut)
                     lut3d_data_ptr_ = nullptr;
+            }
+        }
+
+        // Tone curves: build 256-entry LUTs on the CPU, pack into an RGBA32F 256x1 texture.
+        {
+            const auto& cv = transforms.image_transform.curves;
+            if (cv.enable) {
+                auto lut_r = build_curve_lut(cv.red);
+                auto lut_g = build_curve_lut(cv.green);
+                auto lut_b = build_curve_lut(cv.blue);
+                auto lut_m = build_curve_lut(cv.master);
+                std::vector<float> rgba(256 * 4);
+                for (int i = 0; i < 256; ++i) {
+                    // BGR working order: .r slot = displayed Blue, .b slot = displayed Red.
+                    rgba[i * 4 + 0] = lut_b[i];
+                    rgba[i * 4 + 1] = lut_g[i];
+                    rgba[i * 4 + 2] = lut_r[i];
+                    rgba[i * 4 + 3] = lut_m[i];
+                }
+                if (!curve_lut_tex_id_) {
+                    GL(glCreateTextures(GL_TEXTURE_2D, 1, &curve_lut_tex_id_));
+                    GL(glTextureStorage2D(curve_lut_tex_id_, 1, GL_RGBA32F, 256, 1));
+                    GL(glTextureParameteri(curve_lut_tex_id_, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+                    GL(glTextureParameteri(curve_lut_tex_id_, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+                    GL(glTextureParameteri(curve_lut_tex_id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+                    GL(glTextureParameteri(curve_lut_tex_id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+                }
+                GL(glTextureSubImage2D(curve_lut_tex_id_, 0, 0, 0, 256, 1, GL_RGBA, GL_FLOAT, rgba.data()));
+                GL(glBindTextureUnit(static_cast<int>(texture_id::curve_lut_tex), curve_lut_tex_id_));
+                shader_->set("curves_enable", true);
+                shader_->set("curve_lut_tex", static_cast<int>(texture_id::curve_lut_tex));
+            } else {
+                shader_->set("curves_enable", false);
             }
         }
 

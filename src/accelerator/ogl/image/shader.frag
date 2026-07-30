@@ -13,6 +13,10 @@ uniform sampler3D	lut3d_tex;
 uniform bool		lut3d_enable;
 uniform float		lut3d_strength;
 
+// Tone curves (per-channel + master, 256-entry LUT packed as RGBA32F 256x1)
+uniform sampler2D	curve_lut_tex;
+uniform bool		curves_enable;
+
 uniform bool        is_straight_alpha;
 
 uniform mat3		color_matrix;
@@ -679,6 +683,36 @@ vec3 apply_lut3d(vec3 c, float strength)
     return mix(c, rgb_out.bgr, strength);
 }
 
+// ---- Tone Curves: bilinear sample of a 256-entry float LUT ----
+// ch: 0=R slot, 1=G slot, 2=B slot, 3=Master. The kernel packs the LUT so the
+// .r slot holds the displayed-Blue curve and .b slot the displayed-Red curve.
+float sample_lut_256(float val, int ch)
+{
+    float s  = clamp(val, 0.0, 1.0) * 255.0;
+    int   lo = int(s);
+    int   hi = min(lo + 1, 255);
+    float f  = fract(s);
+    vec4 lo4 = texelFetch(curve_lut_tex, ivec2(lo, 0), 0);
+    vec4 hi4 = texelFetch(curve_lut_tex, ivec2(hi, 0), 0);
+    vec4 v4  = mix(lo4, hi4, f);
+    if (ch == 0) return v4.r;
+    if (ch == 1) return v4.g;
+    if (ch == 2) return v4.b;
+    return v4.a;
+}
+
+vec3 apply_curves(vec3 c)
+{
+    // Per-channel curves first, then the master curve as a global tone.
+    c.r = sample_lut_256(c.r, 0);
+    c.g = sample_lut_256(c.g, 1);
+    c.b = sample_lut_256(c.b, 2);
+    c.r = sample_lut_256(c.r, 3);
+    c.g = sample_lut_256(c.g, 3);
+    c.b = sample_lut_256(c.b, 3);
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -688,6 +722,8 @@ void main()
         color = chroma_key(color);
     if (lut3d_enable)
         color.rgb = apply_lut3d(color.rgb, lut3d_strength);
+    if (curves_enable)
+        color.rgb = apply_curves(color.rgb);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)

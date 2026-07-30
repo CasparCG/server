@@ -77,6 +77,11 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
         self.lut3d          = other.lut3d;
         self.lut3d_strength = other.lut3d_strength;
     }
+
+    // Tone curves: override when enabled (curves don't compose additively)
+    if (other.curves.enable) {
+        self.curves = other.curves;
+    }
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
     // against). Two layers at the edge of legal would otherwise reach a value no single

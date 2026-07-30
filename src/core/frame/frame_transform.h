@@ -39,6 +39,29 @@ struct lut3d_data final
     std::vector<float> data;      // size*size*size*3 RGB float values
 };
 
+// Tone curve control points (per-channel + master, up to 16 points each).
+struct curve_point final
+{
+    double x = 0.0;
+    double y = 0.0;
+};
+
+// count == 0 means "identity" (the LUT builder returns a linear ramp).
+struct curve_channel final
+{
+    int                         count = 0;
+    std::array<curve_point, 16> points{};
+};
+
+struct tone_curves final
+{
+    bool          enable = false;
+    curve_channel master; // applied as a global tone after per-channel curves
+    curve_channel red;
+    curve_channel green;
+    curve_channel blue;
+};
+
 struct chroma
 {
     enum class legacy_type
@@ -161,6 +184,7 @@ struct image_transform final
     core::chroma          chroma;
     std::shared_ptr<const lut3d_data> lut3d;                // nullptr = disabled
     float                             lut3d_strength = 1.0f; // 0..1 mix factor
+    core::tone_curves                 curves;               // per-channel + master tone curves
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

@@ -37,7 +37,8 @@ enum class texture_id
     local_key,
     layer_key,
     background,
-    lut3d_tex
+    lut3d_tex,
+    curve_lut_tex
 };
 
 std::shared_ptr<shader> get_image_shader(const spl::shared_ptr<device>& ogl);
