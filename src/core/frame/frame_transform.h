@@ -62,6 +62,12 @@ struct tone_curves final
     curve_channel blue;
 };
 
+// Hue-curve data (Hue-vs-Hue, Hue-vs-Sat, Hue-vs-Lum, Sat-vs-Sat).
+struct hue_curve_data final
+{
+    std::vector<float> data; // 256*4 floats (R=HvH, G=HvS, B=HvL, A=SvS)
+};
+
 struct chroma
 {
     enum class legacy_type
@@ -185,6 +191,7 @@ struct image_transform final
     std::shared_ptr<const lut3d_data> lut3d;                // nullptr = disabled
     float                             lut3d_strength = 1.0f; // 0..1 mix factor
     core::tone_curves                 curves;               // per-channel + master tone curves
+    std::shared_ptr<const hue_curve_data> hue_curves;       // nullptr = disabled
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

@@ -116,6 +116,7 @@ image_transform image_transform::tween(double                 time,
                                                         duration,
                                                         tween));
     result.curves         = dest.curves; // snap to destination (control-point sets cannot interpolate)
+    result.hue_curves     = dest.hue_curves; // snap to destination
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
     for (int i = 0; i < 3; ++i) {
@@ -178,7 +179,7 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
                lhs.perspective == rhs.perspective && lhs.lut3d.get() == rhs.lut3d.get() &&
                eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) &&
-               lhs.curves.enable == rhs.curves.enable &&
+               lhs.hue_curves.get() == rhs.hue_curves.get() && lhs.curves.enable == rhs.curves.enable &&
                [&]() {
                    auto cc_eq = [](const core::curve_channel& a, const core::curve_channel& b) {
                        if (a.count != b.count)

@@ -1659,6 +1659,118 @@ std::future<std::wstring> mixer_curves_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+static std::shared_ptr<core::hue_curve_data>
+build_hue_curve_lut(const std::vector<std::pair<float, float>>& points, int channel)
+{
+    // 256-entry LUT built from control points by linear interpolation.
+    // channel: 0=HvH, 1=HvS, 2=HvL, 3=SvS. Defaults are identity per channel.
+    auto data = std::make_shared<core::hue_curve_data>();
+    data->data.resize(256 * 4, 0.0f);
+    for (int i = 0; i < 256; ++i) {
+        data->data[i * 4 + 0] = 0.0f; // HvH offset
+        data->data[i * 4 + 1] = 1.0f; // HvS multiplier
+        data->data[i * 4 + 2] = 0.0f; // HvL offset
+        data->data[i * 4 + 3] = 1.0f; // SvS multiplier
+    }
+
+    if (points.size() < 2)
+        return data;
+
+    auto sorted = points;
+    std::sort(sorted.begin(), sorted.end());
+
+    for (int i = 0; i < 256; ++i) {
+        float x   = static_cast<float>(i) / 255.0f;
+        float val = 0.0f;
+        if (x <= sorted.front().first) {
+            val = sorted.front().second;
+        } else if (x >= sorted.back().first) {
+            val = sorted.back().second;
+        } else {
+            for (size_t j = 0; j + 1 < sorted.size(); ++j) {
+                if (x >= sorted[j].first && x <= sorted[j + 1].first) {
+                    float t = (x - sorted[j].first) / (sorted[j + 1].first - sorted[j].first);
+                    val     = sorted[j].second + t * (sorted[j + 1].second - sorted[j].second);
+                    break;
+                }
+            }
+        }
+        data->data[i * 4 + channel] = val;
+    }
+    return data;
+}
+
+std::future<std::wstring> mixer_huecurve_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            return t.hue_curves ? L"201 MIXER OK\r\nACTIVE\r\n" : L"201 MIXER OK\r\nDISABLED\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"RESET")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.hue_curves = nullptr;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    int channel = -1;
+    if (boost::iequals(ctx.parameters.at(0), L"HUE_HUE"))
+        channel = 0;
+    else if (boost::iequals(ctx.parameters.at(0), L"HUE_SAT"))
+        channel = 1;
+    else if (boost::iequals(ctx.parameters.at(0), L"HUE_LUM"))
+        channel = 2;
+    else if (boost::iequals(ctx.parameters.at(0), L"SAT_SAT"))
+        channel = 3;
+    if (channel < 0)
+        return make_ready_future<std::wstring>(L"400 ERROR\r\n");
+
+    int n_params = static_cast<int>(ctx.parameters.size()) - 1;
+    if (n_params < 4 || n_params % 2 != 0)
+        return make_ready_future<std::wstring>(L"400 ERROR\r\n");
+
+    std::vector<std::pair<float, float>> points;
+    for (int i = 0; i < n_params / 2; ++i) {
+        float h = std::stof(ctx.parameters.at(1 + i * 2));
+        float v = std::stof(ctx.parameters.at(2 + i * 2));
+        points.emplace_back(h, v);
+    }
+
+    auto lut = build_hue_curve_lut(points, channel);
+
+    transforms_applier transforms(ctx);
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            // Merge this channel into any existing hue curves.
+            if (transform.image_transform.hue_curves) {
+                auto merged = std::make_shared<core::hue_curve_data>(*transform.image_transform.hue_curves);
+                for (int i = 0; i < 256; ++i)
+                    merged->data[i * 4 + channel] = lut->data[i * 4 + channel];
+                transform.image_transform.hue_curves = merged;
+            } else {
+                transform.image_transform.hue_curves = lut;
+            }
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2330,6 +2442,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER LUT3D", mixer_lut3d_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CURVES", mixer_curves_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER HUECURVE", mixer_huecurve_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

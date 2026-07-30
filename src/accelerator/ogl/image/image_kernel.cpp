@@ -163,6 +163,7 @@ struct image_kernel::impl
     GLuint                  lut3d_tex_id_   = 0;
     const core::lut3d_data* lut3d_data_ptr_ = nullptr; // tracks which LUT data is uploaded
     GLuint                  curve_lut_tex_id_ = 0;
+    GLuint                  hue_curve_tex_id_ = 0;
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -183,6 +184,8 @@ struct image_kernel::impl
                 GL(glDeleteTextures(1, &lut3d_tex_id_));
             if (curve_lut_tex_id_)
                 GL(glDeleteTextures(1, &curve_lut_tex_id_));
+            if (hue_curve_tex_id_)
+                GL(glDeleteTextures(1, &hue_curve_tex_id_));
         });
     }
 
@@ -509,6 +512,27 @@ struct image_kernel::impl
                 shader_->set("curve_lut_tex", static_cast<int>(texture_id::curve_lut_tex));
             } else {
                 shader_->set("curves_enable", false);
+            }
+        }
+
+        // Hue-vs-Hue / Hue-vs-Sat curves
+        {
+            const auto& hc = transforms.image_transform.hue_curves;
+            if (hc && !hc->data.empty()) {
+                if (!hue_curve_tex_id_) {
+                    GL(glCreateTextures(GL_TEXTURE_2D, 1, &hue_curve_tex_id_));
+                    GL(glTextureStorage2D(hue_curve_tex_id_, 1, GL_RGBA32F, 256, 1));
+                    GL(glTextureParameteri(hue_curve_tex_id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(hue_curve_tex_id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(hue_curve_tex_id_, GL_TEXTURE_WRAP_S, GL_REPEAT));
+                    GL(glTextureParameteri(hue_curve_tex_id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+                }
+                GL(glTextureSubImage2D(hue_curve_tex_id_, 0, 0, 0, 256, 1, GL_RGBA, GL_FLOAT, hc->data.data()));
+                GL(glBindTextureUnit(static_cast<int>(texture_id::hue_curve_tex), hue_curve_tex_id_));
+                shader_->set("hue_curve_enable", true);
+                shader_->set("hue_curve_tex", static_cast<int>(texture_id::hue_curve_tex));
+            } else {
+                shader_->set("hue_curve_enable", false);
             }
         }
 

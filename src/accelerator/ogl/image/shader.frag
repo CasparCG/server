@@ -17,6 +17,10 @@ uniform float		lut3d_strength;
 uniform sampler2D	curve_lut_tex;
 uniform bool		curves_enable;
 
+// Hue-vs-Hue / Hue-vs-Sat / Hue-vs-Lum / Sat-vs-Sat curves (256x1 RGBA32F)
+uniform sampler2D	hue_curve_tex;
+uniform bool		hue_curve_enable;
+
 uniform bool        is_straight_alpha;
 
 uniform mat3		color_matrix;
@@ -713,6 +717,22 @@ vec3 apply_curves(vec3 c)
     return c;
 }
 
+// ---- Hue-vs-Hue / Hue-vs-Sat / Hue-vs-Lum / Sat-vs-Sat curves ----
+// 4-channel LUT indexed by hue: R=hue offset, G=sat multiplier, B=lum offset,
+// A=sat-vs-sat multiplier (indexed by saturation).
+vec3 apply_hue_curves(vec3 c)
+{
+    vec3 hsv     = rgb2hsv(clamp(c, 0.0, 1.0));
+    vec4 offsets = texture(hue_curve_tex, vec2(hsv.x, 0.5));
+    hsv.x = fract(hsv.x + offsets.r);
+    hsv.y *= offsets.g;
+    vec4 sat_offsets = texture(hue_curve_tex, vec2(hsv.y, 0.5));
+    hsv.y *= sat_offsets.a;
+    vec3 result = hsv2rgb(hsv);
+    result += offsets.b;
+    return result;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -724,6 +744,8 @@ void main()
         color.rgb = apply_lut3d(color.rgb, lut3d_strength);
     if (curves_enable)
         color.rgb = apply_curves(color.rgb);
+    if (hue_curve_enable)
+        color.rgb = apply_hue_curves(color.rgb);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)

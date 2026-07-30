@@ -82,6 +82,11 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     if (other.curves.enable) {
         self.curves = other.curves;
     }
+
+    // Hue curves
+    if (other.hue_curves) {
+        self.hue_curves = other.hue_curves;
+    }
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
     // against). Two layers at the edge of legal would otherwise reach a value no single
