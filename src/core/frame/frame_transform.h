@@ -26,9 +26,18 @@
 #include <core/mixer/image/blend_modes.h>
 
 #include <array>
+#include <memory>
 #include <optional>
+#include <vector>
 
 namespace caspar { namespace core {
+
+// 3D LUT data (parsed from .cube files).
+struct lut3d_data final
+{
+    int                size = 0; // LUT dimension (e.g. 33 for a 33x33x33 LUT)
+    std::vector<float> data;      // size*size*size*3 RGB float values
+};
 
 struct chroma
 {
@@ -150,6 +159,8 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    std::shared_ptr<const lut3d_data> lut3d;                // nullptr = disabled
+    float                             lut3d_strength = 1.0f; // 0..1 mix factor
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel

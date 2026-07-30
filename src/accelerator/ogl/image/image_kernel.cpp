@@ -86,6 +86,8 @@ struct image_kernel::impl
     spl::shared_ptr<shader> shader_;
     GLuint                  vao_;
     GLuint                  vbo_;
+    GLuint                  lut3d_tex_id_   = 0;
+    const core::lut3d_data* lut3d_data_ptr_ = nullptr; // tracks which LUT data is uploaded
 
     explicit impl(const spl::shared_ptr<device>& ogl)
         : ogl_(ogl)
@@ -102,6 +104,8 @@ struct image_kernel::impl
         ogl_->dispatch_sync([&] {
             GL(glDeleteVertexArrays(1, &vao_));
             GL(glDeleteBuffers(1, &vbo_));
+            if (lut3d_tex_id_)
+                GL(glDeleteTextures(1, &lut3d_tex_id_));
         });
     }
 
@@ -364,6 +368,37 @@ struct image_kernel::impl
                 shader_->set("cdl_saturation", static_cast<float>(cs));
             } else {
                 shader_->set("cdl_enable", false);
+            }
+        }
+
+        // 3D LUT
+        {
+            const auto& lut = transforms.image_transform.lut3d;
+            if (lut && lut->size > 0 && !lut->data.empty()) {
+                // Re-upload only when the data pointer changes (a new LUT was loaded).
+                if (lut.get() != lut3d_data_ptr_) {
+                    if (lut3d_tex_id_)
+                        GL(glDeleteTextures(1, &lut3d_tex_id_));
+                    GL(glCreateTextures(GL_TEXTURE_3D, 1, &lut3d_tex_id_));
+                    GL(glTextureStorage3D(lut3d_tex_id_, 1, GL_RGB32F, lut->size, lut->size, lut->size));
+                    GL(glTextureParameteri(lut3d_tex_id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(lut3d_tex_id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+                    GL(glTextureParameteri(lut3d_tex_id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+                    GL(glTextureParameteri(lut3d_tex_id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+                    GL(glTextureParameteri(lut3d_tex_id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
+                    GL(glTextureSubImage3D(lut3d_tex_id_, 0, 0, 0, 0,
+                                           lut->size, lut->size, lut->size,
+                                           GL_RGB, GL_FLOAT, lut->data.data()));
+                    lut3d_data_ptr_ = lut.get();
+                }
+                GL(glBindTextureUnit(static_cast<int>(texture_id::lut3d_tex), lut3d_tex_id_));
+                shader_->set("lut3d_enable", true);
+                shader_->set("lut3d_tex", static_cast<int>(texture_id::lut3d_tex));
+                shader_->set("lut3d_strength", transforms.image_transform.lut3d_strength);
+            } else {
+                shader_->set("lut3d_enable", false);
+                if (lut3d_tex_id_ && !lut)
+                    lut3d_data_ptr_ = nullptr;
             }
         }
 

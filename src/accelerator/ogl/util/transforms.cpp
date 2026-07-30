@@ -72,6 +72,11 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
 
+    // 3D LUT
+    if (other.lut3d) {
+        self.lut3d          = other.lut3d;
+        self.lut3d_strength = other.lut3d_strength;
+    }
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
     // against). Two layers at the edge of legal would otherwise reach a value no single

@@ -1470,6 +1470,104 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+std::future<std::wstring> mixer_lut3d_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            if (!t.lut3d)
+                return L"201 MIXER OK\r\nNONE\r\n";
+            return L"201 MIXER OK\r\nACTIVE " + std::to_wstring(t.lut3d->size) + L" " +
+                   std::to_wstring(t.lut3d_strength) + L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"NONE")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.lut3d          = nullptr;
+                t.image_transform.lut3d_strength = 1.0f;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    // Resolve the path: try as given, else relative to the media folder.
+    std::wstring path = ctx.parameters.at(0);
+    if (!std::ifstream(path).is_open())
+        path = caspar::env::media_folder() + L"/" + path;
+
+    auto lut = parse_cube_file(path);
+    if (!lut)
+        return make_ready_future<std::wstring>(L"404 LUT3D LOAD FAILED\r\n");
+
+    float strength = ctx.parameters.size() > 1 ? std::stof(ctx.parameters[1]) : 1.0f;
+
+    transforms_applier transforms(ctx);
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.lut3d          = lut;
+            transform.image_transform.lut3d_strength = strength;
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+}
+
+static std::shared_ptr<const core::lut3d_data> parse_cube_file(const std::wstring& path)
+{
+    std::ifstream file(path);
+    if (!file.is_open())
+        return nullptr;
+
+    auto        lut = std::make_shared<core::lut3d_data>();
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#')
+            continue;
+        size_t start = line.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos)
+            continue;
+        line = line.substr(start);
+
+        if (line.rfind("TITLE", 0) == 0 || line.rfind("DOMAIN_MIN", 0) == 0 || line.rfind("DOMAIN_MAX", 0) == 0)
+            continue;
+
+        if (line.rfind("LUT_3D_SIZE", 0) == 0) {
+            lut->size = std::stoi(line.substr(12));
+            lut->data.reserve(static_cast<size_t>(lut->size) * lut->size * lut->size * 3);
+            continue;
+        }
+        if (line.rfind("LUT_1D_SIZE", 0) == 0)
+            continue; // skip 1D LUT sections
+
+        if (lut->size > 0) {
+            float r, g, b;
+            if (std::sscanf(line.c_str(), "%f %f %f", &r, &g, &b) == 3) {
+                lut->data.push_back(r);
+                lut->data.push_back(g);
+                lut->data.push_back(b);
+            }
+        }
+    }
+
+    size_t expected = static_cast<size_t>(lut->size) * lut->size * lut->size * 3;
+    if (lut->size <= 0 || lut->data.size() != expected)
+        return nullptr;
+
+    return lut;
+}
+
 std::future<std::wstring> mixer_fill_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -2139,6 +2237,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER CLEAR", mixer_clear_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER LUT3D", mixer_lut3d_command, 0);
     repo->register_command(L"Mixer Commands", L"CHANNEL_GRID", channel_grid_command, 0);
 
     repo->register_command(L"Thumbnail Commands", L"THUMBNAIL LIST", thumbnail_list_command, 0);

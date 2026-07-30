@@ -8,6 +8,11 @@ uniform sampler2D	plane[4];
 uniform sampler2D	local_key;
 uniform sampler2D	layer_key;
 
+// 3D LUT (creative look)
+uniform sampler3D	lut3d_tex;
+uniform bool		lut3d_enable;
+uniform float		lut3d_strength;
+
 uniform bool        is_straight_alpha;
 
 uniform mat3		color_matrix;
@@ -664,6 +669,16 @@ vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
     return c;
 }
 
+// ---- 3D LUT ----
+// Trilinear lookup in a 3D texture. Working colour is BGR, so swizzle to RGB
+// for the lookup and back. Input clamped to the LUT's 0..1 domain.
+vec3 apply_lut3d(vec3 c, float strength)
+{
+    vec3 rgb_in  = clamp(c.bgr, 0.0, 1.0);
+    vec3 rgb_out = texture(lut3d_tex, rgb_in).rgb;
+    return mix(c, rgb_out.bgr, strength);
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -671,6 +686,8 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    if (lut3d_enable)
+        color.rgb = apply_lut3d(color.rgb, lut3d_strength);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)

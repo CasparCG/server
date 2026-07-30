@@ -109,6 +109,12 @@ image_transform image_transform::tween(double                 time,
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;
 
+    result.lut3d          = dest.lut3d; // snap to destination (cannot interpolate LUT data)
+    result.lut3d_strength = static_cast<float>(do_tween(time,
+                                                        static_cast<double>(source.lut3d_strength),
+                                                        static_cast<double>(dest.lut3d_strength),
+                                                        duration,
+                                                        tween));
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
     for (int i = 0; i < 3; ++i) {
@@ -169,6 +175,8 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
+               lhs.perspective == rhs.perspective && lhs.lut3d.get() == rhs.lut3d.get() &&
+               eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
                boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
