@@ -157,6 +157,12 @@ void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
                BMDPixelFormat                                   pixel_format,
                const std::wstring&                              print)
 {
+    if (keyer == configuration::keyer_t::disabled_keyer) {
+        decklink_keyer->Disable();
+        CASPAR_LOG(info) << print << L" Keyer disabled.";
+        return;
+    }
+
     if (keyer == configuration::keyer_t::internal_keyer || keyer == configuration::keyer_t::external_keyer) {
         BMDDisplayMode actualMode = bmdModeUnknown;
         BOOL           supported  = FALSE;
