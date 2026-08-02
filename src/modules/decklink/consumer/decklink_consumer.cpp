@@ -158,7 +158,6 @@ void set_keyer(const com_iface_ptr<IDeckLinkProfileAttributes>& attributes,
                const std::wstring&                              print)
 {
     if (keyer == configuration::keyer_t::disabled_keyer) {
-        decklink_keyer->Disable();
         CASPAR_LOG(info) << print << L" Keyer disabled.";
         return;
     }
