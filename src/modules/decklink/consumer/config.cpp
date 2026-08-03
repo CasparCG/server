@@ -144,6 +144,8 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         config.keyer = configuration::keyer_t::external_keyer;
     } else if (keyer == L"internal") {
         config.keyer = configuration::keyer_t::internal_keyer;
+    } else if (keyer == L"disabled") {
+        config.keyer = configuration::keyer_t::disabled_keyer;
     } else if (keyer == L"external_separate_device") {
         config.keyer = configuration::keyer_t::external_keyer;
 
@@ -198,6 +200,8 @@ configuration parse_amcp_config(const std::vector<std::wstring>&     params,
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (contains_param(L"EXTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::external_keyer;
+    } else if (contains_param(L"DISABLED_KEY", params)) {
+        config.keyer = configuration::keyer_t::disabled_keyer;
     } else {
         config.keyer = configuration::keyer_t::default_keyer;
     }
