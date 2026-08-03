@@ -24,11 +24,6 @@ jobs:
                   out-file-path: "media-scanner"
                   extract: true
 
-            - name: Tidy media-scanner download
-              shell: bash
-              run: |
-                  rm media-scanner/*.zip
-
             - name: Run build
               run: |
                   ./tools/windows/build.bat
