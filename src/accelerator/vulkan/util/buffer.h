@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+ * Copyright 2025
  *
  * This file is part of CasparCG (www.casparcg.com).
  *
@@ -16,21 +16,39 @@
  * You should have received a copy of the GNU General Public License
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  *
- * Author: Helge Norberg, helge.norberg@svt.se
+ * Author: Niklas Andersson, niklas@niklaspandersson.se
  */
 
 #pragma once
 
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <memory>
 
-namespace caspar {
+#include <vk_mem_alloc.h>
 
-void                  setup_process_scheduling();
-void                  setup_prerequisites();
-void                  setup_console_window();
-void                  increase_process_priority();
-void                  wait_for_keypress();
-std::shared_ptr<void> setup_debugging_environment();
-void                  wait_for_remote_debugging();
+namespace caspar { namespace accelerator { namespace vulkan {
 
-} // namespace caspar
+class buffer final
+{
+  public:
+    static boost::property_tree::wptree info();
+
+    buffer(int size, bool write, VmaAllocator allocator);
+    buffer(const buffer&) = delete;
+    buffer(buffer&& other);
+    ~buffer();
+
+    buffer& operator=(const buffer&) = delete;
+    buffer& operator=(buffer&& other);
+
+    VkBuffer id() const;
+    void*    data();
+    int      size() const;
+    bool     write() const;
+
+  private:
+    struct impl;
+    std::unique_ptr<impl> impl_;
+};
+
+}}} // namespace caspar::accelerator::vulkan

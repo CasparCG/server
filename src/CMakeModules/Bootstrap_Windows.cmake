@@ -12,6 +12,7 @@ if(POLICY CMP0167)
 endif()
 
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
+set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
 
 set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG "" CACHE INTERNAL "")
@@ -151,6 +152,24 @@ target_link_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/lib/Release/x64)
 target_link_libraries(GLEW::glew INTERFACE glew32)
 casparcg_add_runtime_dependency("${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
 
+IF(ENABLE_VULKAN)
+	find_package(Vulkan REQUIRED)
+
+	FetchContent_Declare(vk_bootstrap
+			URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.zip
+			URL_HASH SHA256=10f257c30a0a49d30b28a72cf3a7942d93a61f977adaa04bee29304c6506dc12
+			DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+			)
+	FetchContent_MakeAvailable(vk_bootstrap)
+
+	FetchContent_Declare(vma
+			URL ${CASPARCG_DOWNLOAD_MIRROR}/VulkanMemoryAllocator/VulkanMemoryAllocator-3.3.0.zip
+			URL_HASH SHA256=81755d8fcb411b97292c6682e828501315db319374c7c34ba6e1226452c6c392
+			DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	)
+	FetchContent_MakeAvailable(vma)
+ENDIF()
+
 # SFML
 FetchContent_Declare(sfml
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.6.2-windows-vc17-64-bit.zip
@@ -272,7 +291,10 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT c
 add_definitions(-DUNICODE)
 add_definitions(-D_UNICODE)
 add_definitions(-DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-D_WIN32_WINNT=0x601)
+add_definitions(-D_WIN32_WINNT=0x0A00) # Minimum windows 10
+
+# TODO: recompile boost to avoid this
+add_compile_definitions(BOOST_USE_WINAPI_VERSION=0x0601)  # Boost ABI: must match prebuilt deps
 
 # ignore boost deprecated headers, as these are often reported inside boost
 add_definitions("-DBOOST_ALLOW_DEPRECATED_HEADERS")
