@@ -73,6 +73,14 @@ if (ENABLE_HTML)
                 "<SOURCE_DIR>/Release/libcef.so"
                 "<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
         )
+        # CEF needs the resources next to libcef.so
+        ExternalProject_Add_Step(cef copy_resources
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "<SOURCE_DIR>/Resources"
+                "<SOURCE_DIR>/Release"
+                DEPENDEES build
+                DEPENDERS install
+        )
         ExternalProject_Get_Property(cef SOURCE_DIR)
         ExternalProject_Get_Property(cef BINARY_DIR)
 
