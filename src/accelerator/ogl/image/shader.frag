@@ -680,9 +680,18 @@ vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
 // ---- 3D LUT ----
 // Trilinear lookup in a 3D texture. Working colour is BGR, so swizzle to RGB
 // for the lookup and back. Input clamped to the LUT's 0..1 domain.
+// Entry k of an N-cube describes input k/(N-1) and lives at texel centre (k+0.5)/N,
+// so the colour has to be rescaled before it is used as a coordinate. Passing it
+// straight in puts value v at texel position v*N - 0.5 instead of v*(N-1): correct
+// only at v = 0.5 and off by up to half a texel at the ends. Measured with an
+// identity cube, where a correct LUT returns its input unchanged, that is up to 7 LSB
+// on a 17-cube and 4 on a 33-cube. textureSize() rather than a uniform, so the value
+// cannot go stale when the LUT is swapped.
 vec3 apply_lut3d(vec3 c, float strength)
 {
+    float n      = float(textureSize(lut3d_tex, 0).x);
     vec3 rgb_in  = clamp(c.bgr, 0.0, 1.0);
+    rgb_in       = (rgb_in * (n - 1.0) + 0.5) / n;
     vec3 rgb_out = texture(lut3d_tex, rgb_in).rgb;
     return mix(c, rgb_out.bgr, strength);
 }
