@@ -715,7 +715,12 @@ vec3 apply_qualifier(vec3 c, float tgt_hue, float hue_w, float min_s, float max_
                      float min_l, float max_l, float soft, float exp_off,
                      float sat_off, float hue_off)
 {
-    vec3  hsv      = rgb2hsv(clamp(c, 0.0, 1.0));
+    // c is BGR here -- this backend carries the pixel through grading in the mixer's
+    // native BGR channel order, as gc_limit above and ContrastSaturationBrightness
+    // already account for. rgb2hsv treats its first component as red, so feeding it
+    // unswizzled puts the pixel's hue on the opposite side of the wheel from the
+    // target the user asked for, and the qualifier keys the wrong colour entirely.
+    vec3  hsv      = rgb2hsv(clamp(c.bgr, 0.0, 1.0));
     float hue_dist = AngleDiff(hsv.x, tgt_hue) * 2.0;
     float hue_mask = 1.0 - smoothstep(hue_w - soft, hue_w + soft, hue_dist);
     float sat_mask = smoothstep(min_s - soft, min_s + soft, hsv.y) *
@@ -727,14 +732,16 @@ vec3 apply_qualifier(vec3 c, float tgt_hue, float hue_w, float min_s, float max_
         return c;
     vec3 graded = c;
     graded *= (1.0 + exp_off);
-    float glum = dot(graded, vec3(0.2126, 0.7152, 0.0722));
+    // .bgr for the same reason: unswizzled, this applies red's Rec.709 coefficient to
+    // blue and blue's to red. Greys are unaffected, so only saturated colour was wrong.
+    float glum = dot(graded.bgr, vec3(0.2126, 0.7152, 0.0722));
     graded     = mix(vec3(glum), graded, 1.0 + sat_off);
     if (abs(hue_off) > 0.01) {
         // HDR-safe hue rotation: normalise by peak, rotate, re-scale.
         float peak = max(max(graded.r, graded.g), max(graded.b, 0.0001));
-        vec3  ghsv = rgb2hsv(clamp(graded / peak, 0.0, 1.0));
+        vec3  ghsv = rgb2hsv(clamp((graded / peak).bgr, 0.0, 1.0));
         ghsv.x     = fract(ghsv.x + hue_off / 360.0);
-        graded     = hsv2rgb(ghsv) * peak;
+        graded     = hsv2rgb(ghsv).bgr * peak;
     }
     return mix(c, graded, mask);
 }
