@@ -132,8 +132,14 @@ static std::array<float, 256> build_curve_lut(const core::curve_channel& cc)
             lut[k] = static_cast<float>(std::max(0.0, std::min(1.0, pts.back().second)));
             continue;
         }
+        // n - 1, not n - 2: there are n-1 intervals between n control points, and the
+        // search has to be able to reach the last one. With n - 2 the interval
+        // [pts[n-2], pts[n-1]) matched no iteration, seg kept its initial 0, and the
+        // final stretch of every curve with three or more points was evaluated with
+        // the FIRST segment's control points and tangents at a parameter far outside
+        // [0,1].
         int seg = 0;
-        for (int i = 0; i < n - 2; ++i)
+        for (int i = 0; i < n - 1; ++i)
             if (t >= pts[i].first && t < pts[i + 1].first) {
                 seg = i;
                 break;
