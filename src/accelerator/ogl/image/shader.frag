@@ -580,13 +580,21 @@ vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
 // ---- Hue Shift ----
 // Rotate hue in HSV space.  Extract peak luminance, normalise, rotate, re-scale
 // so HDR values (>1.0) are preserved.
+// The grading chain carries the pixel in the mixer's native BGR order, so c.r holds
+// blue -- see apply_white_balance below and apply_lut3d, both of which say so. rgb2hsv
+// does not know what the channels mean; it treats the first as red, and exchanging red
+// and blue mirrors the hue wheel. Feeding it unswizzled negated every rotation: a
+// requested +15 degrees came out as -15. Only 0 and 180 looked right, because they are
+// their own negations. Swizzling in and back out makes the hue domain a real hue
+// domain. Saturation and value are unchanged by the exchange, which is why nothing
+// else about this function was visibly wrong.
 vec3 apply_hue_shift(vec3 c, float degrees)
 {
     float peak = max(max(c.r, c.g), max(c.b, 0.0001));
     vec3  norm = c / peak;
-    vec3  hsv  = rgb2hsv(clamp(norm, 0.0, 1.0));
+    vec3  hsv  = rgb2hsv(clamp(norm.bgr, 0.0, 1.0));
     hsv.x      = fract(hsv.x + degrees / 360.0);
-    return hsv2rgb(hsv) * peak;
+    return hsv2rgb(hsv).bgr * peak;
 }
 
 // ---- Tonal Balance (Shadows / Highlights separation) ----
@@ -594,7 +602,11 @@ vec3 apply_hue_shift(vec3 c, float degrees)
 // headroom is preserved for downstream tonemapping.
 vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
 {
-    float lum         = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    // dot(c.bgr, ...) — c is BGR here, so an unswizzled dot applies red's Rec.709
+    // coefficient to blue and blue's to red. Greys are unaffected by the exchange,
+    // which is why only saturated colour was ever wrong. ContrastSaturationBrightness
+    // above already does this by hand via luma_coeff.bgr.
+    float lum         = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722));
     float shadow_mask = 1.0 - smoothstep(0.0, 0.6, lum);
     float hl_mask     = smoothstep(0.4, 1.0, lum);
     c += vec3(shadows    * 0.5 * shadow_mask);
@@ -607,7 +619,7 @@ vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
 // with a crossover controlled by bal.
 vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
 {
-    float lum     = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float lum     = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722)); // BGR — see apply_tone_balance
     float shad_mk = 1.0 - smoothstep(bal - 0.3, bal + 0.3, lum);
     float hi_mk   = smoothstep(bal - 0.3, bal + 0.3, lum);
     c += shad_col * shad_mk;
@@ -621,7 +633,7 @@ vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
 vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
 {
     c = pow(max(c * slope + off, vec3(0.0)), pwr);
-    float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float lum = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722)); // BGR — see apply_tone_balance
     c = mix(vec3(lum), c, sat_val);
     return c;
 }
