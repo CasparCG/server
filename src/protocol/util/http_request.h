@@ -15,8 +15,8 @@ struct HTTPResponse
 
 HTTPResponse request(const std::string& host, const std::string& port, const std::string& path);
 
-// URL-encode a file path, preserving '/' and '\' as path separators.
-// Encodes special characters in each path component per RFC 3986.
+// URL-encode a file path. Normalizes '\' to '/' before encoding, so lookups match
+// regardless of client OS; '/' is percent-encoded like any other character.
 std::string url_encode_path(const std::string& path);
 
 }} // namespace caspar::http

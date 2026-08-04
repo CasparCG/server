@@ -4,6 +4,7 @@
 #include <common/log.h>
 
 #include <boost/asio.hpp>
+#include <cctype>
 #include <sstream>
 #include <string>
 
@@ -103,26 +104,25 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     return res;
 }
 
-// URL-encode a file path, preserving '/' and '\' as path separators.
-// Encodes special characters in each path component per RFC 3986.
-// Only unreserved characters (A-Za-z0-9-_.~) are not encoded.
+// URL-encode a file path. Normalizes '\' to '/' (Windows-style paths) before encoding,
+// so lookups match the scanner's internally stored id regardless of client OS.
+// The scanner's routes take the whole id as a single path segment, so '/' is percent-encoded
+// like any other reserved character rather than left as a literal separator.
 std::string url_encode_path(const std::string& path)
 {
     std::string result;
     result.reserve(path.size() * 2); // Reserve space to avoid reallocations
 
     for (auto c : path) {
-        // Treat both forward slash and backslash as path separators
-        // Always output forward slash for HTTP URLs
-        if (c == '/' || c == '\\') {
-            result += '/';
-        } else if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            result += c;
+        unsigned char uc = (c == '\\') ? '/' : static_cast<unsigned char>(c);
+
+        if (std::isalnum(uc) || uc == '-' || uc == '_' || uc == '.' || uc == '~') {
+            result += static_cast<char>(uc);
         } else {
-            // Encode special character as %XX
+            // Encode special character (including '/') as %XX
             result += '%';
-            result += "0123456789ABCDEF"[(unsigned char)c >> 4];
-            result += "0123456789ABCDEF"[(unsigned char)c & 0x0F];
+            result += "0123456789ABCDEF"[uc >> 4];
+            result += "0123456789ABCDEF"[uc & 0x0F];
         }
     }
 
