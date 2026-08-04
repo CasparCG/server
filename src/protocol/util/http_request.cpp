@@ -17,7 +17,7 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     HTTPResponse res;
 
     // Log the URL being requested for debugging
-    CASPAR_LOG(info) << "HTTP GET: " << path;
+    CASPAR_LOG(debug) << "HTTP GET: " << path;
 
     asio::io_context io_context;
 
