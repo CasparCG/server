@@ -810,7 +810,13 @@ vec3 apply_film_grain(vec3 c, vec2 uv, float intensity, float size_val, int fram
 {
     vec2  grain_uv = uv * target_size / max(size_val, 0.5);
     float noise    = grain_hash(grain_uv, frame_seed) * 2.0 - 1.0; // -1..+1
-    float lum      = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    // dot(c.bgr, ...) -- c is BGR here, since this backend carries the pixel through
+    // the chain in the mixer's native BGR channel order (ContrastSaturationBrightness
+    // above already takes luma_coeff.bgr for the same reason). Unswizzled, the
+    // photographic response curve is driven by a luminance with red's Rec.709
+    // coefficient applied to blue, so grain lands in the wrong tonal range on
+    // saturated colour. Greys are unaffected by the exchange.
+    float lum      = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722));
     float response = smoothstep(0.0, 0.15, lum) * (1.0 - smoothstep(0.8, 1.0, lum));
     c += vec3(noise * intensity * response);
     return c;
