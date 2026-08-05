@@ -591,7 +591,8 @@ class html_client
             return;
 
         auto audio       = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
-        auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
+        auto audio_frame = core::mutable_frame(
+            this, {}, std::move(audio), core::pixel_format_desc(), core::frame_side_data_in_queue());
 
         {
             std::lock_guard<std::mutex> lock(audio_frames_mutex_);

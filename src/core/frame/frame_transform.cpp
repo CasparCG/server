@@ -180,6 +180,32 @@ bool operator==(const audio_transform& lhs, const audio_transform& rhs) { return
 
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs) { return !(lhs == rhs); }
 
+// side_data_transform
+
+side_data_transform side_data_transform::tween(double                     time,
+                                               const side_data_transform& source,
+                                               const side_data_transform& dest,
+                                               double                     duration,
+                                               const tweener&             tween)
+{
+    side_data_transform result;
+    // shouldn't tween since that can have weird effects like temporarily picking some third source while transitioning
+    // between two sources
+    result.closed_captions_priority_ = dest.closed_captions_priority_;
+    static_cast<void>(time);
+    static_cast<void>(source);
+    static_cast<void>(duration);
+    static_cast<void>(tween);
+    return result;
+}
+
+bool operator==(const side_data_transform& lhs, const side_data_transform& rhs)
+{
+    return lhs.closed_captions_priority_ == rhs.closed_captions_priority_;
+}
+
+bool operator!=(const side_data_transform& lhs, const side_data_transform& rhs) { return !(lhs == rhs); }
+
 // frame_transform
 frame_transform::frame_transform() = default;
 
@@ -194,12 +220,15 @@ frame_transform frame_transform::tween(double                 time,
         image_transform::tween(time, source.image_transform, dest.image_transform, duration, tween);
     result.audio_transform =
         audio_transform::tween(time, source.audio_transform, dest.audio_transform, duration, tween);
+    result.side_data_transform =
+        side_data_transform::tween(time, source.side_data_transform, dest.side_data_transform, duration, tween);
     return result;
 }
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 {
-    return lhs.image_transform == rhs.image_transform && lhs.audio_transform == rhs.audio_transform;
+    return lhs.image_transform == rhs.image_transform && lhs.audio_transform == rhs.audio_transform &&
+           lhs.side_data_transform == rhs.side_data_transform;
 }
 
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs) { return !(lhs == rhs); }
@@ -241,5 +270,4 @@ std::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str)
         return {};
     }
 }
-
 }} // namespace caspar::core
