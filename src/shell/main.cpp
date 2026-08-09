@@ -48,7 +48,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/locale.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/stacktrace.hpp>
@@ -57,16 +56,17 @@
 #include <thread>
 
 #include <clocale>
+#include <codecvt>
 #include <csignal>
 
 namespace caspar {
 
 void setup_global_locale()
 {
-    boost::locale::generator gen;
-    gen.categories(boost::locale::category_t::codepage);
-
-    std::locale::global(gen(""));
+    // Force a UTF-8-capable codepage facet regardless of the deployment environment's locale
+    // configuration. The AMCP protocol mandates UTF-8, so this must not depend on whether the
+    // OS/container happens to have a UTF-8 locale installed (see GitHub issues #1364, #1018).
+    std::locale::global(std::locale(std::locale::classic(), new std::codecvt_utf8<wchar_t>));
 
     // sscanf is used in for example FFmpeg where we want decimals to be parsed as .
     std::setlocale(LC_ALL, "C");
