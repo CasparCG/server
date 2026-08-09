@@ -1471,8 +1471,9 @@ std::wstring thumbnail_retrieve_command(command_context& ctx)
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    return make_request(
-        ctx, "/thumbnail/generate/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
+    return make_request(ctx,
+                        "/thumbnail/generate/" + http::url_encode_path(u8(ctx.parameters.at(0))),
+                        L"501 THUMBNAIL GENERATE FAILED\r\n");
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)

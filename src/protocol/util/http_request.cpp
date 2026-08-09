@@ -71,7 +71,8 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     }
 
     if (res.status_code < 200 || res.status_code >= 300) {
-        CASPAR_THROW_EXCEPTION(io_error() << msg_info("HTTP request failed with status " + std::to_string(res.status_code)));
+        CASPAR_THROW_EXCEPTION(io_error()
+                               << msg_info("HTTP request failed with status " + std::to_string(res.status_code)));
     }
 
     // Read the response headers, which are terminated by a blank line.
