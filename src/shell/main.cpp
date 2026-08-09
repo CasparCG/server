@@ -58,6 +58,7 @@
 #include <clocale>
 #include <codecvt>
 #include <csignal>
+#include <cwchar>
 
 namespace caspar {
 
@@ -66,7 +67,15 @@ void setup_global_locale()
     // Force a UTF-8-capable codepage facet regardless of the deployment environment's locale
     // configuration. The AMCP protocol mandates UTF-8, so this must not depend on whether the
     // OS/container happens to have a UTF-8 locale installed (see GitHub issues #1364, #1018).
+    //
+    // wchar_t is 16-bit on Windows (UTF-16, needs surrogate-pair-aware conversion) but 32-bit on
+    // Linux/macOS (UCS-4), so the correct codecvt facet depends on the platform's wchar_t width,
+    // not the OS itself.
+#if WCHAR_MAX > 0xFFFFu
     std::locale::global(std::locale(std::locale::classic(), new std::codecvt_utf8<wchar_t>));
+#else
+    std::locale::global(std::locale(std::locale::classic(), new std::codecvt_utf8_utf16<wchar_t>));
+#endif
 
     // sscanf is used in for example FFmpeg where we want decimals to be parsed as .
     std::setlocale(LC_ALL, "C");
