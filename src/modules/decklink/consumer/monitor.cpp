@@ -62,6 +62,8 @@ core::monitor::state get_state_for_config(const configuration& config, const cor
         state["decklink/keyer"] = std::wstring(L"external");
     } else if (config.keyer == configuration::keyer_t::internal_keyer) {
         state["decklink/keyer"] = std::wstring(L"internal");
+    } else if (config.keyer == configuration::keyer_t::disabled_keyer) {
+        state["decklink/keyer"] = std::wstring(L"disabled");
     }
 
     if (config.latency == configuration::latency_t::low_latency) {
