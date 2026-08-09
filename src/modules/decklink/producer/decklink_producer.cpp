@@ -216,29 +216,44 @@ struct Filter
             FF(avfilter_graph_create_filter(
                 &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
 
-            // av_opt_set_int_list() was removed in newer FFmpeg; av_opt_set_bin() is the stable underlying call
             AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
-            FF(av_opt_set_bin(sink,
-                              "pix_fmts",
-                              reinterpret_cast<const uint8_t*>(pix_fmts),
-                              sizeof(pix_fmts) - sizeof(*pix_fmts),
-                              AV_OPT_SEARCH_CHILDREN));
+            // FFmpeg 8 removed av_opt_set_int_list() and renamed pix_fmts -> pixel_formats with a typed-array API
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "pixel_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(pix_fmts) - 1,
+                                AV_OPT_TYPE_PIXEL_FMT,
+                                pix_fmts));
+#else
+            FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+#endif
         } else if (type == AVMEDIA_TYPE_AUDIO) {
             FF(avfilter_graph_create_filter(
                 &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
 
             AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             int            sample_rates[] = {format_desc.audio_sample_rate, 0};
-            FF(av_opt_set_bin(sink,
-                              "sample_fmts",
-                              reinterpret_cast<const uint8_t*>(sample_fmts),
-                              sizeof(sample_fmts) - sizeof(*sample_fmts),
-                              AV_OPT_SEARCH_CHILDREN));
-            FF(av_opt_set_bin(sink,
-                              "sample_rates",
-                              reinterpret_cast<const uint8_t*>(sample_rates),
-                              sizeof(sample_rates) - sizeof(*sample_rates),
-                              AV_OPT_SEARCH_CHILDREN));
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "sample_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_fmts) - 1,
+                                AV_OPT_TYPE_SAMPLE_FMT,
+                                sample_fmts));
+            FF(av_opt_set_array(sink,
+                                "samplerates",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_rates) - 1,
+                                AV_OPT_TYPE_INT,
+                                sample_rates));
+#else
+            FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+            FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN));
+#endif
 
             // TODO - we might want to force the filter to produce 16 channels
             // But this segfaults (changing the property name causes it to fail with an error)
