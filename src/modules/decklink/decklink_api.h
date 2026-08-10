@@ -112,6 +112,7 @@ T* get_raw(const CComPtr<T>& ptr)
 #include "linux_interop/DeckLinkAPIConfiguration.h"
 #include "linux_interop/DeckLinkAPIConfiguration_v10_11.h"
 #include "linux_interop/DeckLinkAPI_v10_11.h"
+#include <cstdlib>
 #include <memory>
 #include <typeinfo>
 
@@ -124,7 +125,13 @@ using BOOL     = bool;
 using UINT32   = uint32_t;
 using LONGLONG = int64_t;
 
-static std::wstring to_string(String utf16_string) { return u16(utf16_string); }
+// Takes ownership of utf16_string, matching the BSTR to_string() overload above, which also frees its input.
+static std::wstring to_string(String utf16_string)
+{
+    auto result = u16(utf16_string);
+    free((void*)utf16_string);
+    return result;
+}
 
 static void com_initialize() {}
 
