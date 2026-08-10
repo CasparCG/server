@@ -217,7 +217,6 @@ struct Filter
                 &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
 
             AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
-            // FFmpeg 8 removed av_opt_set_int_list() and renamed pix_fmts -> pixel_formats with a typed-array API
 #if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
             FF(av_opt_set_array(sink,
                                 "pixel_formats",
