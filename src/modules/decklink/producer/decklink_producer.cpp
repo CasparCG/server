@@ -228,7 +228,17 @@ struct Filter
 #pragma warning(disable : 4245)
 #endif
             AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "pixel_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(pix_fmts) - 1,
+                                AV_OPT_TYPE_PIXEL_FMT,
+                                pix_fmts));
+#else
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -242,8 +252,25 @@ struct Filter
 
             AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             int            sample_rates[] = {format_desc.audio_sample_rate, 0};
+#if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
+            FF(av_opt_set_array(sink,
+                                "sample_formats",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_fmts) - 1,
+                                AV_OPT_TYPE_SAMPLE_FMT,
+                                sample_fmts));
+            FF(av_opt_set_array(sink,
+                                "samplerates",
+                                AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                0,
+                                FF_ARRAY_ELEMS(sample_rates) - 1,
+                                AV_OPT_TYPE_INT,
+                                sample_rates));
+#else
             FF(av_opt_set_int_list(sink, "sample_fmts", sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", sample_rates, 0, AV_OPT_SEARCH_CHILDREN));
+#endif
 
 #if FFMPEG_NEW_CHANNEL_LAYOUT
             // TODO - we might want to force the filter to produce 16 channels
@@ -593,9 +620,10 @@ class decklink_producer : public IDeckLinkInputCallback
             auto fmt     = get_caspar_video_format(newMode);
 
             if (fmt == input_format.format) {
-                // This gets called often if the enabled pixel format doesn't match the signal https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=144234
-                // So if the video format hasn't actually changed, then we can ignore this event.
-                // In the future we may wish to respect this in order to unpack the pixels ourselves
+                // This gets called often if the enabled pixel format doesn't match the signal
+                // https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=144234 So if the video format hasn't actually
+                // changed, then we can ignore this event. In the future we may wish to respect this in order to unpack
+                // the pixels ourselves
                 return S_OK;
             }
 
@@ -770,8 +798,8 @@ class decklink_producer : public IDeckLinkInputCallback
 
                 // CASPAR_LOG(trace) << "decklink a/v pts:" << av_video->pts << " " << av_audio->pts;
 
-                auto in_sync = static_cast<double>(in_video_pts) / AV_TIME_BASE -
-                               static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
+                auto in_sync  = static_cast<double>(in_video_pts) / AV_TIME_BASE -
+                                static_cast<double>(in_audio_pts) / format_desc_.audio_sample_rate;
                 auto out_sync = static_cast<double>(av_video->pts * video_tb.num) / video_tb.den -
                                 static_cast<double>(av_audio->pts * audio_tb.num) / audio_tb.den;
 
