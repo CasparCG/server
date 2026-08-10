@@ -213,8 +213,7 @@ struct Filter
         }
 
         if (type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out"));
 
             AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
 #if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
@@ -229,8 +228,7 @@ struct Filter
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #endif
         } else if (type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
 
             AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             int            sample_rates[] = {format_desc.audio_sample_rate, 0};
@@ -269,6 +267,8 @@ struct Filter
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
+        FF(avfilter_init_str(sink, nullptr));
 
         {
             const auto cur = outputs;
