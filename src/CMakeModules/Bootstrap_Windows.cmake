@@ -91,8 +91,8 @@ add_definitions( -DBOOST_LOCALE_HIDE_AUTO_PTR )
 # FFMPEG
 casparcg_add_external_project(ffmpeg-lib)
 ExternalProject_Add(ffmpeg-lib
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-7.0.2-full_build-shared.7z
-	URL_HASH MD5=c5127aeed36a9a86dd3b84346be182f8
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-8.1.2-full_build-shared.7z
+	URL_HASH SHA256=cba748035c21ce1431d0823c7a3a711f38616f89f87a265dceddf9b7f6749d2d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
@@ -102,14 +102,13 @@ ExternalProject_Get_Property(ffmpeg-lib SOURCE_DIR)
 set(FFMPEG_INCLUDE_PATH "${SOURCE_DIR}/include")
 set(FFMPEG_BIN_PATH "${SOURCE_DIR}/bin")
 link_directories("${SOURCE_DIR}/lib")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-10.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-58.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-5.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-11.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-60.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-6.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-9.dll")
 # for scanner:
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
