@@ -438,12 +438,12 @@ struct bluefish_producer
                 auto src_audio = alloc_frame();
 
                 // video
-                src_video->format           = AV_PIX_FMT_RGB24;
-                src_video->width            = width;
-                src_video->height           = height;
-                src_video->interlaced_frame = !is_progressive;
-                src_video->top_field_first  = height != 486;
-                src_video->key_frame        = 1;
+                src_video->format = AV_PIX_FMT_RGB24;
+                src_video->width  = width;
+                src_video->height = height;
+                src_video->flags |= is_progressive == 0u ? AV_FRAME_FLAG_INTERLACED : 0;
+                src_video->flags |= height != 486 ? AV_FRAME_FLAG_TOP_FIELD_FIRST : 0;
+                src_video->flags |= AV_FRAME_FLAG_KEY;
                 // src_video->display_picture_number = frames_captured;
                 src_video->pts = capture_ts;
 

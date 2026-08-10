@@ -57,6 +57,7 @@ set(HEADERS
 		scope_exit.h
 		stdafx.h
 		timer.h
+		timespan.h
 		tweener.h
 		utf.h
 )
