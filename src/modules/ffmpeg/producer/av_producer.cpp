@@ -456,10 +456,21 @@ struct Filter
                 return lhs->codecpar->height > rhs->codecpar->height;
             });
 
+            auto same_properties = [](AVStream* lhs, AVStream* rhs) {
+                auto lcp = lhs->codecpar;
+                auto rcp = rhs->codecpar;
+                return lcp->width == rcp->width && lcp->height == rcp->height &&
+                       lcp->sample_aspect_ratio.num == rcp->sample_aspect_ratio.num &&
+                       lcp->sample_aspect_ratio.den == rcp->sample_aspect_ratio.den &&
+                       lcp->field_order == rcp->field_order;
+            };
+
             // TODO (fix) Use some form of stream meta data to do this.
             // https://github.com/CasparCG/server/issues/832
-            if (video_streams.size() >= 2 && video_streams[0]->codecpar->height == video_streams[1]->codecpar->height) {
-                filter_spec = "alphamerge," + filter_spec;
+            if (video_streams.size() > 1 && same_properties(video_streams[0], video_streams[1])) {
+                if (video_streams.size() == 2 || !same_properties(video_streams[0], video_streams[2])) {
+                    filter_spec = "alphamerge," + filter_spec;
+                }
             }
         }
 
