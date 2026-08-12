@@ -419,47 +419,46 @@ struct Filter
             }
         }
 
-        std::vector<AVStream*> av_streams;
+        std::deque<AVStream*> video_streams, audio_streams;
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
             const auto codec_channels = st->codecpar->ch_layout.nb_channels;
-            if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && codec_channels == 0) {
-                continue;
-            }
 
             auto disposition = st->disposition;
             if (!disposition || disposition == AV_DISPOSITION_DEFAULT) {
-                av_streams.push_back(st);
+                switch (st->codecpar->codec_type) {
+                    case AVMEDIA_TYPE_VIDEO:
+                        video_streams.push_back(st);
+                        break;
+                    case AVMEDIA_TYPE_AUDIO:
+                        if (codec_channels > 0) {
+                            audio_streams.push_back(st);
+                        }
+                        break;
+                    default:
+                        // ignore stream
+                        break;
+                }
             }
         }
 
         if (audio_input_count == 1) {
-            auto count = std::count_if(av_streams.begin(), av_streams.end(), [](auto s) {
-                return s->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
-            });
-
             // TODO (fix) Use some form of stream meta data to do this.
             // https://github.com/CasparCG/server/issues/833
-            if (count > 1) {
-                filter_spec = (boost::format("amerge=inputs=%d,") % count).str() + filter_spec;
+            if (audio_streams.size() > 1) {
+                filter_spec = (boost::format("amerge=inputs=%d,") % audio_streams.size()).str() + filter_spec;
             }
         }
 
         if (video_input_count == 1) {
-            std::stable_sort(av_streams.begin(), av_streams.end(), [](auto lhs, auto rhs) {
-                return lhs->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && lhs->codecpar->height > rhs->codecpar->height;
-            });
-
-            std::vector<AVStream*> video_av_streams;
-            std::copy_if(av_streams.begin(), av_streams.end(), std::back_inserter(video_av_streams), [](auto s) {
-                return s->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+            std::stable_sort(video_streams.begin(), video_streams.end(), [&](AVStream* lhs, AVStream* rhs) {
+                return lhs->codecpar->height > rhs->codecpar->height;
             });
 
             // TODO (fix) Use some form of stream meta data to do this.
             // https://github.com/CasparCG/server/issues/832
-            if (video_av_streams.size() >= 2 &&
-                video_av_streams[0]->codecpar->height == video_av_streams[1]->codecpar->height) {
+            if (video_streams.size() >= 2 && video_streams[0]->codecpar->height == video_streams[1]->codecpar->height) {
                 filter_spec = "alphamerge," + filter_spec;
             }
         }
@@ -477,31 +476,37 @@ struct Filter
         {
             for (auto cur = inputs; cur; cur = cur->next) {
                 const auto type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
-                if (type != AVMEDIA_TYPE_VIDEO && type != AVMEDIA_TYPE_AUDIO) {
-                    CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
-                                                            << msg_info_t("only video and audio filters supported"));
-                }
 
-                unsigned index = 0;
+                AVStream* stream;
 
-                // TODO find stream based on link name
-                while (true) {
-                    if (index == av_streams.size()) {
-                        graph = nullptr;
-                        return;
-                    }
-                    if (av_streams.at(index)->codecpar->codec_type == type &&
-                        sources.find(static_cast<int>(index)) == sources.end()) {
+                switch (type) {
+                    case AVMEDIA_TYPE_VIDEO:
+                        if (video_streams.empty()) {
+                            graph = nullptr;
+                            return;
+                        }
+                        // TODO find stream based on link name
+                        stream = video_streams.front();
+                        video_streams.pop_front();
                         break;
-                    }
-                    index++;
+                    case AVMEDIA_TYPE_AUDIO:
+                        if (audio_streams.empty()) {
+                            graph = nullptr;
+                            return;
+                        }
+                        // TODO find stream based on link name
+                        stream = audio_streams.front();
+                        audio_streams.pop_front();
+                        break;
+                    default:
+                        CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
+                                               << boost::errinfo_errno(EINVAL)
+                                               << msg_info_t("only video and audio filters supported"));
                 }
 
-                index = av_streams.at(index)->index;
-
-                auto it = streams.find(index);
+                auto it = streams.find(stream->index);
                 if (it == streams.end()) {
-                    it = streams.emplace(index, input->streams[index]).first;
+                    it = streams.emplace(stream->index, stream).first;
                 }
 
                 auto st = it->second.ctx;
@@ -510,7 +515,7 @@ struct Filter
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
                                  st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
-                    auto name = (boost::format("in_%d") % index).str();
+                    auto name = (boost::format("in_%d") % stream->index).str();
 
                     if (st->sample_aspect_ratio.num > 0 && st->sample_aspect_ratio.den > 0) {
                         args +=
@@ -526,7 +531,7 @@ struct Filter
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-                    sources.emplace(index, source);
+                    sources.emplace(stream->index, source);
                 } else if (st->codec_type == AVMEDIA_TYPE_AUDIO) {
                     char channel_layout[128];
                     FF(av_channel_layout_describe(&st->ch_layout, channel_layout, sizeof(channel_layout)));
@@ -535,13 +540,13 @@ struct Filter
                                  st->pkt_timebase.num % st->pkt_timebase.den % st->sample_rate %
                                  av_get_sample_fmt_name(st->sample_fmt) % channel_layout)
                                     .str();
-                    auto name = (boost::format("in_%d") % index).str();
+                    auto name = (boost::format("in_%d") % stream->index).str();
 
                     AVFilterContext* source = nullptr;
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("abuffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
                     FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
-                    sources.emplace(index, source);
+                    sources.emplace(stream->index, source);
                 } else {
                     CASPAR_THROW_EXCEPTION(ffmpeg_error_t() << boost::errinfo_errno(EINVAL)
                                                             << msg_info_t("invalid filter input media type"));
