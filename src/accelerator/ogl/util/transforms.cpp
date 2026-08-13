@@ -2,6 +2,7 @@
 #include "transforms.h"
 
 #include <algorithm>
+#include <cmath>
 #include <unordered_set>
 
 namespace caspar::accelerator::ogl {
@@ -82,8 +83,15 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
         self.gain[i]    *= other.gain[i];
     }
 
-    // Hue shift: additive
-    self.hue_shift += other.hue_shift;
+    // Hue shift: additive, then wrapped into [-180, 180].
+    //
+    // Wrapped, not clamped: 200 degrees of rotation is -160, not 180. The shader rotates
+    // with fract(), so rotation is already periodic and this does not change what is
+    // rendered -- what it does is bound the accumulation. Stacking layer, channel and
+    // tweened transforms can otherwise walk hue_shift arbitrarily far from zero, which
+    // costs precision in fract() and makes the "is this effect active" test dishonest:
+    // an accumulated 360 is exactly identity but reads as active and pays for the branch.
+    self.hue_shift = std::remainder(self.hue_shift + other.hue_shift, 360.0);
 
     // Tone balance: additive
     self.shadows    += other.shadows;
