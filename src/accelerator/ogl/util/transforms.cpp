@@ -97,12 +97,26 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.shadows    += other.shadows;
     self.highlights += other.highlights;
 
-    // Split toning: additive colours, balance override if non-default
+    // Split toning: colours add, and the balance of whichever transform actually has
+    // split toning active wins.
+    //
+    // split_balance is a crossover position in luma, not a strength, so no arithmetic
+    // composition of two of them means anything: adding 0.5 and 0.5 gives 1.0 (everything
+    // is shadow), multiplying gives 0.25. And the shader has one crossover and one colour
+    // pair, so two stacked split tones cannot both be represented however they are
+    // combined. Summing the colours and keeping a single crossover is the least-lossy
+    // approximation available. "Is other active" is the same test the mixer uses to decide
+    // whether to enable the effect at all; comparing other.split_balance against its 0.5
+    // default instead would misread a tweened 0.4999999 as an explicit setting.
+    const auto is_set = [](double v) { return v != 0.0; };
+    const bool other_splits =
+        std::any_of(other.split_shadow_color.begin(), other.split_shadow_color.end(), is_set) ||
+        std::any_of(other.split_highlight_color.begin(), other.split_highlight_color.end(), is_set);
     for (int i = 0; i < 3; ++i) {
         self.split_shadow_color[i]    += other.split_shadow_color[i];
         self.split_highlight_color[i] += other.split_highlight_color[i];
     }
-    if (other.split_balance != 0.5)
+    if (other_splits)
         self.split_balance = other.split_balance;
 
     // ASC CDL: slope/power multiplicative, offset additive, saturation multiplicative
