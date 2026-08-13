@@ -49,6 +49,8 @@ uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
 uniform float		wb_tint;        // -1 magenta .. +1 green
 
 // Lift / Midtone / Gain (3-way primary colour corrector)
+// Per-channel uniforms are uploaded in RGB order and swizzled to the working order
+// where they are used, in main() -- see the note above the grading functions below.
 uniform bool		lmg_enable;
 uniform vec3		lmg_lift;    // shadow offset per channel, default vec3(0)
 uniform vec3		lmg_midtone; // midtone power per channel,  default vec3(1)
@@ -552,19 +554,35 @@ vec4 get_rgba_color()
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
+// ============================ Primary grading chain ============================
+//
+// CHANNEL ORDER. The colour vector carried through this shader is in BGR order:
+// `color.r` holds displayed blue. That is this shader's own long-standing
+// convention, not something the grading chain introduced -- see `fragColor =
+// color.bgra` at the end of main(), which swaps back on output, and
+// `LumCoeff = luma_coeff.bgr` in ContrastSaturationBrightness above, which
+// swizzles an RGB-order uniform at its point of use.
+//
+// The grading functions below therefore follow the same rule as
+// ContrastSaturationBrightness: they take and return the working (BGR) vector,
+// and anything that needs a real RGB triple -- a Rec.709 luma dot product, a hue
+// conversion, a per-channel uniform -- swizzles it at the point of use. All
+// per-channel uniforms are uploaded from C++ in plain RGB order and get their
+// `.bgr` in main(), so the convention lives in exactly one file.
+//
+// Note that greys are invariant under a red/blue exchange, so a grey ramp passes
+// every channel-order defect in here. Test with asymmetric per-channel values.
+// ===============================================================================
+
 // ---- White Balance ----
 // temp: -1=cool (blue), +1=warm (orange); tint_val: -1=magenta, +1=green.
 // Diagonal gain matrix, no clamping so HDR headroom is preserved.
-// Note: working colour is in BGR order (c.r=displayed Blue, c.b=displayed Red).
 vec3 apply_white_balance(vec3 c, float temp, float tint_val)
 {
-    float r_gain = 1.0 + temp     * 0.20; // warm -> more red
-    float g_gain = 1.0 + tint_val * 0.10; // tint -> more green
-    float b_gain = 1.0 - temp     * 0.20; // warm -> less blue
-    c.r *= b_gain; // .r = Blue in BGR convention
-    c.g *= g_gain;
-    c.b *= r_gain; // .b = Red in BGR convention
-    return c;
+    vec3 gain_rgb = vec3(1.0 + temp     * 0.20,  // warm -> more red
+                         1.0 + tint_val * 0.10,  // tint -> more green
+                         1.0 - temp     * 0.20); // warm -> less blue
+    return c * gain_rgb.bgr;
 }
 
 // ---- Lift / Midtone / Gain (3-way colour corrector) ----
@@ -585,14 +603,11 @@ vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
 // ---- Hue Shift ----
 // Rotate hue in HSV space.  Extract peak luminance, normalise, rotate, re-scale
 // so HDR values (>1.0) are preserved.
-// The grading chain carries the pixel in the mixer's native BGR order, so c.r holds
-// blue -- see apply_white_balance below and apply_lut3d, both of which say so. rgb2hsv
-// does not know what the channels mean; it treats the first as red, and exchanging red
-// and blue mirrors the hue wheel. Feeding it unswizzled negated every rotation: a
-// requested +15 degrees came out as -15. Only 0 and 180 looked right, because they are
-// their own negations. Swizzling in and back out makes the hue domain a real hue
-// domain. Saturation and value are unchanged by the exchange, which is why nothing
-// else about this function was visibly wrong.
+// rgb2hsv does not know what the channels mean; it treats the first as red, and
+// exchanging red and blue mirrors the hue wheel. Feeding it the working vector
+// unswizzled negated every rotation: a requested +15 degrees came out as -15, and only
+// 0 and 180 looked right because they are their own negations. Saturation and value are
+// unchanged by the exchange, which is why nothing else about this function was wrong.
 vec3 apply_hue_shift(vec3 c, float degrees)
 {
     float peak = max(max(c.r, c.g), max(c.b, 0.0001));
@@ -650,18 +665,21 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    // Per-channel uniforms arrive in RGB order and are swizzled to the working order
+    // here -- see the channel-order note above the grading functions.
     if (cdl_enable)
-        color.rgb = apply_cdl(color.rgb, cdl_slope, cdl_offset, cdl_power, cdl_saturation);
+        color.rgb = apply_cdl(color.rgb, cdl_slope.bgr, cdl_offset.bgr, cdl_power.bgr, cdl_saturation);
     if (white_balance)
         color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
     if (lmg_enable)
-        color.rgb = apply_lmg(color.rgb, lmg_lift, lmg_midtone, lmg_gain);
+        color.rgb = apply_lmg(color.rgb, lmg_lift.bgr, lmg_midtone.bgr, lmg_gain.bgr);
     if (hue_shift_enable)
         color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
     if (tonebalance_enable)
         color.rgb = apply_tone_balance(color.rgb, tb_shadows, tb_highlights);
     if (split_tone_enable)
-        color.rgb = apply_split_tone(color.rgb, split_shadow_color, split_highlight_color, split_balance);
+        color.rgb =
+            apply_split_tone(color.rgb, split_shadow_color.bgr, split_highlight_color.bgr, split_balance);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

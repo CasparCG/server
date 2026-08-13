@@ -302,10 +302,9 @@ struct image_kernel::impl
                 std::abs(gain[1] - 1.0) > epsilon || std::abs(gain[2] - 1.0) > epsilon;
             if (lmg_active) {
                 shader_->set("lmg_enable", true);
-                // Upload swapped to BGR order so .r affects displayed Blue, .b affects displayed Red.
-                shader_->set("lmg_lift", lift[2], lift[1], lift[0]);
-                shader_->set("lmg_midtone", midtone[2], midtone[1], midtone[0]);
-                shader_->set("lmg_gain", gain[2], gain[1], gain[0]);
+                shader_->set("lmg_lift", lift[0], lift[1], lift[2]);
+                shader_->set("lmg_midtone", midtone[0], midtone[1], midtone[2]);
+                shader_->set("lmg_gain", gain[0], gain[1], gain[2]);
             } else {
                 shader_->set("lmg_enable", false);
             }
@@ -338,9 +337,8 @@ struct image_kernel::impl
                 std::abs(hc[0]) > epsilon || std::abs(hc[1]) > epsilon || std::abs(hc[2]) > epsilon;
             if (split_active) {
                 shader_->set("split_tone_enable", true);
-                // Upload swapped to BGR order so .r affects displayed Blue, .b affects displayed Red.
-                shader_->set("split_shadow_color", sc[2], sc[1], sc[0]);
-                shader_->set("split_highlight_color", hc[2], hc[1], hc[0]);
+                shader_->set("split_shadow_color", sc[0], sc[1], sc[2]);
+                shader_->set("split_highlight_color", hc[0], hc[1], hc[2]);
                 shader_->set("split_balance", static_cast<float>(transforms.image_transform.split_balance));
             } else {
                 shader_->set("split_tone_enable", false);
@@ -360,10 +358,9 @@ struct image_kernel::impl
                 std::abs(cs - 1.0) > epsilon;
             if (cdl_active) {
                 shader_->set("cdl_enable", true);
-                // Upload swapped to BGR working order (.r=Blue, .b=Red).
-                shader_->set("cdl_slope", s[2], s[1], s[0]);
-                shader_->set("cdl_offset", o[2], o[1], o[0]);
-                shader_->set("cdl_power", p[2], p[1], p[0]);
+                shader_->set("cdl_slope", s[0], s[1], s[2]);
+                shader_->set("cdl_offset", o[0], o[1], o[2]);
+                shader_->set("cdl_power", p[0], p[1], p[2]);
                 shader_->set("cdl_saturation", static_cast<float>(cs));
             } else {
                 shader_->set("cdl_enable", false);
