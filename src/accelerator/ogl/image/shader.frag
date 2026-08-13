@@ -569,11 +569,16 @@ vec3 apply_white_balance(vec3 c, float temp, float tint_val)
 
 // ---- Lift / Midtone / Gain (3-way colour corrector) ----
 // out = pow(max(c * gain + lift, 0.0), 1.0 / midtone).
-// No upper clamp so HDR values pass through; negatives clamped for pow() safety.
+// midtone is clamped before the reciprocal, not after: at midtone == 0 the
+// reciprocal is +Inf and pow() collapses the channel to 0 (or Inf above 1.0),
+// and clamping the exponent cannot undo that -- max(0.01, Inf) is Inf. A
+// negative midtone would likewise invert the curve. Clamping the base to
+// [0.01, 100] bounds the exponent to [0.01, 100] and covers both.
+// No upper clamp on the colour so HDR values pass through; negatives clamped for pow() safety.
 vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
 {
     c = max(c * gain + lift, vec3(0.0));
-    c = pow(c, max(vec3(0.01), 1.0 / midtone));
+    c = pow(c, 1.0 / clamp(midtone, vec3(0.01), vec3(100.0)));
     return c;
 }
 
