@@ -29,12 +29,12 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
                                           int               width,
                                           int               height,
                                           std::vector<int>& data_map,
-                                          core::color_space color_space = core::color_space::bt709);
+                                          core::color_space color_space = core::color_space::unknown);
 core::mutable_frame     make_frame(void*                    tag,
                                    core::frame_factory&     frame_factory,
                                    std::shared_ptr<AVFrame> video,
                                    std::shared_ptr<AVFrame> audio,
-                                   core::color_space        color_space = core::color_space::bt709,
+                                   core::color_space        color_space = core::color_space::unknown,
                                    core::frame_geometry::scale_mode     = core::frame_geometry::scale_mode::stretch,
                                    bool is_straight_alpha               = false);
 

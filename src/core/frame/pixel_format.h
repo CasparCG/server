@@ -51,6 +51,10 @@ enum class color_space
     bt601,
     bt709,
     bt2020,
+
+    /// The source did not say; `decode_color_space` below resolves it. Must stay last,
+    /// because the value is a matrix index in both mixer shaders.
+    unknown,
 };
 
 struct pixel_format_desc final
@@ -79,7 +83,7 @@ struct pixel_format_desc final
 
     pixel_format_desc() = default;
 
-    explicit pixel_format_desc(pixel_format format, core::color_space color_space = core::color_space::bt709)
+    explicit pixel_format_desc(pixel_format format, core::color_space color_space = core::color_space::unknown)
         : format(format)
         , color_space(color_space)
     {
@@ -88,7 +92,18 @@ struct pixel_format_desc final
     pixel_format       format            = pixel_format::invalid;
     bool               is_straight_alpha = false;
     std::vector<plane> planes;
-    core::color_space  color_space = core::color_space::bt709;
+    core::color_space  color_space = core::color_space::unknown;
 };
+
+/// The matrix to decode this source's chroma with: whatever it declared, or the SD/HD
+/// convention when it declared nothing. Both mixers must pick the same one, so the
+/// convention lives here rather than once per backend.
+inline color_space decode_color_space(const pixel_format_desc& desc)
+{
+    if (desc.color_space != color_space::unknown) {
+        return desc.color_space;
+    }
+    return desc.planes.at(0).height > 700 ? color_space::bt709 : color_space::bt601;
+}
 
 }} // namespace caspar::core
