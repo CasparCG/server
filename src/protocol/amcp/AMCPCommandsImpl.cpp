@@ -1484,9 +1484,15 @@ std::future<std::wstring> mixer_gamutcompress_command(command_context& ctx)
 
     transforms_applier transforms(ctx);
     bool   enable  = std::stoi(ctx.parameters.at(0)) != 0;
-    double cyan    = ctx.parameters.size() > 1 ? std::stod(ctx.parameters[1]) : 1.147;
-    double magenta = ctx.parameters.size() > 2 ? std::stod(ctx.parameters[2]) : 1.264;
-    double yellow  = ctx.parameters.size() > 3 ? std::stod(ctx.parameters[3]) : 1.312;
+    double cyan    = ctx.parameters.size() > 1
+                         ? grade_param(ctx.parameters[1], core::grade_limits::gamut_limit, L"cyan limit")
+                         : 1.147;
+    double magenta = ctx.parameters.size() > 2
+                         ? grade_param(ctx.parameters[2], core::grade_limits::gamut_limit, L"magenta limit")
+                         : 1.264;
+    double yellow  = ctx.parameters.size() > 3
+                         ? grade_param(ctx.parameters[3], core::grade_limits::gamut_limit, L"yellow limit")
+                         : 1.312;
 
     transforms.add(stage::transform_tuple_t(
         ctx.layer_index(),
@@ -1536,16 +1542,20 @@ std::future<std::wstring> mixer_qualifier_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    double       tgt_hue  = std::stod(ctx.parameters.at(0));
-    double       hue_w    = std::stod(ctx.parameters.at(1));
-    double       min_sat  = std::stod(ctx.parameters.at(2));
-    double       max_sat  = std::stod(ctx.parameters.at(3));
-    double       min_lum  = std::stod(ctx.parameters.at(4));
-    double       max_lum  = std::stod(ctx.parameters.at(5));
-    double       softness = std::stod(ctx.parameters.at(6));
-    double       exp_off  = std::stod(ctx.parameters.at(7));
-    double       sat_off  = std::stod(ctx.parameters.at(8));
-    double       hue_off  = std::stod(ctx.parameters.at(9));
+    grade_require(ctx,
+                  10,
+                  L"MIXER QUALIFIER hue width minSat maxSat minLum maxLum softness "
+                  L"exposureOffset satOffset hueOffset [duration] [tween]");
+    double tgt_hue  = grade_param(ctx.parameters.at(0), core::grade_limits::hue_degrees, L"target hue");
+    double hue_w    = grade_param(ctx.parameters.at(1), core::grade_limits::hue_width, L"hue width");
+    double min_sat  = grade_param(ctx.parameters.at(2), core::grade_limits::unit, L"min saturation");
+    double max_sat  = grade_param(ctx.parameters.at(3), core::grade_limits::unit, L"max saturation");
+    double min_lum  = grade_param(ctx.parameters.at(4), core::grade_limits::unit, L"min luminance");
+    double max_lum  = grade_param(ctx.parameters.at(5), core::grade_limits::unit, L"max luminance");
+    double softness = grade_param(ctx.parameters.at(6), core::grade_limits::unit, L"softness");
+    double exp_off  = grade_param(ctx.parameters.at(7), core::grade_limits::offset, L"exposure offset");
+    double sat_off  = grade_param(ctx.parameters.at(8), core::grade_limits::offset, L"saturation offset");
+    double hue_off  = grade_param(ctx.parameters.at(9), core::grade_limits::hue_shift, L"hue offset");
     int          duration = ctx.parameters.size() > 10 ? std::stoi(ctx.parameters[10]) : 0;
     std::wstring tween    = ctx.parameters.size() > 11 ? ctx.parameters[11] : L"linear";
 
@@ -1604,23 +1614,27 @@ std::future<std::wstring> mixer_rgblevels_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
+    grade_require(ctx,
+                  15,
+                  L"MIXER RGBLEVELS rMinIn rMaxIn rGamma rMinOut rMaxOut gMinIn ... "
+                  L"bMaxOut [duration] [tween], or MIXER RGBLEVELS RESET");
     core::rgb_levels rl;
     rl.enable       = true;
-    rl.r.min_input  = std::stod(ctx.parameters.at(0));
-    rl.r.max_input  = std::stod(ctx.parameters.at(1));
-    rl.r.gamma      = std::stod(ctx.parameters.at(2));
-    rl.r.min_output = std::stod(ctx.parameters.at(3));
-    rl.r.max_output = std::stod(ctx.parameters.at(4));
-    rl.g.min_input  = std::stod(ctx.parameters.at(5));
-    rl.g.max_input  = std::stod(ctx.parameters.at(6));
-    rl.g.gamma      = std::stod(ctx.parameters.at(7));
-    rl.g.min_output = std::stod(ctx.parameters.at(8));
-    rl.g.max_output = std::stod(ctx.parameters.at(9));
-    rl.b.min_input  = std::stod(ctx.parameters.at(10));
-    rl.b.max_input  = std::stod(ctx.parameters.at(11));
-    rl.b.gamma      = std::stod(ctx.parameters.at(12));
-    rl.b.min_output = std::stod(ctx.parameters.at(13));
-    rl.b.max_output = std::stod(ctx.parameters.at(14));
+    rl.r.min_input  = grade_param(ctx.parameters.at(0), core::grade_limits::level, L"R min input");
+    rl.r.max_input  = grade_param(ctx.parameters.at(1), core::grade_limits::level, L"R max input");
+    rl.r.gamma      = grade_param(ctx.parameters.at(2), core::grade_limits::level_gamma, L"R gamma");
+    rl.r.min_output = grade_param(ctx.parameters.at(3), core::grade_limits::level, L"R min output");
+    rl.r.max_output = grade_param(ctx.parameters.at(4), core::grade_limits::level, L"R max output");
+    rl.g.min_input  = grade_param(ctx.parameters.at(5), core::grade_limits::level, L"G min input");
+    rl.g.max_input  = grade_param(ctx.parameters.at(6), core::grade_limits::level, L"G max input");
+    rl.g.gamma      = grade_param(ctx.parameters.at(7), core::grade_limits::level_gamma, L"G gamma");
+    rl.g.min_output = grade_param(ctx.parameters.at(8), core::grade_limits::level, L"G min output");
+    rl.g.max_output = grade_param(ctx.parameters.at(9), core::grade_limits::level, L"G max output");
+    rl.b.min_input  = grade_param(ctx.parameters.at(10), core::grade_limits::level, L"B min input");
+    rl.b.max_input  = grade_param(ctx.parameters.at(11), core::grade_limits::level, L"B max input");
+    rl.b.gamma      = grade_param(ctx.parameters.at(12), core::grade_limits::level_gamma, L"B gamma");
+    rl.b.min_output = grade_param(ctx.parameters.at(13), core::grade_limits::level, L"B min output");
+    rl.b.max_output = grade_param(ctx.parameters.at(14), core::grade_limits::level, L"B max output");
     int          duration = ctx.parameters.size() > 15 ? std::stoi(ctx.parameters[15]) : 0;
     std::wstring tween    = ctx.parameters.size() > 16 ? ctx.parameters[16] : L"linear";
 

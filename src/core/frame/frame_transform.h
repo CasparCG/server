@@ -142,6 +142,17 @@ inline constexpr grade_range cdl_offset{-1.0, 1.0};
 inline constexpr grade_range cdl_power{0.01, 10.0};
 inline constexpr grade_range cdl_saturation{0.0, 10.0};
 
+/// Distance threshold from the achromatic axis; meaningless at or below 1.0.
+inline constexpr grade_range gamut_limit{1.0, 2.0};
+/// Absolute position on the wheel, not the signed offset hue_shift uses.
+inline constexpr grade_range hue_degrees{0.0, 360.0};
+inline constexpr grade_range hue_width{0.0, 180.0};
+inline constexpr grade_range unit{0.0, 1.0}; // saturation / luminance bounds, softness
+inline constexpr grade_range offset{-1.0, 1.0};
+/// Gamma shares midtone's bounds: it is the same kind of exponent.
+inline constexpr grade_range level{0.0, 1.0};
+inline constexpr grade_range level_gamma{0.01, 100.0};
+
 } // namespace grade_limits
 
 struct image_transform final

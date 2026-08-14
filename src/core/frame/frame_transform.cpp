@@ -113,29 +113,6 @@ image_transform image_transform::tween(double                 time,
     result.gc_cyan    = do_tween(time, source.gc_cyan, dest.gc_cyan, duration, tween);
     result.gc_magenta = do_tween(time, source.gc_magenta, dest.gc_magenta, duration, tween);
     result.gc_yellow  = do_tween(time, source.gc_yellow, dest.gc_yellow, duration, tween);
-    result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
-    result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
-    for (int i = 0; i < 3; ++i) {
-        result.lift[i]    = do_tween(time, source.lift[i], dest.lift[i], duration, tween);
-        result.midtone[i] = do_tween(time, source.midtone[i], dest.midtone[i], duration, tween);
-        result.gain[i]    = do_tween(time, source.gain[i], dest.gain[i], duration, tween);
-    }
-    result.hue_shift = do_tween(time, source.hue_shift, dest.hue_shift, duration, tween);
-    result.shadows    = do_tween(time, source.shadows, dest.shadows, duration, tween);
-    result.highlights = do_tween(time, source.highlights, dest.highlights, duration, tween);
-    for (int i = 0; i < 3; ++i) {
-        result.split_shadow_color[i] =
-            do_tween(time, source.split_shadow_color[i], dest.split_shadow_color[i], duration, tween);
-        result.split_highlight_color[i] =
-            do_tween(time, source.split_highlight_color[i], dest.split_highlight_color[i], duration, tween);
-    }
-    result.split_balance = do_tween(time, source.split_balance, dest.split_balance, duration, tween);
-    for (int i = 0; i < 3; ++i) {
-        result.cdl_slope[i]  = do_tween(time, source.cdl_slope[i], dest.cdl_slope[i], duration, tween);
-        result.cdl_offset[i] = do_tween(time, source.cdl_offset[i], dest.cdl_offset[i], duration, tween);
-        result.cdl_power[i]  = do_tween(time, source.cdl_power[i], dest.cdl_power[i], duration, tween);
-    }
-    result.cdl_saturation = do_tween(time, source.cdl_saturation, dest.cdl_saturation, duration, tween);
 
     result.qualifier_enable = dest.qualifier_enable;
     result.qual_target_hue  = do_tween(time, source.qual_target_hue, dest.qual_target_hue, duration, tween);
@@ -166,6 +143,30 @@ image_transform image_transform::tween(double                 time,
     result.per_channel_levels.b.gamma      = rl(source.per_channel_levels.b.gamma, dest.per_channel_levels.b.gamma);
     result.per_channel_levels.b.min_output = rl(source.per_channel_levels.b.min_output, dest.per_channel_levels.b.min_output);
     result.per_channel_levels.b.max_output = rl(source.per_channel_levels.b.max_output, dest.per_channel_levels.b.max_output);
+
+    result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
+    result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
+    for (int i = 0; i < 3; ++i) {
+        result.lift[i]    = do_tween(time, source.lift[i], dest.lift[i], duration, tween);
+        result.midtone[i] = do_tween(time, source.midtone[i], dest.midtone[i], duration, tween);
+        result.gain[i]    = do_tween(time, source.gain[i], dest.gain[i], duration, tween);
+    }
+    result.hue_shift = do_tween(time, source.hue_shift, dest.hue_shift, duration, tween);
+    result.shadows    = do_tween(time, source.shadows, dest.shadows, duration, tween);
+    result.highlights = do_tween(time, source.highlights, dest.highlights, duration, tween);
+    for (int i = 0; i < 3; ++i) {
+        result.split_shadow_color[i] =
+            do_tween(time, source.split_shadow_color[i], dest.split_shadow_color[i], duration, tween);
+        result.split_highlight_color[i] =
+            do_tween(time, source.split_highlight_color[i], dest.split_highlight_color[i], duration, tween);
+    }
+    result.split_balance = do_tween(time, source.split_balance, dest.split_balance, duration, tween);
+    for (int i = 0; i < 3; ++i) {
+        result.cdl_slope[i]  = do_tween(time, source.cdl_slope[i], dest.cdl_slope[i], duration, tween);
+        result.cdl_offset[i] = do_tween(time, source.cdl_offset[i], dest.cdl_offset[i], duration, tween);
+        result.cdl_power[i]  = do_tween(time, source.cdl_power[i], dest.cdl_power[i], duration, tween);
+    }
+    result.cdl_saturation = do_tween(time, source.cdl_saturation, dest.cdl_saturation, duration, tween);
 
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -203,14 +204,33 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
-               lhs.perspective == rhs.perspective && lhs.gamut_compress == rhs.gamut_compress &&
-               eq(lhs.gc_cyan, rhs.gc_cyan) && eq(lhs.gc_magenta, rhs.gc_magenta) &&
-               eq(lhs.gc_yellow, rhs.gc_yellow) && lhs.qualifier_enable == rhs.qualifier_enable &&
-               eq(lhs.qual_target_hue, rhs.qual_target_hue) && eq(lhs.qual_hue_width, rhs.qual_hue_width) &&
-               eq(lhs.qual_min_sat, rhs.qual_min_sat) && eq(lhs.qual_max_sat, rhs.qual_max_sat) &&
-               eq(lhs.qual_min_lum, rhs.qual_min_lum) && eq(lhs.qual_max_lum, rhs.qual_max_lum) &&
-               eq(lhs.qual_softness, rhs.qual_softness) && eq(lhs.qual_exposure, rhs.qual_exposure) &&
-               eq(lhs.qual_sat_offset, rhs.qual_sat_offset) && eq(lhs.qual_hue_offset, rhs.qual_hue_offset) &&
+               lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
+               eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
+               boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
+               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) &&
+               eq(lhs.shadows, rhs.shadows) && eq(lhs.highlights, rhs.highlights) &&
+               boost::range::equal(lhs.split_shadow_color, rhs.split_shadow_color, eq) &&
+               boost::range::equal(lhs.split_highlight_color, rhs.split_highlight_color, eq) &&
+               eq(lhs.split_balance, rhs.split_balance) &&
+               boost::range::equal(lhs.cdl_slope, rhs.cdl_slope, eq) &&
+               boost::range::equal(lhs.cdl_offset, rhs.cdl_offset, eq) &&
+               boost::range::equal(lhs.cdl_power, rhs.cdl_power, eq) &&
+               eq(lhs.cdl_saturation, rhs.cdl_saturation) &&
+               lhs.gamut_compress == rhs.gamut_compress &&
+               eq(lhs.gc_cyan, rhs.gc_cyan) &&
+               eq(lhs.gc_magenta, rhs.gc_magenta) &&
+               eq(lhs.gc_yellow, rhs.gc_yellow) &&
+               lhs.qualifier_enable == rhs.qualifier_enable &&
+               eq(lhs.qual_target_hue, rhs.qual_target_hue) &&
+               eq(lhs.qual_hue_width, rhs.qual_hue_width) &&
+               eq(lhs.qual_min_sat, rhs.qual_min_sat) &&
+               eq(lhs.qual_max_sat, rhs.qual_max_sat) &&
+               eq(lhs.qual_min_lum, rhs.qual_min_lum) &&
+               eq(lhs.qual_max_lum, rhs.qual_max_lum) &&
+               eq(lhs.qual_softness, rhs.qual_softness) &&
+               eq(lhs.qual_exposure, rhs.qual_exposure) &&
+               eq(lhs.qual_sat_offset, rhs.qual_sat_offset) &&
+               eq(lhs.qual_hue_offset, rhs.qual_hue_offset) &&
                lhs.per_channel_levels.enable == rhs.per_channel_levels.enable &&
                eq(lhs.per_channel_levels.r.min_input, rhs.per_channel_levels.r.min_input) &&
                eq(lhs.per_channel_levels.r.max_input, rhs.per_channel_levels.r.max_input) &&
@@ -227,20 +247,6 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.per_channel_levels.b.gamma, rhs.per_channel_levels.b.gamma) &&
                eq(lhs.per_channel_levels.b.min_output, rhs.per_channel_levels.b.min_output) &&
                eq(lhs.per_channel_levels.b.max_output, rhs.per_channel_levels.b.max_output) ||
-               eq(lhs.qual_sat_offset, rhs.qual_sat_offset) && eq(lhs.qual_hue_offset, rhs.qual_hue_offset) ||
-               eq(lhs.gc_yellow, rhs.gc_yellow) ||
-               lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
-               eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
-               boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
-               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) &&
-               eq(lhs.shadows, rhs.shadows) && eq(lhs.highlights, rhs.highlights) &&
-               boost::range::equal(lhs.split_shadow_color, rhs.split_shadow_color, eq) &&
-               boost::range::equal(lhs.split_highlight_color, rhs.split_highlight_color, eq) &&
-               eq(lhs.split_balance, rhs.split_balance) &&
-               boost::range::equal(lhs.cdl_slope, rhs.cdl_slope, eq) &&
-               boost::range::equal(lhs.cdl_offset, rhs.cdl_offset, eq) &&
-               boost::range::equal(lhs.cdl_power, rhs.cdl_power, eq) &&
-               eq(lhs.cdl_saturation, rhs.cdl_saturation) ||
            lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
