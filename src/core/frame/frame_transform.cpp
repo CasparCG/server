@@ -185,14 +185,6 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
-               lhs.perspective == rhs.perspective && lhs.blur.enable == rhs.blur.enable &&
-               eq(lhs.blur.radius, rhs.blur.radius) && lhs.blur.type == rhs.blur.type &&
-               eq(lhs.blur.angle, rhs.blur.angle) && boost::range::equal(lhs.blur.center, rhs.blur.center, eq) &&
-               eq(lhs.blur.tilt_y, rhs.blur.tilt_y) && eq(lhs.blur.tilt_h, rhs.blur.tilt_h) &&
-               eq(lhs.sharpen_amount, rhs.sharpen_amount) && eq(lhs.sharpen_radius, rhs.sharpen_radius) &&
-               eq(lhs.grain_intensity, rhs.grain_intensity) && eq(lhs.grain_size, rhs.grain_size) ||
-               eq(lhs.sharpen_amount, rhs.sharpen_amount) && eq(lhs.sharpen_radius, rhs.sharpen_radius) ||
-               eq(lhs.blur.tilt_y, rhs.blur.tilt_y) && eq(lhs.blur.tilt_h, rhs.blur.tilt_h) ||
                lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
                eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
                boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
@@ -204,7 +196,13 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                boost::range::equal(lhs.cdl_slope, rhs.cdl_slope, eq) &&
                boost::range::equal(lhs.cdl_offset, rhs.cdl_offset, eq) &&
                boost::range::equal(lhs.cdl_power, rhs.cdl_power, eq) &&
-               eq(lhs.cdl_saturation, rhs.cdl_saturation) ||
+               eq(lhs.cdl_saturation, rhs.cdl_saturation) &&
+               lhs.blur.enable == rhs.blur.enable &&
+               eq(lhs.blur.radius, rhs.blur.radius) && lhs.blur.type == rhs.blur.type &&
+               eq(lhs.blur.angle, rhs.blur.angle) && boost::range::equal(lhs.blur.center, rhs.blur.center, eq) &&
+               eq(lhs.blur.tilt_y, rhs.blur.tilt_y) && eq(lhs.blur.tilt_h, rhs.blur.tilt_h) &&
+               eq(lhs.sharpen_amount, rhs.sharpen_amount) && eq(lhs.sharpen_radius, rhs.sharpen_radius) &&
+               eq(lhs.grain_intensity, rhs.grain_intensity) && eq(lhs.grain_size, rhs.grain_size) ||
            lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 

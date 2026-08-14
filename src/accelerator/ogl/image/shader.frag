@@ -43,13 +43,6 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
-uniform bool		blur_enable;
-uniform float		blur_radius;
-uniform int			blur_type; // 0=gaussian, 1=box, 2=directional, 3=zoom, 4=tilt_shift, 5=lens
-uniform float		blur_angle;
-uniform vec2		blur_center;
-uniform vec2		blur_tilt;
-uniform vec2		target_size;
 // White balance (temperature / tint)
 uniform bool		white_balance;
 uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
@@ -84,6 +77,13 @@ uniform vec3		cdl_slope;
 uniform vec3		cdl_offset;
 uniform vec3		cdl_power;
 uniform float		cdl_saturation;
+uniform bool		blur_enable;
+uniform float		blur_radius;
+uniform int			blur_type; // 0=gaussian, 1=box, 2=directional, 3=zoom, 4=tilt_shift, 5=lens
+uniform float		blur_angle;
+uniform vec2		blur_center;
+uniform vec2		blur_tilt;
+uniform vec2		target_size;
 
 uniform bool		sharpen_enable;
 uniform float		sharpen_amount;
@@ -775,7 +775,7 @@ vec4 get_blurred_color(vec2 uv)
             float theta  = dither_theta + float(i) * 2.39996323;
             vec2  offset = vec2(cos(theta), sin(theta)) * radius * texelSize;
             vec4  col    = get_rgba_color(uv + offset);
-            float lum    = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+            float lum    = working_luma(col.rgb);
             float weight = 1.0 + pow(max(lum - 0.3, 0.0), 3.0) * 15.0;
             weight      *= mix(0.3, 1.0, t);
             totalColor  += col * weight;
@@ -810,13 +810,7 @@ vec3 apply_film_grain(vec3 c, vec2 uv, float intensity, float size_val, int fram
 {
     vec2  grain_uv = uv * target_size / max(size_val, 0.5);
     float noise    = grain_hash(grain_uv, frame_seed) * 2.0 - 1.0; // -1..+1
-    // dot(c.bgr, ...) -- c is BGR here, since this backend carries the pixel through
-    // the chain in the mixer's native BGR channel order (ContrastSaturationBrightness
-    // above already takes luma_coeff.bgr for the same reason). Unswizzled, the
-    // photographic response curve is driven by a luminance with red's Rec.709
-    // coefficient applied to blue, so grain lands in the wrong tonal range on
-    // saturated colour. Greys are unaffected by the exchange.
-    float lum      = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722));
+    float lum      = working_luma(c);
     float response = smoothstep(0.0, 0.15, lum) * (1.0 - smoothstep(0.8, 1.0, lum));
     c += vec3(noise * intensity * response);
     return c;

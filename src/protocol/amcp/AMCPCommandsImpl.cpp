@@ -1470,21 +1470,6 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-core::blur_type get_blur_type(const std::wstring& str)
-{
-    if (boost::iequals(str, L"box"))
-        return core::blur_type::box;
-    if (boost::iequals(str, L"directional"))
-        return core::blur_type::directional;
-    if (boost::iequals(str, L"zoom"))
-        return core::blur_type::zoom;
-    if (boost::iequals(str, L"tilt_shift") || boost::iequals(str, L"tilt-shift"))
-        return core::blur_type::tilt_shift;
-    if (boost::iequals(str, L"lens"))
-        return core::blur_type::lens;
-    return core::blur_type::gaussian;
-}
-
 std::wstring get_blur_type_string(core::blur_type type)
 {
     switch (type) {
@@ -1504,6 +1489,21 @@ std::wstring get_blur_type_string(core::blur_type type)
     }
 }
 
+core::blur_type get_blur_type(const std::wstring& str)
+{
+    if (boost::iequals(str, L"box"))
+        return core::blur_type::box;
+    if (boost::iequals(str, L"directional"))
+        return core::blur_type::directional;
+    if (boost::iequals(str, L"zoom"))
+        return core::blur_type::zoom;
+    if (boost::iequals(str, L"tilt_shift") || boost::iequals(str, L"tilt-shift"))
+        return core::blur_type::tilt_shift;
+    if (boost::iequals(str, L"lens"))
+        return core::blur_type::lens;
+    return core::blur_type::gaussian;
+}
+
 std::future<std::wstring> mixer_blur_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1521,14 +1521,25 @@ std::future<std::wstring> mixer_blur_command(command_context& ctx)
     core::blur_config  blur;
 
     // Format: MIXER 1-10 BLUR <radius> [type] [angle] [center_x] [center_y] [tilt_y] [tilt_h] [duration] [tween]
-    blur.enable = std::stod(ctx.parameters.at(0)) > 0.001; // Enable if radius > 0
-    blur.radius = std::stod(ctx.parameters.at(0));
+    grade_require(ctx, 1, L"MIXER BLUR radius [type] [angle] [centerX] [centerY] [tiltY] [tiltH] [duration] [tween]");
+    blur.radius = grade_param(ctx.parameters.at(0), core::grade_limits::blur_radius, L"blur radius");
+    blur.enable = blur.radius > 0.001; // a zero radius is the effect being off
     blur.type   = ctx.parameters.size() > 1 ? get_blur_type(ctx.parameters[1]) : core::blur_type::gaussian;
-    blur.angle  = ctx.parameters.size() > 2 ? std::stod(ctx.parameters[2]) : 0.0;
-    blur.center = {ctx.parameters.size() > 3 ? std::stod(ctx.parameters[3]) : 0.5,
-                   ctx.parameters.size() > 4 ? std::stod(ctx.parameters[4]) : 0.5};
-    blur.tilt_y = ctx.parameters.size() > 5 ? std::stod(ctx.parameters[5]) : 0.5;
-    blur.tilt_h = ctx.parameters.size() > 6 ? std::stod(ctx.parameters[6]) : 0.2;
+    blur.angle  = ctx.parameters.size() > 2
+                      ? grade_param(ctx.parameters[2], core::grade_limits::blur_angle, L"blur angle")
+                      : 0.0;
+    blur.center = {ctx.parameters.size() > 3
+                       ? grade_param(ctx.parameters[3], core::grade_limits::unit, L"blur centre X")
+                       : 0.5,
+                   ctx.parameters.size() > 4
+                       ? grade_param(ctx.parameters[4], core::grade_limits::unit, L"blur centre Y")
+                       : 0.5};
+    blur.tilt_y = ctx.parameters.size() > 5
+                      ? grade_param(ctx.parameters[5], core::grade_limits::unit, L"tilt centre")
+                      : 0.5;
+    blur.tilt_h = ctx.parameters.size() > 6
+                      ? grade_param(ctx.parameters[6], core::grade_limits::unit, L"tilt height")
+                      : 0.2;
 
     int          duration = ctx.parameters.size() > 7 ? std::stoi(ctx.parameters[7]) : 0;
     std::wstring tween    = ctx.parameters.size() > 8 ? ctx.parameters[8] : L"linear";
@@ -1558,8 +1569,11 @@ std::future<std::wstring> mixer_sharpen_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    double       amount   = std::stod(ctx.parameters.at(0));
-    double       radius   = ctx.parameters.size() > 1 ? std::stod(ctx.parameters[1]) : 1.0;
+    grade_require(ctx, 1, L"MIXER SHARPEN amount [radius] [duration] [tween]");
+    double amount = grade_param(ctx.parameters.at(0), core::grade_limits::sharpen_amount, L"sharpen amount");
+    double radius = ctx.parameters.size() > 1
+                        ? grade_param(ctx.parameters[1], core::grade_limits::sharpen_radius, L"sharpen radius")
+                        : 1.0;
     int          duration = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
     std::wstring tween    = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
 
@@ -1588,8 +1602,11 @@ std::future<std::wstring> mixer_grain_command(command_context& ctx)
     }
 
     transforms_applier transforms(ctx);
-    double       intensity = std::stod(ctx.parameters.at(0));
-    double       size      = ctx.parameters.size() > 1 ? std::stod(ctx.parameters[1]) : 1.0;
+    grade_require(ctx, 1, L"MIXER GRAIN intensity [size] [duration] [tween]");
+    double intensity = grade_param(ctx.parameters.at(0), core::grade_limits::grain_intensity, L"grain intensity");
+    double size      = ctx.parameters.size() > 1
+                           ? grade_param(ctx.parameters[1], core::grade_limits::grain_size, L"grain size")
+                           : 1.0;
     int          duration  = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
     std::wstring tween     = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
 
