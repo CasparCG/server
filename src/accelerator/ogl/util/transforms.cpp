@@ -72,15 +72,27 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
 
+    // Every combined grading value below is clamped back into the range its MIXER
+    // command accepts (core::grade_limits, the same table the commands validate
+    // against). Two layers at the edge of legal would otherwise reach a value no single
+    // command could set: lift 0.9 over lift 0.9 is 1.8, and a midtone of 0.2 under
+    // another 0.2 is an exponent of 25. Clamping here rather than in the shader keeps
+    // the value the kernel reports and the value it renders the same thing.
+    //
+    // The bounds are wide enough that ordinary stacking is untouched -- gain 2 over
+    // gain 2 is 4, well inside [0, 10]. hue_shift is the exception and is wrapped
+    // instead, below, because rotation is periodic.
+    namespace lim = core::grade_limits;
+
     // White balance: additive
-    self.temperature += other.temperature;
-    self.tint        += other.tint;
+    self.temperature = lim::temperature.clamp(self.temperature + other.temperature);
+    self.tint        = lim::tint.clamp(self.tint + other.tint);
 
     // Lift/Midtone/Gain: additive lift, multiplicative midtone+gain
     for (int i = 0; i < 3; ++i) {
-        self.lift[i]    += other.lift[i];
-        self.midtone[i] *= other.midtone[i];
-        self.gain[i]    *= other.gain[i];
+        self.lift[i]    = lim::lift.clamp(self.lift[i] + other.lift[i]);
+        self.midtone[i] = lim::midtone.clamp(self.midtone[i] * other.midtone[i]);
+        self.gain[i]    = lim::gain.clamp(self.gain[i] * other.gain[i]);
     }
 
     // Hue shift: additive, then wrapped into [-180, 180].
@@ -94,8 +106,8 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.hue_shift = std::remainder(self.hue_shift + other.hue_shift, 360.0);
 
     // Tone balance: additive
-    self.shadows    += other.shadows;
-    self.highlights += other.highlights;
+    self.shadows    = lim::tone.clamp(self.shadows + other.shadows);
+    self.highlights = lim::tone.clamp(self.highlights + other.highlights);
 
     // Split toning: colours add, and the balance of whichever transform actually has
     // split toning active wins.
@@ -113,19 +125,21 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
         std::any_of(other.split_shadow_color.begin(), other.split_shadow_color.end(), is_set) ||
         std::any_of(other.split_highlight_color.begin(), other.split_highlight_color.end(), is_set);
     for (int i = 0; i < 3; ++i) {
-        self.split_shadow_color[i]    += other.split_shadow_color[i];
-        self.split_highlight_color[i] += other.split_highlight_color[i];
+        self.split_shadow_color[i] =
+            lim::split_color.clamp(self.split_shadow_color[i] + other.split_shadow_color[i]);
+        self.split_highlight_color[i] =
+            lim::split_color.clamp(self.split_highlight_color[i] + other.split_highlight_color[i]);
     }
     if (other_splits)
-        self.split_balance = other.split_balance;
+        self.split_balance = lim::split_balance.clamp(other.split_balance);
 
     // ASC CDL: slope/power multiplicative, offset additive, saturation multiplicative
     for (int i = 0; i < 3; ++i) {
-        self.cdl_slope[i]  *= other.cdl_slope[i];
-        self.cdl_offset[i] += other.cdl_offset[i];
-        self.cdl_power[i]  *= other.cdl_power[i];
+        self.cdl_slope[i]  = lim::cdl_slope.clamp(self.cdl_slope[i] * other.cdl_slope[i]);
+        self.cdl_offset[i] = lim::cdl_offset.clamp(self.cdl_offset[i] + other.cdl_offset[i]);
+        self.cdl_power[i]  = lim::cdl_power.clamp(self.cdl_power[i] * other.cdl_power[i]);
     }
-    self.cdl_saturation *= other.cdl_saturation;
+    self.cdl_saturation = lim::cdl_saturation.clamp(self.cdl_saturation * other.cdl_saturation);
 }
 
 bool is_default_perspective(const core::corners& perspective)

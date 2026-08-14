@@ -1130,6 +1130,43 @@ std::future<std::wstring> mixer_levels_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// Parse one grading argument and refuse it if it is outside the parameter's defined
+// range, so a bad value is a 403 naming the offender rather than a silently applied
+// grade -- or, for a NaN, a black layer. `grade_limits` is the same table that
+// apply_transform_colour_values clamps combined transforms to; if the two disagreed,
+// stacking two legal layers could reach a value no command would accept.
+//
+// Scoped to the commands added in this series. The older mixer commands validate
+// nothing (MIXER OPACITY -5 is accepted today) and retrofitting them would change
+// behaviour for existing clients, which belongs in its own change.
+double grade_param(const std::wstring& raw, core::grade_range range, const wchar_t* name)
+{
+    double value = 0.0;
+    try {
+        value = std::stod(raw);
+    } catch (...) {
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info(std::wstring(name) + L" is not a number: " + raw));
+    }
+    if (!range.contains(value)) {
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(name) + L" must be between " +
+                                                       std::to_wstring(range.lo) + L" and " +
+                                                       std::to_wstring(range.hi) + L", got " + raw));
+    }
+    return value;
+}
+
+// Refuse a short parameter list by name. Without this the .at() below throws
+// std::out_of_range, which surfaces as a generic failure rather than saying which
+// command wanted how many arguments.
+void grade_require(const command_context& ctx, size_t count, const wchar_t* usage)
+{
+    if (ctx.parameters.size() < count) {
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(L"expected at least ") +
+                                                       std::to_wstring(count) + L" parameters: " + usage));
+    }
+}
+
 // MIXER WHITEBALANCE temperature tint [duration tween]
 std::future<std::wstring> mixer_whitebalance_command(command_context& ctx)
 {
@@ -1141,9 +1178,10 @@ std::future<std::wstring> mixer_whitebalance_command(command_context& ctx)
         });
     }
 
+    grade_require(ctx, 2, L"MIXER WHITEBALANCE temperature tint [duration] [tween]");
     transforms_applier transforms(ctx);
-    double       temperature = std::stod(ctx.parameters.at(0));
-    double       tint        = std::stod(ctx.parameters.at(1));
+    double temperature = grade_param(ctx.parameters.at(0), core::grade_limits::temperature, L"temperature");
+    double tint        = grade_param(ctx.parameters.at(1), core::grade_limits::tint, L"tint");
     int          duration    = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
     std::wstring tween       = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
 
@@ -1161,10 +1199,15 @@ std::future<std::wstring> mixer_whitebalance_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-// Shared implementation for the three per-channel (R G B) grade wheels.
+// Shared implementation for the three per-channel (R G B) grade wheels. `range` and
+// `name` differ per wheel -- lift is an offset, midtone an exponent, gain a multiplier --
+// so they are threaded through rather than assumed.
 template <typename Getter, typename Setter>
-std::future<std::wstring>
-mixer_rgb_triple_command(command_context& ctx, const Getter& getter, const Setter& setter)
+std::future<std::wstring> mixer_rgb_triple_command(command_context&  ctx,
+                                                   const Getter&     getter,
+                                                   const Setter&     setter,
+                                                   core::grade_range range,
+                                                   const wchar_t*    name)
 {
     if (ctx.parameters.empty()) {
         auto transform2 = get_current_transform(ctx).share();
@@ -1175,10 +1218,11 @@ mixer_rgb_triple_command(command_context& ctx, const Getter& getter, const Sette
         });
     }
 
+    grade_require(ctx, 3, L"MIXER <wheel> R G B [duration] [tween]");
     transforms_applier transforms(ctx);
-    double       r        = std::stod(ctx.parameters.at(0));
-    double       g        = std::stod(ctx.parameters.at(1));
-    double       b        = std::stod(ctx.parameters.at(2));
+    double       r        = grade_param(ctx.parameters.at(0), range, name);
+    double       g        = grade_param(ctx.parameters.at(1), range, name);
+    double       b        = grade_param(ctx.parameters.at(2), range, name);
     int          duration = ctx.parameters.size() > 3 ? std::stoi(ctx.parameters[3]) : 0;
     std::wstring tween    = ctx.parameters.size() > 4 ? ctx.parameters[4] : L"linear";
 
@@ -1201,7 +1245,9 @@ std::future<std::wstring> mixer_lift_command(command_context& ctx)
     return mixer_rgb_triple_command(
         ctx,
         [](const image_transform& t) { return t.lift; },
-        [](image_transform& t, double r, double g, double b) { t.lift = {r, g, b}; });
+        [](image_transform& t, double r, double g, double b) { t.lift = {r, g, b}; },
+        core::grade_limits::lift,
+        L"lift");
 }
 
 // MIXER MIDTONE r g b [duration tween] -- per-channel midtone power (DaVinci "gamma" wheel)
@@ -1210,7 +1256,9 @@ std::future<std::wstring> mixer_midtone_command(command_context& ctx)
     return mixer_rgb_triple_command(
         ctx,
         [](const image_transform& t) { return t.midtone; },
-        [](image_transform& t, double r, double g, double b) { t.midtone = {r, g, b}; });
+        [](image_transform& t, double r, double g, double b) { t.midtone = {r, g, b}; },
+        core::grade_limits::midtone,
+        L"midtone");
 }
 
 // MIXER GAIN r g b [duration tween] -- per-channel highlight multiplier
@@ -1219,7 +1267,9 @@ std::future<std::wstring> mixer_gain_command(command_context& ctx)
     return mixer_rgb_triple_command(
         ctx,
         [](const image_transform& t) { return t.gain; },
-        [](image_transform& t, double r, double g, double b) { t.gain = {r, g, b}; });
+        [](image_transform& t, double r, double g, double b) { t.gain = {r, g, b}; },
+        core::grade_limits::gain,
+        L"gain");
 }
 
 // MIXER HUESHIFT degrees [duration tween] -- global hue rotation (-180..+180)
@@ -1232,8 +1282,9 @@ std::future<std::wstring> mixer_hueshift_command(command_context& ctx)
         });
     }
 
+    grade_require(ctx, 1, L"MIXER HUESHIFT degrees [duration] [tween]");
     transforms_applier transforms(ctx);
-    double       value    = std::stod(ctx.parameters.at(0));
+    double       value    = grade_param(ctx.parameters.at(0), core::grade_limits::hue_shift, L"hue shift");
     int          duration = ctx.parameters.size() > 1 ? std::stoi(ctx.parameters[1]) : 0;
     std::wstring tween    = ctx.parameters.size() > 2 ? ctx.parameters[2] : L"linear";
 
@@ -1261,9 +1312,10 @@ std::future<std::wstring> mixer_tonebalance_command(command_context& ctx)
         });
     }
 
+    grade_require(ctx, 2, L"MIXER TONEBALANCE shadows highlights [duration] [tween]");
     transforms_applier transforms(ctx);
-    double       shadows    = std::stod(ctx.parameters.at(0));
-    double       highlights = std::stod(ctx.parameters.at(1));
+    double shadows    = grade_param(ctx.parameters.at(0), core::grade_limits::tone, L"shadows");
+    double highlights = grade_param(ctx.parameters.at(1), core::grade_limits::tone, L"highlights");
     int          duration   = ctx.parameters.size() > 2 ? std::stoi(ctx.parameters[2]) : 0;
     std::wstring tween      = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
 
@@ -1313,14 +1365,21 @@ std::future<std::wstring> mixer_splittone_command(command_context& ctx)
         return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
     }
 
+    grade_require(ctx,
+                  6,
+                  L"MIXER SPLITTONE shadowR shadowG shadowB highlightR highlightG highlightB "
+                  L"[balance] [duration] [tween], or MIXER SPLITTONE RESET");
     transforms_applier transforms(ctx);
-    double       sr    = std::stod(ctx.parameters.at(0));
-    double       sg    = std::stod(ctx.parameters.at(1));
-    double       sb    = std::stod(ctx.parameters.at(2));
-    double       hr    = std::stod(ctx.parameters.at(3));
-    double       hg    = std::stod(ctx.parameters.at(4));
-    double       hb    = std::stod(ctx.parameters.at(5));
-    double       bal   = ctx.parameters.size() > 6 ? std::stod(ctx.parameters[6]) : 0.5;
+    const auto&  sc_lim = core::grade_limits::split_color;
+    double       sr    = grade_param(ctx.parameters.at(0), sc_lim, L"shadow red");
+    double       sg    = grade_param(ctx.parameters.at(1), sc_lim, L"shadow green");
+    double       sb    = grade_param(ctx.parameters.at(2), sc_lim, L"shadow blue");
+    double       hr    = grade_param(ctx.parameters.at(3), sc_lim, L"highlight red");
+    double       hg    = grade_param(ctx.parameters.at(4), sc_lim, L"highlight green");
+    double       hb    = grade_param(ctx.parameters.at(5), sc_lim, L"highlight blue");
+    double       bal   = ctx.parameters.size() > 6
+                             ? grade_param(ctx.parameters[6], core::grade_limits::split_balance, L"balance")
+                             : 0.5;
     int          dur   = ctx.parameters.size() > 7 ? std::stoi(ctx.parameters[7]) : 0;
     std::wstring tween = ctx.parameters.size() > 8 ? ctx.parameters[8] : L"linear";
 
@@ -1372,17 +1431,26 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
         return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
     }
 
+    grade_require(ctx,
+                  9,
+                  L"MIXER CDL slopeR slopeG slopeB offsetR offsetG offsetB powerR powerG powerB "
+                  L"[saturation] [duration] [tween], or MIXER CDL RESET");
     transforms_applier transforms(ctx);
-    double       sR  = std::stod(ctx.parameters.at(0));
-    double       sG  = std::stod(ctx.parameters.at(1));
-    double       sB  = std::stod(ctx.parameters.at(2));
-    double       oR  = std::stod(ctx.parameters.at(3));
-    double       oG  = std::stod(ctx.parameters.at(4));
-    double       oB  = std::stod(ctx.parameters.at(5));
-    double       pR  = std::stod(ctx.parameters.at(6));
-    double       pG  = std::stod(ctx.parameters.at(7));
-    double       pB  = std::stod(ctx.parameters.at(8));
-    double       sat = ctx.parameters.size() > 9 ? std::stod(ctx.parameters[9]) : 1.0;
+    const auto&  sl = core::grade_limits::cdl_slope;
+    const auto&  of = core::grade_limits::cdl_offset;
+    const auto&  pw = core::grade_limits::cdl_power;
+    double       sR  = grade_param(ctx.parameters.at(0), sl, L"CDL slope red");
+    double       sG  = grade_param(ctx.parameters.at(1), sl, L"CDL slope green");
+    double       sB  = grade_param(ctx.parameters.at(2), sl, L"CDL slope blue");
+    double       oR  = grade_param(ctx.parameters.at(3), of, L"CDL offset red");
+    double       oG  = grade_param(ctx.parameters.at(4), of, L"CDL offset green");
+    double       oB  = grade_param(ctx.parameters.at(5), of, L"CDL offset blue");
+    double       pR  = grade_param(ctx.parameters.at(6), pw, L"CDL power red");
+    double       pG  = grade_param(ctx.parameters.at(7), pw, L"CDL power green");
+    double       pB  = grade_param(ctx.parameters.at(8), pw, L"CDL power blue");
+    double       sat = ctx.parameters.size() > 9
+                           ? grade_param(ctx.parameters[9], core::grade_limits::cdl_saturation, L"CDL saturation")
+                           : 1.0;
     int          dur = ctx.parameters.size() > 10 ? std::stoi(ctx.parameters[10]) : 0;
     std::wstring tw  = ctx.parameters.size() > 11 ? ctx.parameters[11] : L"linear";
 
