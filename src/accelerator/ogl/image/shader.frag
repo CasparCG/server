@@ -760,27 +760,27 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
-    if (lut3d_enable)
-        color.rgb = apply_lut3d(color.rgb, lut3d_strength);
-    if (curves_enable)
-        color.rgb = apply_curves(color.rgb);
-    if (hue_curve_enable)
-        color.rgb = apply_hue_curves(color.rgb);
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)
         color.rgb = apply_cdl(color.rgb, cdl_slope.bgr, cdl_offset.bgr, cdl_power.bgr, cdl_saturation);
+    if (lut3d_enable)
+        color.rgb = apply_lut3d(color.rgb, lut3d_strength);
     if (white_balance)
         color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
     if (lmg_enable)
         color.rgb = apply_lmg(color.rgb, lmg_lift.bgr, lmg_midtone.bgr, lmg_gain.bgr);
     if (hue_shift_enable)
         color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
+    if (hue_curve_enable)
+        color.rgb = apply_hue_curves(color.rgb);
     if (tonebalance_enable)
         color.rgb = apply_tone_balance(color.rgb, tb_shadows, tb_highlights);
     if (split_tone_enable)
         color.rgb =
             apply_split_tone(color.rgb, split_shadow_color.bgr, split_highlight_color.bgr, split_balance);
+    if (curves_enable)
+        color.rgb = apply_curves(color.rgb);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

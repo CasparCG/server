@@ -163,6 +163,14 @@ inline constexpr grade_range cdl_offset{-1.0, 1.0};
 inline constexpr grade_range cdl_power{0.01, 10.0};
 inline constexpr grade_range cdl_saturation{0.0, 10.0};
 
+/// Curve control points are normalised on both axes.
+inline constexpr grade_range lut3d_strength{0.0, 1.0};
+inline constexpr grade_range curve_coord{0.0, 1.0};
+/// HUE_HUE and HUE_LUM are signed offsets (neutral 0); HUE_SAT and SAT_SAT are
+/// multipliers (neutral 1). Chosen by the curve the command names.
+inline constexpr grade_range hue_curve_offset{-1.0, 1.0};
+inline constexpr grade_range hue_curve_scale{0.0, 4.0};
+
 } // namespace grade_limits
 
 struct image_transform final
@@ -188,10 +196,6 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
-    std::shared_ptr<const lut3d_data> lut3d;                // nullptr = disabled
-    float                             lut3d_strength = 1.0f; // 0..1 mix factor
-    core::tone_curves                 curves;               // per-channel + master tone curves
-    std::shared_ptr<const hue_curve_data> hue_curves;       // nullptr = disabled
     double                temperature = 0.0; // white balance: -1 cool .. +1 warm
     double                tint        = 0.0; // white balance: -1 magenta .. +1 green
     std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel
@@ -207,6 +211,10 @@ struct image_transform final
     std::array<double, 3> cdl_offset     = {0.0, 0.0, 0.0}; // ASC CDL offset
     std::array<double, 3> cdl_power      = {1.0, 1.0, 1.0}; // ASC CDL power
     double                cdl_saturation = 1.0;             // ASC CDL saturation
+    std::shared_ptr<const lut3d_data> lut3d;                // nullptr = disabled
+    float                             lut3d_strength = 1.0f; // 0..1 mix factor
+    core::tone_curves                 curves;               // per-channel + master tone curves
+    std::shared_ptr<const hue_curve_data> hue_curves;       // nullptr = disabled
 
     bool             is_key      = false;
     bool             invert      = false;

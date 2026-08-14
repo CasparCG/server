@@ -1470,64 +1470,8 @@ std::future<std::wstring> mixer_cdl_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-std::future<std::wstring> mixer_lut3d_command(command_context& ctx)
-{
-    if (ctx.parameters.empty()) {
-        auto transform2 = get_current_transform(ctx).share();
-        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
-            auto t = transform2.get().image_transform;
-            if (!t.lut3d)
-                return L"201 MIXER OK\r\nNONE\r\n";
-            return L"201 MIXER OK\r\nACTIVE " + std::to_wstring(t.lut3d->size) + L" " +
-                   std::to_wstring(t.lut3d_strength) + L"\r\n";
-        });
-    }
-
-    if (boost::iequals(ctx.parameters.at(0), L"NONE")) {
-        transforms_applier transforms(ctx);
-        transforms.add(stage::transform_tuple_t(
-            ctx.layer_index(),
-            [](frame_transform t) {
-                t.image_transform.lut3d          = nullptr;
-                t.image_transform.lut3d_strength = 1.0f;
-                return t;
-            },
-            0,
-            L"linear"));
-        transforms.apply();
-        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
-    }
-
-    // Resolve the path: try as given, else relative to the media folder.
-    std::wstring path = ctx.parameters.at(0);
-    if (!boost::filesystem::exists(boost::filesystem::path(path)))
-        path = caspar::env::media_folder() + L"/" + path;
-
-    auto lut = parse_cube_file(path);
-    if (!lut)
-        return make_ready_future<std::wstring>(L"404 LUT3D LOAD FAILED\r\n");
-
-    float strength = ctx.parameters.size() > 1 ? std::stof(ctx.parameters[1]) : 1.0f;
-
-    transforms_applier transforms(ctx);
-    transforms.add(stage::transform_tuple_t(
-        ctx.layer_index(),
-        [=](frame_transform transform) -> frame_transform {
-            transform.image_transform.lut3d          = lut;
-            transform.image_transform.lut3d_strength = strength;
-            return transform;
-        },
-        0,
-        L"linear"));
-    transforms.apply();
-
-    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
-}
-
 static std::shared_ptr<const core::lut3d_data> parse_cube_file(const std::wstring& path)
 {
-    // std::ifstream takes a wide path only as an MSVC extension; boost's does it
-    // portably, which is what the Linux build needs.
     boost::filesystem::path     cube_path(path);
     boost::filesystem::ifstream file(cube_path);
     if (!file.is_open())
@@ -1569,6 +1513,63 @@ static std::shared_ptr<const core::lut3d_data> parse_cube_file(const std::wstrin
         return nullptr;
 
     return lut;
+}
+
+std::future<std::wstring> mixer_lut3d_command(command_context& ctx)
+{
+    if (ctx.parameters.empty()) {
+        auto transform2 = get_current_transform(ctx).share();
+        return std::async(std::launch::deferred, [transform2]() -> std::wstring {
+            auto t = transform2.get().image_transform;
+            if (!t.lut3d)
+                return L"201 MIXER OK\r\nNONE\r\n";
+            return L"201 MIXER OK\r\nACTIVE " + std::to_wstring(t.lut3d->size) + L" " +
+                   std::to_wstring(t.lut3d_strength) + L"\r\n";
+        });
+    }
+
+    if (boost::iequals(ctx.parameters.at(0), L"NONE")) {
+        transforms_applier transforms(ctx);
+        transforms.add(stage::transform_tuple_t(
+            ctx.layer_index(),
+            [](frame_transform t) {
+                t.image_transform.lut3d          = nullptr;
+                t.image_transform.lut3d_strength = 1.0f;
+                return t;
+            },
+            0,
+            L"linear"));
+        transforms.apply();
+        return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
+    }
+
+    // Resolve the path: try as given, else relative to the media folder.
+    std::wstring path = ctx.parameters.at(0);
+    if (!boost::filesystem::exists(boost::filesystem::path(path)))
+        path = caspar::env::media_folder() + L"/" + path;
+
+    auto lut = parse_cube_file(path);
+    if (!lut)
+        return make_ready_future<std::wstring>(L"404 LUT3D LOAD FAILED\r\n");
+
+    float strength = ctx.parameters.size() > 1
+                         ? static_cast<float>(grade_param(ctx.parameters[1], core::grade_limits::lut3d_strength,
+                                                          L"LUT strength"))
+                         : 1.0f;
+
+    transforms_applier transforms(ctx);
+    transforms.add(stage::transform_tuple_t(
+        ctx.layer_index(),
+        [=](frame_transform transform) -> frame_transform {
+            transform.image_transform.lut3d          = lut;
+            transform.image_transform.lut3d_strength = strength;
+            return transform;
+        },
+        0,
+        L"linear"));
+    transforms.apply();
+
+    return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
 std::future<std::wstring> mixer_curves_command(command_context& ctx)
@@ -1637,8 +1638,8 @@ std::future<std::wstring> mixer_curves_command(command_context& ctx)
     core::curve_channel new_cc;
     new_cc.count = n_params / 2;
     for (int i = 0; i < new_cc.count; ++i) {
-        new_cc.points[i].x = std::stod(ctx.parameters.at(1 + i * 2));
-        new_cc.points[i].y = std::stod(ctx.parameters.at(2 + i * 2));
+        new_cc.points[i].x = grade_param(ctx.parameters.at(1 + i * 2), core::grade_limits::curve_coord, L"curve x");
+        new_cc.points[i].y = grade_param(ctx.parameters.at(2 + i * 2), core::grade_limits::curve_coord, L"curve y");
     }
 
     transforms_applier transforms(ctx);
@@ -1745,8 +1746,13 @@ std::future<std::wstring> mixer_huecurve_command(command_context& ctx)
 
     std::vector<std::pair<float, float>> points;
     for (int i = 0; i < n_params / 2; ++i) {
-        float h = std::stof(ctx.parameters.at(1 + i * 2));
-        float v = std::stof(ctx.parameters.at(2 + i * 2));
+        float h = static_cast<float>(
+            grade_param(ctx.parameters.at(1 + i * 2), core::grade_limits::curve_coord, L"hue"));
+        // channel 1 (HUE_SAT) and 3 (SAT_SAT) scale; 0 (HUE_HUE) and 2 (HUE_LUM) offset.
+        const auto& v_range = (channel == 1 || channel == 3) ? core::grade_limits::hue_curve_scale
+                                                             : core::grade_limits::hue_curve_offset;
+        float v = static_cast<float>(
+            grade_param(ctx.parameters.at(2 + i * 2), v_range, L"hue curve value"));
         points.emplace_back(h, v);
     }
 

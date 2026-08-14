@@ -109,14 +109,6 @@ image_transform image_transform::tween(double                 time,
     result.blend_mode       = std::max(source.blend_mode, dest.blend_mode);
     result.layer_depth      = dest.layer_depth;
 
-    result.lut3d          = dest.lut3d; // snap to destination (cannot interpolate LUT data)
-    result.lut3d_strength = static_cast<float>(do_tween(time,
-                                                        static_cast<double>(source.lut3d_strength),
-                                                        static_cast<double>(dest.lut3d_strength),
-                                                        duration,
-                                                        tween));
-    result.curves         = dest.curves; // snap to destination (control-point sets cannot interpolate)
-    result.hue_curves     = dest.hue_curves; // snap to destination
     result.temperature = do_tween(time, source.temperature, dest.temperature, duration, tween);
     result.tint        = do_tween(time, source.tint, dest.tint, duration, tween);
     for (int i = 0; i < 3; ++i) {
@@ -140,6 +132,14 @@ image_transform image_transform::tween(double                 time,
         result.cdl_power[i]  = do_tween(time, source.cdl_power[i], dest.cdl_power[i], duration, tween);
     }
     result.cdl_saturation = do_tween(time, source.cdl_saturation, dest.cdl_saturation, duration, tween);
+    result.lut3d          = dest.lut3d; // snap to destination (cannot interpolate LUT data)
+    result.lut3d_strength = static_cast<float>(do_tween(time,
+                                                        static_cast<double>(source.lut3d_strength),
+                                                        static_cast<double>(dest.lut3d_strength),
+                                                        duration,
+                                                        tween));
+    result.curves         = dest.curves; // snap to destination (control-point sets cannot interpolate)
+    result.hue_curves     = dest.hue_curves; // snap to destination
 
     do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
     do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -177,7 +177,19 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                eq(lhs.chroma.softness, rhs.chroma.softness) &&
                eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
                eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) && lhs.crop == rhs.crop &&
-               lhs.perspective == rhs.perspective && lhs.lut3d.get() == rhs.lut3d.get() &&
+               lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
+               eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
+               boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
+               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) &&
+               eq(lhs.shadows, rhs.shadows) && eq(lhs.highlights, rhs.highlights) &&
+               boost::range::equal(lhs.split_shadow_color, rhs.split_shadow_color, eq) &&
+               boost::range::equal(lhs.split_highlight_color, rhs.split_highlight_color, eq) &&
+               eq(lhs.split_balance, rhs.split_balance) &&
+               boost::range::equal(lhs.cdl_slope, rhs.cdl_slope, eq) &&
+               boost::range::equal(lhs.cdl_offset, rhs.cdl_offset, eq) &&
+               boost::range::equal(lhs.cdl_power, rhs.cdl_power, eq) &&
+               eq(lhs.cdl_saturation, rhs.cdl_saturation) &&
+               lhs.lut3d.get() == rhs.lut3d.get() &&
                eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) &&
                lhs.hue_curves.get() == rhs.hue_curves.get() && lhs.curves.enable == rhs.curves.enable &&
                [&]() {
@@ -193,19 +205,6 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
                    return cc_eq(lhs.curves.master, rhs.curves.master) && cc_eq(lhs.curves.red, rhs.curves.red) &&
                           cc_eq(lhs.curves.green, rhs.curves.green) && cc_eq(lhs.curves.blue, rhs.curves.blue);
                }() ||
-               eq(static_cast<double>(lhs.lut3d_strength), static_cast<double>(rhs.lut3d_strength)) ||
-               lhs.perspective == rhs.perspective && eq(lhs.temperature, rhs.temperature) &&
-               eq(lhs.tint, rhs.tint) && boost::range::equal(lhs.lift, rhs.lift, eq) &&
-               boost::range::equal(lhs.midtone, rhs.midtone, eq) &&
-               boost::range::equal(lhs.gain, rhs.gain, eq) && eq(lhs.hue_shift, rhs.hue_shift) &&
-               eq(lhs.shadows, rhs.shadows) && eq(lhs.highlights, rhs.highlights) &&
-               boost::range::equal(lhs.split_shadow_color, rhs.split_shadow_color, eq) &&
-               boost::range::equal(lhs.split_highlight_color, rhs.split_highlight_color, eq) &&
-               eq(lhs.split_balance, rhs.split_balance) &&
-               boost::range::equal(lhs.cdl_slope, rhs.cdl_slope, eq) &&
-               boost::range::equal(lhs.cdl_offset, rhs.cdl_offset, eq) &&
-               boost::range::equal(lhs.cdl_power, rhs.cdl_power, eq) &&
-               eq(lhs.cdl_saturation, rhs.cdl_saturation) ||
            lhs.enable_geometry_modifiers == rhs.enable_geometry_modifiers;
 }
 
