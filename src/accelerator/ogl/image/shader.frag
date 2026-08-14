@@ -574,6 +574,16 @@ vec4 get_rgba_color()
 // every channel-order defect in here. Test with asymmetric per-channel values.
 // ===============================================================================
 
+// Luma of the working colour, using the channel's own coefficients.
+//
+// luma_coeff is uploaded in RGB order and holds Rec.601, Rec.709 or Rec.2020 weights
+// depending on the source (image_kernel.cpp), so a grade no longer hard-codes Rec.709
+// and no longer disagrees with ContrastSaturationBrightness, which has always read this
+// uniform. The `.bgr` is the working-order swizzle described above -- dot(c.bgr, k) and
+// dot(c, k.bgr) are the same sum, and swizzling the three-element uniform rather than
+// the pixel keeps this the only place the order is mentioned.
+float working_luma(vec3 c) { return dot(c, luma_coeff.bgr); }
+
 // ---- White Balance ----
 // temp: -1=cool (blue), +1=warm (orange); tint_val: -1=magenta, +1=green.
 // Diagonal gain matrix, no clamping so HDR headroom is preserved.
@@ -622,11 +632,7 @@ vec3 apply_hue_shift(vec3 c, float degrees)
 // headroom is preserved for downstream tonemapping.
 vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
 {
-    // dot(c.bgr, ...) — c is BGR here, so an unswizzled dot applies red's Rec.709
-    // coefficient to blue and blue's to red. Greys are unaffected by the exchange,
-    // which is why only saturated colour was ever wrong. ContrastSaturationBrightness
-    // above already does this by hand via luma_coeff.bgr.
-    float lum         = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722));
+    float lum         = working_luma(c);
     float shadow_mask = 1.0 - smoothstep(0.0, 0.6, lum);
     float hl_mask     = smoothstep(0.4, 1.0, lum);
     c += vec3(shadows    * 0.5 * shadow_mask);
@@ -639,7 +645,7 @@ vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
 // with a crossover controlled by bal.
 vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
 {
-    float lum     = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722)); // BGR — see apply_tone_balance
+    float lum     = working_luma(c);
     float shad_mk = 1.0 - smoothstep(bal - 0.3, bal + 0.3, lum);
     float hi_mk   = smoothstep(bal - 0.3, bal + 0.3, lum);
     c += shad_col * shad_mk;
@@ -653,7 +659,7 @@ vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
 vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
 {
     c = pow(max(c * slope + off, vec3(0.0)), pwr);
-    float lum = dot(c.bgr, vec3(0.2126, 0.7152, 0.0722)); // BGR — see apply_tone_balance
+    float lum = working_luma(c);
     c = mix(vec3(lum), c, sat_val);
     return c;
 }
