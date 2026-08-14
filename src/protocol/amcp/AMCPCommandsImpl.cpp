@@ -1129,6 +1129,43 @@ static std::wstring to_wstring_tonemap(int tm)
     }
 }
 
+// Parse one grading argument and refuse it if it is outside the parameter's defined
+// range, so a bad value is a 403 naming the offender rather than a silently applied
+// grade -- or, for a NaN, a black layer. `grade_limits` is the same table that
+// apply_transform_colour_values clamps combined transforms to; if the two disagreed,
+// stacking two legal layers could reach a value no command would accept.
+//
+// Scoped to the commands added in this series. The older mixer commands validate
+// nothing (MIXER OPACITY -5 is accepted today) and retrofitting them would change
+// behaviour for existing clients, which belongs in its own change.
+double grade_param(const std::wstring& raw, core::grade_range range, const wchar_t* name)
+{
+    double value = 0.0;
+    try {
+        value = std::stod(raw);
+    } catch (...) {
+        CASPAR_THROW_EXCEPTION(user_error()
+                               << msg_info(std::wstring(name) + L" is not a number: " + raw));
+    }
+    if (!range.contains(value)) {
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(name) + L" must be between " +
+                                                       std::to_wstring(range.lo) + L" and " +
+                                                       std::to_wstring(range.hi) + L", got " + raw));
+    }
+    return value;
+}
+
+// Refuse a short parameter list by name. Without this the .at() below throws
+// std::out_of_range, which surfaces as a generic failure rather than saying which
+// command wanted how many arguments.
+void grade_require(const command_context& ctx, size_t count, const wchar_t* usage)
+{
+    if (ctx.parameters.size() < count) {
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(L"expected at least ") +
+                                                       std::to_wstring(count) + L" parameters: " + usage));
+    }
+}
+
 std::future<std::wstring> mixer_colorspace_command(command_context& ctx)
 {
     if (ctx.parameters.empty()) {
@@ -1166,7 +1203,11 @@ std::future<std::wstring> mixer_colorspace_command(command_context& ctx)
     int   tm       = ctx.parameters.size() > 2 ? parse_tonemapping_fn(ctx.parameters.at(2)) : 0;
     int   og       = ctx.parameters.size() > 3 ? parse_gamut_fn(ctx.parameters.at(3)) : 0;
     int   ot       = ctx.parameters.size() > 4 ? parse_transfer_fn(ctx.parameters.at(4)) : 1;
-    float exposure = ctx.parameters.size() > 5 ? std::stof(ctx.parameters.at(5)) : 1.0f;
+    float exposure = ctx.parameters.size() > 5
+                         ? static_cast<float>(grade_param(ctx.parameters.at(5),
+                                                          core::grade_limits::exposure,
+                                                          L"exposure"))
+                         : 1.0f;
 
     transforms.add(stage::transform_tuple_t(
         ctx.layer_index(),
@@ -1300,42 +1341,6 @@ std::future<std::wstring> mixer_levels_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
-// Parse one grading argument and refuse it if it is outside the parameter's defined
-// range, so a bad value is a 403 naming the offender rather than a silently applied
-// grade -- or, for a NaN, a black layer. `grade_limits` is the same table that
-// apply_transform_colour_values clamps combined transforms to; if the two disagreed,
-// stacking two legal layers could reach a value no command would accept.
-//
-// Scoped to the commands added in this series. The older mixer commands validate
-// nothing (MIXER OPACITY -5 is accepted today) and retrofitting them would change
-// behaviour for existing clients, which belongs in its own change.
-double grade_param(const std::wstring& raw, core::grade_range range, const wchar_t* name)
-{
-    double value = 0.0;
-    try {
-        value = std::stod(raw);
-    } catch (...) {
-        CASPAR_THROW_EXCEPTION(user_error()
-                               << msg_info(std::wstring(name) + L" is not a number: " + raw));
-    }
-    if (!range.contains(value)) {
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(name) + L" must be between " +
-                                                       std::to_wstring(range.lo) + L" and " +
-                                                       std::to_wstring(range.hi) + L", got " + raw));
-    }
-    return value;
-}
-
-// Refuse a short parameter list by name. Without this the .at() below throws
-// std::out_of_range, which surfaces as a generic failure rather than saying which
-// command wanted how many arguments.
-void grade_require(const command_context& ctx, size_t count, const wchar_t* usage)
-{
-    if (ctx.parameters.size() < count) {
-        CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(L"expected at least ") +
-                                                       std::to_wstring(count) + L" parameters: " + usage));
-    }
-}
 
 // MIXER WHITEBALANCE temperature tint [duration tween]
 std::future<std::wstring> mixer_whitebalance_command(command_context& ctx)

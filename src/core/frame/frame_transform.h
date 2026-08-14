@@ -125,6 +125,10 @@ inline constexpr grade_range cdl_offset{-1.0, 1.0};
 inline constexpr grade_range cdl_power{0.01, 10.0};
 inline constexpr grade_range cdl_saturation{0.0, 10.0};
 
+/// A linear gain in the working space, so zero is black and the upper bound only exists
+/// to keep a typo from saturating the frame.
+inline constexpr grade_range exposure{0.0, 16.0};
+
 } // namespace grade_limits
 // ACES-based per-layer color management (MIXER COLORSPACE).
 // Transfer:    0=linear,1=srgb,2=rec709,3=pq(st2084),4=hlg,5=logc3(arri),6=slog3(sony)
