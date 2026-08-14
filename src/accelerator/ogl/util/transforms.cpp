@@ -71,9 +71,6 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.is_mix |= other.is_mix;
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
-    if (other.color_grade.enable) {
-        self.color_grade = other.color_grade;
-    }
 
     // Every combined grading value below is clamped back into the range its MIXER
     // command accepts (core::grade_limits, the same table the commands validate
@@ -143,6 +140,9 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
         self.cdl_power[i]  = lim::cdl_power.clamp(self.cdl_power[i] * other.cdl_power[i]);
     }
     self.cdl_saturation = lim::cdl_saturation.clamp(self.cdl_saturation * other.cdl_saturation);
+    if (other.color_grade.enable) {
+        self.color_grade = other.color_grade;
+    }
 }
 
 bool is_default_perspective(const core::corners& perspective)

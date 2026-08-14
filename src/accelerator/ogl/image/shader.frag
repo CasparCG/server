@@ -43,16 +43,6 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
-// Color Grading (ACES color management)
-uniform bool  color_grading;
-uniform int   input_transfer;    // 0=linear,1=srgb,2=rec709,3=pq,4=hlg,5=logc3,6=slog3
-uniform int   output_transfer;
-uniform mat3  input_to_working;  // input gamut -> working space (ACEScg / AP1)
-uniform mat3  working_to_output; // working space (ACEScg / AP1) -> output gamut
-uniform int   tone_mapping_op;   // 0=none,1=reinhard,2=aces_filmic,3=aces_rrt,4=rrt_709,5=rrt_p3,6=rrt_2020_pq,7=hlg_ootf
-uniform float exposure;          // linear exposure multiplier
-uniform float luminance_scale;   // BT.2408 luminance adaptation across HDR/SDR domains
-uniform float display_peak_luminance; // display nominal peak luminance in nits
 // White balance (temperature / tint)
 uniform bool		white_balance;
 uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
@@ -87,6 +77,16 @@ uniform vec3		cdl_slope;
 uniform vec3		cdl_offset;
 uniform vec3		cdl_power;
 uniform float		cdl_saturation;
+// Color Grading (ACES color management)
+uniform bool  color_grading;
+uniform int   input_transfer;    // 0=linear,1=srgb,2=rec709,3=pq,4=hlg,5=logc3,6=slog3
+uniform int   output_transfer;
+uniform mat3  input_to_working;  // input gamut -> working space (ACEScg / AP1)
+uniform mat3  working_to_output; // working space (ACEScg / AP1) -> output gamut
+uniform int   tone_mapping_op;   // 0=none,1=reinhard,2=aces_filmic,3=aces_rrt,4=rrt_709,5=rrt_p3,6=rrt_2020_pq,7=hlg_ootf
+uniform float exposure;          // linear exposure multiplier
+uniform float luminance_scale;   // BT.2408 luminance adaptation across HDR/SDR domains
+uniform float display_peak_luminance; // display nominal peak luminance in nits
 
 /*
 ** Contrast, saturation, brightness
@@ -898,18 +898,15 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    // Input conversion, before the grading chain: the chain must operate in the
+    // working space.
     if (color_grading) {
         color.rgb  = apply_eotf(color.rgb, input_transfer);
         color.rgb *= luminance_scale;
         color.bgr  = input_to_working * color.bgr;
         color.rgb *= exposure;
-        if (tone_mapping_op > 0)
-            color.rgb = apply_tone_mapping(color.rgb, tone_mapping_op);
-        color.bgr  = working_to_output * color.bgr;
-        if (tone_mapping_op == 0)
-            color.rgb = clamp(color.rgb, 0.0, 1.0);
-        color.rgb  = apply_oetf(color.rgb, output_transfer);
     }
+
     // Per-channel uniforms arrive in RGB order and are swizzled to the working order
     // here -- see the channel-order note above the grading functions.
     if (cdl_enable)
@@ -925,6 +922,15 @@ void main()
     if (split_tone_enable)
         color.rgb =
             apply_split_tone(color.rgb, split_shadow_color.bgr, split_highlight_color.bgr, split_balance);
+    // Output half: tone map from the working space, then encode for the display.
+    if (color_grading) {
+        if (tone_mapping_op > 0)
+            color.rgb = apply_tone_mapping(color.rgb, tone_mapping_op);
+        color.bgr  = working_to_output * color.bgr;
+        if (tone_mapping_op == 0)
+            color.rgb = clamp(color.rgb, 0.0, 1.0);
+        color.rgb  = apply_oetf(color.rgb, output_transfer);
+    }
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)
