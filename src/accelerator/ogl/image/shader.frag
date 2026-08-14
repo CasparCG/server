@@ -648,17 +648,19 @@ vec3 apply_qualifier(vec3 c, float tgt_hue, float hue_w, float min_s, float max_
 
 // ---- Per-channel RGB Levels ----
 // Independent input range, gamma, and output range per channel.
+// Uniforms are in RGB order; the working vector is BGR, so each channel reads its
+// own RGB slot: c.r (blue) -> [2], c.g -> [1], c.b (red) -> [0].
 vec3 apply_rgb_levels(vec3 c)
 {
-    c.r = clamp((c.r - rgb_levels_min_input[0]) / max(rgb_levels_max_input[0] - rgb_levels_min_input[0], 0.0001), 0.0, 1.0);
-    c.r = pow(c.r, 1.0 / max(rgb_levels_gamma[0], 0.01));
-    c.r = mix(rgb_levels_min_output[0], rgb_levels_max_output[0], c.r);
+    c.r = clamp((c.r - rgb_levels_min_input[2]) / max(rgb_levels_max_input[2] - rgb_levels_min_input[2], 0.0001), 0.0, 1.0);
+    c.r = pow(c.r, 1.0 / max(rgb_levels_gamma[2], 0.01));
+    c.r = mix(rgb_levels_min_output[2], rgb_levels_max_output[2], c.r);
     c.g = clamp((c.g - rgb_levels_min_input[1]) / max(rgb_levels_max_input[1] - rgb_levels_min_input[1], 0.0001), 0.0, 1.0);
     c.g = pow(c.g, 1.0 / max(rgb_levels_gamma[1], 0.01));
     c.g = mix(rgb_levels_min_output[1], rgb_levels_max_output[1], c.g);
-    c.b = clamp((c.b - rgb_levels_min_input[2]) / max(rgb_levels_max_input[2] - rgb_levels_min_input[2], 0.0001), 0.0, 1.0);
-    c.b = pow(c.b, 1.0 / max(rgb_levels_gamma[2], 0.01));
-    c.b = mix(rgb_levels_min_output[2], rgb_levels_max_output[2], c.b);
+    c.b = clamp((c.b - rgb_levels_min_input[0]) / max(rgb_levels_max_input[0] - rgb_levels_min_input[0], 0.0001), 0.0, 1.0);
+    c.b = pow(c.b, 1.0 / max(rgb_levels_gamma[0], 0.01));
+    c.b = mix(rgb_levels_min_output[0], rgb_levels_max_output[0], c.b);
     return c;
 }
 
