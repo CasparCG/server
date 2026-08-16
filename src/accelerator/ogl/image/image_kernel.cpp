@@ -289,7 +289,7 @@ struct image_kernel::impl
             shader_->set("csb", false);
         }
 
-        // Gamut compression (ACES 1.3 Reference Gamut Compress)
+        // Gamut compression, with ACES 1.3's limits
         if (transforms.image_transform.gamut_compress) {
             shader_->set("gamut_compress_enable", true);
             // BGR order: .r=Blue(yellow), .g=Green(magenta), .b=Red(cyan)

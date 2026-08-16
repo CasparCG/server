@@ -43,7 +43,7 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
-// Gamut compression (ACES 1.3 Reference Gamut Compress)
+// Gamut compression, with ACES 1.3's limits
 uniform bool		gamut_compress_enable;
 // Per-channel limits in RGB order (cyan=red, magenta=green, yellow=blue).
 uniform vec3		gc_limit;
@@ -590,9 +590,12 @@ vec4 get_rgba_color()
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
-// ---- Gamut Compression (ACES 1.3 Reference Gamut Compress) ----
+// ---- Gamut Compression ----
 // Compresses out-of-gamut values toward the achromatic axis using a smooth
 // toe function.  Operates per-channel on the distance from achromatic.
+// An approximation with ACES 1.3's limits, not the ACES algorithm: one threshold
+// rather than three, a rational curve rather than the power form, and all-negative
+// pixels left untouched.
 vec3 apply_gamut_compress(vec3 c, vec3 lim)
 {
     float achromatic = max(max(c.r, c.g), max(c.b, 0.0));
