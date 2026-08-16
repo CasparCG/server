@@ -1018,8 +1018,19 @@ std::future<std::wstring> mixer_chroma_command(command_context& ctx)
     return make_ready_future<std::wstring>(L"202 MIXER OK\r\n");
 }
 
+// Refuse an unrecognised token, naming the ones that would have worked.
+[[noreturn]] static void reject_token(const std::wstring& got, const wchar_t* what, const wchar_t* valid)
+{
+    CASPAR_THROW_EXCEPTION(user_error() << msg_info(std::wstring(what) + L" must be one of " +
+                                                    valid + L", got: " + got));
+}
+
+// LINEAR, BT709 and NONE need cases of their own: they were only ever reachable as the
+// fallback, and would be refused without one.
 static int parse_transfer_fn(const std::wstring& s)
 {
+    if (boost::iequals(s, L"LINEAR"))
+        return 0;
     if (boost::iequals(s, L"SRGB"))
         return 1;
     if (boost::iequals(s, L"REC709"))
@@ -1032,11 +1043,13 @@ static int parse_transfer_fn(const std::wstring& s)
         return 5;
     if (boost::iequals(s, L"SLOG3"))
         return 6;
-    return 0; // LINEAR
+    reject_token(s, L"transfer function", L"LINEAR, SRGB, REC709, PQ, HLG, LOGC3 or SLOG3");
 }
 
 static int parse_gamut_fn(const std::wstring& s)
 {
+    if (boost::iequals(s, L"BT709") || boost::iequals(s, L"REC709"))
+        return 0;
     if (boost::iequals(s, L"BT2020"))
         return 1;
     if (boost::iequals(s, L"DCIP3"))
@@ -1051,11 +1064,14 @@ static int parse_gamut_fn(const std::wstring& s)
         return 5;
     if (boost::iequals(s, L"SGAMUT3_CINE"))
         return 6;
-    return 0; // BT709
+    reject_token(s, L"gamut",
+                 L"BT709, BT2020, DCIP3, ACES_AP0, ACES_AP1 (ACESCG), ARRI_WG3 or SGAMUT3_CINE");
 }
 
 static int parse_tonemapping_fn(const std::wstring& s)
 {
+    if (boost::iequals(s, L"NONE"))
+        return 0;
     if (boost::iequals(s, L"REINHARD"))
         return 1;
     if (boost::iequals(s, L"ACES_FILMIC"))
@@ -1068,7 +1084,9 @@ static int parse_tonemapping_fn(const std::wstring& s)
         return 5;
     if (boost::iequals(s, L"ACES_RRT_2020_PQ"))
         return 6;
-    return 0; // NONE
+    reject_token(s, L"tone mapping operator",
+                 L"NONE, REINHARD, ACES_FILMIC, ACES_RRT, ACES_RRT_709, ACES_RRT_P3 or "
+                 L"ACES_RRT_2020_PQ");
 }
 
 static std::wstring to_wstring_transfer(int t)
