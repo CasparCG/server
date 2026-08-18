@@ -56,8 +56,7 @@ Getting Started
 Documentation
 -------------
 
-The most up-to-date documentation is always available at
-https://github.com/CasparCG/help/wiki
+The most up-to-date documentation is always available at https://casparcg.com/docs/wiki
 
 Ask questions in the forum: https://casparcgforum.org/
 
