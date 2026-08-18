@@ -2,6 +2,7 @@
 #include "transforms.h"
 
 #include <algorithm>
+#include <cmath>
 #include <unordered_set>
 
 namespace caspar::accelerator::ogl {
@@ -70,6 +71,75 @@ void apply_transform_colour_values(core::image_transform& self, const core::imag
     self.is_mix |= other.is_mix;
     self.blend_mode = std::max(self.blend_mode, other.blend_mode);
     self.layer_depth += other.layer_depth;
+
+    // Every combined grading value below is clamped back into the range its MIXER
+    // command accepts (core::grade_limits, the same table the commands validate
+    // against). Two layers at the edge of legal would otherwise reach a value no single
+    // command could set: lift 0.9 over lift 0.9 is 1.8, and a midtone of 0.2 under
+    // another 0.2 is an exponent of 25. Clamping here rather than in the shader keeps
+    // the value the kernel reports and the value it renders the same thing.
+    //
+    // The bounds are wide enough that ordinary stacking is untouched -- gain 2 over
+    // gain 2 is 4, well inside [0, 10]. hue_shift is the exception and is wrapped
+    // instead, below, because rotation is periodic.
+    namespace lim = core::grade_limits;
+
+    // White balance: additive
+    self.temperature = lim::temperature.clamp(self.temperature + other.temperature);
+    self.tint        = lim::tint.clamp(self.tint + other.tint);
+
+    // Lift/Midtone/Gain: additive lift, multiplicative midtone+gain
+    for (int i = 0; i < 3; ++i) {
+        self.lift[i]    = lim::lift.clamp(self.lift[i] + other.lift[i]);
+        self.midtone[i] = lim::midtone.clamp(self.midtone[i] * other.midtone[i]);
+        self.gain[i]    = lim::gain.clamp(self.gain[i] * other.gain[i]);
+    }
+
+    // Hue shift: additive, then wrapped into [-180, 180].
+    //
+    // Wrapped, not clamped: 200 degrees of rotation is -160, not 180. The shader rotates
+    // with fract(), so rotation is already periodic and this does not change what is
+    // rendered -- what it does is bound the accumulation. Stacking layer, channel and
+    // tweened transforms can otherwise walk hue_shift arbitrarily far from zero, which
+    // costs precision in fract() and makes the "is this effect active" test dishonest:
+    // an accumulated 360 is exactly identity but reads as active and pays for the branch.
+    self.hue_shift = std::remainder(self.hue_shift + other.hue_shift, 360.0);
+
+    // Tone balance: additive
+    self.shadows    = lim::tone.clamp(self.shadows + other.shadows);
+    self.highlights = lim::tone.clamp(self.highlights + other.highlights);
+
+    // Split toning: colours add, and the balance of whichever transform actually has
+    // split toning active wins.
+    //
+    // split_balance is a crossover position in luma, not a strength, so no arithmetic
+    // composition of two of them means anything: adding 0.5 and 0.5 gives 1.0 (everything
+    // is shadow), multiplying gives 0.25. And the shader has one crossover and one colour
+    // pair, so two stacked split tones cannot both be represented however they are
+    // combined. Summing the colours and keeping a single crossover is the least-lossy
+    // approximation available. "Is other active" is the same test the mixer uses to decide
+    // whether to enable the effect at all; comparing other.split_balance against its 0.5
+    // default instead would misread a tweened 0.4999999 as an explicit setting.
+    const auto is_set = [](double v) { return v != 0.0; };
+    const bool other_splits =
+        std::any_of(other.split_shadow_color.begin(), other.split_shadow_color.end(), is_set) ||
+        std::any_of(other.split_highlight_color.begin(), other.split_highlight_color.end(), is_set);
+    for (int i = 0; i < 3; ++i) {
+        self.split_shadow_color[i] =
+            lim::split_color.clamp(self.split_shadow_color[i] + other.split_shadow_color[i]);
+        self.split_highlight_color[i] =
+            lim::split_color.clamp(self.split_highlight_color[i] + other.split_highlight_color[i]);
+    }
+    if (other_splits)
+        self.split_balance = lim::split_balance.clamp(other.split_balance);
+
+    // ASC CDL: slope/power multiplicative, offset additive, saturation multiplicative
+    for (int i = 0; i < 3; ++i) {
+        self.cdl_slope[i]  = lim::cdl_slope.clamp(self.cdl_slope[i] * other.cdl_slope[i]);
+        self.cdl_offset[i] = lim::cdl_offset.clamp(self.cdl_offset[i] + other.cdl_offset[i]);
+        self.cdl_power[i]  = lim::cdl_power.clamp(self.cdl_power[i] * other.cdl_power[i]);
+    }
+    self.cdl_saturation = lim::cdl_saturation.clamp(self.cdl_saturation * other.cdl_saturation);
 }
 
 bool is_default_perspective(const core::corners& perspective)

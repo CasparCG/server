@@ -61,8 +61,12 @@ layout(push_constant) uniform ParamsBlock {
     uint flags;
 };
 
+// Each matrix follows from its luma coefficients: Cr->R is 2(1-Kr), Cb->B is 2(1-Kb),
+// and the green terms are -2(1-Kb)Kb/Kg and -2(1-Kr)Kr/Kg. BT.601's Cr->G was -0.509
+// and should be -0.714136 = -2(1-0.299)(0.299)/0.587. Kept in step with the OpenGL
+// mixer, which carried the same wrong literal.
 const mat3[3] color_matrices = mat3[3](
-                    mat3(1.0, 0.0, 1.402, 1.0, -0.344, -0.509, 1.0, 1.772, 0.0),
+                    mat3(1.0, 0.0, 1.402, 1.0, -0.344136, -0.714136, 1.0, 1.772, 0.0),
                     mat3(1.0, 0.0, 1.5748, 1.0, -0.1873, -0.4681, 1.0, 1.8556, 0.0),
                     mat3(1.0, 0.0, 1.4746, 1.0, -0.16455312684366, -0.57135312684366, 1.0, 1.8814, 0.0)
                 ); 
