@@ -95,30 +95,6 @@ const AVCodec* get_decoder(AVCodecID codec_id)
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
-core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
-{
-    auto result = core::color_space::unknown;
-    if (video) {
-        switch (video->colorspace) {
-            case AVColorSpace::AVCOL_SPC_BT709:
-                result = core::color_space::bt709;
-                break;
-            case AVColorSpace::AVCOL_SPC_BT2020_NCL:
-                result = core::color_space::bt2020;
-                break;
-            case AVColorSpace::AVCOL_SPC_BT470BG:
-            case AVColorSpace::AVCOL_SPC_SMPTE170M:
-            case AVColorSpace::AVCOL_SPC_SMPTE240M:
-                result = core::color_space::bt601;
-                break;
-            default:
-                break;
-        }
-    }
-
-    return result;
-}
-
 class Decoder
 {
     Decoder(const Decoder&)            = delete;

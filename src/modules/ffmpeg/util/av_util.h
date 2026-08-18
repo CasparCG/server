@@ -25,6 +25,8 @@ namespace caspar { namespace ffmpeg {
 std::shared_ptr<AVFrame>  alloc_frame();
 std::shared_ptr<AVPacket> alloc_packet();
 
+core::color_space get_color_space(const std::shared_ptr<AVFrame>& video);
+
 core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
                                           int               width,
                                           int               height,
