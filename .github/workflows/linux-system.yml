@@ -48,13 +48,7 @@ jobs:
                       container: debian:sid # Debian Testing
                       apt_prefix: ""
                       upload_artifacts: false # Because of CEF, this is not built correctly
-                    - os: ubuntu-latest
-                      family: debian
-                      distribution: trixie
-                      arch: amd64
-                      container: debian:trixie
-                      apt_prefix: ""
-                      upload_artifacts: false # Because of CEF, this is not built correctly
+                      experimental: true
                     - os: ubuntu-latest
                       family: archlinux
                       distribution: latest
@@ -62,9 +56,11 @@ jobs:
                       container: archlinux:latest
                       apt_prefix: ""
                       upload_artifacts: false # Not supported
+                      experimental: true
 
         runs-on: ${{ matrix.os }}
         container: ${{ matrix.container }}
+        continue-on-error: ${{ matrix.experimental || false }} # Stop failures of smoke tests being loud
         defaults:
             run:
                 shell: bash

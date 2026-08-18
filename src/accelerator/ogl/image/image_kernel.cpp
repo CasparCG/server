@@ -192,8 +192,17 @@ struct image_kernel::impl
         const auto is_hd       = params.pix_desc.planes.at(0).height > 700;
         const auto color_space = is_hd ? params.pix_desc.color_space : core::color_space::bt601;
 
+        // Row order is R, G, B; columns are Y, Cb, Cr. Each row follows from the
+        // luma coefficients: Cr->R is 2(1-Kr), Cb->B is 2(1-Kb), and the two green terms
+        // are -2(1-Kb)Kb/Kg and -2(1-Kr)Kr/Kg.
+        //
+        // The BT.601 Cr->G term was -0.509 and should be -0.714136:
+        // -2(1-0.299)(0.299)/0.587. BT.709 and BT.2020 were both already correct, which
+        // is what made this hard to see -- only SD material was affected, and only in
+        // green. Measured on flat patches decoded as BT.601, green was out by up to 20
+        // LSB on saturated colour while red and blue were exact.
         const float color_matrices[3][9] = {
-            {1.0, 0.0, 1.402, 1.0, -0.344, -0.509, 1.0, 1.772, 0.0},                          // bt.601
+            {1.0, 0.0, 1.402, 1.0, -0.344136, -0.714136, 1.0, 1.772, 0.0},                    // bt.601
             {1.0, 0.0, 1.5748, 1.0, -0.1873, -0.4681, 1.0, 1.8556, 0.0},                      // bt.709
             {1.0, 0.0, 1.4746, 1.0, -0.16455312684366, -0.57135312684366, 1.0, 1.8814, 0.0}}; // bt.2020
         const auto color_matrix = color_matrices[static_cast<int>(color_space)];
@@ -278,6 +287,93 @@ struct image_kernel::impl
             shader_->set("con", transforms.image_transform.contrast);
         } else {
             shader_->set("csb", false);
+        }
+
+        // White balance (temperature / tint)
+        if (std::abs(transforms.image_transform.temperature) > epsilon ||
+            std::abs(transforms.image_transform.tint) > epsilon) {
+            shader_->set("white_balance", true);
+            shader_->set("wb_temperature", static_cast<float>(transforms.image_transform.temperature));
+            shader_->set("wb_tint", static_cast<float>(transforms.image_transform.tint));
+        } else {
+            shader_->set("white_balance", false);
+        }
+
+        // Lift / Midtone / Gain (per-channel 3-way colour corrector)
+        {
+            const auto& lift    = transforms.image_transform.lift;
+            const auto& midtone = transforms.image_transform.midtone;
+            const auto& gain    = transforms.image_transform.gain;
+            bool        lmg_active =
+                std::abs(lift[0]) > epsilon || std::abs(lift[1]) > epsilon || std::abs(lift[2]) > epsilon ||
+                std::abs(midtone[0] - 1.0) > epsilon || std::abs(midtone[1] - 1.0) > epsilon ||
+                std::abs(midtone[2] - 1.0) > epsilon || std::abs(gain[0] - 1.0) > epsilon ||
+                std::abs(gain[1] - 1.0) > epsilon || std::abs(gain[2] - 1.0) > epsilon;
+            if (lmg_active) {
+                shader_->set("lmg_enable", true);
+                shader_->set("lmg_lift", lift[0], lift[1], lift[2]);
+                shader_->set("lmg_midtone", midtone[0], midtone[1], midtone[2]);
+                shader_->set("lmg_gain", gain[0], gain[1], gain[2]);
+            } else {
+                shader_->set("lmg_enable", false);
+            }
+        }
+
+        // Hue shift
+        if (std::abs(transforms.image_transform.hue_shift) > epsilon) {
+            shader_->set("hue_shift_enable", true);
+            shader_->set("hue_shift_degrees", static_cast<float>(transforms.image_transform.hue_shift));
+        } else {
+            shader_->set("hue_shift_enable", false);
+        }
+
+        // Tonal balance (shadows / highlights)
+        if (std::abs(transforms.image_transform.shadows) > epsilon ||
+            std::abs(transforms.image_transform.highlights) > epsilon) {
+            shader_->set("tonebalance_enable", true);
+            shader_->set("tb_shadows", static_cast<float>(transforms.image_transform.shadows));
+            shader_->set("tb_highlights", static_cast<float>(transforms.image_transform.highlights));
+        } else {
+            shader_->set("tonebalance_enable", false);
+        }
+
+        // Split toning (independent shadow / highlight tint)
+        {
+            const auto& sc = transforms.image_transform.split_shadow_color;
+            const auto& hc = transforms.image_transform.split_highlight_color;
+            bool        split_active =
+                std::abs(sc[0]) > epsilon || std::abs(sc[1]) > epsilon || std::abs(sc[2]) > epsilon ||
+                std::abs(hc[0]) > epsilon || std::abs(hc[1]) > epsilon || std::abs(hc[2]) > epsilon;
+            if (split_active) {
+                shader_->set("split_tone_enable", true);
+                shader_->set("split_shadow_color", sc[0], sc[1], sc[2]);
+                shader_->set("split_highlight_color", hc[0], hc[1], hc[2]);
+                shader_->set("split_balance", static_cast<float>(transforms.image_transform.split_balance));
+            } else {
+                shader_->set("split_tone_enable", false);
+            }
+        }
+
+        // ASC CDL (Slope/Offset/Power)
+        {
+            const auto& s  = transforms.image_transform.cdl_slope;
+            const auto& o  = transforms.image_transform.cdl_offset;
+            const auto& p  = transforms.image_transform.cdl_power;
+            double      cs = transforms.image_transform.cdl_saturation;
+            bool        cdl_active =
+                std::abs(s[0] - 1.0) > epsilon || std::abs(s[1] - 1.0) > epsilon || std::abs(s[2] - 1.0) > epsilon ||
+                std::abs(o[0]) > epsilon || std::abs(o[1]) > epsilon || std::abs(o[2]) > epsilon ||
+                std::abs(p[0] - 1.0) > epsilon || std::abs(p[1] - 1.0) > epsilon || std::abs(p[2] - 1.0) > epsilon ||
+                std::abs(cs - 1.0) > epsilon;
+            if (cdl_active) {
+                shader_->set("cdl_enable", true);
+                shader_->set("cdl_slope", s[0], s[1], s[2]);
+                shader_->set("cdl_offset", o[0], o[1], o[2]);
+                shader_->set("cdl_power", p[0], p[1], p[2]);
+                shader_->set("cdl_saturation", static_cast<float>(cs));
+            } else {
+                shader_->set("cdl_enable", false);
+            }
         }
 
         // Setup drawing area
