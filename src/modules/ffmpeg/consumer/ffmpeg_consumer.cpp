@@ -253,13 +253,31 @@ struct Stream
                                 nb_sample_rates,
                                 AV_OPT_TYPE_INT,
                                 sample_rates));
+
+            const void* ch_layouts;
+            int         nb_ch_layouts = 0;
+            FF(avcodec_get_supported_config(
+                nullptr, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, &ch_layouts, &nb_ch_layouts));
+
+            // A null list means no restriction, and the sink must then be left alone: an empty
+            // array would say "no layout is supported". PCM takes the 16 channels unchanged.
+            if (ch_layouts != nullptr) {
+                FF(av_opt_set_array(sink,
+                                    "channel_layouts",
+                                    AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                    0,
+                                    nb_ch_layouts,
+                                    AV_OPT_TYPE_CHLAYOUT,
+                                    ch_layouts));
+            }
 #else
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
 
-            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
+            // TODO: need to translate codec->ch_layouts into something that can be passed via
+            // av_opt_set_*. Unconstrained here; the FFmpeg 8 path above constrains the sink.
             // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
+#endif
 
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
