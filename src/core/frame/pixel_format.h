@@ -103,7 +103,16 @@ inline color_space decode_color_space(const pixel_format_desc& desc)
     if (desc.color_space != color_space::unknown) {
         return desc.color_space;
     }
-    return desc.planes.at(0).height > 700 ? color_space::bt709 : color_space::bt601;
+    // The sub-720 convention is about which matrix encoded the chroma, so it only applies
+    // to formats that have any. RGB is sRGB here, which is BT.709 primaries.
+    switch (desc.format) {
+        case pixel_format::ycbcr:
+        case pixel_format::ycbcra:
+        case pixel_format::uyvy:
+            return desc.planes.at(0).height > 700 ? color_space::bt709 : color_space::bt601;
+        default:
+            return color_space::bt709;
+    }
 }
 
 }} // namespace caspar::core
