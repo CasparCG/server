@@ -290,8 +290,7 @@ struct image_kernel::impl
             uniforms.precision_factor[n] = get_precision_factor(params.textures[n]->depth());
         }
 
-        const auto is_hd           = params.pix_desc.planes.at(0).height > 700;
-        const auto color_space     = is_hd ? params.pix_desc.color_space : core::color_space::bt601;
+        const auto color_space     = core::decode_color_space(params.pix_desc);
         uniforms.color_space_index = static_cast<uint32_t>(color_space);
 
         if (params.pix_desc.is_straight_alpha) {
