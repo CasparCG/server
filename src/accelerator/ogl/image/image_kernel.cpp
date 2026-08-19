@@ -189,8 +189,7 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
-        const auto is_hd       = params.pix_desc.planes.at(0).height > 700;
-        const auto color_space = is_hd ? params.pix_desc.color_space : core::color_space::bt601;
+        const auto color_space = core::decode_color_space(params.pix_desc);
 
         const float color_matrices[3][9] = {
             {1.0, 0.0, 1.402, 1.0, -0.344, -0.509, 1.0, 1.772, 0.0},                          // bt.601

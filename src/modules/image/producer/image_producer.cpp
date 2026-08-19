@@ -57,7 +57,7 @@ struct image_producer : public core::frame_producer
             av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
         auto frame =
-            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, ffmpeg::get_color_space(av_frame), scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
 
         state_["file/path"] = description_;
@@ -78,7 +78,7 @@ struct image_producer : public core::frame_producer
             av_frame = convert_image_frame(av_frame, AV_PIX_FMT_BGRA);
 
         auto frame =
-            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, core::color_space::bt709, scale_mode, true);
+            ffmpeg::make_frame(this, *frame_factory, av_frame, nullptr, ffmpeg::get_color_space(av_frame), scale_mode, true);
         frame_ = core::draw_frame(std::move(frame));
 
         CASPAR_LOG(info) << print() << L" Initialized";
