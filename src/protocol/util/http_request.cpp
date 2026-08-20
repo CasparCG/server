@@ -1,9 +1,10 @@
 #include "http_request.h"
 
 #include <common/except.h>
+#include <common/log.h>
 
 #include <boost/asio.hpp>
-#include <iomanip>
+#include <cctype>
 #include <sstream>
 #include <string>
 
@@ -15,6 +16,9 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     using namespace boost;
 
     HTTPResponse res;
+
+    // Log the URL being requested for debugging
+    CASPAR_LOG(debug) << "HTTP GET: " << path;
 
     asio::io_context io_context;
 
@@ -63,13 +67,12 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     std::getline(response_stream, res.status_message);
 
     if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-        // TODO
-        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
+        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid HTTP response"));
     }
 
     if (res.status_code < 200 || res.status_code >= 300) {
-        // TODO
-        CASPAR_THROW_EXCEPTION(io_error() << msg_info("Invalid Response"));
+        CASPAR_THROW_EXCEPTION(io_error()
+                               << msg_info("HTTP request failed with status " + std::to_string(res.status_code)));
     }
 
     // Read the response headers, which are terminated by a blank line.
@@ -102,21 +105,29 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
     return res;
 }
 
-std::string url_encode(const std::string& str)
+// URL-encode a file path. Normalizes '\' to '/' (Windows-style paths) before encoding,
+// so lookups match the scanner's internally stored id regardless of client OS.
+// The scanner's routes take the whole id as a single path segment, so '/' is percent-encoded
+// like any other reserved character rather than left as a literal separator.
+std::string url_encode_path(const std::string& path)
 {
-    std::stringstream escaped;
-    escaped.fill('0');
-    escaped << std::hex;
+    std::string result;
+    result.reserve(path.size() * 2); // Reserve space to avoid reallocations
 
-    for (auto c : str) {
-        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            escaped << c;
+    for (auto c : path) {
+        unsigned char uc = (c == '\\') ? '/' : static_cast<unsigned char>(c);
+
+        if (std::isalnum(uc) || uc == '-' || uc == '_' || uc == '.' || uc == '~') {
+            result += static_cast<char>(uc);
         } else {
-            escaped << std::uppercase << '%' << std::setw(2) << int((unsigned char)c) << std::nouppercase;
+            // Encode special character (including '/') as %XX
+            result += '%';
+            result += "0123456789ABCDEF"[uc >> 4];
+            result += "0123456789ABCDEF"[uc & 0x0F];
         }
     }
 
-    return escaped.str();
+    return result;
 }
 
 }} // namespace caspar::http
