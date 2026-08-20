@@ -12,6 +12,8 @@ if(POLICY CMP0167)
 endif()
 
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
+set(ENABLE_ULTRALIGHT OFF CACHE BOOL "Enable Ultralight synchronous HTML producer (requires separate SDK download)")
+set(ULTRALIGHT_SDK_PATH "" CACHE PATH "Path to the Ultralight SDK root directory")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
