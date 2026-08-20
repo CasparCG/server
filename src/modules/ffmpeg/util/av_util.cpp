@@ -36,6 +36,30 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
+core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
+{
+    auto result = core::color_space::unknown;
+    if (video) {
+        switch (video->colorspace) {
+            case AVColorSpace::AVCOL_SPC_BT709:
+                result = core::color_space::bt709;
+                break;
+            case AVColorSpace::AVCOL_SPC_BT2020_NCL:
+                result = core::color_space::bt2020;
+                break;
+            case AVColorSpace::AVCOL_SPC_BT470BG:
+            case AVColorSpace::AVCOL_SPC_SMPTE170M:
+            case AVColorSpace::AVCOL_SPC_SMPTE240M:
+                result = core::color_space::bt601;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return result;
+}
+
 core::mutable_frame make_frame(void*                            tag,
                                core::frame_factory&             frame_factory,
                                std::shared_ptr<AVFrame>         video,

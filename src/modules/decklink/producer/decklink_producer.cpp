@@ -395,11 +395,13 @@ core::color_space get_color_space(IDeckLinkVideoInputFrame* video)
                 return core::color_space::bt2020;
             } else if (color_space == bmdColorspaceRec601) {
                 return core::color_space::bt601;
+            } else if (color_space == bmdColorspaceRec709) {
+                return core::color_space::bt709;
             }
         }
     }
 
-    return core::color_space::bt709;
+    return core::color_space::unknown;
 }
 
 com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInput>& device,
@@ -686,7 +688,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
             BMDTimeValue      in_video_pts = 0LL;
             BMDTimeValue      in_audio_pts = 0LL;
-            core::color_space color_space  = core::color_space::bt709;
+            core::color_space color_space  = core::color_space::unknown;
 
             if (video) {
                 const auto flags = video->GetFlags();
