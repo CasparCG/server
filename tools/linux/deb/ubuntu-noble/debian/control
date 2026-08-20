@@ -33,7 +33,8 @@ Build-Depends: cmake,
                pkg-config,
                txt2man,
                zlib1g-dev,
-               casparcg-cef-142-dev
+               casparcg-cef-142-dev,
+               nlohmann-json3-dev
 Homepage: https://github.com/CasparCG/server/
 Vcs-Git: https://github.com/CasparCG/server.git
 Vcs-Browser: https://github.com/CasparCG/server/

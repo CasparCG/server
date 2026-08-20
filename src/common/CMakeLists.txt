@@ -12,6 +12,7 @@ set(SOURCES
 		log.cpp
 		tweener.cpp
 		utf.cpp
+		v210.cpp
 )
 if (MSVC)
 	list(APPEND SOURCES
@@ -60,6 +61,7 @@ set(HEADERS
 		timespan.h
 		tweener.h
 		utf.h
+		v210.h
 )
 
 casparcg_add_library(common SOURCES ${SOURCES} ${HEADERS})
