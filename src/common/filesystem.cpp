@@ -30,6 +30,25 @@
 
 namespace caspar {
 
+namespace {
+// Prefer a guaranteed Unicode-capable locale that requires no OS locale generation (available on
+// any glibc >= 2.35), rather than trusting the deployment environment to have one configured -
+// falling back to the environment, and finally to "C" (ASCII-only, but never throws), only if
+// that isn't recognized (e.g. on Windows/musl). See GitHub issues #1364, #1018.
+std::locale safe_case_insensitive_locale()
+{
+    try {
+        return std::locale("C.UTF-8");
+    } catch (const std::runtime_error&) {
+    }
+    try {
+        return std::locale("");
+    } catch (const std::runtime_error&) {
+    }
+    return std::locale::classic();
+}
+} // namespace
+
 std::optional<boost::filesystem::path>
 probe_path(const boost::filesystem::path&                             full_path,
            const std::function<bool(const boost::filesystem::path&)>& is_valid_file)
@@ -40,7 +59,7 @@ probe_path(const boost::filesystem::path&                             full_path,
         return {};
 
     auto dir = boost::filesystem::path(*parent);
-    auto loc = std::locale(""); // Use system locale
+    auto loc = safe_case_insensitive_locale();
 
     auto leaf_name     = full_path.filename().stem().wstring();
     auto has_extension = !full_path.filename().extension().wstring().empty();
