@@ -81,6 +81,13 @@ void renderpass::draw(const draw_params& params)
 
     for (int n = 0; n < params.textures.size(); ++n) {
         textures[1 + n] = params.textures[n]->view();
+
+        // Consume the upload hand-off the transfer service stamped on this plane:
+        // cross-queue ones (distance 1/2) are waited — and at distance 2 acquired —
+        // by commit(); same-queue (distance 0) returns an inert token we skip.
+        auto handoff = params.textures[n]->take_pending_handoff();
+        if (handoff)
+            acquire_handoffs_.push_back({handoff, params.textures[n]->id()});
     }
     if (params.local_key) {
         textures[5] = params.local_key->view();
@@ -106,114 +113,131 @@ void renderpass::commit()
     // One descriptor set per layer (= per draw), sized to this exact frame.
     auto descriptor_sets = _ctx->allocate_descriptor_sets(static_cast<uint32_t>(layers_.size()));
 
-    _ctx->record_and_submit([&](vk::CommandBuffer cmd_buffer) {
-        vk::ClearValue clearColor{vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f})};
+    // Cross-queue producer completions this render must wait on (the uploads it
+    // samples). At distance 1/2 these are real timeline waits; the harvest skipped
+    // distance-0 tokens, and record_and_submit drops any same-context token.
+    std::vector<completion_token> wait_tokens;
+    wait_tokens.reserve(acquire_handoffs_.size());
+    for (const auto& handoff : acquire_handoffs_)
+        wait_tokens.push_back(handoff.token.completion);
 
-        // Viewport and scissor
-        vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(_width), static_cast<float>(_height), 0.0f, 1.0f};
+    _ctx->record_and_submit(
+        [&](vk::CommandBuffer cmd_buffer) {
+            // Acquire half of each cross-family upload hand-off, before any
+            // rendering begins (a no-op below distance 2). Pairs with the release
+            // recorded on the transfer queue; the wait_tokens above order it.
+            for (const auto& handoff : acquire_handoffs_)
+                acquire_into(cmd_buffer, handoff.token, handoff.image);
 
-        vk::Extent2D extent = {_width, _height};
-        vk::Rect2D   scissor{{0, 0}, extent};
+            vk::ClearValue clearColor{vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f})};
 
-        if (layers_.empty()) {
-            // No layers, just clear the default attachment
-            vk::RenderingAttachmentInfo attachment_info{};
-            attachment_info.imageView   = _default_attachment->view();
-            attachment_info.imageLayout = vk::ImageLayout::eRenderingLocalRead;
-            attachment_info.loadOp      = vk::AttachmentLoadOp::eClear;
-            attachment_info.storeOp     = vk::AttachmentStoreOp::eStore;
+            // Viewport and scissor
+            vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(_width), static_cast<float>(_height), 0.0f, 1.0f};
 
-            vk::RenderingInfo rendering_info{};
-            rendering_info.renderArea = scissor;
-            rendering_info.layerCount = 1;
-            rendering_info.setColorAttachments(attachment_info);
+            vk::Extent2D extent = {_width, _height};
+            vk::Rect2D   scissor{{0, 0}, extent};
 
-            cmd_buffer.beginRendering(rendering_info);
-            cmd_buffer.setViewport(0, viewport);
-            cmd_buffer.setScissor(0, scissor);
-        } else {
-            // create a renderpass for each layer
-            bool                     default_cleared = false;
-            std::shared_ptr<texture> previous_attachment;
-            size_t                   draw_index = 0;
-            for (auto& layer : layers_) {
-                if (layer.attachment != previous_attachment) {
-                    // We need to start a new render pass
+            if (layers_.empty()) {
+                // No layers, just clear the default attachment
+                vk::RenderingAttachmentInfo attachment_info{};
+                attachment_info.imageView   = _default_attachment->view();
+                attachment_info.imageLayout = vk::ImageLayout::eRenderingLocalRead;
+                attachment_info.loadOp      = vk::AttachmentLoadOp::eClear;
+                attachment_info.storeOp     = vk::AttachmentStoreOp::eStore;
 
-                    if (previous_attachment) {
-                        // If this is not the first pass, end the previous render pass
-                        cmd_buffer.endRendering();
+                vk::RenderingInfo rendering_info{};
+                rendering_info.renderArea = scissor;
+                rendering_info.layerCount = 1;
+                rendering_info.setColorAttachments(attachment_info);
 
-                        if (previous_attachment != _default_attachment) {
-                            // If we're done with a non-default attachment, we need to transition it to a shader read
-                            // layout
-                            vk::ImageMemoryBarrier2 memoryBarrier{};
-                            auto range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-                            memoryBarrier.subresourceRange = range;
-                            memoryBarrier.srcStageMask     = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-                            memoryBarrier.srcAccessMask    = vk::AccessFlagBits2::eColorAttachmentWrite;
-                            memoryBarrier.dstStageMask     = vk::PipelineStageFlagBits2::eFragmentShader;
-                            memoryBarrier.dstAccessMask    = vk::AccessFlagBits2::eInputAttachmentRead;
-                            memoryBarrier.oldLayout        = vk::ImageLayout::eRenderingLocalRead;
-                            memoryBarrier.newLayout        = vk::ImageLayout::eShaderReadOnlyOptimal;
-                            memoryBarrier.image            = previous_attachment->id();
+                cmd_buffer.beginRendering(rendering_info);
+                cmd_buffer.setViewport(0, viewport);
+                cmd_buffer.setScissor(0, scissor);
+            } else {
+                // create a renderpass for each layer
+                bool                     default_cleared = false;
+                std::shared_ptr<texture> previous_attachment;
+                size_t                   draw_index = 0;
+                for (auto& layer : layers_) {
+                    if (layer.attachment != previous_attachment) {
+                        // We need to start a new render pass
 
-                            vk::DependencyInfo dependencyInfo{};
-                            dependencyInfo.setImageMemoryBarriers(memoryBarrier);
-                            cmd_buffer.pipelineBarrier2(dependencyInfo);
+                        if (previous_attachment) {
+                            // If this is not the first pass, end the previous render pass
+                            cmd_buffer.endRendering();
+
+                            if (previous_attachment != _default_attachment) {
+                                // If we're done with a non-default attachment, we need to transition it to a shader
+                                // read layout
+                                vk::ImageMemoryBarrier2 memoryBarrier{};
+                                auto range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+                                memoryBarrier.subresourceRange = range;
+                                memoryBarrier.srcStageMask     = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+                                memoryBarrier.srcAccessMask    = vk::AccessFlagBits2::eColorAttachmentWrite;
+                                memoryBarrier.dstStageMask     = vk::PipelineStageFlagBits2::eFragmentShader;
+                                memoryBarrier.dstAccessMask    = vk::AccessFlagBits2::eInputAttachmentRead;
+                                memoryBarrier.oldLayout        = vk::ImageLayout::eRenderingLocalRead;
+                                memoryBarrier.newLayout        = vk::ImageLayout::eShaderReadOnlyOptimal;
+                                memoryBarrier.image            = previous_attachment->id();
+
+                                vk::DependencyInfo dependencyInfo{};
+                                dependencyInfo.setImageMemoryBarriers(memoryBarrier);
+                                cmd_buffer.pipelineBarrier2(dependencyInfo);
+                            }
                         }
+
+                        // We only want to clear the default attachment once
+                        bool do_clear = (layer.attachment != _default_attachment) || !default_cleared;
+
+                        vk::RenderingAttachmentInfo attachment_info{};
+                        attachment_info.imageView   = layer.attachment->view();
+                        attachment_info.imageLayout = vk::ImageLayout::eRenderingLocalRead;
+                        attachment_info.loadOp  = do_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+                        attachment_info.storeOp = vk::AttachmentStoreOp::eStore;
+
+                        if (layer.attachment == _default_attachment) {
+                            default_cleared = true;
+                        }
+
+                        previous_attachment = layer.attachment;
+
+                        vk::RenderingInfo rendering_info{};
+                        rendering_info.renderArea = scissor;
+                        rendering_info.layerCount = 1;
+                        rendering_info.setColorAttachments(attachment_info);
+
+                        cmd_buffer.beginRendering(rendering_info);
+                        cmd_buffer.setViewport(0, viewport);
+                        cmd_buffer.setScissor(0, scissor);
+                    } else {
+                        // We are continuing in the same render pass, so we need a barrier to ensure the attachment is
+                        // ready
+                        vk::MemoryBarrier2 memoryBarrier{};
+                        memoryBarrier.srcStageMask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+                        memoryBarrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
+                        memoryBarrier.dstStageMask  = vk::PipelineStageFlagBits2::eFragmentShader;
+                        memoryBarrier.dstAccessMask = vk::AccessFlagBits2::eInputAttachmentRead;
+
+                        vk::DependencyInfo dependencyInfo{};
+                        dependencyInfo.dependencyFlags    = vk::DependencyFlagBits::eByRegion;
+                        dependencyInfo.memoryBarrierCount = 1;
+                        dependencyInfo.pMemoryBarriers    = &memoryBarrier;
+                        cmd_buffer.pipelineBarrier2(dependencyInfo);
                     }
 
-                    // We only want to clear the default attachment once
-                    bool do_clear = (layer.attachment != _default_attachment) || !default_cleared;
-
-                    vk::RenderingAttachmentInfo attachment_info{};
-                    attachment_info.imageView   = layer.attachment->view();
-                    attachment_info.imageLayout = vk::ImageLayout::eRenderingLocalRead;
-                    attachment_info.loadOp      = do_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
-                    attachment_info.storeOp     = vk::AttachmentStoreOp::eStore;
-
-                    if (layer.attachment == _default_attachment) {
-                        default_cleared = true;
-                    }
-
-                    previous_attachment = layer.attachment;
-
-                    vk::RenderingInfo rendering_info{};
-                    rendering_info.renderArea = scissor;
-                    rendering_info.layerCount = 1;
-                    rendering_info.setColorAttachments(attachment_info);
-
-                    cmd_buffer.beginRendering(rendering_info);
-                    cmd_buffer.setViewport(0, viewport);
-                    cmd_buffer.setScissor(0, scissor);
-                } else {
-                    // We are continuing in the same render pass, so we need a barrier to ensure the attachment is ready
-                    vk::MemoryBarrier2 memoryBarrier{};
-                    memoryBarrier.srcStageMask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-                    memoryBarrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
-                    memoryBarrier.dstStageMask  = vk::PipelineStageFlagBits2::eFragmentShader;
-                    memoryBarrier.dstAccessMask = vk::AccessFlagBits2::eInputAttachmentRead;
-
-                    vk::DependencyInfo dependencyInfo{};
-                    dependencyInfo.dependencyFlags    = vk::DependencyFlagBits::eByRegion;
-                    dependencyInfo.memoryBarrierCount = 1;
-                    dependencyInfo.pMemoryBarriers    = &memoryBarrier;
-                    cmd_buffer.pipelineBarrier2(dependencyInfo);
+                    _pipeline->draw(cmd_buffer,
+                                    descriptor_sets[draw_index++],
+                                    vertex_buffer,
+                                    static_cast<uint32_t>(layer.coords.size()),
+                                    layer.vertex_buffer_offset,
+                                    layer.uniforms,
+                                    layer.textures);
                 }
-
-                _pipeline->draw(cmd_buffer,
-                                descriptor_sets[draw_index++],
-                                vertex_buffer,
-                                static_cast<uint32_t>(layer.coords.size()),
-                                layer.vertex_buffer_offset,
-                                layer.uniforms,
-                                layer.textures);
             }
-        }
 
-        cmd_buffer.endRendering();
-    });
+            cmd_buffer.endRendering();
+        },
+        wait_tokens);
 }
 
 }}} // namespace caspar::accelerator::vulkan

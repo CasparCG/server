@@ -25,7 +25,9 @@
 #include "buffer.h"
 #include "command_context.h"
 #include "device.h"
+#include "handoff.h"
 #include "texture.h"
+#include "vulkan_queue.h"
 
 #include <common/future.h>
 #include <common/log.h>
@@ -36,7 +38,9 @@ namespace caspar { namespace accelerator { namespace vulkan {
 
 transfer::transfer(device& device)
     : device_(device)
-    , ctx_(std::make_unique<command_context>(device.getVkDevice(), device.queue()))
+    , transfer_queue_(device.acquire_queue(queue_type::transfer))
+    , render_queue_(device.queue())
+    , ctx_(std::make_unique<command_context>(device.getVkDevice(), transfer_queue_))
 {
 }
 
@@ -64,7 +68,21 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
                                vk::Offset3D(0, 0, 0),
                                vk::Extent3D(width, height, 1));
 
-    ctx_->record_and_submit([&](vk::CommandBuffer cmd) {
+    // Hand the uploaded texture off to the render queue: the upload's final
+    // transition to shader-read becomes the producer (release) half. At distance 0
+    // this is exactly the plain transition it was before; at distance 1/2 the
+    // renderer waits the completion (and at 2 records the matching acquire) — see
+    // renderpass::commit, which consumes the stamped pending-handoff.
+    auto handoff = make_handoff(*transfer_queue_,
+                                *render_queue_,
+                                vk::ImageLayout::eTransferDstOptimal,
+                                vk::ImageLayout::eShaderReadOnlyOptimal,
+                                vk::PipelineStageFlagBits2::eTransfer,
+                                vk::AccessFlagBits2::eTransferWrite,
+                                vk::PipelineStageFlagBits2::eFragmentShader,
+                                vk::AccessFlagBits2::eShaderRead);
+
+    auto token = ctx_->record_and_submit([&](vk::CommandBuffer cmd) {
         transitionImageLayout(tex->id(),
                               vk::ImageLayout::eUndefined,
                               vk::AccessFlagBits2::eNone,
@@ -77,21 +95,32 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
 
         cmd.copyBufferToImage(buf->id(), tex->id(), vk::ImageLayout::eTransferDstOptimal, region);
 
-        transitionImageLayout(tex->id(),
-                              vk::ImageLayout::eTransferDstOptimal,
-                              vk::AccessFlagBits2::eTransferWrite,
-                              vk::PipelineStageFlagBits2::eTransfer,
-
-                              vk::ImageLayout::eShaderReadOnlyOptimal,
-                              vk::AccessFlagBits2::eShaderRead,
-                              vk::PipelineStageFlagBits2::eFragmentShader,
-                              cmd);
+        record_release(cmd, handoff, tex->id());
     });
+
+    handoff.completion = token;
+    tex->set_pending_handoff(handoff);
 
     return make_ready_future(std::move(tex));
 }
 
-std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<texture>& source)
+handoff_token transfer::readback_handoff() const
+{
+    // The render queue is the producer (it last wrote `target` as a color attachment
+    // in eRenderingLocalRead); the transfer queue is the consumer that reads it back
+    // as a transfer source. Mirror of the upload hand-off in copy_async(upload).
+    return make_handoff(*render_queue_,
+                        *transfer_queue_,
+                        vk::ImageLayout::eRenderingLocalRead,
+                        vk::ImageLayout::eTransferSrcOptimal,
+                        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                        vk::AccessFlagBits2::eColorAttachmentWrite,
+                        vk::PipelineStageFlagBits2::eTransfer,
+                        vk::AccessFlagBits2::eTransferRead);
+}
+
+std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<texture>& source,
+                                                       const handoff_token&            from_renderer)
 {
     auto buf = device_.create_buffer(source->size(), false);
 
@@ -108,18 +137,38 @@ std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<tex
         vk::Extent3D{static_cast<uint32_t>(source->width()), static_cast<uint32_t>(source->height()), 1};
     copyInfo.setRegions(region);
 
-    auto token = ctx_->record_and_submit([&](vk::CommandBuffer cmd) {
-        transitionImageLayout(source->id(),
-                              vk::ImageLayout::eRenderingLocalRead,
-                              vk::AccessFlagBits2::eColorAttachmentWrite,
-                              vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    // Hand the read-back target back to the render queue: after the copy the image
+    // returns to the shader-read output invariant (TRANSFER_SRC -> SHADER_READ) so a
+    // GPU-direct consumer can still sample it off the const_frame. The caller's
+    // finalize consumes this (waits the completion + records the acquire half).
+    auto to_renderer = make_handoff(*transfer_queue_,
+                                    *render_queue_,
+                                    vk::ImageLayout::eTransferSrcOptimal,
+                                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                                    vk::PipelineStageFlagBits2::eTransfer,
+                                    vk::AccessFlagBits2::eTransferRead,
+                                    vk::PipelineStageFlagBits2::eFragmentShader,
+                                    vk::AccessFlagBits2::eShaderRead);
 
-                              vk::ImageLayout::eTransferSrcOptimal,
-                              vk::AccessFlagBits2::eHostRead,
-                              vk::PipelineStageFlagBits2::eHost,
-                              cmd);
-        cmd.copyImageToBuffer2(copyInfo);
-    });
+    auto token = ctx_->record_and_submit(
+        [&](vk::CommandBuffer cmd) {
+            // Acquire half of the render->transfer hand-off (no-op below distance 2;
+            // at distance 2 it completes the eRenderingLocalRead -> eTransferSrcOptimal
+            // transition and takes ownership). At distance 0/1 the render-side release
+            // already moved the layout, so the image is eTransferSrcOptimal regardless.
+            acquire_into(cmd, from_renderer, source->id());
+
+            cmd.copyImageToBuffer2(copyInfo);
+
+            // TODO: sequential transfer-src -> shader-read on one image. Concurrent
+            // host + GPU-direct consumers at distance 2 will need a scratch copy so
+            // the readback and the sampler do not serialize.
+            record_release(cmd, to_renderer, source->id());
+        },
+        from_renderer.completion);
+
+    to_renderer.completion = token;
+    source->set_pending_handoff(to_renderer);
 
     return std::async(std::launch::deferred, [this, buf = std::move(buf), token]() mutable {
         if (!ctx_->wait(token)) {

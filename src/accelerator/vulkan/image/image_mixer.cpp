@@ -25,6 +25,7 @@
 #include "../util/barrier.h"
 #include "../util/buffer.h"
 #include "../util/device.h"
+#include "../util/handoff.h"
 #include "../util/renderpass.h"
 #include "../util/texture.h"
 #include "../util/transfer.h"
@@ -126,23 +127,26 @@ class image_renderer
         }
 
         // A host consumer wants the bytes: read them back through the transfer
-        // service, which keeps the readback on its own command context (and its own
-        // queue, once transfer moves off the graphics queue). The readback leaves
-        // `target` in eTransferSrcOptimal; finalize it from there to the shader-read
-        // invariant on the kernel context — ordered after the readback by submission
-        // order on the shared queue — so a GPU-direct consumer can still sample it.
-        auto readback = vulkan_->transfer().copy_async(target);
+        // service on its own command context and (at distance 1/2) its own queue.
+        // The readback is a two-leg cross-queue hand-off: the render queue RELEASES
+        // `target` (eRenderingLocalRead -> eTransferSrcOptimal) to the transfer queue,
+        // which copies it out and hands it back (eTransferSrcOptimal ->
+        // eShaderReadOnlyOptimal), so a GPU-direct consumer can still sample the
+        // const_frame's texture. At distance 0 every leg is inert and this is
+        // byte-for-byte the old submission-ordered sequence.
+        auto to_transfer   = vulkan_->transfer().readback_handoff();
+        auto release_token = kernel_.record_and_submit(
+            [&](vk::CommandBuffer cmd) { record_release(cmd, to_transfer, target->id()); });
+        to_transfer.completion = release_token;
 
-        kernel_.record_and_submit([&](vk::CommandBuffer cmd) {
-            transitionImageLayout(target->id(),
-                                  vk::ImageLayout::eTransferSrcOptimal,
-                                  vk::AccessFlagBits2::eTransferRead,
-                                  vk::PipelineStageFlagBits2::eTransfer,
-                                  vk::ImageLayout::eShaderReadOnlyOptimal,
-                                  vk::AccessFlagBits2::eShaderRead,
-                                  vk::PipelineStageFlagBits2::eAllCommands,
-                                  cmd);
-        });
+        auto readback = vulkan_->transfer().copy_async(target, to_transfer);
+
+        // Finalize: take the transfer service's return hand-off and record its acquire
+        // half on the kernel context, waiting the readback's completion, so `target`
+        // ends in the shader-read output invariant the screen consumer samples.
+        auto to_renderer = target->take_pending_handoff();
+        kernel_.record_and_submit([&](vk::CommandBuffer cmd) { acquire_into(cmd, to_renderer, target->id()); },
+                                  to_renderer.completion);
 
         return std::async(std::launch::deferred,
                           [readback = std::move(readback),

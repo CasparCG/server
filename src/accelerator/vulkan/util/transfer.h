@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "handoff.h"
+
 #include <common/array.h>
 #include <common/bit_depth.h>
 
@@ -32,6 +34,7 @@ namespace caspar { namespace accelerator { namespace vulkan {
 class device;
 class texture;
 class command_context;
+class vulkan_queue;
 
 // The shared host<->device copy service: one instance per device, used by every
 // channel's image_mixer for plane uploads (h->d) and the final frame readback
@@ -54,13 +57,32 @@ class transfer final
     std::future<std::shared_ptr<texture>>
     copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth);
 
-    // Readback (d->h). Records + submits synchronously; the returned deferred
-    // future blocks at .get() on the completion wait — the one legitimate CPU
-    // wait, because the caller is consuming bytes.
-    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source);
+    // Build the render->transfer hand-off that moves a composited target onto this
+    // service's queue for readback (RENDERING_LOCAL_READ -> TRANSFER_SRC). The caller
+    // records its release half on the render queue (record_release), fills the
+    // returned token's `completion`, then passes it to copy_async below. Keeps the
+    // queue/layout knowledge in one place (it mirrors the return leg copy_async
+    // builds internally). Inert at distance 0.
+    handoff_token readback_handoff() const;
+
+    // Readback (d->h). `from_renderer` is readback_handoff()'s token with its
+    // completion filled in: the readback waits it (and at distance 2 acquires the
+    // image into the transfer queue) before copying, then hands the image back to the
+    // render queue (TRANSFER_SRC -> SHADER_READ) by stamping `source`'s pending
+    // hand-off for the caller's finalize to consume. Records + submits synchronously;
+    // the returned deferred future blocks at .get() on the completion wait — the one
+    // legitimate CPU wait, because the caller is consuming bytes.
+    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source,
+                                                 const handoff_token&            from_renderer);
 
   private:
-    device&                          device_;
+    device& device_;
+    // The dedicated transfer queue this service records/submits on (the producer of
+    // uploaded textures, the consumer of read-back targets), and the render queue
+    // its hand-offs cross to/from. On single-family hardware these may be the same
+    // VkQueue, in which case every hand-off is distance 0 (inert).
+    std::shared_ptr<vulkan_queue>    transfer_queue_;
+    std::shared_ptr<vulkan_queue>    render_queue_;
     std::unique_ptr<command_context> ctx_;
 };
 

@@ -72,7 +72,31 @@ vk::CommandBuffer command_context::acquire_command_buffer()
 
 completion_token command_context::record_and_submit(const std::function<void(vk::CommandBuffer)>& record)
 {
+    return record_and_submit(record, {});
+}
+
+completion_token command_context::record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                                    vk::ArrayProxy<const completion_token>        wait_tokens)
+{
     std::lock_guard<std::mutex> lock(mutex_);
+
+    // Cross-queue waits: keep only tokens on a foreign timeline. A token on our own
+    // timeline means the producer ran on this same queue (queue_distance::same_queue),
+    // where submission order plus the producer's barriers already order it before
+    // these commands, so waiting it would be redundant — and self-waiting the value
+    // we are about to signal could deadlock.
+    std::vector<vk::Semaphore>          wait_semaphores;
+    std::vector<uint64_t>               wait_values;
+    std::vector<vk::PipelineStageFlags> wait_stages;
+    for (const auto& token : wait_tokens) {
+        if (!token || token.timeline == timeline_)
+            continue;
+        wait_semaphores.push_back(token.timeline);
+        wait_values.push_back(token.value);
+        // vk::SubmitInfo carries v1 stage flags (not the v2 masks the barriers use);
+        // eAllCommands is the conservative, translation-safe wait scope.
+        wait_stages.push_back(vk::PipelineStageFlagBits::eAllCommands);
+    }
 
     auto cmd = acquire_command_buffer();
 
@@ -83,10 +107,13 @@ completion_token command_context::record_and_submit(const std::function<void(vk:
     auto signal_value = ++value_;
 
     vk::TimelineSemaphoreSubmitInfo timeline_submit{};
+    timeline_submit.setWaitSemaphoreValues(wait_values);
     timeline_submit.setSignalSemaphoreValues(signal_value);
 
     vk::SubmitInfo submit_info{};
     submit_info.setCommandBuffers(cmd);
+    submit_info.setWaitSemaphores(wait_semaphores);
+    submit_info.setWaitDstStageMask(wait_stages);
     submit_info.setSignalSemaphores(timeline_);
     submit_info.pNext = &timeline_submit;
     queue_->submit(submit_info);

@@ -54,6 +54,12 @@ class image_kernel final : public std::enable_shared_from_this<image_kernel>
     // timeline with the render.
     completion_token record_and_submit(const std::function<void(vk::CommandBuffer)>& record);
 
+    // As above, but the submit first waits on the given completion tokens (cross-queue
+    // hand-off consumer half). The image_mixer's readback finalize uses this to wait
+    // the transfer queue's release before acquiring `target` back to shader-read.
+    completion_token record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                       vk::ArrayProxy<const completion_token>        wait_tokens);
+
     // A shared 1x1 transparent-black texture in shader-read layout, created at
     // kernel setup. Used as the GPU payload for empty frames (consumers sample a
     // valid cleared texture) and as the MoltenVK stand-in for absent planes.

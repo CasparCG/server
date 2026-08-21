@@ -29,7 +29,9 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include "completion_token.h"
 #include "draw_params.h"
+#include "handoff.h"
 #include "uniform_block.h"
 
 namespace caspar { namespace accelerator { namespace vulkan {
@@ -46,7 +48,10 @@ struct frame_context
     // Record the renderpass body into a fresh command buffer and submit it; the
     // buffer's begin/end and the submit are owned by the implementation (a
     // command_context). The recorded function must not begin/end the buffer.
-    virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record) = 0;
+    // `wait_tokens` are cross-queue producer completions the submit must wait on
+    // (the upload hand-offs sampled by this pass); same-queue tokens are dropped.
+    virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                   vk::ArrayProxy<const completion_token>        wait_tokens) = 0;
     virtual std::shared_ptr<class texture>
     create_attachment(uint32_t width, uint32_t height, uint32_t components_count) = 0;
 };
@@ -71,6 +76,16 @@ class renderpass
         uint32_t                                 vertex_buffer_offset = 0;
     };
     std::vector<layer_info> layers_;
+
+    // Pending upload hand-offs for the textures this pass samples, harvested off
+    // each draw()'s plane textures: the acquire half (distance 2) is recorded into
+    // the render command buffer and the completion is waited by the render submit.
+    struct pending_acquire
+    {
+        handoff_token token;
+        vk::Image     image;
+    };
+    std::vector<pending_acquire> acquire_handoffs_;
 
   public:
     renderpass(frame_context* ctx, uint32_t width, uint32_t height);

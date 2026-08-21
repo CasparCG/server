@@ -26,22 +26,28 @@
 namespace caspar { namespace accelerator { namespace vulkan {
 
 // Record a single-subresource image layout transition (color, mip 0, layer 0)
-// with explicit src/dst access + stage masks. Shared by the transfer paths
-// (upload/readback) and the renderer's attachment initialization.
-inline void transitionImageLayout(const vk::Image&        image,
-                                  vk::ImageLayout         oldLayout,
-                                  vk::AccessFlags2        srcAccessMask,
-                                  vk::PipelineStageFlags2 srcStage,
-                                  vk::ImageLayout         newLayout,
-                                  vk::AccessFlags2        dstAccessMask,
-                                  vk::PipelineStageFlags2 dstStage,
-                                  vk::CommandBuffer       cmdBuffer)
+// with explicit src/dst access + stage masks AND explicit queue families. With
+// real (non-Ignored) families this is one half of a queue-family ownership
+// transfer (QFOT): the producer records a RELEASE (its last-use src scope, empty
+// dst scope) and the consumer records the matching ACQUIRE (empty src scope, its
+// first-use dst scope) — identical oldLayout/newLayout, families and range on both
+// halves so they pair. See handoff.{h,cpp}, which is the only QFOT caller.
+inline void transitionImageLayoutQFOT(const vk::Image&        image,
+                                      vk::ImageLayout         oldLayout,
+                                      vk::AccessFlags2        srcAccessMask,
+                                      vk::PipelineStageFlags2 srcStage,
+                                      vk::ImageLayout         newLayout,
+                                      vk::AccessFlags2        dstAccessMask,
+                                      vk::PipelineStageFlags2 dstStage,
+                                      uint32_t                srcQueueFamily,
+                                      uint32_t                dstQueueFamily,
+                                      vk::CommandBuffer       cmdBuffer)
 {
     auto range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
     vk::ImageMemoryBarrier2 barrier{};
-    barrier.oldLayout = oldLayout, barrier.newLayout = newLayout, barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored, barrier.image = image, barrier.subresourceRange = range;
+    barrier.oldLayout = oldLayout, barrier.newLayout = newLayout, barrier.srcQueueFamilyIndex = srcQueueFamily,
+    barrier.dstQueueFamilyIndex = dstQueueFamily, barrier.image = image, barrier.subresourceRange = range;
 
     barrier.srcAccessMask = srcAccessMask;
     barrier.srcStageMask  = srcStage;
@@ -53,6 +59,31 @@ inline void transitionImageLayout(const vk::Image&        image,
     dep_info.setImageMemoryBarriers(barrier);
 
     cmdBuffer.pipelineBarrier2(dep_info);
+}
+
+// Record a single-subresource image layout transition (color, mip 0, layer 0)
+// with explicit src/dst access + stage masks. Shared by the transfer paths
+// (upload/readback) and the renderer's attachment initialization. No ownership
+// transfer — both queue families are Ignored (single-queue / same-family use).
+inline void transitionImageLayout(const vk::Image&        image,
+                                  vk::ImageLayout         oldLayout,
+                                  vk::AccessFlags2        srcAccessMask,
+                                  vk::PipelineStageFlags2 srcStage,
+                                  vk::ImageLayout         newLayout,
+                                  vk::AccessFlags2        dstAccessMask,
+                                  vk::PipelineStageFlags2 dstStage,
+                                  vk::CommandBuffer       cmdBuffer)
+{
+    transitionImageLayoutQFOT(image,
+                              oldLayout,
+                              srcAccessMask,
+                              srcStage,
+                              newLayout,
+                              dstAccessMask,
+                              dstStage,
+                              vk::QueueFamilyIgnored,
+                              vk::QueueFamilyIgnored,
+                              cmdBuffer);
 }
 
 }}} // namespace caspar::accelerator::vulkan

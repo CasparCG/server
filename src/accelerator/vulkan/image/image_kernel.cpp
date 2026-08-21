@@ -174,9 +174,10 @@ struct image_kernel::impl
         {
             return desc_pool_.allocate(count);
         }
-        virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record)
+        virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                       vk::ArrayProxy<const completion_token>        wait_tokens)
         {
-            token = parent->cmd_ctx_.record_and_submit(record);
+            token = parent->cmd_ctx_.record_and_submit(record, wait_tokens);
         }
         virtual std::shared_ptr<class texture>
         create_attachment(uint32_t width, uint32_t height, uint32_t components_count)
@@ -508,6 +509,12 @@ spl::shared_ptr<renderpass> image_kernel::create_renderpass(uint32_t width, uint
 completion_token image_kernel::record_and_submit(const std::function<void(vk::CommandBuffer)>& record)
 {
     return impl_->cmd_ctx_.record_and_submit(record);
+}
+
+completion_token image_kernel::record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                                 vk::ArrayProxy<const completion_token>        wait_tokens)
+{
+    return impl_->cmd_ctx_.record_and_submit(record, wait_tokens);
 }
 
 std::shared_ptr<texture> image_kernel::empty_texture() const { return impl_->empty_texture_; }

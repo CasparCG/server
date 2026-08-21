@@ -60,6 +60,16 @@ class command_context final
     // submit it on the bound queue signalling this context's timeline.
     completion_token record_and_submit(const std::function<void(vk::CommandBuffer)>& record);
 
+    // As above, but the submit first waits on the given completion tokens. Tokens
+    // on THIS context's own timeline are dropped — same-queue ordering
+    // (queue_distance::same_queue) is already covered by submission order plus the
+    // producer's barriers; cross-queue tokens (a different timeline semaphore) become
+    // timeline waits on the submit. This is the consumer half of a cross-queue
+    // handoff(): the producer's completion_token flows in here so its work is
+    // visible before the commands recorded by `record` run.
+    completion_token record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                       vk::ArrayProxy<const completion_token>        wait_tokens);
+
     // Block until the token's value is reached (or timeout). True on success;
     // an empty token is already complete.
     bool wait(const completion_token& token, uint64_t timeout_ns = 1'000'000'000) const;
