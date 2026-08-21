@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../util/gpu_frame_factory.h"
+
 #include <common/array.h>
 #include <common/bit_depth.h>
 #include <common/memory.h>
@@ -34,7 +36,9 @@
 
 namespace caspar { namespace accelerator { namespace vulkan {
 
-class image_mixer final : public core::image_mixer
+class image_mixer final
+    : public core::image_mixer
+    , public gpu_frame_factory
 {
   public:
     image_mixer(const spl::shared_ptr<class device>& vulkan,
@@ -61,6 +65,20 @@ class image_mixer final : public core::image_mixer
 #endif
 
     void update_aspect_ratio(double aspect_ratio) override;
+
+    // gpu_frame_factory
+
+    std::shared_ptr<texture>
+    create_producer_texture(int width, int height, int stride, common::bit_depth depth) override;
+    std::shared_ptr<command_context> create_command_context(queue_type queue) override;
+    handoff_token                    make_producer_handoff(const vulkan_queue&     producer_queue,
+                                                           vk::ImageLayout         src_layout,
+                                                           vk::PipelineStageFlags2 src_stage,
+                                                           vk::AccessFlags2        src_access) override;
+    core::const_frame                import_textures(const void*                    tag,
+                                                     std::vector<gpu_plane>         planes,
+                                                     const core::pixel_format_desc& desc,
+                                                     array<const std::int32_t>      audio) override;
 
     // core::image_mixer
 

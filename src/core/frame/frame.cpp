@@ -114,6 +114,16 @@ struct const_frame::impl
         }
     }
 
+    // GPU-producer path: no host planes; the textures ride in `opaque`.
+    impl(const void* tag, const core::pixel_format_desc& desc, std::any opaque, array<const std::int32_t> audio)
+        : audio_data_(std::move(audio))
+        , desc_(desc)
+        , tag_(tag)
+        , opaque_(std::move(opaque))
+        , texture_(nullptr)
+    {
+    }
+
     impl(mutable_frame&& other)
         : image_data_(std::make_move_iterator(other.impl_->image_data_.begin()),
                       std::make_move_iterator(other.impl_->image_data_.end()))
@@ -154,6 +164,15 @@ const_frame::const_frame(const void*                            tag,
 const_frame::const_frame(mutable_frame&& other)
     : impl_(new impl(std::move(other)))
 {
+}
+const_frame const_frame::from_textures(const void*                    tag,
+                                       const core::pixel_format_desc& desc,
+                                       std::any                       opaque,
+                                       array<const std::int32_t>      audio)
+{
+    const_frame frame;
+    frame.impl_ = std::make_shared<impl>(tag, desc, std::move(opaque), std::move(audio));
+    return frame;
 }
 const_frame::const_frame(const const_frame& other)
     : impl_(other.impl_)

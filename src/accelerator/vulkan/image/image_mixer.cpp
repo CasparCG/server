@@ -24,11 +24,14 @@
 
 #include "../util/barrier.h"
 #include "../util/buffer.h"
+#include "../util/command_context.h"
 #include "../util/device.h"
+#include "../util/gpu_frame_factory.h"
 #include "../util/handoff.h"
 #include "../util/renderpass.h"
 #include "../util/texture.h"
 #include "../util/transfer.h"
+#include "../util/vulkan_queue.h"
 
 #ifdef WIN32
 #include "../../d3d/d3d_texture2d.h"
@@ -138,9 +141,9 @@ class image_renderer
         // eShaderReadOnlyOptimal), so a GPU-direct consumer can still sample the
         // const_frame's texture. At distance 0 every leg is inert and this is
         // byte-for-byte the old submission-ordered sequence.
-        auto to_transfer   = vulkan_->transfer().readback_handoff();
-        auto release_token = kernel_.record_and_submit(
-            [&](vk::CommandBuffer cmd) { record_release(cmd, to_transfer, target->id()); });
+        auto to_transfer = vulkan_->transfer().readback_handoff();
+        auto release_token =
+            kernel_.record_and_submit([&](vk::CommandBuffer cmd) { record_release(cmd, to_transfer, target->id()); });
         to_transfer.completion = release_token;
 
         auto readback = vulkan_->transfer().copy_async(target, to_transfer);
@@ -357,10 +360,13 @@ struct image_mixer::impl
         item.transforms = transform_stack_.back();
         item.geometry   = frame.geometry();
 
-        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<texture_ptr>>>(&frame.opaque());
+        // A GPU-resident frame carries its textures out-of-band in opaque(); a host frame does not.
+        // This any_cast is what tells the two apart. Use the pointer overload (note the &): on a
+        // host frame it just returns nullptr, so we fall through to the host path below.
+        const auto* gpu_textures = std::any_cast<std::shared_ptr<std::vector<texture_ptr>>>(&frame.opaque());
 
-        if (textures_ptr && *textures_ptr) {
-            item.textures = **textures_ptr;
+        if (gpu_textures && *gpu_textures) {
+            item.textures = **gpu_textures;
         } else {
             for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
                 item.textures.emplace_back(vulkan_->transfer().copy_async(frame.image_data(n),
@@ -412,11 +418,12 @@ struct image_mixer::impl
                                        }
                                        std::vector<texture_ptr> textures;
                                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                                           textures.emplace_back(self->vulkan_->transfer().copy_async(image_data[n],
-                                                                                                      desc.planes[n].width,
-                                                                                                      desc.planes[n].height,
-                                                                                                      desc.planes[n].stride,
-                                                                                                      desc.planes[n].depth));
+                                           textures.emplace_back(
+                                               self->vulkan_->transfer().copy_async(image_data[n],
+                                                                                    desc.planes[n].width,
+                                                                                    desc.planes[n].height,
+                                                                                    desc.planes[n].stride,
+                                                                                    desc.planes[n].depth));
                                        }
                                        return std::make_shared<decltype(textures)>(std::move(textures));
                                    });
@@ -431,6 +438,51 @@ struct image_mixer::impl
         throw std::runtime_error("d3d texture import not supported on vulkan accelerator");
     }
 #endif
+
+    // --- gpu_frame_factory (GPU producer path) ---
+
+    std::shared_ptr<texture> create_producer_texture(int width, int height, int stride, common::bit_depth depth)
+    {
+        return vulkan_->create_texture(width, height, stride, depth);
+    }
+
+    std::shared_ptr<command_context> create_command_context(queue_type queue)
+    {
+        auto q = vulkan_->acquire_queue(queue);
+        if (!q)
+            return nullptr;
+        return std::make_shared<command_context>(vulkan_->getVkDevice(), q);
+    }
+
+    handoff_token make_producer_handoff(const vulkan_queue&     producer_queue,
+                                        vk::ImageLayout         src_layout,
+                                        vk::PipelineStageFlags2 src_stage,
+                                        vk::AccessFlags2        src_access)
+    {
+        return make_handoff(producer_queue,
+                            *vulkan_->queue(),
+                            src_layout,
+                            vk::ImageLayout::eShaderReadOnlyOptimal,
+                            src_stage,
+                            src_access,
+                            vk::PipelineStageFlagBits2::eFragmentShader,
+                            vk::AccessFlagBits2::eShaderRead);
+    }
+
+    core::const_frame import_textures(const void*                    tag,
+                                      std::vector<gpu_plane>         planes,
+                                      const core::pixel_format_desc& desc,
+                                      array<const std::int32_t>      audio)
+    {
+        auto textures = std::make_shared<std::vector<texture_ptr>>();
+        textures->reserve(planes.size());
+        for (auto& p : planes) {
+            // Stamp the producer->render hand-off so renderpass acquires it (inert at distance 0).
+            p.tex->set_pending_handoff(p.handoff);
+            textures->push_back(std::move(p.tex));
+        }
+        return core::const_frame::from_textures(tag, desc, std::any(std::move(textures)), std::move(audio));
+    }
 
     common::bit_depth depth() const { return renderer_.depth(); }
 };
@@ -471,6 +523,30 @@ core::const_frame image_mixer::import_d3d_texture(const void*                   
     return impl_->import_d3d_texture(tag, d3d_texture, format, depth);
 }
 #endif
+
+std::shared_ptr<texture>
+image_mixer::create_producer_texture(int width, int height, int stride, common::bit_depth depth)
+{
+    return impl_->create_producer_texture(width, height, stride, depth);
+}
+std::shared_ptr<command_context> image_mixer::create_command_context(queue_type queue)
+{
+    return impl_->create_command_context(queue);
+}
+handoff_token image_mixer::make_producer_handoff(const vulkan_queue&     producer_queue,
+                                                 vk::ImageLayout         src_layout,
+                                                 vk::PipelineStageFlags2 src_stage,
+                                                 vk::AccessFlags2        src_access)
+{
+    return impl_->make_producer_handoff(producer_queue, src_layout, src_stage, src_access);
+}
+core::const_frame             image_mixer::import_textures(const void*                    tag,
+                                               std::vector<gpu_plane>         planes,
+                                               const core::pixel_format_desc& desc,
+                                               array<const std::int32_t>      audio)
+{
+    return impl_->import_textures(tag, std::move(planes), desc, std::move(audio));
+}
 
 common::bit_depth image_mixer::depth() const { return impl_->depth(); }
 

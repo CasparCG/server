@@ -74,6 +74,11 @@ class command_context final
     // an empty token is already complete.
     bool wait(const completion_token& token, uint64_t timeout_ns = 1'000'000'000) const;
 
+    // The queue this context records and submits on, so a producer can build a
+    // hand-off (make_handoff(*ctx->queue(), render_queue, ...)) without a separate
+    // lookup.
+    const std::shared_ptr<vulkan_queue>& queue() const { return queue_; }
+
   private:
     struct inflight_command_buffer
     {

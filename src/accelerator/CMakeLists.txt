@@ -53,6 +53,7 @@ IF(ENABLE_VULKAN)
 		vulkan/util/descriptor_pool.cpp
 		vulkan/util/device.cpp
 		vulkan/util/handoff.cpp
+		vulkan/util/gpu_producer.cpp
 		vulkan/util/queue_manager.cpp
 		vulkan/util/vulkan_queue.cpp
 		vulkan/util/pipeline.cpp
@@ -74,6 +75,7 @@ IF(ENABLE_VULKAN)
 		vulkan/util/descriptor_pool.h
 		vulkan/util/device.h
 		vulkan/util/handoff.h
+		vulkan/util/gpu_producer.h
 		vulkan/util/queue_manager.h
 		vulkan/util/vulkan_queue.h
 		vulkan/util/draw_params.h
