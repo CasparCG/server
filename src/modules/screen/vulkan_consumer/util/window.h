@@ -65,6 +65,10 @@ class screen_window
     void wait_for_events();
 
     vk::SurfaceKHR create_surface(vk::Instance vk_instance);
+#ifdef __APPLE__
+    // macOS workaround: nudge the window once so the first presented frame shows.
+    void nudge_for_first_frame();
+#endif
 
   private:
     struct impl;

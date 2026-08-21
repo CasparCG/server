@@ -21,8 +21,6 @@
 
 #include "screen.h"
 
-#include "consumer/screen_consumer.h"
-
 #include <core/consumer/frame_consumer.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -30,26 +28,27 @@
 #include <string>
 #include <vector>
 
-// The Vulkan screen consumer is non-Apple only in this phase (no macOS window
-// backend yet); macOS keeps the GL consumer.
-#if defined(ENABLE_VULKAN) && !defined(__APPLE__)
+// macOS has no usable desktop OpenGL, so the GL screen consumer is non-Apple.
+#ifndef __APPLE__
+#include "consumer/screen_consumer.h"
+#endif
+
+#ifdef ENABLE_VULKAN
 #include "vulkan_consumer/screen_consumer_vk.h"
 
 #include <accelerator/vulkan/util/device.h>
 
-#include <memory>
-#endif
-
-#ifdef ENABLE_VULKAN
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
+
+#include <memory>
 #endif
 
 namespace caspar { namespace screen {
 
 void init(const core::module_dependencies& dependencies)
 {
-#if defined(ENABLE_VULKAN) && !defined(__APPLE__)
+#ifdef ENABLE_VULKAN
     auto vk_device = std::dynamic_pointer_cast<accelerator::vulkan::device>(dependencies.accelerator_device);
 #endif
 
@@ -59,11 +58,16 @@ void init(const core::module_dependencies& dependencies)
             const core::video_format_repository&                     format_repository,
             const std::vector<spl::shared_ptr<core::video_channel>>& channels,
             const core::channel_info& channel_info) -> spl::shared_ptr<core::frame_consumer> {
-#if defined(ENABLE_VULKAN) && !defined(__APPLE__)
+#ifdef ENABLE_VULKAN
             if (vk_device)
                 return vulkan::create_consumer(vk_device, params, format_repository, channels, channel_info);
 #endif
+
+#ifndef __APPLE__
             return create_consumer(params, format_repository, channels, channel_info);
+#else
+            return core::frame_consumer::empty();
+#endif
         });
 
     dependencies.consumer_registry->register_preconfigured_consumer_factory(
@@ -72,12 +76,17 @@ void init(const core::module_dependencies& dependencies)
             const core::video_format_repository&                     format_repository,
             const std::vector<spl::shared_ptr<core::video_channel>>& channels,
             const core::channel_info& channel_info) -> spl::shared_ptr<core::frame_consumer> {
-#if defined(ENABLE_VULKAN) && !defined(__APPLE__)
+#ifdef ENABLE_VULKAN
             if (vk_device)
                 return vulkan::create_preconfigured_consumer(
                     vk_device, ptree, format_repository, channels, channel_info);
 #endif
+
+#ifndef __APPLE__
             return create_preconfigured_consumer(ptree, format_repository, channels, channel_info);
+#else
+            return core::frame_consumer::empty();
+#endif
         });
 }
 

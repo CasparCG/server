@@ -101,6 +101,7 @@ struct screen_consumer_vk
 
     std::atomic<bool> is_running_{true};
     std::atomic<bool> needs_resize_{false};
+    std::atomic<bool> first_frame_presented_{false};
     std::thread       thread_;
 
     screen_consumer_vk(const screen_consumer_vk&)            = delete;
@@ -366,6 +367,12 @@ struct screen_consumer_vk
 
             swapchain_->next_frame();
         }
+
+#ifdef __APPLE__
+        if (!first_frame_presented_.exchange(true)) {
+            window_->nudge_for_first_frame();
+        }
+#endif
 
         graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
         tick_timer_.restart();

@@ -8,9 +8,7 @@ add_subdirectory(decklink)
 add_subdirectory(newtek)
 add_subdirectory(artnet)
 
-if(NOT DEFINED APPLE)
-	add_subdirectory(screen)
-endif()
+add_subdirectory(screen)
 
 if (ENABLE_HTML)
 	add_subdirectory(html)

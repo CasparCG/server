@@ -38,6 +38,7 @@ find_package(SFML 2 COMPONENTS graphics window REQUIRED PATHS /opt/homebrew/opt/
 SET (CMAKE_PREFIX_PATH /opt/homebrew/opt/ffmpeg@7 ${CMAKE_PREFIX_PATH})
 find_package(FFmpeg REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(glfw3 REQUIRED) # window/swapchain for the Vulkan screen consumer
 
 FetchContent_Declare(vk_bootstrap
     URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.tar.gz

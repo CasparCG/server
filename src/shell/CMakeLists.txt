@@ -27,6 +27,7 @@ if (MSVC)
 elseif(APPLE)
 	list(APPEND SOURCES
 			macos_specific.cpp
+			macos_main_loop.mm
 	)
 else ()
 	list(APPEND SOURCES
@@ -96,6 +97,7 @@ elseif(APPLE)
 		OpenAL::OpenAL
 		dl
 		pthread
+		"-framework Cocoa"
 	)
 
 	# RPATH needed at runtime for frameworks in the app bundle
@@ -103,6 +105,13 @@ elseif(APPLE)
 		INSTALL_RPATH "@executable_path/../Frameworks"
 		BUILD_WITH_INSTALL_RPATH TRUE
 	)
+
+	if(ENABLE_HTML)
+		# macos_main_loop.mm hosts CEF on the main thread, so it needs the CEF
+		# headers (CefAppProtocol). ENABLE_HTML gates the CEF-specific code there.
+		target_include_directories(casparcg PRIVATE "${CEF_ROOT}")
+		target_compile_definitions(casparcg PRIVATE ENABLE_HTML)
+	endif()
 
 	# Copy CEF framework to build/Frameworks/ for package.sh to find
 	if(ENABLE_HTML)

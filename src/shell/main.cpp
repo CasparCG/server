@@ -59,6 +59,16 @@
 #include <clocale>
 #include <csignal>
 
+#ifdef __APPLE__
+// Defined in macos_main_loop.mm - pumps Cocoa events and the main run loop so
+// GCD main-queue blocks (used by the Vulkan screen consumer for GLFW/Cocoa
+// calls) are processed on the main thread. On macOS this also pumps CEF, which
+// runs on the main thread; that workaround is kept inside macos_main_loop.mm so
+// the shared shell main loop stays platform- and module-agnostic.
+extern "C" void macos_init_app();
+extern "C" void macos_process_events(double timeout_seconds);
+#endif
+
 namespace caspar {
 
 void setup_global_locale()
@@ -94,6 +104,13 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     };
 
     print_info();
+
+#ifdef __APPLE__
+    // Create the (CefAppProtocol-conforming) NSApplication on the main thread
+    // before constructing the server, so the HTML module can CefInitialize
+    // against it during startup (CEF runs on the main thread on macOS).
+    macos_init_app();
+#endif
 
     // Create server object which initializes channels, protocols and controllers.
     std::unique_ptr<server> caspar_server(new server(shutdown));
@@ -162,7 +179,23 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     boost::asio::signal_set signals(io, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io.stop(); });
 
+#ifdef __APPLE__
+    // On macOS the main thread must own Cocoa/GCD event processing so the screen
+    // consumer can create and drive its window (macos_process_events also pumps
+    // CEF internally). Run ASIO on a background thread and pump the main run loop
+    // here until shutdown.
+    auto        work_guard = boost::asio::make_work_guard(io);
+    std::thread asio_thread([&io] { io.run(); });
+
+    while (!io.stopped()) {
+        macos_process_events(0.01); // 10ms timeout
+    }
+
+    work_guard.reset();
+    asio_thread.join();
+#else
     io.run();
+#endif
 
     caspar_server.reset();
 
@@ -307,6 +340,15 @@ int main(int argc, char** argv)
     }
 
     boost::log::core::get()->flush();
+
+#ifdef __APPLE__
+    // SFML registers a global HIDJoystickManager whose destructor runs during
+    // C-runtime exit and crashes on macOS (it unschedules from an already
+    // torn-down IOKit run loop). The orderly shutdown above is complete and the
+    // log is flushed, so bypass static/atexit destructors to avoid that crash
+    // while still returning the exit code run.sh uses to decide on a restart.
+    _Exit(return_code);
+#endif
 
     return return_code;
 }
