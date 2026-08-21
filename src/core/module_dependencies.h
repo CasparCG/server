@@ -31,6 +31,10 @@ namespace caspar::protocol::amcp {
 class amcp_command_repository_wrapper;
 }
 
+namespace caspar::accelerator {
+class accelerator_device;
+}
+
 namespace caspar::core {
 
 struct module_dependencies
@@ -39,15 +43,18 @@ struct module_dependencies
     const spl::shared_ptr<frame_producer_registry>                         producer_registry;
     const spl::shared_ptr<frame_consumer_registry>                         consumer_registry;
     const std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper> command_repository;
+    const std::shared_ptr<accelerator::accelerator_device>                 accelerator_device;
 
     module_dependencies(const spl::shared_ptr<cg_producer_registry>&                            cg_registry,
                         const spl::shared_ptr<frame_producer_registry>&                         producer_registry,
                         const spl::shared_ptr<frame_consumer_registry>&                         consumer_registry,
-                        const std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper>& command_repository)
+                        const std::shared_ptr<protocol::amcp::amcp_command_repository_wrapper>& command_repository,
+                        const std::shared_ptr<accelerator::accelerator_device>&                 accelerator_device)
         : cg_registry(cg_registry)
         , producer_registry(producer_registry)
         , consumer_registry(consumer_registry)
         , command_repository(command_repository)
+        , accelerator_device(accelerator_device)
     {
     }
 };
