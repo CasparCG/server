@@ -279,6 +279,10 @@ struct server::impl
 #endif
 
         accelerator_.set_backend(backend);
+
+#ifdef ENABLE_VULKAN
+        register_module_vulkan_requirements(accelerator_);
+#endif
     }
 
     std::vector<boost::property_tree::wptree> setup_channels(const boost::property_tree::wptree& pt)

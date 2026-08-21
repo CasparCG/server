@@ -12,12 +12,14 @@
 
 #include <common/bit_depth.h>
 #include <common/except.h>
+#include <common/log.h>
 
 #include <core/mixer/image/image_mixer.h>
 
 #include <memory>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 namespace caspar { namespace accelerator {
 
@@ -26,6 +28,9 @@ struct accelerator::impl
     std::shared_ptr<accelerator_device> device_;
     const core::video_format_repository format_repository_;
     accelerator_backend                 backend_;
+#ifdef ENABLE_VULKAN
+    std::vector<vulkan_requirements_fn> pending_vulkan_requirements_;
+#endif
 
     impl(const core::video_format_repository format_repository)
         : format_repository_(format_repository)
@@ -41,6 +46,16 @@ struct accelerator::impl
 
         backend_ = backend;
     }
+
+#ifdef ENABLE_VULKAN
+    void add_vulkan_requirements(vulkan_requirements_fn fn)
+    {
+        if (device_) {
+            CASPAR_LOG(warning) << L"Vulkan requirements registered after device creation; will not take effect.";
+        }
+        pending_vulkan_requirements_.push_back(std::move(fn));
+    }
+#endif
 
     std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth)
     {
@@ -68,7 +83,8 @@ struct accelerator::impl
 #ifdef ENABLE_VULKAN
         if (backend_ == accelerator_backend::vulkan) {
             if (!device_) {
-                device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<vulkan::device>());
+                device_ = std::dynamic_pointer_cast<accelerator_device>(
+                    std::make_shared<vulkan::device>(pending_vulkan_requirements_));
             }
 
             return device_;
@@ -90,6 +106,10 @@ accelerator::accelerator(const core::video_format_repository format_repository)
 accelerator::~accelerator() {}
 
 void accelerator::set_backend(accelerator_backend backend) { impl_->set_backend(backend); }
+
+#ifdef ENABLE_VULKAN
+void accelerator::add_vulkan_requirements(vulkan_requirements_fn fn) { impl_->add_vulkan_requirements(std::move(fn)); }
+#endif
 
 std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(const int channel_id, common::bit_depth depth)
 {

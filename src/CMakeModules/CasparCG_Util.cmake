@@ -15,6 +15,7 @@ SET (CASPARCG_MODULE_INCLUDE_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_INIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_UNINIT_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "" CACHE INTERNAL "")
+SET (CASPARCG_MODULE_VULKAN_REQ_STATEMENTS "" CACHE INTERNAL "")
 SET (CASPARCG_MODULE_TARGETS "" CACHE INTERNAL "")
 
 # CasparCG version of CMake `add_library`
@@ -55,7 +56,7 @@ FUNCTION (casparcg_add_module_project TARGET)
 	cmake_parse_arguments(
         PARSED_ARGS # prefix of output variables
         "" # list of names of the boolean arguments (only defined ones will be true)
-        "NAME;HEADER_FILE;INIT_FUNCTION;UNINIT_FUNCTION;CLI_INTERCEPTOR" # list of names of mono-valued arguments
+        "NAME;HEADER_FILE;INIT_FUNCTION;UNINIT_FUNCTION;CLI_INTERCEPTOR;VULKAN_REQUIREMENTS_FUNCTION" # list of names of mono-valued arguments
         "SOURCES" # list of names of multi-valued arguments (output variables are lists)
         ${ARGN} # arguments of the function to parse, here we take the all original ones
     )
@@ -106,6 +107,14 @@ FUNCTION (casparcg_add_module_project TARGET)
 		SET (CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS "${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}"
 			"	if (${PARSED_ARGS_CLI_INTERCEPTOR}(argc, argv))"
 			"		return true\;"
+			""
+			CACHE INTERNAL ""
+		)
+	ENDIF ()
+
+	IF (PARSED_ARGS_VULKAN_REQUIREMENTS_FUNCTION)
+		SET (CASPARCG_MODULE_VULKAN_REQ_STATEMENTS "${CASPARCG_MODULE_VULKAN_REQ_STATEMENTS}"
+			"	acc.add_vulkan_requirements(${PARSED_ARGS_VULKAN_REQUIREMENTS_FUNCTION})\;"
 			""
 			CACHE INTERNAL ""
 		)

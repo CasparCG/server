@@ -103,7 +103,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::unique_ptr<class transfer> transfer_;
 
-    impl()
+    explicit impl(const std::vector<vulkan_requirements_fn>& requirements)
     {
         CASPAR_LOG(info) << L"Initializing Vulkan Device.";
 
@@ -166,6 +166,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
         vk::PhysicalDeviceRobustness2FeaturesEXT robustness2Features;
         robustness2Features.nullDescriptor = true;
         _vkb_physical_device.enable_extension_features_if_present(robustness2Features);
+
+        for (auto& fn : requirements) {
+            if (fn)
+                fn(_vkb_physical_device);
+        }
 
         // Create the logical device. The queue_manager scans the families and
         // resolves each kind of work (graphics/transfer/compute/video) to a
@@ -441,8 +446,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     }
 };
 
-device::device()
-    : impl_(new impl())
+device::device(const std::vector<vulkan_requirements_fn>& requirements)
+    : impl_(new impl(requirements))
 {
     // Created after impl_ is set so the transfer service can build its
     // command_context off this fully-constructed device's queue.

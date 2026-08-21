@@ -45,7 +45,7 @@ class device final
     , public accelerator_device
 {
   public:
-    device();
+    explicit device(const std::vector<vulkan_requirements_fn>& requirements = {});
     ~device();
 
     device(const device&) = delete;

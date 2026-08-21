@@ -8,9 +8,16 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <functional>
 #include <future>
 #include <memory>
 #include <string>
+
+#ifdef ENABLE_VULKAN
+namespace vkb {
+struct PhysicalDevice;
+}
+#endif
 
 namespace caspar { namespace accelerator {
 
@@ -30,6 +37,10 @@ enum class accelerator_backend
 #endif
 };
 
+#ifdef ENABLE_VULKAN
+using vulkan_requirements_fn = std::function<void(vkb::PhysicalDevice&)>;
+#endif
+
 class accelerator
 {
   public:
@@ -40,6 +51,10 @@ class accelerator
     accelerator& operator=(accelerator&) = delete;
 
     void set_backend(accelerator_backend backend);
+
+#ifdef ENABLE_VULKAN
+    void add_vulkan_requirements(vulkan_requirements_fn fn);
+#endif
 
     std::unique_ptr<caspar::core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth);
 

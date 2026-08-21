@@ -7,6 +7,10 @@
 #include <common/log.h>
 
 #include <core/module_dependencies.h>
+
+#ifdef ENABLE_VULKAN
+#include <accelerator/accelerator.h>
+#endif
 ${CASPARCG_MODULE_INCLUDE_STATEMENTS}
 
 namespace caspar {
@@ -18,6 +22,11 @@ static bool intercept_command_line_args(int argc, char** argv)
 
 static void initialize_modules(const core::module_dependencies& dependencies)
 {${CASPARCG_MODULE_INIT_STATEMENTS}}
+
+#ifdef ENABLE_VULKAN
+static void register_module_vulkan_requirements([[maybe_unused]] caspar::accelerator::accelerator& acc)
+{${CASPARCG_MODULE_VULKAN_REQ_STATEMENTS}}
+#endif
 
 static void uninitialize_modules()
 {
