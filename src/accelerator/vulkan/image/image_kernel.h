@@ -24,9 +24,11 @@
 #include <core/mixer/image/blend_modes.h>
 
 #include <common/memory.h>
+#include <functional>
 #include <utility>
 #include <vulkan/vulkan.hpp>
 
+#include "../util/completion_token.h"
 #include "../util/draw_params.h"
 #include "../util/matrix.h"
 #include "../util/transforms.h"
@@ -44,6 +46,13 @@ class image_kernel final : public std::enable_shared_from_this<image_kernel>
     ~image_kernel();
 
     spl::shared_ptr<class renderpass> create_renderpass(uint32_t width, uint32_t height);
+
+    // Record + submit a one-time command buffer on the kernel's command context
+    // (the same context/timeline the render uses), returning its completion. The
+    // image_mixer drives the per-frame output finalize (the transition leaving the
+    // composited target shader-read) through this, so the finalize shares one
+    // timeline with the render.
+    completion_token record_and_submit(const std::function<void(vk::CommandBuffer)>& record);
 
     // A shared 1x1 transparent-black texture in shader-read layout, created at
     // kernel setup. Used as the GPU payload for empty frames (consumers sample a

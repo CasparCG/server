@@ -505,6 +505,11 @@ spl::shared_ptr<renderpass> image_kernel::create_renderpass(uint32_t width, uint
     return impl_->create_renderpass(width, height);
 }
 
+completion_token image_kernel::record_and_submit(const std::function<void(vk::CommandBuffer)>& record)
+{
+    return impl_->cmd_ctx_.record_and_submit(record);
+}
+
 std::shared_ptr<texture> image_kernel::empty_texture() const { return impl_->empty_texture_; }
 
 } // namespace caspar::accelerator::vulkan

@@ -22,6 +22,7 @@
 
 #include "image_kernel.h"
 
+#include "../util/barrier.h"
 #include "../util/buffer.h"
 #include "../util/device.h"
 #include "../util/renderpass.h"
@@ -104,15 +105,44 @@ class image_renderer
         auto target = pass->default_attachment();
         draw(target, std::move(layers), format_desc, pass);
 
-        pass->commit();
+        pass->commit(); // leaves `target` in eRenderingLocalRead
 
-        // No consumer wants the bytes on the host: skip the GPU->host
         if (!need_host_frame) {
+            // Finalize to the output invariant: `target` always ends in
+            // eShaderReadOnlyOptimal
+            kernel_.record_and_submit([&](vk::CommandBuffer cmd) {
+                transitionImageLayout(target->id(),
+                                      vk::ImageLayout::eRenderingLocalRead,
+                                      vk::AccessFlagBits2::eColorAttachmentWrite,
+                                      vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                      vk::ImageLayout::eShaderReadOnlyOptimal,
+                                      vk::AccessFlagBits2::eShaderRead,
+                                      vk::PipelineStageFlagBits2::eAllCommands,
+                                      cmd);
+            });
+
             return make_ready_future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>(
                 {array<const std::uint8_t>(), target});
         }
 
+        // A host consumer wants the bytes: read them back through the transfer
+        // service, which keeps the readback on its own command context (and its own
+        // queue, once transfer moves off the graphics queue). The readback leaves
+        // `target` in eTransferSrcOptimal; finalize it from there to the shader-read
+        // invariant on the kernel context — ordered after the readback by submission
+        // order on the shared queue — so a GPU-direct consumer can still sample it.
         auto readback = vulkan_->transfer().copy_async(target);
+
+        kernel_.record_and_submit([&](vk::CommandBuffer cmd) {
+            transitionImageLayout(target->id(),
+                                  vk::ImageLayout::eTransferSrcOptimal,
+                                  vk::AccessFlagBits2::eTransferRead,
+                                  vk::PipelineStageFlagBits2::eTransfer,
+                                  vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::AccessFlagBits2::eShaderRead,
+                                  vk::PipelineStageFlagBits2::eAllCommands,
+                                  cmd);
+        });
 
         return std::async(std::launch::deferred,
                           [readback = std::move(readback),
