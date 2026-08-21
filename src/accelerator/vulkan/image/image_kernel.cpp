@@ -85,11 +85,50 @@ static const double epsilon = 0.001;
 
 static const uint32_t frame_buffer_size = 3;
 
+// A 1x1 transparent-black RGBA texture, allocated device-local and cleared +
+// transitioned to shader-read on the kernel's own command_context. Used as the
+// GPU payload for empty frames and as the MoltenVK stand-in for absent planes.
+static std::shared_ptr<texture>
+create_empty_texture(const spl::shared_ptr<device>& vulkan, command_context& ctx, common::bit_depth depth)
+{
+    auto tex   = vulkan->create_texture(1, 1, 4, depth);
+    auto range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+    ctx.record_and_submit([&](vk::CommandBuffer cmd) {
+        transitionImageLayout(tex->id(),
+                              vk::ImageLayout::eUndefined,
+                              vk::AccessFlagBits2::eNone,
+                              vk::PipelineStageFlagBits2::eTopOfPipe,
+                              vk::ImageLayout::eTransferDstOptimal,
+                              vk::AccessFlagBits2::eTransferWrite,
+                              vk::PipelineStageFlagBits2::eTransfer,
+                              cmd);
+
+        cmd.clearColorImage(tex->id(),
+                            vk::ImageLayout::eTransferDstOptimal,
+                            vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}),
+                            range);
+
+        transitionImageLayout(tex->id(),
+                              vk::ImageLayout::eTransferDstOptimal,
+                              vk::AccessFlagBits2::eTransferWrite,
+                              vk::PipelineStageFlagBits2::eTransfer,
+                              vk::ImageLayout::eShaderReadOnlyOptimal,
+                              vk::AccessFlagBits2::eShaderRead,
+                              vk::PipelineStageFlagBits2::eFragmentShader,
+                              cmd);
+    });
+
+    return tex;
+}
+
 struct image_kernel::impl
 {
-    spl::shared_ptr<device>   vulkan_;
-    common::bit_depth         depth_;
-    std::shared_ptr<pipeline> pipeline_;
+    spl::shared_ptr<device>        vulkan_;
+    common::bit_depth              depth_;
+    command_context                cmd_ctx_;
+    std::shared_ptr<class texture> empty_texture_;
+    std::shared_ptr<pipeline>      pipeline_;
 
     // Output/intermediate render targets, recycled per (width,height). Kept in a
     // shared_ptr so a recycled texture's deleter can outlive this kernel without a
@@ -146,20 +185,18 @@ struct image_kernel::impl
         }
     };
 
-    // Private to this kernel's (channel's) thread: command buffers are recorded
-    // lock-free here; only the queue submit serializes (vulkan_queue's mutex).
-    command_context cmd_ctx_;
-    frame_data      frames_[frame_buffer_size];
-    uint32_t        current_frame_index_ = 0;
+    frame_data frames_[frame_buffer_size];
+    uint32_t   current_frame_index_ = 0;
 
     explicit impl(const spl::shared_ptr<device>& vulkan, common::bit_depth depth)
         : vulkan_(vulkan)
         , depth_(depth)
+        , cmd_ctx_(vulkan->getVkDevice(), vulkan->queue())
+        , empty_texture_(create_empty_texture(vulkan, cmd_ctx_, depth))
         , pipeline_(std::make_shared<pipeline>(vulkan->getVkDevice(),
                                                depth == common::bit_depth::bit8 ? vk::Format::eR8G8B8A8Unorm
                                                                                 : vk::Format::eR16G16B16A16Unorm))
         , attachment_pools_(std::make_shared<tbb::concurrent_unordered_map<size_t, attachment_queue_t>>())
-        , cmd_ctx_(vulkan->getVkDevice(), vulkan->queue())
         , frames_{frame_data{this}, frame_data{this}, frame_data{this}}
     {
     }
@@ -467,5 +504,7 @@ spl::shared_ptr<renderpass> image_kernel::create_renderpass(uint32_t width, uint
 {
     return impl_->create_renderpass(width, height);
 }
+
+std::shared_ptr<texture> image_kernel::empty_texture() const { return impl_->empty_texture_; }
 
 } // namespace caspar::accelerator::vulkan

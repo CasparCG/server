@@ -95,6 +95,9 @@ texture& texture::operator=(texture&& other)
 
 vk::ImageView texture::view() const { return impl_->imageView_; }
 
+void texture::bind(int /*index*/) {}
+void texture::unbind() {}
+
 int               texture::width() const { return impl_->width_; }
 int               texture::height() const { return impl_->height_; }
 int               texture::stride() const { return impl_->stride_; }

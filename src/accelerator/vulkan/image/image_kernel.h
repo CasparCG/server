@@ -45,6 +45,11 @@ class image_kernel final : public std::enable_shared_from_this<image_kernel>
 
     spl::shared_ptr<class renderpass> create_renderpass(uint32_t width, uint32_t height);
 
+    // A shared 1x1 transparent-black texture in shader-read layout, created at
+    // kernel setup. Used as the GPU payload for empty frames (consumers sample a
+    // valid cleared texture) and as the MoltenVK stand-in for absent planes.
+    std::shared_ptr<class texture> empty_texture() const;
+
   private:
     struct impl;
     spl::unique_ptr<impl> impl_;
