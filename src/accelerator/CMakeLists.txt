@@ -46,6 +46,7 @@ IF(ENABLE_VULKAN)
 		vulkan/util/command_context.cpp
 		vulkan/util/descriptor_pool.cpp
 		vulkan/util/device.cpp
+		vulkan/util/queue_manager.cpp
 		vulkan/util/vulkan_queue.cpp
 		vulkan/util/pipeline.cpp
 		vulkan/util/renderpass.cpp
@@ -65,6 +66,7 @@ IF(ENABLE_VULKAN)
 		vulkan/util/completion_token.h
 		vulkan/util/descriptor_pool.h
 		vulkan/util/device.h
+		vulkan/util/queue_manager.h
 		vulkan/util/vulkan_queue.h
 		vulkan/util/draw_params.h
 		vulkan/util/pipeline.h

@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "queue_manager.h"
+
 #include <accelerator/accelerator.h>
 #include <common/array.h>
 #include <common/bit_depth.h>
@@ -53,7 +55,13 @@ class device final
     vk::PhysicalDeviceMemoryProperties getMemoryProperties();
     vk::Device                         getVkDevice() const;
     std::shared_ptr<vulkan_queue>      queue();
-    class transfer&                    transfer();
+    // Hand out the queue dedicated to a kind of work (transfer/compute/video), so a
+    // client (e.g. the screen consumer, hw decode) can run off the render queue.
+    // Transfer/compute collapse to queue() on hardware without a dedicated family;
+    // a video type returns nullptr when the hardware can't do it. Internally
+    // synchronized and shared — no reclamation, exhaustion is impossible.
+    std::shared_ptr<vulkan_queue> acquire_queue(queue_type type);
+    class transfer&               transfer();
 
     std::shared_ptr<class texture> create_texture(int width, int height, int stride, common::bit_depth depth);
     std::shared_ptr<class buffer>  create_buffer(int size, bool write);
