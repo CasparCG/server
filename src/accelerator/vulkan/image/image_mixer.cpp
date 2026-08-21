@@ -52,14 +52,18 @@
 
 namespace caspar { namespace accelerator { namespace vulkan {
 
-using future_texture = std::shared_future<std::shared_ptr<texture>>;
+// Textures are created eagerly (transfer::copy_async returns the texture directly, GPU ordering
+// rides the handoff/timeline token), so we carry the resolved texture — no future wrapper, no CPU
+// wait. This is Vulkan-internal; the cross-accelerator boundary is the type-erased const_frame
+// opaque() (std::any). The OGL accelerator keeps its own genuinely-async future_texture.
+using texture_ptr = std::shared_ptr<texture>;
 
 struct item
 {
-    core::pixel_format_desc     pix_desc = core::pixel_format_desc(core::pixel_format::invalid);
-    std::vector<future_texture> textures;
-    draw_transforms             transforms;
-    core::frame_geometry        geometry = core::frame_geometry::get_default();
+    core::pixel_format_desc  pix_desc = core::pixel_format_desc(core::pixel_format::invalid);
+    std::vector<texture_ptr> textures;
+    draw_transforms          transforms;
+    core::frame_geometry     geometry = core::frame_geometry::get_default();
 };
 
 struct layer
@@ -233,8 +237,8 @@ class image_renderer
         draw_params.aspect_ratio =
             static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height);
 
-        for (auto& future_texture : item.textures) {
-            draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
+        for (auto& tex : item.textures) {
+            draw_params.textures.push_back(spl::make_shared_ptr(tex));
         }
 
         if (draw_params.transforms.image_transform
@@ -353,10 +357,10 @@ struct image_mixer::impl
         item.transforms = transform_stack_.back();
         item.geometry   = frame.geometry();
 
-        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<texture_ptr>>>(&frame.opaque());
 
-        if (textures_ptr) {
-            item.textures = *textures_ptr;
+        if (textures_ptr && *textures_ptr) {
+            item.textures = **textures_ptr;
         } else {
             for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
                 item.textures.emplace_back(vulkan_->transfer().copy_async(frame.image_data(n),
@@ -406,14 +410,13 @@ struct image_mixer::impl
                                        if (!self) {
                                            return std::any{};
                                        }
-                                       std::vector<future_texture> textures;
+                                       std::vector<texture_ptr> textures;
                                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                                           textures.emplace_back(
-                                               self->vulkan_->transfer().copy_async(image_data[n],
-                                                                                    desc.planes[n].width,
-                                                                                    desc.planes[n].height,
-                                                                                    desc.planes[n].stride,
-                                                                                    desc.planes[n].depth));
+                                           textures.emplace_back(self->vulkan_->transfer().copy_async(image_data[n],
+                                                                                                      desc.planes[n].width,
+                                                                                                      desc.planes[n].height,
+                                                                                                      desc.planes[n].stride,
+                                                                                                      desc.planes[n].depth));
                                        }
                                        return std::make_shared<decltype(textures)>(std::move(textures));
                                    });

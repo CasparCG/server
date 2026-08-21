@@ -46,7 +46,7 @@ transfer::transfer(device& device)
 
 transfer::~transfer() {}
 
-std::future<std::shared_ptr<texture>>
+std::shared_ptr<texture>
 transfer::copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth)
 {
     std::shared_ptr<buffer> buf;
@@ -101,7 +101,7 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
     handoff.completion = token;
     tex->set_pending_handoff(handoff);
 
-    return make_ready_future(std::move(tex));
+    return tex;
 }
 
 handoff_token transfer::readback_handoff() const

@@ -54,7 +54,7 @@ class transfer final
     // Upload (h->d). Records + submits synchronously on the caller's thread and
     // returns a ready future: no host readback, so no CPU wait — GPU consumers of
     // the texture are ordered by the memory barriers, not by the CPU.
-    std::future<std::shared_ptr<texture>>
+    std::shared_ptr<texture>
     copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth);
 
     // Build the render->transfer hand-off that moves a composited target onto this
