@@ -153,6 +153,7 @@ casparcg_add_runtime_dependency("${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
 
 IF(ENABLE_VULKAN)
 	find_package(Vulkan REQUIRED)
+	# find_package(glfw3 REQUIRED)
 
 	FetchContent_Declare(vk_bootstrap
 			URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.zip

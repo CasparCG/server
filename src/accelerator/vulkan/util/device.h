@@ -54,6 +54,8 @@ class device final
 
     vk::PhysicalDeviceMemoryProperties getMemoryProperties();
     vk::Device                         getVkDevice() const;
+    vk::Instance                       instance() const;
+    vk::PhysicalDevice                 physical_device() const;
     std::shared_ptr<vulkan_queue>      queue();
     // Hand out the queue dedicated to a kind of work (transfer/compute/video), so a
     // client (e.g. the screen consumer, hw decode) can run off the render queue.

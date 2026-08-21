@@ -21,6 +21,8 @@
 
 #include "screen_consumer.h"
 
+#include "../util/config.h"
+
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
 
@@ -32,7 +34,6 @@
 #include <common/memory.h>
 #include <common/param.h>
 #include <common/timer.h>
-#include <common/timespan.h>
 #include <common/utf.h>
 
 #include <core/consumer/channel_info.h>
@@ -69,52 +70,6 @@ std::unique_ptr<accelerator::ogl::shader> get_shader()
     return std::make_unique<accelerator::ogl::shader>(std::string(reinterpret_cast<const char*>(vertex_shader)),
                                                       std::string(reinterpret_cast<const char*>(fragment_shader)));
 }
-
-enum class stretch
-{
-    none,
-    uniform,
-    fill,
-    uniform_to_fill
-};
-
-struct configuration
-{
-    enum class aspect_ratio
-    {
-        aspect_4_3 = 0,
-        aspect_16_9,
-        aspect_invalid,
-    };
-
-    enum class colour_spaces
-    {
-        RGB               = 0,
-        datavideo_full    = 1,
-        datavideo_limited = 2
-    };
-
-    std::wstring    name          = L"Screen consumer";
-    int             screen_index  = 0;
-    int             screen_x      = 0;
-    int             screen_y      = 0;
-    int             screen_width  = 0;
-    int             screen_height = 0;
-    screen::stretch stretch       = screen::stretch::fill;
-    bool            windowed      = true;
-    bool            key_only      = false;
-    bool            sbs_key       = false;
-    aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
-    bool            vsync         = false;
-    bool            interactive   = true;
-    bool            borderless    = false;
-    bool            always_on_top = false;
-    colour_spaces   colour_space  = colour_spaces::RGB;
-    bool            high_bitdepth = false;
-    bool            gpu_texture   = false;
-
-    timespan        delay;
-};
 
 struct frame
 {
@@ -199,11 +154,12 @@ struct screen_consumer
         }
 
         auto delay_frames = config_.delay.in_frames(format_desc_.fps);
-        delay_frames = std::clamp<int>(delay_frames, 0, format_desc_.fps);
+        delay_frames      = std::clamp<int>(delay_frames, 0, format_desc_.fps);
         CASPAR_LOG(info) << print() << " Latency: " << delay_frames << " frames";
 
         frame_buffer_.set_capacity(delay_frames + 1);
-        while (delay_frames--) frame_buffer_.push(core::const_frame{});
+        while (delay_frames--)
+            frame_buffer_.push(core::const_frame{});
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -792,49 +748,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         return core::frame_consumer::empty();
     }
 
-    configuration config;
-
-    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
-
-    if (params.size() > 1) {
-        try {
-            config.screen_index = std::stoi(params.at(1));
-        } catch (...) {
-        }
-    }
-
-    config.windowed    = !contains_param(L"FULLSCREEN", params);
+    auto config        = parse_consumer_params(params, channel_info);
     config.gpu_texture = contains_param(L"GPU", params);
-    config.key_only    = contains_param(L"KEY_ONLY", params);
-    config.sbs_key     = contains_param(L"SBS_KEY", params);
-    config.interactive = !contains_param(L"NON_INTERACTIVE", params);
-    config.borderless  = contains_param(L"BORDERLESS", params);
-
-    if (contains_param(L"NAME", params)) {
-        config.name = get_param(L"NAME", params);
-    }
-
-    if (contains_param(L"X", params)) {
-        config.screen_x = get_param(L"X", params, 0);
-    }
-    if (contains_param(L"Y", params)) {
-        config.screen_y = get_param(L"Y", params, 0);
-    }
-    if (contains_param(L"WIDTH", params)) {
-        config.screen_width = get_param(L"WIDTH", params, 0);
-    }
-    if (contains_param(L"HEIGHT", params)) {
-        config.screen_height = get_param(L"HEIGHT", params, 0);
-    }
-
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
-    }
-
-    if (contains_param(L"DELAY", params)) {
-        config.delay = timespan{ u8(get_param(L"DELAY", params, L"")) };
-    }
 
     return spl::make_shared<screen_consumer_proxy>(config);
 }
@@ -845,68 +760,8 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    configuration config;
-
-    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
-
-    config.name          = ptree.get(L"name", config.name);
-    config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
-    config.screen_x      = ptree.get(L"x", config.screen_x);
-    config.screen_y      = ptree.get(L"y", config.screen_y);
-    config.screen_width  = ptree.get(L"width", config.screen_width);
-    config.screen_height = ptree.get(L"height", config.screen_height);
-    config.windowed      = ptree.get(L"windowed", config.windowed);
-    config.key_only      = ptree.get(L"key-only", config.key_only);
-    config.sbs_key       = ptree.get(L"sbs-key", config.sbs_key);
-    config.vsync         = ptree.get(L"vsync", config.vsync);
-    config.interactive   = ptree.get(L"interactive", config.interactive);
-    config.borderless    = ptree.get(L"borderless", config.borderless);
-    config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
-    config.gpu_texture   = ptree.get(L"gpu-texture", config.gpu_texture);
-
-    auto colour_space_value = ptree.get(L"colour-space", L"RGB");
-    config.colour_space     = configuration::colour_spaces::RGB;
-    if (colour_space_value == L"datavideo-full")
-        config.colour_space = configuration::colour_spaces::datavideo_full;
-    else if (colour_space_value == L"datavideo-limited")
-        config.colour_space = configuration::colour_spaces::datavideo_limited;
-
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.sbs_key) {
-        CASPAR_LOG(warning) << L" Side-by-side fill and key not supported for DataVideo TC100/TC200. Ignored.";
-        config.sbs_key = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.key_only) {
-        CASPAR_LOG(warning) << L" Key only not supported for DataVideo TC100/TC200. Ignored.";
-        config.key_only = false;
-    }
-
-    auto stretch_str = ptree.get(L"stretch", L"fill");
-    if (stretch_str == L"none") {
-        config.stretch = screen::stretch::none;
-    } else if (stretch_str == L"uniform") {
-        config.stretch = screen::stretch::uniform;
-    } else if (stretch_str == L"uniform_to_fill") {
-        config.stretch = screen::stretch::uniform_to_fill;
-    }
-
-    auto aspect_str = ptree.get(L"aspect-ratio", L"default");
-    if (aspect_str == L"16:9") {
-        config.aspect = configuration::aspect_ratio::aspect_16_9;
-    } else if (aspect_str == L"4:3") {
-        config.aspect = configuration::aspect_ratio::aspect_4_3;
-    }
-
-    config.delay = timespan{ u8(ptree.get(L"delay", L"0")) };
+    auto config        = parse_preconfigured_consumer(ptree, channel_info);
+    config.gpu_texture = ptree.get(L"gpu-texture", config.gpu_texture);
 
     return spl::make_shared<screen_consumer_proxy>(config);
 }

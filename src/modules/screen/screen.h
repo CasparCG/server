@@ -23,8 +23,18 @@
 
 #include <core/module_dependencies.h>
 
+#ifdef ENABLE_VULKAN
+namespace vkb {
+struct PhysicalDevice;
+} // namespace vkb
+#endif
+
 namespace caspar { namespace screen {
 
 void init(const core::module_dependencies& dependencies);
+
+#ifdef ENABLE_VULKAN
+void register_vulkan_requirements(vkb::PhysicalDevice& pd);
+#endif
 
 }} // namespace caspar::screen

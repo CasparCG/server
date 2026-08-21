@@ -44,6 +44,7 @@ endif()
 
 IF (ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
+    find_package(glfw3 REQUIRED) # window/swapchain for the Vulkan screen consumer
 
     FetchContent_Declare(vk_bootstrap
             URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.tar.gz

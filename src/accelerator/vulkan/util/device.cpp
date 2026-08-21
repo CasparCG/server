@@ -121,6 +121,26 @@ struct device::impl : public std::enable_shared_from_this<impl>
                                     .set_headless(true)
                                     .set_engine_name("CasparCG")
                                     .require_api_version(VK_API_VERSION_1_3);
+
+        // Enable the surface-creation instance extensions when the loader reports
+        // them available, so consumers (e.g. the screen consumer) can present to a
+        // window. Enabling the available extensions here is purely additive.
+        if (auto sys_info = vkb::SystemInfo::get_system_info()) {
+            const char* surface_extensions[] = {
+                "VK_KHR_surface",
+                "VK_EXT_metal_surface",
+                "VK_KHR_win32_surface",
+                "VK_KHR_xlib_surface",
+                "VK_KHR_xcb_surface",
+                "VK_KHR_wayland_surface",
+            };
+            for (const auto* ext : surface_extensions) {
+                if (sys_info->is_extension_available(ext)) {
+                    instance_builder.enable_extension(ext);
+                }
+            }
+        }
+
         auto instance_ret = instance_builder.build();
         if (!instance_ret) {
             CASPAR_THROW_EXCEPTION(caspar_exception()
@@ -457,6 +477,8 @@ device::~device() {}
 
 vk::PhysicalDeviceMemoryProperties device::getMemoryProperties() { return impl_->_memoryProperties; }
 vk::Device                         device::getVkDevice() const { return impl_->_device; }
+vk::Instance                       device::instance() const { return vk::Instance(impl_->_vkb_instance.instance); }
+vk::PhysicalDevice                 device::physical_device() const { return impl_->_physical_device; }
 std::shared_ptr<vulkan_queue>      device::queue() { return impl_->queue_manager_->primary(); }
 std::shared_ptr<vulkan_queue> device::acquire_queue(queue_type type) { return impl_->queue_manager_->acquire(type); }
 class transfer&               device::transfer() { return *impl_->transfer_; }
