@@ -79,9 +79,12 @@ class gpu_frame_factory
     create_producer_texture(int width, int height, int stride, common::bit_depth depth) = 0;
 
     // Mint a fresh command_context on the dedicated queue for `queue` (the render queue's alias when
-    // the hardware has no dedicated family; null for an unsupported video queue). The caller OWNS it —
-    // hold it for the producer's lifetime. Get its queue back via command_context::queue() to build
-    // the producer->render hand-off with make_producer_handoff(*ctx->queue(), ...).
+    // the hardware has no dedicated family; null for an unsupported video queue). The producer holds
+    // it for its lifetime and simply lets it drop on destruction — it must NOT block or tear it down
+    // itself: the render queue may still be waiting on completion_tokens the context's timeline
+    // signalled, so the returned shared_ptr carries a deleter that hands the context back to the mixer
+    // for deferred destruction once the GPU has drained it. Get its queue back via
+    // command_context::queue() to build the producer->render hand-off with make_producer_handoff().
     virtual std::shared_ptr<command_context> create_command_context(queue_type queue) = 0;
 
     // Build the producer->render hand-off for a texture the producer is about to release. The

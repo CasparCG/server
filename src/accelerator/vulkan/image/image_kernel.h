@@ -65,6 +65,11 @@ class image_kernel final : public std::enable_shared_from_this<image_kernel>
     // valid cleared texture) and as the MoltenVK stand-in for absent planes.
     std::shared_ptr<class texture> empty_texture() const;
 
+    // The completion of the most recent render submit ({timeline, last value}) on the kernel's
+    // command context. A snapshot of the render queue's in-flight work, used to defer destruction of
+    // a producer's command_context until any render batch still waiting on its tokens has drained.
+    completion_token render_completion();
+
   private:
     struct impl;
     spl::unique_ptr<impl> impl_;

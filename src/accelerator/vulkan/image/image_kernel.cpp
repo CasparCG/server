@@ -520,4 +520,6 @@ completion_token image_kernel::record_and_submit(const std::function<void(vk::Co
 
 std::shared_ptr<texture> image_kernel::empty_texture() const { return impl_->empty_texture_; }
 
+completion_token image_kernel::render_completion() { return impl_->cmd_ctx_.current_completion(); }
+
 } // namespace caspar::accelerator::vulkan

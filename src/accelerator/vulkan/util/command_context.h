@@ -45,8 +45,8 @@ class vulkan_queue;
 // the inflight ring and the timeline value. wait() is deliberately left
 // lock-free — it only reads the semaphore via a self-contained completion_token,
 // touching no mutable state, so a host readback can block without serializing
-// other submitters. The owner must ensure the device is idle before destruction
-// (the dtor does not waitIdle).
+// other submitters. The owner must ensure this context's work is complete before
+// destruction (the dtor does not wait) — call wait_idle() first.
 class command_context final
 {
   public:
@@ -73,6 +73,17 @@ class command_context final
     // Block until the token's value is reached (or timeout). True on success;
     // an empty token is already complete.
     bool wait(const completion_token& token, uint64_t timeout_ns = 1'000'000'000) const;
+
+    // Block until every submission made on this context has completed, so the owner can destroy it
+    // safely (the dtor itself does not wait — see class note). Waits only this context's own timeline,
+    // not the whole device, so it is safe to call while other queues stay busy. No-op if nothing was
+    // ever submitted.
+    bool wait_idle(uint64_t timeout_ns = UINT64_MAX);
+
+    // The completion of the most recent submit on this context ({timeline, last signalled value}; an
+    // empty-valued token if nothing was ever submitted). A snapshot for polling drain progress
+    // without blocking (vkGetSemaphoreCounterValue) — e.g. deferred command_context destruction.
+    completion_token current_completion();
 
     // The queue this context records and submits on, so a producer can build a
     // hand-off (make_handoff(*ctx->queue(), render_queue, ...)) without a separate

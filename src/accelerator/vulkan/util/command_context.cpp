@@ -134,4 +134,15 @@ bool command_context::wait(const completion_token& token, uint64_t timeout_ns) c
     return device_.waitSemaphores(wait_info, timeout_ns) == vk::Result::eSuccess;
 }
 
+bool command_context::wait_idle(uint64_t timeout_ns)
+{
+    return wait(current_completion(), timeout_ns);
+}
+
+completion_token command_context::current_completion()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return completion_token{timeline_, value_}; // value_ is 0 until the first submit
+}
+
 }}} // namespace caspar::accelerator::vulkan

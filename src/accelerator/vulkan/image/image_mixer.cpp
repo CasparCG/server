@@ -50,7 +50,10 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include <algorithm>
 #include <any>
+#include <memory>
+#include <mutex>
 #include <vector>
 
 namespace caspar { namespace accelerator { namespace vulkan {
@@ -163,6 +166,8 @@ class image_renderer
     }
 
     common::bit_depth depth() const { return depth_; }
+
+    completion_token render_completion() { return kernel_.render_completion(); }
 
   private:
     void draw(std::shared_ptr<texture>&      target_texture,
@@ -304,11 +309,23 @@ struct image_mixer::impl
     : public core::frame_factory
     , public std::enable_shared_from_this<impl>
 {
+    // A producer-owned command_context awaiting deferred destruction: kept alive until the GPU has
+    // drained both its own work (`self`) and the render queue's work in flight when it was handed back
+    // (`render_barrier`) — which may still wait on the completion_tokens its timeline signalled.
+    struct retired_context
+    {
+        std::unique_ptr<command_context> ctx;
+        completion_token                 self;
+        completion_token                 render_barrier;
+    };
+
     spl::shared_ptr<device>      vulkan_;
     image_renderer               renderer_;
     std::vector<draw_transforms> transform_stack_;
     std::vector<layer>           layers_; // layer/stream/items
     std::vector<layer*>          layer_stack_;
+    std::mutex                   retire_mutex_;
+    std::vector<retired_context> retired_;
 
     double aspect_ratio_ = 1.0;
 
@@ -322,6 +339,15 @@ struct image_mixer::impl
         , transform_stack_(1)
     {
         CASPAR_LOG(info) << L"Initialized Vulkan Accelerated GPU Image Mixer for channel " << channel_id;
+    }
+
+    ~impl()
+    {
+        // Destroy any producer contexts still awaiting drain. The render thread has stopped by now, so
+        // idle the device — command_context's dtor does not wait, and a retired one may not have been
+        // polled to completion yet.
+        vulkan_->getVkDevice().waitIdle();
+        retired_.clear();
     }
 
     void update_aspect_ratio(double aspect_ratio) { aspect_ratio_ = aspect_ratio; }
@@ -389,6 +415,7 @@ struct image_mixer::impl
     std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>
     render(const core::video_format_desc& format_desc, bool need_host_frame)
     {
+        drain_retired(); // reclaim any producer contexts the GPU has finished with
         return renderer_(std::move(layers_), format_desc, need_host_frame);
     }
 
@@ -451,7 +478,40 @@ struct image_mixer::impl
         auto q = vulkan_->acquire_queue(queue);
         if (!q)
             return nullptr;
-        return std::make_shared<command_context>(vulkan_->getVkDevice(), q);
+        // The producer holds this for its lifetime but must NOT destroy it inline: when it dies the
+        // render queue may still be waiting on completion_tokens this context's timeline signalled, so
+        // tearing down the timeline semaphore would be use-after-free. The custom deleter hands it back
+        // for deferred destruction once the GPU has drained that work (see retire_command_context).
+        auto* raw = new command_context(vulkan_->getVkDevice(), q);
+        return std::shared_ptr<command_context>(raw, [this](command_context* ctx) { retire_command_context(ctx); });
+    }
+
+    // Take ownership of a producer's expired command_context (called from its shared_ptr deleter) and
+    // queue it for destruction once the GPU is done with it. Snapshots the drain conditions now;
+    // drain_retired() polls them on the render thread.
+    void retire_command_context(command_context* ctx)
+    {
+        completion_token self           = ctx->current_completion();    // this context's own submits
+        completion_token render_barrier = renderer_.render_completion(); // render work that may await it
+
+        std::lock_guard<std::mutex> lock(retire_mutex_);
+        retired_.push_back({std::unique_ptr<command_context>(ctx), self, render_barrier});
+    }
+
+    // Destroy every retired context whose drain conditions the GPU has now passed. Non-blocking
+    // (vkGetSemaphoreCounterValue only); called once per render tick from render().
+    void drain_retired()
+    {
+        auto device  = vulkan_->getVkDevice();
+        auto reached = [&](const completion_token& t) {
+            return !t.timeline || device.getSemaphoreCounterValue(t.timeline) >= t.value;
+        };
+
+        std::lock_guard<std::mutex> lock(retire_mutex_);
+        retired_.erase(std::remove_if(retired_.begin(),
+                                      retired_.end(),
+                                      [&](retired_context& r) { return reached(r.self) && reached(r.render_barrier); }),
+                       retired_.end());
     }
 
     handoff_token make_producer_handoff(const vulkan_queue&     producer_queue,
