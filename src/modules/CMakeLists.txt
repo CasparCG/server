@@ -5,9 +5,12 @@ add_subdirectory(image)
 add_subdirectory(ffmpeg)
 add_subdirectory(oal)
 add_subdirectory(decklink)
-add_subdirectory(screen)
 add_subdirectory(newtek)
 add_subdirectory(artnet)
+
+if(NOT DEFINED APPLE)
+	add_subdirectory(screen)
+endif()
 
 if (ENABLE_HTML)
 	add_subdirectory(html)

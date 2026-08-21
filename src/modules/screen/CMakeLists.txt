@@ -19,6 +19,7 @@ bin2c("consumer/screen.vert" "consumer_screen_vertex.h" "caspar::screen" "vertex
 bin2c("consumer/screen.frag" "consumer_screen_fragment.h" "caspar::screen" "fragment_shader")
 
 if (MSVC)
+elseif(APPLE)
 else ()
 	list(APPEND SOURCES
 		util/x11_util.cpp

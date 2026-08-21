@@ -152,11 +152,12 @@ class context : public drawable
                 window_->setActive();
                 window_->setVerticalSyncEnabled(true);
                 calculate_view_ = true;
+#ifndef __APPLE__
                 glEnable(GL_BLEND);
                 glEnable(GL_LINE_SMOOTH);
                 glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+#endif
                 tick();
             }
         } else
@@ -356,16 +357,18 @@ class line : public drawable
                 target.draw(connecting_line, states);
             }
         } else {
+#ifndef __APPLE__
             glEnable(GL_LINE_STIPPLE);
             glLineStipple(3, 0xAAAA);
-
+#endif
             for (size_t n = 0; n < line_tags_.size(); ++n) {
                 if (line_tags_[n]) {
                     target.draw(*line_tags_[n], states);
                 }
             }
-
+#ifndef __APPLE__
             glDisable(GL_LINE_STIPPLE);
+#endif
         }
     }
 
@@ -492,15 +495,17 @@ struct graph
             result.append(sf::Vertex(sf::Vector2f(1.0f, 0.1f), guide_color));
             return result;
         }();
-
+#ifndef __APPLE__
         glEnable(GL_LINE_STIPPLE);
         glLineStipple(3, 0xAAAA);
-
+#endif
         target.draw(middle_guide, states);
         target.draw(bottom_guide, states);
         target.draw(top_guide, states);
 
+#ifndef __APPLE__
         glDisable(GL_LINE_STIPPLE);
+#endif
 
         for (auto it = lines_.begin(); it != lines_.end(); ++it) {
             target.draw(it->second, states);

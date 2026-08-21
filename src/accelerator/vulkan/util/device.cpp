@@ -120,7 +120,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
                                     .set_app_name("CasparCG")
                                     .set_headless(true)
                                     .set_engine_name("CasparCG")
+#ifdef __APPLE__
+                                    .require_api_version(VK_API_VERSION_1_4);
+#else
                                     .require_api_version(VK_API_VERSION_1_3);
+#endif
 
         // Enable the surface-creation instance extensions when the loader reports
         // them available, so consumers (e.g. the screen consumer) can present to a

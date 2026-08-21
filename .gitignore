@@ -19,3 +19,6 @@ src/.idea
 # debian build artifacts
 /debian
 /obj-*
+
+# macos specific
+.DS_Store

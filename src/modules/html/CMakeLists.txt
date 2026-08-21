@@ -25,6 +25,17 @@ target_include_directories(html PRIVATE
 	${FFMPEG_INCLUDE_PATH}
 )
 
+# On Mac, override problematic CEF compiler flags that conflict with CasparCG code
+if(APPLE)
+    # Remove CEF's restrictive flags that break CasparCG compilation
+    target_compile_options(html PRIVATE 
+        -fexceptions        # Override CEF's -fno-exceptions
+        -frtti              # Override CEF's -fno-rtti
+        -Wno-newline-eof    # Disable newline warnings
+        -Wno-unknown-pragmas # Ignore MSVC-specific pragmas
+    )
+endif()
+
 set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)

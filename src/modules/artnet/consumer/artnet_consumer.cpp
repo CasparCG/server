@@ -161,12 +161,15 @@ struct artnet_consumer : public core::frame_consumer
     core::monitor::state state() const override
     {
         core::monitor::state state;
+#ifndef __APPLE__
+        // TODO: Fix for Apple platforms
         state["artnet/computed-fixtures"] = computed_fixtures.size();
         state["artnet/fixtures"]          = config.fixtures.size();
-        state["artnet/universe"]          = config.universe;
-        state["artnet/host"]              = config.host;
-        state["artnet/port"]              = config.port;
-        state["artnet/refresh-rate"]      = config.refreshRate;
+#endif
+        state["artnet/universe"]     = config.universe;
+        state["artnet/host"]         = config.host;
+        state["artnet/port"]         = config.port;
+        state["artnet/refresh-rate"] = config.refreshRate;
 
         return state;
     }

@@ -81,7 +81,12 @@ set(HEADERS
 casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(core PRIVATE ..)
 target_precompile_headers(core PRIVATE StdAfx.h)
-target_link_libraries(core PRIVATE common GLEW::glew sfml-graphics)
+
+target_link_libraries(core PRIVATE common sfml-graphics)
+
+if(NOT APPLE)
+		target_link_libraries(core PRIVATE GLEW::glew)
+endif()
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)

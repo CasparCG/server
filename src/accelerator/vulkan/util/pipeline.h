@@ -47,7 +47,9 @@ class pipeline final
     pipeline& operator=(const pipeline&);
 
   public:
-    pipeline(vk::Device device, vk::Format format);
+    // dummy_view is a valid sampled image view used to stand in for absent plane
+    // textures on MoltenVK, which does not support null descriptors.
+    pipeline(vk::Device device, vk::Format format, vk::ImageView dummy_view);
     ~pipeline();
 
     // Write `descriptorSet` (allocated by the caller for this draw) with the

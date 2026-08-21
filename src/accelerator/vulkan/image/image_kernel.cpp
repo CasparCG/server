@@ -196,7 +196,8 @@ struct image_kernel::impl
         , empty_texture_(create_empty_texture(vulkan, cmd_ctx_, depth))
         , pipeline_(std::make_shared<pipeline>(vulkan->getVkDevice(),
                                                depth == common::bit_depth::bit8 ? vk::Format::eR8G8B8A8Unorm
-                                                                                : vk::Format::eR16G16B16A16Unorm))
+                                                                                : vk::Format::eR16G16B16A16Unorm,
+                                               empty_texture_->view()))
         , attachment_pools_(std::make_shared<tbb::concurrent_unordered_map<size_t, attachment_queue_t>>())
         , frames_{frame_data{this}, frame_data{this}, frame_data{this}}
     {

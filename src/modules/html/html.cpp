@@ -37,13 +37,22 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
+#ifdef __APPLE__
+#include <boost/dll/runtime_symbol_info.hpp>
+#include <dispatch/dispatch.h>
+#endif
+
+#pragma warning(push)
+#pragma warning(disable : 4458)
 #include <include/cef_api_hash.h>
 #include <include/cef_app.h>
 #include <include/cef_version.h>
 #include <include/cef_version_info.h>
+#pragma warning(pop)
 
 #ifdef WIN32
 #include <accelerator/d3d/d3d_device.h>
@@ -81,6 +90,13 @@ extern "C" struct mallinfo mallinfo(void)
 namespace caspar::html {
 
 std::unique_ptr<executor> g_cef_executor;
+#ifdef __APPLE__
+// On macOS CEF runs on the main application thread and is pumped cooperatively
+// by the shell's main loop (see caspar_html_tick). This tracks whether
+// CefInitialize has succeeded so the tick/shutdown hooks are safe no-ops
+// before init and after shutdown.
+std::atomic<bool> g_cef_running{false};
+#endif
 
 void caspar_log(const CefRefPtr<CefBrowser>&        browser,
                 boost::log::trivial::severity_level level,
@@ -131,6 +147,7 @@ class remove_handler : public CefV8Handler
 
 class renderer_application
     : public CefApp
+    , public CefBrowserProcessHandler
     , CefRenderProcessHandler
 {
     std::vector<CefRefPtr<CefV8Context>> contexts_;
@@ -145,6 +162,22 @@ class renderer_application
     }
 
     CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
+
+#ifdef __APPLE__
+    CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override { return this; }
+
+    void OnScheduleMessagePumpWork(int64_t delay_ms) override
+    {
+        // external_message_pump: schedule a single CefDoMessageLoopWork() on the
+        // main thread after |delay_ms|. The shell's run loop services the main
+        // GCD queue, so the work runs on the CEF UI (main) thread.
+        dispatch_after_f(
+            dispatch_time(DISPATCH_TIME_NOW, delay_ms * 1000000LL), dispatch_get_main_queue(), nullptr, [](void*) {
+                if (g_cef_running)
+                    CefDoMessageLoopWork();
+            });
+    }
+#endif
 
     void
     OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
@@ -204,8 +237,11 @@ class renderer_application
         if (enable_gpu_) {
             command_line->AppendSwitch("enable-webgl");
 
-            auto default_backend = L""; // Let CEF choose what is best
-#if __unix__
+            auto default_backend = L"";
+#if __APPLE__
+            // macOS: prefer Metal backend via ANGLE for best performance
+            default_backend = L"metal";
+#elif __unix__
             // If there is no X server, Chromium requires us to force it to the angle backend
             if (getenv("DISPLAY") == nullptr)
                 default_backend = L"vulkan";
@@ -218,7 +254,8 @@ class renderer_application
             }
         }
 
-#if __unix__
+#if defined(__unix__) && !defined(__APPLE__)
+        // Linux: If there is no X server, use headless ozone platform
         if (getenv("DISPLAY") == nullptr) {
             command_line->AppendSwitchWithValue("ozone-platform", "headless");
         }
@@ -241,6 +278,15 @@ class renderer_application
         // for the same class of crash, kept as a defense in depth.
         command_line->AppendSwitch("disable-component-update");
         command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
+
+#ifdef __APPLE__
+        // macOS: Use mock keychain to prevent "Chromium Safe Storage" keychain permission dialog
+        command_line->AppendSwitch("use-mock-keychain");
+
+        // macOS: Run GPU thread in main process to avoid subprocess launch failures
+        // CEF's GPU subprocess can fail to launch on macOS due to signing/sandbox issues
+        command_line->AppendSwitch("in-process-gpu");
+#endif
 
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
@@ -284,8 +330,8 @@ void init(const core::module_dependencies& dependencies)
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
-    g_cef_executor = std::make_unique<executor>(L"cef");
-    bool result    = g_cef_executor->invoke([&] {
+
+    auto initialize_cef = [&]() -> bool {
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
@@ -297,6 +343,81 @@ void init(const core::module_dependencies& dependencies)
         settings.remote_debugging_port        = env::properties().get(L"configuration.html.remote-debugging-port", 0);
         settings.windowless_rendering_enabled = true;
 
+#ifdef __APPLE__
+        // macOS: CEF's default UI message pump calls [NSApplication run], which
+        // collides with the shell's own main-thread event pump. external_message_pump
+        // switches CEF to a pump driven by CefDoMessageLoopWork() (see caspar_html_tick)
+        // and OnScheduleMessagePumpWork(), so it never calls [NSApp run] itself.
+        settings.external_message_pump = true;
+
+        // macOS: Configure paths for both app bundle and flat deployment
+        // Get executable path and derive framework/resource locations
+        auto exe_path = boost::dll::program_location();
+        auto exe_dir  = exe_path.parent_path();
+
+        // Detect if running from an app bundle (path contains .app/Contents/MacOS)
+        auto exe_path_str  = exe_path.string();
+        bool is_app_bundle = exe_path_str.find(".app/Contents/MacOS") != std::string::npos;
+
+        boost::filesystem::path bundle_path;
+        boost::filesystem::path data_dir;
+
+        if (is_app_bundle) {
+            // App bundle: CasparCG.app/Contents/MacOS/casparcg
+            auto contents_path = exe_dir.parent_path();       // Contents
+            bundle_path        = contents_path.parent_path(); // CasparCG.app
+            data_dir           = contents_path / "Resources" / "data";
+            CASPAR_LOG(info) << "[html] Running from app bundle: " << bundle_path.string();
+        } else {
+            // Flat structure: build/shell/casparcg
+            bundle_path = exe_dir;
+            data_dir    = exe_dir / "data";
+            CASPAR_LOG(info) << "[html] Running from flat structure: " << exe_dir.string();
+        }
+
+        // Framework path is always ../Frameworks relative to executable
+        auto frameworks_path = exe_dir.parent_path() / "Frameworks";
+
+        // Framework: Contents/Frameworks/Chromium Embedded Framework.framework
+        auto framework_path = frameworks_path / "Chromium Embedded Framework.framework";
+        CefString(&settings.framework_dir_path).FromString(framework_path.string());
+
+        // Resources are inside the framework bundle on macOS
+        auto resources_path = framework_path / "Resources";
+        CefString(&settings.resources_dir_path).FromString(resources_path.string());
+        CefString(&settings.locales_dir_path).FromString(resources_path.string());
+
+        // Subprocess path: in an app bundle, CEF must spawn the dedicated helper
+        // apps - macOS won't relaunch the main bundle executable as a child
+        // process cleanly, which leaves the renderer/GPU process dead (no frames,
+        // no logs). CEF derives the (GPU)/(Renderer)/... variants from the base
+        // "<App> Helper". In a flat layout there are no helpers, so the main
+        // executable doubles as the subprocess (see intercept_command_line).
+        if (is_app_bundle) {
+            auto app_name = bundle_path.stem().string();
+            auto helper_exe =
+                frameworks_path / (app_name + " Helper.app") / "Contents" / "MacOS" / (app_name + " Helper");
+            CefString(&settings.browser_subprocess_path).FromString(helper_exe.string());
+            CASPAR_LOG(info) << "[html]   Subprocess (helper): " << helper_exe.string();
+        } else {
+            CefString(&settings.browser_subprocess_path).FromString(exe_path.string());
+        }
+
+        // Set main_bundle_path appropriately for app bundle or flat structure
+        if (is_app_bundle) {
+            CefString(&settings.main_bundle_path).FromString(bundle_path.string());
+        } else {
+            CefString(&settings.main_bundle_path).FromString(exe_dir.string());
+        }
+
+        CASPAR_LOG(info) << "[html] macOS CEF paths configured:";
+        CASPAR_LOG(info) << "[html]   App bundle: " << (is_app_bundle ? "yes" : "no");
+        CASPAR_LOG(info) << "[html]   Framework: " << framework_path.string();
+        CASPAR_LOG(info) << "[html]   Resources: " << resources_path.string();
+        CASPAR_LOG(info) << "[html]   Bundle path: " << bundle_path.string();
+#endif
+
+        // Set root_cache_path to prevent CEF from using shared keychain storage
         auto cache_path = env::properties().get(L"configuration.html.cache-path", L"cef-cache");
         if (!cache_path.empty()) {
             if (!boost::filesystem::path(cache_path).is_absolute()) {
@@ -308,7 +429,20 @@ void init(const core::module_dependencies& dependencies)
 
         return CefInitialize(
             main_args, settings, CefRefPtr<CefApp>(new renderer_application(gpu.first, gpu.second)), nullptr);
-    });
+    };
+
+#ifdef __APPLE__
+    // macOS: CEF must be initialized and pumped on the main application thread.
+    // init() runs on the main thread during server construction, so initialize
+    // here and let the shell's main loop drive CefDoMessageLoopWork() via
+    // caspar_html_tick(). Do not spin a dedicated CEF thread or run the loop.
+    bool result = initialize_cef();
+    if (result)
+        g_cef_running = true;
+#else
+    g_cef_executor = std::make_unique<executor>(L"cef");
+    bool result    = g_cef_executor->invoke(initialize_cef);
+#endif
 
     if (!result) {
         CASPAR_LOG(error) << "[html] Failed to initialize CEF";
@@ -321,7 +455,10 @@ void init(const core::module_dependencies& dependencies)
                      << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
                      << cef_api_version() << ". Built against CEF " << CEF_VERSION;
 
+#ifndef __APPLE__
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
+#endif
+
     dependencies.cg_registry->register_cg_producer(
         L"html",
         {L".html"},
@@ -332,14 +469,32 @@ void init(const core::module_dependencies& dependencies)
         false);
 }
 
+#ifdef __APPLE__
+extern "C" void caspar_html_tick()
+{
+    // Pump CEF's browser-process message loop on the main thread. No-op until
+    // CefInitialize has succeeded and after CefShutdown.
+    if (g_cef_running)
+        CefDoMessageLoopWork();
+}
+#endif
+
 void uninit()
 {
+#ifdef __APPLE__
+    if (!g_cef_running)
+        return;
+    g_cef_running = false;
+    CefShutdown();
+    return;
+#else
     if (!g_cef_executor)
         return;
 
     invoke([] { CefQuitMessageLoop(); });
     g_cef_executor->begin_invoke([&] { CefShutdown(); });
     g_cef_executor.reset();
+#endif
 }
 
 class cef_task : public CefTask

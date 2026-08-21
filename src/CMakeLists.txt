@@ -26,6 +26,9 @@ add_compile_definitions("DIAG_FONT_PATH=\"${DIAG_FONT_PATH}\"")
 # Add custom cmake modules path
 set(CASPARCG_PATCH_DIR ${CMAKE_SOURCE_DIR}/CMakeModules/patches)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
+if(APPLE)
+    list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/lib/pkgconfig)
+endif()
 
 # Determine the git hash
 find_package(Git)
@@ -48,6 +51,8 @@ configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generat
 
 if(MSVC)
     include(Bootstrap_Windows)
+elseif(APPLE)
+    include(Bootstrap_Mac)
 else ()
     include(Bootstrap_Linux)
 

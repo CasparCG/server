@@ -269,7 +269,11 @@ struct server::impl
         caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::invalid;
         auto accelerator = boost::to_lower_copy(pt.get(L"configuration.accelerator", L"auto"));
         if (accelerator == L"auto") {
+#if defined(__APPLE__)
+            backend = caspar::accelerator::accelerator_backend::vulkan;
+#else
             backend = caspar::accelerator::accelerator_backend::opengl;
+#endif
         } else if (accelerator == L"opengl") {
             backend = caspar::accelerator::accelerator_backend::opengl;
         } else if (accelerator == L"vulkan") {

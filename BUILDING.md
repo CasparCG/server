@@ -44,6 +44,27 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 4. Build All and ensure it builds successfully
 
+# MacOS
+
+## Building on your system
+
+### Install dependencies
+
+Install the following build dependencies using `brew` or similar:
+
+-   sfml@2
+-   boost
+-   tbb
+-   ffmpeg
+-   glew
+-   simde
+
+Install the VulkanSDK from: https://vulkan.lunarg.com/sdk/home#mac
+
+### Development
+
+Follow the guide for development on linux below to configure and develop using cmake.
+
 # Linux
 
 ## Building on your system

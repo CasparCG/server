@@ -1,7 +1,9 @@
 #include "accelerator.h"
 
+#if !defined(__APPLE__)
 #include "ogl/image/image_mixer.h"
 #include "ogl/util/device.h"
+#endif
 
 #ifdef ENABLE_VULKAN
 #include "vulkan/image/image_mixer.h"
@@ -44,6 +46,13 @@ struct accelerator::impl
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Accelerator backend already set"));
         }
 
+#if defined(__APPLE__)
+        if (backend != accelerator_backend::vulkan) {
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info(L"Vulkan is the only supported accelerator backend on apple hardware"));
+        }
+#endif
+
         backend_ = backend;
     }
 
@@ -68,33 +77,42 @@ struct accelerator::impl
                 depth);
         }
 #endif
-        return std::make_unique<ogl::image_mixer>(
-            spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
-            channel_id,
-            format_repository_.get_max_video_format_size(),
-            depth);
+
+#if !defined(__APPLE__)
+        if (backend_ == accelerator_backend::opengl) {
+            return std::make_unique<ogl::image_mixer>(
+                spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
+                channel_id,
+                format_repository_.get_max_video_format_size(),
+                depth);
+        }
+#endif
+
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Accelerator backend not set"));
     }
 
     std::shared_ptr<accelerator_device> get_device()
     {
-        if (backend_ == accelerator_backend::invalid) {
-            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Accelerator backend not set"));
-        }
 #ifdef ENABLE_VULKAN
         if (backend_ == accelerator_backend::vulkan) {
             if (!device_) {
                 device_ = std::dynamic_pointer_cast<accelerator_device>(
                     std::make_shared<vulkan::device>(pending_vulkan_requirements_));
             }
-
             return device_;
         }
 #endif
 
-        if (!device_) {
-            device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
+#if !defined(__APPLE__)
+        if (backend_ == accelerator_backend::opengl) {
+            if (!device_) {
+                device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
+            }
+
+            return device_;
         }
-        return device_;
+#endif
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Accelerator backend not set"));
     }
 };
 
@@ -117,5 +135,4 @@ std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(const int cha
 }
 
 std::shared_ptr<accelerator_device> accelerator::get_device() const { return impl_->get_device(); }
-
 }} // namespace caspar::accelerator

@@ -74,6 +74,9 @@ struct pipeline::impl
     vk::Device device_;
     vk::Format format_;
 
+    // Stand-in for absent plane textures on MoltenVK (no null-descriptor support).
+    vk::ImageView dummyView_;
+
     vk::Sampler             textureSampler_;
     vk::Sampler             keySampler_;
     vk::DescriptorSetLayout descriptorSetLayout_;
@@ -151,9 +154,10 @@ struct pipeline::impl
     }
 
   public:
-    impl(vk::Device device, vk::Format format)
+    impl(vk::Device device, vk::Format format, vk::ImageView dummy_view)
         : device_(device)
         , format_(format)
+        , dummyView_(dummy_view)
     {
         setup_descriptors();
 
@@ -259,8 +263,12 @@ struct pipeline::impl
         // Bind planes, local_key, and layer_key to the bindless texture array
         std::array<vk::DescriptorImageInfo, 6> textureInfos;
         for (int i = 0; i < 6; ++i) {
-            textureInfos[i].sampler     = textureSampler_;
-            textureInfos[i].imageView   = textures[i + 1];
+            textureInfos[i].sampler   = textureSampler_;
+            textureInfos[i].imageView = textures[i + 1];
+#ifdef __APPLE__
+            // moltenvk doesn't support nullDescriptors, so bind a dummy texture if the plane is not present
+            textureInfos[i].imageView = textures[i + 1] ? textures[i + 1] : dummyView_;
+#endif
             textureInfos[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         }
 
@@ -320,8 +328,8 @@ struct pipeline::impl
     }
 };
 
-pipeline::pipeline(vk::Device device, vk::Format format)
-    : impl_(new impl(device, format))
+pipeline::pipeline(vk::Device device, vk::Format format, vk::ImageView dummy_view)
+    : impl_(new impl(device, format, dummy_view))
 {
 }
 pipeline::~pipeline() {}
