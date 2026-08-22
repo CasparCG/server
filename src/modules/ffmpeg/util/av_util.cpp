@@ -185,6 +185,12 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
             return {core::pixel_format::gbrap, common::bit_depth::bit8};
         case AV_PIX_FMT_GBRAP16:
             return {core::pixel_format::gbrap, common::bit_depth::bit16};
+        case AV_PIX_FMT_NV12:
+            return {core::pixel_format::nv12, common::bit_depth::bit8};
+        // p010's 10 bits sit in the high bits of each 16-bit sample, so it samples as a
+        // plain 16-bit texture — bit10 here would apply yuv420p10's 64x scaling twice.
+        case AV_PIX_FMT_P010:
+            return {core::pixel_format::p010, common::bit_depth::bit16};
         default:
             return {core::pixel_format::invalid, common::bit_depth::bit8};
     }
@@ -257,6 +263,15 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
             if (desc.format == core::pixel_format::ycbcra)
                 desc.planes.push_back(core::pixel_format_desc::plane(linesizes[3], height, 1, depth));
 
+            return desc;
+        }
+        case core::pixel_format::nv12:
+        case core::pixel_format::p010: {
+            // Semi-planar 4:2:0: a full-res single-component luma plane and a half-res
+            // two-component chroma plane, so the second plane is half as wide in pixels
+            // even though its linesize matches the first.
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[0], height, 1, depth));
+            desc.planes.push_back(core::pixel_format_desc::plane(linesizes[1] / 2, height / 2, 2, depth));
             return desc;
         }
         case core::pixel_format::uyvy: {
@@ -343,6 +358,12 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
         case core::pixel_format::gbrp:
         case core::pixel_format::gbrap:
             // TODO
+            break;
+        case core::pixel_format::nv12:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_NV12;
+            break;
+        case core::pixel_format::p010:
+            av_frame->format = AVPixelFormat::AV_PIX_FMT_P010;
             break;
         case core::pixel_format::count:
         case core::pixel_format::invalid:

@@ -42,6 +42,8 @@ enum class pixel_format
     uyvy,
     gbrp,  // planar
     gbrap, // planar
+    nv12,  // semi-planar: full-res Y + half-res interleaved CbCr
+    p010,  // semi-planar, 10 bit in the high bits of 16: full-res Y + half-res interleaved CbCr
     count,
     invalid,
 };
@@ -109,6 +111,8 @@ inline color_space decode_color_space(const pixel_format_desc& desc)
         case pixel_format::ycbcr:
         case pixel_format::ycbcra:
         case pixel_format::uyvy:
+        case pixel_format::nv12:
+        case pixel_format::p010:
             return desc.planes.at(0).height > 700 ? color_space::bt709 : color_space::bt601;
         default:
             return color_space::bt709;

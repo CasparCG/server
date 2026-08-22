@@ -547,6 +547,18 @@ vec4 get_rgba_color()
             float a = get_sample(textures[PLANE3], uv).r * precision_factor[3];
 			return vec4(b, g, r, a);
         }
+    case 13:    // nv12
+    case 14:    // p010
+        {
+            // Semi-planar: full-res luma in PLANE0.r, half-res interleaved chroma in
+            // PLANE1.rg. The sampler resolves the 2x chroma subsampling for us, so both
+            // planes are read at the same normalised coordinate. p010 stores its 10 bits
+            // in the high bits of a 16-bit texel, which R16_UNORM already normalises to
+            // 0..1 — hence a precision_factor of 1 for both, unlike yuv420p10.
+            float y  = get_sample(textures[PLANE0], uv).r * precision_factor[0];
+            vec2  cbcr = get_sample(textures[PLANE1], uv).rg * precision_factor[1];
+            return ycbcra_to_rgba(y, cbcr.r, cbcr.g, 1.0);
+        }
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }

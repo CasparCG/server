@@ -550,6 +550,15 @@ vec4 get_rgba_color()
             float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r * precision_factor[3];
 			return vec4(b, g, r, a);
         }
+    case 13:    // nv12
+    case 14:    // p010
+        {
+            // Semi-planar: full-res luma in plane 0, half-res interleaved chroma in
+            // plane 1. See the Vulkan shader for why p010 needs no extra scaling.
+            float y    = get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0];
+            vec2  cbcr = get_sample(plane[1], TexCoord.st / TexCoord.q).rg * precision_factor[1];
+            return ycbcra_to_rgba(y, cbcr.r, cbcr.g, 1.0);
+        }
     }
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
