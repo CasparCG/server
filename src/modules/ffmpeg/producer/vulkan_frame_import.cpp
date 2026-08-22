@@ -312,7 +312,7 @@ core::draw_frame vulkan_frame_import::import(void*                            ta
     auto* frames_ctx = reinterpret_cast<AVHWFramesContext*>(video->hw_frames_ctx->data);
     auto* vk_frames  = static_cast<AVVulkanFramesContext*>(frames_ctx->hwctx);
 
-    // accepts_frames_context() already refused any format without a layout, so this only guards
+    // video_strategy::accepts() already refused any format without a layout, so this only guards
     // a decoder that changed format mid-stream.
     auto layout = mixer_layout_of(frames_ctx->sw_format, video->width, video->height, color_space);
     if (!layout) {

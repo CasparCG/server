@@ -283,17 +283,6 @@ class Decoder
     /// only known once it has chosen a pixel format (see ctx->hw_frames_ctx).
     bool claimed_by_strategy() const { return claimed_; }
 
-    bool is_eof() const { return eof; }
-
-    /// Whether the decoder has queued anything yet. get_format() runs on the first packet and
-    /// settles the output format there and then, so output without a hardware frames context
-    /// means the decoder chose software — which the hardware primer uses to stop waiting.
-    bool has_output() const
-    {
-        boost::lock_guard<boost::mutex> lock(output_mutex);
-        return !output.empty();
-    }
-
     bool want_packet() const
     {
         if (eof) {
@@ -351,18 +340,28 @@ struct Filter
     std::shared_ptr<AVFrame>        frame;
     bool                            eof = false;
 
+    /// Set on a video filter whose graph has not been built yet, because the frame that
+    /// describes its source has not been decoded yet (see Impl::configure_video_filter). Such a
+    /// filter has nothing to pull and is *not* at end of file; the producer's ordinary "waiting
+    /// for a frame" path covers the gap, which is why there is no separate wait anywhere.
+    bool pending = false;
+
     Filter() = default;
 
     /// `strategy` is the video strategy for AVMEDIA_TYPE_VIDEO and null for audio. It decides
     /// the deinterlacer, the formats the sink may end in, and — through the decoder it opened —
     /// whether the source carries hardware frames.
+    /// `source_frame` is the first frame the video decoder produced, and is what the graph's
+    /// video source is described from. It is null for audio, and for the rare video graph that
+    /// reads more than one stream — see the comment where it is used.
     Filter(std::string                    filter_spec,
            const Input&                   input,
            std::map<int, Decoder>&        streams,
            int64_t                        start_time,
            AVMediaType                    media_type,
            const core::video_format_desc& format_desc,
-           video_strategy*                strategy)
+           video_strategy*                strategy,
+           const AVFrame*                 source_frame = nullptr)
     {
         if (media_type == AVMEDIA_TYPE_VIDEO) {
             CASPAR_VERIFY(strategy);
@@ -566,22 +565,38 @@ struct Filter
                     }
                     CASPAR_SCOPE_EXIT { av_free(params); };
 
-                    params->format        = st->pix_fmt;
-                    params->width         = st->width;
-                    params->height        = st->height;
-                    params->time_base     = st->pkt_timebase;
-                    params->hw_frames_ctx = st->hw_frames_ctx;
+                    // Describe the source from the frame the decoder actually produced, never
+                    // from the codec context. The context cannot be trusted for any of this: a
+                    // hardware decoder settles its pixel format and frames context inside
+                    // get_format(), which FFmpeg runs on the Decoder's own thread when the first
+                    // packet arrives, so reading the context is both premature and a data race.
+                    // The frame carries the finished answer.
+                    //
+                    // source_frame is null only when this graph reads a video stream the producer
+                    // could not wait on — several video streams feeding one graph, which a user
+                    // FILTER can arrange and which is software-only. There the container's
+                    // description is exact, because nothing negotiates a format.
+                    const auto sar = source_frame ? source_frame->sample_aspect_ratio : st->sample_aspect_ratio;
+
+                    params->format        = source_frame ? source_frame->format : st->pix_fmt;
+                    params->width         = source_frame ? source_frame->width : st->width;
+                    params->height        = source_frame ? source_frame->height : st->height;
+                    params->hw_frames_ctx = source_frame ? source_frame->hw_frames_ctx : st->hw_frames_ctx;
+
+                    // Timing is ours: we set both before the codec was opened, and the decoder
+                    // never touches them, so there is nothing to learn from the frame.
+                    params->time_base = st->pkt_timebase;
 
 #if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(9, 16, 100)
                     // Declare the colour properties up front. Left unset, the source configures its
                     // link as "unspecified" and then complains that every incoming frame changes
                     // them, which also denies downstream filters the range/matrix they need.
-                    params->color_space = st->colorspace;
-                    params->color_range = st->color_range;
+                    params->color_space = source_frame ? source_frame->colorspace : st->colorspace;
+                    params->color_range = source_frame ? source_frame->color_range : st->color_range;
 #endif
 
-                    if (st->sample_aspect_ratio.num > 0 && st->sample_aspect_ratio.den > 0) {
-                        params->sample_aspect_ratio = st->sample_aspect_ratio;
+                    if (sar.num > 0 && sar.den > 0) {
+                        params->sample_aspect_ratio = sar;
                     }
 
                     if (st->framerate.num > 0 && st->framerate.den > 0) {
@@ -649,7 +664,7 @@ struct Filter
 
     bool operator()(int nb_samples = -1)
     {
-        if (frame || eof) {
+        if (frame || eof || pending) {
             return false;
         }
 
@@ -695,10 +710,18 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
-    /// How video is decoded, filtered and handed to the mixer. Chosen once at construction and
-    /// replaced at most once, if the hardware strategy turns out not to fit the file (see
-    /// reset()). Never null.
-    std::shared_ptr<video_strategy> video_;
+    /// How video is decoded, filtered and handed to the mixer: the candidates in preference
+    /// order, hardware first and the CPU one always last, and which of them is in use. A
+    /// candidate that turns out not to fit the file is abandoned for the rest of this producer's
+    /// life and the next one tried (see reset()), so this only ever moves forwards.
+    std::vector<std::shared_ptr<video_strategy>> video_candidates_;
+    size_t                                       video_candidate_ = 0;
+
+    /// Where the current reset() started. Kept because the video graph is built later than
+    /// reset() returns, and a strategy that falls through has to rewind the input to here.
+    int64_t reset_time_ = 0;
+
+    const std::shared_ptr<video_strategy>& video() const { return video_candidates_[video_candidate_]; }
 
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
@@ -760,7 +783,7 @@ struct AVProducer::Impl
         , video_executor_(L"video-executor")
         , audio_executor_(L"audio-executor")
     {
-        video_ = select_video_strategy();
+        video_candidates_ = build_video_strategies();
 
         diagnostics::register_graph(graph_);
         graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -900,6 +923,14 @@ struct AVProducer::Impl
             {
                 progress |= schedule();
 
+                // The video graph is described by the first decoded frame, so it is built here
+                // rather than in reset() — by which point the decoder has had packets. Until it
+                // exists video_filter_ yields nothing and reports no end of file, so the loop
+                // below simply waits, exactly as it waits for any frame that is not ready yet.
+                if (video_filter_.pending) {
+                    progress |= configure_video_filter();
+                }
+
                 std::vector<std::future<bool>> futures;
 
                 if (!video_filter_.frame) {
@@ -961,7 +992,8 @@ struct AVProducer::Impl
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
             }
 
-            frame.frame = video_->make_frame(this, frame.video, frame.audio, get_color_space(frame.video), scale_mode_);
+            frame.frame =
+                video()->make_frame(this, frame.video, frame.audio, get_color_space(frame.video), scale_mode_);
             frame.frame_count = frame_count_++;
 
             graph_->set_value("decode-time", decode_timer.elapsed() * format_desc_.fps * 0.5);
@@ -1238,25 +1270,46 @@ struct AVProducer::Impl
         reset(time);
     }
 
-    /// The video strategy this producer runs with. Hardware decoding is only a candidate when
-    /// nothing about the request rules it out; everything else — no Vulkan accelerator on this
-    /// channel, no Vulkan video on this GPU, no hardware decoder for the codec — is settled
-    /// inside the strategy itself, which reports failure by not being created.
-    std::shared_ptr<video_strategy> select_video_strategy() const
+    /// The video strategies this producer may use, best first. Hardware decoding is only a
+    /// candidate when nothing about the request rules it out; everything else — no Vulkan
+    /// accelerator on this channel, no Vulkan video on this GPU, no CUDA in this FFmpeg — is
+    /// settled inside each strategy, which reports failure by not being created.
+    ///
+    /// Vulkan comes before CUDA because it decodes into the render device directly, while CUDA
+    /// pays for a copy across the API boundary; CUDA earns its place on the codecs Vulkan video
+    /// decode cannot do at all. The CPU strategy is always last and always present.
+    std::vector<std::shared_ptr<video_strategy>> build_video_strategies() const
     {
+        std::vector<std::shared_ptr<video_strategy>> candidates;
+
         const auto enabled = env::properties().get(L"configuration.ffmpeg.producer.hardware-decode", true);
 
         // A user-supplied video filter chain is a chain of software filters, so it pins the
         // producer to software decoding.
         if (enabled && vfilter_.empty()) {
 #ifdef ENABLE_VULKAN
-            if (auto hw = try_create_vulkan_video_strategy(frame_factory_)) {
-                return hw;
+            if (auto vulkan = try_create_vulkan_video_strategy(frame_factory_)) {
+                candidates.push_back(std::move(vulkan));
+            }
+            if (auto cuda = try_create_cuda_video_strategy(frame_factory_)) {
+                candidates.push_back(std::move(cuda));
             }
 #endif
         }
 
-        return create_cpu_video_strategy(frame_factory_);
+        candidates.push_back(create_cpu_video_strategy(frame_factory_));
+        return candidates;
+    }
+
+    /// Give up on the current strategy and move to the next. The CPU one is last, so this always
+    /// lands somewhere.
+    void next_video_strategy()
+    {
+        CASPAR_LOG(info) << print() << " " << u8(video()->name()) << " video decoding is not available for this file.";
+        if (video_candidate_ + 1 < video_candidates_.size()) {
+            ++video_candidate_;
+            CASPAR_LOG(info) << print() << " Trying " << u8(video()->name()) << " video decoding instead.";
+        }
     }
 
     /// The one video stream the graph will read, or null when the file has none or has several
@@ -1280,117 +1333,34 @@ struct AVProducer::Impl
         return found;
     }
 
-    /// Decode far enough for a hardware decoder to publish the frames context its output lives
-    /// in — the filter graph's source has to be told about it before the graph can be
-    /// configured, and it does not exist until the decoder has chosen a pixel format on its
-    /// first packet. Returns false when the stream turns out not to be hardware decodable
-    /// after all, which is the caller's cue to fall back.
-    bool prime_video_decoder()
+    /// The video decoder for `stream`, opened with the strategy currently in hand.
+    Decoder& open_video_decoder(AVStream& stream)
     {
-        auto* stream = single_video_stream();
-        if (!stream) {
-            return false;
-        }
-
-        auto it = decoders_.find(stream->index);
-        if (it == decoders_.end()) {
-            it = decoders_
-                     .emplace(std::piecewise_construct,
-                              std::forward_as_tuple(stream->index),
-                              std::forward_as_tuple(stream, video_.get()))
-                     .first;
-        }
-
-        auto& decoder = it->second;
-        if (!decoder.claimed_by_strategy()) {
-            return false;
-        }
-
-        // Feed the decoder through the ordinary scheduler, with the video stream registered as
-        // a packet sink that has no buffersrc behind it yet: decoded frames simply queue up in
-        // the decoder for the graph we are about to build, and audio packets still reach the
-        // audio filter instead of being dropped.
-        sources_.clear();
-        for (auto& p : audio_filter_.sources) {
-            sources_[p.first].push_back(p.second);
-        }
-        sources_[stream->index];
-
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-        while (!decoder.ctx->hw_frames_ctx) {
-            boost::this_thread::interruption_point();
-
-            if (decoder.is_eof() || decoder.has_output()) {
-                return false; // decoded something without a frames context: it chose software
-            }
-            if (std::chrono::steady_clock::now() > deadline) {
-                CASPAR_LOG(warning) << print() << " Timed out waiting for the hardware decoder to start.";
-                return false;
-            }
-            if (!schedule()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-
-        // The decoder picked a hardware format; the strategy still has to be able to hand frames of
-        // that description to the mixer. A codec whose decoder emits something the mixer has no
-        // layout for (ProRes 4444's yuva444p12, say) falls back here, before a single frame is lost
-        // — the software graph can negotiate such a format down to one the mixer does take.
-        return video_->accepts_frames_context(decoder.ctx->hw_frames_ctx);
+        return decoders_
+            .emplace(std::piecewise_construct,
+                     std::forward_as_tuple(stream.index),
+                     std::forward_as_tuple(&stream, video().get()))
+            .first->second;
     }
 
-    void use_cpu_video_strategy()
+    /// Point sources_ at whatever the filters currently expose, and drop the decoders nothing
+    /// reads any more.
+    ///
+    /// A video stream whose graph is still pending is registered with no filter behind it: that
+    /// is how its packets keep reaching its decoder while nothing yet consumes its frames.
+    void rebuild_sources()
     {
-        CASPAR_LOG(info) << print() << " " << u8(video_->name())
-                         << " video decoding is not available for this file; using the CPU path.";
-        video_ = create_cpu_video_strategy(frame_factory_);
-    }
-
-    void reset(int64_t start_time)
-    {
-        // Audio first: building it creates the audio decoders, so priming the video decoder
-        // below can route audio packets to them rather than dropping them on the floor.
-        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_, nullptr);
-
-        // Hardware decoding has to prove itself per file, and each step can only be found out by
-        // trying it: the codec needs a hardware decoder, the decoder has to actually choose it,
-        // and the graph built from hardware filters has to configure. Failing any of them drops
-        // to the CPU strategy for the rest of this producer's life rather than failing playback.
-        if (video_->hw_device_context() && !prime_video_decoder()) {
-            // The decoder stays: having declined hardware, it is producing exactly the software
-            // frames the CPU graph wants, packets and all.
-            use_cpu_video_strategy();
-        }
-
-        try {
-            video_filter_ =
-                Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_, video_.get());
-        } catch (...) {
-            if (!video_->hw_device_context()) {
-                throw; // the software graph failing to build is a real error, as it always was
-            }
-
-            CASPAR_LOG_CURRENT_EXCEPTION();
-            use_cpu_video_strategy();
-
-            // Here the decoder really is emitting hardware frames, which the software graph
-            // cannot read, so it has to go — and with it the packets it already swallowed.
-            // Rewind and rebuild the whole chain from a clean position.
-            decoders_.clear();
-            if (seekable_) {
-                input_.seek(start_time);
-            }
-            audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_, nullptr);
-            video_filter_ =
-                Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_, video_.get());
-        }
-
         sources_.clear();
         for (auto& p : video_filter_.sources) {
             sources_[p.first].push_back(p.second);
         }
         for (auto& p : audio_filter_.sources) {
             sources_[p.first].push_back(p.second);
+        }
+        if (video_filter_.pending) {
+            if (auto* stream = single_video_stream()) {
+                sources_[stream->index];
+            }
         }
 
         std::vector<int> keys;
@@ -1404,6 +1374,119 @@ struct AVProducer::Impl
         for (auto& key : keys) {
             decoders_.erase(key);
         }
+    }
+
+    /// Build the video graph, now that the decoder has produced the frame that describes it.
+    ///
+    /// This is the one place the strategy is judged against the file. It cannot happen sooner:
+    /// a hardware decoder does not know its own output format until FFmpeg calls get_format(),
+    /// and FFmpeg only calls that once the first packet has been decoded — on the Decoder's own
+    /// thread. avcodec_get_hw_frames_parameters() cannot be asked ahead of time either; it needs
+    /// a codec context that is already open, which is why FFmpeg itself only ever calls it from
+    /// inside get_format(). So the frame is the earliest honest answer, and waiting for it costs
+    /// nothing: the producer is already willing to wait for a video frame.
+    ///
+    /// Returns whether it did anything, for the caller's progress tracking.
+    bool configure_video_filter()
+    {
+        auto* stream = single_video_stream();
+        CASPAR_VERIFY(stream);
+
+        auto it = decoders_.find(stream->index);
+        if (it == decoders_.end()) {
+            return false;
+        }
+
+        auto frame = it->second.pop();
+        if (!frame) {
+            return false; // nothing decoded yet; the producer waits as it does for any frame
+        }
+
+        // A frame with no data is end of file before a single picture — there is nothing to
+        // describe the source with, and nothing to show either. Build the graph from the
+        // container so the shape is right, then close the source immediately below.
+        const auto* description = frame->data[0] ? frame.get() : nullptr;
+
+        if (description && !video()->accepts(*description)) {
+            return restart_with_next_video_strategy();
+        }
+
+        try {
+            video_filter_ = Filter(
+                vfilter_, input_, decoders_, reset_time_, AVMEDIA_TYPE_VIDEO, format_desc_, video().get(), description);
+        } catch (...) {
+            if (!video()->hw_device_context()) {
+                throw; // the software graph failing to build is a real error, as it always was
+            }
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            return restart_with_next_video_strategy();
+        }
+
+        rebuild_sources();
+
+        CASPAR_LOG(info) << print() << " Using " << u8(video()->name()) << " video decoding.";
+
+        // The frame that described the graph is also the graph's first input.
+        for (auto source : sources_[stream->index]) {
+            if (frame->data[0]) {
+                FF(av_buffersrc_write_frame(source, frame.get()));
+            } else {
+                FF(av_buffersrc_close(source, frame->pts, 0));
+            }
+        }
+
+        return true;
+    }
+
+    /// Hand the file to the next strategy: the frames this one produced are of no use to the
+    /// next, and it has already eaten the packets the next one needs, so everything built for it
+    /// goes and the input rewinds to where this attempt started.
+    bool restart_with_next_video_strategy()
+    {
+        next_video_strategy();
+        decoders_.clear();
+        if (seekable_) {
+            input_.seek(reset_time_);
+        }
+        reset(reset_time_);
+        return true;
+    }
+
+    void reset(int64_t start_time)
+    {
+        reset_time_ = start_time;
+
+        auto* stream = single_video_stream();
+
+        // Hardware decoding needs the one video stream it can wait on. Without it — no video at
+        // all, or several streams feeding one graph — only the CPU strategy applies, and its
+        // graph can be built straight away from the container.
+        if (!stream) {
+            video_candidate_ = video_candidates_.size() - 1;
+        } else {
+            // Skip any strategy that will not even open a decoder for this codec. Opening one
+            // reads no packets, so declining here costs nothing and saves a rewind later.
+            for (;;) {
+                auto& decoder = open_video_decoder(*stream);
+                if (!video()->hw_device_context() || decoder.claimed_by_strategy()) {
+                    break;
+                }
+                decoders_.erase(stream->index);
+                next_video_strategy();
+            }
+        }
+
+        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_, nullptr);
+
+        if (stream) {
+            video_filter_         = Filter();
+            video_filter_.pending = true;
+        } else {
+            video_filter_ =
+                Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_, video().get());
+        }
+
+        rebuild_sources();
     }
 
     std::string print() const

@@ -73,17 +73,18 @@ class video_strategy
     virtual bool open_decoder(AVCodecContext& ctx, const AVCodec& codec) = 0;
 
     /// The device decoded frames live on, or nullptr when they are ordinary host frames.
-    /// Non-null carries a second meaning for the producer: the filter graph's source has to
-    /// be told the decoder's AVHWFramesContext, and a hardware decoder only publishes that
-    /// once it has seen a packet — so the producer primes the decoder before building the
-    /// graph. Ownership stays with the strategy.
+    /// The producer reads it as "this strategy may still turn out not to fit the file", which
+    /// is what makes falling back to the next candidate allowed. Ownership stays here.
     virtual AVBufferRef* hw_device_context() const { return nullptr; }
 
-    /// Whether frames described by this AVHWFramesContext can actually be handed to the mixer.
-    /// Called once the decoder has published one, so a strategy that turns out not to cover the
-    /// format the decoder chose can decline before any frame is lost rather than dropping video.
-    /// Only meaningful for a strategy with a hw_device_context().
-    virtual bool accepts_frames_context(AVBufferRef*) const { return true; }
+    /// Whether this strategy can present frames like this one to the mixer.
+    ///
+    /// Asked once, of the first frame the decoder produces — which is the earliest moment the
+    /// answer exists. A hardware decoder settles its pixel format and frames context inside
+    /// get_format(), and FFmpeg only calls that when the first packet arrives, so until then
+    /// even the decoder does not know what it will emit. Saying no hands the file to the next
+    /// candidate, before a single frame has been shown.
+    virtual bool accepts(const AVFrame&) const { return true; }
 
     /// The deinterlacer for `deint` ("all" / "interlaced"), as one filter graph element, or
     /// empty for none. Hardware frames need a deinterlacer that runs on the same device, so
@@ -109,9 +110,14 @@ spl::shared_ptr<video_strategy> create_cpu_video_strategy(std::shared_ptr<core::
 #ifdef ENABLE_VULKAN
 /// Decode straight into GPU images on the accelerator's own Vulkan device, filter with the
 /// Vulkan filters, and hand the mixer the resulting textures — no host round trip.
-/// Returns nullptr when this channel or this machine cannot do it, which is the caller's cue
-/// to use the CPU strategy.
+/// Returns nullptr when this channel or this machine cannot do it.
 std::shared_ptr<video_strategy> try_create_vulkan_video_strategy(const std::shared_ptr<core::frame_factory>& frame_factory);
+
+/// Decode with NVDEC and transfer the frame onto the accelerator's Vulkan device. For the codecs
+/// Vulkan video decode cannot do at all — MPEG-2 above all — so it belongs AFTER the Vulkan
+/// strategy: where both can decode a codec, Vulkan avoids the CUDA/Vulkan copy this one pays for.
+/// Returns nullptr when FFmpeg has no CUDA support or no CUDA device shares the GPU.
+std::shared_ptr<video_strategy> try_create_cuda_video_strategy(const std::shared_ptr<core::frame_factory>& frame_factory);
 #endif
 
 }} // namespace caspar::ffmpeg

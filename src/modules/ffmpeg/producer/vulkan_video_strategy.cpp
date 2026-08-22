@@ -32,6 +32,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
+#include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
 }
@@ -113,12 +114,15 @@ class vulkan_video_strategy : public video_strategy
 
     AVBufferRef* hw_device_context() const override { return import_->device(); }
 
-    bool accepts_frames_context(AVBufferRef* frames_ref) const override
+    bool accepts(const AVFrame& frame) const override
     {
-        if (!frames_ref)
+        // A software frame means get_format() declined Vulkan after all — either the codec has no
+        // Vulkan hwaccel for this stream, or the hwaccel failed to initialise and FFmpeg quietly
+        // retried without it.
+        if (frame.format != AV_PIX_FMT_VULKAN || !frame.hw_frames_ctx)
             return false;
 
-        const auto* frames_ctx = reinterpret_cast<const AVHWFramesContext*>(frames_ref->data);
+        const auto* frames_ctx = reinterpret_cast<const AVHWFramesContext*>(frame.hw_frames_ctx->data);
         if (!vulkan_frame_import::has_mixer_layout(frames_ctx->sw_format, frames_ctx->width, frames_ctx->height)) {
             CASPAR_LOG(info) << L"[ffmpeg] The mixer has no layout for hardware frame format "
                              << u16(av_get_pix_fmt_name(frames_ctx->sw_format))
