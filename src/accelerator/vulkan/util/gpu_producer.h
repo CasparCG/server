@@ -22,6 +22,7 @@
 #pragma once
 
 #include "gpu_frame_factory.h" // gpu_frame_factory, gpu_plane, queue_type
+#include "completion_token.h" // completion_token
 #include "texture.h"           // texture, handoff_token (via handoff.h)
 
 #include <common/array.h>
@@ -97,6 +98,20 @@ struct producer_plane
 //     return core::draw_frame(gpu_.produce(this, producer_plane{std::move(tex)},
 //                                          core::pixel_format::rgba,
 //                                          [&](vk::CommandBuffer cmd, const auto& tex){ /* fill */ }));
+// Timelines OUTSIDE our queue system that one frame's submit has to order against.
+// A producer that generates its own content leaves this empty; one whose source
+// comes from a foreign Vulkan user needs both halves. FFmpeg's hardware decoder is
+// the case that motivates it: it hands over a decoded image together with its own
+// timeline semaphore, and its contract is that every user waits that semaphore at
+// the frame's current value and signals it back at an incremented one — the signal
+// is how FFmpeg knows the surface may be recycled. Putting both on the producer's
+// own submit keeps the CPU out of it entirely.
+struct external_sync
+{
+    std::vector<completion_token> wait;   // waited before the workload runs
+    std::vector<completion_token> signal; // signalled once it completes
+};
+
 class gpu_producer
 {
   public:
@@ -117,7 +132,9 @@ class gpu_producer
                               std::vector<producer_plane>    planes,
                               const core::pixel_format_desc& desc,
                               const record_fn&               record,
-                              array<const std::int32_t>      audio = {});
+                              array<const std::int32_t>      audio    = {},
+                              const external_sync&           sync     = {},
+                              core::frame_geometry           geometry = core::frame_geometry::get_default());
 
     // 1-plane convenience: derives the single-plane pixel_format_desc from the texture's
     // geometry and `fmt`, and passes the lone texture straight to `record` so the common
@@ -126,7 +143,9 @@ class gpu_producer
                               producer_plane                                                                 plane,
                               core::pixel_format                                                             fmt,
                               const std::function<void(vk::CommandBuffer, const std::shared_ptr<texture>&)>& record,
-                              array<const std::int32_t> audio = {});
+                              array<const std::int32_t> audio    = {},
+                              const external_sync&      sync     = {},
+                              core::frame_geometry      geometry = core::frame_geometry::get_default());
 
     gpu_frame_factory& factory() const { return *gpu_; } // for create_producer_texture(...)
     command_context&   context() const { return *ctx_; }

@@ -58,6 +58,13 @@ class vulkan_queue final
     // serialize against the ones going through submit().
     std::unique_lock<std::mutex> scoped_lock() { return std::unique_lock<std::mutex>(mutex_); }
 
+    // The same lock, unscoped, for C callback pairs that cannot hold a guard
+    // across the call boundary — FFmpeg's AVVulkanDeviceContext lock_queue /
+    // unlock_queue, which brackets its own vkQueueSubmit on one of our queues.
+    // Prefer scoped_lock() everywhere else.
+    void lock() { mutex_.lock(); }
+    void unlock() { mutex_.unlock(); }
+
   private:
     vk::Queue  queue_;
     uint32_t   family_index_;

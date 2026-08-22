@@ -29,6 +29,8 @@
 #include <core/frame/geometry.h>
 
 #include <future>
+#include <string>
+#include <vector>
 
 #include <vulkan/vulkan.hpp>
 
@@ -64,6 +66,28 @@ class device final
     // synchronized and shared — no reclamation, exhaustion is impossible.
     std::shared_ptr<vulkan_queue> acquire_queue(queue_type type);
     class transfer&               transfer();
+
+    // --- Interop surface: what an external Vulkan client needs to drive OUR device ---
+    // (FFmpeg's AVVulkanDeviceContext is the one caller today: it decodes into this
+    // device on the queues below, so nothing is copied across devices.) All handles
+    // stay owned here — a client may use them, never destroy them.
+
+    // The loader entry point the instance was built with. An external client must
+    // resolve its own function pointers through this one, not through a second
+    // loader instance.
+    PFN_vkGetInstanceProcAddr instance_proc_addr() const;
+
+    // The extensions actually enabled on the instance / device. External clients
+    // key their feature detection off these lists rather than re-querying, so what
+    // they believe is enabled matches what we asked for.
+    const std::vector<std::string>& enabled_instance_extensions() const;
+    const std::vector<std::string>& enabled_device_extensions() const;
+
+    // The queue families we took queues from (see queue_family_usage), and the
+    // reverse lookup an external submitter needs to find the vulkan_queue whose
+    // lock it must hold while submitting on (family, index).
+    std::vector<queue_family_usage> queue_families() const;
+    std::shared_ptr<vulkan_queue>   queue_at(uint32_t family, uint32_t index) const;
 
     std::shared_ptr<class texture> create_texture(int width, int height, int stride, common::bit_depth depth);
     std::shared_ptr<class buffer>  create_buffer(int size, bool write);

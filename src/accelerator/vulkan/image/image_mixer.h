@@ -78,7 +78,8 @@ class image_mixer final
     core::const_frame                import_textures(const void*                    tag,
                                                      std::vector<gpu_plane>         planes,
                                                      const core::pixel_format_desc& desc,
-                                                     array<const std::int32_t>      audio) override;
+                                                     array<const std::int32_t>      audio,
+                                                     core::frame_geometry           geometry) override;
 
     // core::image_mixer
 

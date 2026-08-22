@@ -44,7 +44,9 @@ core::const_frame gpu_producer::produce(const void*                    tag,
                                         std::vector<producer_plane>    planes,
                                         const core::pixel_format_desc& desc,
                                         const record_fn&               record,
-                                        array<const std::int32_t>      audio)
+                                        array<const std::int32_t>      audio,
+                                        const external_sync&           sync,
+                                        core::frame_geometry           geometry)
 {
     // One hand-off per plane (planes may differ in scope, e.g. NV12 Y vs UV); they all share
     // the single completion token of the one submit below. completion is empty here — filled
@@ -61,28 +63,31 @@ core::const_frame gpu_producer::produce(const void*                    tag,
     for (const auto& p : planes)
         textures.push_back(p.tex);
 
-    auto token = ctx_->record_and_submit([&](vk::CommandBuffer cmd) {
-        // Acquire: move each texture from its incoming layout into the work scope the
-        // producer declared. Source scope (eTopOfPipe, eNone) suits a fresh/discardable
-        // texture; the dst scope is the same triple the release uses, so they cannot drift.
-        for (const auto& p : planes) {
-            transitionImageLayout(p.tex->id(),
-                                  p.from_layout,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eTopOfPipe,
-                                  p.work_layout,
-                                  p.work_access,
-                                  p.work_stage,
-                                  cmd);
-        }
+    auto token = ctx_->record_and_submit(
+        [&](vk::CommandBuffer cmd) {
+            // Acquire: move each texture from its incoming layout into the work scope the
+            // producer declared. Source scope (eTopOfPipe, eNone) suits a fresh/discardable
+            // texture; the dst scope is the same triple the release uses, so they cannot drift.
+            for (const auto& p : planes) {
+                transitionImageLayout(p.tex->id(),
+                                      p.from_layout,
+                                      vk::AccessFlagBits2::eNone,
+                                      vk::PipelineStageFlagBits2::eTopOfPipe,
+                                      p.work_layout,
+                                      p.work_access,
+                                      p.work_stage,
+                                      cmd);
+            }
 
-        record(cmd, textures);
+            record(cmd, textures);
 
-        // Release: the producer->render boundary for each texture (a plain transition at
-        // distance 0/1, a queue-family release at distance 2).
-        for (std::size_t i = 0; i < planes.size(); ++i)
-            record_release(cmd, handoffs[i], planes[i].tex->id());
-    });
+            // Release: the producer->render boundary for each texture (a plain transition at
+            // distance 0/1, a queue-family release at distance 2).
+            for (std::size_t i = 0; i < planes.size(); ++i)
+                record_release(cmd, handoffs[i], planes[i].tex->id());
+        },
+        sync.wait,
+        sync.signal);
 
     // Stamp the shared completion onto every hand-off so the renderer waits it
     // (inert at distance 0).
@@ -94,7 +99,7 @@ core::const_frame gpu_producer::produce(const void*                    tag,
     for (std::size_t i = 0; i < planes.size(); ++i)
         gpu_planes.push_back(gpu_plane{std::move(planes[i].tex), handoffs[i]});
 
-    return gpu_->import_textures(tag, std::move(gpu_planes), desc, std::move(audio));
+    return gpu_->import_textures(tag, std::move(gpu_planes), desc, std::move(audio), std::move(geometry));
 }
 
 core::const_frame
@@ -102,7 +107,9 @@ gpu_producer::produce(const void*                                               
                       producer_plane                                                                 plane,
                       core::pixel_format                                                             fmt,
                       const std::function<void(vk::CommandBuffer, const std::shared_ptr<texture>&)>& record,
-                      array<const std::int32_t>                                                      audio)
+                      array<const std::int32_t>                                                      audio,
+                      const external_sync&                                                           sync,
+                      core::frame_geometry                                                           geometry)
 {
     core::pixel_format_desc desc(fmt);
     desc.planes.push_back(core::pixel_format_desc::plane(plane.tex->width(), plane.tex->height(), plane.tex->stride()));
@@ -117,7 +124,9 @@ gpu_producer::produce(const void*                                               
         [&](vk::CommandBuffer cmd, const std::vector<std::shared_ptr<texture>>& textures) {
             record(cmd, textures.front());
         },
-        std::move(audio));
+        std::move(audio),
+        sync,
+        std::move(geometry));
 }
 
 }}} // namespace caspar::accelerator::vulkan

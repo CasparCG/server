@@ -101,6 +101,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::unique_ptr<queue_manager> queue_manager_;
     VmaAllocator                   _allocator;
 
+    // What we actually enabled, kept so an external Vulkan client (FFmpeg's
+    // hwcontext) can be told exactly which extensions this device has rather
+    // than guessing from what the driver supports.
+    std::vector<std::string> _enabled_instance_extensions;
+    std::vector<std::string> _enabled_device_extensions;
+
     std::unique_ptr<class transfer> transfer_;
 
     explicit impl(const std::vector<vulkan_requirements_fn>& requirements)
@@ -141,6 +147,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             for (const auto* ext : surface_extensions) {
                 if (sys_info->is_extension_available(ext)) {
                     instance_builder.enable_extension(ext);
+                    _enabled_instance_extensions.emplace_back(ext);
                 }
             }
         }
@@ -212,6 +219,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
         for (const auto& [family, count] : queue_manager_->queue_setup())
             queue_descriptions.emplace_back(family, std::vector<float>(count, queue_priority));
         device_builder.custom_queue_setup(queue_descriptions);
+
+        _enabled_device_extensions = _vkb_physical_device.get_extensions();
 
         auto device_res = device_builder.build();
         if (!device_res) {
@@ -486,6 +495,21 @@ vk::PhysicalDevice                 device::physical_device() const { return impl
 std::shared_ptr<vulkan_queue>      device::queue() { return impl_->queue_manager_->primary(); }
 std::shared_ptr<vulkan_queue> device::acquire_queue(queue_type type) { return impl_->queue_manager_->acquire(type); }
 class transfer&               device::transfer() { return *impl_->transfer_; }
+
+PFN_vkGetInstanceProcAddr device::instance_proc_addr() const { return impl_->_vkb_instance.fp_vkGetInstanceProcAddr; }
+const std::vector<std::string>& device::enabled_instance_extensions() const
+{
+    return impl_->_enabled_instance_extensions;
+}
+const std::vector<std::string>& device::enabled_device_extensions() const
+{
+    return impl_->_enabled_device_extensions;
+}
+std::vector<queue_family_usage> device::queue_families() const { return impl_->queue_manager_->families(); }
+std::shared_ptr<vulkan_queue>   device::queue_at(uint32_t family, uint32_t index) const
+{
+    return impl_->queue_manager_->queue_at(family, index);
+}
 
 std::shared_ptr<texture> device::create_texture(int width, int height, int stride, common::bit_depth depth)
 {

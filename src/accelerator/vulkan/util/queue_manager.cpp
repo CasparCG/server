@@ -207,4 +207,63 @@ std::shared_ptr<vulkan_queue> queue_manager::acquire(queue_type type) const
     return queues_.at(q);
 }
 
+std::vector<queue_family_usage> queue_manager::families() const
+{
+    // What each kind of work needs a family to advertise. Video maps to its own
+    // bit only: a video family that also reports transfer must not be picked up
+    // by someone looking for a transfer queue.
+    auto usage_of = [](queue_type type) -> vk::QueueFlags {
+        switch (type) {
+            case queue_type::graphics:
+                return vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer;
+            case queue_type::compute:
+                return vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer;
+            case queue_type::transfer:
+                return vk::QueueFlagBits::eTransfer;
+            case queue_type::video_encode:
+                return vk::QueueFlagBits::eVideoEncodeKHR;
+            case queue_type::video_decode:
+                return vk::QueueFlagBits::eVideoDecodeKHR;
+        }
+        return {};
+    };
+
+    std::vector<queue_family_usage> result;
+    auto                            entry_for = [&](uint32_t family) -> queue_family_usage& {
+        auto it = std::find_if(result.begin(), result.end(), [&](const auto& e) { return e.index == family; });
+        if (it != result.end())
+            return *it;
+        queue_family_usage e;
+        e.index = family;
+        e.count = static_cast<uint32_t>(
+            std::count_if(queue_specs_.begin(), queue_specs_.end(), [&](const auto& s) { return s.first == family; }));
+        result.push_back(e);
+        return result.back();
+    };
+
+    // Specialized types first, graphics last, so a consumer that takes the first
+    // family matching a capability prefers the dedicated one.
+    for (auto type : {queue_type::transfer,
+                      queue_type::compute,
+                      queue_type::video_decode,
+                      queue_type::video_encode,
+                      queue_type::graphics}) {
+        auto family = type_family_[static_cast<size_t>(type)];
+        if (family == UINT32_MAX)
+            continue;
+        entry_for(family).usage |= usage_of(type);
+    }
+
+    return result;
+}
+
+std::shared_ptr<vulkan_queue> queue_manager::queue_at(uint32_t family, uint32_t index) const
+{
+    for (size_t q = 0; q < queue_specs_.size(); ++q) {
+        if (queue_specs_[q].first == family && queue_specs_[q].second == index)
+            return q < queues_.size() ? queues_[q] : nullptr;
+    }
+    return nullptr;
+}
+
 }}} // namespace caspar::accelerator::vulkan

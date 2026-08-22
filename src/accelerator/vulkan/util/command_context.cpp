@@ -23,6 +23,8 @@
 
 #include "vulkan_queue.h"
 
+#include <vector>
+
 namespace caspar { namespace accelerator { namespace vulkan {
 
 command_context::command_context(vk::Device device, std::shared_ptr<vulkan_queue> queue)
@@ -78,6 +80,13 @@ completion_token command_context::record_and_submit(const std::function<void(vk:
 completion_token command_context::record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
                                                     vk::ArrayProxy<const completion_token>        wait_tokens)
 {
+    return record_and_submit(record, wait_tokens, {});
+}
+
+completion_token command_context::record_and_submit(const std::function<void(vk::CommandBuffer)>& record,
+                                                    vk::ArrayProxy<const completion_token>        wait_tokens,
+                                                    vk::ArrayProxy<const completion_token>        signal_tokens)
+{
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Cross-queue waits: keep only tokens on a foreign timeline. A token on our own
@@ -106,15 +115,26 @@ completion_token command_context::record_and_submit(const std::function<void(vk:
 
     auto signal_value = ++value_;
 
+    // Our own timeline first, then any foreign ones the caller wants released by
+    // this submit (the two arrays are index-matched, so they are built together).
+    std::vector<vk::Semaphore> signal_semaphores{timeline_};
+    std::vector<uint64_t>      signal_values{signal_value};
+    for (const auto& token : signal_tokens) {
+        if (!token.timeline || token.timeline == timeline_)
+            continue;
+        signal_semaphores.push_back(token.timeline);
+        signal_values.push_back(token.value);
+    }
+
     vk::TimelineSemaphoreSubmitInfo timeline_submit{};
     timeline_submit.setWaitSemaphoreValues(wait_values);
-    timeline_submit.setSignalSemaphoreValues(signal_value);
+    timeline_submit.setSignalSemaphoreValues(signal_values);
 
     vk::SubmitInfo submit_info{};
     submit_info.setCommandBuffers(cmd);
     submit_info.setWaitSemaphores(wait_semaphores);
     submit_info.setWaitDstStageMask(wait_stages);
-    submit_info.setSignalSemaphores(timeline_);
+    submit_info.setSignalSemaphores(signal_semaphores);
     submit_info.pNext = &timeline_submit;
     queue_->submit(submit_info);
 

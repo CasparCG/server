@@ -49,6 +49,23 @@ enum class queue_type
 
 const char* to_string(queue_type type);
 
+// One queue family we took queues from, described the way an external API needs
+// to see it (FFmpeg's AVVulkanDeviceContext, which submits its decode work on
+// our queues): the family, how many queues we created there, and what we mean
+// that family to be used FOR.
+//
+// `usage` is deliberately NOT the family's raw capability flags. A video family
+// commonly also advertises transfer, and an external user that picks "the first
+// family with TRANSFER" would then push blits onto the video queue. It carries
+// only the capabilities of the queue_types that resolved to this family, so a
+// first-match lookup lands where we intended.
+struct queue_family_usage
+{
+    uint32_t       index = 0;
+    uint32_t       count = 0; // queues we created in this family
+    vk::QueueFlags usage;
+};
+
 // Picks which queue families to take queues from and owns the resulting queues.
 //
 // Two-phase, spanning device creation: queue count is frozen at vkCreateDevice.
@@ -91,6 +108,16 @@ class queue_manager final
     // something). Returns nullptr only for a video type the hardware can't do —
     // callers of the video types must check capability first.
     std::shared_ptr<vulkan_queue> acquire(queue_type type) const;
+
+    // The families we created queues in, most specialized first and the graphics
+    // family last, so an external first-match lookup by capability lands on a
+    // dedicated family when the hardware has one.
+    std::vector<queue_family_usage> families() const;
+
+    // The queue we created as `index` within `family`, or nullptr when that pair
+    // is not one of ours. Lets an external submitter map the (family, index) it
+    // is about to submit on back onto the vulkan_queue whose lock it must hold.
+    std::shared_ptr<vulkan_queue> queue_at(uint32_t family, uint32_t index) const;
 
   private:
     static constexpr size_t type_count = 5; // keep in sync with queue_type

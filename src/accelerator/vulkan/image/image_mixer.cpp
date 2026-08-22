@@ -532,7 +532,8 @@ struct image_mixer::impl
     core::const_frame import_textures(const void*                    tag,
                                       std::vector<gpu_plane>         planes,
                                       const core::pixel_format_desc& desc,
-                                      array<const std::int32_t>      audio)
+                                      array<const std::int32_t>      audio,
+                                      core::frame_geometry           geometry)
     {
         auto textures = std::make_shared<std::vector<texture_ptr>>();
         textures->reserve(planes.size());
@@ -541,7 +542,8 @@ struct image_mixer::impl
             p.tex->set_pending_handoff(p.handoff);
             textures->push_back(std::move(p.tex));
         }
-        return core::const_frame::from_textures(tag, desc, std::any(std::move(textures)), std::move(audio));
+        return core::const_frame::from_textures(
+            tag, desc, std::any(std::move(textures)), std::move(audio), std::move(geometry));
     }
 
     common::bit_depth depth() const { return renderer_.depth(); }
@@ -603,9 +605,10 @@ handoff_token image_mixer::make_producer_handoff(const vulkan_queue&     produce
 core::const_frame             image_mixer::import_textures(const void*                    tag,
                                                std::vector<gpu_plane>         planes,
                                                const core::pixel_format_desc& desc,
-                                               array<const std::int32_t>      audio)
+                                               array<const std::int32_t>      audio,
+                                               core::frame_geometry           geometry)
 {
-    return impl_->import_textures(tag, std::move(planes), desc, std::move(audio));
+    return impl_->import_textures(tag, std::move(planes), desc, std::move(audio), std::move(geometry));
 }
 
 common::bit_depth image_mixer::depth() const { return impl_->depth(); }

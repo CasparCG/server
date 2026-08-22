@@ -168,10 +168,12 @@ const_frame::const_frame(mutable_frame&& other)
 const_frame const_frame::from_textures(const void*                    tag,
                                        const core::pixel_format_desc& desc,
                                        std::any                       opaque,
-                                       array<const std::int32_t>      audio)
+                                       array<const std::int32_t>      audio,
+                                       frame_geometry                 geometry)
 {
     const_frame frame;
     frame.impl_ = std::make_shared<impl>(tag, desc, std::move(opaque), std::move(audio));
+    frame.impl_->geometry_ = std::move(geometry);
     return frame;
 }
 const_frame::const_frame(const const_frame& other)

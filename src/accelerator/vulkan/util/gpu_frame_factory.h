@@ -28,6 +28,7 @@
 #include <common/bit_depth.h>
 
 #include <core/frame/frame.h>
+#include <core/frame/geometry.h>
 #include <core/frame/pixel_format.h>
 
 #include <cstdint>
@@ -103,7 +104,8 @@ class gpu_frame_factory
     virtual core::const_frame import_textures(const void*                    tag,
                                               std::vector<gpu_plane>         planes,
                                               const core::pixel_format_desc& desc,
-                                              array<const std::int32_t>      audio = {}) = 0;
+                                              array<const std::int32_t>      audio    = {},
+                                              core::frame_geometry           geometry = core::frame_geometry::get_default()) = 0;
 };
 
 }}} // namespace caspar::accelerator::vulkan

@@ -2,6 +2,8 @@
 
 #include <common/array.h>
 
+#include "geometry.h"
+
 #include <any>
 #include <cstddef>
 #include <cstdint>
@@ -82,7 +84,8 @@ class const_frame final
     static const_frame from_textures(const void*                     tag,
                                      const struct pixel_format_desc& desc,
                                      std::any                        opaque,
-                                     array<const std::int32_t>       audio = {});
+                                     array<const std::int32_t>       audio    = {},
+                                     class frame_geometry            geometry = frame_geometry::get_default());
 
     ~const_frame();
 
