@@ -113,6 +113,16 @@ spl::shared_ptr<video_strategy> create_cpu_video_strategy(std::shared_ptr<core::
 /// Returns nullptr when this channel or this machine cannot do it.
 std::shared_ptr<video_strategy> try_create_vulkan_video_strategy(const std::shared_ptr<core::frame_factory>& frame_factory);
 
+#ifdef __APPLE__
+/// Decode with VideoToolbox and import the decoder's own frames into the accelerator's Vulkan
+/// device: its CVPixelBuffers are IOSurfaces, and each plane of one becomes a VkImage through
+/// Metal, so nothing is copied on the way to the GPU. The only hardware decoding macOS has —
+/// there is no Vulkan video decode on MoltenVK and no CUDA on Apple hardware.
+/// Returns nullptr when this channel is not on the Vulkan accelerator or MoltenVK cannot import.
+std::shared_ptr<video_strategy>
+try_create_videotoolbox_video_strategy(const std::shared_ptr<core::frame_factory>& frame_factory);
+#endif
+
 /// Decode with NVDEC and transfer the frame onto the accelerator's Vulkan device. For the codecs
 /// Vulkan video decode cannot do at all — MPEG-2 above all — so it belongs AFTER the Vulkan
 /// strategy: where both can decode a codec, Vulkan avoids the CUDA/Vulkan copy this one pays for.

@@ -31,6 +31,10 @@ if (ENABLE_VULKAN)
 		producer/vulkan_video_strategy.cpp
 		producer/cuda_video_strategy.cpp
 	)
+	if (APPLE)
+		# VideoToolbox frames reach the mixer through Metal, so this one translation unit is ObjC++.
+		list(APPEND SOURCES producer/videotoolbox_video_strategy.mm)
+	endif ()
 endif ()
 
 if (ENABLE_VULKAN)
@@ -80,5 +84,12 @@ if (ENABLE_VULKAN)
 	target_link_libraries(ffmpeg PRIVATE accelerator Vulkan::Headers vk-bootstrap::vk-bootstrap)
 	if (WIN32)
 		target_compile_definitions(ffmpeg PUBLIC VK_USE_PLATFORM_WIN32_KHR)
+	elseif (APPLE)
+		target_link_libraries(ffmpeg PRIVATE "-framework Metal" "-framework CoreVideo" "-framework IOSurface")
+		# Manual retain/release, as everywhere else in this codebase. The module's precompiled
+		# header is C++, and a PCH cannot be shared with an ObjC++ translation unit.
+		set_source_files_properties(producer/videotoolbox_video_strategy.mm PROPERTIES
+			COMPILE_FLAGS "-fno-objc-arc"
+			SKIP_PRECOMPILE_HEADERS ON)
 	endif ()
 endif ()

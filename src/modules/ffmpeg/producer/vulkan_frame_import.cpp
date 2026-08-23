@@ -25,6 +25,7 @@
 #include "../util/av_util.h"
 
 #include <accelerator/vulkan/util/barrier.h>
+#include <accelerator/vulkan/util/command_context.h>
 #include <accelerator/vulkan/util/device.h>
 #include <accelerator/vulkan/util/queue_manager.h>
 #include <accelerator/vulkan/util/texture.h>
@@ -247,10 +248,28 @@ std::optional<core::pixel_format_desc> mixer_layout_of(AVPixelFormat     sw_form
 
 struct vulkan_frame_import::impl
 {
-    std::shared_ptr<core::frame_factory> frame_factory;
-    std::shared_ptr<AVBufferRef>         device;
-    gpu_producer                         gpu;
-    bool                                 warned_unsupported_format = false;
+    std::shared_ptr<core::frame_factory>         frame_factory;
+    std::shared_ptr<accelerator::vulkan::device> accelerator_device;
+    std::shared_ptr<AVBufferRef>                 device; // null unless FFmpeg has to know our device
+    gpu_producer                                 gpu;
+    bool                                         warned_unsupported_format = false;
+
+    /// Sources that have to outlive their copy. A frame whose surface belongs to another API with
+    /// no timeline of its own (VideoToolbox) is held here until the submit that read it has
+    /// retired; FFmpeg's Vulkan frames need nothing, because their semaphore says it.
+    struct in_flight
+    {
+        completion_token      token;
+        std::shared_ptr<void> source;
+    };
+    std::vector<in_flight> in_flight;
+
+    /// Drop everything the GPU is done with. Cheap and non-blocking: a timeline query per entry.
+    void retire_completed()
+    {
+        const auto done = [&](const struct in_flight& f) { return gpu.context().wait(f.token, 0); };
+        in_flight.erase(std::remove_if(in_flight.begin(), in_flight.end(), done), in_flight.end());
+    }
 };
 
 vulkan_frame_import::vulkan_frame_import(std::unique_ptr<impl> i)
@@ -260,8 +279,36 @@ vulkan_frame_import::vulkan_frame_import(std::unique_ptr<impl> i)
 
 vulkan_frame_import::~vulkan_frame_import() = default;
 
+namespace {
+
+/// The accelerator's Vulkan device, or null when this process has none.
+std::shared_ptr<device> accelerator_device()
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return g_accelerator_device.lock();
+}
+
+} // namespace
+
 std::unique_ptr<vulkan_frame_import>
 vulkan_frame_import::create(const std::shared_ptr<core::frame_factory>& frame_factory)
+{
+    auto import = create_for_import(frame_factory);
+    if (!import)
+        return nullptr;
+
+    // The half that only a decoder writing into our device needs: FFmpeg has to be handed the
+    // device, the queues and the extension lists before it can target it.
+    auto device = hw_device_ctx();
+    if (!device)
+        return nullptr;
+
+    import->impl_->device = std::move(device);
+    return import;
+}
+
+std::unique_ptr<vulkan_frame_import>
+vulkan_frame_import::create_for_import(const std::shared_ptr<core::frame_factory>& frame_factory)
 {
     if (!frame_factory)
         return nullptr;
@@ -274,22 +321,48 @@ vulkan_frame_import::create(const std::shared_ptr<core::frame_factory>& frame_fa
         return nullptr;
     }
 
-    auto device = hw_device_ctx();
-    if (!device)
+    auto dev = accelerator_device();
+    if (!dev) {
+        CASPAR_LOG(debug) << L"[ffmpeg] No Vulkan accelerator device to decode on; hardware decoding disabled.";
         return nullptr;
+    }
 
-    auto i           = std::make_unique<impl>();
-    i->frame_factory = frame_factory;
-    i->device        = std::move(device);
-    i->gpu           = std::move(gpu);
+    auto i                = std::make_unique<impl>();
+    i->frame_factory      = frame_factory;
+    i->accelerator_device = std::move(dev);
+    i->gpu                = std::move(gpu);
     return std::unique_ptr<vulkan_frame_import>(new vulkan_frame_import(std::move(i)));
 }
 
-AVBufferRef* vulkan_frame_import::device() const { return impl_->device.get(); }
+AVBufferRef* vulkan_frame_import::device() const { return impl_->device ? impl_->device.get() : nullptr; }
+
+bool vulkan_frame_import::has_device_extension(const char* name) const
+{
+    for (const auto& extension : impl_->accelerator_device->enabled_device_extensions()) {
+        if (extension == name)
+            return true;
+    }
+    return false;
+}
+
+vk::Device vulkan_frame_import::vk_device() const { return impl_->accelerator_device->getVkDevice(); }
+
+void vulkan_frame_import::drain()
+{
+    auto& ctx = impl_->gpu.context();
+    ctx.wait(ctx.current_completion(), UINT64_MAX);
+    impl_->in_flight.clear();
+}
 
 bool vulkan_frame_import::has_mixer_layout(AVPixelFormat sw_format, int width, int height)
 {
     return mixer_layout_of(sw_format, width, height).has_value();
+}
+
+std::optional<core::pixel_format_desc>
+vulkan_frame_import::mixer_layout(AVPixelFormat sw_format, int width, int height, core::color_space color_space)
+{
+    return mixer_layout_of(sw_format, width, height, color_space);
 }
 
 core::draw_frame vulkan_frame_import::host_frame(void*                            tag,
@@ -325,26 +398,9 @@ core::draw_frame vulkan_frame_import::import(void*                            ta
         return core::draw_frame{};
     }
 
-    const auto& desc      = *layout;
-    const int   nb_planes = static_cast<int>(desc.planes.size());
-
     int nb_images = 0;
     while (nb_images < AV_NUM_DATA_POINTERS && vkf->img[nb_images])
         ++nb_images;
-
-    // One mixer texture per plane, sized and strided exactly as the desc the mixer will
-    // read it back with, so the copy extents and the shader agree by construction.
-    std::vector<producer_plane> planes;
-    planes.reserve(desc.planes.size());
-    for (const auto& plane : desc.planes) {
-        producer_plane p;
-        p.tex = impl_->gpu.factory().create_producer_texture(plane.width, plane.height, plane.stride, plane.depth);
-        p.from_layout = vk::ImageLayout::eUndefined; // pooled texture, previous contents discardable
-        p.work_layout = vk::ImageLayout::eTransferDstOptimal;
-        p.work_stage  = vk::PipelineStageFlagBits2::eTransfer;
-        p.work_access = vk::AccessFlagBits2::eTransferWrite;
-        planes.push_back(std::move(p));
-    }
 
     // FFmpeg's contract: read the frame's properties under its lock, wait its timeline at
     // the value it reports, signal that timeline back at an incremented value, and record
@@ -362,14 +418,53 @@ core::draw_frame vulkan_frame_import::import(void*                            ta
         sync.signal.push_back({vk::Semaphore(vkf->sem[i]), vkf->sem_value[i] + 1});
     }
 
+    auto frame = import_images(tag, src_images, src_layouts, *layout, sync, audio, scale_mode);
+
+    for (int i = 0; i < nb_images; ++i) {
+        vkf->sem_value[i] += 1;
+        vkf->layout[i] = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        vkf->access[i] = VK_ACCESS_TRANSFER_READ_BIT;
+    }
+
+    return frame;
+}
+
+core::draw_frame vulkan_frame_import::import_images(void*                                     tag,
+                                                    const std::vector<vk::Image>&             images,
+                                                    const std::vector<vk::ImageLayout>&       layouts,
+                                                    const core::pixel_format_desc&            desc,
+                                                    const accelerator::vulkan::external_sync& sync,
+                                                    const std::shared_ptr<AVFrame>&           audio,
+                                                    core::frame_geometry::scale_mode          scale_mode,
+                                                    std::shared_ptr<void>                     keep_alive)
+{
+    const int nb_planes = static_cast<int>(desc.planes.size());
+    const int nb_images = static_cast<int>(images.size());
+
+    // One mixer texture per plane, sized and strided exactly as the desc the mixer will
+    // read it back with, so the copy extents and the shader agree by construction.
+    std::vector<producer_plane> planes;
+    planes.reserve(desc.planes.size());
+    for (const auto& plane : desc.planes) {
+        producer_plane p;
+        p.tex = impl_->gpu.factory().create_producer_texture(plane.width, plane.height, plane.stride, plane.depth);
+        p.from_layout = vk::ImageLayout::eUndefined; // pooled texture, previous contents discardable
+        p.work_layout = vk::ImageLayout::eTransferDstOptimal;
+        p.work_stage  = vk::PipelineStageFlagBits2::eTransfer;
+        p.work_access = vk::AccessFlagBits2::eTransferWrite;
+        planes.push_back(std::move(p));
+    }
+
     auto record = [&](vk::CommandBuffer cmd, const std::vector<std::shared_ptr<texture>>& textures) {
-        // Move FFmpeg's images to a transfer source. They are CONCURRENT across every queue
-        // family we registered with the hardware device context, so this is a plain
-        // transition: an ownership transfer is neither needed nor legal on such an image,
-        // and the timeline wait above is what orders it after the decode.
+        // Move the source images to a transfer source. FFmpeg's are CONCURRENT across every queue
+        // family we registered with the hardware device context, so this is a plain transition: an
+        // ownership transfer is neither needed nor legal on such an image, and the caller's
+        // timeline wait is what orders it after the decode. An image imported from another API
+        // arrives in eUndefined, which discards contents on paper but not on the driver that has
+        // one — MoltenVK, where layouts are near no-ops and the memory is the IOSurface itself.
         for (int i = 0; i < nb_images; ++i) {
-            transitionImageLayout(src_images[i],
-                                  src_layouts[i],
+            transitionImageLayout(images[i],
+                                  layouts[i],
                                   vk::AccessFlagBits2::eNone,
                                   vk::PipelineStageFlagBits2::eTopOfPipe,
                                   vk::ImageLayout::eTransferSrcOptimal,
@@ -386,7 +481,7 @@ core::draw_frame vulkan_frame_import::import(void*                            ta
             region.dstSubresource = vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
             region.extent = vk::Extent3D(static_cast<uint32_t>(dst->width()), static_cast<uint32_t>(dst->height()), 1);
 
-            cmd.copyImage(src_images[image_index_of_plane(n, nb_images)],
+            cmd.copyImage(images[image_index_of_plane(n, nb_images)],
                           vk::ImageLayout::eTransferSrcOptimal,
                           vk::Image(dst->id()),
                           vk::ImageLayout::eTransferDstOptimal,
@@ -401,10 +496,11 @@ core::draw_frame vulkan_frame_import::import(void*                            ta
     auto frame =
         impl_->gpu.produce(tag, std::move(planes), desc, record, to_audio_array(audio), sync, std::move(geometry));
 
-    for (int i = 0; i < nb_images; ++i) {
-        vkf->sem_value[i] += 1;
-        vkf->layout[i] = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        vkf->access[i] = VK_ACCESS_TRANSFER_READ_BIT;
+    if (keep_alive) {
+        impl_->retire_completed();
+        // The context is shared, so this token may belong to a later submit than ours. Holding the
+        // source a little longer than strictly necessary is the safe direction to err in.
+        impl_->in_flight.push_back({impl_->gpu.context().current_completion(), std::move(keep_alive)});
     }
 
     return core::draw_frame(std::move(frame));
@@ -429,6 +525,12 @@ void register_vulkan_requirements(vkb::PhysicalDevice& pd)
 #ifdef _WIN32
     pd.enable_extension_if_present(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
     pd.enable_extension_if_present(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+#endif
+#ifdef __APPLE__
+    // How a Metal texture comes to back a VkImage, which is the whole VideoToolbox path: its
+    // frames are IOSurfaces, and this is the only route MoltenVK offers into one. Named as a
+    // literal to keep the Metal platform headers out of this file.
+    pd.enable_extension_if_present("VK_EXT_metal_objects");
 #endif
 
     // FFmpeg's decoder needs the feature, not just the extension: it allocates DPB images

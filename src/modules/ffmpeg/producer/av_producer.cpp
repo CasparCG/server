@@ -101,6 +101,15 @@ const AVCodec* get_decoder(AVCodecID codec_id)
 // TODO (fix) Handle ts discontinuities.
 // TODO (feat) Forward options.
 
+/// Whether a frame the decoder handed over carries anything, as opposed to the empty frame pop()
+/// returns at end of file.
+///
+/// Not `data[0]`: a hardware frame keeps its payload wherever its API does, and VideoToolbox
+/// leaves data[0] null and puts the CVPixelBuffer in data[3] — reading data[0] there reports end
+/// of file for every picture in the file. Every real frame, hardware or software, arrives with a
+/// buffer reference; only the end-of-file sentinel, a bare alloc_frame(), has none.
+bool has_content(const AVFrame& frame) { return frame.buf[0] != nullptr; }
+
 class Decoder
 {
     Decoder(const Decoder&)            = delete;
@@ -1230,7 +1239,7 @@ struct AVProducer::Impl
             }
 
             for (auto& source : p.second) {
-                if (!frame->data[0]) {
+                if (!has_content(*frame)) {
                     FF(av_buffersrc_close(source, frame->pts, 0));
                 } else {
                     // TODO (fix) Guard against overflow?
@@ -1240,7 +1249,7 @@ struct AVProducer::Impl
             }
 
             // End Of File
-            if (!frame->data[0]) {
+            if (!has_content(*frame)) {
                 eof.push_back(p.first);
             }
         }
@@ -1277,7 +1286,9 @@ struct AVProducer::Impl
     ///
     /// Vulkan comes before CUDA because it decodes into the render device directly, while CUDA
     /// pays for a copy across the API boundary; CUDA earns its place on the codecs Vulkan video
-    /// decode cannot do at all. The CPU strategy is always last and always present.
+    /// decode cannot do at all. On macOS neither exists — MoltenVK has no Vulkan video decode and
+    /// Apple hardware has no CUDA — and VideoToolbox is the whole of hardware decoding there.
+    /// The CPU strategy is always last and always present.
     std::vector<std::shared_ptr<video_strategy>> build_video_strategies() const
     {
         std::vector<std::shared_ptr<video_strategy>> candidates;
@@ -1294,6 +1305,11 @@ struct AVProducer::Impl
             if (auto cuda = try_create_cuda_video_strategy(frame_factory_)) {
                 candidates.push_back(std::move(cuda));
             }
+#ifdef __APPLE__
+            if (auto videotoolbox = try_create_videotoolbox_video_strategy(frame_factory_)) {
+                candidates.push_back(std::move(videotoolbox));
+            }
+#endif
 #endif
         }
 
@@ -1405,7 +1421,7 @@ struct AVProducer::Impl
         // A frame with no data is end of file before a single picture — there is nothing to
         // describe the source with, and nothing to show either. Build the graph from the
         // container so the shape is right, then close the source immediately below.
-        const auto* description = frame->data[0] ? frame.get() : nullptr;
+        const auto* description = has_content(*frame) ? frame.get() : nullptr;
 
         if (description && !video()->accepts(*description)) {
             return restart_with_next_video_strategy();
@@ -1428,7 +1444,7 @@ struct AVProducer::Impl
 
         // The frame that described the graph is also the graph's first input.
         for (auto source : sources_[stream->index]) {
-            if (frame->data[0]) {
+            if (has_content(*frame)) {
                 FF(av_buffersrc_write_frame(source, frame.get()));
             } else {
                 FF(av_buffersrc_close(source, frame->pts, 0));
