@@ -11,6 +11,7 @@ set(SOURCES
 
 		frame/draw_frame.cpp
 		frame/frame.cpp
+		frame/frame_side_data.cpp
 		frame/frame_transform.cpp
 		frame/geometry.cpp
 
