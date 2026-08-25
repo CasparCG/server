@@ -26,6 +26,7 @@ class AVProducer
                std::optional<int64_t>               duration,
                std::optional<bool>                  loop,
                int                                  seekable,
+               std::optional<int>                   hls_start_index,
                core::frame_geometry::scale_mode     scale_mode);
 
     core::draw_frame prev_frame(const core::video_field field);
