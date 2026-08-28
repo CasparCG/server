@@ -35,8 +35,8 @@ struct layer::impl
     monitor::state                state_;
     const core::video_format_desc format_desc_;
 
-    spl::shared_ptr<frame_producer> foreground_ = frame_producer::empty();
-    spl::shared_ptr<frame_producer> background_ = frame_producer::empty();
+    frame_producer_and_attrs foreground_;
+    frame_producer_and_attrs background_;
 
     bool auto_play_ = false;
     bool paused_    = false;
@@ -51,12 +51,12 @@ struct layer::impl
 
     void resume() { paused_ = false; }
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview_producer, bool auto_play)
+    void load(frame_producer_and_attrs producer, bool preview_producer, bool auto_play)
     {
         background_ = std::move(producer);
         auto_play_  = auto_play;
 
-        if (auto_play_ && foreground_ == frame_producer::empty()) {
+        if (auto_play_ && foreground_.producer == frame_producer::empty()) {
             play();
         } else if (preview_producer) {
             preview(true);
@@ -65,7 +65,7 @@ struct layer::impl
 
     void preview(bool force)
     {
-        if (force || background_ != frame_producer::empty()) {
+        if (force || background_.producer != frame_producer::empty()) {
             play();
             paused_ = true;
         }
@@ -73,23 +73,25 @@ struct layer::impl
 
     void play()
     {
-        if (background_ != frame_producer::empty()) {
+        if (background_.producer != frame_producer::empty()) {
             if (!paused_) {
-                background_->leading_producer(foreground_);
+                background_.producer->leading_producer(foreground_);
             } else {
                 if (format_desc_.field_count == 2) {
-                    auto frame1 = foreground_->last_frame(core::video_field::a);
-                    auto frame2 = foreground_->last_frame(core::video_field::b);
-                    background_->leading_producer(
-                        spl::make_shared<core::const_producer>(std::move(frame1), std::move(frame2)));
+                    auto frame1 = foreground_.last_frame(core::video_field::a);
+                    auto frame2 = foreground_.last_frame(core::video_field::b);
+                    background_.producer->leading_producer(
+                        {spl::make_shared<core::const_producer>(std::move(frame1), std::move(frame2)),
+                         closed_captions_priority()});
                 } else {
-                    auto frame = foreground_->last_frame(core::video_field::progressive);
-                    background_->leading_producer(spl::make_shared<core::const_producer>(frame, frame));
+                    auto frame = foreground_.last_frame(core::video_field::progressive);
+                    background_.producer->leading_producer(
+                        {spl::make_shared<core::const_producer>(frame, frame), closed_captions_priority()});
                 }
             }
 
             foreground_ = std::move(background_);
-            background_ = frame_producer::empty();
+            background_ = {};
 
             auto_play_ = false;
         }
@@ -99,23 +101,24 @@ struct layer::impl
 
     void stop()
     {
-        foreground_ = frame_producer::empty();
+        foreground_ = {};
         auto_play_  = false;
     }
 
     draw_frame receive(const video_field field, int nb_samples)
     {
         try {
-            if (foreground_->following_producer() != core::frame_producer::empty() && field != video_field::b) {
-                foreground_ = foreground_->following_producer();
+            if (foreground_.producer->following_producer().producer != core::frame_producer::empty() &&
+                field != video_field::b) {
+                foreground_ = foreground_.producer->following_producer();
             }
 
             int64_t frames_left = 0;
             if (auto_play_) {
-                auto auto_play_delta = background_->auto_play_delta();
+                auto auto_play_delta = background_.producer->auto_play_delta();
                 if (auto_play_delta) {
-                    auto time     = static_cast<std::int64_t>(foreground_->frame_number());
-                    auto duration = static_cast<std::int64_t>(foreground_->nb_frames());
+                    auto time     = static_cast<std::int64_t>(foreground_.producer->frame_number());
+                    auto duration = static_cast<std::int64_t>(foreground_.producer->nb_frames());
                     frames_left   = duration - time - *auto_play_delta;
                     if (frames_left < 1 && field != video_field::b) {
                         play();
@@ -123,22 +126,22 @@ struct layer::impl
                 }
             }
 
-            auto frame = paused_ ? core::draw_frame{} : foreground_->receive(field, nb_samples);
+            auto frame = paused_ ? core::draw_frame{} : foreground_.receive(field, nb_samples);
             if (!frame) {
-                frame = foreground_->last_frame(field);
+                frame = foreground_.last_frame(field);
             }
 
             state_                           = {};
-            state_["foreground"]             = foreground_->state();
-            state_["foreground"]["producer"] = foreground_->name();
+            state_["foreground"]             = foreground_.producer->state();
+            state_["foreground"]["producer"] = foreground_.producer->name();
             state_["foreground"]["paused"]   = paused_;
 
             if (frames_left > 0) {
                 state_["foreground"]["frames_left"] = frames_left;
             }
 
-            state_["background"]             = background_->state();
-            state_["background"]["producer"] = background_->name();
+            state_["background"]             = background_.producer->state();
+            state_["background"]["producer"] = background_.producer->name();
 
             return frame;
         } catch (...) {
@@ -151,11 +154,10 @@ struct layer::impl
     draw_frame receive_background(const video_field field, int nb_samples)
     {
         try {
-            return background_->first_frame(field);
-
+            return background_.first_frame(field);
         } catch (...) {
             CASPAR_LOG_CURRENT_EXCEPTION();
-            background_ = frame_producer::empty();
+            background_ = {};
             return draw_frame{};
         }
     }
@@ -175,7 +177,7 @@ layer& layer::operator=(layer&& other)
     return *this;
 }
 void layer::swap(layer& other) { impl_.swap(other.impl_); }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, bool auto_play)
+void layer::load(frame_producer_and_attrs frame_producer, bool preview, bool auto_play)
 {
     return impl_->load(std::move(frame_producer), preview, auto_play);
 }
@@ -189,8 +191,8 @@ draw_frame layer::receive_background(const video_field field, int nb_samples)
 {
     return impl_->receive_background(field, nb_samples);
 }
-spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_; }
-spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_; }
-bool                            layer::has_background() const { return impl_->background_ != frame_producer::empty(); }
-core::monitor::state            layer::state() const { return impl_->state_; }
+frame_producer_and_attrs layer::foreground() const { return impl_->foreground_; }
+frame_producer_and_attrs layer::background() const { return impl_->background_; }
+bool                 layer::has_background() const { return impl_->background_.producer != frame_producer::empty(); }
+core::monitor::state layer::state() const { return impl_->state_; }
 }} // namespace caspar::core

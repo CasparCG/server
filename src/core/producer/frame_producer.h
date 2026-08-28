@@ -133,9 +133,9 @@ class frame_producer
         }
         return core::draw_frame::still(first_frame_);
     }
-    virtual void                            leading_producer(const spl::shared_ptr<frame_producer>&) {}
-    virtual spl::shared_ptr<frame_producer> following_producer() const { return core::frame_producer::empty(); }
-    virtual std::optional<int64_t>          auto_play_delta() const { return {}; }
+    virtual void                     leading_producer(const frame_producer_and_attrs&) {}
+    virtual frame_producer_and_attrs following_producer() const { return frame_producer_and_attrs(); }
+    virtual std::optional<int64_t>   auto_play_delta() const { return {}; }
 
     /**
      * Some producers take a couple of frames before they produce frames.
