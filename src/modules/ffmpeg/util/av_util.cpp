@@ -1,5 +1,6 @@
 #include "av_util.h"
 #include "av_assert.h"
+#include <core/frame/frame_side_data.h>
 
 #include <common/bit_depth.h>
 
@@ -60,13 +61,14 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
     return result;
 }
 
-core::mutable_frame make_frame(void*                            tag,
-                               core::frame_factory&             frame_factory,
-                               std::shared_ptr<AVFrame>         video,
-                               std::shared_ptr<AVFrame>         audio,
-                               core::color_space                color_space,
-                               core::frame_geometry::scale_mode scale_mode,
-                               bool                             is_straight_alpha)
+core::mutable_frame make_frame(void*                                        tag,
+                               core::frame_factory&                         frame_factory,
+                               std::shared_ptr<AVFrame>                     video,
+                               std::shared_ptr<AVFrame>                     audio,
+                               std::shared_ptr<core::frame_side_data_queue> side_data_queue,
+                               core::color_space                            color_space,
+                               core::frame_geometry::scale_mode             scale_mode,
+                               bool                                         is_straight_alpha)
 {
     std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
 
