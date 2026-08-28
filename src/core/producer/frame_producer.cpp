@@ -48,6 +48,12 @@ frame_producer_dependencies::frame_producer_dependencies(
 {
 }
 
+frame_producer_and_attrs::frame_producer_and_attrs()
+    : producer(frame_producer::empty())
+    , cc_priority(1)
+{
+}
+
 const spl::shared_ptr<frame_producer>& frame_producer::empty()
 {
     class empty_frame_producer : public frame_producer
@@ -80,4 +86,16 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
     return producer;
 }
 
+draw_frame frame_producer_and_attrs::receive(const video_field field, int nb_samples)
+{
+    return apply_attrs(producer->receive(field, nb_samples));
+}
+draw_frame frame_producer_and_attrs::last_frame(const video_field field)
+{
+    return apply_attrs(producer->last_frame(field));
+}
+draw_frame frame_producer_and_attrs::first_frame(const video_field field)
+{
+    return apply_attrs(producer->first_frame(field));
+}
 }} // namespace caspar::core

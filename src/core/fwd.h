@@ -34,6 +34,7 @@ class output;
 class image_mixer;
 struct video_format_desc;
 class frame_factory;
+struct frame_producer_and_attrs;
 class frame_producer;
 class frame_consumer;
 class draw_frame;
