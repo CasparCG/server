@@ -36,7 +36,6 @@
 #include <core/video_format.h>
 
 #include <queue>
-#include <unordered_map>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -89,9 +88,14 @@ struct mixer::impl
                 auto desc = pixel_format_desc(pixel_format::bgra);
                 desc.planes.push_back(pixel_format_desc::plane(format_desc.width, format_desc.height, 4, depth));
                 std::vector<array<const uint8_t>> image_data;
-                auto                              tuple = std::move(result.get());
-                image_data.emplace_back(std::move(std::get<0>(tuple)));
-                return const_frame(tag, std::move(image_data), std::move(audio), desc, std::move(std::get<1>(tuple)));
+                auto [image, texture] = std::move(result.get());
+                image_data.emplace_back(std::move(image));
+                return const_frame(tag,
+                                   std::move(image_data),
+                                   std::move(audio),
+                                   desc,
+                                   std::move(texture),
+                                   core::frame_side_data_in_queue());
             }));
 
         if (buffer_.size() <= format_desc.field_count) {
