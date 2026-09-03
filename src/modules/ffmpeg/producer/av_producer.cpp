@@ -4,9 +4,11 @@
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
+#include "core/frame/frame_side_data.h"
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
+#include <boost/log/utility/manipulators/dump.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/rotate.hpp>
 #include <boost/rational.hpp>
@@ -26,9 +28,13 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
+#include <tuple>
+#include <utility>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavcodec/codec_id.h>
+#include <libavcodec/packet.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
@@ -36,6 +42,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/error.h>
+#include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
@@ -112,14 +119,20 @@ class Decoder
   public:
     std::shared_ptr<AVCodecContext> ctx;
 
+    static inline constexpr int           eia608_video_width   = 16;
+    static inline constexpr int           eia608_video_height  = 16;
+    static inline constexpr AVPixelFormat eia608_video_pix_fmt = AV_PIX_FMT_RGB24;
+
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream)
+    explicit Decoder(AVStream* stream, Decoder* eia608_subtitles_decoder, bool remove_a53_cc)
         : st(stream)
     {
-        auto debug_stream_kind = stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO   ? "video"
-                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ? "audio"
-                                                                                      : "unknown";
+        auto debug_stream_kind = stream->codecpar->codec_id == AV_CODEC_ID_EIA_608       ? "eia-608"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO    ? "video"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO    ? "audio"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE ? "subtitle"
+                                                                                         : "unknown";
         auto input_channel     = channel<std::shared_ptr<AVPacket>>(
             2, channel_capacity_is_hint, (boost::format("Decoder-%i-%s-in") % stream->index % debug_stream_kind).str());
         auto output_channel = channel<std::shared_ptr<AVFrame>>(
@@ -128,6 +141,60 @@ class Decoder
         input  = std::move(input_channel.first);
         output = std::move(output_channel.second);
 
+        if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608) {
+            thread = boost::thread([this,
+                                    stream,
+                                    input_receiver = std::move(input_channel.second),
+                                    output_sender  = std::move(output_channel.first)]() mutable {
+                try {
+                    while (!thread.interruption_requested()) {
+                        auto packet_opt = input_receiver.try_receive_blocking();
+                        if (!packet_opt) {
+                            break; // no sender -- we're done
+                        }
+                        auto packet = std::move(*packet_opt);
+                        if (!packet) {
+                            continue; // we don't need to do anything for a flush
+                        }
+
+                        auto av_frame    = alloc_frame();
+                        av_frame->width  = eia608_video_width;
+                        av_frame->height = eia608_video_height;
+                        av_frame->format = eia608_video_pix_fmt;
+                        FF(av_frame_get_buffer(av_frame.get(), 1));
+                        for (int y = 0; y < av_frame->height; y++) {
+                            std::uint8_t* p = av_frame->data[0] + y * av_frame->linesize[0];
+                            for (int x = 0; x < av_frame->width; x++) {
+                                *p++ = 0;
+                                *p++ = 0;
+                                *p++ = 0;
+                            }
+                        }
+                        auto* side_data =
+                            FFMEM(av_frame_new_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC, packet->size));
+                        std::memcpy(side_data->data, packet->data, packet->size);
+                        av_frame->pts     = packet->pts;
+                        av_frame->pkt_dts = packet->dts;
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 10, 100)
+                        av_frame->time_base = stream->time_base;
+#endif
+#if LIBAVUTIL_VERSION_MAJOR < 58
+                        av_frame->pkt_duration = packet->duration;
+#else
+                        av_frame->duration = packet->duration;
+#endif
+                        if (output_sender.try_send_blocking(av_frame)) {
+                            break; // no receiver -- we're done
+                        }
+                    }
+                } catch (boost::thread_interrupted&) {
+                    // Do nothing...
+                } catch (...) {
+                    CASPAR_LOG_CURRENT_EXCEPTION();
+                }
+            });
+            return;
+        }
         const auto codec = get_decoder(stream->codecpar->codec_id);
 
         if (!codec) {
@@ -154,7 +221,17 @@ class Decoder
 
         ctx->pkt_timebase = stream->time_base;
 
+        Receiver<std::shared_ptr<AVPacket>> eia608_subtitles_in;
+
         if (ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+            if (eia608_subtitles_decoder) {
+                auto side_data_in = channel<std::shared_ptr<AVPacket>>(
+                    2,
+                    channel_capacity_is_hint,
+                    (boost::format("Decoder-%i-eia-608-side-data-in") % stream->index).str());
+                eia608_subtitles_in             = std::move(side_data_in.second);
+                eia608_subtitles_decoder->input = std::move(side_data_in.first);
+            }
             ctx->framerate           = av_guess_frame_rate(nullptr, stream, nullptr);
             ctx->sample_aspect_ratio = av_guess_sample_aspect_ratio(nullptr, stream, nullptr);
         } else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -164,8 +241,9 @@ class Decoder
 
         thread = boost::thread([=,
                                 this,
-                                input_receiver = std::move(input_channel.second),
-                                output_sender  = std::move(output_channel.first)]() mutable {
+                                eia608_subtitles_in = std::move(eia608_subtitles_in),
+                                input_receiver      = std::move(input_channel.second),
+                                output_sender       = std::move(output_channel.first)]() mutable {
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
@@ -231,6 +309,22 @@ class Decoder
                             next_pts = AV_NOPTS_VALUE;
                         }
 
+                        if (auto eia608_subtitles_packet = eia608_subtitles_in.try_receive_blocking().value_or(nullptr);
+                            eia608_subtitles_packet) {
+                            av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                            auto new_side_data = FFMEM(av_frame_new_side_data(
+                                av_frame.get(), AV_FRAME_DATA_A53_CC, eia608_subtitles_packet->size));
+                            std::memcpy(
+                                new_side_data->data, eia608_subtitles_packet->data, eia608_subtitles_packet->size);
+                        }
+
+                        if (remove_a53_cc) {
+                            av_frame_remove_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC);
+                        } else if (auto* side_data = av_frame_get_side_data(av_frame.get(), AV_FRAME_DATA_A53_CC)) {
+                            CASPAR_LOG(trace) << L"ffmpeg producer: decoded frame with A53_CC side data: "
+                                              << boost::log::dump(side_data->data, side_data->size, 16);
+                        }
+
                         if (output_sender.try_send_blocking(av_frame)) {
                             break; // no receiver -- we're done
                         }
@@ -274,8 +368,10 @@ class Decoder
 
 struct Filter
 {
-    std::shared_ptr<AVFilterGraph>  graph;
-    AVFilterContext*                sink = nullptr;
+    std::shared_ptr<AVFilterGraph> graph;
+    AVFilterContext*               sink = nullptr;
+    /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
+    /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, AVFilterContext*> sources;
     std::shared_ptr<AVFrame>        frame;
     bool                            eof = false;
@@ -289,6 +385,7 @@ struct Filter
            AVMediaType                    media_type,
            const core::video_format_desc& format_desc)
     {
+        bool need_fps_filter = false;
         if (media_type == AVMEDIA_TYPE_VIDEO) {
             if (filter_spec.empty()) {
                 filter_spec = "null";
@@ -300,6 +397,8 @@ struct Filter
             if (deint != "none") {
                 filter_spec += (boost::format(",bwdif=mode=send_field:parity=auto:deint=%s") % deint).str();
             }
+
+            need_fps_filter = true;
 
             filter_spec += (boost::format(",fps=fps=%d/%d:start_time=%f") %
                             (format_desc.framerate.numerator() * format_desc.field_count) %
@@ -362,7 +461,9 @@ struct Filter
             }
         }
 
-        std::deque<AVStream*> video_streams, audio_streams;
+        std::deque<AVStream*>    video_streams, audio_streams;
+        std::optional<AVStream*> eia608_subtitles_stream;
+        bool                     eia608_subtitles_stream_is_default = false;
         for (auto n = 0U; n < input->nb_streams; ++n) {
             const auto st = input->streams[n];
 
@@ -384,7 +485,34 @@ struct Filter
                         break;
                 }
             }
+
+            // if we're the video input, look for EIA-608 subtitles that can be added as side-data
+            if (st->codecpar->codec_id == AV_CODEC_ID_EIA_608 && media_type == AVMEDIA_TYPE_VIDEO) {
+                need_fps_filter = true;
+                if (!eia608_subtitles_stream_is_default && (disposition & AV_DISPOSITION_DEFAULT) != 0) {
+                    eia608_subtitles_stream            = st;
+                    eia608_subtitles_stream_is_default = true;
+                } else if (!eia608_subtitles_stream) {
+                    eia608_subtitles_stream = st;
+                }
+            }
         }
+
+        bool remove_a53_cc = false;
+#if LIBAVFILTER_VERSION_MAJOR <= 9
+        // check against version of actually-loaded library, since you might be using a
+        // different dynamic library version than the one that was compiled against.
+        if (need_fps_filter && avfilter_version() < AV_VERSION_INT(9, 8, 101)) {
+            if (media_type == AVMEDIA_TYPE_VIDEO) {
+                // only error for video stream to avoid duplicate messages
+                CASPAR_LOG(error)
+                    << "ffmpeg producer: libavfilter is too old and buggy to properly handle closed captions when "
+                       "changing frame-rate with the \"fps\" filter, you need at least libavfilter version 9.8.101"
+                       " -- disabling closed captions for ffmpeg producer";
+            }
+            remove_a53_cc = true;
+        }
+#endif
 
         if (audio_input_count == 1) {
             // TODO (fix) Use some form of stream meta data to do this.
@@ -414,6 +542,10 @@ struct Filter
                 if (video_streams.size() == 2 || !same_properties(video_streams[0], video_streams[2])) {
                     filter_spec = "alphamerge," + filter_spec;
                 }
+            } else if (video_streams.empty() && eia608_subtitles_stream) {
+                // fake video input so we can add EIA-608 closed captions side data
+                video_streams.push_back(*eia608_subtitles_stream);
+                eia608_subtitles_stream = std::nullopt;
             }
         }
 
@@ -432,6 +564,7 @@ struct Filter
                 const auto type = avfilter_pad_get_type(cur->filter_ctx->input_pads, cur->pad_idx);
 
                 AVStream* stream;
+                Decoder*  eia608_subtitles_stream_decoder = nullptr;
 
                 switch (type) {
                     case AVMEDIA_TYPE_VIDEO:
@@ -442,6 +575,20 @@ struct Filter
                         // TODO find stream based on link name
                         stream = video_streams.front();
                         video_streams.pop_front();
+                        if (remove_a53_cc) {
+                            if (stream->codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
+                                graph = nullptr;
+                                return;
+                            }
+                        } else if (eia608_subtitles_stream && streams.count((*eia608_subtitles_stream)->index) == 0) {
+                            eia608_subtitles_stream_decoder =
+                                &streams
+                                     .emplace(std::piecewise_construct,
+                                              std::tuple((*eia608_subtitles_stream)->index),
+                                              std::tuple(*eia608_subtitles_stream, nullptr, false))
+                                     .first->second;
+                            sources.emplace((*eia608_subtitles_stream)->index, nullptr);
+                        }
                         break;
                     case AVMEDIA_TYPE_AUDIO:
                         if (audio_streams.empty()) {
@@ -460,12 +607,30 @@ struct Filter
 
                 auto it = streams.find(stream->index);
                 if (it == streams.end()) {
-                    it = streams.emplace(stream->index, stream).first;
+                    it = streams
+                             .emplace(std::piecewise_construct,
+                                      std::tuple(stream->index),
+                                      std::tuple(stream, eia608_subtitles_stream_decoder, remove_a53_cc))
+                             .first;
                 }
 
                 auto st = it->second.ctx;
 
-                if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
+                if (!st) {
+                    // fake video input so we can add EIA-608 closed captions side data
+
+                    auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") %
+                                 Decoder::eia608_video_width % Decoder::eia608_video_height %
+                                 Decoder::eia608_video_pix_fmt % stream->time_base.num % stream->time_base.den)
+                                    .str();
+                    auto name = (boost::format("in_%d") % stream->index).str();
+
+                    AVFilterContext* source = nullptr;
+                    FF(avfilter_graph_create_filter(
+                        &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
+                    FF(avfilter_link(source, 0, cur->filter_ctx, cur->pad_idx));
+                    sources.emplace(stream->index, source);
+                } else if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
                     auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
                                  st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
@@ -654,6 +819,8 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
+    /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
+    /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, std::vector<AVFilterContext*>> sources_;
 
     std::atomic<int64_t> start_{AV_NOPTS_VALUE};
@@ -1146,6 +1313,8 @@ struct AVProducer::Impl
 
             auto nb_requests = 0U;
             for (auto source : p.second) {
+                if (!source)
+                    continue;
                 nb_requests = std::max(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
@@ -1159,6 +1328,8 @@ struct AVProducer::Impl
             }
 
             for (auto& source : p.second) {
+                if (!source)
+                    continue;
                 if (!frame->data[0]) {
                     FF(av_buffersrc_close(source, frame->pts, 0));
                 } else {
