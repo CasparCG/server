@@ -1,5 +1,7 @@
 #include "av_util.h"
 #include "av_assert.h"
+#include "common/assert.h"
+#include "common/log.h"
 #include <core/frame/frame_side_data.h>
 
 #include <common/bit_depth.h>
@@ -16,6 +18,8 @@ extern "C" {
 #include <array>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
+
+#include <boost/log/utility/manipulators/dump.hpp>
 
 #include <tuple>
 
@@ -61,6 +65,83 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
     return result;
 }
 
+static void add_side_data(std::vector<core::const_frame_side_data>& out, const AVFrameSideData& in)
+{
+    auto add_no_metadata = [&](core::frame_side_data_type type) {
+        out.push_back(core::const_frame_side_data(type, std::vector<uint8_t>(in.data, in.data + in.size)));
+    };
+    switch (in.type) {
+        case AV_FRAME_DATA_A53_CC:
+            CASPAR_LOG(trace) << L"got A53_CC side data: " << boost::log::dump(in.data, in.size, 16);
+            add_no_metadata(core::frame_side_data_type::a53_cc);
+            break;
+        case AV_FRAME_DATA_PANSCAN:
+        case AV_FRAME_DATA_STEREO3D:
+        case AV_FRAME_DATA_MATRIXENCODING:
+        case AV_FRAME_DATA_DOWNMIX_INFO:
+        case AV_FRAME_DATA_REPLAYGAIN:
+        case AV_FRAME_DATA_DISPLAYMATRIX:
+        case AV_FRAME_DATA_AFD:
+        case AV_FRAME_DATA_MOTION_VECTORS:
+        case AV_FRAME_DATA_SKIP_SAMPLES:
+        case AV_FRAME_DATA_AUDIO_SERVICE_TYPE:
+        case AV_FRAME_DATA_MASTERING_DISPLAY_METADATA:
+        case AV_FRAME_DATA_GOP_TIMECODE:
+        case AV_FRAME_DATA_SPHERICAL:
+        case AV_FRAME_DATA_CONTENT_LIGHT_LEVEL:
+        case AV_FRAME_DATA_ICC_PROFILE:
+        case AV_FRAME_DATA_S12M_TIMECODE:
+        case AV_FRAME_DATA_DYNAMIC_HDR_PLUS:
+        case AV_FRAME_DATA_REGIONS_OF_INTEREST:
+        case AV_FRAME_DATA_VIDEO_ENC_PARAMS:
+        case AV_FRAME_DATA_SEI_UNREGISTERED:
+        case AV_FRAME_DATA_FILM_GRAIN_PARAMS:
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(56, 73, 100)
+        case AV_FRAME_DATA_DETECTION_BBOXES:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 9, 100)
+        case AV_FRAME_DATA_DOVI_RPU_BUFFER:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 16, 100)
+        case AV_FRAME_DATA_DOVI_METADATA:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 22, 100)
+        case AV_FRAME_DATA_DYNAMIC_HDR_VIVID:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 44, 100)
+        case AV_FRAME_DATA_AMBIENT_VIEWING_ENVIRONMENT:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 15, 100)
+        case AV_FRAME_DATA_VIDEO_HINT:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(59, 37, 100)
+        case AV_FRAME_DATA_LCEVC:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(59, 38, 100)
+        case AV_FRAME_DATA_VIEW_ID:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 4, 101)
+        case AV_FRAME_DATA_3D_REFERENCE_DISPLAYS:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 10, 100)
+        case AV_FRAME_DATA_EXIF:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 30, 100)
+        case AV_FRAME_DATA_DYNAMIC_HDR_SMPTE_2094_APP5:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 31, 100)
+        case AV_FRAME_DATA_IAMF_MIX_GAIN_PARAM:
+        case AV_FRAME_DATA_IAMF_DEMIXING_INFO_PARAM:
+        case AV_FRAME_DATA_IAMF_RECON_GAIN_INFO_PARAM:
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 33, 100)
+        case AV_FRAME_DATA_RAW_COLOR_PARAMS:
+#endif
+            // TODO: add to core::frame_side_data_type and add metadata to core::*_frame_side_data if necessary
+            break;
+    }
+}
+
 core::mutable_frame make_frame(void*                                        tag,
                                core::frame_factory&                         frame_factory,
                                std::shared_ptr<AVFrame>                     video,
@@ -81,6 +162,29 @@ core::mutable_frame make_frame(void*                                        tag,
     auto frame = frame_factory.create_frame(tag, pix_desc);
     if (scale_mode != core::frame_geometry::scale_mode::stretch) {
         frame.geometry() = core::frame_geometry::get_default(scale_mode);
+    }
+
+    std::vector<core::const_frame_side_data> side_data;
+
+    if (video) {
+        for (int i = 0; i < video->nb_side_data; i++) {
+            add_side_data(side_data, *video->side_data[i]);
+        }
+    }
+
+    if (audio) {
+        for (int i = 0; i < audio->nb_side_data; i++) {
+            add_side_data(side_data, *audio->side_data[i]);
+        }
+    }
+
+    if (side_data_queue) {
+        frame.side_data() =
+            core::frame_side_data_in_queue{side_data_queue->add_frame(std::move(side_data)), side_data_queue};
+    } else if (!side_data.empty()) {
+        CASPAR_LOG(error)
+            << "frame has side-data but no frame_side_data_queue was passed to make_frame() -- dropping side data:\n"
+            << caspar::log::get_stack_trace();
     }
 
     tbb::parallel_invoke(
