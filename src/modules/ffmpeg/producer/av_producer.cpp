@@ -5,6 +5,7 @@
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
 #include "core/frame/frame_side_data.h"
+#include "substituted_a53_cc_queue.h"
 
 #include <boost/exception/exception.hpp>
 #include <boost/format.hpp>
@@ -819,6 +820,8 @@ struct AVProducer::Impl
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
+    std::unique_ptr<SubstitutedA53CCQueue> substituted_a53_cc_queue_;
+
     /// map from ffmpeg's stream index to the corresponding ffmpeg buffersrc,
     /// which may be null to indicate that the stream is used but its output is merged into a different stream
     std::map<int, std::vector<AVFilterContext*>> sources_;
@@ -1065,7 +1068,8 @@ struct AVProducer::Impl
             const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
             if (video_filter_.frame) {
-                frame.video      = std::move(video_filter_.frame);
+                frame.video = std::move(video_filter_.frame);
+                substituted_a53_cc_queue_->extract_by_key(frame.video.get());
                 const auto tb    = av_buffersink_get_time_base(video_filter_.sink);
                 const auto fr    = av_buffersink_get_frame_rate(video_filter_.sink);
                 frame.start_time = start_time;
@@ -1327,6 +1331,8 @@ struct AVProducer::Impl
                 continue;
             }
 
+            substituted_a53_cc_queue_->insert_and_replace_with_key(frame.get());
+
             for (auto& source : p.second) {
                 if (!source)
                     continue;
@@ -1372,8 +1378,9 @@ struct AVProducer::Impl
 
     void reset(int64_t start_time)
     {
-        video_filter_ = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
-        audio_filter_ = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
+        substituted_a53_cc_queue_ = std::make_unique<SubstitutedA53CCQueue>();
+        video_filter_             = Filter(vfilter_, input_, decoders_, start_time, AVMEDIA_TYPE_VIDEO, format_desc_);
+        audio_filter_             = Filter(afilter_, input_, decoders_, start_time, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
         for (auto& p : video_filter_.sources) {
