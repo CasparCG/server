@@ -592,7 +592,9 @@ struct Filter
             const AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             const int            sample_rates[] = {format_desc.audio_sample_rate, -1};
 
+#if LIBAVUTIL_VERSION_MAJOR < 60 // "all_channel_counts" was removed from abuffersink in FFmpeg 8
             FF(av_opt_set_int(sink, "all_channel_counts", 1, AV_OPT_SEARCH_CHILDREN));
+#endif
 
 #if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
             FF(av_opt_set_array(sink,
