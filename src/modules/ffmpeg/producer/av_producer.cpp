@@ -517,6 +517,21 @@ struct Filter
                         args += (boost::format(":frame_rate=%d/%d") % st->framerate.num % st->framerate.den).str();
                     }
 
+#if LIBAVFILTER_VERSION_MAJOR >= 10 // FFmpeg 7
+                    // A scaler in the graph takes the range from the link rather than the
+                    // frames. Left unset, it squeezes a full-range source down to limited
+                    // before the mixer sees it -- still correct, but a needless lossy
+                    // conversion. Older FFmpeg lacks these options and always squeezes.
+                    // The option values are the AVColorRange/AVColorSpace enums.
+                    if (st->color_range != AVCOL_RANGE_UNSPECIFIED) {
+                        args += (boost::format(":range=%d") % static_cast<int>(st->color_range)).str();
+                    }
+
+                    if (st->colorspace != AVCOL_SPC_UNSPECIFIED) {
+                        args += (boost::format(":colorspace=%d") % static_cast<int>(st->colorspace)).str();
+                    }
+#endif
+
                     AVFilterContext* source = nullptr;
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
