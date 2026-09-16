@@ -68,9 +68,14 @@ extern "C" {
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <atomic>
+#include <chrono>
+#include <future>
 #include <memory>
 #include <optional>
 #include <thread>
+
+using namespace std::chrono_literals;
 
 namespace caspar { namespace ffmpeg {
 
@@ -414,9 +419,29 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
+    std::mutex         reconnect_mutex_;
 
     tbb::concurrent_bounded_queue<std::tuple<core::const_frame, std::int64_t, std::int64_t>> frame_buffer_;
     std::thread                                                                              frame_thread_;
+
+    // Reconnect state. When the frame thread terminates due to a connection loss we
+    // disconnect the consumer and periodically try to reinitialize it from send().
+    // Uses a stepped backoff (1s, 2s, 4s, 8s, 16s) with 25 attempts per level,
+    // capped at 30s.
+    //
+    // packet_thread_failed_ is set by the packet thread when its writes fail.
+    // The frame thread polls this on every iteration to exit cleanly.
+    std::atomic<bool>                     connected_{true};
+    std::atomic<bool>                     packet_thread_failed_{false};
+    std::future<void>                     reconnect_timeout_;
+    std::chrono::milliseconds             reconnect_delay_                    = 1s;
+    int                                   reconnect_attempts_at_current_delay_ = 0;
+    static constexpr int                  reconnect_attempts_per_level_        = 25;
+    static constexpr std::chrono::milliseconds reconnect_max_delay_            = 30s;
+
+    // Stored arguments for reinitialization during reconnect.
+    std::optional<core::channel_info> last_channel_info_;
+    int                               last_port_index_ = -1;
 
     common::bit_depth depth_;
 
@@ -460,8 +485,10 @@ struct ffmpeg_consumer : public core::frame_consumer
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
         }
 
-        format_desc_   = format_desc;
-        channel_index_ = channel_info.index;
+        format_desc_       = format_desc;
+        channel_index_     = channel_info.index;
+        last_channel_info_ = channel_info;
+        last_port_index_   = port_index;
 
         graph_->set_text(print());
 
@@ -558,7 +585,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                         CASPAR_SCOPE_EXIT
                         {
                             if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-                                FF(avio_closep(&oc->pb));
+                                avio_closep(&oc->pb);
                             }
                         };
 
@@ -582,25 +609,49 @@ struct ffmpeg_consumer : public core::frame_consumer
                         }
 
                     } catch (...) {
-                        CASPAR_LOG_CURRENT_EXCEPTION();
-                        // TODO
+                        {
+                            std::lock_guard<std::mutex> lock(exception_mutex_);
+                            if (!exception_) {
+                                exception_ = std::current_exception();
+                            }
+                        }
+                        packet_thread_failed_.store(true, std::memory_order_release);
                         packet_buffer.abort();
                     }
                 });
                 CASPAR_SCOPE_EXIT
                 {
                     if (packet_thread.joinable()) {
-                        // TODO Is nullptr needed?
-                        packet_buffer.push(nullptr);
+                        try {
+                            packet_buffer.push(nullptr);
+                        } catch (...) {
+                        }
                         packet_buffer.abort();
                         packet_thread.join();
                     }
                 };
 
-                auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) { packet_buffer.push(std::move(pkt)); };
+                // Avoid blocking forever on a full packet buffer after the packet
+                // thread has failed.
+                auto packet_cb = [&](std::shared_ptr<AVPacket>&& pkt) {
+                    while (!packet_thread_failed_.load(std::memory_order_acquire)) {
+                        if (packet_buffer.try_push(pkt)) {
+                            return;
+                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+                };
+
+                connected_                           = true;
+                packet_thread_failed_.store(false, std::memory_order_release);
+                reconnect_delay_                     = 1s;
+                reconnect_attempts_at_current_delay_ = 0;
 
                 std::int64_t frame_number = 0;
                 while (true) {
+                    if (packet_thread_failed_.load(std::memory_order_acquire)) {
+                        break;
+                    }
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
                         state_["file/frame"] = frame_number++;
@@ -626,7 +677,9 @@ struct ffmpeg_consumer : public core::frame_consumer
                     graph_->set_value("frame-time", frame_timer.elapsed() * format_desc.fps * 0.5);
 
                     if (!std::get<0>(data)) {
-                        packet_buffer.push(nullptr);
+                        if (!packet_thread_failed_.load(std::memory_order_acquire)) {
+                            packet_buffer.push(nullptr);
+                        }
                         break;
                     }
                 }
@@ -634,19 +687,106 @@ struct ffmpeg_consumer : public core::frame_consumer
                 packet_thread.join();
             } catch (...) {
                 std::lock_guard<std::mutex> lock(exception_mutex_);
-                exception_ = std::current_exception();
+                if (!exception_) {
+                    exception_ = std::current_exception();
+                }
             }
         });
+    }
+
+    // Tears down the current frame thread and schedules a reconnect attempt.
+    void disconnect()
+    {
+        std::lock_guard<std::mutex> reconnect_lock(reconnect_mutex_);
+        if (frame_thread_.joinable()) {
+            packet_thread_failed_.store(true, std::memory_order_release);
+            {
+                std::tuple<core::const_frame, std::int64_t, std::int64_t> drain;
+                while (frame_buffer_.try_pop(drain)) {
+                }
+            }
+            frame_buffer_.push({core::const_frame{}, -1, -1});
+            frame_thread_.join();
+        }
+        {
+            std::tuple<core::const_frame, std::int64_t, std::int64_t> drain;
+            while (frame_buffer_.try_pop(drain)) {
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(exception_mutex_);
+            exception_ = nullptr;
+        }
+
+        connected_ = false;
+
+        const auto delay                      = reconnect_delay_;
+        reconnect_attempts_at_current_delay_ += 1;
+        if (reconnect_attempts_at_current_delay_ >= reconnect_attempts_per_level_) {
+            reconnect_attempts_at_current_delay_ = 0;
+            reconnect_delay_                     = std::min(reconnect_delay_ * 2, reconnect_max_delay_);
+        }
+
+        reconnect_timeout_ = std::async(std::launch::async, [delay] { std::this_thread::sleep_for(delay); });
+
+        CASPAR_LOG(warning) << print() << L" Connection lost. Attempting reconnection in "
+                            << std::chrono::duration_cast<std::chrono::milliseconds>(delay).count() << L"ms";
+    }
+
+    void connect()
+    {
+        std::lock_guard<std::mutex> reconnect_lock(reconnect_mutex_);
+        if (!last_channel_info_) {
+            return;
+        }
+        if (connected_) {
+            return;
+        }
+        if (frame_thread_.joinable()) {
+            // A reconnect attempt has already started but has not yet completed
+            // its FFmpeg initialization. Treat it as in progress so later send()
+            // calls do not try to initialize the same consumer again.
+            connected_ = true;
+            return;
+        }
+        CASPAR_LOG(info) << print() << L" Attempting reconnect...";
+        connected_ = true;
+        initialize(format_desc_, *last_channel_info_, last_port_index_);
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
         // TODO - field alignment
 
-        {
+        try {
             std::lock_guard<std::mutex> lock(exception_mutex_);
             if (exception_ != nullptr) {
-                std::rethrow_exception(exception_);
+                auto exception = exception_;
+                exception_     = nullptr;
+                std::rethrow_exception(exception);
+            }
+        } catch (...) {
+            // For file recordings, propagate the error immediately. Only realtime stream
+            // consumers (SRT/RTMP/...) should transparently reconnect.
+            if (!realtime_) {
+                throw;
+            }
+            if (!connected_) {
+                CASPAR_LOG(warning) << print() << L" Reconnection attempt failed";
+            }
+            disconnect();
+        }
+
+        if (!connected_) {
+            if (reconnect_timeout_.valid() && reconnect_timeout_.wait_for(0s) == std::future_status::ready) {
+                try {
+                    connect();
+                } catch (...) {
+                    CASPAR_LOG(warning) << print() << L" Reconnection attempt failed";
+                    disconnect();
+                }
+            } else {
+                return make_ready_future(true);
             }
         }
 
