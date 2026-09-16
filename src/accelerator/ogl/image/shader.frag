@@ -12,6 +12,8 @@ uniform bool        is_straight_alpha;
 
 uniform mat3		color_matrix;
 uniform vec3		luma_coeff;
+uniform vec3		ycbcr_offset;	// black point and chroma neutral, normalised
+uniform vec3		ycbcr_scale;	// excursion -> [0,1] luma, [-0.5,0.5] chroma
 uniform bool		has_local_key;
 uniform bool		has_layer_key;
 uniform int			blend_mode;
@@ -473,16 +475,21 @@ vec4 chroma_key(vec4 c)
     return ChromaOnCustomColor(c.bgra).bgra;
 }
 
+// ycbcr_offset and ycbcr_scale carry the source's colour range; image_kernel.cpp picks
+// them. Limited range is the (16,128,128) black point with a 255/219 luma and 255/224
+// chroma excursion, which is what this used to hard-code.
 vec4 ycbcra_to_rgba(float Y, float Cb, float Cr, float A)
 {
-    const float luma_coefficient = 255.0/219.0;
-    const float chroma_coefficient = 255.0/224.0;
+    vec3 YCbCr = (vec3(Y, Cb, Cr) - ycbcr_offset) * ycbcr_scale;
 
-    vec3 YCbCr = vec3(Y, Cb, Cr) * 255;
-    YCbCr -= vec3(16.0, 128.0, 128.0);
-    YCbCr *= vec3(luma_coefficient, chroma_coefficient, chroma_coefficient);
+    return vec4(color_matrix * YCbCr, A).bgra;
+}
 
-    return vec4(color_matrix * YCbCr / 255, A).bgra;
+// Luma with no chroma alongside it. Same excursion as the Y above, so a limited-range
+// monochrome source expands and a full-range one passes through.
+vec4 luma_to_rgba(float Y)
+{
+    return vec4(vec3((Y - ycbcr_offset.r) * ycbcr_scale.r), 1.0);
 }
 
 vec4 get_sample(sampler2D sampler, vec2 coords)
@@ -495,7 +502,8 @@ vec4 get_rgba_color()
     switch(pixel_format)
     {
     case 0:		//gray
-        return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).rrr * precision_factor[0], 1.0);
+    case 7:		//luma
+        return luma_to_rgba(get_sample(plane[0], TexCoord.st / TexCoord.q).r * precision_factor[0]);
     case 1:		//bgra,
         return get_sample(plane[0], TexCoord.st / TexCoord.q).bgra * precision_factor[0];
     case 2:		//rgba,
@@ -518,11 +526,6 @@ vec4 get_rgba_color()
             float cr = get_sample(plane[2], TexCoord.st / TexCoord.q).r * precision_factor[2];
             float a  = get_sample(plane[3], TexCoord.st / TexCoord.q).r * precision_factor[3];
             return ycbcra_to_rgba(y, cb, cr, a);
-        }
-    case 7:		//luma
-        {
-            vec3 y3 = get_sample(plane[0], TexCoord.st / TexCoord.q).rrr * precision_factor[0];
-            return vec4((y3-0.065)/0.859, 1.0);
         }
     case 8:		//bgr,
         return vec4(get_sample(plane[0], TexCoord.st / TexCoord.q).bgr * precision_factor[0], 1.0);
