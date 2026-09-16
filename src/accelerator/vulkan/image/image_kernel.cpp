@@ -292,6 +292,8 @@ struct image_kernel::impl
 
         const auto color_space     = core::decode_color_space(params.pix_desc);
         uniforms.color_space_index = static_cast<uint32_t>(color_space);
+        uniforms.color_range_index =
+            core::decode_color_range(params.pix_desc) == core::color_range::full ? 1u : 0u;
 
         if (params.pix_desc.is_straight_alpha) {
             uniforms.flags |= static_cast<uint32_t>(shader_flags::is_straight_alpha);

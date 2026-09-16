@@ -31,6 +31,7 @@ const uint chroma_show_mask_mask = 1u << 7;
 
 layout(push_constant) uniform ParamsBlock {
     uint color_space_index;
+    uint color_range_index;
     float precision_factor[4];
     int blend_mode;
     int keyer;
@@ -74,6 +75,19 @@ const vec3[3] luma_coefficients = vec3[3](
                     vec3(0.299, 0.587, 0.114), // Rec. 601
                     vec3(0.2126, 0.7152, 0.0722),  // Rec. 709
                     vec3(0.2627, 0.6780, 0.0593)   // Rec. 2020
+                );
+
+// Black point and excursion per colour range. Limited range puts black at 16 and spans
+// 219 for luma / 224 for chroma on an 8-bit scale; full range uses every code, with
+// chroma still neutral at 128. Normalised, so they hold at every bit depth. Kept in step
+// with the OpenGL mixer, which passes the same pair in as uniforms.
+const vec3[2] ycbcr_offsets = vec3[2](
+                    vec3(16.0, 128.0, 128.0) / 255.0, // limited
+                    vec3( 0.0, 128.0, 128.0) / 255.0  // full
+                );
+const vec3[2] ycbcr_scales = vec3[2](
+                    vec3(255.0/219.0, 255.0/224.0, 255.0/224.0), // limited
+                    vec3(1.0)                                    // full
                 );
 
 /*
@@ -470,14 +484,16 @@ vec4 ycbcra_to_rgba(float Y, float Cb, float Cr, float A)
 {
     mat3 color_matrix = transpose(color_matrices[color_space_index]);
 
-    const float luma_coefficient = 255.0/219.0;
-    const float chroma_coefficient = 255.0/224.0;
+    vec3 YCbCr = (vec3(Y, Cb, Cr) - ycbcr_offsets[color_range_index]) * ycbcr_scales[color_range_index];
 
-    vec3 YCbCr = vec3(Y, Cb, Cr) * 255;
-    YCbCr -= vec3(16.0, 128.0, 128.0);
-    YCbCr *= vec3(luma_coefficient, chroma_coefficient, chroma_coefficient);
+    return vec4(color_matrix * YCbCr, A);
+}
 
-    return vec4(color_matrix * YCbCr / 255, A);
+// Luma with no chroma alongside it. Same excursion as the Y above, so a limited-range
+// monochrome source expands and a full-range one passes through.
+vec4 luma_to_rgba(float Y)
+{
+    return vec4(vec3((Y - ycbcr_offsets[color_range_index].r) * ycbcr_scales[color_range_index].r), 1.0);
 }
 
 vec4 get_sample(sampler2D texSampler, vec2 coords)
@@ -492,7 +508,8 @@ vec4 get_rgba_color()
     switch(pixel_format)
     {
     case 0:		//gray
-        return vec4(get_sample(textures[PLANE0], uv).rrr * precision_factor[0], 1.0);
+    case 7:		//luma
+        return luma_to_rgba(get_sample(textures[PLANE0], uv).r * precision_factor[0]);
     case 1:		//bgra,
         return get_sample(textures[PLANE0], uv).bgra * precision_factor[0];
     case 2:		//rgba,
@@ -515,11 +532,6 @@ vec4 get_rgba_color()
             float cr = get_sample(textures[PLANE2], uv).r * precision_factor[2];
             float a  = get_sample(textures[PLANE3], uv).r * precision_factor[3];
             return ycbcra_to_rgba(y, cb, cr, a);
-        }
-    case 7:		//luma
-        {
-            vec3 y3 = get_sample(textures[PLANE0], uv).rrr * precision_factor[0];
-            return vec4((y3-0.065)/0.859, 1.0);
         }
     case 8:		//bgr,
         return vec4(get_sample(textures[PLANE0], uv).bgr * precision_factor[0], 1.0);
