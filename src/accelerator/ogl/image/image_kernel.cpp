@@ -189,8 +189,7 @@ struct image_kernel::impl
             params.layer_key->bind(static_cast<int>(texture_id::layer_key));
         }
 
-        const auto is_hd       = params.pix_desc.planes.at(0).height > 700;
-        const auto color_space = is_hd ? params.pix_desc.color_space : core::color_space::bt601;
+        const auto color_space = core::decode_color_space(params.pix_desc);
 
         // Row order is R, G, B; columns are Y, Cb, Cr. Each row follows from the
         // luma coefficients: Cr->R is 2(1-Kr), Cb->B is 2(1-Kb), and the two green terms

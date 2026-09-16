@@ -34,7 +34,10 @@ add_executable(casparcg ${SOURCES} ${HEADERS})
 set_target_properties(casparcg PROPERTIES
         OUTPUT_NAME "${CASPARCG_BINARY_NAME}"
     )
-target_compile_features(casparcg PRIVATE cxx_std_20)
+set_target_properties(casparcg PROPERTIES
+		CXX_STANDARD 20
+		CXX_STANDARD_REQUIRED ON
+		CXX_EXTENSIONS OFF)
 target_include_directories(casparcg PRIVATE
     ..
     ${BOOST_INCLUDE_PATH}
