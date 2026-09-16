@@ -1397,7 +1397,7 @@ std::wstring channel_grid_command(command_context& ctx)
         ctx.static_context->consumer_registry->create_consumer(params,
                                                                ctx.static_context->format_repository,
                                                                get_channels(ctx),
-                                                               ctx.channel.raw_channel->get_consumer_channel_info());
+                                                               self.raw_channel->get_consumer_channel_info());
 
     self.raw_channel->output().add(screen);
 
