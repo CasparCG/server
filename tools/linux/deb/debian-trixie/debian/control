@@ -57,7 +57,8 @@ Build-Depends: cmake,
                libxext6,
                libxfixes3,
                libxkbcommon0,
-               libxrandr2
+               libxrandr2,
+               nlohmann-json3-dev
 Homepage: https://github.com/CasparCG/server/
 Vcs-Git: https://github.com/CasparCG/server.git
 Vcs-Browser: https://github.com/CasparCG/server/

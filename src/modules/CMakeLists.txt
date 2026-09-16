@@ -16,5 +16,6 @@ endif ()
 if (MSVC)
 	add_subdirectory(flash)
 	add_subdirectory(bluefish)
+else()
+	add_subdirectory(dmf_mxl)
 endif()
-
