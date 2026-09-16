@@ -562,7 +562,17 @@ struct Filter
                                               AV_PIX_FMT_YUV420P,
                                               AV_PIX_FMT_YUV420P10,
                                               AV_PIX_FMT_YUV420P12,
+                                              AV_PIX_FMT_YUV440P,
                                               AV_PIX_FMT_YUV410P,
+                                              // The deprecated full-range aliases. Without
+                                              // these the graph inserts a scaler for every
+                                              // frame of a full-range source purely to
+                                              // relabel it.
+                                              AV_PIX_FMT_YUVJ444P,
+                                              AV_PIX_FMT_YUVJ422P,
+                                              AV_PIX_FMT_YUVJ420P,
+                                              AV_PIX_FMT_YUVJ440P,
+                                              AV_PIX_FMT_YUVJ411P,
                                               AV_PIX_FMT_YUVA444P,
                                               AV_PIX_FMT_YUVA422P,
                                               AV_PIX_FMT_YUVA420P,

@@ -188,6 +188,16 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
             return {core::pixel_format::ycbcr, common::bit_depth::bit12};
         case AV_PIX_FMT_YUV420P:
             return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV440P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        // The deprecated full-range aliases. Taking them directly keeps swscale out of
+        // the way; get_color_range reads the range back off the format.
+        case AV_PIX_FMT_YUVJ444P:
+        case AV_PIX_FMT_YUVJ422P:
+        case AV_PIX_FMT_YUVJ420P:
+        case AV_PIX_FMT_YUVJ440P:
+        case AV_PIX_FMT_YUVJ411P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV420P10:
             return {core::pixel_format::ycbcr, common::bit_depth::bit10};
         case AV_PIX_FMT_YUV420P12:
