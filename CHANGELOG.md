@@ -9,12 +9,14 @@ CasparCG 2.5.1 Stable
 * AMCP: Prevent race when executing BATCH
 * Linux: Support SFML 3 (not 100% feature parity)
 * Windows: Prevent background throttling when no visible window
+* Channel grid failing to initialise
 
 ### Producers
 ##### Fixes
 * FFmpeg: Gracefully handle ENOMEM errorss
 * FFmpeg: Reduce mutex contention
 * FFmpeg: Ensure graph is stopped before joining
+* HTML: Missing WebGPU libraries (windows only)
 
 ### Consumers
 ##### Improvements
