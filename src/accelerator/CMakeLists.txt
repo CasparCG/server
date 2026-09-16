@@ -43,10 +43,14 @@ IF(ENABLE_VULKAN)
 		vulkan/image/image_mixer.cpp
 
 		vulkan/util/buffer.cpp
+		vulkan/util/command_context.cpp
+		vulkan/util/descriptor_pool.cpp
 		vulkan/util/device.cpp
+		vulkan/util/vulkan_queue.cpp
 		vulkan/util/pipeline.cpp
 		vulkan/util/renderpass.cpp
 		vulkan/util/texture.cpp
+		vulkan/util/transfer.cpp
 		vulkan/util/matrix.cpp
 		vulkan/util/transforms.cpp
 	)
@@ -55,11 +59,17 @@ IF(ENABLE_VULKAN)
 		vulkan/image/image_kernel.h
 		vulkan/image/image_mixer.h
 
+		vulkan/util/barrier.h
 		vulkan/util/buffer.h
+		vulkan/util/command_context.h
+		vulkan/util/completion_token.h
+		vulkan/util/descriptor_pool.h
 		vulkan/util/device.h
+		vulkan/util/vulkan_queue.h
 		vulkan/util/draw_params.h
 		vulkan/util/pipeline.h
 		vulkan/util/texture.h
+		vulkan/util/transfer.h
 		vulkan/util/matrix.h
 		vulkan/util/transforms.h
 		vulkan/util/uniform_block.h
