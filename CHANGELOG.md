@@ -1,3 +1,38 @@
+CasparCG 2.5.1 Stable
+==========================================
+
+### Core
+##### Improvements
+* Remove AVX2 requirement. It is still required for v210 decklink output, but not for other usage.
+* Update FFmpeg to 8.1.2
+##### Fixes
+* AMCP: Prevent race when executing BATCH
+* Linux: Support SFML 3 (not 100% feature parity)
+* Windows: Prevent background throttling when no visible window
+* Channel grid failing to initialise
+
+### Producers
+##### Fixes
+* FFmpeg: Gracefully handle ENOMEM errorss
+* FFmpeg: Reduce mutex contention
+* FFmpeg: Ensure graph is stopped before joining
+* HTML: Missing WebGPU libraries (windows only)
+
+### Consumers
+##### Improvements
+* Decklink: Add option to disable keying
+* Audio: Configurable delay
+* Audio: Allow multiple devices to be used
+* Audio: Improve sync to other consumers
+* Screen: Configurable delay
+
+##### Fixes
+* Audio: Device enumeration issues
+* Decklink: Recover av-sync in extreme cases
+* Decklink: Check for keying support before enabling
+* Decklink: Free model names string
+
+
 CasparCG 2.5.0 Stable
 ==========================================
 
