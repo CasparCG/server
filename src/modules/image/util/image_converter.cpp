@@ -61,12 +61,29 @@ std::shared_ptr<AVFrame> convert_image_frame(const std::shared_ptr<AVFrame>& src
         CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to create SwsContext"));
     }
 
+    // sws_scale takes raw pointers, so it never sees the frame's metadata -- left alone it
+    // decodes everything as limited-range BT.601. Fails harmlessly for an RGB source,
+    // which has neither a matrix nor an excursion.
+    const auto src_range = src->color_range == AVCOL_RANGE_JPEG ? 1 : 0;
+    const auto src_space = src->colorspace == AVCOL_SPC_BT709        ? SWS_CS_ITU709
+                           : src->colorspace == AVCOL_SPC_BT2020_NCL ? SWS_CS_BT2020
+                                                                     : SWS_CS_ITU601;
+    sws_setColorspaceDetails(sws.get(),
+                             sws_getCoefficients(src_space),
+                             src_range,
+                             sws_getCoefficients(SWS_CS_ITU709),
+                             1, // RGB is always full range
+                             0,
+                             1 << 16,
+                             1 << 16);
+
     auto dest                 = ffmpeg::alloc_frame();
     dest->sample_aspect_ratio = src->sample_aspect_ratio;
     dest->width               = src->width;
     dest->height              = src->height;
     dest->format              = pixFmt;
-    dest->colorspace          = AVCOL_SPC_BT709;
+    dest->colorspace          = AVCOL_SPC_RGB;
+    dest->color_range         = AVCOL_RANGE_JPEG;
     av_frame_get_buffer(dest.get(), 64);
 
     sws_scale(sws.get(), src->data, src->linesize, 0, src->height, dest->data, dest->linesize);

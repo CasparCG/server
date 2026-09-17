@@ -57,6 +57,16 @@ enum class color_space
     unknown,
 };
 
+enum class color_range
+{
+    limited,
+    full,
+
+    /// The source did not say; `decode_color_range` below resolves it. Must stay last,
+    /// because the value is an array index in the vulkan mixer shader.
+    unknown,
+};
+
 struct pixel_format_desc final
 {
     struct plane
@@ -83,9 +93,12 @@ struct pixel_format_desc final
 
     pixel_format_desc() = default;
 
-    explicit pixel_format_desc(pixel_format format, core::color_space color_space = core::color_space::unknown)
+    explicit pixel_format_desc(pixel_format      format,
+                               core::color_space color_space = core::color_space::unknown,
+                               core::color_range color_range = core::color_range::unknown)
         : format(format)
         , color_space(color_space)
+        , color_range(color_range)
     {
     }
 
@@ -93,6 +106,7 @@ struct pixel_format_desc final
     bool               is_straight_alpha = false;
     std::vector<plane> planes;
     core::color_space  color_space = core::color_space::unknown;
+    core::color_range  color_range = core::color_range::unknown;
 };
 
 /// The matrix to decode this source's chroma with: whatever it declared, or the SD/HD
@@ -112,6 +126,27 @@ inline color_space decode_color_space(const pixel_format_desc& desc)
             return desc.planes.at(0).height > 700 ? color_space::bt709 : color_space::bt601;
         default:
             return color_space::bt709;
+    }
+}
+
+/// The excursion this source's samples use: whatever it declared, or the broadcast
+/// convention when it declared nothing. RGB has no excursion, and `gray` is resolved by
+/// its producer -- a still image is full range while monochrome video is not -- so only
+/// an untagged luma/chroma source lands on the limited default.
+inline color_range decode_color_range(const pixel_format_desc& desc)
+{
+    if (desc.color_range != color_range::unknown) {
+        return desc.color_range;
+    }
+    switch (desc.format) {
+        case pixel_format::gray:
+        case pixel_format::luma:
+        case pixel_format::ycbcr:
+        case pixel_format::ycbcra:
+        case pixel_format::uyvy:
+            return color_range::limited;
+        default:
+            return color_range::full;
     }
 }
 
