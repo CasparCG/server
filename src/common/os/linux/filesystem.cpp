@@ -30,6 +30,25 @@ using namespace boost::filesystem;
 
 namespace caspar {
 
+namespace {
+// Prefer a guaranteed Unicode-capable locale that requires no OS locale generation (available on
+// any glibc >= 2.35), rather than trusting the deployment environment to have one configured -
+// falling back to the environment, and finally to "C" (ASCII-only, but never throws), only if
+// that isn't recognized. See GitHub issues #1364, #1018.
+std::locale safe_case_insensitive_locale()
+{
+    try {
+        return std::locale("C.UTF-8");
+    } catch (const std::runtime_error&) {
+    }
+    try {
+        return std::locale("");
+    } catch (const std::runtime_error&) {
+    }
+    return std::locale::classic();
+}
+} // namespace
+
 std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
 {
     path p(case_insensitive);
@@ -40,7 +59,7 @@ std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insen
     p = absolute(p);
     path result;
 
-    auto loc = std::locale(""); // Use system locale
+    auto loc = safe_case_insensitive_locale();
 
     for (auto part : p) {
         auto concatenated = result / part;
