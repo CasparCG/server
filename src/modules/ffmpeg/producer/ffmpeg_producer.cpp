@@ -53,6 +53,12 @@ namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
 
+struct ffmpeg_input_options
+{
+    int                seekable;
+    std::optional<int> hls_start_index;
+};
+
 struct ffmpeg_producer : public core::frame_producer
 {
     const std::wstring                   filename_;
@@ -72,7 +78,7 @@ struct ffmpeg_producer : public core::frame_producer
                              std::optional<int64_t>               seek,
                              std::optional<int64_t>               duration,
                              std::optional<bool>                  loop,
-                             int                                  seekable,
+                             ffmpeg_input_options                 input_options,
                              core::frame_geometry::scale_mode     scale_mode)
         : filename_(filename)
         , frame_factory_(frame_factory)
@@ -87,7 +93,8 @@ struct ffmpeg_producer : public core::frame_producer
                                    seek,
                                    duration,
                                    loop,
-                                   seekable,
+                                   input_options.seekable,
+                                   input_options.hls_start_index,
                                    scale_mode))
     {
     }
@@ -296,6 +303,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto seekable = get_param(L"SEEKABLE", params, static_cast<int>(2));
 
+    std::optional<int> hls_start_index;
+    if (contains_param(L"HLS_START_INDEX", params)) {
+        hls_start_index = get_param(L"HLS_START_INDEX", params, 0);
+    }
+
     auto loop = contains_param(L"LOOP", params);
 
     auto seek = get_param(L"SEEK", params, static_cast<uint32_t>(0));
@@ -350,7 +362,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
                                                  seek2,
                                                  duration,
                                                  loop,
-                                                 seekable,
+                                                 ffmpeg_input_options{seekable, hls_start_index},
                                                  scale_mode);
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();

@@ -58,6 +58,10 @@ Documentation
 
 The most up-to-date documentation is always available at https://casparcg.com/docs/wiki
 
+Repository guides:
+
+- [Starting and seeking within an active HLS EVENT playlist](docs/hls-event-playback.md)
+
 Ask questions in the forum: https://casparcgforum.org/
 
 Development

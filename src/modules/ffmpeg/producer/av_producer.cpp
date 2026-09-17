@@ -733,13 +733,17 @@ struct AVProducer::Impl
          std::optional<int64_t>               duration,
          bool                                 loop,
          int                                  seekable,
+         std::optional<int>                   hls_start_index,
          core::frame_geometry::scale_mode     scale_mode)
         : frame_factory_(frame_factory)
         , format_desc_(format_desc)
         , format_tb_({format_desc.duration, format_desc.time_scale * format_desc.field_count})
         , name_(name)
         , path_(path)
-        , input_(path, graph_, seekable >= 0 && seekable < 2 ? std::optional<bool>(false) : std::optional<bool>())
+        , input_(path,
+                 graph_,
+                 seekable >= 0 && seekable < 2 ? std::optional<bool>(false) : std::optional<bool>(),
+                 hls_start_index)
         , start_(start ? av_rescale_q(*start, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , duration_(duration ? av_rescale_q(*duration, format_tb_, TIME_BASE_Q) : AV_NOPTS_VALUE)
         , loop_(loop)
@@ -1275,6 +1279,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                        std::optional<int64_t>               duration,
                        std::optional<bool>                  loop,
                        int                                  seekable,
+                       std::optional<int>                   hls_start_index,
                        core::frame_geometry::scale_mode     scale_mode)
     : impl_(new Impl(std::move(frame_factory),
                      std::move(format_desc),
@@ -1287,6 +1292,7 @@ AVProducer::AVProducer(std::shared_ptr<core::frame_factory> frame_factory,
                      std::move(duration),
                      std::move(loop.value_or(false)),
                      seekable,
+                     hls_start_index,
                      scale_mode))
 {
 }
