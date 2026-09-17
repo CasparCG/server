@@ -203,6 +203,14 @@ class renderer_application
         command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
         command_line->AppendSwitchWithValue("remote-allow-origins", "*");
 
+        // Component updates (e.g. CRLSet) are irrelevant for an embedded playout renderer, and starting
+        // the updater's Unzipper utility process has been observed to crash with a stack-smashing abort
+        // on Linux (mismatched stack-protector settings across the prebuilt CEF binary after fork()).
+        // Disabling updates avoids ever spawning that process; the flag below is Chromium's own workaround
+        // for the same class of crash, kept as a defense in depth.
+        command_line->AppendSwitch("disable-component-update");
+        command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
+
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
             // smoothly
