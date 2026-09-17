@@ -14,6 +14,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <common/channel.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/except.h>
@@ -100,19 +101,11 @@ class Decoder
     Decoder(const Decoder&)            = delete;
     Decoder& operator=(const Decoder&) = delete;
 
-    AVStream*         st       = nullptr;
-    int64_t           next_pts = AV_NOPTS_VALUE;
-    std::atomic<bool> eof      = {false};
+    AVStream* st       = nullptr;
+    int64_t   next_pts = AV_NOPTS_VALUE;
 
-    std::queue<std::shared_ptr<AVPacket>> input;
-    mutable boost::mutex                  input_mutex;
-    boost::condition_variable             input_cond;
-    int                                   input_capacity = 2;
-
-    std::queue<std::shared_ptr<AVFrame>> output;
-    mutable boost::mutex                 output_mutex;
-    boost::condition_variable            output_cond;
-    int                                  output_capacity = 8;
+    Sender<std::shared_ptr<AVPacket>>  input;
+    Receiver<std::shared_ptr<AVFrame>> output;
 
     boost::thread thread;
 
@@ -124,6 +117,17 @@ class Decoder
     explicit Decoder(AVStream* stream)
         : st(stream)
     {
+        auto debug_stream_kind = stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO   ? "video"
+                                 : stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ? "audio"
+                                                                                      : "unknown";
+        auto input_channel     = channel<std::shared_ptr<AVPacket>>(
+            2, channel_capacity_is_hint, (boost::format("Decoder-%i-%s-in") % stream->index % debug_stream_kind).str());
+        auto output_channel = channel<std::shared_ptr<AVFrame>>(
+            8, (boost::format("Decoder-%i-%s-out") % stream->index % debug_stream_kind).str());
+
+        input  = std::move(input_channel.first);
+        output = std::move(output_channel.second);
+
         const auto codec = get_decoder(stream->codecpar->codec_id);
 
         if (!codec) {
@@ -158,32 +162,28 @@ class Decoder
 
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
-        thread = boost::thread([this]() {
+        thread = boost::thread([=,
+                                this,
+                                input_receiver = std::move(input_channel.second),
+                                output_sender  = std::move(output_channel.first)]() mutable {
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
                     auto ret      = avcodec_receive_frame(ctx.get(), av_frame.get());
 
                     if (ret == AVERROR(EAGAIN)) {
-                        std::shared_ptr<AVPacket> packet;
-                        {
-                            boost::unique_lock<boost::mutex> lock(input_mutex);
-                            input_cond.wait(lock, [&]() { return !input.empty(); });
-                            packet = std::move(input.front());
-                            input.pop();
+                        auto packet_opt = input_receiver.try_receive_blocking();
+                        FF(avcodec_send_packet(ctx.get(), packet_opt.value_or(nullptr).get()));
+                        if (!packet_opt) {
+                            break; // no sender -- we're done
                         }
-                        FF(avcodec_send_packet(ctx.get(), packet.get()));
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
                         next_pts      = AV_NOPTS_VALUE;
-                        eof           = true;
-
-                        {
-                            boost::unique_lock<boost::mutex> lock(output_mutex);
-                            output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
-                            output.push(std::move(av_frame));
-                        }
+                        // we don't care if there's no receiver anymore, we're done anyway
+                        static_cast<void>(output_sender.try_send_blocking(av_frame));
+                        break; // we're done
                     } else {
                         FF_RET(ret, "avcodec_receive_frame");
 
@@ -231,17 +231,14 @@ class Decoder
                             next_pts = AV_NOPTS_VALUE;
                         }
 
-                        {
-                            boost::unique_lock<boost::mutex> lock(output_mutex);
-                            output_cond.wait(lock, [&]() { return output.size() < output_capacity; });
-                            output.push(std::move(av_frame));
+                        if (output_sender.try_send_blocking(av_frame)) {
+                            break; // no receiver -- we're done
                         }
                     }
                 }
             } catch (boost::thread_interrupted&) {
                 // Do nothing...
             } catch (...) {
-                eof = true;
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
         });
@@ -259,52 +256,19 @@ class Decoder
         }
     }
 
-    bool want_packet() const
-    {
-        if (eof) {
-            return false;
-        }
-
-        {
-            boost::lock_guard<boost::mutex> lock(input_mutex);
-            return input.size() < input_capacity;
-        }
-    }
+    bool want_packet() const { return !input.full(); }
 
     void push(std::shared_ptr<AVPacket> packet)
     {
-        if (eof) {
-            return;
-        }
-
-        {
-            boost::lock_guard<boost::mutex> lock(input_mutex);
-            input.push(std::move(packet));
-        }
-
-        input_cond.notify_all();
+        input.try_send_blocking(packet); // ignore if we fail to send
     }
 
     std::shared_ptr<AVFrame> pop()
     {
-        std::shared_ptr<AVFrame> frame;
-
-        {
-            boost::lock_guard<boost::mutex> lock(output_mutex);
-
-            if (!output.empty()) {
-                frame = std::move(output.front());
-                output.pop();
-            }
-        }
-
-        if (frame) {
-            output_cond.notify_all();
-        } else if (eof) {
-            frame = alloc_frame();
-        }
-
-        return frame;
+        auto try_receive_result = output.try_receive();
+        if (try_receive_result.closed)
+            return alloc_frame();
+        return std::move(try_receive_result.value).value_or(nullptr);
     }
 };
 
