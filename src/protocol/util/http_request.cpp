@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace caspar { namespace http {
 
@@ -16,7 +17,7 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 
     HTTPResponse res;
 
-    // Log the URL being requested for debugging
+    // Log the request path for debugging.
     CASPAR_LOG(debug) << "HTTP GET: " << path;
 
     asio::io_context io_context;
@@ -108,22 +109,26 @@ HTTPResponse request(const std::string& host, const std::string& port, const std
 // so lookups match the scanner's internally stored id regardless of client OS.
 // The scanner's routes take the whole id as a single path segment, so '/' is percent-encoded
 // like any other reserved character rather than left as a literal separator.
-std::string url_encode_path(const std::string& path)
+std::string url_encode_path(std::string_view path)
 {
+    constexpr char hex_chars[] = "0123456789ABCDEF";
+
     std::string result;
     result.reserve(path.size() * 2); // Reserve space to avoid reallocations
 
-    for (auto c : path) {
-        unsigned char uc = (c == '\\') ? '/' : static_cast<unsigned char>(c);
+    for (unsigned char c : path) {
+        if (c == '\\') {
+            c = '/';
+        }
 
-        if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') || uc == '-' ||
-            uc == '_' || uc == '.' || uc == '~') {
-            result += static_cast<char>(uc);
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' ||
+            c == '.' || c == '~') {
+            result += c;
         } else {
             // Encode special character (including '/') as %XX
             result += '%';
-            result += "0123456789ABCDEF"[uc >> 4];
-            result += "0123456789ABCDEF"[uc & 0x0F];
+            result += hex_chars[c >> 4];
+            result += hex_chars[c & 0x0F];
         }
     }
 
