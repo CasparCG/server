@@ -73,7 +73,8 @@ struct ffmpeg_producer : public core::frame_producer
                              std::optional<int64_t>               duration,
                              std::optional<bool>                  loop,
                              int                                  seekable,
-                             core::frame_geometry::scale_mode     scale_mode)
+                             core::frame_geometry::scale_mode     scale_mode,
+                             bool                                 straight_alpha)
         : filename_(filename)
         , frame_factory_(frame_factory)
         , format_desc_(format_desc)
@@ -88,7 +89,8 @@ struct ffmpeg_producer : public core::frame_producer
                                    duration,
                                    loop,
                                    seekable,
-                                   scale_mode))
+                                   scale_mode,
+                                   straight_alpha))
     {
     }
 
@@ -317,6 +319,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
 
+    // Decoded media is straight alpha; PREMULTIPLIED is the override.
+    auto straight_alpha = !contains_param(L"PREMULTIPLIED", params);
+
     boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
     boost::ireplace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
@@ -340,18 +345,20 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
 
     try {
-        return spl::make_shared<ffmpeg_producer>(dependencies.frame_factory,
-                                                 dependencies.format_desc,
-                                                 name,
-                                                 path,
-                                                 vfilter,
-                                                 afilter,
-                                                 start,
-                                                 seek2,
-                                                 duration,
-                                                 loop,
-                                                 seekable,
-                                                 scale_mode);
+        // spl::make_shared forwards at most twelve arguments.
+        return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(dependencies.frame_factory,
+                                                                      dependencies.format_desc,
+                                                                      name,
+                                                                      path,
+                                                                      vfilter,
+                                                                      afilter,
+                                                                      start,
+                                                                      seek2,
+                                                                      duration,
+                                                                      loop,
+                                                                      seekable,
+                                                                      scale_mode,
+                                                                      straight_alpha));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
     }
