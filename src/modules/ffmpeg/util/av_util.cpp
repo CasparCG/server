@@ -2,6 +2,9 @@
 #include "av_assert.h"
 
 #include <common/bit_depth.h>
+#include <cstdint>
+#include <cstring>
+#include <vector>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -9,10 +12,10 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 }
 
-#include <array>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
@@ -414,4 +417,163 @@ uint64_t get_channel_layout_mask_for_channels(int channel_count)
     return channel_layout;
 }
 
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+#define GET_SET_ATTRIBUTE(                                                                                             \
+    ty, fn_suffix, config_type, opt_type, old_config_name, new_config_name, codec_type, field, terminator)             \
+    av_opt_array_ref<ty> get_supported_##fn_suffix(const AVCodecContext* avctx, const AVCodec* codec)                  \
+    {                                                                                                                  \
+        if (!codec)                                                                                                    \
+            codec = avctx->codec;                                                                                      \
+        if (codec->type != codec_type)                                                                                 \
+            FF_RET(AVERROR(EINVAL), THROW_ON_ERROR_STR(get_supported_##fn_suffix));                                    \
+        return av_opt_array_ref<ty>::terminated(codec->field, terminator);                                             \
+    }                                                                                                                  \
+                                                                                                                       \
+    void set_##fn_suffix(AVFilterContext* target, av_opt_array_ref<ty> array_ref)                                      \
+    {                                                                                                                  \
+        std::size_t size = sizeof(ty) * array_ref.size();                                                              \
+        if (size > static_cast<std::size_t>(INT_MAX))                                                                  \
+            CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function("set_" #fn_suffix));             \
+        FF(av_opt_set_bin(target,                                                                                      \
+                          old_config_name,                                                                             \
+                          reinterpret_cast<const uint8_t*>(array_ref.data()),                                          \
+                          static_cast<int>(size),                                                                      \
+                          AV_OPT_SEARCH_CHILDREN));                                                                    \
+    }
+
+#else
+#define GET_SET_ATTRIBUTE(                                                                                             \
+    ty, fn_suffix, config_type, opt_type, old_config_name, new_config_name, codec_type, field, terminator)             \
+    av_opt_array_ref<ty> get_supported_##fn_suffix(const AVCodecContext* avctx, const AVCodec* codec)                  \
+    {                                                                                                                  \
+        const ty* data = nullptr;                                                                                      \
+        int       size = 0;                                                                                            \
+        FF(avcodec_get_supported_config(avctx, codec, config_type, 0, reinterpret_cast<const void**>(&data), &size));  \
+        return av_opt_array_ref<ty>(data, size);                                                                       \
+    }                                                                                                                  \
+                                                                                                                       \
+    void set_##fn_suffix(AVFilterContext* target, av_opt_array_ref<ty> array_ref)                                      \
+    {                                                                                                                  \
+        if (array_ref.size() > static_cast<std::size_t>(UINT_MAX))                                                     \
+            CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function("set_" #fn_suffix));             \
+        FF(av_opt_set_array(target,                                                                                    \
+                            new_config_name,                                                                           \
+                            AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,                                             \
+                            0,                                                                                         \
+                            static_cast<unsigned>(array_ref.size()),                                                   \
+                            opt_type,                                                                                  \
+                            array_ref.data()));                                                                        \
+    }
+#endif
+
+GET_SET_ATTRIBUTE(AVPixelFormat,
+                  pixel_formats,
+                  AV_CODEC_CONFIG_PIX_FORMAT,
+                  AV_OPT_TYPE_PIXEL_FMT,
+                  "pix_fmts",
+                  "pixel_formats",
+                  AVMEDIA_TYPE_VIDEO,
+                  pix_fmts,
+                  AV_PIX_FMT_NONE)
+
+GET_SET_ATTRIBUTE(AVSampleFormat,
+                  sample_formats,
+                  AV_CODEC_CONFIG_SAMPLE_FORMAT,
+                  AV_OPT_TYPE_SAMPLE_FMT,
+                  "sample_fmts",
+                  "sample_formats",
+                  AVMEDIA_TYPE_AUDIO,
+                  sample_fmts,
+                  AV_SAMPLE_FMT_NONE)
+
+GET_SET_ATTRIBUTE(int,
+                  sample_rates,
+                  AV_CODEC_CONFIG_SAMPLE_RATE,
+                  AV_OPT_TYPE_INT,
+                  "sample_rates",
+                  "samplerates",
+                  AVMEDIA_TYPE_AUDIO,
+                  supported_samplerates,
+                  0)
+
+av_opt_array_ref<AVChannelLayout> get_supported_channel_layouts(const AVCodecContext* avctx, const AVCodec* codec)
+{
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+    if (!codec)
+        codec = avctx->codec;
+    if (codec->type != AVMEDIA_TYPE_AUDIO)
+        FF_RET(AVERROR(EINVAL), THROW_ON_ERROR_STR(get_supported_channel_layouts));
+    static constexpr AVChannelLayout terminator = {};
+    return av_opt_array_ref<AVChannelLayout>::terminated(codec->ch_layouts, [](const AVChannelLayout& v) {
+        return 0 == std::memcmp(&v, &terminator, sizeof(terminator));
+    });
+#else
+    const AVChannelLayout* data = nullptr;
+    int                    size = 0;
+    FF(avcodec_get_supported_config(
+        avctx, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, reinterpret_cast<const void**>(&data), &size));
+    return av_opt_array_ref<AVChannelLayout>(data, size);
+#endif
+}
+
+void set_channel_layouts(AVFilterContext* target, av_opt_array_ref<AVChannelLayout> array_ref)
+{
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+    // TODO: need to translate into something that can be passed via av_opt_set_*
+    // FF(av_opt_set_chlayout(sink, "ch_layouts", ch_layouts, AV_OPT_SEARCH_CHILDREN));
+#else
+    if (array_ref.size() > static_cast<std::size_t>(UINT_MAX))
+        CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function("set_channel_layouts"));
+    FF(av_opt_set_array(target,
+                        "channel_layouts",
+                        AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                        0,
+                        static_cast<unsigned>(array_ref.size()),
+                        AV_OPT_TYPE_CHLAYOUT,
+                        array_ref.data()));
+#endif
+}
+
+AVChannelLayout get_channel_layout_default(int nb_channels)
+{
+    AVChannelLayout retval{};
+    av_channel_layout_default(&retval, nb_channels);
+    return retval;
+}
+
+AVFilterContext*
+create_buffersink(AVFilterGraph* graph, const char* name, std::optional<av_opt_array_ref<AVPixelFormat>> pixel_formats)
+{
+    AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("buffersink"), name));
+    if (pixel_formats) {
+        set_pixel_formats(retval, *pixel_formats);
+    }
+    FF(avfilter_init_str(retval, nullptr));
+    return retval;
+}
+
+AVFilterContext* create_abuffersink(AVFilterGraph*                                   graph,
+                                    const char*                                      name,
+                                    std::optional<av_opt_array_ref<AVSampleFormat>>  sample_formats,
+                                    std::optional<av_opt_array_ref<int>>             sample_rates,
+                                    std::optional<av_opt_array_ref<AVChannelLayout>> channel_layouts)
+{
+    AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("abuffersink"), name));
+    if (sample_formats) {
+        set_sample_formats(retval, *sample_formats);
+    }
+    if (sample_rates) {
+        set_sample_rates(retval, *sample_rates);
+    }
+    if (channel_layouts) {
+        set_channel_layouts(retval, *channel_layouts);
+    }
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+    else {
+        FF(av_opt_set_int(retval, "all_channel_counts", 1, AV_OPT_SEARCH_CHILDREN));
+    }
+#endif
+    FF(avfilter_init_str(retval, nullptr));
+    return retval;
+}
 }} // namespace caspar::ffmpeg
