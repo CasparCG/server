@@ -36,14 +36,38 @@
 #include <boost/stacktrace.hpp>
 
 #include <atomic>
+#include <locale>
 #include <string>
 
 namespace caspar { namespace log {
 
+namespace detail {
+    // Prefer a guaranteed Unicode-capable locale that requires no OS locale generation, rather
+    // than trusting the deployment environment to have one configured - falling back to the
+    // environment, and finally to "C" (ASCII-only, but never throws), only if that isn't
+    // recognized. Constructed once and cached, since this runs on every logged line. See GitHub
+    // issues #1364, #1018, #1772.
+    inline const std::locale& safe_log_locale()
+    {
+        static const std::locale loc = [] {
+            try {
+                return std::locale("C.UTF-8");
+            } catch (const std::runtime_error&) {
+            }
+            try {
+                return std::locale("");
+            } catch (const std::runtime_error&) {
+            }
+            return std::locale::classic();
+        }();
+        return loc;
+    }
+} // namespace detail
+
 template <typename T>
 void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
-    std::locale loc(""); // Use system locale
+    const std::locale& loc = detail::safe_log_locale();
     std::replace_if(
         str.begin(), str.end(), [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n'); }, with);
 }
