@@ -110,8 +110,15 @@ std::vector<int> parse_channel_map(const std::string& str, int default_channels)
     std::string       item;
     while (std::getline(ss, item, ',')) {
         boost::trim(item);
-        if (!item.empty())
-            map.push_back(std::stoi(item));
+        if (item.empty())
+            continue;
+
+        std::size_t pos  = 0;
+        auto        value = std::stoi(item, &pos);
+        if (pos != item.size())
+            throw std::invalid_argument("CHANNEL_MAP entry is not a plain integer: '" + item + "'");
+
+        map.push_back(value);
     }
     return map;
 }
@@ -229,15 +236,24 @@ struct proaudio_consumer : public core::frame_consumer
         executor_.begin_invoke([this] {
             try {
                 channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
+                if (channel_map_.empty())
+                    CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("CHANNEL_MAP resolved to no channels"));
 
                 auto device = find_device(device_name_, host_api_name_);
                 auto info   = Pa_GetDeviceInfo(device);
 
-                int max_dest_channel = 0;
-                for (auto ch : channel_map_)
-                    max_dest_channel = std::max(max_dest_channel, ch);
+                // Every entry must be a valid 1-based device channel - a stray 0/negative entry would
+                // underflow to a huge index and corrupt memory in the realtime callback below.
+                for (auto ch : channel_map_) {
+                    if (ch < 1)
+                        CASPAR_THROW_EXCEPTION(
+                            invalid_operation() << msg_info("CHANNEL_MAP entries must be 1-based channel numbers, got " +
+                                                            std::to_string(ch)));
+                }
 
-                if (max_dest_channel <= 0 || max_dest_channel > info->maxOutputChannels)
+                auto max_dest_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
+
+                if (max_dest_channel > info->maxOutputChannels)
                     CASPAR_THROW_EXCEPTION(
                         invalid_operation() << msg_info("CHANNEL_MAP requires channel " +
                                                         std::to_string(max_dest_channel) + " but device '" +
@@ -252,8 +268,12 @@ struct proaudio_consumer : public core::frame_consumer
                 auto max_cadence =
                     *std::max_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
 
-                ring_ = std::make_unique<frame_ring_buffer>(static_cast<std::size_t>(num_silence + 4) * max_cadence,
-                                                            channel_map_.size());
+                // At least double the largest block PortAudio's callback can ask for in one go, so an
+                // oversized host-requested block can't drain the ring dry and report a false dropout.
+                auto ring_capacity = std::max<std::size_t>(static_cast<std::size_t>(num_silence + 4) * max_cadence,
+                                                           static_cast<std::size_t>(max_frames_per_callback) * 2);
+
+                ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
                 scratch_.resize(max_frames_per_callback * channel_map_.size());
 
                 // Pre-roll silence so the callback has real data to consume from the first tick,
