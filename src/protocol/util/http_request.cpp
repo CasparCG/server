@@ -118,13 +118,13 @@ std::string url_encode_path(std::string_view path)
     result.reserve(path.size() * 2); // Reserve space to avoid reallocations
 
     for (unsigned char c : path) {
-        if (c == '\\') {
-            c = '/';
-        }
-
         if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
             result += c;
         } else {
+            if (c == '\\') {
+                c = '/';
+            }
+
             // Encode special character (including '/') as %XX
             result += '%';
             result += hex_chars[c >> 4];
