@@ -96,6 +96,9 @@ else ()
 		z
 		pthread
 	)
+	# Keeps internal (non-exported) symbol names in the dynamic symbol table, so
+	# boost::stacktrace can resolve function names in a crash backtrace instead of just addresses.
+	target_link_options(casparcg PRIVATE -rdynamic)
 endif ()
 
 add_custom_target(casparcg_copy_dependencies ALL)
