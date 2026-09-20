@@ -10,4 +10,8 @@ copy %1\CHANGELOG.md "%SERVER_FOLDER%"
 copy %1\LICENSE "%SERVER_FOLDER%"
 copy %1\README.md "%SERVER_FOLDER%"
 
-if exist "%MEDIA_SCANNER_FOLDER%" xcopy "%MEDIA_SCANNER_FOLDER%" "%SERVER_FOLDER%" /E /I /Y
+if exist "%MEDIA_SCANNER_FOLDER%" (
+    xcopy "%MEDIA_SCANNER_FOLDER%" "%SERVER_FOLDER%" /E /I /Y
+    rem media-scanner releases ship the exe with a versioned name, but casparcg_auto_restart.bat expects scanner.exe
+    for %%F in ("%SERVER_FOLDER%\casparcg-scanner-*.exe") do ren "%%F" scanner.exe
+)
