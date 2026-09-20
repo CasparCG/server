@@ -180,12 +180,17 @@ struct proaudio_consumer : public core::frame_consumer
     std::string               channel_map_param_;
     std::vector<int>           channel_map_; // 1-based destination device channel per source channel
     timespan                   delay_;
+    int                        buffer_size_frames_; // <=0 means "let PortAudio/the driver choose"
+    double                     latency_ms_;         // <0 means "use the device's default low latency"
 
     PaStream* stream_          = nullptr;
     int       device_channels_ = 0; // width the stream was opened with
 
-    static constexpr unsigned long max_frames_per_callback = 8192;
-    std::vector<std::int16_t>      scratch_; // pre-sized once, only touched by the realtime callback
+    // Frames-per-callback ceiling used to size the ring buffer and scratch_. Defaulted to a safe
+    // fallback for when BUFFER_SIZE isn't configured (PortAudio/the driver picks the block size), and
+    // set to BUFFER_SIZE (with headroom) in initialize() when it is.
+    unsigned long              max_frames_per_callback_ = 8192;
+    std::vector<std::int16_t> scratch_; // pre-sized once, only touched by the realtime callback
 
     std::unique_ptr<frame_ring_buffer> ring_;
     std::atomic<std::uint64_t>         frames_played_{0};
@@ -195,12 +200,19 @@ struct proaudio_consumer : public core::frame_consumer
     executor executor_{L"proaudio_consumer"};
 
   public:
-    explicit proaudio_consumer(std::string device_name, std::string host_api_name, std::string channel_map, timespan delay)
+    explicit proaudio_consumer(std::string device_name,
+                               std::string host_api_name,
+                               std::string channel_map,
+                               timespan    delay,
+                               int         buffer_size_frames,
+                               double      latency_ms)
         : library_(library::acquire())
         , device_name_(std::move(device_name))
         , host_api_name_(std::move(host_api_name))
         , channel_map_param_(std::move(channel_map))
         , delay_(delay)
+        , buffer_size_frames_(buffer_size_frames)
+        , latency_ms_(latency_ms)
     {
         using diagnostics::color;
         graph_->set_color("tick-time", color(0.0, 0.6, 0.9));
@@ -262,6 +274,13 @@ struct proaudio_consumer : public core::frame_consumer
 
                 device_channels_ = max_dest_channel;
 
+                if (buffer_size_frames_ > 0) {
+                    // Same knob as the "buffer size" control in a DAW/ASIO control panel - trades
+                    // latency for CPU/dropout headroom. Clamped to a sane range so a stray huge value
+                    // from an AMCP client can't force an oversized allocation below.
+                    max_frames_per_callback_ = static_cast<unsigned long>(std::clamp(buffer_size_frames_, 16, 65536));
+                }
+
                 auto num_silence = delay_.in_frames(format_desc_.fps);
                 num_silence      = std::clamp<int>(num_silence, 1, format_desc_.fps);
 
@@ -271,10 +290,10 @@ struct proaudio_consumer : public core::frame_consumer
                 // At least double the largest block PortAudio's callback can ask for in one go, so an
                 // oversized host-requested block can't drain the ring dry and report a false dropout.
                 auto ring_capacity = std::max<std::size_t>(static_cast<std::size_t>(num_silence + 4) * max_cadence,
-                                                           static_cast<std::size_t>(max_frames_per_callback) * 2);
+                                                           static_cast<std::size_t>(max_frames_per_callback_) * 2);
 
                 ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
-                scratch_.resize(max_frames_per_callback * channel_map_.size());
+                scratch_.resize(max_frames_per_callback_ * channel_map_.size());
 
                 // Pre-roll silence so the callback has real data to consume from the first tick,
                 // instead of waiting on data that hasn't been pushed by send() yet.
@@ -288,14 +307,15 @@ struct proaudio_consumer : public core::frame_consumer
                 out_params.device                    = device;
                 out_params.channelCount               = device_channels_;
                 out_params.sampleFormat               = paInt16;
-                out_params.suggestedLatency           = info->defaultLowOutputLatency;
+                out_params.suggestedLatency = latency_ms_ >= 0.0 ? latency_ms_ / 1000.0 : info->defaultLowOutputLatency;
                 out_params.hostApiSpecificStreamInfo = nullptr;
 
                 auto err = Pa_OpenStream(&stream_,
                                          nullptr,
                                          &out_params,
                                          format_desc_.audio_sample_rate,
-                                         paFramesPerBufferUnspecified,
+                                         buffer_size_frames_ > 0 ? static_cast<unsigned long>(buffer_size_frames_)
+                                                                : paFramesPerBufferUnspecified,
                                          paNoFlag,
                                          &proaudio_consumer::pa_callback,
                                          this);
@@ -311,7 +331,10 @@ struct proaudio_consumer : public core::frame_consumer
                                                        Pa_GetErrorText(err)));
 
                 CASPAR_LOG(info) << print() << " Using device '" << u16(std::string(info->name)) << "'";
-                CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames";
+                CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames ("
+                                 << out_params.suggestedLatency * 1000.0 << " ms suggested, buffer "
+                                 << (buffer_size_frames_ > 0 ? std::to_string(max_frames_per_callback_) : "auto")
+                                 << " frames)";
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
@@ -408,7 +431,7 @@ struct proaudio_consumer : public core::frame_consumer
 
         std::memset(out, 0, static_cast<std::size_t>(frame_count) * self->device_channels_ * sizeof(std::int16_t));
 
-        auto frames = std::min<unsigned long>(frame_count, max_frames_per_callback);
+        auto frames = std::min<unsigned long>(frame_count, self->max_frames_per_callback_);
         if (frames < frame_count)
             self->dropout_.store(true, std::memory_order_relaxed);
 
@@ -442,8 +465,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     auto host_api     = u8(get_param(L"HOST_API", params, L""));
     auto channel_map  = u8(get_param(L"CHANNEL_MAP", params, L""));
     auto delay        = u8(get_param(L"DELAY", params, L"0"));
+    auto buffer_size  = get_param(L"BUFFER_SIZE", params, -1);
+    auto latency_ms   = get_param(L"LATENCY_MS", params, -1.0);
 
-    return spl::make_shared<proaudio_consumer>(device_name, host_api, channel_map, timespan{delay});
+    return spl::make_shared<proaudio_consumer>(device_name, host_api, channel_map, timespan{delay}, buffer_size, latency_ms);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -456,8 +481,10 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     auto host_api     = u8(ptree.get(L"host-api", L""));
     auto channel_map  = u8(ptree.get(L"channel-map", L""));
     auto delay        = u8(ptree.get(L"delay", L"0"));
+    auto buffer_size  = ptree.get(L"buffer-size", -1);
+    auto latency_ms   = ptree.get(L"latency-ms", -1.0);
 
-    return spl::make_shared<proaudio_consumer>(device_name, host_api, channel_map, timespan{delay});
+    return spl::make_shared<proaudio_consumer>(device_name, host_api, channel_map, timespan{delay}, buffer_size, latency_ms);
 }
 
 }} // namespace caspar::proaudio
