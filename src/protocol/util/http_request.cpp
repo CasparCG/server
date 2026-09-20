@@ -4,6 +4,7 @@
 #include <common/log.h>
 
 #include <boost/asio.hpp>
+#include <cctype>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -121,8 +122,7 @@ std::string url_encode_path(std::string_view path)
             c = '/';
         }
 
-        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' ||
-            c == '.' || c == '~') {
+        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
             result += c;
         } else {
             // Encode special character (including '/') as %XX
