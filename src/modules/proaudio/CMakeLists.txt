@@ -2,13 +2,13 @@ cmake_minimum_required (VERSION 3.28)
 project (proaudio)
 
 set(SOURCES
-	consumer/proaudio_consumer.cpp
-	consumer/proaudio_consumer.h
+		consumer/proaudio_consumer.cpp
+		consumer/proaudio_consumer.h
 
-	util/ring_buffer.h
+		util/ring_buffer.h
 
-	proaudio.cpp
-	proaudio.h
+		proaudio.cpp
+		proaudio.h
 )
 
 casparcg_add_module_project(proaudio
