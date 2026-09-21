@@ -58,7 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <future>
-#include <iomanip>
+#include <format>
 #include <memory>
 
 #if defined(__GNUC__) && __GNUC__ == 14
@@ -69,7 +69,6 @@
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
@@ -1952,22 +1951,12 @@ std::wstring info_server_command(command_context& ctx)
 {
     using namespace std::chrono;
 
-    auto uptime_secs = duration_cast<seconds>(system_clock::now() - caspar::env::start_time()).count();
-    auto days        = uptime_secs / 86400;
-    auto hours       = (uptime_secs % 86400) / 3600;
-    auto minutes     = (uptime_secs % 3600) / 60;
-    auto seconds_rem = uptime_secs % 60;
-
-    std::wstringstream uptime;
-    uptime << std::setfill(L'0') << std::setw(2) << days << L":" << std::setw(2) << hours << L":" << std::setw(2)
-           << minutes << L":" << std::setw(2) << seconds_rem;
-
-    auto start_time_str =
-        u16(boost::posix_time::to_iso_extended_string(boost::posix_time::from_time_t(system_clock::to_time_t(caspar::env::start_time()))));
+    auto uptime = duration_cast<seconds>(system_clock::now() - caspar::env::start_time());
+    auto d      = duration_cast<days>(uptime);
 
     boost::property_tree::wptree info;
-    info.add(L"server.start-time", start_time_str);
-    info.add(L"server.uptime", uptime.str());
+    info.add(L"server.start-time", std::format(L"{:%FT%T}", floor<seconds>(caspar::env::start_time())));
+    info.add(L"server.uptime", std::format(L"{:02}:{:%T}", d.count(), uptime - d));
 
     std::wstringstream replyString;
     // This is needed for backwards compatibility with old clients
