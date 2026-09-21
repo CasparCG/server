@@ -257,9 +257,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
 
                 // Stop tracking layers that no longer exist, so this doesn't grow unbounded.
-                for (auto it = last_sent_transforms_.begin(); it != last_sent_transforms_.end();) {
-                    it = layers_.find(it->first) == layers_.end() ? last_sent_transforms_.erase(it) : std::next(it);
-                }
+                std::erase_if(last_sent_transforms_, [&](const auto& kv) { return !layers_.contains(kv.first); });
 
                 state_ = std::move(state);
             } catch (...) {
