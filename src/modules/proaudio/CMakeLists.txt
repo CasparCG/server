@@ -5,6 +5,9 @@ set(SOURCES
 		consumer/proaudio_consumer.cpp
 		consumer/proaudio_consumer.h
 
+		producer/proaudio_producer.cpp
+		producer/proaudio_producer.h
+
 		util/ring_buffer.h
 
 		proaudio.cpp

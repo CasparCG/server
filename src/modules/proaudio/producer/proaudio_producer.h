@@ -15,21 +15,17 @@
  * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "proaudio.h"
+#pragma once
 
-#include "consumer/proaudio_consumer.h"
-#include "producer/proaudio_producer.h"
+#include <common/memory.h>
 
-#include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
+
+#include <vector>
 
 namespace caspar { namespace proaudio {
 
-void init(const core::module_dependencies& dependencies)
-{
-    dependencies.consumer_registry->register_consumer_factory(L"Pro Audio Consumer", create_consumer);
-    dependencies.consumer_registry->register_preconfigured_consumer_factory(L"proaudio", create_preconfigured_consumer);
-    dependencies.producer_registry->register_producer_factory(L"Pro Audio Producer", create_producer);
-}
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
+                                                      const std::vector<std::wstring>&         params);
 
 }} // namespace caspar::proaudio
