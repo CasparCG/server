@@ -23,6 +23,7 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <chrono>
 #include <string>
 
 namespace caspar { namespace env {
@@ -35,6 +36,9 @@ const std::wstring& log_folder();
 const std::wstring& template_folder();
 const std::wstring& data_folder();
 const std::wstring& version();
+
+/// The time this process started, recorded at static-initialization time.
+std::chrono::system_clock::time_point start_time();
 
 bool log_to_file();
 
