@@ -191,10 +191,12 @@ struct proaudio_consumer : public core::frame_consumer
     // set to BUFFER_SIZE (with headroom) in initialize() when it is.
     unsigned long              max_frames_per_callback_ = 8192;
     std::vector<std::int16_t> scratch_; // pre-sized once, only touched by the realtime callback
+    std::string                device_name_for_print_; // set once in initialize(), only read after
 
     std::unique_ptr<frame_ring_buffer> ring_;
     std::atomic<std::uint64_t>         frames_played_{0};
     std::atomic<bool>                  dropout_{false};
+    std::atomic<bool>                  device_underflow_{false};
     std::atomic<bool>                  stop_{false};
 
     executor executor_{L"proaudio_consumer"};
@@ -219,6 +221,7 @@ struct proaudio_consumer : public core::frame_consumer
         graph_->set_color("queue-size", color(0.2, 0.9, 0.9));
         graph_->set_color("frame-time", color(0.1, 1.0, 0.1));
         graph_->set_color("drop-out", color(0.6, 0.3, 0.3));
+        graph_->set_color("device-underflow", color(0.6, 0.3, 0.9));
         diagnostics::register_graph(graph_);
     }
 
@@ -253,6 +256,13 @@ struct proaudio_consumer : public core::frame_consumer
 
                 auto device = find_device(device_name_, host_api_name_);
                 auto info   = Pa_GetDeviceInfo(device);
+                if (!info)
+                    CASPAR_THROW_EXCEPTION(
+                        invalid_operation()
+                        << msg_info("No default PortAudio output device is available on this machine. "
+                                    "Specify DEVICE_NAME/HOST_API explicitly."));
+
+                device_name_for_print_ = info->name;
 
                 // Every entry must be a valid 1-based device channel - a stray 0/negative entry would
                 // underflow to a huge index and corrupt memory in the realtime callback below.
@@ -381,6 +391,8 @@ struct proaudio_consumer : public core::frame_consumer
             tick_timer_.restart();
             if (dropout_.exchange(false, std::memory_order_relaxed))
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
+            if (device_underflow_.exchange(false, std::memory_order_relaxed))
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "device-underflow");
         });
 
         return std::async(std::launch::deferred, [this, target_future] {
@@ -402,7 +414,8 @@ struct proaudio_consumer : public core::frame_consumer
 
     std::wstring print() const override
     {
-        return L"proaudio[" + std::to_wstring(channel_index_) + L"|" + format_desc_.name + L"]";
+        return L"proaudio[" + std::to_wstring(channel_index_) + L"|" + u16(device_name_for_print_) + L"|" +
+               format_desc_.name + L"]";
     }
 
     std::wstring name() const override { return L"proaudio"; }
@@ -423,11 +436,16 @@ struct proaudio_consumer : public core::frame_consumer
                            void*                            output,
                            unsigned long                    frame_count,
                            const PaStreamCallbackTimeInfo* /*time_info*/,
-                           PaStreamCallbackFlags /*status_flags*/,
+                           PaStreamCallbackFlags            status_flags,
                            void* user_data)
     {
         auto self = static_cast<proaudio_consumer*>(user_data);
         auto out  = static_cast<std::int16_t*>(output);
+
+        // The driver/device itself ran out of data to send to hardware - distinct from (and a
+        // likely cause of) our own ring_ dropout below.
+        if (status_flags & paOutputUnderflow)
+            self->device_underflow_.store(true, std::memory_order_relaxed);
 
         std::memset(out, 0, static_cast<std::size_t>(frame_count) * self->device_channels_ * sizeof(std::int16_t));
 

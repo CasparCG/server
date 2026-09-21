@@ -26,9 +26,12 @@ namespace caspar { namespace proaudio {
 
 // Single-producer/single-consumer lock-free ring buffer of interleaved audio frames.
 //
-// The producer (the consumer's executor thread, in push()) and the consumer (the realtime
-// PortAudio callback thread, in pop()) never block or take a lock against each other - this is
-// required because the PortAudio callback must never block, allocate, or touch a mutex.
+// push() and pop() never block or take a lock against each other, so each may safely be called
+// from a realtime PortAudio callback that must never block, allocate, or touch a mutex - which
+// side that is depends on the direction of data flow: the consumer pushes from its executor
+// thread and pops from its realtime playback callback, while the producer is the other way
+// around (pushes from its realtime capture callback, pops from the mixer's executor thread).
+// Either way, push() must only ever be called from one fixed thread and pop() from the other.
 //
 // One "frame" here is `channels` interleaved int16_t samples.
 class frame_ring_buffer
@@ -44,7 +47,7 @@ class frame_ring_buffer
 
     std::size_t channels() const { return channels_; }
 
-    // Called only from the producer thread.
+    // Called only from whichever side owns writing (see class comment). Never blocks/allocates.
     // Returns the number of whole frames actually written (less than requested if full).
     std::size_t push(const int16_t* frames, std::size_t frame_count)
     {
@@ -63,7 +66,7 @@ class frame_ring_buffer
         return to_write;
     }
 
-    // Called only from the realtime callback thread. Never blocks/allocates.
+    // Called only from whichever side owns reading (see class comment). Never blocks/allocates.
     // Missing frames (buffer underrun) are zero-filled; returns the number of frames that were
     // real audio (as opposed to underrun silence), so the caller can flag a dropout.
     std::size_t pop(int16_t* out_frames, std::size_t frame_count)
