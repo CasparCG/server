@@ -209,6 +209,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 
 bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo)
 {
+    // mask filename "empty" enables cut mode, see sting_producer.cpp
     auto match = std::find_if(params.begin(), params.end(), param_comparer(L"STING"));
     if (match == params.end())
         return false;
