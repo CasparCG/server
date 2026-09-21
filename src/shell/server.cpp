@@ -379,7 +379,7 @@ struct server::impl
 
     void setup_diag_http(const boost::property_tree::wptree& pt)
     {
-        auto port = pt.get<unsigned short>(L"configuration.diag.http-port", 0);
+        auto port = pt.get<unsigned short>(L"configuration.diag.default-port", 4000);
         if (port == 0)
             return;
 
