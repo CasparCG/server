@@ -65,11 +65,27 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
 <div id="graphs"></div>
 <script>
   var HISTORY = 300;
-  var series = {};   // id -> { container, h2, canvas, ctx, tagsEl, values: { name: [numbers...] }, colors: { name: cssColor } }
+  var series = {};   // id -> { container, h2, canvas, ctx, tagsEl, values: { name: [numbers...] }, colors: { name: cssColor }, critical: { name: bool } }
 
-  function colorToCss(c) {
-    if (typeof c !== "number") return "#0f0";
+  // Named series that indicate problems (dropped/late frames, underflows, etc.) get boosted brightness
+  // and a thicker stroke so they stand out even though their configured color (matching osd_graph) is
+  // often a dark, muted tone meant to sit quietly among a busy set of SFML lines.
+  var CRITICAL_NAMES = ["dropped-frame", "late-frame", "flushed-frame", "underflow", "drop-out",
+                         "audio-clipping", "audio-buffer-overflow"];
+
+  function scaleToVivid(r, g, b) {
+    var max = Math.max(r, g, b, 1);
+    var factor = 255 / max;
+    return [Math.min(255, r * factor), Math.min(255, g * factor), Math.min(255, b * factor)];
+  }
+
+  function colorToCss(c, boost) {
+    if (typeof c !== "number") return boost ? "#f33" : "#fff"; // osd_graph's default line color is white
     var r = (c >>> 24) & 255, g = (c >>> 16) & 255, b = (c >>> 8) & 255, a = c & 255;
+    if (boost) {
+      var vivid = scaleToVivid(r, g, b);
+      r = vivid[0]; g = vivid[1]; b = vivid[2]; a = 255;
+    }
     return "rgba(" + r + "," + g + "," + b + "," + (a / 255) + ")";
   }
 
@@ -95,7 +111,7 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
     document.getElementById("graphs").appendChild(container);
 
     series[id] = { container: container, title: title, ctx: ctx, canvas: canvas, g: canvas.getContext("2d"),
-                   tagsEl: tagsEl, values: {}, colors: {} };
+                   tagsEl: tagsEl, values: {}, colors: {}, critical: {} };
     return series[id];
   }
 
@@ -105,7 +121,11 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
 
     Object.keys(s.values).forEach(function (name) {
       var vals = s.values[name];
-      ctx.strokeStyle = s.colors[name] || "#0f0";
+      var critical = !!s.critical[name];
+      ctx.strokeStyle = s.colors[name] || (critical ? "#f33" : "#fff");
+      ctx.lineWidth = critical ? 2.5 : 1;
+      ctx.shadowBlur = critical ? 4 : 0;
+      ctx.shadowColor = ctx.strokeStyle;
       ctx.beginPath();
       for (var i = 0; i < vals.length; i++) {
         var x = (i / (HISTORY - 1)) * w;
@@ -114,6 +134,7 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
       }
       ctx.stroke();
     });
+    ctx.shadowBlur = 0;
   }
 
   function applySnapshot(snapshot) {
@@ -130,7 +151,9 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
         if (!s.values[name]) s.values[name] = [];
         s.values[name].push(graph.values[name]);
         if (s.values[name].length > HISTORY) s.values[name].shift();
-        if (graph.colors && graph.colors[name] !== undefined) s.colors[name] = colorToCss(graph.colors[name]);
+        var critical = CRITICAL_NAMES.indexOf(name) !== -1;
+        s.critical[name] = critical;
+        if (graph.colors && graph.colors[name] !== undefined) s.colors[name] = colorToCss(graph.colors[name], critical);
       });
 
       s.tagsEl.innerHTML = "";
