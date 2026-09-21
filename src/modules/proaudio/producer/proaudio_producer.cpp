@@ -181,9 +181,11 @@ struct proaudio_producer : public core::frame_producer
 
     unsigned long              max_frames_per_callback_ = 8192;
     std::vector<std::int16_t> scratch_; // pre-sized once, only touched by the realtime callback
+    std::string                device_name_for_print_; // set once in the ctor, only read after
 
     std::unique_ptr<frame_ring_buffer> ring_;
     std::atomic<bool>                  dropout_{false};
+    std::atomic<bool>                  device_overflow_{false};
 
   public:
     explicit proaudio_producer(spl::shared_ptr<core::frame_factory> frame_factory,
@@ -204,6 +206,7 @@ struct proaudio_producer : public core::frame_producer
     {
         using diagnostics::color;
         graph_->set_color("underflow", color(0.6, 0.3, 0.9));
+        graph_->set_color("device-overflow", color(0.6, 0.3, 0.3));
         diagnostics::register_graph(graph_);
 
         channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
@@ -219,6 +222,12 @@ struct proaudio_producer : public core::frame_producer
 
         auto device = find_device(device_name_, host_api_name_);
         auto info   = Pa_GetDeviceInfo(device);
+        if (!info)
+            CASPAR_THROW_EXCEPTION(invalid_operation()
+                                   << msg_info("No default PortAudio input device is available on this machine. "
+                                               "Specify DEVICE_NAME/HOST_API explicitly."));
+
+        device_name_for_print_ = info->name;
 
         auto max_source_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
         if (max_source_channel > info->maxInputChannels)
@@ -294,6 +303,8 @@ struct proaudio_producer : public core::frame_producer
         auto                       popped = ring_->pop(captured.data(), static_cast<std::size_t>(nb_samples));
         if (popped < static_cast<std::size_t>(nb_samples))
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+        if (device_overflow_.exchange(false, std::memory_order_relaxed))
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "device-overflow");
 
         // Left-justify each 16-bit capture into caspar's 32-bit sample range - the inverse of the
         // consumer's `>> 16` truncation down to int16 for playback.
@@ -314,7 +325,10 @@ struct proaudio_producer : public core::frame_producer
         return core::draw_frame(std::move(frame));
     }
 
-    std::wstring print() const override { return L"proaudio[" + format_desc_.name + L"]"; }
+    std::wstring print() const override
+    {
+        return L"proaudio[" + u16(device_name_for_print_) + L"|" + format_desc_.name + L"]";
+    }
 
     std::wstring name() const override { return L"proaudio"; }
 
@@ -332,11 +346,16 @@ struct proaudio_producer : public core::frame_producer
                            void* /*output*/,
                            unsigned long                    frame_count,
                            const PaStreamCallbackTimeInfo* /*time_info*/,
-                           PaStreamCallbackFlags /*status_flags*/,
+                           PaStreamCallbackFlags            status_flags,
                            void* user_data)
     {
         auto self = static_cast<proaudio_producer*>(user_data);
         auto in   = static_cast<const std::int16_t*>(input);
+
+        // The driver/device itself dropped samples before we even got them - distinct from (and a
+        // likely cause of) our own ring_ underflow below.
+        if (status_flags & paInputOverflow)
+            self->device_overflow_.store(true, std::memory_order_relaxed);
 
         auto frames = std::min<unsigned long>(frame_count, self->max_frames_per_callback_);
         if (frames < frame_count)
