@@ -51,15 +51,21 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
 <style>
   body { margin: 0; padding: 12px; background: #111; color: #eee; font-family: monospace; }
   .graph { border: 1px solid #333; margin-bottom: 12px; }
-  .graph h2 { margin: 0; padding: 4px 8px; font-size: 13px; background: #222; }
+  .graph h2 { margin: 0; padding: 4px 8px; font-size: 13px; background: #222; display: flex; justify-content: space-between; }
+  .graph h2 .ctx { color: #888; }
   canvas { display: block; width: 100%; height: 80px; }
+  .tags { padding: 2px 8px; font-size: 11px; min-height: 1.4em; }
+  .tags .tag { display: inline-block; margin-right: 8px; padding: 0 4px; border-radius: 2px; }
+  .tags .warning { background: #622; color: #fbb; }
+  .tags .info { background: #226; color: #bdf; }
+  .tags .silent { background: #333; color: #999; }
 </style>
 </head>
 <body>
 <div id="graphs"></div>
 <script>
   var HISTORY = 300;
-  var series = {};   // graphKey -> { canvas, ctx, values: { name: [numbers...] }, colors: { name: cssColor } }
+  var series = {};   // id -> { container, h2, canvas, ctx, tagsEl, values: { name: [numbers...] }, colors: { name: cssColor } }
 
   function colorToCss(c) {
     if (typeof c !== "number") return "#0f0";
@@ -67,31 +73,39 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
     return "rgba(" + r + "," + g + "," + b + "," + (a / 255) + ")";
   }
 
-  function ensureGraph(key, text) {
-    if (series[key]) return series[key];
+  function ensureGraph(id, text) {
+    if (series[id]) return series[id];
 
     var container = document.createElement("div");
     container.className = "graph";
     var h2 = document.createElement("h2");
-    h2.textContent = text || key;
+    var title = document.createElement("span");
+    var ctx = document.createElement("span");
+    ctx.className = "ctx";
+    h2.appendChild(title);
+    h2.appendChild(ctx);
     var canvas = document.createElement("canvas");
     canvas.width = 900;
     canvas.height = 80;
+    var tagsEl = document.createElement("div");
+    tagsEl.className = "tags";
     container.appendChild(h2);
     container.appendChild(canvas);
+    container.appendChild(tagsEl);
     document.getElementById("graphs").appendChild(container);
 
-    series[key] = { h2: h2, canvas: canvas, ctx: canvas.getContext("2d"), values: {}, colors: {} };
-    return series[key];
+    series[id] = { container: container, title: title, ctx: ctx, canvas: canvas, g: canvas.getContext("2d"),
+                   tagsEl: tagsEl, values: {}, colors: {} };
+    return series[id];
   }
 
-  function draw(g) {
-    var ctx = g.ctx, w = g.canvas.width, h = g.canvas.height;
+  function draw(s) {
+    var ctx = s.g, w = s.canvas.width, h = s.canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    Object.keys(g.values).forEach(function (name) {
-      var vals = g.values[name];
-      ctx.strokeStyle = g.colors[name] || "#0f0";
+    Object.keys(s.values).forEach(function (name) {
+      var vals = s.values[name];
+      ctx.strokeStyle = s.colors[name] || "#0f0";
       ctx.beginPath();
       for (var i = 0; i < vals.length; i++) {
         var x = (i / (HISTORY - 1)) * w;
@@ -103,19 +117,39 @@ const char* VIEWER_HTML = R"HTML(<!DOCTYPE html>
   }
 
   function applySnapshot(snapshot) {
-    (snapshot.graphs || []).forEach(function (graph, index) {
-      var key = "graph-" + index;
-      var g = ensureGraph(key, graph.text);
-      g.h2.textContent = graph.text || key;
+    var seenIds = {};
+
+    (snapshot.graphs || []).forEach(function (graph) {
+      var id = graph.id;
+      seenIds[id] = true;
+      var s = ensureGraph(id, graph.text);
+      s.title.textContent = graph.text || ("graph " + id);
+      s.ctx.textContent = graph.channel >= 0 ? (graph.channel + (graph.layer >= 0 ? "-" + graph.layer : "")) : "";
 
       Object.keys(graph.values || {}).forEach(function (name) {
-        if (!g.values[name]) g.values[name] = [];
-        g.values[name].push(graph.values[name]);
-        if (g.values[name].length > HISTORY) g.values[name].shift();
-        if (graph.colors && graph.colors[name] !== undefined) g.colors[name] = colorToCss(graph.colors[name]);
+        if (!s.values[name]) s.values[name] = [];
+        s.values[name].push(graph.values[name]);
+        if (s.values[name].length > HISTORY) s.values[name].shift();
+        if (graph.colors && graph.colors[name] !== undefined) s.colors[name] = colorToCss(graph.colors[name]);
       });
 
-      draw(g);
+      s.tagsEl.innerHTML = "";
+      Object.keys(graph.tags || {}).forEach(function (name) {
+        var span = document.createElement("span");
+        span.className = "tag " + graph.tags[name];
+        span.textContent = name;
+        s.tagsEl.appendChild(span);
+      });
+
+      draw(s);
+    });
+
+    // A graph disappears once its owning caspar::diagnostics::graph is destroyed - drop it here too.
+    Object.keys(series).forEach(function (id) {
+      if (!seenIds[id]) {
+        series[id].container.remove();
+        delete series[id];
+      }
     });
   }
 

@@ -21,11 +21,14 @@
 
 #include "web_graph.h"
 
+#include "call_context.h"
+
 #include <common/diagnostics/graph.h>
 #include <common/memory.h>
 #include <common/utf.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <mutex>
@@ -71,15 +74,35 @@ std::string json_escape(const std::string& s)
     return out;
 }
 
+const char* tag_severity_name(caspar::diagnostics::tag_severity severity)
+{
+    switch (severity) {
+        case caspar::diagnostics::tag_severity::WARNING:
+            return "warning";
+        case caspar::diagnostics::tag_severity::INFO:
+            return "info";
+        default:
+            return "silent";
+    }
+}
+
+std::atomic<long long> g_next_id{1};
+
 // Mirrors every value/text/color/tag set on its owning caspar::diagnostics::graph into plain members
 // guarded by a mutex, so a JSON snapshot can be built at any time from any thread (the HTTP server's).
+// Captures the same per-thread channel/layer call_context the SFML osd_graph shows in its corner, and a
+// stable id (rather than registry position) so clients can track a graph across snapshots even as other
+// graphs come and go.
 class web_graph_sink : public caspar::diagnostics::spi::graph_sink
 {
+    const long long                                id_       = g_next_id.fetch_add(1);
+    const caspar::core::diagnostics::call_context  context_  = caspar::core::diagnostics::call_context::for_thread();
+
     mutable std::mutex                      mutex_;
     std::string                             text_;
     std::unordered_map<std::string, double> values_;
     std::unordered_map<std::string, int>    colors_;
-    std::vector<std::string>                tags_;
+    std::unordered_map<std::string, int>    pending_tags_; // name -> tag_severity, cleared once emitted
 
   public:
     void activate() override {}
@@ -102,25 +125,27 @@ class web_graph_sink : public caspar::diagnostics::spi::graph_sink
         colors_[name] = color;
     }
 
-    void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override
+    void set_tag(caspar::diagnostics::tag_severity severity, const std::string& name) override
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (std::find(tags_.begin(), tags_.end(), name) == tags_.end())
-            tags_.push_back(name);
+        pending_tags_[name] = static_cast<int>(severity);
     }
 
+    // Matches osd_graph's behaviour of decaying every value back to 0 after a render/snapshot cycle.
     void auto_reset() override
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        tags_.clear();
+        for (auto& p : values_)
+            p.second = 0.0;
     }
 
-    std::string to_json() const
+    std::string to_json()
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
         std::ostringstream os;
-        os << "{\"text\":\"" << json_escape(text_) << "\",\"values\":{";
+        os << "{\"id\":" << id_ << ",\"channel\":" << context_.video_channel << ",\"layer\":" << context_.layer
+           << ",\"text\":\"" << json_escape(text_) << "\",\"values\":{";
         bool first = true;
         for (auto& p : values_) {
             if (!first)
@@ -136,15 +161,19 @@ class web_graph_sink : public caspar::diagnostics::spi::graph_sink
             first = false;
             os << "\"" << json_escape(p.first) << "\":" << p.second;
         }
-        os << "},\"tags\":[";
+        os << "},\"tags\":{";
         first = true;
-        for (auto& t : tags_) {
+        for (auto& p : pending_tags_) {
             if (!first)
                 os << ",";
             first = false;
-            os << "\"" << json_escape(t) << "\"";
+            os << "\"" << json_escape(p.first)
+               << "\":\"" << tag_severity_name(static_cast<caspar::diagnostics::tag_severity>(p.second)) << "\"";
         }
-        os << "]}";
+        os << "}}";
+
+        pending_tags_.clear(); // only report tags fired since the previous snapshot, like osd_graph's tick_tag_
+
         return os.str();
     }
 };
