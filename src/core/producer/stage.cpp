@@ -44,9 +44,8 @@
 namespace caspar { namespace core {
 
 namespace {
-// Exposes the mixer/transform properties applied via the MIXER family of AMCP commands (opacity, fill,
-// clip, etc.) as OSC state, in addition to the producer state layer::state() already provides.
-// See GitHub issue #37 - these were never sent over OSC, only queryable synchronously via AMCP.
+// Serializes the mixer/transform properties applied via the MIXER family of AMCP commands (opacity,
+// fill, clip, etc.) into OSC state, alongside the producer state layer::state() already provides.
 monitor::state transform_state(const frame_transform& transform)
 {
     monitor::state state;
@@ -77,8 +76,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
 
-    // Only the last transform actually sent to OSC subscribers for each layer, so unchanged mixer
-    // properties (opacity, fill, clip, etc.) aren't retransmitted every tick - see GitHub issue #37.
+    // The last transform actually sent to OSC subscribers for each layer, so unchanged mixer
+    // properties aren't retransmitted every tick.
     std::map<int, frame_transform> last_sent_transforms_;
 
     mutable std::mutex      format_desc_mutex_;
