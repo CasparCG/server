@@ -43,6 +43,31 @@
 
 namespace caspar { namespace core {
 
+namespace {
+// Exposes the mixer/transform properties applied via the MIXER family of AMCP commands (opacity, fill,
+// clip, etc.) as OSC state, in addition to the producer state layer::state() already provides.
+// See GitHub issue #37 - these were never sent over OSC, only queryable synchronously via AMCP.
+monitor::state transform_state(const frame_transform& transform)
+{
+    monitor::state state;
+
+    auto& image = transform.image_transform;
+    state["opacity"]          = image.opacity;
+    state["contrast"]         = image.contrast;
+    state["brightness"]       = image.brightness;
+    state["saturation"]       = image.saturation;
+    state["anchor"]           = std::vector<double>(image.anchor.begin(), image.anchor.end());
+    state["fill_translation"] = std::vector<double>(image.fill_translation.begin(), image.fill_translation.end());
+    state["fill_scale"]       = std::vector<double>(image.fill_scale.begin(), image.fill_scale.end());
+    state["clip_translation"] = std::vector<double>(image.clip_translation.begin(), image.clip_translation.end());
+    state["clip_scale"]       = std::vector<double>(image.clip_scale.begin(), image.clip_scale.end());
+    state["angle"]            = image.angle;
+    state["volume"]           = transform.audio_transform.volume;
+
+    return state;
+}
+} // namespace
+
 struct stage::impl : public std::enable_shared_from_this<impl>
 {
     int                                 channel_index_;
@@ -51,6 +76,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, layer>                layers_;
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
+
+    // Only the last transform actually sent to OSC subscribers for each layer, so unchanged mixer
+    // properties (opacity, fill, clip, etc.) aren't retransmitted every tick - see GitHub issue #37.
+    std::map<int, frame_transform> last_sent_transforms_;
 
     mutable std::mutex      format_desc_mutex_;
     core::video_format_desc format_desc_;
@@ -219,7 +248,20 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 monitor::state state;
                 for (auto& p : layers_) {
                     state["layer"][p.first] = p.second.state();
+
+                    auto transform = tweens_[p.first].fetch();
+                    auto last_sent = last_sent_transforms_.find(p.first);
+                    if (last_sent == last_sent_transforms_.end() || last_sent->second != transform) {
+                        state["layer"][p.first]["transform"] = transform_state(transform);
+                        last_sent_transforms_[p.first]        = transform;
+                    }
                 }
+
+                // Stop tracking layers that no longer exist, so this doesn't grow unbounded.
+                for (auto it = last_sent_transforms_.begin(); it != last_sent_transforms_.end();) {
+                    it = layers_.find(it->first) == layers_.end() ? last_sent_transforms_.erase(it) : std::next(it);
+                }
+
                 state_ = std::move(state);
             } catch (...) {
                 layers_.clear();
