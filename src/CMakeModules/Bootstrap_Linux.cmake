@@ -125,6 +125,98 @@ if (ENABLE_HTML)
     endif()
 endif ()
 
+# OMT (Open Media Transport) - source build for the omt module's libomt.so/libvmx.so.
+# Upstream publishes no prebuilt Linux binary, so this builds both from source instead.
+#
+# Opt-in and OFF by default: requires the .NET 8 SDK and clang, beyond what CasparCG's
+# own build otherwise needs. The omt module still works without this if libomt.so is
+# installed some other way.
+option(OMT_BUILD_FROM_SOURCE "Build the Open Media Transport runtime (libomt, libvmx) from source and bundle it. Requires the .NET 8 SDK ('dotnet') and clang, in addition to CasparCG's normal build tools." OFF)
+
+if (OMT_BUILD_FROM_SOURCE)
+    find_program(OMT_DOTNET_EXECUTABLE dotnet)
+    if (NOT OMT_DOTNET_EXECUTABLE)
+        message(FATAL_ERROR "OMT_BUILD_FROM_SOURCE requires the .NET 8 SDK ('dotnet' not found in PATH) - "
+                             "install it from https://dotnet.microsoft.com/download/dotnet/8.0, or configure "
+                             "with -DOMT_BUILD_FROM_SOURCE=OFF.")
+    endif()
+
+    # libvmx: the video codec libomt depends on. See omt_build_libvmx_linux.sh for how it
+    # picks the right build script for the host architecture (x86_64 or aarch64).
+    #
+    # PATCH_COMMAND works around a Clang narrowing warning that upstream's code triggers
+    # as a hard error (GCC/MSVC only warn). Patches both build scripts, since the wrapper
+    # decides at build time which one actually runs.
+    casparcg_add_external_project(libvmx-src)
+    ExternalProject_Add(libvmx-src
+        GIT_REPOSITORY https://github.com/openmediatransport/libvmx.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+        DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+        PATCH_COMMAND sh -c "sed -i 's/ -shared/ -Wno-c++11-narrowing -shared/' <SOURCE_DIR>/build/buildlinuxx64.sh <SOURCE_DIR>/build/buildlinuxarm64.sh"
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE TRUE
+        BUILD_COMMAND bash ${CMAKE_CURRENT_LIST_DIR}/omt_build_libvmx_linux.sh
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "<SOURCE_DIR>/build/libvmx.so"
+    )
+    ExternalProject_Get_Property(libvmx-src SOURCE_DIR)
+    set(OMT_LIBVMX_SO "${SOURCE_DIR}/build/libvmx.so")
+
+    # libomtnet: libomt.csproj expects a prebuilt libomtnet.dll next to it, at
+    # ../libomtnet/bin/Release/netstandard2.0/libomtnet.dll. Both are checked out under
+    # the same parent directory so that path resolves correctly.
+    set(OMT_NET_SRC_ROOT "${CMAKE_CURRENT_BINARY_DIR}/omt-src")
+
+    casparcg_add_external_project(libomtnet)
+    ExternalProject_Add(libomtnet
+        GIT_REPOSITORY https://github.com/openmediatransport/libomtnet.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+        DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+        SOURCE_DIR "${OMT_NET_SRC_ROOT}/libomtnet"
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE TRUE
+        BUILD_COMMAND sh -c "cd build && dotnet build ../libomtnet.sln -c Release"
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "${OMT_NET_SRC_ROOT}/libomtnet/bin/Release/netstandard2.0/libomtnet.dll"
+    )
+
+    # libomt: see omt_build_libomt_linux.sh for why this needs a wrapper rather than a direct
+    # BUILD_COMMAND - dotnet publish's exact output path isn't fixed the way libvmx's is.
+    casparcg_add_external_project(libomt-src)
+    ExternalProject_Add(libomt-src
+        GIT_REPOSITORY https://github.com/openmediatransport/libomt.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+        DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+        SOURCE_DIR "${OMT_NET_SRC_ROOT}/libomt"
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE TRUE
+        BUILD_COMMAND bash ${CMAKE_CURRENT_LIST_DIR}/omt_build_libomt_linux.sh
+        INSTALL_COMMAND ""
+        DEPENDS libvmx-src libomtnet
+        BUILD_BYPRODUCTS "${OMT_NET_SRC_ROOT}/libomt/libomt.so"
+    )
+    set(OMT_LIBOMT_SO "${OMT_NET_SRC_ROOT}/libomt/libomt.so")
+
+    # Install to the right lib directory: lib64 on most 64-bit Linux, plain lib on
+    # Debian/Ubuntu. Needed for dlopen() to find these at runtime, not just for
+    # packaging. -DOMT_INSTALL_LIBDIR overrides this.
+    set(OMT_INSTALL_LIBDIR "" CACHE STRING "Install directory for the OMT runtime libraries (libomt.so, libvmx.so), relative to the install prefix. Empty = auto-detect.")
+    if (NOT OMT_INSTALL_LIBDIR)
+        if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT EXISTS "/etc/debian_version")
+            set(OMT_INSTALL_LIBDIR "lib64")
+        elseif (CMAKE_INSTALL_LIBDIR)
+            set(OMT_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
+        else()
+            set(OMT_INSTALL_LIBDIR "lib")
+        endif()
+    endif()
+    install(FILES "${OMT_LIBVMX_SO}" DESTINATION "${OMT_INSTALL_LIBDIR}")
+    install(FILES "${OMT_LIBOMT_SO}" DESTINATION "${OMT_INSTALL_LIBDIR}")
+endif()
+
 SET (BOOST_INCLUDE_PATH "${Boost_INCLUDE_DIRS}")
 SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")
 
