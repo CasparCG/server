@@ -33,9 +33,12 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #include <boost/algorithm/string.hpp>
+#include <chrono>
 #include <fstream>
 
 namespace caspar { namespace env {
+
+const std::chrono::system_clock::time_point program_start_time = std::chrono::system_clock::now();
 
 std::wstring                 initial;
 std::wstring                 media;
@@ -153,6 +156,8 @@ const std::wstring& log_folder()
     check_is_configured();
     return log;
 }
+
+std::chrono::system_clock::time_point start_time() { return program_start_time; }
 
 bool log_to_file()
 {

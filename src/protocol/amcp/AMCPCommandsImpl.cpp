@@ -35,6 +35,7 @@
 #include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/param.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/consumer/frame_consumer_registry.h>
@@ -57,6 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <future>
+#include <iomanip>
 #include <memory>
 
 #if defined(__GNUC__) && __GNUC__ == 14
@@ -1946,6 +1948,38 @@ std::wstring info_paths_command(command_context& ctx)
     return replyString.str();
 }
 
+std::wstring info_server_command(command_context& ctx)
+{
+    using namespace std::chrono;
+
+    auto uptime_secs = duration_cast<seconds>(system_clock::now() - caspar::env::start_time()).count();
+    auto days        = uptime_secs / 86400;
+    auto hours       = (uptime_secs % 86400) / 3600;
+    auto minutes     = (uptime_secs % 3600) / 60;
+    auto seconds_rem = uptime_secs % 60;
+
+    std::wstringstream uptime;
+    uptime << std::setfill(L'0') << std::setw(2) << days << L":" << std::setw(2) << hours << L":" << std::setw(2)
+           << minutes << L":" << std::setw(2) << seconds_rem;
+
+    auto start_time_str =
+        u16(boost::posix_time::to_iso_extended_string(boost::posix_time::from_time_t(system_clock::to_time_t(caspar::env::start_time()))));
+
+    boost::property_tree::wptree info;
+    info.add(L"server.start-time", start_time_str);
+    info.add(L"server.uptime", uptime.str());
+
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO SERVER OK\r\n";
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, info, w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
 std::wstring diag_command(command_context& ctx)
 {
     core::diagnostics::osd::show_graphs(true);
@@ -2161,6 +2195,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
     repo->register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
+    repo->register_command(L"Query Commands", L"INFO SERVER", info_server_command, 0);
     repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
     repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 
