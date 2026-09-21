@@ -34,6 +34,7 @@
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/diagnostics/web_graph.h>
 #include <core/frame/pixel_format.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
@@ -50,6 +51,7 @@
 #include <protocol/amcp/amcp_shared.h>
 #include <protocol/osc/client.h>
 #include <protocol/util/AsyncEventServer.h>
+#include <protocol/util/diag_http_server.h>
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/util/tokenize.h>
 
@@ -108,6 +110,7 @@ struct server::impl
     std::shared_ptr<IO::AsyncEventServer>                  primary_amcp_server_;
     std::shared_ptr<osc::client>                           osc_client_ = std::make_shared<osc::client>(io_context_);
     std::vector<std::shared_ptr<void>>                     predefined_osc_subscriptions_;
+    std::shared_ptr<protocol::diag::diag_http_server>      diag_http_server_;
     spl::shared_ptr<std::vector<protocol::amcp::channel_context>> channels_;
     spl::shared_ptr<core::cg_producer_registry>                   cg_registry_;
     spl::shared_ptr<core::frame_producer_registry>                producer_registry_;
@@ -125,6 +128,7 @@ struct server::impl
         , shutdown_server_now_(std::move(shutdown_server_now))
     {
         caspar::core::diagnostics::osd::register_sink();
+        caspar::core::diagnostics::web::register_sink();
     }
 
     void start()
@@ -154,11 +158,15 @@ struct server::impl
 
         setup_osc(env::properties());
         CASPAR_LOG(info) << L"Initialized osc.";
+
+        setup_diag_http(env::properties());
+        CASPAR_LOG(info) << L"Initialized diag http.";
     }
 
     ~impl()
     {
         std::weak_ptr<boost::asio::io_context> weak_io_context = io_context_;
+        diag_http_server_.reset();
         io_context_.reset();
         predefined_osc_subscriptions_.clear();
         osc_client_.reset();
@@ -367,6 +375,16 @@ struct server::impl
                                           osc_client_->get_subscription_token(
                                               udp::endpoint(make_address_v4(ipv4_address), default_port)));
                 });
+    }
+
+    void setup_diag_http(const boost::property_tree::wptree& pt)
+    {
+        auto port = pt.get<unsigned short>(L"configuration.diag.http-port", 0);
+        if (port == 0)
+            return;
+
+        diag_http_server_ = std::make_shared<protocol::diag::diag_http_server>(
+            io_context_, port, [] { return core::diagnostics::web::snapshot_json(); });
     }
 
     void setup_channel_producers_and_consumers(const std::vector<boost::property_tree::wptree>& xml_channels)

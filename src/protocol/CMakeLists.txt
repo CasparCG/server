@@ -18,6 +18,7 @@ set(SOURCES
 		osc/client.cpp
 
 		util/AsyncEventServer.cpp
+		util/diag_http_server.cpp
 		util/lock_container.cpp
 		util/strategy_adapters.cpp
 		util/http_request.cpp
@@ -48,6 +49,7 @@ set(HEADERS
 
 		util/AsyncEventServer.h
 		util/ClientInfo.h
+		util/diag_http_server.h
 		util/lock_container.h
 		util/ProtocolStrategy.h
 		util/protocol_strategy.h
