@@ -8,6 +8,7 @@ set(SOURCES
 
 		diagnostics/call_context.cpp
 		diagnostics/osd_graph.cpp
+		diagnostics/web_graph.cpp
 
 		frame/draw_frame.cpp
 		frame/frame.cpp
@@ -40,6 +41,7 @@ set(HEADERS
 
 		diagnostics/call_context.h
 		diagnostics/osd_graph.h
+		diagnostics/web_graph.h
 
 		frame/draw_frame.h
 		frame/frame.h
