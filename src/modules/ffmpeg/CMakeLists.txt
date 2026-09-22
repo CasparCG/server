@@ -33,6 +33,11 @@ target_include_directories(ffmpeg PRIVATE
     )
 target_precompile_headers(ffmpeg PRIVATE "StdAfx.h")
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# GCC 14 false positive inside boost::regex's parser (vector<digraph<char>> realloc).
+	set_source_files_properties(producer/av_input.cpp PROPERTIES COMPILE_OPTIONS "-Wno-stringop-overflow")
+endif()
+
 set_target_properties(ffmpeg PROPERTIES FOLDER modules)
 source_group(sources ./*)
 source_group(sources\\consumer ./consumer/.*)
