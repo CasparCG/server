@@ -45,7 +45,7 @@ CasparCG 2.5.0 Stable
 * Reimplement mixer transforms, to handle routes correctly
 * Support more pixel formats from ffmpeg, to preserve colour accuracy better
 * Support running on headless linux
-* Transitions: Additional behaviours
+* Transitions: Add FADECUT, CUTFADE and VFADE types, UP/DOWN directions for PUSH/SLIDE, and a STING cut mode
 ##### Fixes
 * Build with boost 1.85/1.86/1.87/1.88
 * Build with ffmpeg 7.1

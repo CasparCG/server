@@ -209,6 +209,7 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 
 bool try_match_sting(const std::vector<std::wstring>& params, sting_info& stingInfo)
 {
+    // mask filename "empty" enables cut mode, see sting_producer.cpp
     auto match = std::find_if(params.begin(), params.end(), param_comparer(L"STING"));
     if (match == params.end())
         return false;
@@ -1806,13 +1807,14 @@ std::wstring thumbnail_list_command(command_context& ctx)
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
     return make_request(
-        ctx, "/thumbnail/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
+        ctx, "/thumbnail/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 THUMBNAIL RETRIEVE FAILED\r\n");
 }
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-    return make_request(
-        ctx, "/thumbnail/generate/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 THUMBNAIL GENERATE FAILED\r\n");
+    return make_request(ctx,
+                        "/thumbnail/generate/" + http::url_encode_path(u8(ctx.parameters.at(0))),
+                        L"501 THUMBNAIL GENERATE FAILED\r\n");
 }
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
@@ -1824,7 +1826,7 @@ std::wstring thumbnail_generateall_command(command_context& ctx)
 
 std::wstring cinf_command(command_context& ctx)
 {
-    return make_request(ctx, "/cinf/" + http::url_encode(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
+    return make_request(ctx, "/cinf/" + http::url_encode_path(u8(ctx.parameters.at(0))), L"501 CINF FAILED\r\n");
 }
 
 std::wstring cls_command(command_context& ctx) { return make_request(ctx, "/cls", L"501 CLS FAILED\r\n"); }
