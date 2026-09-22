@@ -22,6 +22,9 @@
 #pragma once
 
 #include "uniform_block.h"
+
+#include <vector>
+
 #include <vulkan/vulkan.hpp>
 namespace caspar { namespace accelerator { namespace vulkan {
 
@@ -47,13 +50,23 @@ class pipeline final
     pipeline(vk::Device device, vk::Format format);
     ~pipeline();
 
+    // Write `descriptorSet` (allocated by the caller for this draw) with the
+    // given textures, then bind and draw. The set must outlive GPU execution;
+    // its lifetime is owned by the caller's per-frame descriptor_pool.
     void         draw(vk::CommandBuffer                   commandBuffer,
+                      vk::DescriptorSet                   descriptorSet,
                       vk::Buffer                          vertexBuffer,
                       uint32_t                            coords_count,
                       uint32_t                            vertex_buffer_offset,
                       const uniform_block&                params,
                       const std::array<vk::ImageView, 7>& textures);
     vk::Pipeline id() const;
+
+    // The layout every per-draw descriptor set is allocated against, and the
+    // per-set descriptor counts a pool must provide for it. Together they let a
+    // descriptor_pool size itself for this pipeline.
+    vk::DescriptorSetLayout             descriptor_set_layout() const;
+    std::vector<vk::DescriptorPoolSize> descriptor_pool_sizes() const;
 
   private:
     struct impl;

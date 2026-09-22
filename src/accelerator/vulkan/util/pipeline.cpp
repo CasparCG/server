@@ -67,7 +67,6 @@ std::array<vk::VertexInputAttributeDescription, 2> get_attribute_descriptions(ui
     return attributeDescriptions;
 }
 
-const int DescriptorPoolSize = 64;
 const int BindlessTextureCount = 8;
 
 struct pipeline::impl
@@ -75,16 +74,12 @@ struct pipeline::impl
     vk::Device device_;
     vk::Format format_;
 
-    vk::Sampler                    textureSampler_;
-    vk::Sampler                    keySampler_;
-    vk::DescriptorSetLayout        descriptorSetLayout_;
-    vk::DescriptorPool             descriptorPool_;
-    std::vector<vk::DescriptorSet> descriptorSets_;
+    vk::Sampler             textureSampler_;
+    vk::Sampler             keySampler_;
+    vk::DescriptorSetLayout descriptorSetLayout_;
 
     vk::PipelineLayout pipelineLayout_;
     vk::Pipeline       pipeline_;
-
-    size_t currentDescriptorSet_ = 0;
 
     impl(const impl&)            = delete;
     impl& operator=(const impl&) = delete;
@@ -106,36 +101,25 @@ struct pipeline::impl
         backgroundLayoutBinding.stageFlags      = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo{};
-        std::array bindings{texturesLayoutBinding, backgroundLayoutBinding};
+        std::array                        bindings{texturesLayoutBinding, backgroundLayoutBinding};
         layoutInfo.setBindings(bindings);
 
-        std::array<vk::DescriptorBindingFlags, 2> bindingFlags{vk::DescriptorBindingFlagBits::ePartiallyBound,
-                                                                vk::DescriptorBindingFlags{}};
+        std::array<vk::DescriptorBindingFlags, 2>     bindingFlags{vk::DescriptorBindingFlagBits::ePartiallyBound,
+                                                               vk::DescriptorBindingFlags{}};
         vk::DescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo;
         bindingFlagsInfo.setBindingFlags(bindingFlags);
         layoutInfo.pNext = &bindingFlagsInfo;
 
         descriptorSetLayout_ = device_.createDescriptorSetLayout(layoutInfo);
+    }
 
-        // Create descriptor pool
-        vk::DescriptorPoolSize samplerPoolSize(vk::DescriptorType::eCombinedImageSampler, BindlessTextureCount * DescriptorPoolSize);
-        vk::DescriptorPoolSize inputAttachmentPoolSize(vk::DescriptorType::eInputAttachment, 1 * DescriptorPoolSize);
-
-        std::array poolSizes{samplerPoolSize, inputAttachmentPoolSize};
-
-        vk::DescriptorPoolCreateInfo poolInfo{};
-        poolInfo.maxSets = DescriptorPoolSize;
-
-        poolInfo.setPoolSizes(poolSizes);
-        descriptorPool_ = device_.createDescriptorPool(poolInfo);
-
-        // Allocate descriptor sets
-        std::vector<vk::DescriptorSetLayout> layouts(DescriptorPoolSize, descriptorSetLayout_);
-        vk::DescriptorSetAllocateInfo        allocInfo;
-        allocInfo.descriptorPool = descriptorPool_;
-        allocInfo.setSetLayouts(layouts);
-
-        descriptorSets_ = device_.allocateDescriptorSets(allocInfo);
+    // Per-set descriptor counts a pool must provide to allocate this pipeline's
+    // layout: the bindless texture array (binding 0) plus one input attachment
+    // (binding 1).
+    std::vector<vk::DescriptorPoolSize> descriptor_pool_sizes() const
+    {
+        return {{vk::DescriptorType::eCombinedImageSampler, BindlessTextureCount},
+                {vk::DescriptorType::eInputAttachment, 1}};
     }
 
     void setup_sampler()
@@ -264,16 +248,13 @@ struct pipeline::impl
         }
     }
 
-    vk::DescriptorSet acquire_descriptor_set(const std::array<vk::ImageView, 7>& textures)
+    void write_descriptor_set(vk::DescriptorSet descriptorSet, const std::array<vk::ImageView, 7>& textures)
     {
         // C++ textures array layout:
         //   [0] = background attachment, [1..4] = planes, [5] = local_key, [6] = layer_key
 
         // Shader bindless textures[N] layout:
         //   [0..3] = planes, [4] = local_key, [5] = layer_key
-
-        auto descriptorSet    = descriptorSets_[currentDescriptorSet_];
-        currentDescriptorSet_ = (currentDescriptorSet_ + 1) % DescriptorPoolSize;
 
         // Bind planes, local_key, and layer_key to the bindless texture array
         std::array<vk::DescriptorImageInfo, 6> textureInfos;
@@ -301,27 +282,25 @@ struct pipeline::impl
         backgroundInfo.imageView   = textures[0];
 
         vk::WriteDescriptorSet backgroundWrite{};
-        backgroundWrite.dstSet                    = descriptorSet;
-        backgroundWrite.dstBinding                = 1;
-        backgroundWrite.dstArrayElement           = 0;
-        backgroundWrite.descriptorType            = vk::DescriptorType::eInputAttachment;
+        backgroundWrite.dstSet          = descriptorSet;
+        backgroundWrite.dstBinding      = 1;
+        backgroundWrite.dstArrayElement = 0;
+        backgroundWrite.descriptorType  = vk::DescriptorType::eInputAttachment;
         backgroundWrite.setImageInfo(backgroundInfo);
 
-
-        vk::WriteDescriptorSet descriptorWrites[]{ backgroundWrite, texturesWrite };
+        vk::WriteDescriptorSet descriptorWrites[]{backgroundWrite, texturesWrite};
         device_.updateDescriptorSets(descriptorWrites, nullptr);
-
-        return descriptorSet;
     }
 
     void draw(vk::CommandBuffer                   commandBuffer,
+              vk::DescriptorSet                   descriptorSet,
               vk::Buffer                          vertexBuffer,
               uint32_t                            coords_count,
               uint32_t                            vertex_buffer_offset,
               const uniform_block&                params,
               const std::array<vk::ImageView, 7>& textures)
     {
-        auto descriptorSet = acquire_descriptor_set(textures);
+        write_descriptor_set(descriptorSet, textures);
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_);
         commandBuffer.bindVertexBuffers(0, vertexBuffer, {vertex_buffer_offset});
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout_, 0, descriptorSet, nullptr);
@@ -332,7 +311,6 @@ struct pipeline::impl
 
     ~impl()
     {
-        device_.destroyDescriptorPool(descriptorPool_);
         device_.destroyDescriptorSetLayout(descriptorSetLayout_);
         device_.destroySampler(textureSampler_);
         device_.destroySampler(keySampler_);
@@ -349,15 +327,20 @@ pipeline::pipeline(vk::Device device, vk::Format format)
 pipeline::~pipeline() {}
 
 void pipeline::draw(vk::CommandBuffer                   commandBuffer,
+                    vk::DescriptorSet                   descriptorSet,
                     vk::Buffer                          vertexBuffer,
                     uint32_t                            coords_count,
                     uint32_t                            vertex_buffer_offset,
                     const uniform_block&                params,
                     const std::array<vk::ImageView, 7>& textures)
 {
-    impl_->draw(commandBuffer, vertexBuffer, coords_count, vertex_buffer_offset, params, textures);
+    impl_->draw(commandBuffer, descriptorSet, vertexBuffer, coords_count, vertex_buffer_offset, params, textures);
 }
 
 vk::Pipeline pipeline::id() const { return impl_->pipeline_; }
+
+vk::DescriptorSetLayout pipeline::descriptor_set_layout() const { return impl_->descriptorSetLayout_; }
+
+std::vector<vk::DescriptorPoolSize> pipeline::descriptor_pool_sizes() const { return impl_->descriptor_pool_sizes(); }
 
 }}} // namespace caspar::accelerator::vulkan

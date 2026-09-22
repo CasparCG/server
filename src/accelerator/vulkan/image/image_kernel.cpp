@@ -21,6 +21,9 @@
 
 #include "image_kernel.h"
 
+#include "../util/barrier.h"
+#include "../util/command_context.h"
+#include "../util/descriptor_pool.h"
 #include "../util/device.h"
 #include "../util/pipeline.h"
 #include "../util/renderpass.h"
@@ -34,8 +37,12 @@
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
+#include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_map.h>
+
 #include <array>
 #include <cmath>
+#include <memory>
 
 namespace caspar::accelerator::vulkan {
 
@@ -80,8 +87,15 @@ static const uint32_t frame_buffer_size = 3;
 
 struct image_kernel::impl
 {
-    spl::shared_ptr<device> vulkan_;
-    common::bit_depth       depth_;
+    spl::shared_ptr<device>   vulkan_;
+    common::bit_depth         depth_;
+    std::shared_ptr<pipeline> pipeline_;
+
+    // Output/intermediate render targets, recycled per (width,height). Kept in a
+    // shared_ptr so a recycled texture's deleter can outlive this kernel without a
+    // dangling pool (concurrent_unordered_map keeps element references stable).
+    using attachment_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
+    std::shared_ptr<tbb::concurrent_unordered_map<size_t, attachment_queue_t>> attachment_pools_;
 
     struct frame_data : public frame_context
     {
@@ -92,11 +106,22 @@ struct image_kernel::impl
         vk::DeviceMemory memory = nullptr;
         size_t           size   = 0;
 
-        vk::CommandBuffer cmd_buffer = nullptr;
-        vk::Fence         fence      = nullptr;
+        // Set by the last submit that used this slot; create_renderpass waits on
+        // it before reusing the slot (keeps its vertex buffer alive until the GPU
+        // is done). Replaces the per-frame VkFence — same completion info, off the
+        // command_context timeline.
+        completion_token token;
+
+        // Per-slot descriptor sets, recycled on the same completion as the vertex
+        // buffer: create_renderpass waits the token before this slot is reused, so
+        // allocate() can safely reset the pool.
+        descriptor_pool desc_pool_;
 
         explicit frame_data(image_kernel::impl* parent)
             : parent(parent)
+            , desc_pool_(parent->vulkan_->getVkDevice(),
+                         parent->pipeline_->descriptor_set_layout(),
+                         parent->pipeline_->descriptor_pool_sizes())
         {
         }
 
@@ -105,66 +130,67 @@ struct image_kernel::impl
             return parent->upload_vertex_buffer(*this, (void*)src.data(), src.size() * sizeof(float));
         }
         virtual draw_data create_draw_data(const draw_params& params) { return parent->draw(params); }
-        virtual std::shared_ptr<class pipeline> get_pipeline() { return parent->vulkan_->get_pipeline(parent->depth_); }
-        virtual vk::CommandBuffer               get_command_buffer() { return cmd_buffer; }
-        virtual void                            submit()
+        virtual std::shared_ptr<class pipeline> get_pipeline() { return parent->pipeline_; }
+        virtual std::vector<vk::DescriptorSet>  allocate_descriptor_sets(uint32_t count)
         {
-            fence = parent->vulkan_->getVkDevice().createFence({});
-            vk::SubmitInfo submitInfo{};
-            submitInfo.setCommandBuffers(cmd_buffer);
-            parent->vulkan_->submit(submitInfo, fence);
+            return desc_pool_.allocate(count);
+        }
+        virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record)
+        {
+            token = parent->cmd_ctx_.record_and_submit(record);
         }
         virtual std::shared_ptr<class texture>
         create_attachment(uint32_t width, uint32_t height, uint32_t components_count)
         {
-            return parent->vulkan_->create_attachment(width, height, parent->depth_, components_count);
+            return parent->create_attachment(width, height, components_count);
         }
     };
 
-    frame_data frames_[frame_buffer_size];
-    uint32_t   current_frame_index_ = 0;
+    // Private to this kernel's (channel's) thread: command buffers are recorded
+    // lock-free here; only the queue submit serializes (vulkan_queue's mutex).
+    command_context cmd_ctx_;
+    frame_data      frames_[frame_buffer_size];
+    uint32_t        current_frame_index_ = 0;
 
     explicit impl(const spl::shared_ptr<device>& vulkan, common::bit_depth depth)
         : vulkan_(vulkan)
         , depth_(depth)
+        , pipeline_(std::make_shared<pipeline>(vulkan->getVkDevice(),
+                                               depth == common::bit_depth::bit8 ? vk::Format::eR8G8B8A8Unorm
+                                                                                : vk::Format::eR16G16B16A16Unorm))
+        , attachment_pools_(std::make_shared<tbb::concurrent_unordered_map<size_t, attachment_queue_t>>())
+        , cmd_ctx_(vulkan->getVkDevice(), vulkan->queue())
         , frames_{frame_data{this}, frame_data{this}, frame_data{this}}
     {
-        auto cmd_buffers = vulkan_->allocateCommandBuffers(frame_buffer_size);
-        for (uint32_t i = 0; i < frame_buffer_size; ++i) {
-            frames_[i].cmd_buffer = cmd_buffers[i];
-        }
     }
 
     ~impl()
     {
         auto vk_device = vulkan_->getVkDevice();
 
+        // command_context's dtor requires the device idle (it does not waitIdle);
+        // the in-flight slots may still reference these vertex buffers.
+        vk_device.waitIdle();
+
         for (auto& frame : frames_) {
             if (frame.buffer) {
                 vk_device.unmapMemory(frame.memory);
                 vk_device.destroyBuffer(frame.buffer);
                 vk_device.freeMemory(frame.memory);
-                if (frame.fence) {
-                    vk_device.destroyFence(frame.fence);
-                }
             }
         }
     }
 
     spl::shared_ptr<renderpass> create_renderpass(uint32_t width, uint32_t height)
     {
-        auto  device = vulkan_->getVkDevice();
-        auto& ctx    = frames_[(++current_frame_index_) % frame_buffer_size];
-        if (ctx.fence) {
-            auto result = device.waitForFences(ctx.fence, true, 1000000000); // wait up to one second
-            if (result == vk::Result::eTimeout) {
-                CASPAR_LOG(warning) << L"[Vulkan image_kernel] Timeout waiting for fence";
-            }
-            device.destroyFence(ctx.fence);
-            ctx.fence = nullptr;
+        auto& ctx = frames_[(++current_frame_index_) % frame_buffer_size];
+
+        // Wait until the previous use of this slot has completed on the GPU before
+        // reusing its vertex buffer (bounds in-flight frames to frame_buffer_size).
+        if (ctx.token && !cmd_ctx_.wait(ctx.token)) {
+            CASPAR_LOG(warning) << L"[Vulkan image_kernel] Timeout waiting for frame completion";
         }
 
-        ctx.cmd_buffer.reset({});
         return spl::make_shared<renderpass>(&ctx, width, height);
     }
 
@@ -215,6 +241,72 @@ struct image_kernel::impl
         memcpy(vb.data, data, size);
 
         return vb.buffer;
+    }
+
+    std::shared_ptr<texture> create_attachment(uint32_t width, uint32_t height, uint32_t components_count)
+    {
+        CASPAR_VERIFY(width > 0 && height > 0);
+
+        auto format = depth_ == common::bit_depth::bit8 ? vk::Format::eR8G8B8A8Unorm : vk::Format::eR16G16B16A16Unorm;
+        auto vk_device = vulkan_->getVkDevice();
+
+        auto pool   = &(*attachment_pools_)[(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
+        auto extent = vk::Extent3D{width, height, 1};
+
+        std::shared_ptr<texture> tex;
+        if (!pool->try_pop(tex)) {
+            vk::ImageCreateInfo imageInfo{};
+            imageInfo.imageType     = vk::ImageType::e2D;
+            imageInfo.format        = format;
+            imageInfo.extent        = extent;
+            imageInfo.mipLevels     = 1;
+            imageInfo.arrayLayers   = 1;
+            imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+            imageInfo.samples       = vk::SampleCountFlagBits::e1;
+            imageInfo.tiling        = vk::ImageTiling::eOptimal;
+            imageInfo.usage         = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eInputAttachment |
+                              vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
+                              vk::ImageUsageFlagBits::eSampled;
+            imageInfo.sharingMode = vk::SharingMode::eExclusive;
+            auto image            = vk_device.createImage(imageInfo);
+
+            auto memReq = vk_device.getImageMemoryRequirements(image);
+
+            vk::MemoryAllocateInfo allocInfo{};
+            allocInfo.allocationSize = memReq.size;
+            allocInfo.memoryTypeIndex =
+                findDedicatedMemoryType(memReq.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+            auto imageMemory = vk_device.allocateMemory(allocInfo);
+            vk_device.bindImageMemory(image, imageMemory, 0);
+            auto range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+            vk::ImageViewCreateInfo createInfo(
+                {}, image, vk::ImageViewType::e2D, format, vk::ComponentMapping(), range);
+
+            auto imageView = vk_device.createImageView(createInfo);
+
+            tex = std::make_shared<texture>(
+                width, height, components_count, depth_, image, imageMemory, imageView, vk_device);
+        }
+
+        cmd_ctx_.record_and_submit([&](vk::CommandBuffer cmd) {
+            transitionImageLayout(
+                tex->id(),
+                vk::ImageLayout::eUndefined,
+                vk::AccessFlagBits2::eNone,
+                vk::PipelineStageFlagBits2::eTopOfPipe,
+                vk::ImageLayout::eRenderingLocalRead,
+                vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eInputAttachmentRead,
+                vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eFragmentShader,
+                cmd);
+        });
+
+        tex->set_depth(depth_);
+
+        auto ptr = tex.get();
+        return std::shared_ptr<texture>(
+            ptr, [tex = std::move(tex), pool, pools = attachment_pools_](texture*) mutable { pool->push(tex); });
     }
 
     std::pair<std::vector<core::frame_geometry::coord>, uniform_block> draw(const draw_params& params)
