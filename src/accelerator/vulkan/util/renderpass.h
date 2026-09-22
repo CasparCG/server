@@ -23,6 +23,7 @@
 
 #include <common/bit_depth.h>
 #include <common/memory.h>
+#include <functional>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <vector>
@@ -39,8 +40,13 @@ struct frame_context
     virtual vk::Buffer                      upload_vertex_data(const std::vector<float>& data) = 0;
     virtual draw_data                       create_draw_data(const draw_params& params)        = 0;
     virtual std::shared_ptr<class pipeline> get_pipeline()                                     = 0;
-    virtual vk::CommandBuffer               get_command_buffer()                               = 0;
-    virtual void                            submit()                                           = 0;
+    // Allocate `count` fresh descriptor sets (one per layer) for this frame from
+    // the frame slot's descriptor_pool; valid until the slot is reused.
+    virtual std::vector<vk::DescriptorSet> allocate_descriptor_sets(uint32_t count) = 0;
+    // Record the renderpass body into a fresh command buffer and submit it; the
+    // buffer's begin/end and the submit are owned by the implementation (a
+    // command_context). The recorded function must not begin/end the buffer.
+    virtual void record_and_submit(const std::function<void(vk::CommandBuffer)>& record) = 0;
     virtual std::shared_ptr<class texture>
     create_attachment(uint32_t width, uint32_t height, uint32_t components_count) = 0;
 };
