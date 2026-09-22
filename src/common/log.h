@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "locale.h"
 #include "utf.h"
 
 #include <boost/log/sources/global_logger_storage.hpp>
@@ -43,7 +44,7 @@ namespace caspar { namespace log {
 template <typename T>
 void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
-    std::locale loc(""); // Use system locale
+    const std::locale& loc = safe_utf8_locale();
     std::replace_if(
         str.begin(), str.end(), [&](T c) -> bool { return (!std::isprint(c, loc) && c != '\r' && c != '\n'); }, with);
 }
