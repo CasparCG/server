@@ -8,9 +8,8 @@ set(SOURCES
 		producer/proaudio_producer.cpp
 		producer/proaudio_producer.h
 
-		util/ring_buffer.h
-
-		proaudio.cpp
+                util/device_util.cpp
+                util/device_util.h
 		proaudio.h
 )
 

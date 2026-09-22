@@ -17,6 +17,7 @@
 
 #include "proaudio_producer.h"
 
+#include "../util/device_util.h"
 #include "../util/ring_buffer.h"
 
 #include <common/array.h>
@@ -40,127 +41,12 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cctype>
 #include <memory>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 
 namespace caspar { namespace proaudio {
-
-// PortAudio's Pa_Initialize/Pa_Terminate must be balanced process-wide. A separate refcounted
-// singleton from the consumer's (same idea, but modules can't share process state across
-// translation units without a common header, and the two are simple enough not to bother).
-class producer_library
-{
-    producer_library()
-    {
-        auto err = Pa_Initialize();
-        if (err != paNoError)
-            CASPAR_THROW_EXCEPTION(invalid_operation()
-                                   << msg_info(std::string("Failed to initialize PortAudio: ") + Pa_GetErrorText(err)));
-    }
-
-    inline static std::mutex             mutex_;
-    inline static std::weak_ptr<producer_library> instance_;
-
-  public:
-    ~producer_library() { Pa_Terminate(); }
-
-    static std::shared_ptr<producer_library> acquire()
-    {
-        std::lock_guard guard{mutex_};
-
-        auto shared = instance_.lock();
-        if (!shared)
-            instance_ = shared = std::shared_ptr<producer_library>{new producer_library()};
-
-        return shared;
-    }
-};
-
-namespace {
-
-std::string clean_name(const std::string& s)
-{
-    std::string out;
-    for (unsigned char c : s) {
-        if (std::isgraph(c))
-            out += static_cast<char>(std::tolower(c));
-    }
-    return out;
-}
-
-std::vector<int> parse_channel_map(const std::string& str, int default_channels)
-{
-    std::vector<int> map;
-
-    if (str.empty()) {
-        for (int i = 0; i < default_channels; ++i)
-            map.push_back(i + 1);
-        return map;
-    }
-
-    std::stringstream ss(str);
-    std::string       item;
-    while (std::getline(ss, item, ',')) {
-        boost::trim(item);
-        if (item.empty())
-            continue;
-
-        std::size_t pos   = 0;
-        auto        value = std::stoi(item, &pos);
-        if (pos != item.size())
-            throw std::invalid_argument("CHANNEL_MAP entry is not a plain integer: '" + item + "'");
-
-        map.push_back(value);
-    }
-    return map;
-}
-
-// Finds a PortAudio *input* device by (fuzzy, case/whitespace-insensitive) name and, optionally,
-// host API name, mirroring the consumer's find_device but filtering on maxInputChannels/the
-// default input device instead of output.
-PaDeviceIndex find_device(const std::string& device_name, const std::string& host_api_name)
-{
-    if (device_name.empty() && host_api_name.empty())
-        return Pa_GetDefaultInputDevice();
-
-    auto target_name = clean_name(device_name);
-    auto target_api   = clean_name(host_api_name);
-
-    std::vector<std::string> available;
-    auto                     count = Pa_GetDeviceCount();
-
-    for (PaDeviceIndex i = 0; i < count; ++i) {
-        auto info = Pa_GetDeviceInfo(i);
-        if (!info || info->maxInputChannels <= 0)
-            continue;
-
-        auto api_info = Pa_GetHostApiInfo(info->hostApi);
-        auto api_name  = api_info ? api_info->name : "?";
-
-        available.push_back(std::string(info->name) + " (" + api_name + ")");
-
-        if (!target_api.empty() && clean_name(api_name).find(target_api) == std::string::npos)
-            continue;
-
-        if (target_name.empty() || clean_name(info->name).find(target_name) != std::string::npos)
-            return i;
-    }
-
-    CASPAR_LOG(info) << "-------- PortAudio Devices -------";
-    for (auto&& name : available)
-        CASPAR_LOG(info) << u16(name);
-    CASPAR_LOG(info) << "-------- PortAudio Devices -------";
-
-    CASPAR_THROW_EXCEPTION(invalid_operation()
-                           << msg_info("Invalid PortAudio device/host-api: '" + device_name + "' '" + host_api_name +
-                                       "'"));
-}
-
-} // namespace
 
 struct proaudio_producer : public core::frame_producer
 {
@@ -168,7 +54,7 @@ struct proaudio_producer : public core::frame_producer
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
 
-    std::shared_ptr<producer_library> library_;
+    std::shared_ptr<pa_library> library_;
     std::string                       device_name_;
     std::string                       host_api_name_;
     std::string                       channel_map_param_;
@@ -197,7 +83,7 @@ struct proaudio_producer : public core::frame_producer
                                double                               latency_ms)
         : frame_factory_(std::move(frame_factory))
         , format_desc_(std::move(format_desc))
-        , library_(producer_library::acquire())
+        , library_(pa_library::acquire())
         , device_name_(std::move(device_name))
         , host_api_name_(std::move(host_api_name))
         , channel_map_param_(std::move(channel_map))
@@ -220,7 +106,7 @@ struct proaudio_producer : public core::frame_producer
                                                     std::to_string(ch)));
         }
 
-        auto device = find_device(device_name_, host_api_name_);
+        auto device = find_device(device_direction::input, device_name_, host_api_name_);
         auto info   = Pa_GetDeviceInfo(device);
         if (!info)
             CASPAR_THROW_EXCEPTION(invalid_operation()
