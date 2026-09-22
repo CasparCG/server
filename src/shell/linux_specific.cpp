@@ -22,34 +22,14 @@
 #include "platform_specific.h"
 
 #include <common/log.h>
+#include <common/locale.h>
 #include <exception>
 
 #include <iostream>
-#include <locale>
 
 #include <X11/Xlib.h>
 
 namespace caspar {
-
-namespace {
-// Prefer a guaranteed Unicode-capable locale that requires no OS locale generation (available on
-// any glibc >= 2.35), rather than trusting the deployment environment to have one configured -
-// falling back to the environment, and finally to "C" (ASCII-only, but never throws), only if
-// that isn't recognized. This runs at startup, so an unhandled exception here would prevent the
-// server from starting at all on a misconfigured environment. See GitHub issues #1364, #1018.
-std::locale safe_console_locale()
-{
-    try {
-        return std::locale("C.UTF-8");
-    } catch (const std::runtime_error&) {
-    }
-    try {
-        return std::locale("");
-    } catch (const std::runtime_error&) {
-    }
-    return std::locale::classic();
-}
-} // namespace
 
 void setup_process_scheduling()
 {
@@ -60,8 +40,8 @@ void setup_prerequisites()
 {
     // Enable utf8 console input and output
     std::wcout.sync_with_stdio(false);
-    std::wcout.imbue(safe_console_locale());
-    std::wcin.imbue(safe_console_locale());
+    std::wcout.imbue(safe_utf8_locale());
+    std::wcin.imbue(safe_utf8_locale());
 
     XInitThreads();
 
