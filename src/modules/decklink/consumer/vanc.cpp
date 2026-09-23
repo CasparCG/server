@@ -20,6 +20,7 @@
  */
 
 #include "vanc.h"
+#include "core/frame/frame_side_data.h"
 #include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace decklink {
@@ -68,7 +69,7 @@ class decklink_vanc_packet : public IDeckLinkAncillaryPacket
     unsigned char STDMETHODCALLTYPE GetDataStreamIndex(void) override { return 0; }
 };
 
-decklink_vanc::decklink_vanc(const vanc_configuration& config)
+decklink_vanc::decklink_vanc(const vanc_configuration& config, const core::video_format_desc& format)
 {
     if (config.enable_scte104) {
         strategies_.push_back(create_scte104_strategy(config.scte104_line));
@@ -76,6 +77,13 @@ decklink_vanc::decklink_vanc(const vanc_configuration& config)
     if (config.enable_op47) {
         strategies_.push_back(create_op47_strategy(
             config.op47_line, config.op47_line_field2, config.op42_sd_line, config.op47_dummy_header));
+    }
+    if (config.enable_a53_cc) {
+        if (auto strategy = decklink_frame_side_data_vanc_strategy::try_create(
+                core::frame_side_data_type::a53_cc, config, format)) {
+            strategies_.push_back(strategy);
+            side_data_strategies_.push_back(std::move(strategy));
+        }
     }
 }
 
@@ -119,9 +127,17 @@ bool decklink_vanc::try_push_data(const std::vector<std::wstring>& params)
     return false;
 }
 
-std::shared_ptr<decklink_vanc> create_vanc(const vanc_configuration& config)
+void decklink_vanc::push_frame_side_data(const core::frame_side_data_in_queue& field1_side_data,
+                                         const core::frame_side_data_in_queue& field2_side_data)
 {
-    return std::make_shared<decklink_vanc>(config);
+    for (auto& strategy : side_data_strategies_) {
+        strategy->push_frame_side_data(field1_side_data, field2_side_data);
+    }
+}
+
+std::shared_ptr<decklink_vanc> create_vanc(const vanc_configuration& config, const core::video_format_desc& format)
+{
+    return std::make_shared<decklink_vanc>(config, format);
 }
 
 }} // namespace caspar::decklink
