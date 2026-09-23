@@ -95,8 +95,8 @@ class SubstitutedA53CCQueue final
                 if (!corrupted_.exchange(true, std::memory_order_relaxed)) {
                     CASPAR_LOG(error) << "ffmpeg producer: SubstitutedA53CCQueue: closed captions corrupted by ffmpeg, "
                                          "removing them.";
-                    break;
                 }
+                break;
             }
             av_frame_remove_side_data(frame, AV_FRAME_DATA_A53_CC);
             if (!side_data_from_queue.empty() && !corrupted_.load(std::memory_order_relaxed)) {
