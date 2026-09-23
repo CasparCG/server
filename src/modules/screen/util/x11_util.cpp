@@ -30,7 +30,11 @@ bool window_always_on_top(const sf::Window& window)
     if (!disp)
         return false;
 
+#if SFML_VERSION_MAJOR >= 3
+    Window win = window.getNativeHandle();
+#else
     Window win = window.getSystemHandle();
+#endif
 
     Atom   wm_state, wm_state_above;
     XEvent event;

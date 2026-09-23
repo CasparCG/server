@@ -96,10 +96,10 @@ class vanc_op47_strategy : public decklink_vanc_strategy
         result[3] = 0x02;                                // format-code
 
         result[4] = (sd_line_ & 0x1F) | (field2 ? 0x00 : 0x80); // VBI packet descriptor (odd field)
-        result[5] = 0;                                       // VBI packet descriptor (not used)
-        result[6] = 0;                                       // VBI packet descriptor (not used)
-        result[7] = 0;                                       // VBI packet descriptor (not used)
-        result[8] = 0;                                       // VBI packet descriptor (not used)
+        result[5] = 0;                                          // VBI packet descriptor (not used)
+        result[6] = 0;                                          // VBI packet descriptor (not used)
+        result[7] = 0;                                          // VBI packet descriptor (not used)
+        result[8] = 0;                                          // VBI packet descriptor (not used)
 
         memcpy(result.data() + 9, packet.data(), packet.size());
         result[54] = 0x74;                     // footer id

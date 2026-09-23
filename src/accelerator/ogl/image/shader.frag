@@ -43,6 +43,41 @@ uniform float		chroma_softness;
 uniform float		chroma_spill_suppress;
 uniform float		chroma_spill_suppress_saturation;
 
+// White balance (temperature / tint)
+uniform bool		white_balance;
+uniform float		wb_temperature; // -1 cool (blue) .. +1 warm (orange)
+uniform float		wb_tint;        // -1 magenta .. +1 green
+
+// Lift / Midtone / Gain (3-way primary colour corrector)
+// Per-channel uniforms are uploaded in RGB order and swizzled to the working order
+// where they are used, in main() -- see the note above the grading functions below.
+uniform bool		lmg_enable;
+uniform vec3		lmg_lift;    // shadow offset per channel, default vec3(0)
+uniform vec3		lmg_midtone; // midtone power per channel,  default vec3(1)
+uniform vec3		lmg_gain;    // highlight multiplier per channel, default vec3(1)
+
+// Hue shift
+uniform bool		hue_shift_enable;
+uniform float		hue_shift_degrees; // -180..+180
+
+// Tonal balance (shadows / highlights separation)
+uniform bool		tonebalance_enable;
+uniform float		tb_shadows;    // -1..+1
+uniform float		tb_highlights; // -1..+1
+
+// Split toning (independent shadow / highlight tint)
+uniform bool		split_tone_enable;
+uniform vec3		split_shadow_color;
+uniform vec3		split_highlight_color;
+uniform float		split_balance; // crossover 0..1
+
+// ASC CDL (Slope / Offset / Power)
+uniform bool		cdl_enable;
+uniform vec3		cdl_slope;
+uniform vec3		cdl_offset;
+uniform vec3		cdl_power;
+uniform float		cdl_saturation;
+
 /*
 ** Contrast, saturation, brightness
 ** Code of this function is from TGM's shader pack
@@ -519,6 +554,116 @@ vec4 get_rgba_color()
     return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
+// ============================ Primary grading chain ============================
+//
+// CHANNEL ORDER. The colour vector carried through this shader is in BGR order:
+// `color.r` holds displayed blue. That is this shader's own long-standing
+// convention, not something the grading chain introduced -- see `fragColor =
+// color.bgra` at the end of main(), which swaps back on output, and
+// `LumCoeff = luma_coeff.bgr` in ContrastSaturationBrightness above, which
+// swizzles an RGB-order uniform at its point of use.
+//
+// The grading functions below therefore follow the same rule as
+// ContrastSaturationBrightness: they take and return the working (BGR) vector,
+// and anything that needs a real RGB triple -- a Rec.709 luma dot product, a hue
+// conversion, a per-channel uniform -- swizzles it at the point of use. All
+// per-channel uniforms are uploaded from C++ in plain RGB order and get their
+// `.bgr` in main(), so the convention lives in exactly one file.
+//
+// Note that greys are invariant under a red/blue exchange, so a grey ramp passes
+// every channel-order defect in here. Test with asymmetric per-channel values.
+// ===============================================================================
+
+// Luma of the working colour, using the channel's own coefficients.
+//
+// luma_coeff is uploaded in RGB order and holds Rec.601, Rec.709 or Rec.2020 weights
+// depending on the source (image_kernel.cpp), so a grade no longer hard-codes Rec.709
+// and no longer disagrees with ContrastSaturationBrightness, which has always read this
+// uniform. The `.bgr` is the working-order swizzle described above -- dot(c.bgr, k) and
+// dot(c, k.bgr) are the same sum, and swizzling the three-element uniform rather than
+// the pixel keeps this the only place the order is mentioned.
+float working_luma(vec3 c) { return dot(c, luma_coeff.bgr); }
+
+// ---- White Balance ----
+// temp: -1=cool (blue), +1=warm (orange); tint_val: -1=magenta, +1=green.
+// Diagonal gain matrix, no clamping so HDR headroom is preserved.
+vec3 apply_white_balance(vec3 c, float temp, float tint_val)
+{
+    vec3 gain_rgb = vec3(1.0 + temp     * 0.20,  // warm -> more red
+                         1.0 + tint_val * 0.10,  // tint -> more green
+                         1.0 - temp     * 0.20); // warm -> less blue
+    return c * gain_rgb.bgr;
+}
+
+// ---- Lift / Midtone / Gain (3-way colour corrector) ----
+// out = pow(max(c * gain + lift, 0.0), 1.0 / midtone).
+// midtone is clamped before the reciprocal, not after: at midtone == 0 the
+// reciprocal is +Inf and pow() collapses the channel to 0 (or Inf above 1.0),
+// and clamping the exponent cannot undo that -- max(0.01, Inf) is Inf. A
+// negative midtone would likewise invert the curve. Clamping the base to
+// [0.01, 100] bounds the exponent to [0.01, 100] and covers both.
+// No upper clamp on the colour so HDR values pass through; negatives clamped for pow() safety.
+vec3 apply_lmg(vec3 c, vec3 lift, vec3 midtone, vec3 gain)
+{
+    c = max(c * gain + lift, vec3(0.0));
+    c = pow(c, 1.0 / clamp(midtone, vec3(0.01), vec3(100.0)));
+    return c;
+}
+
+// ---- Hue Shift ----
+// Rotate hue in HSV space.  Extract peak luminance, normalise, rotate, re-scale
+// so HDR values (>1.0) are preserved.
+// rgb2hsv does not know what the channels mean; it treats the first as red, and
+// exchanging red and blue mirrors the hue wheel. Feeding it the working vector
+// unswizzled negated every rotation: a requested +15 degrees came out as -15, and only
+// 0 and 180 looked right because they are their own negations. Saturation and value are
+// unchanged by the exchange, which is why nothing else about this function was wrong.
+vec3 apply_hue_shift(vec3 c, float degrees)
+{
+    float peak = max(max(c.r, c.g), max(c.b, 0.0001));
+    vec3  norm = c / peak;
+    vec3  hsv  = rgb2hsv(clamp(norm.bgr, 0.0, 1.0));
+    hsv.x      = fract(hsv.x + degrees / 360.0);
+    return hsv2rgb(hsv).bgr * peak;
+}
+
+// ---- Tonal Balance (Shadows / Highlights separation) ----
+// Soft luminance-based masks drive additive offsets.  No clamping so HDR
+// headroom is preserved for downstream tonemapping.
+vec3 apply_tone_balance(vec3 c, float shadows, float highlights)
+{
+    float lum         = working_luma(c);
+    float shadow_mask = 1.0 - smoothstep(0.0, 0.6, lum);
+    float hl_mask     = smoothstep(0.4, 1.0, lum);
+    c += vec3(shadows    * 0.5 * shadow_mask);
+    c += vec3(highlights * 0.5 * hl_mask);
+    return c;
+}
+
+// ---- Split Toning ----
+// Luminance-based tint: additive colour offsets for shadows and highlights,
+// with a crossover controlled by bal.
+vec3 apply_split_tone(vec3 c, vec3 shad_col, vec3 hi_col, float bal)
+{
+    float lum     = working_luma(c);
+    float shad_mk = 1.0 - smoothstep(bal - 0.3, bal + 0.3, lum);
+    float hi_mk   = smoothstep(bal - 0.3, bal + 0.3, lum);
+    c += shad_col * shad_mk;
+    c += hi_col   * hi_mk;
+    return c;
+}
+
+// ---- ASC CDL (Slope/Offset/Power) ----
+// Industry-standard primary grade: out = pow(max(in * slope + offset, 0), power),
+// followed by a saturation adjustment.
+vec3 apply_cdl(vec3 c, vec3 slope, vec3 off, vec3 pwr, float sat_val)
+{
+    c = pow(max(c * slope + off, vec3(0.0)), pwr);
+    float lum = working_luma(c);
+    c = mix(vec3(lum), c, sat_val);
+    return c;
+}
+
 void main()
 {
     vec4 color = get_rgba_color();
@@ -526,6 +671,21 @@ void main()
         color.rgb *= color.a;
     if (chroma)
         color = chroma_key(color);
+    // Per-channel uniforms arrive in RGB order and are swizzled to the working order
+    // here -- see the channel-order note above the grading functions.
+    if (cdl_enable)
+        color.rgb = apply_cdl(color.rgb, cdl_slope.bgr, cdl_offset.bgr, cdl_power.bgr, cdl_saturation);
+    if (white_balance)
+        color.rgb = apply_white_balance(color.rgb, wb_temperature, wb_tint);
+    if (lmg_enable)
+        color.rgb = apply_lmg(color.rgb, lmg_lift.bgr, lmg_midtone.bgr, lmg_gain.bgr);
+    if (hue_shift_enable)
+        color.rgb = apply_hue_shift(color.rgb, hue_shift_degrees);
+    if (tonebalance_enable)
+        color.rgb = apply_tone_balance(color.rgb, tb_shadows, tb_highlights);
+    if (split_tone_enable)
+        color.rgb =
+            apply_split_tone(color.rgb, split_shadow_color.bgr, split_highlight_color.bgr, split_balance);
     if(levels)
         color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
     if(csb)

@@ -74,6 +74,7 @@ struct configuration
     {
         internal_keyer,
         external_keyer,
+        disabled_keyer,
         default_keyer = external_keyer
     };
 

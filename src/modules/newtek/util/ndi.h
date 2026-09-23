@@ -27,10 +27,11 @@
 namespace caspar { namespace newtek { namespace ndi {
 
 const std::wstring&                    dll_name();
-NDIlib_v5*                             load_library();
+NDIlib_v6*                             load_library();
 std::map<std::string, NDIlib_source_t> get_current_sources();
 void                                   not_initialized();
 void                                   not_installed();
+std::string                            apply_default_discovery_port(std::string url);
 
 std::wstring list_command(protocol::amcp::command_context& ctx);
 

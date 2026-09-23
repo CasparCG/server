@@ -24,6 +24,12 @@
 #include <common/param.h>
 #include <common/ptree.h>
 
+#ifdef WIN32
+#include <isa_availability.h>
+
+#define CHECK_INSTRUCTION_SUPPORT(a, v) (__check_arch_support((a), (v)) || __check_isa_support((a), (v)))
+#endif
+
 namespace caspar { namespace decklink {
 
 port_configuration parse_output_config(const boost::property_tree::wptree&  ptree,
@@ -130,6 +136,19 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
             CASPAR_THROW_EXCEPTION(user_error()
                                    << msg_info(L"The decklink consumer only supports rgba output on 8-bit channels"));
         }
+
+        if (config.pixel_format != configuration::pixel_format_t::rgba) {
+#ifdef WIN32
+            if (!CHECK_INSTRUCTION_SUPPORT(__IA_SUPPORT_VECTOR256, 0)) {
+#elif defined(__x86_64__) || defined(__i386__)
+            if (!__builtin_cpu_supports("avx2")) {
+#else
+            if (false) {
+#endif
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Your cpu does not support the features needed for yuv output"));
+            }
+        }
     }
 
     config.primary = parse_output_config(ptree, format_repository);
@@ -141,6 +160,8 @@ configuration parse_xml_config(const boost::property_tree::wptree&  ptree,
         config.keyer = configuration::keyer_t::external_keyer;
     } else if (keyer == L"internal") {
         config.keyer = configuration::keyer_t::internal_keyer;
+    } else if (keyer == L"disabled") {
+        config.keyer = configuration::keyer_t::disabled_keyer;
     } else if (keyer == L"external_separate_device") {
         config.keyer = configuration::keyer_t::external_keyer;
 
@@ -200,6 +221,8 @@ configuration parse_amcp_config(const std::vector<std::wstring>&     params,
         config.keyer = configuration::keyer_t::internal_keyer;
     } else if (contains_param(L"EXTERNAL_KEY", params)) {
         config.keyer = configuration::keyer_t::external_keyer;
+    } else if (contains_param(L"DISABLED_KEY", params)) {
+        config.keyer = configuration::keyer_t::disabled_keyer;
     } else {
         config.keyer = configuration::keyer_t::default_keyer;
     }

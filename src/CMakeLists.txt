@@ -58,6 +58,10 @@ else ()
     message(STATUS "Build Version: ${CONFIG_VERSION_MAJOR}.${CONFIG_VERSION_MINOR}.${CONFIG_VERSION_BUG} ${CONFIG_VERSION_TAG} (Revision: ${CONFIG_VERSION_GIT_HASH})")
 endif ()
 
+IF(ENABLE_VULKAN)
+    add_definitions(-DENABLE_VULKAN)
+ENDIF()
+
 include_directories("${CMAKE_BINARY_DIR}/generated")
 
 add_subdirectory(tools)

@@ -39,10 +39,6 @@
 
 #include <common/diagnostics/graph.h>
 
-#if defined(_MSC_VER)
-#pragma warning(push, 1) // TODO: Legacy code, just disable warnings
-#endif
-
 namespace caspar { namespace protocol { namespace amcp {
 
 using IO::ClientInfoPtr;
@@ -140,7 +136,8 @@ class AMCPProtocolStrategy
             return;
         }
 
-        CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
+        CASPAR_LOG(info) << L"Received message from " << client->address() << ": "
+                         << log::replace_nonprintable_copy(message, L'?') << L"\\r\\n";
 
         std::wstring request_id;
         std::wstring command_name;

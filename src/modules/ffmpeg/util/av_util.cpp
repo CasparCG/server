@@ -3,10 +3,6 @@
 
 #include <common/bit_depth.h>
 
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
@@ -15,9 +11,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
 }
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
 
 #include <array>
 #include <tbb/parallel_for.h>
@@ -41,6 +34,30 @@ std::shared_ptr<AVPacket> alloc_packet()
     if (!packet)
         FF_RET(AVERROR(ENOMEM), "av_packet_alloc");
     return packet;
+}
+
+core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
+{
+    auto result = core::color_space::unknown;
+    if (video) {
+        switch (video->colorspace) {
+            case AVColorSpace::AVCOL_SPC_BT709:
+                result = core::color_space::bt709;
+                break;
+            case AVColorSpace::AVCOL_SPC_BT2020_NCL:
+                result = core::color_space::bt2020;
+                break;
+            case AVColorSpace::AVCOL_SPC_BT470BG:
+            case AVColorSpace::AVCOL_SPC_SMPTE170M:
+            case AVColorSpace::AVCOL_SPC_SMPTE240M:
+                result = core::color_space::bt601;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return result;
 }
 
 core::mutable_frame make_frame(void*                            tag,

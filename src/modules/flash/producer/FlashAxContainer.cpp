@@ -26,9 +26,7 @@
 
 #include <common/log.h>
 
-#if defined(_MSC_VER)
 #pragma warning(push, 2) // TODO
-#endif
 
 using namespace ATL;
 

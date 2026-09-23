@@ -32,6 +32,7 @@
 #include <common/memory.h>
 #include <common/param.h>
 #include <common/timer.h>
+#include <common/timespan.h>
 #include <common/utf.h>
 
 #include <core/consumer/channel_info.h>
@@ -47,14 +48,12 @@
 #include <tbb/concurrent_queue.h>
 
 #include <thread>
+#include <tuple> // std::ignore
 #include <utility>
 #include <vector>
 
 #if defined(_MSC_VER)
 #include <windows.h>
-
-#pragma warning(push)
-#pragma warning(disable : 4244)
 #else
 #include "../util/x11_util.h"
 #endif
@@ -67,7 +66,8 @@ namespace caspar { namespace screen {
 
 std::unique_ptr<accelerator::ogl::shader> get_shader()
 {
-    return std::make_unique<accelerator::ogl::shader>(std::string(vertex_shader), std::string(fragment_shader));
+    return std::make_unique<accelerator::ogl::shader>(std::string(reinterpret_cast<const char*>(vertex_shader)),
+                                                      std::string(reinterpret_cast<const char*>(fragment_shader)));
 }
 
 enum class stretch
@@ -112,6 +112,8 @@ struct configuration
     colour_spaces   colour_space  = colour_spaces::RGB;
     bool            high_bitdepth = false;
     bool            gpu_texture   = false;
+
+    timespan        delay;
 };
 
 struct frame
@@ -196,7 +198,12 @@ struct screen_consumer
             }
         }
 
-        frame_buffer_.set_capacity(1);
+        auto delay_frames = config_.delay.in_frames(format_desc_.fps);
+        delay_frames = std::clamp<int>(delay_frames, 0, format_desc_.fps);
+        CASPAR_LOG(info) << print() << " Latency: " << delay_frames << " frames";
+
+        frame_buffer_.set_capacity(delay_frames + 1);
+        while (delay_frames--) frame_buffer_.push(core::const_frame{});
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -252,6 +259,19 @@ struct screen_consumer
 
         thread_ = std::thread([this] {
             try {
+#if SFML_VERSION_MAJOR >= 3
+                sf::VideoMode mode{sf::Vector2u(config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_),
+                                   sf::VideoMode::getDesktopMode().bitsPerPixel};
+                sf::ContextSettings settings{.depthBits         = 0,
+                                             .stencilBits       = 0,
+                                             .antiAliasingLevel = 0,
+                                             .majorVersion      = 4,
+                                             .minorVersion      = 5,
+                                             .attributeFlags    = sf::ContextSettings::Attribute::Core};
+                auto state = config_.windowed || config_.borderless ? sf::State::Windowed : sf::State::Fullscreen;
+                auto style = config_.borderless ? sf::Style::None : sf::Style::Default;
+                window_.create(mode, u8(print()), style, state, settings);
+#else
                 const auto    window_style = config_.borderless ? sf::Style::None
                                              : config_.windowed ? sf::Style::Resize | sf::Style::Close
                                                                 : sf::Style::Fullscreen;
@@ -262,9 +282,10 @@ struct screen_consumer
                                u8(print()),
                                window_style,
                                sf::ContextSettings(0, 0, 0, 4, 5, sf::ContextSettings::Attribute::Core));
+#endif
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
-                window_.setActive(true);
+                std::ignore = window_.setActive(true);
 
                 if (config_.always_on_top) {
 #ifdef _MSC_VER
@@ -355,7 +376,17 @@ struct screen_consumer
 
     bool poll()
     {
-        int       count = 0;
+        int count = 0;
+#if SFML_VERSION_MAJOR >= 3
+        while (const auto e = window_.pollEvent()) {
+            count++;
+            if (e->is<sf::Event::Resized>()) {
+                calculate_aspect();
+            } else if (e->is<sf::Event::Closed>()) {
+                is_running_ = false;
+            }
+        }
+#else
         sf::Event e;
         while (window_.pollEvent(e)) {
             count++;
@@ -365,6 +396,7 @@ struct screen_consumer
                 is_running_ = false;
             }
         }
+#endif
         return count > 0;
     }
 
@@ -800,6 +832,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
         config.key_only = false;
     }
 
+    if (contains_param(L"DELAY", params)) {
+        config.delay = timespan{ u8(get_param(L"DELAY", params, L"")) };
+    }
+
     return spl::make_shared<screen_consumer_proxy>(config);
 }
 
@@ -869,6 +905,8 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
     } else if (aspect_str == L"4:3") {
         config.aspect = configuration::aspect_ratio::aspect_4_3;
     }
+
+    config.delay = timespan{ u8(ptree.get(L"delay", L"0")) };
 
     return spl::make_shared<screen_consumer_proxy>(config);
 }

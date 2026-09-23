@@ -44,10 +44,6 @@
 #include "../util/image_converter.h"
 #include "../util/image_view.h"
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -56,9 +52,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/pixfmt.h>
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 namespace caspar::image {
 

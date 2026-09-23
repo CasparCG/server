@@ -35,6 +35,7 @@
 #include <GL/glew.h>
 
 #ifdef WIN32
+#include "../../d3d/d3d_device.h"
 #include <GL/wglew.h>
 #endif
 
@@ -67,6 +68,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
     GLuint fbo_;
 
     std::wstring version_;
+
+#ifdef WIN32
+    std::shared_ptr<d3d::d3d_device> d3d_device_;
+    std::shared_ptr<void>            interop_handle_;
+#endif
 
     io_context                             io_context_;
     decltype(make_work_guard(io_context_)) work_;
@@ -109,6 +115,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
         GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 
         context_->unbind();
+
+#ifdef WIN32
+        if (env::properties().get(L"configuration.html.enable-gpu", false)) {
+            d3d_device_ = d3d::d3d_device::get_device();
+        }
+        if (d3d_device_) {
+            interop_handle_ = std::shared_ptr<void>(wglDXOpenDeviceNV(d3d_device_->device()), [](void* p) {
+                if (p)
+                    wglDXCloseDeviceNV(p);
+            });
+
+            if (!interop_handle_)
+                CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize d3d interop."));
+        }
+#endif
 
         thread_ = std::thread([&] {
             context_->bind();
@@ -225,7 +246,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::future<std::shared_ptr<texture>>
     copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth)
     {
-        return dispatch_async([=] {
+        return dispatch_async([=, this] {
             std::shared_ptr<buffer> buf;
 
             auto tmp = source.storage<std::shared_ptr<buffer>>();
@@ -246,7 +267,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source)
     {
-        return spawn_async([=](yield_context yield) {
+        return spawn_async([=, this](yield_context yield) {
             auto buf = create_buffer(source->size(), false);
             source->copy_to(*buf);
 
@@ -273,6 +294,38 @@ struct device::impl : public std::enable_shared_from_this<impl>
             return array<const uint8_t>(ptr, size, std::move(buf));
         });
     }
+
+#ifdef WIN32
+    std::future<std::shared_ptr<texture>>
+    copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
+    {
+        return spawn_async([=, this](yield_context yield) {
+            auto tex = create_texture(width, height, stride, depth, false);
+
+            tex->copy_from(source);
+
+            auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+            GL(glFlush());
+
+            deadline_timer timer(io_context_);
+            for (auto n = 0; true; ++n) {
+                // TODO (perf) Smarter non-polling solution?
+                timer.expires_from_now(boost::posix_time::milliseconds(2));
+                timer.async_wait(yield);
+
+                auto wait = glClientWaitSync(fence, 0, 1);
+                if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+                    break;
+                }
+            }
+
+            glDeleteSync(fence);
+
+            return tex;
+        });
+    }
+#endif
 
     boost::property_tree::wptree info() const
     {
@@ -362,7 +415,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
     std::future<void> gc()
     {
-        return spawn_async([=](yield_context yield) {
+        return spawn_async([this](yield_context yield) {
             CASPAR_LOG(info) << " ogl: Running GC.";
 
             try {
@@ -402,6 +455,16 @@ std::future<array<const uint8_t>> device::copy_async(const std::shared_ptr<textu
 {
     return impl_->copy_async(source);
 }
+
+#ifdef WIN32
+std::shared_ptr<void> device::d3d_interop() const { return impl_->interop_handle_; }
+std::future<std::shared_ptr<texture>>
+device::copy_async(GLuint source, int width, int height, int stride, common::bit_depth depth)
+{
+    return impl_->copy_async(source, width, height, stride, depth);
+}
+#endif
+
 void device::dispatch(std::function<void()> func) { boost::asio::dispatch(impl_->io_context_, std::move(func)); }
 std::wstring                 device::version() const { return impl_->version(); }
 boost::property_tree::wptree device::info() const { return impl_->info(); }

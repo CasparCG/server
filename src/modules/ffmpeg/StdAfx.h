@@ -61,8 +61,6 @@
 #include <thread>
 #include <vector>
 
-#pragma warning(push, 1)
-
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
@@ -80,5 +78,3 @@ extern "C" {
 #include <libavutil/timecode.h>
 #include <libswscale/swscale.h>
 }
-
-#pragma warning(pop)

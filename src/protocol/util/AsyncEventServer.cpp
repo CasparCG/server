@@ -280,9 +280,29 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
     implementation(std::shared_ptr<boost::asio::io_context>    io_context,
                    const protocol_strategy_factory<char>::ptr& protocol,
+                   const std::string&                          host,
                    unsigned short                              port)
         : io_context_(std::move(io_context))
-        , acceptor_(*io_context_, tcp::endpoint(tcp::v4(), port))
+        , acceptor_([&]() {
+            boost::asio::ip::tcp::endpoint endpoint;
+            if (host.empty()) {
+                endpoint = boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port);
+            } else {
+                try {
+                    auto addr = boost::asio::ip::make_address(host);
+                    // Only allow IPv4 to avoid crashes
+                    if (addr.is_v6()) {
+                        CASPAR_LOG(fatal) << "IPv6 addresses are not supported for host: " << host;
+                        throw std::runtime_error("IPv6 not supported");
+                    }
+                    endpoint = boost::asio::ip::tcp::endpoint(addr, port);
+                } catch (...) {
+                    CASPAR_THROW_EXCEPTION(std::invalid_argument("Invalid AMCP bind address: " + host));
+                }
+            }
+
+            return tcp::acceptor(*io_context_, endpoint);
+        }())
         , protocol_factory_(protocol)
     {
     }
@@ -352,8 +372,9 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
 AsyncEventServer::AsyncEventServer(std::shared_ptr<boost::asio::io_context>    io_context,
                                    const protocol_strategy_factory<char>::ptr& protocol,
+                                   const std::string&                          host,
                                    unsigned short                              port)
-    : impl_(new implementation(std::move(io_context), protocol, port))
+    : impl_(new implementation(std::move(io_context), protocol, host, port))
 {
     impl_->start_accept();
 }

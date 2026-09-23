@@ -15,7 +15,8 @@ set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
 set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
-set(ENABLE_AVX2 ON CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
+set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
+set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
 
 # Determine build (target) platform
 SET (PLATFORM_FOLDER_NAME "linux")
@@ -30,13 +31,36 @@ MARK_AS_ADVANCED (CMAKE_INSTALL_PREFIX)
 if (USE_STATIC_BOOST)
 	SET (Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.83.0 COMPONENTS system thread filesystem log_setup log locale regex date_time coroutine REQUIRED)
+find_package(Boost 1.83.0 COMPONENTS thread filesystem log_setup log locale regex date_time coroutine REQUIRED)
 find_package(FFmpeg REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
 find_package(GLEW REQUIRED)
 find_package(TBB REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+find_package(SFML 3 COMPONENTS Graphics System Window QUIET)
+if(NOT SFML_FOUND)
+    find_package(SFML 2 COMPONENTS graphics system window REQUIRED)
+endif()
+
+IF (ENABLE_VULKAN)
+    find_package(Vulkan REQUIRED)
+
+    FetchContent_Declare(vk_bootstrap
+            URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.tar.gz
+            URL_HASH SHA256=3be0220de218dc3e692aeac552b2953860a0e0a48257f4a61c3f1c1472674744
+            DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+            )
+    FetchContent_MakeAvailable(vk_bootstrap)
+
+    FetchContent_Declare(vma
+            URL ${CASPARCG_DOWNLOAD_MIRROR}/VulkanMemoryAllocator/VulkanMemoryAllocator-3.3.0.tar.gz
+            URL_HASH SHA256=c4f6bbe6b5a45c2eb610ca9d231158e313086d5b1a40c9922cb42b597419b14e
+            DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+    )
+    FetchContent_MakeAvailable(vma)
+endif()
+
+
 find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
@@ -62,6 +86,14 @@ if (ENABLE_HTML)
             BUILD_BYPRODUCTS
                 "<SOURCE_DIR>/Release/libcef.so"
                 "<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
+        )
+        # CEF needs the resources next to libcef.so
+        ExternalProject_Add_Step(cef copy_resources
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "<SOURCE_DIR>/Resources"
+                "<SOURCE_DIR>/Release"
+                DEPENDEES build
+                DEPENDERS install
         )
         ExternalProject_Get_Property(cef SOURCE_DIR)
         ExternalProject_Get_Property(cef BINARY_DIR)
@@ -128,14 +160,20 @@ IF (CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x64|x86_64|amd64|e2k)")
         ADD_COMPILE_OPTIONS (-mavx)
         ADD_COMPILE_OPTIONS (-mavx2)
     ENDIF ()
+ELSE ()
+    ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
+    ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
+    ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ENDIF ()
 
-ADD_COMPILE_DEFINITIONS (USE_SIMDE) # Enable OpenMP support in simde
-ADD_COMPILE_DEFINITIONS (SIMDE_ENABLE_OPENMP) # Enable OpenMP support in simde
-ADD_COMPILE_OPTIONS (-fopenmp-simd) # Enable OpenMP SIMD support
 ADD_COMPILE_OPTIONS (-fnon-call-exceptions) # Allow signal handler to throw exception
 
 ADD_COMPILE_OPTIONS (-Wno-deprecated-declarations -Wno-write-strings -Wno-multichar -Wno-cpp -Werror)
+
+IF (ENABLE_VULKAN)
+    ADD_COMPILE_OPTIONS (-Wno-nonnull -Wno-nullability-completeness)
+ENDIF()
+
 IF (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     ADD_COMPILE_OPTIONS (-Wno-terminate)
 ELSEIF (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -145,3 +183,5 @@ ELSEIF (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(STATUS "ADDING: -DTBB_USE_GLIBCXX_VERSION=${TBB_USE_GLIBCXX_VERSION}")
     add_definitions(-DTBB_USE_GLIBCXX_VERSION=${TBB_USE_GLIBCXX_VERSION})
 ENDIF ()
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")

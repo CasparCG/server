@@ -46,7 +46,7 @@ swf_t::header_t::header_t(const std::wstring& filename)
     if (this->signature != s1 && this->signature != s2)
         return;
 
-    _byteswap_ulong(this->file_length);
+    //_byteswap_ulong(this->file_length);
 
     std::vector<char> file_data;
     std::copy(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>(), std::back_inserter(file_data));

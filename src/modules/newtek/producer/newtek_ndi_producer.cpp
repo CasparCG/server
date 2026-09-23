@@ -52,16 +52,9 @@
 
 #include <ffmpeg/util/av_util.h>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #include <libavformat/avformat.h>
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #include "../util/ndi.h"
 
@@ -76,7 +69,7 @@ struct newtek_ndi_producer : public core::frame_producer
 
     spl::shared_ptr<core::frame_factory> frame_factory_;
     core::video_format_desc              format_desc_;
-    NDIlib_v5*                           ndi_lib_;
+    NDIlib_v6*                           ndi_lib_;
     NDIlib_framesync_instance_t          ndi_framesync_;
     NDIlib_recv_instance_t               ndi_recv_instance_;
     spl::shared_ptr<diagnostics::graph>  graph_;

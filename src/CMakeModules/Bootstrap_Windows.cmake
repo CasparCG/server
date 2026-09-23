@@ -12,6 +12,7 @@ if(POLICY CMP0167)
 endif()
 
 set(BOOST_USE_PRECOMPILED ON CACHE BOOL "Use precompiled boost")
+set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
 
 set(CASPARCG_RUNTIME_DEPENDENCIES_RELEASE "" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES_DEBUG "" CACHE INTERNAL "")
@@ -60,7 +61,7 @@ if (BOOST_USE_PRECOMPILED)
 	INSTALL_COMMAND ""
 	)
 	ExternalProject_Get_Property(boost SOURCE_DIR)
-	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_74")
+	set(BOOST_INCLUDE_PATH "${SOURCE_DIR}/include/boost-1_83")
 	link_directories("${SOURCE_DIR}/lib")
 else ()
 	set(BOOST_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost-install)
@@ -80,7 +81,7 @@ else ()
 	BUILD_COMMAND ./b2 install debug release --prefix=${BOOST_INSTALL_DIR} link=static threading=multi runtime-link=shared -j ${CONFIG_CPU_COUNT}
 	INSTALL_COMMAND ""
 	)
-	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_74")
+	set(BOOST_INCLUDE_PATH "${BOOST_INSTALL_DIR}/include/boost-1_83")
 	link_directories("${BOOST_INSTALL_DIR}/lib")
 endif ()
 add_definitions( -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE )
@@ -90,8 +91,8 @@ add_definitions( -DBOOST_LOCALE_HIDE_AUTO_PTR )
 # FFMPEG
 casparcg_add_external_project(ffmpeg-lib)
 ExternalProject_Add(ffmpeg-lib
-	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-7.0.2-full_build-shared.7z
-	URL_HASH MD5=c5127aeed36a9a86dd3b84346be182f8
+	URL ${CASPARCG_DOWNLOAD_MIRROR}/ffmpeg/ffmpeg-8.1.2-full_build-shared.7z
+	URL_HASH SHA256=cba748035c21ce1431d0823c7a3a711f38616f89f87a265dceddf9b7f6749d2d
 	DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ""
@@ -101,14 +102,13 @@ ExternalProject_Get_Property(ffmpeg-lib SOURCE_DIR)
 set(FFMPEG_INCLUDE_PATH "${SOURCE_DIR}/include")
 set(FFMPEG_BIN_PATH "${SOURCE_DIR}/bin")
 link_directories("${SOURCE_DIR}/lib")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-10.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-61.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-59.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-58.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-5.dll")
-casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-8.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-11.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-62.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-60.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-6.dll")
+casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-9.dll")
 # for scanner:
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffmpeg.exe")
 casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/ffprobe.exe")
@@ -151,6 +151,24 @@ target_link_directories(GLEW::glew INTERFACE ${glew_SOURCE_DIR}/lib/Release/x64)
 target_link_libraries(GLEW::glew INTERFACE glew32)
 casparcg_add_runtime_dependency("${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
 
+IF(ENABLE_VULKAN)
+	find_package(Vulkan REQUIRED)
+
+	FetchContent_Declare(vk_bootstrap
+			URL ${CASPARCG_DOWNLOAD_MIRROR}/vk-bootstrap/vk-bootstrap-1.4.328.zip
+			URL_HASH SHA256=10f257c30a0a49d30b28a72cf3a7942d93a61f977adaa04bee29304c6506dc12
+			DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+			)
+	FetchContent_MakeAvailable(vk_bootstrap)
+
+	FetchContent_Declare(vma
+			URL ${CASPARCG_DOWNLOAD_MIRROR}/VulkanMemoryAllocator/VulkanMemoryAllocator-3.3.0.zip
+			URL_HASH SHA256=81755d8fcb411b97292c6682e828501315db319374c7c34ba6e1226452c6c392
+			DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+	)
+	FetchContent_MakeAvailable(vma)
+ENDIF()
+
 # SFML
 FetchContent_Declare(sfml
 	URL ${CASPARCG_DOWNLOAD_MIRROR}/sfml/SFML-2.6.2-windows-vc17-64-bit.zip
@@ -161,11 +179,11 @@ FetchContent_MakeAvailable(sfml)
 
 list(APPEND CMAKE_PREFIX_PATH ${sfml_SOURCE_DIR}/lib/cmake/SFML)
 # set(SFML_STATIC_LIBRARIES TRUE)
-find_package(SFML 2 COMPONENTS graphics window REQUIRED)
+find_package(SFML 2 COMPONENTS graphics system window REQUIRED)
 
 casparcg_add_runtime_dependency_from_target(sfml-graphics)
-casparcg_add_runtime_dependency_from_target(sfml-window)
 casparcg_add_runtime_dependency_from_target(sfml-system)
+casparcg_add_runtime_dependency_from_target(sfml-window)
 
 #ZLIB
 casparcg_add_external_project(zlib)
@@ -259,6 +277,8 @@ if (ENABLE_HTML)
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_47.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/dxcompiler.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/dxil.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libEGL.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libGLESv2.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/vk_swiftshader.dll")
@@ -272,7 +292,10 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT c
 add_definitions(-DUNICODE)
 add_definitions(-D_UNICODE)
 add_definitions(-DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-D_WIN32_WINNT=0x601)
+add_definitions(-D_WIN32_WINNT=0x0A00) # Minimum windows 10
+
+# TODO: recompile boost to avoid this
+add_compile_definitions(BOOST_USE_WINAPI_VERSION=0x0601)  # Boost ABI: must match prebuilt deps
 
 # ignore boost deprecated headers, as these are often reported inside boost
 add_definitions("-DBOOST_ALLOW_DEPRECATED_HEADERS")
@@ -282,4 +305,4 @@ string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX2 /Ot /Gy /bigobj")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}	/Oi /arch:AVX /Ot /Gy /bigobj")

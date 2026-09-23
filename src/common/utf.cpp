@@ -20,8 +20,6 @@
  */
 #include "utf.h"
 
-#pragma warning(push, 1)
-
 #include <boost/locale.hpp>
 
 namespace caspar {

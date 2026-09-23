@@ -132,7 +132,7 @@ struct shader::impl
         GL(glUniform3f(get_uniform_location(name.c_str()),
                        static_cast<float>(value0),
                        static_cast<float>(value1),
-                       static_cast<float>(value1)));
+                       static_cast<float>(value2)));
     }
 
     void set(const std::string& name, double value)

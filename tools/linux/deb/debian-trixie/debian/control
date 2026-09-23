@@ -1,0 +1,69 @@
+Source: casparcg-server-beta
+Maintainer: Julian Waller <git@julusian.co.uk>
+Section: video
+Priority: optional
+Standards-Version: 4.6.0.1
+Build-Depends: cmake,
+               debhelper-compat (= 13),
+               dh-exec,
+               libavcodec-dev,
+               libavdevice-dev,
+               libavfilter-dev,
+               libavformat-dev,
+               libavutil-dev,
+               libboost-coroutine-dev,
+               libboost-date-time-dev,
+               libboost-dev,
+               libboost-filesystem-dev,
+               libboost-locale-dev,
+               libboost-log-dev,
+               libboost-regex-dev,
+               libboost-system-dev,
+               libboost-thread-dev,
+               libegl-dev,
+               libicu-dev,
+               libglew-dev,
+               libjpeg-dev,
+               libopenal-dev,
+               libsfml-dev,
+               libsimde-dev,
+               libswresample-dev,
+               libswscale-dev,
+               libtbb-dev,
+               libxrandr-dev,
+               pkg-config,
+               txt2man,
+               zlib1g-dev,
+               libasound2,
+               libatk-bridge2.0-0,
+               libatk1.0-0,
+               libatspi2.0-0,
+               libc6,
+               libcairo2,
+               libcups2,
+               libdbus-1-3,
+               libdrm2,
+               libexpat1,
+               libgbm1,
+               libgcc-s1,
+               libglib2.0-0,
+               libnspr4,
+               libnss3,
+               libpango-1.0-0,
+               libx11-6,
+               libxcb1,
+               libxcomposite1,
+               libxdamage1,
+               libxext6,
+               libxfixes3,
+               libxkbcommon0,
+               libxrandr2
+Homepage: https://github.com/CasparCG/server/
+Vcs-Git: https://github.com/CasparCG/server.git
+Vcs-Browser: https://github.com/CasparCG/server/
+
+Package: casparcg-server-beta
+Pre-Depends: ${misc:Pre-Depends}
+Depends: fonts-liberation, ${misc:Depends}, ${shlibs:Depends}
+Architecture: amd64 arm64
+Description: This build will be broken, as CEF will not be packaged correctly inside of it. This exists simply as a build check

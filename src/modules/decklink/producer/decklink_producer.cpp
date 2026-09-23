@@ -45,10 +45,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
@@ -62,9 +58,6 @@ extern "C" {
 #include <libavutil/samplefmt.h>
 #include <libavutil/timecode.h>
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #include <boost/format.hpp>
 
@@ -221,13 +214,8 @@ struct Filter
         }
 
         if (type == AVMEDIA_TYPE_VIDEO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("buffersink"), "out", nullptr, nullptr, graph.get()));
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("buffersink"), "out"));
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
             AVPixelFormat pix_fmts[] = {pix_fmt, AV_PIX_FMT_NONE};
 #if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
             FF(av_opt_set_array(sink,
@@ -240,17 +228,8 @@ struct Filter
 #else
             FF(av_opt_set_int_list(sink, "pix_fmts", pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
         } else if (type == AVMEDIA_TYPE_AUDIO) {
-            FF(avfilter_graph_create_filter(
-                &sink, avfilter_get_by_name("abuffersink"), "out", nullptr, nullptr, graph.get()));
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4245)
-#endif
+            sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
 
             AVSampleFormat sample_fmts[]  = {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE};
             int            sample_rates[] = {format_desc.audio_sample_rate, 0};
@@ -284,13 +263,12 @@ struct Filter
             av_channel_layout_uninit(&channel_layout);
              */
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
+        FF(avfilter_init_str(sink, nullptr));
 
         {
             const auto cur = outputs;
@@ -417,11 +395,13 @@ core::color_space get_color_space(IDeckLinkVideoInputFrame* video)
                 return core::color_space::bt2020;
             } else if (color_space == bmdColorspaceRec601) {
                 return core::color_space::bt601;
+            } else if (color_space == bmdColorspaceRec709) {
+                return core::color_space::bt709;
             }
         }
     }
 
-    return core::color_space::bt709;
+    return core::color_space::unknown;
 }
 
 com_ptr<IDeckLinkDisplayMode> get_display_mode(const com_iface_ptr<IDeckLinkInput>& device,
@@ -708,15 +688,7 @@ class decklink_producer : public IDeckLinkInputCallback
 
             BMDTimeValue      in_video_pts = 0LL;
             BMDTimeValue      in_audio_pts = 0LL;
-            core::color_space color_space  = core::color_space::bt709;
-
-            // If the video is delayed too much, audio only will be delivered
-            // we don't want audio only since the buffer is small and we keep avcodec
-            // very busy processing all the (unnecessary) packets. Also, because there is
-            // no audio, the sync values will be incorrect.
-            if (!audio) {
-                return S_OK;
-            }
+            core::color_space color_space  = core::color_space::unknown;
 
             if (video) {
                 const auto flags = video->GetFlags();
@@ -817,6 +789,25 @@ class decklink_producer : public IDeckLinkInputCallback
                     CASPAR_LOG(warning) << print() << " out-sync changed: " << out_sync;
                 }
                 out_sync_ = out_sync;
+
+                // If filter output sync has drifted too far from input sync, recreate the filters to resync.
+                // This usually happens after signal loss/regain from receiving incomplete frames.
+                const double frame_duration_threshold = 1.5 / input_format.hz;
+                const double sync_drift               = std::abs(out_sync - in_sync);
+                if (sync_drift > frame_duration_threshold) {
+                    CASPAR_LOG(warning) << print() << " Excessive A/V sync drift detected ("
+                                        << static_cast<int>(sync_drift * 1000) << "ms), recreating filters to resync";
+
+                    // Recreate filters to clear all buffered data
+                    video_filter_ = Filter(vfilter_, AVMEDIA_TYPE_VIDEO, format_desc_, mode_, hdr_);
+                    audio_filter_ = Filter(afilter_, AVMEDIA_TYPE_AUDIO, format_desc_, mode_, hdr_);
+
+                    in_sync_  = 0.0;
+                    out_sync_ = 0.0;
+
+                    // Skip this iteration and start fresh
+                    return S_OK;
+                }
 
                 graph_->set_value("in-sync", in_sync * 2.0 + 0.5);
                 graph_->set_value("out-sync", out_sync * 2.0 + 0.5);
@@ -929,7 +920,7 @@ class decklink_producer_proxy : public core::frame_producer
         , executor_(L"decklink_producer[" + std::to_wstring(device_index) + L"]")
     {
         auto ctx = core::diagnostics::call_context::for_thread();
-        executor_.invoke([=] {
+        executor_.invoke([=, this] {
             core::diagnostics::call_context::for_thread() = ctx;
             com_initialize();
             producer_.reset(new decklink_producer(format_desc,
@@ -946,7 +937,7 @@ class decklink_producer_proxy : public core::frame_producer
 
     ~decklink_producer_proxy() override
     {
-        executor_.invoke([=] {
+        executor_.invoke([this] {
             producer_.reset();
             com_uninitialize();
         });

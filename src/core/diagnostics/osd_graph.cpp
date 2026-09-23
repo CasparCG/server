@@ -23,8 +23,6 @@
 
 #include "osd_graph.h"
 
-#pragma warning(disable : 4244)
-
 #include "call_context.h"
 
 #include <common/executor.h>
@@ -50,6 +48,14 @@
 namespace fs = std::filesystem;
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
+
+#if SFML_VERSION_MAJOR >= 3
+
+void register_sink() {}
+void show_graphs(bool value) {}
+void shutdown() {}
+
+#else
 
 static const int PREFERRED_VERTICAL_GRAPHS = 8;
 static const int RENDERING_WIDTH           = 1024;
@@ -512,5 +518,7 @@ void register_sink()
 void show_graphs(bool value) { context::show(value); }
 
 void shutdown() { context::shutdown(); }
+
+#endif
 
 }}}} // namespace caspar::core::diagnostics::osd

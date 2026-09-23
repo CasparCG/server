@@ -21,6 +21,15 @@ class accelerator_device
     virtual std::future<void>            gc()         = 0;
 };
 
+enum class accelerator_backend
+{
+    invalid = 0,
+    opengl,
+#ifdef ENABLE_VULKAN
+    vulkan,
+#endif
+};
+
 class accelerator
 {
   public:
@@ -29,6 +38,8 @@ class accelerator
     ~accelerator();
 
     accelerator& operator=(accelerator&) = delete;
+
+    void set_backend(accelerator_backend backend);
 
     std::unique_ptr<caspar::core::image_mixer> create_image_mixer(int channel_id, common::bit_depth depth);
 

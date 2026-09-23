@@ -121,7 +121,7 @@ struct video_channel::impl final
 
         CASPAR_LOG(info) << print() << " Successfully Initialized.";
 
-        thread_ = std::thread([=] {
+        thread_ = std::thread([this] {
             set_thread_realtime_priority();
             set_thread_name(L"channel-" + std::to_wstring(channel_info_.index));
 
@@ -152,7 +152,7 @@ struct video_channel::impl final
                     // Produce
                     caspar::timer produce_timer;
                     auto          stage_frames = (*stage_)(frame_counter_, background_routes, routesCb);
-                    graph_->set_value("produce-time", produce_timer.elapsed() * format_desc.hz * 0.5);
+                    graph_->set_value("produce-time", produce_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     // This is a little race prone, but at worst a new consumer will start with a frame of black
                     bool has_consumers = output_.consumer_count() > 0;
@@ -166,7 +166,7 @@ struct video_channel::impl final
                         has_consumers && stage_frames.format_desc.field_count == 2
                             ? mixer_(stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples)
                             : const_frame{};
-                    graph_->set_value("mix-time", mix_timer.elapsed() * format_desc.hz * 0.5);
+                    graph_->set_value("mix-time", mix_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     // Consume
                     caspar::timer consume_timer;

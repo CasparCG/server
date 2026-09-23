@@ -135,7 +135,7 @@ class executor final
 
         task_t task;
 
-        while (is_running_) {
+        while (true) {
             try {
                 queue_.pop(task);
                 do {

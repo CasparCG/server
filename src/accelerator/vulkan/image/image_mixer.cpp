@@ -1,0 +1,434 @@
+/*
+ * Copyright 2025
+ *
+ * This file is part of CasparCG (www.casparcg.com).
+ *
+ * CasparCG is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * CasparCG is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Niklas Andersson, niklas@niklaspandersson.se
+ */
+#include "image_mixer.h"
+
+#include "image_kernel.h"
+
+#include "../util/buffer.h"
+#include "../util/device.h"
+#include "../util/renderpass.h"
+#include "../util/texture.h"
+#include "../util/transfer.h"
+
+#ifdef WIN32
+#include "../../d3d/d3d_texture2d.h"
+#endif
+
+#include <boost/align/aligned_allocator.hpp>
+
+#include <common/array.h>
+#include <common/bit_depth.h>
+#include <common/future.h>
+#include <common/log.h>
+
+#include <core/frame/frame.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/geometry.h>
+#include <core/frame/pixel_format.h>
+#include <core/video_format.h>
+
+#include <any>
+#include <vector>
+
+namespace caspar { namespace accelerator { namespace vulkan {
+
+using future_texture = std::shared_future<std::shared_ptr<texture>>;
+
+struct item
+{
+    core::pixel_format_desc     pix_desc = core::pixel_format_desc(core::pixel_format::invalid);
+    std::vector<future_texture> textures;
+    draw_transforms             transforms;
+    core::frame_geometry        geometry = core::frame_geometry::get_default();
+};
+
+struct layer
+{
+    std::vector<layer> sublayers;
+    std::vector<item>  items;
+    core::blend_mode   blend_mode;
+
+    explicit layer(core::blend_mode blend_mode)
+        : blend_mode(blend_mode)
+    {
+    }
+};
+
+class image_renderer
+{
+    spl::shared_ptr<device> vulkan_;
+    image_kernel            kernel_;
+    const size_t            max_frame_size_;
+    common::bit_depth       depth_;
+
+  public:
+    explicit image_renderer(const spl::shared_ptr<device>& vulkan, const size_t max_frame_size, common::bit_depth depth)
+        : vulkan_(vulkan)
+        , kernel_(vulkan_, depth)
+        , max_frame_size_(max_frame_size)
+        , depth_(depth)
+    {
+    }
+
+    std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>
+    operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+    {
+        if (layers.empty()) { // Bypass GPU with empty frame.
+            static const std::vector<uint8_t, boost::alignment::aligned_allocator<uint8_t, 32>> buffer(max_frame_size_,
+                                                                                                       0);
+            return make_ready_future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>(
+                {array<const std::uint8_t>(buffer.data(), format_desc.size, true), nullptr});
+        }
+
+        // Record + submit synchronously on the caller's (mixer) thread; the only
+        // CPU wait is the readback future's .get() downstream (it consumes bytes).
+        auto pass   = kernel_.create_renderpass(format_desc.square_width, format_desc.square_height);
+        auto target = pass->default_attachment();
+        draw(target, std::move(layers), format_desc, pass);
+
+        pass->commit();
+
+        auto readback = vulkan_->transfer().copy_async(target);
+
+        return std::async(std::launch::deferred,
+                          [readback = std::move(readback)]() mutable
+                              -> std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>> {
+                              return {std::move(readback.get()), nullptr};
+                          });
+    }
+
+    common::bit_depth depth() const { return depth_; }
+
+  private:
+    void draw(std::shared_ptr<texture>&      target_texture,
+              std::vector<layer>             layers,
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
+    {
+        std::shared_ptr<texture> layer_key_texture;
+
+        for (auto& layer : layers) {
+            draw(target_texture, layer.sublayers, format_desc, pass);
+            draw(target_texture, std::move(layer), layer_key_texture, format_desc, pass);
+        }
+    }
+
+    void draw(std::shared_ptr<texture>&      target_texture,
+              layer                          layer,
+              std::shared_ptr<texture>&      layer_key_texture,
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
+    {
+        if (layer.items.empty())
+            return;
+
+        std::shared_ptr<texture> local_key_texture;
+        std::shared_ptr<texture> local_mix_texture;
+
+        if (layer.blend_mode != core::blend_mode::normal) {
+            auto layer_texture = pass->create_attachment();
+
+            for (auto& item : layer.items)
+                draw(layer_texture,
+                     std::move(item),
+                     layer_key_texture,
+                     local_key_texture,
+                     local_mix_texture,
+                     format_desc,
+                     pass);
+
+            draw(layer_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
+            draw(target_texture, std::move(layer_texture), format_desc, pass, layer.blend_mode);
+        } else // fast path
+        {
+            for (auto& item : layer.items)
+                draw(target_texture,
+                     std::move(item),
+                     layer_key_texture,
+                     local_key_texture,
+                     local_mix_texture,
+                     format_desc,
+                     pass);
+
+            draw(target_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
+        }
+
+        layer_key_texture = std::move(local_key_texture);
+    }
+
+    void draw(std::shared_ptr<texture>&      target_texture,
+              item                           item,
+              std::shared_ptr<texture>&      layer_key_texture,
+              std::shared_ptr<texture>&      local_key_texture,
+              std::shared_ptr<texture>&      local_mix_texture,
+              const core::video_format_desc& format_desc,
+              spl::shared_ptr<renderpass>    pass)
+    {
+        draw_params draw_params;
+        draw_params.target_width  = format_desc.square_width;
+        draw_params.target_height = format_desc.square_height;
+        // TODO: Pass the target color_space
+
+        draw_params.pix_desc   = std::move(item.pix_desc);
+        draw_params.transforms = std::move(item.transforms);
+        draw_params.geometry   = std::move(item.geometry);
+        draw_params.aspect_ratio =
+            static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height);
+
+        for (auto& future_texture : item.textures) {
+            draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
+        }
+
+        if (draw_params.transforms.image_transform
+                .is_key) { // A key means we will use it for the next non-key item as a mask
+            local_key_texture = local_key_texture ? local_key_texture : pass->create_attachment();
+
+            draw_params.background = local_key_texture;
+            draw_params.local_key  = nullptr;
+            draw_params.layer_key  = nullptr;
+
+            pass->draw(std::move(draw_params));
+        } else if (draw_params.transforms.image_transform
+                       .is_mix) { // A mix means precomp the items to a texture, before drawing to the channel
+            local_mix_texture = local_mix_texture ? local_mix_texture : pass->create_attachment();
+
+            draw_params.background = local_mix_texture;
+            draw_params.local_key  = std::move(local_key_texture); // Use and reset the key
+            draw_params.layer_key  = layer_key_texture;
+
+            draw_params.keyer = keyer::additive;
+
+            pass->draw(std::move(draw_params));
+        } else {
+            // If there is a mix, this is the end so draw it and reset
+            draw(target_texture, std::move(local_mix_texture), format_desc, pass, core::blend_mode::normal);
+
+            draw_params.background = target_texture;
+            draw_params.local_key  = std::move(local_key_texture);
+            draw_params.layer_key  = layer_key_texture;
+
+            pass->draw(std::move(draw_params));
+        }
+    }
+
+    void draw(std::shared_ptr<texture>&   target_texture,
+              std::shared_ptr<texture>&&  source_texture,
+              core::video_format_desc     format_desc,
+              spl::shared_ptr<renderpass> pass,
+              core::blend_mode            blend_mode = core::blend_mode::normal)
+    {
+        if (!source_texture)
+            return;
+
+        draw_params draw_params;
+        draw_params.target_width    = format_desc.square_width;
+        draw_params.target_height   = format_desc.square_height;
+        draw_params.pix_desc.format = core::pixel_format::bgra;
+        draw_params.pix_desc.planes = {core::pixel_format_desc::plane(
+            source_texture->width(), source_texture->height(), 4, source_texture->depth())};
+        draw_params.textures        = {spl::make_shared_ptr(source_texture)};
+        draw_params.blend_mode      = blend_mode;
+        draw_params.background      = target_texture;
+        draw_params.geometry        = core::frame_geometry::get_default();
+
+        pass->draw(std::move(draw_params));
+    }
+};
+
+struct image_mixer::impl
+    : public core::frame_factory
+    , public std::enable_shared_from_this<impl>
+{
+    spl::shared_ptr<device>      vulkan_;
+    image_renderer               renderer_;
+    std::vector<draw_transforms> transform_stack_;
+    std::vector<layer>           layers_; // layer/stream/items
+    std::vector<layer*>          layer_stack_;
+
+    double aspect_ratio_ = 1.0;
+
+  public:
+    impl(const spl::shared_ptr<device>& device,
+         const int                      channel_id,
+         const size_t                   max_frame_size,
+         common::bit_depth              depth)
+        : vulkan_(device)
+        , renderer_(device, max_frame_size, depth)
+        , transform_stack_(1)
+    {
+        CASPAR_LOG(info) << L"Initialized Vulkan Accelerated GPU Image Mixer for channel " << channel_id;
+    }
+
+    void update_aspect_ratio(double aspect_ratio) { aspect_ratio_ = aspect_ratio; }
+
+    void push(const core::frame_transform& transform)
+    {
+        auto previous_layer_depth = transform_stack_.back().image_transform.layer_depth;
+
+        transform_stack_.push_back(transform_stack_.back().combine_transform(transform.image_transform, aspect_ratio_));
+
+        auto new_layer_depth = transform_stack_.back().image_transform.layer_depth;
+
+        if (previous_layer_depth < new_layer_depth) {
+            layer new_layer(transform_stack_.back().image_transform.blend_mode);
+
+            if (layer_stack_.empty()) {
+                layers_.push_back(std::move(new_layer));
+                layer_stack_.push_back(&layers_.back());
+            } else {
+                layer_stack_.back()->sublayers.push_back(std::move(new_layer));
+                layer_stack_.push_back(&layer_stack_.back()->sublayers.back());
+            }
+        }
+    }
+
+    void visit(const core::const_frame& frame)
+    {
+        if (frame.pixel_format_desc().format == core::pixel_format::invalid)
+            return;
+
+        if (frame.pixel_format_desc().planes.empty())
+            return;
+
+        item item;
+        item.pix_desc   = frame.pixel_format_desc();
+        item.transforms = transform_stack_.back();
+        item.geometry   = frame.geometry();
+
+        auto textures_ptr = std::any_cast<std::shared_ptr<std::vector<future_texture>>>(frame.opaque());
+
+        if (textures_ptr) {
+            item.textures = *textures_ptr;
+        } else {
+            for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
+                item.textures.emplace_back(vulkan_->transfer().copy_async(frame.image_data(n),
+                                                                          item.pix_desc.planes[n].width,
+                                                                          item.pix_desc.planes[n].height,
+                                                                          item.pix_desc.planes[n].stride,
+                                                                          item.pix_desc.planes[n].depth));
+            }
+        }
+
+        layer_stack_.back()->items.push_back(item);
+    }
+
+    void pop()
+    {
+        transform_stack_.pop_back();
+        layer_stack_.resize(transform_stack_.back().image_transform.layer_depth);
+    }
+
+    std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>
+    render(const core::video_format_desc& format_desc)
+    {
+        return renderer_(std::move(layers_), format_desc);
+    }
+
+    core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
+    {
+        return create_frame(tag, desc, common::bit_depth::bit8);
+    }
+
+    core::mutable_frame
+    create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth) override
+    {
+        std::vector<array<std::uint8_t>> image_data;
+        for (auto& plane : desc.planes) {
+            auto bytes_per_pixel = depth == common::bit_depth::bit8 ? 1 : 2;
+            image_data.push_back(vulkan_->create_array(plane.size * bytes_per_pixel));
+        }
+
+        std::weak_ptr<image_mixer::impl> weak_self = shared_from_this();
+        return core::mutable_frame(tag,
+                                   std::move(image_data),
+                                   array<int32_t>{},
+                                   desc,
+                                   [weak_self, desc](std::vector<array<const std::uint8_t>> image_data) -> std::any {
+                                       auto self = weak_self.lock();
+                                       if (!self) {
+                                           return std::any{};
+                                       }
+                                       std::vector<future_texture> textures;
+                                       for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
+                                           textures.emplace_back(
+                                               self->vulkan_->transfer().copy_async(image_data[n],
+                                                                                    desc.planes[n].width,
+                                                                                    desc.planes[n].height,
+                                                                                    desc.planes[n].stride,
+                                                                                    desc.planes[n].depth));
+                                       }
+                                       return std::make_shared<decltype(textures)>(std::move(textures));
+                                   });
+    }
+
+#ifdef WIN32
+    core::const_frame import_d3d_texture(const void*                                tag,
+                                         const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture,
+                                         core::pixel_format                         format,
+                                         common::bit_depth                          depth) override
+    {
+        throw std::runtime_error("d3d texture import not supported on vulkan accelerator");
+    }
+#endif
+
+    common::bit_depth depth() const { return renderer_.depth(); }
+};
+
+image_mixer::image_mixer(const spl::shared_ptr<device>& vulkan,
+                         const int                      channel_id,
+                         const size_t                   max_frame_size,
+                         common::bit_depth              depth)
+    : impl_(std::make_unique<impl>(vulkan, channel_id, max_frame_size, depth))
+{
+}
+image_mixer::~image_mixer() {}
+void image_mixer::push(const core::frame_transform& transform) { impl_->push(transform); }
+void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
+void image_mixer::pop() { impl_->pop(); }
+void image_mixer::update_aspect_ratio(double aspect_ratio) { impl_->update_aspect_ratio(aspect_ratio); }
+std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>
+image_mixer::render(const core::video_format_desc& format_desc)
+{
+    return impl_->render(format_desc);
+}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc)
+{
+    return impl_->create_frame(tag, desc);
+}
+core::mutable_frame
+image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, common::bit_depth depth)
+{
+    return impl_->create_frame(tag, desc, depth);
+}
+
+#ifdef WIN32
+core::const_frame image_mixer::import_d3d_texture(const void*                                tag,
+                                                  const std::shared_ptr<d3d::d3d_texture2d>& d3d_texture,
+                                                  core::pixel_format                         format,
+                                                  common::bit_depth                          depth)
+{
+    return impl_->import_d3d_texture(tag, d3d_texture, format, depth);
+}
+#endif
+
+common::bit_depth image_mixer::depth() const { return impl_->depth(); }
+
+}}} // namespace caspar::accelerator::vulkan

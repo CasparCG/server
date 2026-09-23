@@ -13,7 +13,6 @@
 #   - AVFORMAT
 #   - AVFILTER
 #   - AVUTIL
-#   - POSTPROC
 #   - SWSCALE
 # the following variables will be defined
 #  <component>_FOUND        - System has <component>
@@ -33,7 +32,7 @@ include(FindPackageHandleStandardArgs)
 
 # The default components were taken from a survey over other FindFFMPEG.cmake files
 if (NOT FFmpeg_FIND_COMPONENTS)
-  set(FFmpeg_FIND_COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE AVFILTER POSTPROC SWSCALE SWRESAMPLE)
+  set(FFmpeg_FIND_COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE AVFILTER SWSCALE SWRESAMPLE)
 endif ()
 
 #
@@ -107,7 +106,6 @@ if (NOT FFMPEG_LIBRARIES)
   find_component(AVUTIL     libavutil     avutil   libavutil/avutil.h)
   find_component(AVFILTER   libavfilter   avfilter libavfilter/avfilter.h)
   find_component(SWSCALE    libswscale    swscale  libswscale/swscale.h)
-  find_component(POSTPROC   libpostproc   postproc libpostproc/postprocess.h)
   find_component(SWRESAMPLE libswresample swresample libswresample/swresample.h)
 
   # Check if the required components were found and add their stuff to the FFMPEG_* vars.
@@ -149,7 +147,7 @@ if (NOT FFMPEG_LIBRARIES)
 endif ()
 
 # Now set the noncached _FOUND vars for the components.
-foreach (_component AVCODEC AVDEVICE AVFORMAT AVUTIL POSTPROCESS SWSCALE)
+foreach (_component AVCODEC AVDEVICE AVFORMAT AVUTIL SWSCALE)
   set_component_found(${_component})
 endforeach ()
 

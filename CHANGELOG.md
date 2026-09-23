@@ -1,12 +1,40 @@
-CasparCG 2.5.0 Stable
+CasparCG 2.5.1 Stable
 ==========================================
 
-### Important
+### Core
+##### Improvements
+* Remove AVX2 requirement. It is still required for v210 decklink output, but not for other usage.
+* Update FFmpeg to 8.1.2
+##### Fixes
+* AMCP: Prevent race when executing BATCH
+* Linux: Support SFML 3 (not 100% feature parity)
+* Windows: Prevent background throttling when no visible window
+* Channel grid failing to initialise
 
-We recommend running CasparCG 2.5 on CPUs which support AVX2. Officially Chrome claims to require AVX2, and it is required for some of our in-progress HDR support.
-Intel CPUs based on Haswell or later support this, which were first released to consumers in 2013, or 2014 for servers.
+### Producers
+##### Fixes
+* FFmpeg: Gracefully handle ENOMEM errorss
+* FFmpeg: Reduce mutex contention
+* FFmpeg: Ensure graph is stopped before joining
+* HTML: Missing WebGPU libraries (windows only)
 
-Starting with CasparCG 2.6, this will become a requirement
+### Consumers
+##### Improvements
+* Decklink: Add option to disable keying
+* Audio: Configurable delay
+* Audio: Allow multiple devices to be used
+* Audio: Improve sync to other consumers
+* Screen: Configurable delay
+
+##### Fixes
+* Audio: Device enumeration issues
+* Decklink: Recover av-sync in extreme cases
+* Decklink: Check for keying support before enabling
+* Decklink: Free model names string
+
+
+CasparCG 2.5.0 Stable
+==========================================
 
 ### Core
 ##### Improvements
@@ -17,7 +45,7 @@ Starting with CasparCG 2.6, this will become a requirement
 * Reimplement mixer transforms, to handle routes correctly
 * Support more pixel formats from ffmpeg, to preserve colour accuracy better
 * Support running on headless linux
-* Transitions: Additional behaviours
+* Transitions: Add FADECUT, CUTFADE and VFADE types, UP/DOWN directions for PUSH/SLIDE, and a STING cut mode
 ##### Fixes
 * Build with boost 1.85/1.86/1.87/1.88
 * Build with ffmpeg 7.1

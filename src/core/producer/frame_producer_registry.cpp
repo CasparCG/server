@@ -94,7 +94,7 @@ class destroy_producer_proxy : public frame_producer
             std::unique_ptr<spl::shared_ptr<frame_producer>> pointer_guard(producer);
             auto                                             str = (*producer)->print();
             try {
-                if (!producer->unique())
+                if (producer->use_count() != 1)
                     CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: "
                                       << producer->use_count();
                 else

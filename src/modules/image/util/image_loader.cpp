@@ -24,11 +24,6 @@
 #include "image_algorithms.h"
 
 #include <common/except.h>
-
-#if defined(_MSC_VER)
-#pragma warning(disable : 4714) // marked as __forceinline not inlined
-#endif
-
 #include "common/scope_exit.h"
 
 #include <ffmpeg/util/av_assert.h>
@@ -39,22 +34,14 @@
 
 #include <set>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#endif
 extern "C" {
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavutil/dict.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 namespace caspar { namespace image {
 
@@ -89,11 +76,8 @@ std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* fo
 
     FF(avcodec_parameters_to_context(codec_ctx.get(), par));
 
-    AVDictionary* opt = nullptr;
-    CASPAR_SCOPE_EXIT { av_dict_free(&opt); };
-
-    av_dict_set(&opt, "thread_type", "slice", 0);
-    FF(avcodec_open2(codec_ctx.get(), codec, &opt));
+    codec_ctx->thread_type = FF_THREAD_SLICE;
+    FF(avcodec_open2(codec_ctx.get(), codec, nullptr));
 
     AVPacket pkt;
     FF(av_read_frame(format_ctx, &pkt));

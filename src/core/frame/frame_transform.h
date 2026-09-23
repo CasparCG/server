@@ -73,6 +73,60 @@ struct rectangle final
     std::array<double, 2> lr = {1.0, 1.0};
 };
 
+/// An inclusive range for a grading parameter, and the clamp that enforces it.
+struct grade_range final
+{
+    double lo;
+    double hi;
+
+    [[nodiscard]] constexpr bool contains(double v) const
+    {
+        // Written as a positive test so a NaN falls outside: every comparison against
+        // NaN is false. std::stod("nan") succeeds, so without this a MIXER command
+        // could put a NaN into the transform and every pixel it touched would go black.
+        return v >= lo && v <= hi;
+    }
+
+    [[nodiscard]] constexpr double clamp(double v) const
+    {
+        if (!(v >= lo)) // also catches NaN, which must not survive as itself
+            return lo;
+        return v > hi ? hi : v;
+    }
+};
+
+/// Legal ranges for the primary grading parameters.
+///
+/// One table, used twice: the MIXER commands refuse anything outside it, and combining
+/// transforms clamps the result back into it. Both have to agree, or a value no single
+/// command could set becomes reachable by stacking two layers.
+///
+/// The bounds are deliberately generous rather than tasteful. They exist to keep the
+/// arithmetic defined and to stop a typo from blacking out a layer, not to enforce a
+/// look, so they sit well outside what a grade would normally use. Where a standard
+/// gives one it is followed: ASC CDL requires slope >= 0, power > 0 and saturation >= 0.
+namespace grade_limits {
+
+inline constexpr grade_range temperature{-1.0, 1.0};
+inline constexpr grade_range tint{-1.0, 1.0};
+inline constexpr grade_range lift{-1.0, 1.0};
+/// The shader raises to 1/midtone, so zero is a division by zero and negatives invert
+/// the curve. Matches the clamp in apply_lmg.
+inline constexpr grade_range midtone{0.01, 100.0};
+inline constexpr grade_range gain{0.0, 10.0};
+/// Rotation is periodic, so this is a wrap rather than a clamp -- see
+/// apply_transform_colour_values. 200 degrees is -160, not 180.
+inline constexpr grade_range hue_shift{-180.0, 180.0};
+inline constexpr grade_range tone{-1.0, 1.0}; // shadows / highlights
+inline constexpr grade_range split_color{-1.0, 1.0};
+inline constexpr grade_range split_balance{0.0, 1.0};
+inline constexpr grade_range cdl_slope{0.0, 10.0};
+inline constexpr grade_range cdl_offset{-1.0, 1.0};
+inline constexpr grade_range cdl_power{0.01, 10.0};
+inline constexpr grade_range cdl_saturation{0.0, 10.0};
+
+} // namespace grade_limits
+
 struct image_transform final
 {
     double opacity    = 1.0;
@@ -96,6 +150,21 @@ struct image_transform final
     corners               perspective;
     core::levels          levels;
     core::chroma          chroma;
+    double                temperature = 0.0; // white balance: -1 cool .. +1 warm
+    double                tint        = 0.0; // white balance: -1 magenta .. +1 green
+    std::array<double, 3> lift    = {0.0, 0.0, 0.0}; // shadow offset per channel
+    std::array<double, 3> midtone = {1.0, 1.0, 1.0}; // midtone power per channel (DaVinci "gamma")
+    std::array<double, 3> gain    = {1.0, 1.0, 1.0}; // highlight multiplier per channel
+    double                hue_shift = 0.0; // global hue rotation, degrees -180..+180
+    double                shadows    = 0.0; // tonal balance: shadow region lift/cut -1..+1
+    double                highlights = 0.0; // tonal balance: highlight region lift/cut -1..+1
+    std::array<double, 3> split_shadow_color    = {0.0, 0.0, 0.0}; // split tone: shadow tint RGB
+    std::array<double, 3> split_highlight_color = {0.0, 0.0, 0.0}; // split tone: highlight tint RGB
+    double                split_balance         = 0.5;             // split tone: crossover 0..1
+    std::array<double, 3> cdl_slope      = {1.0, 1.0, 1.0}; // ASC CDL slope
+    std::array<double, 3> cdl_offset     = {0.0, 0.0, 0.0}; // ASC CDL offset
+    std::array<double, 3> cdl_power      = {1.0, 1.0, 1.0}; // ASC CDL power
+    double                cdl_saturation = 1.0;             // ASC CDL saturation
 
     bool             is_key      = false;
     bool             invert      = false;

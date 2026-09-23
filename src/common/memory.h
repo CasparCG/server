@@ -402,8 +402,6 @@ class shared_ptr
 
     T* get() const { return p_.get(); }
 
-    bool unique() const { return p_.unique(); }
-
     long use_count() const { return p_.use_count(); }
 
     void swap(shared_ptr& other) { p_.swap(other.p_); }

@@ -70,7 +70,7 @@ struct draw_frame::impl
         visitor.pop();
     }
 
-    bool operator==(const impl& other) { return frame_ == other.frame_ && transform_ == other.transform_; }
+    bool operator==(const impl& other) const { return frame_ == other.frame_ && transform_ == other.transform_; }
 };
 
 draw_frame::draw_frame()

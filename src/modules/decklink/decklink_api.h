@@ -29,12 +29,7 @@
 
 #include "interop/DeckLinkAPI.h"
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
-
 #include <atlbase.h>
-
-#pragma warning(pop)
 
 namespace caspar { namespace decklink {
 
@@ -43,8 +38,7 @@ using UINT32 = unsigned int;
 
 static std::wstring to_string(String bstr_string)
 {
-    std::wstring result = bstr_t(bstr_string, false);
-    return result;
+    return static_cast<const wchar_t*>(bstr_t(bstr_string, false));
 }
 
 static void com_initialize() { ::CoInitialize(nullptr); }
@@ -94,7 +88,7 @@ static com_ptr<IDeckLinkVideoFrameAncillaryPackets> create_ancillary_packets()
 template <typename I, typename T>
 static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr, bool optional = false)
 {
-    com_iface_ptr<I> result = ptr;
+    com_iface_ptr<I> result{ptr.p};
 
     if (!optional && !result)
         CASPAR_THROW_EXCEPTION(not_supported()
@@ -118,6 +112,7 @@ T* get_raw(const CComPtr<T>& ptr)
 #include "linux_interop/DeckLinkAPIConfiguration.h"
 #include "linux_interop/DeckLinkAPIConfiguration_v10_11.h"
 #include "linux_interop/DeckLinkAPI_v10_11.h"
+#include <cstdlib>
 #include <memory>
 #include <typeinfo>
 
@@ -130,7 +125,13 @@ using BOOL     = bool;
 using UINT32   = uint32_t;
 using LONGLONG = int64_t;
 
-static std::wstring to_string(String utf16_string) { return u16(utf16_string); }
+// Takes ownership of utf16_string, matching the BSTR to_string() overload above, which also frees its input.
+static std::wstring to_string(String utf16_string)
+{
+    auto result = u16(utf16_string);
+    free((void*)utf16_string);
+    return result;
+}
 
 static void com_initialize() {}
 

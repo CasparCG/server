@@ -132,6 +132,9 @@ struct server::impl
         setup_video_modes(env::properties());
         CASPAR_LOG(info) << L"Initialized video modes.";
 
+        setup_accelerator(env::properties());
+        CASPAR_LOG(info) << L"Initialized accelerator.";
+
         auto xml_channels = setup_channels(env::properties());
         CASPAR_LOG(info) << L"Initialized channels.";
 
@@ -254,6 +257,30 @@ struct server::impl
         }
     }
 
+    void setup_accelerator(const boost::property_tree::wptree& pt)
+    {
+        using boost::property_tree::wptree;
+        using namespace boost::asio::ip;
+
+#ifdef ENABLE_VULKAN
+        caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::invalid;
+        auto accelerator = boost::to_lower_copy(pt.get(L"configuration.accelerator", L"auto"));
+        if (accelerator == L"auto") {
+            backend = caspar::accelerator::accelerator_backend::opengl;
+        } else if (accelerator == L"opengl") {
+            backend = caspar::accelerator::accelerator_backend::opengl;
+        } else if (accelerator == L"vulkan") {
+            backend = caspar::accelerator::accelerator_backend::vulkan;
+        } else {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid accelerator: " + accelerator));
+        }
+#else
+        caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::opengl;
+#endif
+
+        accelerator_.set_backend(backend);
+    }
+
     std::vector<boost::property_tree::wptree> setup_channels(const boost::property_tree::wptree& pt)
     {
         using boost::property_tree::wptree;
@@ -333,7 +360,7 @@ struct server::impl
 
         if (!disable_send_to_amcp_clients && primary_amcp_server_)
             primary_amcp_server_->add_client_lifecycle_object_factory(
-                [=](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
+                [=, this](const std::string& ipv4_address) -> std::pair<std::wstring, std::shared_ptr<void>> {
                     using namespace boost::asio::ip;
 
                     return std::make_pair(std::wstring(L"osc_subscribe"),
@@ -409,8 +436,8 @@ struct server::impl
     {
         amcp_command_repo_ = std::make_shared<amcp::amcp_command_repository>(channels_);
 
-        auto ogl_device = accelerator_.get_device();
-        auto ctx        = std::make_shared<amcp::amcp_command_static_context>(
+        auto accelerator_device = accelerator_.get_device();
+        auto ctx                = std::make_shared<amcp::amcp_command_static_context>(
             video_format_repository_,
             cg_registry_,
             producer_registry_,
@@ -419,7 +446,7 @@ struct server::impl
             shutdown_server_now_,
             u8(caspar::env::properties().get(L"configuration.amcp.media-server.host", L"127.0.0.1")),
             u8(caspar::env::properties().get(L"configuration.amcp.media-server.port", L"8000")),
-            ogl_device,
+            accelerator_device,
             spl::make_shared_ptr(osc_client_));
 
         amcp_context_factory_ = std::make_shared<amcp::command_context_factory>(ctx);
@@ -439,11 +466,14 @@ struct server::impl
 
             if (name == L"tcp") {
                 auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
+                std::wstring host_w = xml_controller.second.get(L"host", L"");
+                auto host_utf8 = u8(host_w);
 
                 try {
                     auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
                         io_context_,
                         create_protocol(protocol, L"TCP Port " + std::to_wstring(port)),
+                        host_utf8,
                         static_cast<short>(port));
                     async_servers_.push_back(asyncbootstrapper);
 

@@ -846,7 +846,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 
     ~bluefish_consumer_proxy()
     {
-        executor_.invoke([=] { consumer_.reset(); });
+        executor_.invoke([=, this] { consumer_.reset(); });
     }
 
     // frame_consumer
@@ -855,7 +855,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
                     int                            port_index) override
     {
         format_desc_ = format_desc;
-        executor_.invoke([=] {
+        executor_.invoke([=, this] {
             consumer_.reset();
             consumer_.reset(new bluefish_consumer(config_, format_desc, channel_info.index));
         });
@@ -863,7 +863,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        return executor_.begin_invoke([=] { return consumer_->send(field, frame); });
+        return executor_.begin_invoke([=, this] { return consumer_->send(field, frame); });
     }
 
     std::wstring print() const override { return consumer_ ? consumer_->print() : L"[bluefish_consumer]"; }

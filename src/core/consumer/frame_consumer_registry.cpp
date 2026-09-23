@@ -73,7 +73,7 @@ class destroy_consumer_proxy : public frame_consumer
             auto                                             str = (*consumer)->print();
 
             try {
-                if (!consumer->unique())
+                if (consumer->use_count() != 1)
                     CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: "
                                       << consumer->use_count();
                 else

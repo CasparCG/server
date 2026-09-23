@@ -25,6 +25,7 @@
 
 namespace caspar {
 
+void                  setup_process_scheduling();
 void                  setup_prerequisites();
 void                  setup_console_window();
 void                  increase_process_priority();
