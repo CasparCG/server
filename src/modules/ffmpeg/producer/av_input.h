@@ -50,7 +50,7 @@ class Input
     std::optional<bool> seekable_;
     bool                cache_;
 
-    std::string                         filename_;
+    const std::string                   filename_;
     std::shared_ptr<diagnostics::graph> graph_;
 
     mutable std::mutex               ic_mutex_;
