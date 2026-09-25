@@ -12,6 +12,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/regex.hpp>
 
 #include <set>
 
@@ -21,6 +22,33 @@ extern "C" {
 }
 
 namespace caspar { namespace ffmpeg {
+
+namespace {
+
+// Parses ffmpeg command line style options ("-key value ...") into an AVDictionary. Every option
+// needs a value: a value-less "-flag" followed by another option takes that option as its value.
+void set_options(AVDictionary** options, const std::string& str)
+{
+    static const boost::regex opt_exp("-(?<NAME>[^\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+
+    for (auto it = boost::sregex_iterator(str.begin(), str.end(), opt_exp); it != boost::sregex_iterator(); ++it) {
+        const auto name  = (*it)["NAME"].str();
+        const auto value = (*it)["VALUE"].matched ? (*it)["VALUE"].str() : std::string();
+        FF(av_dict_set(options, name.c_str(), value.c_str(), 0));
+    }
+}
+
+// Options from <ffmpeg><producer><options><scope>. Unknown options are logged as unused once the
+// input has been opened, but an invalid value for a known option makes the open fail.
+void set_config_options(AVDictionary** options, const std::wstring& scope)
+{
+    const auto str = env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.options." + scope, L"");
+    if (!str.empty()) {
+        set_options(options, u8(str));
+    }
+}
+
+} // namespace
 
 Input::Input(const std::string&                  filename,
              std::shared_ptr<diagnostics::graph> graph,
@@ -184,30 +212,26 @@ void Input::internal_reset()
             u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.cache.path", L"./ffmpeg-cache"));
         av_dict_set(&options, "cache_dir", cache_dir.c_str(), 0);
 
-        auto cache_size_max =
-            u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.cache.max-size", L""));
-        if (!cache_size_max.empty()) {
-            av_dict_set(&options, "cache_size_max", cache_size_max.c_str(), 0);
-        }
-
-        auto ignore_errors = env::properties().get<bool>(L"configuration.ffmpeg.producer.cache.ignore-errors", true);
-        av_dict_set(&options, "ignore_errors", ignore_errors ? "1" : "0", 0);
-
-        auto retry_corrupt = env::properties().get<bool>(L"configuration.ffmpeg.producer.cache.retry-corrupt", true);
-        av_dict_set(&options, "retry_corrupt", retry_corrupt ? "1" : "0", 0);
-
-        auto cache_timeout =
-            u8(env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.cache.timeout", L""));
-        if (!cache_timeout.empty()) {
-            av_dict_set(&options, "cache_timeout", cache_timeout.c_str(), 0);
-        }
-
         filename_ = "shared:" + filename_;
     }
 
     if (input_format == nullptr) {
         // TODO (fix) timeout?
         FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
+    }
+
+    // Applied last so that user configuration wins over the defaults above.
+    set_config_options(&options, L"default");
+    if (!url_parts.first.empty()) {
+        // The TLS variants share their protocol implementation, so they share its scope as well.
+        auto scope = url_parts.first;
+        if (scope == L"https" || scope == L"rtmps") {
+            scope.pop_back();
+        }
+        set_config_options(&options, scope);
+    }
+    if (cache_) {
+        set_config_options(&options, L"shared");
     }
 
     AVFormatContext* ic             = avformat_alloc_context();
