@@ -122,6 +122,7 @@ class html_client
     , public CefLifeSpanHandler
     , public CefLoadHandler
     , public CefDisplayHandler
+    , public CefRequestHandler
 {
     std::wstring                        url_;
     spl::shared_ptr<diagnostics::graph> graph_;
@@ -507,6 +508,23 @@ class html_client
     CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
 
     CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
+
+    CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
+
+    // A crash/kill of the (separate-process) renderer leaves this browser instance permanently blank
+    // otherwise - respawn it the same way an explicit RELOAD would, rather than losing the layer for good.
+    void OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
+                                   TerminationStatus     status,
+                                   int                    error_code,
+                                   const CefString&       error_string) override
+    {
+        if (closing_)
+            return;
+
+        CASPAR_LOG(warning) << "[html_producer] " << print() << L" renderer process terminated (status: "
+                            << static_cast<int>(status) << L"), reloading.";
+        browser->Reload();
+    }
 
     void OnLoadError(CefRefPtr<CefBrowser> browser,
                      CefRefPtr<CefFrame>   frame,
