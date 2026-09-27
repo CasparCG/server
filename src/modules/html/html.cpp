@@ -39,6 +39,7 @@
 
 #include <memory>
 #include <utility>
+#include <cstring>
 
 #include <include/cef_api_hash.h>
 #include <include/cef_app.h>
@@ -282,6 +283,21 @@ void init(const core::module_dependencies& dependencies)
 #endif
 // Malinfo patch section 2 end - Remove once fixed upstream.
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
+
+    // CasparCG builds against CEF's unversioned/experimental API, which is only guaranteed compatible with
+    // the exact library build the headers came from (see cef_api_hash.h). This is normally guaranteed by
+    // linking a bundled libcef, but USE_SYSTEM_CEF instead relies on the installed casparcg-cef-142 package
+    // matching what CasparCG was last built against - which can silently drift after a package update without
+    // a rebuild. Surface that loudly here instead of it only manifesting later as an unexplained crash.
+    const char* actual_hash = cef_api_hash(CEF_API_VERSION, 0);
+    if (!actual_hash || std::strcmp(actual_hash, CEF_API_HASH_PLATFORM) != 0) {
+        CASPAR_LOG(error) << L"[html] CEF API hash mismatch: this build of CasparCG does not match the "
+                             L"installed CEF library/version. This is a known cause of crashes (including "
+                             L"SIGILL) inside libcef.so. Rebuild CasparCG against the currently-installed "
+                             L"casparcg-cef-142/-dev packages (or reinstall the package version this build "
+                             L"expects) to resolve. built-against="
+                          << CEF_API_HASH_PLATFORM << L" installed=" << (actual_hash ? actual_hash : "(null)");
+    }
 
     CefMainArgs main_args;
     g_cef_executor = std::make_unique<executor>(L"cef");
