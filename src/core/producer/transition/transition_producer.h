@@ -37,12 +37,13 @@ enum class transition_type
     push,
     slide,
     wipe,
-    fadecut,
-    cutfade,
-    vfade,
+    fadecut, // fade source to black, then cut to destination
+    cutfade, // cut source to black, then fade in destination
+    vfade,   // fade source to black, then fade in destination
     count
 };
 
+// Direction of DST relative to SRC; unused by MIX/CUT/FADECUT/CUTFADE/VFADE
 enum class transition_direction
 {
     from_left,

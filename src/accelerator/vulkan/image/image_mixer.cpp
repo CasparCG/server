@@ -26,6 +26,7 @@
 #include "../util/device.h"
 #include "../util/renderpass.h"
 #include "../util/texture.h"
+#include "../util/transfer.h"
 
 #ifdef WIN32
 #include "../../d3d/d3d_texture2d.h"
@@ -97,24 +98,21 @@ class image_renderer
                 {array<const std::uint8_t>(buffer.data(), format_desc.size, true), nullptr});
         }
 
-        auto f = std::move(vulkan_->dispatch_async(
-            [this, format_desc, layers = std::move(layers)]() mutable
-            -> std::tuple<std::future<array<const std::uint8_t>>, std::shared_ptr<core::texture>> {
-                auto pass   = kernel_.create_renderpass(format_desc.square_width, format_desc.square_height);
-                auto target = pass->default_attachment();
-                draw(target, std::move(layers), format_desc, pass);
+        // Record + submit synchronously on the caller's (mixer) thread; the only
+        // CPU wait is the readback future's .get() downstream (it consumes bytes).
+        auto pass   = kernel_.create_renderpass(format_desc.square_width, format_desc.square_height);
+        auto target = pass->default_attachment();
+        draw(target, std::move(layers), format_desc, pass);
 
-                pass->commit();
+        pass->commit();
 
-                return {vulkan_->copy_async(target), nullptr};
-            }));
+        auto readback = vulkan_->transfer().copy_async(target);
 
-        return std::async(
-            std::launch::deferred,
-            [f = std::move(f)]() mutable -> std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>> {
-                auto tuple = std::move(f.get());
-                return {std::move(std::get<0>(tuple).get()), std::move(std::get<1>(tuple))};
-            });
+        return std::async(std::launch::deferred,
+                          [readback = std::move(readback)]() mutable
+                              -> std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>> {
+                              return {std::move(readback.get()), nullptr};
+                          });
     }
 
     common::bit_depth depth() const { return depth_; }
@@ -321,11 +319,11 @@ struct image_mixer::impl
             item.textures = *textures_ptr;
         } else {
             for (int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n) {
-                item.textures.emplace_back(vulkan_->copy_async(frame.image_data(n),
-                                                               item.pix_desc.planes[n].width,
-                                                               item.pix_desc.planes[n].height,
-                                                               item.pix_desc.planes[n].stride,
-                                                               item.pix_desc.planes[n].depth));
+                item.textures.emplace_back(vulkan_->transfer().copy_async(frame.image_data(n),
+                                                                          item.pix_desc.planes[n].width,
+                                                                          item.pix_desc.planes[n].height,
+                                                                          item.pix_desc.planes[n].stride,
+                                                                          item.pix_desc.planes[n].depth));
             }
         }
 
@@ -370,11 +368,12 @@ struct image_mixer::impl
                                        }
                                        std::vector<future_texture> textures;
                                        for (int n = 0; n < static_cast<int>(desc.planes.size()); ++n) {
-                                           textures.emplace_back(self->vulkan_->copy_async(image_data[n],
-                                                                                           desc.planes[n].width,
-                                                                                           desc.planes[n].height,
-                                                                                           desc.planes[n].stride,
-                                                                                           desc.planes[n].depth));
+                                           textures.emplace_back(
+                                               self->vulkan_->transfer().copy_async(image_data[n],
+                                                                                    desc.planes[n].width,
+                                                                                    desc.planes[n].height,
+                                                                                    desc.planes[n].stride,
+                                                                                    desc.planes[n].depth));
                                        }
                                        return std::make_shared<decltype(textures)>(std::move(textures));
                                    });
@@ -419,7 +418,6 @@ image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, 
 {
     return impl_->create_frame(tag, desc, depth);
 }
-
 
 #ifdef WIN32
 core::const_frame image_mixer::import_d3d_texture(const void*                                tag,

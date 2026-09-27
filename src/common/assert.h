@@ -45,7 +45,7 @@
     do {                                                                                                               \
         if (!(expr)) {                                                                                                 \
             CASPAR_THROW_EXCEPTION(programming_error()                                                                 \
-                                   << msg_info(std::string("Assertion Failed: ") + CASPAR_VERIFY_EXPR_STR(expr)));     \
+                                   << msg_info(std::string("Assertion Failed: " CASPAR_VERIFY_EXPR_STR(expr))));       \
         }                                                                                                              \
     } while (0);
 

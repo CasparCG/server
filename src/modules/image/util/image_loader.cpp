@@ -39,7 +39,6 @@ extern "C" {
 #define __STDC_LIMIT_MACROS
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavutil/dict.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
@@ -77,11 +76,8 @@ std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* fo
 
     FF(avcodec_parameters_to_context(codec_ctx.get(), par));
 
-    AVDictionary* opt = nullptr;
-    CASPAR_SCOPE_EXIT { av_dict_free(&opt); };
-
-    av_dict_set(&opt, "thread_type", "slice", 0);
-    FF(avcodec_open2(codec_ctx.get(), codec, &opt));
+    codec_ctx->thread_type = FF_THREAD_SLICE;
+    FF(avcodec_open2(codec_ctx.get(), codec, nullptr));
 
     AVPacket pkt;
     FF(av_read_frame(format_ctx, &pkt));

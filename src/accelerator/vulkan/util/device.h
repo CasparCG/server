@@ -26,7 +26,6 @@
 #include <common/bit_depth.h>
 #include <core/frame/geometry.h>
 
-#include <functional>
 #include <future>
 
 #include <vulkan/vulkan.hpp>
@@ -36,6 +35,8 @@ namespace caspar { namespace accelerator { namespace vulkan {
 struct draw_params;
 
 class image_kernel;
+class vulkan_queue;
+class transfer;
 
 class device final
     : public std::enable_shared_from_this<device>
@@ -49,40 +50,14 @@ class device final
 
     device& operator=(const device&) = delete;
 
-    std::shared_ptr<class pipeline> get_pipeline(common::bit_depth depth);
-    std::pair<vk::Buffer, vk::DeviceMemory>
-    upload_vertex_buffer(const std::vector<core::frame_geometry::coord>& coords);
-
     vk::PhysicalDeviceMemoryProperties getMemoryProperties();
-    std::vector<vk::CommandBuffer>     allocateCommandBuffers(uint32_t count);
-    void                               submit(const vk::SubmitInfo& submitInfo, vk::Fence fence);
     vk::Device                         getVkDevice() const;
+    std::shared_ptr<vulkan_queue>      queue();
+    class transfer&                    transfer();
 
-    std::shared_ptr<class texture>
-    create_attachment(int width, int height, common::bit_depth depth, uint32_t components_count);
     std::shared_ptr<class texture> create_texture(int width, int height, int stride, common::bit_depth depth);
+    std::shared_ptr<class buffer>  create_buffer(int size, bool write);
     array<uint8_t>                 create_array(int size);
-
-    std::future<std::shared_ptr<class texture>>
-    copy_async(const array<const uint8_t>& source, int width, int height, int stride, common::bit_depth depth);
-    std::future<array<const uint8_t>> copy_async(const std::shared_ptr<class texture>& source);
-    template <typename Func>
-    auto dispatch_async(Func&& func)
-    {
-        using result_type = decltype(func());
-        using task_type   = std::packaged_task<result_type()>;
-
-        auto task   = std::make_shared<task_type>(std::forward<Func>(func));
-        auto future = task->get_future();
-        dispatch([=] { (*task)(); });
-        return future;
-    }
-
-    template <typename Func>
-    auto dispatch_sync(Func&& func)
-    {
-        return dispatch_async(std::forward<Func>(func)).get();
-    }
 
     std::wstring version() const;
 
@@ -90,7 +65,6 @@ class device final
     std::future<void>            gc();
 
   private:
-    void dispatch(std::function<void()> func);
     struct impl;
     std::shared_ptr<impl> impl_;
 };

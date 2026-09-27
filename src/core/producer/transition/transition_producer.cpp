@@ -259,6 +259,7 @@ class transition_producer : public frame_producer
             src.transform().audio_transform.immediate_volume = current_frame_ == 0;
             return src;
         } else if (info_.type == transition_type::vfade) {
+            // Hold on a single black frame at the midpoint, sized to fit one frame regardless of parity
             double delta            = info_.tweener(current_frame_, 0.0, 1.0, static_cast<double>(info_.duration - 1));
             bool   is_even_duration = (info_.duration % 2 == 0);
 
@@ -315,6 +316,7 @@ class transition_producer : public frame_producer
         src_frame.transform().audio_transform.volume = 1.0 - delta;
         dst_frame.transform().audio_transform.volume = delta;
         if (info_.type == transition_type::cutfade) {
+            // SRC already cut away (opacity 0 below); ramp DST opacity in linearly by frame count, ignoring the tweener
             double mix;
             if (current_frame_ == 0) {
                 mix = 0.0;
@@ -378,6 +380,8 @@ spl::shared_ptr<frame_producer> create_transition_producer(const spl::shared_ptr
 
 bool try_match_transition(const std::wstring& message, transition_info& transitionInfo)
 {
+    // Syntax: <CUT|MIX|PUSH|SLIDE|WIPE|FADECUT|CUTFADE|VFADE> <duration> [tween] [direction]
+    // direction is only used by PUSH/SLIDE/WIPE; LEFT/RIGHT/UP/DOWN are aliases for FROMRIGHT/FROMLEFT/FROMBOTTOM/FROMTOP
     // Using word boundaries to ensure we match complete transition names
     static const boost::wregex expr(
         LR"(.*\b(?<TRANSITION>VFADE|FADECUT|CUTFADE|CUT|PUSH|SLIDE|WIPE|MIX)\b\s+(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|FROMTOP|FROMBOTTOM|LEFT|RIGHT|UP|DOWN)?.*)");
