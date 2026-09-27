@@ -305,19 +305,19 @@ class html_client
         }
     }
 
-    bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
-                       CefRefPtr<CefFrame>            frame,
-                       int                            popup_id,
-                       const CefString&               target_url,
-                       const CefString&               target_frame_name,
-                       WindowOpenDisposition          target_disposition,
-                       bool                           user_gesture,
-                       const CefPopupFeatures&        popupFeatures,
-                       CefWindowInfo&                 windowInfo,
-                       CefRefPtr<CefClient>&          client,
-                       CefBrowserSettings&            settings,
-                       CefRefPtr<CefDictionaryValue>& dict,
-                       bool*                          no_javascript_access) override
+    bool OnBeforePopup(CefRefPtr<CefBrowser>                      browser,
+                       CefRefPtr<CefFrame>                        frame,
+                       int                                        popup_id,
+                       const CefString&                           target_url,
+                       const CefString&                           target_frame_name,
+                       CefLifeSpanHandler::WindowOpenDisposition  target_disposition,
+                       bool                                       user_gesture,
+                       const CefPopupFeatures&                    popupFeatures,
+                       CefWindowInfo&                             windowInfo,
+                       CefRefPtr<CefClient>&                      client,
+                       CefBrowserSettings&                        settings,
+                       CefRefPtr<CefDictionaryValue>&             dict,
+                       bool*                                      no_javascript_access) override
     {
         // This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon
         // closing
