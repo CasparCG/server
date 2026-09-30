@@ -171,13 +171,21 @@ struct wrapped_vertex
     double texture_q = 1.0;
 };
 
-static const double epsilon = 0.001;
+// Distance (in normalised coordinates) a vertex must be outside a crop edge to be cropped. Less than a pixel at 8k.
+static const double epsilon = 0.0001;
 
 bool inline point_is_outside_of_line(const t_point& line_1, const t_point& line_2, const t_point& vertex, bool invert_winding)
 {
-    // use a cross product to check if the point is outside the crop region
-    auto cross = (line_2(0) - line_1(0)) * (vertex(1) - line_1(1)) - (line_2(1) - line_1(1)) * (vertex(0) - line_1(0));
-    return invert_winding ? cross > epsilon : cross < -epsilon;
+    auto dx  = line_2(0) - line_1(0);
+    auto dy  = line_2(1) - line_1(1);
+    auto len = std::hypot(dx, dy);
+    if (len == 0)
+        return false;
+
+    // Signed distance of the vertex from the crop edge. The cross product alone is scaled by the edge length, so
+    // comparing it against epsilon would make the tolerance grow as the crop region gets smaller.
+    auto dist = (dx * (vertex(1) - line_1(1)) - dy * (vertex(0) - line_1(0))) / len;
+    return invert_winding ? dist > epsilon : dist < -epsilon;
 }
 
 // http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
@@ -204,14 +212,6 @@ bool get_intersection_with_crop_line(const t_point& crop0,
     }
 
     return false; // No collision
-}
-
-double hypotenuse(double x1, double y1, double x2, double y2)
-{
-    auto x = x2 - x1;
-    auto y = y2 - y1;
-
-    return std::sqrt(x * x + y * y);
 }
 
 double calc_q(double close_diagonal, double distant_diagonal)
@@ -268,13 +268,13 @@ void fill_texture_q_for_quad(std::vector<wrapped_vertex>& coords)
         double diagonal_intersection_y = coords[0].vertex(1) + t * s1_y;
 
         auto d0 =
-            hypotenuse(coords[3].vertex(0), coords[3].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+            std::hypot(diagonal_intersection_x - coords[3].vertex(0), diagonal_intersection_y - coords[3].vertex(1));
         auto d1 =
-            hypotenuse(coords[2].vertex(0), coords[2].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+            std::hypot(diagonal_intersection_x - coords[2].vertex(0), diagonal_intersection_y - coords[2].vertex(1));
         auto d2 =
-            hypotenuse(coords[1].vertex(0), coords[1].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+            std::hypot(diagonal_intersection_x - coords[1].vertex(0), diagonal_intersection_y - coords[1].vertex(1));
         auto d3 =
-            hypotenuse(coords[0].vertex(0), coords[0].vertex(1), diagonal_intersection_x, diagonal_intersection_y);
+            std::hypot(diagonal_intersection_x - coords[0].vertex(0), diagonal_intersection_y - coords[0].vertex(1));
 
         auto ulq = calc_q(d3, d1);
         auto urq = calc_q(d2, d0);
