@@ -19,10 +19,14 @@ extern "C" {
 
 namespace caspar { namespace ffmpeg {
 
-Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph, std::optional<bool> seekable)
-    : filename_(filename)
+Input::Input(const std::string&                  filename,
+             std::shared_ptr<diagnostics::graph> graph,
+             std::optional<bool>                 seekable,
+             std::optional<int>                  hls_start_index)
+    : seekable_(seekable)
+    , hls_start_index_(hls_start_index)
+    , filename_(filename)
     , graph_(graph)
-    , seekable_(seekable)
 {
     graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
     graph_->set_color("input", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -166,6 +170,12 @@ void Input::internal_reset()
     if (seekable_) {
         CASPAR_LOG(debug) << "av_input[" + filename_ + "] Disabled seeking";
         FF(av_dict_set(&options, "seekable", *seekable_ ? "1" : "0", 0));
+    }
+
+    if (hls_start_index_) {
+        const auto value = std::to_string(*hls_start_index_);
+        CASPAR_LOG(debug) << "av_input[" << filename_ << "] HLS live_start_index=" << *hls_start_index_;
+        FF(av_dict_set(&options, "live_start_index", value.c_str(), 0));
     }
 
     if (input_format == nullptr) {
