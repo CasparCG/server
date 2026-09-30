@@ -201,6 +201,7 @@ int main(int argc, char** argv)
 
     ::signal(SIGSEGV, signal_handler);
     ::signal(SIGABRT, signal_handler);
+    ::signal(SIGILL, signal_handler);
     std::set_terminate(caspar::terminate_handler);
 
     static auto backtrace = "./backtrace.dump";
