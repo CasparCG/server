@@ -22,6 +22,7 @@
 #include "../../stdafx.h"
 
 #include "../filesystem.h"
+#include "../../locale.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -40,7 +41,7 @@ std::optional<std::wstring> find_case_insensitive(const std::wstring& case_insen
     p = absolute(p);
     path result;
 
-    auto loc = std::locale(""); // Use system locale
+    auto loc = safe_utf8_locale();
 
     for (auto part : p) {
         auto concatenated = result / part;
