@@ -47,8 +47,8 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <mutex>
 #include <thread>
-#include <tuple> // std::ignore
 #include <utility>
 #include <vector>
 
@@ -63,6 +63,9 @@
 #include <accelerator/ogl/util/shader.h>
 
 namespace caspar { namespace screen {
+
+// glewInit() rewrites a process-global table and needs a current context, so setup must not overlap a teardown.
+static std::mutex g_gl_lifetime_mutex;
 
 std::unique_ptr<accelerator::ogl::shader> get_shader()
 {
@@ -162,8 +165,8 @@ struct screen_consumer
     tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
 
     std::unique_ptr<accelerator::ogl::shader> shader_;
-    GLuint                                    vao_;
-    GLuint                                    vbo_;
+    GLuint                                    vao_ = 0;
+    GLuint                                    vbo_ = 0;
 
     std::atomic<bool> is_running_{true};
     std::thread       thread_;
@@ -258,7 +261,9 @@ struct screen_consumer
         }
 
         thread_ = std::thread([this] {
+            bool gl_ready = false;
             try {
+                std::unique_lock<std::mutex> gl_lifetime_lock(g_gl_lifetime_mutex);
 #if SFML_VERSION_MAJOR >= 3
                 sf::VideoMode mode{sf::Vector2u(config_.sbs_key ? screen_width_ * 2 : screen_width_, screen_height_),
                                    sf::VideoMode::getDesktopMode().bitsPerPixel};
@@ -285,7 +290,10 @@ struct screen_consumer
 #endif
                 window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
                 window_.setMouseCursorVisible(config_.interactive);
-                std::ignore = window_.setActive(true);
+                if (!window_.setActive(true)) {
+                    CASPAR_THROW_EXCEPTION(gl::ogl_exception()
+                                           << msg_info("Failed to make the OpenGL context current."));
+                }
 
                 if (config_.always_on_top) {
 #ifdef _MSC_VER
@@ -296,8 +304,11 @@ struct screen_consumer
 #endif
                 }
 
-                if (glewInit() != GLEW_OK) {
-                    CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+                if (const auto err = glewInit(); err != GLEW_OK) {
+                    CASPAR_THROW_EXCEPTION(gl::ogl_exception()
+                                           << msg_info(std::string("Failed to initialize GLEW (") +
+                                                       std::to_string(static_cast<int>(err)) + "): " +
+                                                       reinterpret_cast<const char*>(glewGetErrorString(err))));
                 }
 
                 if (!GLEW_VERSION_4_5 && (glewIsSupported("GL_ARB_sync GL_ARB_shader_objects GL_ARB_multitexture "
@@ -306,6 +317,8 @@ struct screen_consumer
                                                "Your graphics card does not meet the minimum hardware requirements "
                                                "since it does not support OpenGL 4.5 or higher."));
                 }
+
+                gl_ready = true;
 
                 GL(glGenVertexArrays(1, &vao_));
                 GL(glGenBuffers(1, &vbo_));
@@ -345,6 +358,8 @@ struct screen_consumer
                 glClear(GL_COLOR_BUFFER_BIT);
                 window_.display();
 
+                gl_lifetime_lock.unlock();
+
                 while (is_running_) {
                     tick();
                 }
@@ -355,13 +370,17 @@ struct screen_consumer
                 is_running_ = false;
             }
 
-            for (auto frame : frames_) {
-                strategy_->cleanup_frame(frame);
-            }
+            std::lock_guard<std::mutex> gl_lifetime_lock(g_gl_lifetime_mutex);
 
-            shader_.reset();
-            GL(glDeleteVertexArrays(1, &vao_));
-            GL(glDeleteBuffers(1, &vbo_));
+            if (gl_ready) {
+                for (auto frame : frames_) {
+                    strategy_->cleanup_frame(frame);
+                }
+
+                shader_.reset();
+                GL(glDeleteVertexArrays(1, &vao_));
+                GL(glDeleteBuffers(1, &vbo_));
+            }
 
             window_.close();
         });
