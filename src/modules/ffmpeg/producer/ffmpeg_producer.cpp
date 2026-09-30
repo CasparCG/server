@@ -36,6 +36,7 @@
 #include <core/video_format.h>
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/logic/tribool.hpp>
@@ -73,7 +74,8 @@ struct ffmpeg_producer : public core::frame_producer
                              std::optional<int64_t>               duration,
                              std::optional<bool>                  loop,
                              int                                  seekable,
-                             core::frame_geometry::scale_mode     scale_mode)
+                             core::frame_geometry::scale_mode     scale_mode,
+                             bool                                 straight_alpha)
         : filename_(filename)
         , frame_factory_(frame_factory)
         , format_desc_(format_desc)
@@ -88,7 +90,8 @@ struct ffmpeg_producer : public core::frame_producer
                                    duration,
                                    loop,
                                    seekable,
-                                   scale_mode))
+                                   scale_mode,
+                                   straight_alpha))
     {
     }
 
@@ -273,6 +276,28 @@ bool is_valid_file(const boost::filesystem::path& filename)
     return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
+// Whether this clip's RGB still has to be multiplied by its alpha before the blend, which
+// is premultiplied source-over. Nothing in ProRes 4444 or QuickTime Animation declares it,
+// so the order is: what the caller said, then the configured default, then premultiplied --
+// which is what the server has always done.
+bool decode_straight_alpha(const std::vector<std::wstring>& params)
+{
+    if (contains_param(L"STRAIGHT", params))
+        return true;
+    if (contains_param(L"PREMULTIPLIED", params))
+        return false;
+
+    const auto mode = env::properties().get<std::wstring>(
+        L"configuration.ffmpeg.producer.decode-alpha-mode", L"default");
+
+    if (boost::iequals(mode, L"straight"))
+        return true;
+    if (!boost::iequals(mode, L"default") && !boost::iequals(mode, L"premultiplied"))
+        CASPAR_LOG(warning) << L"Unknown decode-alpha-mode '" << mode << L"'. Expected default, "
+                               L"straight or premultiplied. Using premultiplied.";
+    return false;
+}
+
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies,
                                                       const std::vector<std::wstring>&         params)
 {
@@ -315,7 +340,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto filter_str = get_param(L"FILTER", params, L"");
 
-    auto scale_mode = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
+    auto scale_mode     = core::scale_mode_from_string(get_param(L"SCALE_MODE", params, L"STRETCH"));
+    auto straight_alpha = decode_straight_alpha(params);
 
     boost::ireplace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
     boost::ireplace_all(filter_str, L"DEINTERLACE_LQ", L"SEPARATEFIELDS");
@@ -340,18 +366,20 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
     auto afilter = get_param(L"AF", params, get_param(L"FILTER", params, L""));
 
     try {
-        return spl::make_shared<ffmpeg_producer>(dependencies.frame_factory,
-                                                 dependencies.format_desc,
-                                                 name,
-                                                 path,
-                                                 vfilter,
-                                                 afilter,
-                                                 start,
-                                                 seek2,
-                                                 duration,
-                                                 loop,
-                                                 seekable,
-                                                 scale_mode);
+        // spl::make_shared forwards at most twelve arguments.
+        return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(dependencies.frame_factory,
+                                                                      dependencies.format_desc,
+                                                                      name,
+                                                                      path,
+                                                                      vfilter,
+                                                                      afilter,
+                                                                      start,
+                                                                      seek2,
+                                                                      duration,
+                                                                      loop,
+                                                                      seekable,
+                                                                      scale_mode,
+                                                                      straight_alpha));
     } catch (...) {
         CASPAR_LOG_CURRENT_EXCEPTION();
     }
