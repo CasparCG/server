@@ -35,6 +35,7 @@
 #include <common/log.h>
 #include <common/os/filesystem.h>
 #include <common/param.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/consumer/frame_consumer_registry.h>
@@ -57,6 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <future>
+#include <format>
 #include <memory>
 
 #if defined(__GNUC__) && __GNUC__ == 14
@@ -67,7 +69,6 @@
 #include <boost/algorithm/string/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
@@ -1946,6 +1947,29 @@ std::wstring info_paths_command(command_context& ctx)
     return replyString.str();
 }
 
+std::wstring info_server_command(command_context& ctx)
+{
+    using namespace std::chrono;
+
+    auto start_time = floor<seconds>(caspar::env::start_time());
+    auto uptime     = floor<seconds>(system_clock::now()) - start_time;
+    auto d          = duration_cast<days>(uptime);
+
+    boost::property_tree::wptree info;
+    info.add(L"server.start-time", std::format(L"{:%FT%T}", start_time));
+    info.add(L"server.uptime", std::format(L"{:02}:{:%T}", d.count(), uptime - d));
+
+    std::wstringstream replyString;
+    // This is needed for backwards compatibility with old clients
+    replyString << L"201 INFO SERVER OK\r\n";
+
+    pt::xml_writer_settings<std::wstring> w(' ', 3);
+    pt::xml_parser::write_xml(replyString, info, w);
+
+    replyString << L"\r\n";
+    return replyString.str();
+}
+
 std::wstring diag_command(command_context& ctx)
 {
     core::diagnostics::osd::show_graphs(true);
@@ -2161,6 +2185,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_command(L"Query Commands", L"INFO", info_command, 0);
     repo->register_command(L"Query Commands", L"INFO CONFIG", info_config_command, 0);
     repo->register_command(L"Query Commands", L"INFO PATHS", info_paths_command, 0);
+    repo->register_command(L"Query Commands", L"INFO SERVER", info_server_command, 0);
     repo->register_command(L"Query Commands", L"GL INFO", gl_info_command, 0);
     repo->register_command(L"Query Commands", L"GL GC", gl_gc_command, 0);
 
