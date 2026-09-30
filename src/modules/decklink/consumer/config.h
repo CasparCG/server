@@ -58,6 +58,11 @@ struct vanc_configuration
     uint32_t     op47_line_field2 = 0;
     uint32_t     scte104_line     = 0;
     std::wstring op47_dummy_header;
+
+    bool                 enable_a53_cc                  = false;
+    std::uint8_t         a53_cc_line                    = 9;
+    boost::rational<int> a53_cc_cdp_frame_rate          = 0;
+    std::uint16_t        a53_cc_initial_sequence_number = 0;
 };
 
 struct hdr_meta_configuration
