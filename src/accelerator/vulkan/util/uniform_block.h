@@ -26,6 +26,7 @@ namespace caspar { namespace accelerator { namespace vulkan {
 struct uniform_block
 {
     uint32_t color_space_index   = 0;
+    uint32_t color_range_index   = 0; // 0 = limited, 1 = full; matches core::color_range
     float    precision_factor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
     int32_t  blend_mode          = 0;
     int32_t  keyer               = 0;

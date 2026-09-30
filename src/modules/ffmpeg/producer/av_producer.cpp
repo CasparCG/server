@@ -517,6 +517,21 @@ struct Filter
                         args += (boost::format(":frame_rate=%d/%d") % st->framerate.num % st->framerate.den).str();
                     }
 
+#if LIBAVFILTER_VERSION_MAJOR >= 10 // FFmpeg 7
+                    // A scaler in the graph takes the range from the link rather than the
+                    // frames. Left unset, it squeezes a full-range source down to limited
+                    // before the mixer sees it -- still correct, but a needless lossy
+                    // conversion. Older FFmpeg lacks these options and always squeezes.
+                    // The option values are the AVColorRange/AVColorSpace enums.
+                    if (st->color_range != AVCOL_RANGE_UNSPECIFIED) {
+                        args += (boost::format(":range=%d") % static_cast<int>(st->color_range)).str();
+                    }
+
+                    if (st->colorspace != AVCOL_SPC_UNSPECIFIED) {
+                        args += (boost::format(":colorspace=%d") % static_cast<int>(st->colorspace)).str();
+                    }
+#endif
+
                     AVFilterContext* source = nullptr;
                     FF(avfilter_graph_create_filter(
                         &source, avfilter_get_by_name("buffer"), name.c_str(), args.c_str(), nullptr, graph.get()));
@@ -562,7 +577,17 @@ struct Filter
                                               AV_PIX_FMT_YUV420P,
                                               AV_PIX_FMT_YUV420P10,
                                               AV_PIX_FMT_YUV420P12,
+                                              AV_PIX_FMT_YUV440P,
                                               AV_PIX_FMT_YUV410P,
+                                              // The deprecated full-range aliases. Without
+                                              // these the graph inserts a scaler for every
+                                              // frame of a full-range source purely to
+                                              // relabel it.
+                                              AV_PIX_FMT_YUVJ444P,
+                                              AV_PIX_FMT_YUVJ422P,
+                                              AV_PIX_FMT_YUVJ420P,
+                                              AV_PIX_FMT_YUVJ440P,
+                                              AV_PIX_FMT_YUVJ411P,
                                               AV_PIX_FMT_YUVA444P,
                                               AV_PIX_FMT_YUVA422P,
                                               AV_PIX_FMT_YUVA420P,

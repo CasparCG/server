@@ -211,6 +211,16 @@ struct image_kernel::impl
                                                {0.2627, 0.6780, 0.0593}}; // bt.2020
         const auto  luma_coeff              = luma_coefficients[static_cast<int>(color_space)];
 
+        // Limited range puts black at 16 and spans 219 for luma / 224 for chroma on an
+        // 8-bit scale; full range uses every code, with chroma still neutral at 128.
+        // These are normalised the same way the shader's samples are, so they hold for
+        // every bit depth.
+        const auto  full_range      = core::decode_color_range(params.pix_desc) == core::color_range::full;
+        const float ycbcr_offset[3] = {full_range ? 0.0f : 16.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f};
+        const float ycbcr_scale[3]  = {full_range ? 1.0f : 255.0f / 219.0f,
+                                       full_range ? 1.0f : 255.0f / 224.0f,
+                                       full_range ? 1.0f : 255.0f / 224.0f};
+
         // Setup shader
         shader_->use();
 
@@ -227,6 +237,8 @@ struct image_kernel::impl
         shader_->set("layer_key", texture_id::layer_key);
         shader_->set_matrix3("color_matrix", color_matrix);
         shader_->set("luma_coeff", luma_coeff[0], luma_coeff[1], luma_coeff[2]);
+        shader_->set("ycbcr_offset", ycbcr_offset[0], ycbcr_offset[1], ycbcr_offset[2]);
+        shader_->set("ycbcr_scale", ycbcr_scale[0], ycbcr_scale[1], ycbcr_scale[2]);
         shader_->set("has_local_key", static_cast<bool>(params.local_key));
         shader_->set("has_layer_key", static_cast<bool>(params.layer_key));
         shader_->set("pixel_format", params.pix_desc.format);

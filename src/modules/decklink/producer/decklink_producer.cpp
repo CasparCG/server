@@ -369,6 +369,9 @@ struct Decoder
 #endif
             }
 
+            // SDI is limited range, and the SDK doesn't expose anything to indicate otherwise
+            frame->color_range = AVCOL_RANGE_MPEG;
+
 #if LIBAVCODEC_VERSION_MAJOR < 61
             frame->interlaced_frame = mode->GetFieldDominance() != bmdProgressiveFrame;
             frame->top_field_first  = mode->GetFieldDominance() == bmdUpperFieldFirst ? 1 : 0;

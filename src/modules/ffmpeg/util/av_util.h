@@ -26,12 +26,14 @@ std::shared_ptr<AVFrame>  alloc_frame();
 std::shared_ptr<AVPacket> alloc_packet();
 
 core::color_space get_color_space(const std::shared_ptr<AVFrame>& video);
+core::color_range get_color_range(const std::shared_ptr<AVFrame>& video);
 
 core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
                                           int               width,
                                           int               height,
                                           std::vector<int>& data_map,
-                                          core::color_space color_space = core::color_space::unknown);
+                                          core::color_space color_space = core::color_space::unknown,
+                                          core::color_range color_range = core::color_range::unknown);
 core::mutable_frame     make_frame(void*                    tag,
                                    core::frame_factory&     frame_factory,
                                    std::shared_ptr<AVFrame> video,

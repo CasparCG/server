@@ -88,6 +88,40 @@ std::shared_ptr<AVFrame> ff_load_image(const char* filename, AVFormatContext* fo
 
     FF(avcodec_receive_frame(codec_ctx.get(), frame.get()));
 
+    // Un-jpeg the format, to avoid the deprecated values
+    switch (frame->format) {
+        case AV_PIX_FMT_YUVJ420P:
+            frame->color_range = AVCOL_RANGE_JPEG;
+            frame->format      = AV_PIX_FMT_YUV420P;
+            break;
+        case AV_PIX_FMT_YUVJ422P:
+            frame->color_range = AVCOL_RANGE_JPEG;
+            frame->format      = AV_PIX_FMT_YUV422P;
+            break;
+        case AV_PIX_FMT_YUVJ444P:
+            frame->color_range = AVCOL_RANGE_JPEG;
+            frame->format      = AV_PIX_FMT_YUV444P;
+            break;
+        case AV_PIX_FMT_YUVJ440P:
+            frame->color_range = AVCOL_RANGE_JPEG;
+            frame->format      = AV_PIX_FMT_YUV440P;
+            break;
+        case AV_PIX_FMT_YUVJ411P:
+            frame->color_range = AVCOL_RANGE_JPEG;
+            frame->format      = AV_PIX_FMT_YUV411P;
+            break;
+        default:
+            break; /* leave as the caller initialized it */
+    }
+
+    // Every still-image codec reachable through image2pipe is full range, but several
+    // decoders (png in particular) never say so. Without this a greyscale or YUV still
+    // would fall through to the mixer's broadcast-range default and come out with
+    // crushed blacks.
+    if (frame->color_range == AVCOL_RANGE_UNSPECIFIED) {
+        frame->color_range = AVCOL_RANGE_JPEG;
+    }
+
     return frame;
 }
 

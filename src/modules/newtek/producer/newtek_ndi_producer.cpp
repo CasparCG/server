@@ -186,7 +186,8 @@ struct newtek_ndi_producer : public core::frame_producer
                         av_frame->format = AV_PIX_FMT_RGBA;
                         break;
                     case NDIlib_FourCC_type_UYVY:
-                        av_frame->format = AV_PIX_FMT_UYVY422;
+                        av_frame->format      = AV_PIX_FMT_UYVY422;
+                        av_frame->color_range = AVCOL_RANGE_MPEG;
                         break;
                     default: // should never happen because library handles the conversion for us
                         av_frame->format = AV_PIX_FMT_BGRA;

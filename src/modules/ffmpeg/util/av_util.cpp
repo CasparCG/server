@@ -60,6 +60,35 @@ core::color_space get_color_space(const std::shared_ptr<AVFrame>& video)
     return result;
 }
 
+core::color_range get_color_range(const std::shared_ptr<AVFrame>& video)
+{
+    if (!video) {
+        return core::color_range::unknown;
+    }
+
+    switch (video->color_range) {
+        case AVColorRange::AVCOL_RANGE_JPEG:
+            return core::color_range::full;
+        case AVColorRange::AVCOL_RANGE_MPEG:
+            return core::color_range::limited;
+        default:
+            break;
+    }
+
+    // The deprecated yuvj* formats carry the range in the format enum rather than in
+    // color_range, and some decoders still emit them.
+    switch (static_cast<AVPixelFormat>(video->format)) {
+        case AV_PIX_FMT_YUVJ420P:
+        case AV_PIX_FMT_YUVJ422P:
+        case AV_PIX_FMT_YUVJ444P:
+        case AV_PIX_FMT_YUVJ440P:
+        case AV_PIX_FMT_YUVJ411P:
+            return core::color_range::full;
+        default:
+            return core::color_range::unknown;
+    }
+}
+
 core::mutable_frame make_frame(void*                            tag,
                                core::frame_factory&             frame_factory,
                                std::shared_ptr<AVFrame>         video,
@@ -70,10 +99,16 @@ core::mutable_frame make_frame(void*                            tag,
 {
     std::vector<int> data_map; // TODO(perf) when using data_map, avoid uploading duplicate planes
 
-    auto pix_desc =
-        video ? pixel_format_desc(
-                    static_cast<AVPixelFormat>(video->format), video->width, video->height, data_map, color_space)
-              : core::pixel_format_desc(core::pixel_format::invalid);
+    // Unlike the color_space, which some callers know better than the frame does, the
+    // range is always whatever the decoder put on the frame -- producers that build their
+    // own AVFrames tag them at the point they know it.
+    auto pix_desc = video ? pixel_format_desc(static_cast<AVPixelFormat>(video->format),
+                                              video->width,
+                                              video->height,
+                                              data_map,
+                                              color_space,
+                                              get_color_range(video))
+                          : core::pixel_format_desc(core::pixel_format::invalid);
     pix_desc.is_straight_alpha = is_straight_alpha;
 
     auto frame = frame_factory.create_frame(tag, pix_desc);
@@ -153,6 +188,16 @@ std::tuple<core::pixel_format, common::bit_depth> get_pixel_format(AVPixelFormat
             return {core::pixel_format::ycbcr, common::bit_depth::bit12};
         case AV_PIX_FMT_YUV420P:
             return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        case AV_PIX_FMT_YUV440P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
+        // The deprecated full-range aliases. Taking them directly keeps swscale out of
+        // the way; get_color_range reads the range back off the format.
+        case AV_PIX_FMT_YUVJ444P:
+        case AV_PIX_FMT_YUVJ422P:
+        case AV_PIX_FMT_YUVJ420P:
+        case AV_PIX_FMT_YUVJ440P:
+        case AV_PIX_FMT_YUVJ411P:
+            return {core::pixel_format::ycbcr, common::bit_depth::bit8};
         case AV_PIX_FMT_YUV420P10:
             return {core::pixel_format::ycbcr, common::bit_depth::bit10};
         case AV_PIX_FMT_YUV420P12:
@@ -190,14 +235,15 @@ core::pixel_format_desc pixel_format_desc(AVPixelFormat     pix_fmt,
                                           int               width,
                                           int               height,
                                           std::vector<int>& data_map,
-                                          core::color_space color_space)
+                                          core::color_space color_space,
+                                          core::color_range color_range)
 {
     // Get linesizes
     int linesizes[4];
     av_image_fill_linesizes(linesizes, pix_fmt, width);
 
     const auto fmt   = get_pixel_format(pix_fmt);
-    auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space);
+    auto       desc  = core::pixel_format_desc(std::get<0>(fmt), color_space, color_range);
     auto       depth = std::get<1>(fmt);
     auto       bpc   = depth == common::bit_depth::bit8 ? 1 : 2;
 
