@@ -155,17 +155,22 @@ struct video_channel::impl final
                     graph_->set_value("produce-time", produce_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     // This is a little race prone, but at worst a new consumer will start with a frame of black
-                    bool has_consumers = output_.consumer_count() > 0;
+                    bool has_consumers   = output_.consumer_count() > 0;
+                    bool need_host_frame = output_.needs_host_frame();
 
                     // Mix
                     caspar::timer mix_timer;
-                    auto          mixed_frame =
-                        has_consumers ? mixer_(stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples)
-                                               : const_frame{};
-                    auto mixed_frame2 =
-                        has_consumers && stage_frames.format_desc.field_count == 2
-                            ? mixer_(stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples)
-                            : const_frame{};
+                    auto          mixed_frame  = has_consumers ? mixer_(stage_frames.frames,
+                                                              stage_frames.format_desc,
+                                                              stage_frames.nb_samples,
+                                                              need_host_frame)
+                                                               : const_frame{};
+                    auto          mixed_frame2 = has_consumers && stage_frames.format_desc.field_count == 2
+                                                     ? mixer_(stage_frames.frames2,
+                                                     stage_frames.format_desc,
+                                                     stage_frames.nb_samples,
+                                                     need_host_frame)
+                                                     : const_frame{};
                     graph_->set_value("mix-time", mix_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
                     // Consume
