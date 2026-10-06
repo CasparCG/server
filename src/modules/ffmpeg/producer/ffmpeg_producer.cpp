@@ -42,6 +42,8 @@
 #include <common/filesystem.h>
 
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 
 extern "C" {
 #define __STDC_CONSTANT_MACROS
@@ -52,6 +54,23 @@ extern "C" {
 namespace caspar { namespace ffmpeg {
 
 using namespace std::chrono_literals;
+
+namespace {
+
+// Producers still being torn down on detached threads; uninit() waits for them so they
+// don't race the GPU driver's exit handlers.
+std::mutex              destroyers_mutex;
+std::condition_variable destroyers_cv;
+int                     destroyers = 0;
+
+} // namespace
+
+void wait_for_producer_destruction()
+{
+    std::unique_lock<std::mutex> lock(destroyers_mutex);
+    if (!destroyers_cv.wait_for(lock, 10s, [] { return destroyers == 0; }))
+        CASPAR_LOG(warning) << L"[ffmpeg] " << destroyers << L" producer(s) still being destroyed at shutdown.";
+}
 
 struct ffmpeg_producer : public core::frame_producer
 {
@@ -94,12 +113,19 @@ struct ffmpeg_producer : public core::frame_producer
 
     ~ffmpeg_producer()
     {
+        {
+            std::lock_guard<std::mutex> lock(destroyers_mutex);
+            ++destroyers;
+        }
         std::thread([producer = std::move(producer_)]() mutable {
             try {
                 producer.reset();
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
             }
+            std::lock_guard<std::mutex> lock(destroyers_mutex);
+            --destroyers;
+            destroyers_cv.notify_all();
         }).detach();
     }
 

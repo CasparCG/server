@@ -129,6 +129,7 @@ void init(const core::module_dependencies& dependencies)
 
 void uninit()
 {
+    wait_for_producer_destruction();
 #ifdef ENABLE_VULKAN
     set_vulkan_accelerator_device(nullptr);
 #endif
