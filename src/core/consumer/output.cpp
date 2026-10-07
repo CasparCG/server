@@ -137,6 +137,10 @@ struct output::impl
                 std::this_thread::sleep_until(*time);
             }
             time_ = *time + std::chrono::microseconds(static_cast<int>(1e6 / format_desc_.hz));
+
+            // The state is otherwise only rebuilt below, so without this the last removed consumer
+            // would keep being reported in INFO / OSC.
+            state_ = {};
             return;
         }
 
