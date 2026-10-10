@@ -66,7 +66,10 @@ extern "C" struct mallinfo mallinfo(void)
 {
     struct mallinfo2 m2 = mallinfo2();
     struct mallinfo   m {};
-    auto              clamp = [](size_t v) { return static_cast<int>(std::min<size_t>(v, INT32_MAX)); };
+    // Clamp to INT32_MAX/2 rather than INT32_MAX: the dump provider sums pairs of these fields
+    // (e.g. arena + hblkhd) as signed ints, so two fields at the full INT32_MAX would still
+    // overflow/wrap negative when added together and re-trigger the same crash.
+    auto clamp = [](size_t v) { return static_cast<int>(std::min<size_t>(v, INT32_MAX / 2)); };
     m.arena                 = clamp(m2.arena);
     m.ordblks               = clamp(m2.ordblks);
     m.smblks                = clamp(m2.smblks);
