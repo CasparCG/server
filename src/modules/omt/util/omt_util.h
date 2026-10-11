@@ -59,7 +59,7 @@ std::unique_lock<std::mutex> serialize_create_call();
 // match what the remote sender announces.
 std::wstring make_ascii_safe_name(const std::wstring& name);
 
-// Returns the sources currently found by discovery, as "Address Name" strings.
+// Returns the sources currently found by discovery, as "HOSTNAME (Source Name)" strings.
 std::vector<std::string> get_current_sources();
 
 // AMCP "OMT LIST" command.

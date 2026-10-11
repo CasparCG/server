@@ -26,6 +26,7 @@
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <thread>
@@ -215,6 +216,11 @@ std::wstring make_ascii_safe_name(const std::wstring& name)
 
 std::vector<std::string> get_current_sources()
 {
+    // libomt keeps the array it returns in static storage and frees it on the next call, so the calls and the
+    // copies out of it are made one at a time. Every AMCP connection runs its commands on its own thread.
+    static std::mutex           discovery_mutex;
+    std::lock_guard<std::mutex> lock(discovery_mutex);
+
     int          address_count = 0;
     char** const addresses     = load_library()->discovery_getaddresses(&address_count);
 
