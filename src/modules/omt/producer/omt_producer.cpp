@@ -403,14 +403,16 @@ std::atomic<int> omt_producer::instances_(0);
 
 namespace {
 
-// The source can be written as "[OMT] name", "OMT name" or "omt://name".
+// The source can be written as "[OMT] name", "OMT name" or "omt://host:port". The name is the one
+// that OMT LIST prints. A URL is passed on as it is, because libomt only connects directly to an
+// address that starts with omt://, and looks any other address up among the discovered sources.
 // Returns an empty string if `params` does not ask for an OMT source.
 std::wstring parse_source_name(const std::vector<std::wstring>& params)
 {
     const std::wstring& first = params.at(0);
 
     if (boost::istarts_with(first, L"omt://") == true) {
-        return first.substr(6);
+        return first;
     }
 
     const bool is_bracketed_keyword = boost::iequals(first, L"[OMT]") == true;
