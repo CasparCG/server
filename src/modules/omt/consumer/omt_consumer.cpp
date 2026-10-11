@@ -18,7 +18,9 @@
 
 #include "../util/omt_util.h"
 
+#include <common/bit_depth.h>
 #include <common/diagnostics/graph.h>
+#include <common/except.h>
 #include <common/future.h>
 #include <common/log.h>
 #include <common/os/thread.h>
@@ -699,6 +701,14 @@ std::atomic<int> omt_consumer::instances_(0);
 
 namespace {
 
+// The frames are handed to libomt as 8-bit BGRA, a deeper channel would be sent as garbage.
+void require_8_bit_channel(const core::channel_info& channel_info)
+{
+    if (channel_info.depth != common::bit_depth::bit8) {
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("The OMT consumer only supports 8-bit color depth."));
+    }
+}
+
 spl::shared_ptr<core::frame_consumer> make_consumer(const std::wstring& name,
                                                     const std::wstring& quality,
                                                     const std::wstring& alpha,
@@ -720,6 +730,8 @@ create_omt_consumer(const std::vector<std::wstring>&                         par
         return core::frame_consumer::empty();
     }
 
+    require_8_bit_channel(channel_info);
+
     return make_consumer(get_param(L"NAME", params, L""),
                          get_param(L"QUALITY", params, L""),
                          get_param(L"ALPHA", params, L""),
@@ -732,6 +744,8 @@ create_preconfigured_omt_consumer(const boost::property_tree::wptree&           
                                   const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                   const core::channel_info&                                channel_info)
 {
+    require_8_bit_channel(channel_info);
+
     return make_consumer(element.get(L"name", L""),
                          element.get(L"quality", L""),
                          element.get(L"alpha", L""),
