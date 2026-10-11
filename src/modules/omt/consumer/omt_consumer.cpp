@@ -217,6 +217,34 @@ struct sws_deleter
     void operator()(SwsContext* context) { sws_freeContext(context); }
 };
 
+// The color space that the frames are tagged with. It is the one that receivers assume when the
+// tag is missing: BT.601 below 720 lines and BT.709 from there on.
+OMTColorSpace color_space_for_height(int height)
+{
+    if (height >= 720) {
+        return OMTColorSpace_BT709;
+    }
+    return OMTColorSpace_BT601;
+}
+
+// libswscale converts RGB to YUV with the BT.601 matrix unless it is told otherwise, so the
+// matrix is set to the one that the frames are tagged with. The BGRA source is full range, the
+// YUV frames are limited range.
+void set_conversion_matrix(SwsContext* context, OMTColorSpace color_space)
+{
+    const int        matrix       = color_space == OMTColorSpace_BT709 ? SWS_CS_ITU709 : SWS_CS_ITU601;
+    const int* const coefficients = sws_getCoefficients(matrix);
+    constexpr int    source_range = 1;
+    constexpr int    target_range = 0;
+    constexpr int    unity        = 1 << 16;
+
+    const int result =
+        sws_setColorspaceDetails(context, coefficients, source_range, coefficients, target_range, 0, unity, unity);
+    if (result < 0) {
+        CASPAR_LOG(warning) << L"OMT: libswscale did not accept the color matrix, the colors may be off.";
+    }
+}
+
 } // namespace
 
 struct omt_consumer : public core::frame_consumer
@@ -485,7 +513,7 @@ struct omt_consumer : public core::frame_consumer
         video_frame.FrameRateD    = format_desc_.framerate.denominator();
         video_frame.AspectRatio =
             static_cast<float>(format_desc_.square_width) / static_cast<float>(format_desc_.square_height);
-        video_frame.ColorSpace = height >= 720 ? OMTColorSpace_BT709 : OMTColorSpace_BT601;
+        video_frame.ColorSpace = color_space_for_height(height);
 
         switch (pixel_format_) {
             case pixel_format::uyvy:
@@ -555,6 +583,9 @@ struct omt_consumer : public core::frame_consumer
             sws_height_ = height;
             sws_.reset(sws_getContext(
                 width, height, AV_PIX_FMT_BGRA, width, height, format, SWS_POINT, nullptr, nullptr, nullptr));
+            if (sws_ != nullptr) {
+                set_conversion_matrix(sws_.get(), color_space_for_height(height));
+            }
         }
 
         const std::array<const uint8_t*, 4> source_planes  = {bgra, nullptr, nullptr, nullptr};
