@@ -65,6 +65,13 @@ constexpr size_t max_queued_frames = 4;
 
 // --- Settings ---
 
+// An empty value means that the setting was not given. Any other value that is not understood
+// falls back to the default, which is worth a warning.
+void warn_unknown_value(const wchar_t* setting, const std::wstring& value, const wchar_t* fallback)
+{
+    CASPAR_LOG(warning) << L"OMT: unknown " << setting << L" \"" << value << L"\", using " << fallback << L".";
+}
+
 OMTQuality parse_quality(const std::wstring& value)
 {
     if (boost::iequals(value, L"low") == true) {
@@ -75,6 +82,9 @@ OMTQuality parse_quality(const std::wstring& value)
     }
     if (boost::iequals(value, L"high") == true) {
         return OMTQuality_High;
+    }
+    if (value.empty() == false && boost::iequals(value, L"default") == false) {
+        warn_unknown_value(L"QUALITY", value, L"default");
     }
     return OMTQuality_Default;
 }
@@ -95,6 +105,9 @@ alpha_mode parse_alpha_mode(const std::wstring& value)
     }
     if (boost::iequals(value, L"none") == true) {
         return alpha_mode::none;
+    }
+    if (value.empty() == false && boost::iequals(value, L"premultiplied") == false) {
+        warn_unknown_value(L"ALPHA", value, L"premultiplied");
     }
     return alpha_mode::premultiplied;
 }
@@ -140,6 +153,9 @@ pixel_format parse_pixel_format(const std::wstring& value)
     }
     if (boost::iequals(value, L"yv12") == true) {
         return pixel_format::yv12;
+    }
+    if (value.empty() == false && boost::iequals(value, L"bgra") == false) {
+        warn_unknown_value(L"PIXEL", value, L"bgra");
     }
     return pixel_format::bgra;
 }
@@ -256,6 +272,7 @@ struct omt_consumer : public core::frame_consumer
     const bool              name_sanitized_;
     const OMTQuality        quality_;
     const alpha_mode        alpha_mode_;
+    const bool              alpha_requested_;
     const pixel_format      pixel_format_;
 
     core::video_format_desc format_desc_;
@@ -287,13 +304,14 @@ struct omt_consumer : public core::frame_consumer
     caspar::timer                       frame_timer_;
 
   public:
-    omt_consumer(std::wstring name, OMTQuality quality, alpha_mode alpha, pixel_format format)
+    omt_consumer(std::wstring name, OMTQuality quality, alpha_mode alpha, bool alpha_requested, pixel_format format)
         : instance_no_(instances_++)
         , name_(name.empty() == false ? name : default_name())
         , name_utf8_(u8(omt::make_ascii_safe_name(name_)))
         , name_sanitized_(u16(name_utf8_) != name_)
         , quality_(quality)
         , alpha_mode_(alpha)
+        , alpha_requested_(alpha_requested)
         , pixel_format_(format)
     {
         lib_ = omt::load_library();
@@ -420,7 +438,7 @@ struct omt_consumer : public core::frame_consumer
         }
 
         CASPAR_LOG(info) << print() << L" sending " << pixel_format_name(pixel_format_) << L" (no alpha channel).";
-        if (alpha_mode_ != alpha_mode::none) {
+        if (alpha_requested_ == true && alpha_mode_ != alpha_mode::none) {
             CASPAR_LOG(warning) << print() << L" " << pixel_format_name(pixel_format_)
                                 << L" cannot carry an alpha channel, ignoring ALPHA " << alpha_mode_name(alpha_mode_)
                                 << L".";
@@ -746,7 +764,7 @@ spl::shared_ptr<core::frame_consumer> make_consumer(const std::wstring& name,
                                                     const std::wstring& pixel)
 {
     return spl::make_shared<omt_consumer>(
-        name, parse_quality(quality), parse_alpha_mode(alpha), parse_pixel_format(pixel));
+        name, parse_quality(quality), parse_alpha_mode(alpha), alpha.empty() == false, parse_pixel_format(pixel));
 }
 
 } // namespace
