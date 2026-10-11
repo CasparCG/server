@@ -337,6 +337,7 @@ struct omt_consumer : public core::frame_consumer
 
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
+        require_even_size();
 
         if (name_sanitized_ == true) {
             CASPAR_LOG(warning) << print() << L" OMT sender name \"" << name_ << L"\" contains non-ASCII characters, "
@@ -420,6 +421,19 @@ struct omt_consumer : public core::frame_consumer
             auto lock = omt::serialize_create_call();
             lib_->send_destroy(send_);
             send_ = nullptr;
+        }
+    }
+
+    // The chroma planes of the subsampled formats are laid out for even sizes, and the buffers are sized that way.
+    void require_even_size() const
+    {
+        const bool subsampled = pixel_format_ != pixel_format::bgra;
+        const bool even       = format_desc_.width % 2 == 0 && format_desc_.height % 2 == 0;
+        if (subsampled == true && even == false) {
+            const std::string size = std::to_string(format_desc_.width) + "x" + std::to_string(format_desc_.height);
+            CASPAR_THROW_EXCEPTION(caspar_exception()
+                                   << msg_info(u8(print()) + " " + u8(pixel_format_name(pixel_format_)) +
+                                               " needs an even frame size, the channel is " + size + "."));
         }
     }
 
