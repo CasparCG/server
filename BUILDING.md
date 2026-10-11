@@ -18,6 +18,22 @@ During the build, you can specify the CMake option `CASPARCG_DOWNLOAD_MIRROR` to
 If you want to be able to build CasparCG offline, you may need to manually seed this cache. You can do so by placing the correct tar.gz or zip into a folder and using `CASPARCG_DOWNLOAD_CACHE` to tell CMake where to find it.
 You can figure out which files you need by looking at each of the `ExternalProject_Add` function calls inside of [Bootstrap_Linux.cmake](./src/CMakeModules/Bootstrap_Linux.cmake) or [Bootstrap_Windows.cmake](./src/CMakeModules/Bootstrap_Windows.cmake). Some of the ones listed are optional, depending on other CMake flags.
 
+# Open Media Transport (OMT)
+
+The OMT runtime (libvmx, libomtnet and libomt) is cloned from https://github.com/openmediatransport at the revisions pinned in [OMT.cmake](./src/CMakeModules/OMT.cmake), and compiled as part of the CasparCG build. This works the same way on Windows and Linux, and the result is bundled next to the server. The sources are cloned into `omt-src` inside the build directory, so `git` must be able to reach GitHub on the first build.
+
+This needs, in addition to the normal build tools:
+
+- The .NET SDK, version 8.0 or newer (`dotnet`)
+- clang (`clang++`). On Windows this is LLVM, or the 'C++ Clang tools for Windows' component of Visual Studio. It must be in `PATH`.
+- Linux only: the zlib development headers (`zlib1g-dev`)
+
+`./tools/linux/install-dependencies` installs all of these on Ubuntu. Configure with `-DOMT_BUILD_FROM_SOURCE=OFF` to skip the OMT runtime. The server still builds and runs, but OMT can only be used once libomt has been installed some other way.
+
+To move to a newer upstream version, change the revisions at the top of [OMT.cmake](./src/CMakeModules/OMT.cmake), or override them with `-DOMT_LIBVMX_REVISION`, `-DOMT_LIBOMTNET_REVISION` and `-DOMT_LIBOMT_REVISION`.
+
+At runtime on Linux, libomt loads ICU (`libicu`) and Avahi (`libavahi-client`) from the system.
+
 # Windows
 
 ## Building distributable
@@ -95,6 +111,8 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
+
+-DOMT_BUILD_FROM_SOURCE=OFF - (default ON) do not build the OMT runtime, see the Open Media Transport section above.
 
 -DENABLE_AVX2=ON (Linux only, default OFF) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
 
