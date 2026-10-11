@@ -26,6 +26,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <thread>
 
@@ -39,100 +40,132 @@ namespace caspar { namespace omt {
 
 namespace {
 
-#ifdef _WIN32
-const wchar_t* LIBRARY_FILENAME = L"libomt.dll";
-#else
-const char* LIBRARY_FILENAME = "libomt.so";
-#endif
+// --- Loading the library ---
 
-void not_installed()
-{
 #ifdef _WIN32
-    CASPAR_THROW_EXCEPTION(
-        not_supported() << msg_info(L"libomt not available. Install the Open Media Transport (OMT) runtime "
-                                    L"(https://github.com/openmediatransport/libomtnet/releases) to use OMT "
-                                    L"sources/consumers."));
-#else
-    CASPAR_THROW_EXCEPTION(not_supported()
-                           << msg_info(L"libomt not available. Upstream doesn't publish a prebuilt Linux binary - "
-                                       L"build libomt (https://github.com/openmediatransport/libomt) and libvmx "
-                                       L"(https://github.com/openmediatransport/libvmx) from source and install "
-                                       L"libomt.so where the system linker can find it, to use OMT sources/"
-                                       L"consumers."));
-#endif
+const wchar_t* const library_filename = L"libomt.dll";
+
+void* open_module(const boost::filesystem::path& path) { return LoadLibraryW(path.c_str()); }
+
+void* find_symbol(void* module, const char* name)
+{
+    return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(module), name));
 }
 
-void not_compatible()
-{
-    CASPAR_THROW_EXCEPTION(
-        not_supported() << msg_info(L"Failed to resolve one or more functions in libomt. The installed OMT "
-                                    L"runtime may be incompatible with this version of CasparCG."));
-}
-
-template <typename Fn>
-bool resolve(void* module, const char* name, Fn& out)
-{
-#ifdef _WIN32
-    out = reinterpret_cast<Fn>(GetProcAddress(reinterpret_cast<HMODULE>(module), name));
+void close_module(void* module) { FreeLibrary(static_cast<HMODULE>(module)); }
 #else
-    out = reinterpret_cast<Fn>(dlsym(module, name));
+const char* const library_filename = "libomt.so";
+
+void* open_module(const boost::filesystem::path& path) { return dlopen(path.c_str(), RTLD_LOCAL | RTLD_LAZY); }
+
+void* find_symbol(void* module, const char* name) { return dlsym(module, name); }
+
+void close_module(void* module) { dlclose(module); }
 #endif
-    return out != nullptr;
+
+[[noreturn]] void throw_library_not_found()
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(
+                               L"libomt was not found. It is built together with CasparCG, unless CMake was "
+                               L"configured with -DOMT_BUILD_FROM_SOURCE=OFF. Otherwise libomt "
+                               L"(https://github.com/openmediatransport/libomt) has to be installed where the system "
+                               L"can find it."));
 }
 
+[[noreturn]] void throw_library_incompatible()
+{
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"libomt is missing one or more functions that CasparCG needs. "
+                                                       L"The installed version may not work with this CasparCG."));
+}
+
+// Looks for libomt on the system library path first, then in the folder CasparCG was started from.
 void* open_library()
 {
-#ifdef _WIN32
-    HMODULE module = LoadLibraryW(LIBRARY_FILENAME);
-    if (!module) {
-        auto dll_path = boost::filesystem::path(env::initial_folder()) / LIBRARY_FILENAME;
-        module         = LoadLibraryW(dll_path.c_str());
-    }
-    if (!module)
-        not_installed();
+    void* module = open_module(library_filename);
 
-    CASPAR_LOG(info) << L"Loaded " << LIBRARY_FILENAME;
-    static std::shared_ptr<void> keep_alive(module, FreeLibrary);
+    if (module == nullptr) {
+        const auto path_next_to_server = boost::filesystem::path(env::initial_folder()) / library_filename;
+        module                         = open_module(path_next_to_server);
+    }
+
+    if (module == nullptr) {
+        throw_library_not_found();
+    }
+
+    CASPAR_LOG(info) << L"Loaded " << boost::filesystem::path(library_filename).wstring();
+
+    // Unloads the library when CasparCG exits.
+    static std::shared_ptr<void> keep_loaded(module, close_module);
     return module;
-#else
-    void* handle = dlopen(LIBRARY_FILENAME, RTLD_LOCAL | RTLD_LAZY);
-    if (!handle) {
-        auto dll_path = boost::filesystem::path(env::initial_folder()) / LIBRARY_FILENAME;
-        handle         = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
-    }
-    if (!handle)
-        not_installed();
+}
 
-    CASPAR_LOG(info) << L"Loaded " << u16(LIBRARY_FILENAME);
-    static std::shared_ptr<void> keep_alive(handle, dlclose);
-    return handle;
-#endif
+template <typename Function>
+bool find_function(void* module, const char* name, Function& function)
+{
+    function = reinterpret_cast<Function>(find_symbol(module, name));
+    return function != nullptr;
+}
+
+// --- Names ---
+
+bool is_ascii(wchar_t character) { return static_cast<unsigned int>(character) <= 127; }
+
+bool is_ascii(const std::wstring& text)
+{
+    for (const wchar_t character : text) {
+        if (is_ascii(character) == false) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_combining_mark(wchar_t character) { return character >= 0x0300 && character <= 0x036F; }
+
+// Splits accented letters into the letter and its combining marks, then drops the marks.
+std::wstring remove_diacritics(const std::wstring& text)
+{
+    // The process-wide locale has no "convert" facet, which normalize() needs.
+    static const boost::locale::generator generator;
+    static const std::locale              normalization_locale = generator("en_US.UTF-8");
+
+    const std::wstring decomposed = boost::locale::normalize(text, boost::locale::norm_nfd, normalization_locale);
+
+    std::wstring result;
+    result.reserve(decomposed.size());
+    for (const wchar_t character : decomposed) {
+        if (is_combining_mark(character) == false) {
+            result.push_back(character);
+        }
+    }
+    return result;
 }
 
 } // namespace
 
 omt_lib* load_library()
 {
-    static omt_lib* lib = []() -> omt_lib* {
-        void* module = open_library();
+    static omt_lib* const lib = [] {
+        void* const module = open_library();
 
-        auto result = std::make_unique<omt_lib>();
+        auto loaded = std::make_unique<omt_lib>();
 
-        bool ok = true;
-        ok &= resolve(module, "omt_discovery_getaddresses", result->discovery_getaddresses);
-        ok &= resolve(module, "omt_receive_create", result->receive_create);
-        ok &= resolve(module, "omt_receive_destroy", result->receive_destroy);
-        ok &= resolve(module, "omt_receive", result->receive);
-        ok &= resolve(module, "omt_send_create", result->send_create);
-        ok &= resolve(module, "omt_send_destroy", result->send_destroy);
-        ok &= resolve(module, "omt_send", result->send);
-        ok &= resolve(module, "omt_send_getaddress", result->send_getaddress);
-        ok &= resolve(module, "omt_send_connections", result->send_connections);
+        bool all_functions_found = true;
+        all_functions_found &= find_function(module, "omt_discovery_getaddresses", loaded->discovery_getaddresses);
+        all_functions_found &= find_function(module, "omt_receive_create", loaded->receive_create);
+        all_functions_found &= find_function(module, "omt_receive_destroy", loaded->receive_destroy);
+        all_functions_found &= find_function(module, "omt_receive", loaded->receive);
+        all_functions_found &= find_function(module, "omt_send_create", loaded->send_create);
+        all_functions_found &= find_function(module, "omt_send_destroy", loaded->send_destroy);
+        all_functions_found &= find_function(module, "omt_send", loaded->send);
+        all_functions_found &= find_function(module, "omt_send_getaddress", loaded->send_getaddress);
+        all_functions_found &= find_function(module, "omt_send_connections", loaded->send_connections);
 
-        if (!ok)
-            not_compatible();
+        if (all_functions_found == false) {
+            throw_library_incompatible();
+        }
 
-        return result.release();
+        return loaded.release();
     }();
 
     return lib;
@@ -140,87 +173,72 @@ omt_lib* load_library()
 
 std::unique_lock<std::mutex> serialize_create_call()
 {
-    static std::mutex                    mutex;
-    static std::chrono::steady_clock::time_point last_call;
+    static std::mutex                                           mutex;
+    static std::optional<std::chrono::steady_clock::time_point> last_call_time;
+
+    constexpr auto minimum_gap = std::chrono::milliseconds(300);
 
     std::unique_lock<std::mutex> lock(mutex);
 
-    constexpr auto min_gap = std::chrono::milliseconds(300);
-    auto           now     = std::chrono::steady_clock::now();
-    if (last_call != std::chrono::steady_clock::time_point{} && now - last_call < min_gap)
-        std::this_thread::sleep_for(min_gap - (now - last_call));
-    last_call = std::chrono::steady_clock::now();
+    if (last_call_time.has_value() == true) {
+        const auto time_since_last_call = std::chrono::steady_clock::now() - last_call_time.value();
+        if (time_since_last_call < minimum_gap) {
+            std::this_thread::sleep_for(minimum_gap - time_since_last_call);
+        }
+    }
+    last_call_time = std::chrono::steady_clock::now();
 
     return lock;
 }
 
 std::wstring make_ascii_safe_name(const std::wstring& name)
 {
-    auto is_ascii = [](const std::wstring& s) {
-        for (wchar_t c : s) {
-            if (static_cast<unsigned int>(c) > 127)
-                return false;
-        }
-        return true;
-    };
-
-    if (is_ascii(name))
+    if (is_ascii(name) == true) {
         return name;
+    }
 
-    std::wstring result = name;
-
+    std::wstring result;
     try {
-        // Own locale with the "convert" category normalize() needs (the process' global
-        // locale only has "codepage").
-        static const boost::locale::generator gen;
-        static const std::locale              loc = gen("en_US.UTF-8");
-
-        // Decompose accented letters into base letter + combining mark, then drop the mark.
-        std::wstring decomposed = boost::locale::normalize(name, boost::locale::norm_nfd, loc);
-
-        result.clear();
-        result.reserve(decomposed.size());
-        for (wchar_t c : decomposed) {
-            if (c >= 0x0300 && c <= 0x036F)
-                continue; // Combining diacritical mark.
-            result.push_back(c);
-        }
+        result = remove_diacritics(name);
     } catch (...) {
-        result = name; // Fall through to the replacement loop below.
+        // Without normalization everything non-ASCII is replaced below.
+        result = name;
     }
 
-    for (wchar_t& c : result) {
-        if (static_cast<unsigned int>(c) > 127)
-            c = L'_';
+    for (wchar_t& character : result) {
+        if (is_ascii(character) == false) {
+            character = L'_';
+        }
     }
-
     return result;
 }
 
 std::vector<std::string> get_current_sources()
 {
-    std::vector<std::string> result;
+    int          address_count = 0;
+    char** const addresses     = load_library()->discovery_getaddresses(&address_count);
 
-    int    count     = 0;
-    char** addresses = load_library()->discovery_getaddresses(&count);
-
-    for (int n = 0; n < count; ++n) {
-        if (addresses && addresses[n]) {
-            result.emplace_back(addresses[n]);
-        }
+    std::vector<std::string> sources;
+    if (addresses == nullptr) {
+        return sources;
     }
 
-    return result;
+    for (int index = 0; index < address_count; ++index) {
+        if (addresses[index] != nullptr) {
+            sources.emplace_back(addresses[index]);
+        }
+    }
+    return sources;
 }
 
 std::wstring list_command(protocol::amcp::command_context& /*ctx*/)
 {
-    auto sources = get_current_sources();
+    const auto sources = get_current_sources();
 
     std::wstringstream reply;
     reply << L"200 OMT LIST OK\r\n";
-    for (size_t n = 0; n < sources.size(); ++n) {
-        reply << (n + 1) << L" \"" << sources[n].c_str() << L"\"\r\n";
+    for (size_t index = 0; index < sources.size(); ++index) {
+        reply << (index + 1) << L" \"" << u16(sources[index]) << L"\"\r\n";
     }
     reply << L"\r\n";
     return reply.str();

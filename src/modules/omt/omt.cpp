@@ -24,6 +24,7 @@
 #include <protocol/amcp/amcp_command_repository_wrapper.h>
 
 #include <common/env.h>
+#include <common/log.h>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -40,11 +41,12 @@ void init(const core::module_dependencies& dependencies)
 
         dependencies.command_repository->register_command(L"Query Commands", L"OMT LIST", omt::list_command, 0);
 
-        bool autoload = caspar::env::properties().get(L"configuration.omt.auto-load", false);
-        if (autoload)
+        const bool auto_load = caspar::env::properties().get(L"configuration.omt.auto-load", false);
+        if (auto_load == true) {
             omt::load_library();
-
+        }
     } catch (...) {
+        CASPAR_LOG_CURRENT_EXCEPTION();
     }
 }
 

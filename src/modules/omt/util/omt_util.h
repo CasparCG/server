@@ -26,8 +26,8 @@
 
 namespace caspar { namespace omt {
 
-// The subset of the libomt C API used by the producer/consumer, resolved dynamically
-// so CasparCG still builds and starts without the OMT runtime installed.
+// The part of the libomt API that CasparCG uses. The functions are looked up when libomt is
+// loaded, so CasparCG builds and starts without libomt being installed.
 struct omt_lib
 {
     decltype(&::omt_discovery_getaddresses) discovery_getaddresses;
@@ -36,38 +36,33 @@ struct omt_lib
     decltype(&::omt_receive_destroy) receive_destroy;
     decltype(&::omt_receive)         receive;
 
-    decltype(&::omt_send_create)     send_create;
-    decltype(&::omt_send_destroy)    send_destroy;
-    decltype(&::omt_send)            send;
-    decltype(&::omt_send_getaddress) send_getaddress;
+    decltype(&::omt_send_create)      send_create;
+    decltype(&::omt_send_destroy)     send_destroy;
+    decltype(&::omt_send)             send;
+    decltype(&::omt_send_getaddress)  send_getaddress;
     decltype(&::omt_send_connections) send_connections;
 };
 
-// Loads (once) and returns the libomt runtime, or throws caspar::not_supported if it
-// couldn't be found/loaded.
+// Loads libomt on the first call and returns it on every call.
+// Throws caspar::not_supported if libomt is missing or does not export everything in omt_lib.
 omt_lib* load_library();
 
-// Serializes calls into omt_send_create/omt_receive_create (and their matching destroy
-// calls) process-wide, with a short minimum spacing between them.
-//
-// Works around a libomt bug: the discovery name of every sender after the first one
-// (within the same process) loses its case. Also guards against a real CasparCG-side
-// race for calls made after startup.
+// Returns a lock that must be held while creating or destroying a sender or receiver.
+// Calls are serialized across the whole process and kept at least 300 ms apart, because libomt
+// loses the upper/lower case of the discovery name of every sender after the first one.
 std::unique_lock<std::mutex> serialize_create_call();
 
-// Returns an ASCII-safe transliteration of `name` for use as an OMT sender name:
-// diacritics are stripped, anything else non-ASCII is replaced with '_'.
-//
-// Works around a libomt bug: a non-ASCII sender name breaks that sender's discovery
-// entirely once more than one sender exists in the same process. Only affects sending;
-// a producer's connection target name is left as given, since it must match whatever
-// the remote sender actually announces.
+// Converts a name to ASCII for use as a sender name: diacritics are removed and any other
+// non-ASCII character becomes '_'. libomt breaks discovery of a sender with a non-ASCII name
+// as soon as there is more than one sender in the process.
+// Receivers are not affected, they connect with the name exactly as given because it has to
+// match what the remote sender announces.
 std::wstring make_ascii_safe_name(const std::wstring& name);
 
-// Returns the list of OMT sources (Address Name) currently visible via discovery.
+// Returns the sources currently found by discovery, as "Address Name" strings.
 std::vector<std::string> get_current_sources();
 
-// AMCP "OMT LIST" query command handler.
+// AMCP "OMT LIST" command.
 std::wstring list_command(protocol::amcp::command_context& ctx);
 
 }} // namespace caspar::omt
