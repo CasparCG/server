@@ -324,19 +324,7 @@ struct omt_consumer : public core::frame_consumer
         diagnostics::register_graph(graph_);
     }
 
-    ~omt_consumer()
-    {
-        running_ = false;
-        frame_queue_cond_.notify_all();
-        if (send_thread_.joinable() == true) {
-            send_thread_.join();
-        }
-
-        if (send_ != nullptr) {
-            auto lock = omt::serialize_create_call();
-            lib_->send_destroy(send_);
-        }
-    }
+    ~omt_consumer() { stop_sending(); }
 
     // --- core::frame_consumer ---
 
@@ -344,6 +332,9 @@ struct omt_consumer : public core::frame_consumer
                     const core::channel_info&      channel_info,
                     int                            port_index) override
     {
+        // The output initializes a consumer again when the video format of the channel changes.
+        stop_sending();
+
         format_desc_   = format_desc;
         channel_index_ = channel_info.index;
 
@@ -408,6 +399,27 @@ struct omt_consumer : public core::frame_consumer
     }
 
   private:
+    // Stops the send thread, drops the queued frames and destroys the sender.
+    void stop_sending()
+    {
+        running_ = false;
+        frame_queue_cond_.notify_all();
+        if (send_thread_.joinable() == true) {
+            send_thread_.join();
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(frame_queue_mutex_);
+            frame_queue_ = std::queue<core::const_frame>();
+        }
+
+        if (send_ != nullptr) {
+            auto lock = omt::serialize_create_call();
+            lib_->send_destroy(send_);
+            send_ = nullptr;
+        }
+    }
+
     // The first consumer is called "CasparCG", the next ones "CasparCG 1", "CasparCG 2" and so on.
     std::wstring default_name() const
     {
