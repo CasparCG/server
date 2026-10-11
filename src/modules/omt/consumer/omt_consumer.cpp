@@ -542,8 +542,9 @@ struct omt_consumer : public core::frame_consumer
         video_frame.Width         = width;
         video_frame.Height        = height;
         video_frame.Flags         = flags;
-        video_frame.FrameRateN    = format_desc_.framerate.numerator();
-        video_frame.FrameRateD    = format_desc_.framerate.denominator();
+        // An interlaced channel hands over every field as a frame, so twice as many frames as its frame rate.
+        video_frame.FrameRateN = format_desc_.framerate.numerator() * format_desc_.field_count;
+        video_frame.FrameRateD = format_desc_.framerate.denominator();
         video_frame.AspectRatio =
             static_cast<float>(format_desc_.square_width) / static_cast<float>(format_desc_.square_height);
         video_frame.ColorSpace = color_space_for_height(height);
