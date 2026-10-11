@@ -348,6 +348,9 @@ struct omt_consumer : public core::frame_consumer
             auto lock = omt::serialize_create_call();
             send_     = lib_->send_create(name_utf8_.c_str(), quality_);
         }
+        if (send_ == nullptr) {
+            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to create the OMT sender."));
+        }
         log_discovery_address();
 
         create_audio_converter();
