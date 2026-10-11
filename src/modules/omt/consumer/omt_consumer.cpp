@@ -691,13 +691,13 @@ struct omt_consumer : public core::frame_consumer
         uint8_t* const v_plane    = luma_plane + luma_size;
         uint8_t* const u_plane    = v_plane + chroma_size;
 
-        // libswscale's planar 4:2:0 format stores Y, U, V. Handing it the V and U planes the
-        // other way around makes it write Y, V, U, which is YV12.
+        // libswscale's planar 4:2:0 format writes Y, U, V into the pointers in that order. YV12
+        // keeps V first in memory, so the U pointer is the one that points at the second chroma plane.
         convert_bgra(AV_PIX_FMT_YUV420P,
                      bgra,
                      width,
                      height,
-                     {luma_plane, v_plane, u_plane, nullptr},
+                     {luma_plane, u_plane, v_plane, nullptr},
                      {width, width / 2, width / 2, 0});
 
         video_frame.Codec      = OMTCodec_YV12;
