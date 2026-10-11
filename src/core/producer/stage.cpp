@@ -31,7 +31,9 @@
 #include <common/executor.h>
 #include <common/future.h>
 
+#include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
+#include <core/frame/frame_visitor.h>
 #include <core/producer/route/route_producer.h>
 
 #include <boost/range/adaptors.hpp>
@@ -39,9 +41,48 @@
 #include <functional>
 #include <future>
 #include <map>
+#include <stack>
 #include <vector>
 
 namespace caspar { namespace core {
+
+class audio_peak_visitor : public frame_visitor
+{
+    std::stack<audio_transform> transform_stack_;
+    std::vector<int32_t>&       peaks_;
+
+  public:
+    audio_peak_visitor(std::vector<int32_t>& peaks)
+        : peaks_(peaks)
+    {
+        transform_stack_.push(audio_transform());
+    }
+
+    void push(const frame_transform& transform) override
+    {
+        transform_stack_.push(transform_stack_.top() * transform.audio_transform);
+    }
+
+    void visit(const const_frame& frame) override
+    {
+        auto volume = transform_stack_.top().volume;
+        if (volume < 0.002 || !frame.audio_data())
+            return;
+
+        auto samples  = frame.audio_data().data();
+        auto size     = frame.audio_data().size();
+        auto channels = peaks_.size();
+        for (size_t n = 0; n + channels <= size; n += channels) {
+            for (size_t ch = 0; ch < channels; ++ch) {
+                auto sample = std::min(std::abs(static_cast<double>(samples[n + ch])) * volume,
+                                       static_cast<double>(std::numeric_limits<int32_t>::max()));
+                peaks_[ch]  = std::max(peaks_[ch], static_cast<int32_t>(sample));
+            }
+        }
+    }
+
+    void pop() override { transform_stack_.pop(); }
+};
 
 struct stage::impl : public std::enable_shared_from_this<impl>
 {
@@ -161,6 +202,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 // This will risk some stutter for freshly created producers, but it lets us tick at 25hz and avoids
                 // amcp changes starting on the second field
 
+                monitor::state state;
                 for (auto& l : layerVec) {
                     auto p = layers_.find(l.first);
                     if (p == layers_.end())
@@ -193,6 +235,15 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                             res.background2 = layer.receive_background(video_field::b, result.nb_samples);
                     }
 
+                    if (l.second) {
+                        std::vector<int32_t> peaks(result.format_desc.audio_channels, 0);
+                        audio_peak_visitor   visitor(peaks);
+                        res.foreground1.accept(visitor);
+                        if (is_interlaced)
+                            res.foreground2.accept(visitor);
+                        state["layer"][p->first]["audio"]["volume"] = peaks;
+                    }
+
                     frames[p->first] = res;
 
                     // push received foreground frame to any configured route producer
@@ -216,7 +267,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     routesCb(-1, chan_lf);
                 }
 
-                monitor::state state;
                 for (auto& p : layers_) {
                     state["layer"][p.first] = p.second.state();
                 }
