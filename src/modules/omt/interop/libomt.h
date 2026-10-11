@@ -27,8 +27,8 @@
  * Vendored copy of the Open Media Transport (OMT) C API header, taken from the
  * "Libraries" folder of the binary release bundle at
  * https://github.com/openmediatransport/libomtnet/releases (the C API's own source lives in
- * https://github.com/openmediatransport/libomt, which as of this writing has no releases of its
- * own - the combined Windows/macOS binaries are published from libomtnet's releases instead).
+ * https://github.com/openmediatransport/libomt, and the combined Windows and macOS binaries are
+ * published from the releases of libomtnet).
  *
  * NOTE: The upstream header normally contains:
  *
