@@ -150,9 +150,18 @@ ExternalProject_Add(libomt
 # --- Bundling ------------------------------------------------------------------------------
 
 # libomt looks for libvmx in its own directory, so both go to the same place.
+# The MIT license of the three projects asks for its notice to come with the libraries. On Windows
+# tools/windows/package.bat copies the texts. Linux packages for a distribution ship them their own
+# way, so only the portable folder gets them here.
 if (MSVC)
     casparcg_add_runtime_dependency("${OMT_LIBOMT_LIBRARY}")
     casparcg_add_runtime_dependency("${OMT_LIBVMX_LIBRARY}")
 else ()
     install(FILES "${OMT_LIBOMT_LIBRARY}" "${OMT_LIBVMX_LIBRARY}" TYPE LIB)
+
+    if ("${CASPARCG_BINARY_NAME}" STREQUAL "casparcg")
+        install(FILES "${OMT_LIBVMX_DIR}/LICENSE.txt" DESTINATION licenses RENAME libvmx.txt)
+        install(FILES "${OMT_LIBOMTNET_DIR}/LICENSE.txt" DESTINATION licenses RENAME libomtnet.txt)
+        install(FILES "${OMT_LIBOMT_DIR}/LICENSE.txt" DESTINATION licenses RENAME libomt.txt)
+    endif ()
 endif ()
