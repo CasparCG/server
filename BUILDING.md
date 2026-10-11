@@ -20,19 +20,19 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 # Open Media Transport (OMT)
 
-The OMT runtime (libvmx, libomtnet and libomt) is cloned from https://github.com/openmediatransport at the revisions pinned in [OMT.cmake](./src/CMakeModules/OMT.cmake), and compiled as part of the CasparCG build. This works the same way on Windows and Linux, and the result is bundled next to the server. The sources are cloned into `omt-src` inside the build directory, so `git` must be able to reach GitHub on the first build.
+The OMT runtime (libvmx, libomtnet and libomt) is cloned from https://github.com/openmediatransport at the revisions pinned in [OMT.cmake](./src/CMakeModules/OMT.cmake), and compiled as part of the CasparCG build. This works the same way on Windows and Linux, and the result is bundled next to the server. The sources are cloned into `omt-src` inside the build directory. The first build needs network access: `git` clones the sources from GitHub, and `dotnet` restores its NuGet packages from nuget.org, among them the Native AOT compiler and the reference assemblies. `CASPARCG_DOWNLOAD_MIRROR` and `CASPARCG_DOWNLOAD_CACHE` do not apply to it.
 
 This needs, in addition to the normal build tools:
 
 - The .NET SDK, version 8.0 or newer (`dotnet`)
 - clang (`clang++`). On Windows this is LLVM, or the 'C++ Clang tools for Windows' component of Visual Studio. It must be in `PATH`.
-- Linux only: the zlib development headers (`zlib1g-dev`)
+- Linux only: the zlib development package (`zlib1g-dev`)
 
 `./tools/linux/install-dependencies` installs all of these on Ubuntu. Configure with `-DOMT_BUILD_FROM_SOURCE=OFF` to skip the OMT runtime. The server still builds and runs, but OMT can only be used once libomt has been installed some other way.
 
 To move to a newer upstream version, change the revisions at the top of [OMT.cmake](./src/CMakeModules/OMT.cmake), or override them with `-DOMT_LIBVMX_REVISION`, `-DOMT_LIBOMTNET_REVISION` and `-DOMT_LIBOMT_REVISION`.
 
-At runtime on Linux, libomt loads ICU (`libicu`) and Avahi (`libavahi-client`) from the system.
+At runtime on Linux, libomt loads ICU (`libicuuc` and `libicui18n`) and Avahi (`libavahi-client`) from the system.
 
 # Windows
 

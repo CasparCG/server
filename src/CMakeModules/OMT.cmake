@@ -9,7 +9,9 @@
 # OMT_BUILD_FROM_SOURCE=OFF. OMT is then only usable once libomt has been installed some other way.
 #
 # Build requirements on every platform: the .NET SDK (8.0 or newer) and clang.
-# Linux also needs the zlib development headers, which Native AOT links against.
+# Linux also needs the zlib development package, which Native AOT links against.
+# The first build needs network access: git clones the sources from GitHub and dotnet restores
+# its NuGet packages from nuget.org, among them the Native AOT compiler and the reference assemblies.
 
 option(OMT_BUILD_FROM_SOURCE "Build the OMT runtime (libvmx, libomtnet, libomt) from source and bundle it" ON)
 
