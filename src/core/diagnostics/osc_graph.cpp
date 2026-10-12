@@ -19,7 +19,7 @@
 
 #include "../StdAfx.h"
 
-#include "web_graph.h"
+#include "osc_graph.h"
 
 #include "call_context.h"
 
@@ -29,48 +29,13 @@
 
 #include <algorithm>
 #include <atomic>
-#include <chrono>
-#include <format>
 #include <mutex>
-#include <sstream>
 #include <unordered_map>
 #include <vector>
 
-namespace caspar { namespace core { namespace diagnostics { namespace web {
+namespace caspar { namespace core { namespace diagnostics { namespace osc_graph {
 
 namespace {
-
-std::string json_escape(const std::string& s)
-{
-    std::string out;
-    out.reserve(s.size());
-    for (char c : s) {
-        switch (c) {
-            case '"':
-                out += "\\\"";
-                break;
-            case '\\':
-                out += "\\\\";
-                break;
-            case '\n':
-                out += "\\n";
-                break;
-            case '\r':
-                out += "\\r";
-                break;
-            case '\t':
-                out += "\\t";
-                break;
-            default:
-                if (static_cast<unsigned char>(c) < 0x20) {
-                    out += std::format("\\u{:04x}", static_cast<unsigned char>(c));
-                } else {
-                    out += c;
-                }
-        }
-    }
-    return out;
-}
 
 const char* tag_severity_name(caspar::diagnostics::tag_severity severity)
 {
@@ -87,14 +52,14 @@ const char* tag_severity_name(caspar::diagnostics::tag_severity severity)
 std::atomic<long long> g_next_id{1};
 
 // Mirrors every value/text/color/tag set on its owning caspar::diagnostics::graph into plain members
-// guarded by a mutex, so a JSON snapshot can be built at any time from any thread (the HTTP server's).
-// Captures the same per-thread channel/layer call_context the SFML osd_graph shows in its corner, and a
-// stable id (rather than registry position) so clients can track a graph across snapshots even as other
-// graphs come and go.
-class web_graph_sink : public caspar::diagnostics::spi::graph_sink
+// guarded by a mutex, so a state snapshot can be built at any time from any thread (protocol::osc::client's
+// background thread). Captures the same per-thread channel/layer call_context the SFML osd_graph shows in
+// its corner, and a stable id (rather than registry position) so clients can track a graph across
+// snapshots even as other graphs come and go.
+class osc_graph_sink : public caspar::diagnostics::spi::graph_sink
 {
-    const long long                                id_       = g_next_id.fetch_add(1);
-    const caspar::core::diagnostics::call_context  context_  = caspar::core::diagnostics::call_context::for_thread();
+    const long long                               id_      = g_next_id.fetch_add(1);
+    const caspar::core::diagnostics::call_context context_ = caspar::core::diagnostics::call_context::for_thread();
 
     mutable std::mutex                      mutex_;
     std::string                             text_;
@@ -137,54 +102,38 @@ class web_graph_sink : public caspar::diagnostics::spi::graph_sink
             p.second = 0.0;
     }
 
-    std::string to_json()
+    void write_state(core::monitor::state& state)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        std::ostringstream os;
-        os << "{\"id\":" << id_ << ",\"channel\":" << context_.video_channel << ",\"layer\":" << context_.layer
-           << ",\"text\":\"" << json_escape(text_) << "\",\"values\":{";
-        bool first = true;
-        for (auto& p : values_) {
-            if (!first)
-                os << ",";
-            first = false;
-            os << "\"" << json_escape(p.first) << "\":" << p.second;
-        }
-        os << "},\"colors\":{";
-        first = true;
-        for (auto& p : colors_) {
-            if (!first)
-                os << ",";
-            first = false;
-            os << "\"" << json_escape(p.first) << "\":" << p.second;
-        }
-        os << "},\"tags\":{";
-        first = true;
-        for (auto& p : pending_tags_) {
-            if (!first)
-                os << ",";
-            first = false;
-            os << "\"" << json_escape(p.first)
-               << "\":\"" << tag_severity_name(static_cast<caspar::diagnostics::tag_severity>(p.second)) << "\"";
-        }
-        os << "}}";
+        auto node       = state["diag"][id_];
+        node["channel"] = context_.video_channel;
+        node["layer"]   = context_.layer;
+        node["text"]    = text_;
+
+        for (auto& p : values_)
+            node["value"][p.first] = p.second;
+
+        for (auto& p : colors_)
+            node["color"][p.first] = p.second;
+
+        for (auto& p : pending_tags_)
+            node["tag"][p.first] =
+                std::string(tag_severity_name(static_cast<caspar::diagnostics::tag_severity>(p.second)));
 
         pending_tags_.clear(); // only report tags fired since the previous snapshot, like osd_graph's tick_tag_
-
-        return os.str();
     }
 };
 
 std::mutex                                 g_registry_mutex;
-std::vector<std::weak_ptr<web_graph_sink>> g_registry;
+std::vector<std::weak_ptr<osc_graph_sink>> g_registry;
 
 } // namespace
 
 void register_sink()
 {
     caspar::diagnostics::spi::register_sink_factory([]() -> spl::shared_ptr<caspar::diagnostics::spi::graph_sink> {
-        auto sink = std::make_shared<web_graph_sink>();
+        auto sink = std::make_shared<osc_graph_sink>();
 
         {
             std::lock_guard<std::mutex> lock(g_registry_mutex);
@@ -195,14 +144,14 @@ void register_sink()
     });
 }
 
-std::string snapshot_json()
+core::monitor::state snapshot_state()
 {
-    std::vector<std::shared_ptr<web_graph_sink>> live;
+    std::vector<std::shared_ptr<osc_graph_sink>> live;
     {
         std::lock_guard<std::mutex> lock(g_registry_mutex);
         g_registry.erase(std::remove_if(g_registry.begin(),
                                         g_registry.end(),
-                                        [&](const std::weak_ptr<web_graph_sink>& w) {
+                                        [&](const std::weak_ptr<osc_graph_sink>& w) {
                                             auto s = w.lock();
                                             if (s)
                                                 live.push_back(s);
@@ -211,18 +160,10 @@ std::string snapshot_json()
                          g_registry.end());
     }
 
-    std::ostringstream os;
-    os << "{\"t\":" << std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count()
-       << ",\"graphs\":[";
-    bool first = true;
-    for (auto& s : live) {
-        if (!first)
-            os << ",";
-        first = false;
-        os << s->to_json();
-    }
-    os << "]}";
-    return os.str();
+    core::monitor::state state;
+    for (auto& s : live)
+        s->write_state(state);
+    return state;
 }
 
-}}}} // namespace caspar::core::diagnostics::web
+}}}} // namespace caspar::core::diagnostics::osc_graph
