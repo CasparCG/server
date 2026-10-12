@@ -517,6 +517,28 @@ struct ffmpeg_consumer : public core::frame_consumer
                     if (oc->oformat->video_codec == AV_CODEC_ID_H264 && options.find("preset:v") == options.end()) {
                         options["preset:v"] = "veryfast";
                     }
+                    // Realtime STREAM consumers are commonly run several-at-a-time on the same machine
+                    // (e.g. one per channel for low-latency monitoring/preview, alongside the full-resolution
+                    // program output). Left unset, libavcodec passes thread_count=0 ("auto") straight through
+                    // to the codec, and slice-threaded software encoders such as libx264 size "auto" off the
+                    // machine's *total* logical CPU count, with no awareness of how many sibling encoder
+                    // instances are doing the same thing at the same time. A handful of concurrent realtime
+                    // encoders can each spin up dozens of worker threads this way, causing CPU oversubscription
+                    // and scheduling latency for everything else in the process - including the channels' own
+                    // render/output threads.
+                    //
+                    // This is opt-in and defaults to 0 (unchanged "auto" behaviour) to avoid surprising anyone
+                    // relying on a single realtime stream getting the whole machine's threads for best quality/
+                    // throughput. Set configuration.ffmpeg.consumer.realtime-threads for a saner default across
+                    // every realtime encode that doesn't request its own thread count; an individual `ADD ...
+                    // STREAM` can still override it (or opt back out to "auto") with `-threads:v`.
+                    if (realtime_ && options.find("threads:v") == options.end()) {
+                        auto realtime_threads =
+                            env::properties().get(L"configuration.ffmpeg.consumer.realtime-threads", 0);
+                        if (realtime_threads > 0) {
+                            options["threads:v"] = std::to_string(realtime_threads);
+                        }
+                    }
                     video_stream.emplace(oc, ":v", oc->oformat->video_codec, format_desc, realtime_, depth_, options);
 
                     {
