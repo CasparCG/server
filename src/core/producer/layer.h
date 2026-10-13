@@ -43,7 +43,7 @@ class layer final
 
     void swap(layer& other);
 
-    void load(spl::shared_ptr<frame_producer> producer, bool preview, bool auto_play = false);
+    void load(frame_producer_and_attrs producer, bool preview, bool auto_play = false);
     void play();
     void preview();
     void pause();
@@ -55,9 +55,9 @@ class layer final
 
     core::monitor::state state() const;
 
-    spl::shared_ptr<frame_producer> foreground() const;
-    spl::shared_ptr<frame_producer> background() const;
-    bool                            has_background() const;
+    frame_producer_and_attrs foreground() const;
+    frame_producer_and_attrs background() const;
+    bool                     has_background() const;
 
   private:
     struct impl;

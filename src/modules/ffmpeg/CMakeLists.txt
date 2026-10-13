@@ -8,6 +8,7 @@ set(SOURCES
 	producer/av_input.h
 	producer/ffmpeg_producer.cpp
 	producer/ffmpeg_producer.h
+	producer/substituted_a53_cc_queue.h
 	consumer/ffmpeg_consumer.cpp
 	consumer/ffmpeg_consumer.h
 

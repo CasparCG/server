@@ -39,8 +39,8 @@ struct sting_info
     uint32_t     audio_fade_duration = UINT32_MAX;
 };
 
-spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies&     dependencies,
-                                                      const spl::shared_ptr<frame_producer>& destination,
-                                                      sting_info&                            info);
+spl::shared_ptr<frame_producer> create_sting_producer(const frame_producer_dependencies& dependencies,
+                                                      const frame_producer_and_attrs&    destination,
+                                                      sting_info&                        info);
 
 }} // namespace caspar::core

@@ -11,11 +11,13 @@ set(SOURCES
 
 		frame/draw_frame.cpp
 		frame/frame.cpp
+		frame/frame_side_data.cpp
 		frame/frame_transform.cpp
 		frame/geometry.cpp
 
 		mixer/audio/audio_mixer.cpp
 		mixer/image/blend_modes.cpp
+		mixer/side_data/side_data_mixer.cpp
 		mixer/mixer.cpp
 
 		producer/color/color_producer.cpp
