@@ -47,6 +47,7 @@
 #include <accelerator/d3d/d3d_device.h>
 #endif
 
+// ---- BEGIN CEF mallinfo() SIGILL hack (cef#3963); remove once CEF ships a fix ----
 #if defined(__linux__)
 #include <algorithm>
 #include <cstdint>
@@ -85,6 +86,7 @@ extern "C" struct mallinfo mallinfo(void)
     return m;
 }
 #endif
+// ---- END CEF mallinfo() SIGILL hack ----
 
 namespace caspar::html {
 
@@ -276,6 +278,7 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(const core::module_dependencies& dependencies)
 {
+    // ---- BEGIN CEF mallinfo() SIGILL hack (cef#3963); remove once CEF ships a fix ----
 #if defined(__linux__)
     // Confirm our mallinfo() override (see above) actually won symbol resolution; remove once CEF fixes cef#3963.
 #pragma GCC diagnostic push
@@ -287,6 +290,7 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(warning) << L"[html] mallinfo() override did NOT install; CEF mallinfo() SIGILL (cef#3963) may occur";
     }
 #endif
+    // ---- END CEF mallinfo() SIGILL hack ----
 
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
