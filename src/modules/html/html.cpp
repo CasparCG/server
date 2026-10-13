@@ -50,6 +50,7 @@
 #if defined(__linux__)
 #include <algorithm>
 #include <cstdint>
+#include <dlfcn.h>
 #include <malloc.h>
 
 // Workaround for a confirmed Chromium/CEF bug (chromiumembedded/cef#3963, upstream Chromium bug
@@ -266,6 +267,18 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(const core::module_dependencies& dependencies)
 {
+#if defined(__linux__)
+    // Confirm our mallinfo() override (see above) actually won symbol resolution; remove once CEF fixes cef#3963.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    if (reinterpret_cast<void*>(dlsym(RTLD_DEFAULT, "mallinfo")) == reinterpret_cast<void*>(&mallinfo)) {
+#pragma GCC diagnostic pop
+        CASPAR_LOG(info) << L"[html] mallinfo() override installed";
+    } else {
+        CASPAR_LOG(warning) << L"[html] mallinfo() override did NOT install; CEF mallinfo() SIGILL (cef#3963) may occur";
+    }
+#endif
+
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
