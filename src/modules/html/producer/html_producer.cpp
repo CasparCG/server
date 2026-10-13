@@ -514,10 +514,17 @@ class html_client
                      const CefString&      errorText,
                      const CefString&      failedUrl) override
     {
-        not_found_ = true;
+        // Replacing a template normally cancels its in-flight navigation.
+        // Neither cancellation nor a failed child iframe invalidates the
+        // parent renderer and its independent on-air graphics.
+        if (errorCode == ERR_ABORTED)
+            return;
         CASPAR_LOG(warning) << "[html_producer] " << errorText.ToString() << " while loading url: \""
                             << failedUrl.ToString() << "\"";
 
+        if (!frame->IsMain())
+            return;
+        not_found_ = true;
         // Stop producing if the page fails to load
         {
             std::lock_guard<std::mutex> lock(frames_mutex_);
