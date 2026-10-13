@@ -67,9 +67,10 @@ extern "C" struct mallinfo mallinfo(void)
 {
     struct mallinfo2 m2 = mallinfo2();
     struct mallinfo   m {};
-    // Clamp to INT32_MAX/2 rather than INT32_MAX: the dump provider sums pairs of these fields
-    // (e.g. arena + hblkhd) as signed ints, so two fields at the full INT32_MAX would still
-    // overflow/wrap negative when added together and re-trigger the same crash.
+    // Clamp to INT32_MAX/2, not INT32_MAX: the dump provider computes `arena + hblkhd` as signed
+    // ints before its own overflow check, so either field alone at INT32_MAX would still overflow
+    // that sum and re-trigger the crash. Other fields (e.g. uordblks) are checked standalone and
+    // don't need the extra headroom, but clamping all fields the same way keeps this simple.
     auto clamp = [](size_t v) { return static_cast<int>(std::min<size_t>(v, INT32_MAX / 2)); };
     m.arena                 = clamp(m2.arena);
     m.ordblks               = clamp(m2.ordblks);
