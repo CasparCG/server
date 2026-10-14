@@ -140,7 +140,14 @@ class html_client
     std::atomic<bool>                    loaded_;
     std::atomic<bool>                    not_found_;
     std::queue<presentation_frame>       frames_;
-    std::queue<presentation_frame>       audio_frames_;
+    // Audio is accumulated continuously rather than queued as discrete CEF packets, because CEF's
+    // frames_per_buffer only approximates variable cadences (e.g. 29.97/59.94) - its packet rate and
+    // the channel's tick rate drift slightly relative to each other. Draining whatever has
+    // accumulated since the last tick (instead of at most one packet per tick) lets audio_mixer's
+    // existing per-tag buffering (has_variable_cadence_) absorb that drift smoothly instead of this
+    // producer periodically contributing no audio on ticks where a whole packet hadn't arrived yet.
+    std::vector<std::int32_t>            audio_buffer_;
+    std::int_least64_t                   audio_buffer_timestamp_ = now();
     mutable std::mutex                   frames_mutex_;
     mutable std::mutex                   audio_frames_mutex_;
     const size_t                         frames_max_size_ = 4;
@@ -224,10 +231,11 @@ class html_client
 
         {
             std::lock_guard<std::mutex> audio_lock(audio_frames_mutex_);
-            if (!audio_frames_.empty()) {
-                audio_frame_timestamp = audio_frames_.front().timestamp;
-                audio_frame           = core::draw_frame(std::move(audio_frames_.front().frame));
-                audio_frames_.pop();
+            if (!audio_buffer_.empty()) {
+                audio_frame_timestamp = audio_buffer_timestamp_;
+                audio_frame           = core::draw_frame(
+                    core::mutable_frame(this, {}, array<std::int32_t>(std::move(audio_buffer_)), core::pixel_format_desc()));
+                audio_buffer_ = {};
             }
         }
 
@@ -590,15 +598,19 @@ class html_client
         if (!audioResampler_)
             return;
 
-        auto audio       = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
-        auto audio_frame = core::mutable_frame(this, {}, std::move(audio), core::pixel_format_desc());
+        auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
 
-        {
-            std::lock_guard<std::mutex> lock(audio_frames_mutex_);
-            while (audio_frames_.size() >= frames_max_size_) {
-                audio_frames_.pop();
-            }
-            audio_frames_.push(presentation_frame(core::draw_frame(std::move(audio_frame))));
+        std::lock_guard<std::mutex> lock(audio_frames_mutex_);
+
+        audio_buffer_.insert(audio_buffer_.end(), audio.data(), audio.data() + audio.size());
+        audio_buffer_timestamp_ = now();
+
+        // Bound how much audio can accumulate if nothing drains it (e.g. the producer is paused),
+        // dropping the oldest samples rather than growing unbounded - equivalent to the previous
+        // queue's frames_max_size_ cap, expressed in samples rather than whole packets.
+        const auto max_buffered_samples = frames_max_size_ * audio.size();
+        if (audio_buffer_.size() > max_buffered_samples) {
+            audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.end() - max_buffered_samples);
         }
     }
     void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override { audioResampler_ = nullptr; }
