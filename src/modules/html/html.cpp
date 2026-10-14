@@ -47,31 +47,18 @@
 #include <accelerator/d3d/d3d_device.h>
 #endif
 
-// ---- BEGIN CEF mallinfo() SIGILL hack (cef#3963); remove once CEF ships a fix ----
 #if defined(__linux__)
 #include <algorithm>
 #include <cstdint>
 #include <dlfcn.h>
 #include <malloc.h>
 
-// Workaround for a confirmed Chromium/CEF bug (chromiumembedded/cef#3963, upstream Chromium bug
-// https://issues.chromium.org/issues/401168177) that we independently root-caused to the same
-// deterministic SIGILL (UD2) on the "MemoryInfra" thread inside libcef.so. CEF binaries built
-// against an old sysroot glibc (<2.33) compile base::trace_event::MallocDumpProvider::OnMemoryDump()
-// to call the deprecated 32-bit `mallinfo()` instead of `mallinfo2()`. Once the heap arena exceeds
-// ~2GB, mallinfo()'s `int` fields overflow to negative, tripping an internal sanity check that
-// executes an intentional illegal instruction - crashing the whole process. Since the main
-// executable's symbols take precedence over a shared library's during dynamic linking, defining our
-// own `mallinfo()` here forwards to the 64-bit-safe `mallinfo2()` and clamps each field instead of
-// letting it wrap negative, without needing to rebuild/replace libcef.so itself.
+// Work around CEF's Linux mallinfo() overflow by forwarding to mallinfo2() with int-safe field clamps.
 extern "C" struct mallinfo mallinfo(void)
 {
     struct mallinfo2 m2 = mallinfo2();
     struct mallinfo   m {};
-    // Clamp to INT32_MAX/2, not INT32_MAX: the dump provider computes `arena + hblkhd` as signed
-    // ints before its own overflow check, so either field alone at INT32_MAX would still overflow
-    // that sum and re-trigger the crash. Other fields (e.g. uordblks) are checked standalone and
-    // don't need the extra headroom, but clamping all fields the same way keeps this simple.
+    // Keep arena + hblkhd below INT32_MAX to avoid overflow in CEF's signed-int sum.
     auto clamp = [](size_t v) { return static_cast<int>(std::min<size_t>(v, INT32_MAX / 2)); };
     m.arena                 = clamp(m2.arena);
     m.ordblks               = clamp(m2.ordblks);
@@ -86,7 +73,6 @@ extern "C" struct mallinfo mallinfo(void)
     return m;
 }
 #endif
-// ---- END CEF mallinfo() SIGILL hack ----
 
 namespace caspar::html {
 
@@ -278,9 +264,8 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(const core::module_dependencies& dependencies)
 {
-    // ---- BEGIN CEF mallinfo() SIGILL hack (cef#3963); remove once CEF ships a fix ----
 #if defined(__linux__)
-    // Confirm our mallinfo() override (see above) actually won symbol resolution; remove once CEF fixes cef#3963.
+    // Verify the override resolves before CEF initializes.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     if (reinterpret_cast<void*>(dlsym(RTLD_DEFAULT, "mallinfo")) == reinterpret_cast<void*>(&mallinfo)) {
@@ -290,7 +275,6 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(warning) << L"[html] mallinfo() override did NOT install; CEF mallinfo() SIGILL (cef#3963) may occur";
     }
 #endif
-    // ---- END CEF mallinfo() SIGILL hack ----
 
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
