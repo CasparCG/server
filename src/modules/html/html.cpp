@@ -47,6 +47,7 @@
 #include <accelerator/d3d/d3d_device.h>
 #endif
 
+// Malinfo patch start - Remove once fixed upstream.
 #if defined(__linux__)
 #include <algorithm>
 #include <cstdint>
@@ -73,6 +74,7 @@ extern "C" struct mallinfo mallinfo(void)
     return m;
 }
 #endif
+// Malinfo patch end section one - Remove once fixed upstream.
 
 namespace caspar::html {
 
@@ -264,6 +266,7 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(const core::module_dependencies& dependencies)
 {
+// Malinfo patch section 2 start - Remove once fixed upstream.
 #if defined(__linux__)
     // Verify the override resolves before CEF initializes.
 #pragma GCC diagnostic push
@@ -275,7 +278,7 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(warning) << L"[html] mallinfo() override did NOT install; CEF mallinfo() SIGILL (cef#3963) may occur";
     }
 #endif
-
+// Malinfo patch section 2 end - Remove once fixed upstream.
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
