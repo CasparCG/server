@@ -514,7 +514,9 @@ class html_client
                      const CefString&      errorText,
                      const CefString&      failedUrl) override
     {
-        // Ignore cancelled navigations and child-frame failures; neither invalidates the on-air page.
+        // Replacing a template normally cancels its in-flight navigation.
+        // Neither cancellation nor a failed child iframe invalidates the
+        // parent renderer and its independent on-air graphics.
         if (errorCode == ERR_ABORTED)
             return;
         CASPAR_LOG(warning) << "[html_producer] " << errorText.ToString() << " while loading url: \""
