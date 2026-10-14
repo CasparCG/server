@@ -577,19 +577,8 @@ class html_client
     {
         params.channel_layout    = CEF_CHANNEL_LAYOUT_7_1;
         params.sample_rate       = format_desc_.audio_sample_rate;
-        // CEF fixes frames_per_buffer once per stream and never varies it per-callback, so it can't be
-        // made to exactly follow a rotating/non-integer audio cadence (e.g. the 59.94 NTSC-family
-        // formats, where audio_cadence has several differently-sized entries that only average out to
-        // the correct sample rate over a few video frames). That used to be a reason to refuse audio
-        // capture entirely for those formats, but audio_mixer::mix() (see core/mixer/audio/audio_mixer.cpp)
-        // already buffers any per-tag leftover/deficit samples across mix() calls - it was built
-        // specifically to let producers feed arbitrarily-sized audio chunks and still land on the exact
-        // sample count each format's cadence calls for, independent of how those chunks were originally
-        // divided up. Using the first cadence value as an approximate buffer size is therefore safe for
-        // every supported frame rate, not just the single-cadence ones, as long as this producer keeps
-        // tagging its audio frames consistently (see OnAudioStreamPacket below), which it already does.
         params.frames_per_buffer = format_desc_.audio_cadence[0];
-        return true;
+        return true; // true keeps audio routed into the mixer; false would leak it to system audio instead
     }
 
     void OnAudioStreamStarted(CefRefPtr<CefBrowser> browser, const CefAudioParameters& params, int channels) override
