@@ -31,11 +31,8 @@ AudioResampler::AudioResampler(int sample_rate, AVSampleFormat in_sample_fmt)
 
 caspar::array<int32_t> AudioResampler::convert(int frames, const void** src)
 {
-    // Built from a std::vector so array<int32_t>::size() reports the element (sample) count, as it
-    // does everywhere else audio_data is populated (see e.g. av_util.cpp). array<T>'s raw-size
-    // constructor instead treats its argument as a byte count and stores that in size() - using it
-    // here (as before) inflated the apparent sample count ~4x for downstream readers such as
-    // audio_mixer's per-tag leftover buffering, risking a heap buffer overread.
+    // Built from a std::vector so size() reports the element count, not a byte count (as array<T>'s
+    // raw-size constructor would) - matching every other array<int32_t> audio buffer in the codebase.
     std::vector<int32_t> result(static_cast<std::size_t>(frames) * 16, 0);
     auto                 ptr         = reinterpret_cast<uint8_t*>(result.data());
     const auto           samples_out = swr_convert(ctx.get(), &ptr, frames, reinterpret_cast<const uint8_t**>(src), frames);
