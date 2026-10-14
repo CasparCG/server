@@ -40,8 +40,10 @@
 #include <memory>
 #include <utility>
 
+#include <include/cef_api_hash.h>
 #include <include/cef_app.h>
 #include <include/cef_version.h>
+#include <include/cef_version_info.h>
 
 #ifdef WIN32
 #include <accelerator/d3d/d3d_device.h>
@@ -270,6 +272,12 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(error) << "[html] Failed to initialize CEF";
         return;
     }
+
+    // The loaded libcef can be newer than the headers we were built with, as long as it supports our API version
+    CASPAR_LOG(info) << "[html] Using CEF " << cef_version_info(0) << "." << cef_version_info(1) << "."
+                     << cef_version_info(2) << " (Chromium " << cef_version_info(4) << "." << cef_version_info(5)
+                     << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
+                     << cef_api_version() << ". Built against CEF " << CEF_VERSION;
 
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(
