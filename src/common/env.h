@@ -40,6 +40,9 @@ const std::wstring& version();
 /// The time this process started, recorded at static-initialization time.
 std::chrono::system_clock::time_point start_time();
 
+/// A monotonic reference point for measuring elapsed time since process start.
+std::chrono::steady_clock::time_point steady_start_time();
+
 bool log_to_file();
 
 const boost::property_tree::wptree& properties();

@@ -1952,12 +1952,12 @@ std::wstring info_server_command(command_context& ctx)
     using namespace std::chrono;
 
     auto start_time = floor<seconds>(caspar::env::start_time());
-    auto uptime     = floor<seconds>(system_clock::now()) - start_time;
+    auto uptime     = floor<seconds>(steady_clock::now() - caspar::env::steady_start_time());
     auto d          = duration_cast<days>(uptime);
 
     boost::property_tree::wptree info;
     info.add(L"server.start-time", std::format(L"{:%FT%T}", start_time));
-    info.add(L"server.uptime", std::format(L"{:02}:{:%T}", d.count(), uptime - d));
+    info.add(L"server.uptime", std::format(L"{:02}:{:%T}", d.count(), hh_mm_ss{uptime - d}));
 
     std::wstringstream replyString;
     // This is needed for backwards compatibility with old clients

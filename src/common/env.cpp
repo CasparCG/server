@@ -39,6 +39,7 @@
 namespace caspar { namespace env {
 
 const std::chrono::system_clock::time_point program_start_time = std::chrono::system_clock::now();
+const std::chrono::steady_clock::time_point program_steady_start_time = std::chrono::steady_clock::now();
 
 std::wstring                 initial;
 std::wstring                 media;
@@ -158,6 +159,8 @@ const std::wstring& log_folder()
 }
 
 std::chrono::system_clock::time_point start_time() { return program_start_time; }
+
+std::chrono::steady_clock::time_point steady_start_time() { return program_steady_start_time; }
 
 bool log_to_file()
 {

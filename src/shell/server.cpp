@@ -320,7 +320,7 @@ struct server::impl
                                                     state[""]["channel"][channel_id] = channel_state;
                                                     state[""]["uptime"] =
                                                         std::chrono::duration_cast<std::chrono::duration<double>>(
-                                                            std::chrono::system_clock::now() - env::start_time())
+                                                            std::chrono::steady_clock::now() - env::steady_start_time())
                                                             .count();
                                                     auto client                      = weak_client.lock();
                                                     if (client) {
