@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+
+source_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+build_dir="${BUILD_DIR:-"$source_root/build"}"
+mkdir -p "$build_dir"
+build_dir="$(cd "$build_dir" && pwd)"
+
+cmake -B "$build_dir" -S "$source_root/src" \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DENABLE_HTML=OFF \
+  "$@"
+
+cmake --build "$build_dir" --parallel "${PROC_COUNT:-2}"
+cmake --install "$build_dir" --prefix "$build_dir/staging"

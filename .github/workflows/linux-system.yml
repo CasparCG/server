@@ -57,6 +57,22 @@ jobs:
                       apt_prefix: ""
                       upload_artifacts: false # Not packaged, this just verifies the build + system CEF discovery
                       experimental: true
+                    - os: ubuntu-latest
+                      family: opensuse
+                      distribution: leap-16.0
+                      arch: amd64
+                      container: opensuse/leap:16.0
+                      apt_prefix: ""
+                      upload_artifacts: true
+                      experimental: true
+                    - os: ubuntu-latest
+                      family: opensuse
+                      distribution: tumbleweed
+                      arch: amd64
+                      container: opensuse/tumbleweed:latest
+                      apt_prefix: ""
+                      upload_artifacts: true
+                      experimental: true
 
         runs-on: ${{ matrix.os }}
         container: ${{ matrix.container }}
@@ -69,6 +85,10 @@ jobs:
             - name: Install git (archlinux)
               if: ${{ matrix.family == 'archlinux' }}
               run: pacman -Sy --noconfirm git
+
+            - name: Install git (openSUSE)
+              if: ${{ matrix.family == 'opensuse' }}
+              run: zypper --non-interactive install --no-recommends git
 
             - uses: actions/checkout@v7
 
@@ -221,3 +241,21 @@ jobs:
                   fi
               env:
                   CI: 1
+
+            - name: Install dependencies (openSUSE)
+              if: ${{ matrix.family == 'opensuse' }}
+              run: ./tools/linux/install-dependencies
+
+            - name: Build and install (openSUSE)
+              if: ${{ matrix.family == 'opensuse' }}
+              run: ./tools/linux/build-with-system-deps
+              env:
+                  CI: 1
+                  PROC_COUNT: 2
+
+            - uses: actions/upload-artifact@v7
+              if: ${{ matrix.family == 'opensuse' && matrix.upload_artifacts }}
+              with:
+                  name: casparcg-server-${{ matrix.distribution }}-${{ matrix.arch }}
+                  path: build/staging
+                  if-no-files-found: error

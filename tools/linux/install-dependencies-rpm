@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -euo pipefail
+
+source /etc/os-release
+
+case "$ID" in
+  rocky)
+    echo "Rocky Linux builds are deferred until the SFML dependency is removed." >&2
+    exit 1
+    ;;
+  opensuse-leap|opensuse-tumbleweed)
+    zypper --non-interactive refresh
+    zypper --non-interactive install --no-recommends \
+      cmake ninja gcc gcc-c++ git make pkg-config \
+      boost-devel 'cmake(SFML)' \
+      libboost_thread-devel libboost_filesystem-devel libboost_log-devel \
+      libboost_locale-devel libboost_regex-devel libboost_date_time-devel \
+      libboost_coroutine-devel \
+      'pkgconfig(glew)' 'pkgconfig(tbb)' 'pkgconfig(openal)' \
+      'pkgconfig(gl)' 'pkgconfig(glx)' 'pkgconfig(egl)' \
+      'pkgconfig(x11)' 'pkgconfig(xrandr)' \
+      'pkgconfig(libavcodec)' 'pkgconfig(libavformat)' \
+      'pkgconfig(libavdevice)' 'pkgconfig(libavutil)' \
+      'pkgconfig(libavfilter)' 'pkgconfig(libswscale)' \
+      'pkgconfig(libswresample)'
+    ;;
+  *)
+    echo "Unsupported RPM distribution: $ID" >&2
+    exit 1
+    ;;
+esac
