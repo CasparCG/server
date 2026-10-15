@@ -93,7 +93,8 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
 
 std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<texture>& source)
 {
-    auto buf = device_.create_buffer(source->size(), false);
+    // Padded, as some FFmpeg filters read past the end of a frame.
+    auto buf = device_.create_buffer(source->size() + 64, false);
 
     vk::CopyImageToBufferInfo2 copyInfo{};
     copyInfo.dstBuffer      = buf->id();
@@ -121,13 +122,12 @@ std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<tex
         cmd.copyImageToBuffer2(copyInfo);
     });
 
-    return std::async(std::launch::deferred, [this, buf = std::move(buf), token]() mutable {
+    return std::async(std::launch::deferred, [this, buf = std::move(buf), size = source->size(), token]() mutable {
         if (!ctx_->wait(token)) {
             CASPAR_LOG(warning) << L"[Vulkan] Timeout waiting for readback semaphore";
         }
 
-        auto ptr  = reinterpret_cast<uint8_t*>(buf->data());
-        auto size = buf->size();
+        auto ptr = reinterpret_cast<uint8_t*>(buf->data());
         return array<const uint8_t>(ptr, size, std::move(buf));
     });
 }

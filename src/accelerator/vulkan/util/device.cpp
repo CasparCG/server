@@ -304,8 +304,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
         }
 
         auto ptr = buf.get();
-        return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), self = shared_from_this()](buffer*) mutable {
-            auto pool = &self->host_pools_[static_cast<int>(buf->write() ? 1 : 0)][buf->size()];
+        // Returned under the requested size, which buf->size() can exceed after alignment.
+        return std::shared_ptr<buffer>(ptr, [buf = std::move(buf), size, self = shared_from_this()](buffer*) mutable {
+            auto pool = &self->host_pools_[static_cast<int>(buf->write() ? 1 : 0)][size];
             pool->push(std::move(buf));
         });
     }

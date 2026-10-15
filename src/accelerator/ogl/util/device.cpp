@@ -268,7 +268,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
     std::future<array<const uint8_t>> copy_async(const std::shared_ptr<texture>& source)
     {
         return spawn_async([=, this](yield_context yield) {
-            auto buf = create_buffer(source->size(), false);
+            // Padded, as some FFmpeg filters read past the end of a frame.
+            auto buf = create_buffer(source->size() + 64, false);
             source->copy_to(*buf);
 
             auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -290,7 +291,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
             glDeleteSync(fence);
 
             auto ptr  = reinterpret_cast<uint8_t*>(buf->data());
-            auto size = buf->size();
+            auto size = source->size();
             return array<const uint8_t>(ptr, size, std::move(buf));
         });
     }
