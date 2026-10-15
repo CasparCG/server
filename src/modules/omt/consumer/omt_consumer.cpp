@@ -588,6 +588,7 @@ struct omt_consumer : public core::frame_consumer
                 break;
         }
 
+        // libomt encodes or copies the data before it returns, so the buffers can be reused for the next frame.
         lib_->send(send_, &video_frame);
     }
 
@@ -772,6 +773,7 @@ struct omt_consumer : public core::frame_consumer
         audio_frame.Data              = audio_buffer_.data();
         audio_frame.DataLength        = static_cast<int>(audio_buffer_.size() * sizeof(float));
 
+        // As above, libomt is done with audio_buffer_ when it returns.
         lib_->send(send_, &audio_frame);
     }
 };
