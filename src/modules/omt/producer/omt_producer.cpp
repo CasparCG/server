@@ -229,10 +229,15 @@ struct omt_producer : public core::frame_producer
                 continue;
             }
 
-            if (frame->Type == OMTFrameType_Video) {
-                handle_video(*frame);
-            } else if (frame->Type == OMTFrameType_Audio) {
-                handle_audio(*frame);
+            // An exception that leaves this thread would end the whole process.
+            try {
+                if (frame->Type == OMTFrameType_Video) {
+                    handle_video(*frame);
+                } else if (frame->Type == OMTFrameType_Audio) {
+                    handle_audio(*frame);
+                }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
             }
         }
 
