@@ -66,11 +66,27 @@ find_package(X11 REQUIRED)
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
         # Provides CasparCG::CEF, with include dir, CEF_API_VERSION, libs and rpath already set
-        find_package(casparcg-cef-api15000 CONFIG REQUIRED)
+        find_package(casparcg-cef-api15000 CONFIG QUIET)
 
         # ALIAS of a non-global imported target needs cmake 3.18
         add_library(CEF::CEF INTERFACE IMPORTED)
-        target_link_libraries(CEF::CEF INTERFACE CasparCG::CEF)
+
+        if (${casparcg-cef-api15000_FOUND})
+            target_link_libraries(CEF::CEF INTERFACE CasparCG::CEF)
+        else()
+            # Fall back to a generic distro-packaged CEF (e.g. Arch's or Fedora's "cef" package),
+            # which ships a FindCEF.cmake module instead of a CasparCG-specific package config.
+            set(CEF_API_VERSION 15000)
+            find_package(CEF MODULE REQUIRED)
+            target_link_libraries(CEF::CEF INTERFACE CEF::Library CEF::Wrapper)
+            target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=${CEF_API_VERSION})
+        endif()
+
+        # cmake strips the RPATH computed during the build when installing targets unless told
+        # otherwise. Without this, a distro package that installs libcef.so outside the default
+        # linker search path (e.g. Arch's /usr/lib/cef) leaves the installed binary unable to
+        # find it at runtime.
+        set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     else()
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
