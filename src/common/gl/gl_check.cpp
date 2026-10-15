@@ -28,7 +28,44 @@
 
 #include <GL/glew.h>
 
+#include <chrono>
+#include <cstddef>
+#include <mutex>
+
 namespace caspar { namespace gl {
+
+// GL() wraps nearly every GL call, so one invalid context makes this log grow at the frame rate.
+static constexpr auto        error_log_window = std::chrono::seconds(1);
+static constexpr std::size_t error_log_burst  = 4;
+
+static std::mutex                            g_error_log_mutex;
+static std::chrono::steady_clock::time_point g_error_log_window_start;
+static bool                                  g_error_log_window_open = false;
+static std::size_t                           g_error_log_logged      = 0;
+static std::size_t                           g_error_log_suppressed  = 0;
+
+static bool claim_error_log_slot(std::size_t& suppressed_before)
+{
+    const auto now = std::chrono::steady_clock::now();
+
+    std::lock_guard<std::mutex> lock(g_error_log_mutex);
+
+    if (!g_error_log_window_open || now - g_error_log_window_start >= error_log_window) {
+        g_error_log_window_open  = true;
+        g_error_log_window_start = now;
+        g_error_log_logged       = 0;
+        suppressed_before        = g_error_log_suppressed;
+        g_error_log_suppressed   = 0;
+    }
+
+    if (g_error_log_logged < error_log_burst) {
+        ++g_error_log_logged;
+        return true;
+    }
+
+    ++g_error_log_suppressed;
+    return false;
+}
 
 void SMFL_GLCheckError(const std::string& /*unused*/, const char* func, const char* file, unsigned int line)
 {
@@ -36,8 +73,14 @@ void SMFL_GLCheckError(const std::string& /*unused*/, const char* func, const ch
     GLenum LastErrorCode = GL_NO_ERROR;
 
     for (GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError()) {
-        std::string str(reinterpret_cast<const char*>(glewGetErrorString(ErrorCode)));
-        CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << str;
+        std::size_t suppressed = 0;
+        if (claim_error_log_slot(suppressed)) {
+            if (suppressed > 0) {
+                CASPAR_LOG(error) << "OpenGL Error: " << suppressed << " further errors were not logged.";
+            }
+            std::string str(reinterpret_cast<const char*>(glewGetErrorString(ErrorCode)));
+            CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << str;
+        }
         LastErrorCode = ErrorCode;
     }
 
