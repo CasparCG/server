@@ -3,6 +3,7 @@
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
 
+#include <common/env.h>
 #include <common/except.h>
 #include <common/os/thread.h>
 #include <common/param.h>
@@ -10,6 +11,8 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/regex.hpp>
 
 #include <set>
 
@@ -18,6 +21,33 @@ extern "C" {
 }
 
 namespace caspar { namespace ffmpeg {
+
+namespace {
+
+// Parses ffmpeg command line style options ("-key value ...") into an AVDictionary. Every option
+// needs a value: a value-less "-flag" followed by another option takes that option as its value.
+void set_options(AVDictionary** options, const std::string& str)
+{
+    static const boost::regex opt_exp("-(?<NAME>[^\\s]+)(\\s+(?<VALUE>[^\\s]+))?");
+
+    for (auto it = boost::sregex_iterator(str.begin(), str.end(), opt_exp); it != boost::sregex_iterator(); ++it) {
+        const auto name  = (*it)["NAME"].str();
+        const auto value = (*it)["VALUE"].matched ? (*it)["VALUE"].str() : std::string();
+        FF(av_dict_set(options, name.c_str(), value.c_str(), 0));
+    }
+}
+
+// Options from <ffmpeg><producer><options><scope>. Unknown options are logged as unused once the
+// input has been opened, but an invalid value for a known option makes the open fail.
+void set_config_options(AVDictionary** options, const std::wstring& scope)
+{
+    const auto str = env::properties().get<std::wstring>(L"configuration.ffmpeg.producer.options." + scope, L"");
+    if (!str.empty()) {
+        set_options(options, u8(str));
+    }
+}
+
+} // namespace
 
 Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> graph, std::optional<bool> seekable)
     : filename_(filename)
@@ -171,6 +201,17 @@ void Input::internal_reset()
     if (input_format == nullptr) {
         // TODO (fix) timeout?
         FF(av_dict_set(&options, "rw_timeout", "60000000", 0)); // 60 second IO timeout
+    }
+
+    // Applied last so that user configuration wins over the defaults above.
+    set_config_options(&options, L"default");
+    if (!url_parts.first.empty()) {
+        // The TLS variants share their protocol implementation, so they share its scope as well.
+        auto scope = url_parts.first;
+        if (scope == L"https" || scope == L"rtmps") {
+            scope.pop_back();
+        }
+        set_config_options(&options, scope);
     }
 
     AVFormatContext* ic             = avformat_alloc_context();

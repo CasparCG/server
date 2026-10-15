@@ -237,10 +237,11 @@ casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationMono-Reg
 if (ENABLE_HTML)
 	casparcg_add_external_project(cef)
 	ExternalProject_Add(cef
-		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_142.0.17+g60aac24+chromium-142.0.7444.176_windows64_minimal.tar.bz2
-		URL_HASH SHA256=16c072a44484fe521037c74d03a339a77573b1fc0146cf44cc71e79fd0cc0198
+		URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_150.0.22+gc1a097e+chromium-150.0.7871.256_windows64_minimal.tar.bz2
+		URL_HASH SHA256=a6afba8ee3d1cc9ef64318a734dfeb5ceafc0384a46df2af37b857e7d76c0544
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-		CMAKE_ARGS -DUSE_SANDBOX=Off -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
+		# api_version must match CEF_API_VERSION below
+		CMAKE_ARGS -DUSE_SANDBOX=Off -Dapi_version=15000 -DCEF_RUNTIME_LIBRARY_FLAG=/MD ${EXTERNAL_CMAKE_ARGS}
 		INSTALL_COMMAND ""
 	)
 	ExternalProject_Get_Property(cef SOURCE_DIR)
@@ -248,6 +249,7 @@ if (ENABLE_HTML)
 
     add_library(CEF::CEF INTERFACE IMPORTED)
 	add_dependencies(CEF::CEF cef)
+    target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=15000)
     target_include_directories(CEF::CEF INTERFACE
         "${SOURCE_DIR}"
     )
