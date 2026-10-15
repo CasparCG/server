@@ -88,6 +88,40 @@ Before beginning, check the build options section below, to decide if you want t
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
 
+### openSUSE Leap and Tumbleweed
+
+Experimental system-dependency builds are available for openSUSE Leap 16.0 and
+Tumbleweed. The Linux system-dependency CI workflow builds both distributions and
+uploads their install trees. These are not RPM packages or portable bundles;
+the target system must have the corresponding runtime dependencies installed.
+
+From the repository root:
+
+```sh
+sudo ./tools/linux/install-dependencies
+./tools/linux/build-with-system-deps
+```
+
+The build is installed into `build/staging`. Set `BUILD_DIR` to use a different
+build directory and `PROC_COUNT` to change the default of two parallel build
+jobs. Additional arguments are forwarded to CMake, for example:
+
+```sh
+PROC_COUNT=4 ./tools/linux/build-with-system-deps -DCMAKE_BUILD_TYPE=Debug
+```
+
+HTML is disabled by default because the system CEF packages are Ubuntu-specific.
+Vulkan is also disabled by default. To enable HTML with the downloaded CEF build,
+pass `-DENABLE_HTML=ON -DUSE_SYSTEM_CEF=OFF` and install CEF's additional build and
+runtime dependencies yourself.
+
+### Rocky Linux
+
+Rocky Linux builds and CI are deferred until the SFML dependency is removed.
+Rocky Linux 10 meets the current minimum Boost (1.83) and CMake (3.28) versions,
+but SFML is unavailable in its standard, CRB, EPEL, and RPM Fusion repositories.
+The dependency installer reports this blocker without changing the system.
+
 ## Build options
 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.

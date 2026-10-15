@@ -1,5 +1,14 @@
 #!/bin/bash
 
+set -euo pipefail
+
+source /etc/os-release
+case "$ID" in
+  rocky|opensuse-leap|opensuse-tumbleweed)
+    exec bash "$(dirname "${BASH_SOURCE[0]}")/install-dependencies-rpm"
+    ;;
+esac
+
 apt-get install -yq --no-install-recommends \
   autoconf \
   automake \
