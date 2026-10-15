@@ -206,7 +206,7 @@ jobs:
 
                   echo "--- Confirming libcef.so resolves via ldd ---"
                   ldd /tmp/casparcg-install/bin/casparcg | grep -i libcef.so
-                  ldd /tmp/casparcg-install/bin/casparcg | grep -qi 'libcef.so =>.*found'
+                  ldd /tmp/casparcg-install/bin/casparcg | grep -qE 'libcef[.]so[[:space:]]+=>[[:space:]]+/'
                   if ldd /tmp/casparcg-install/bin/casparcg | grep -qi 'not found'; then
                     echo "::error::Installed binary has unresolved shared libraries"
                     ldd /tmp/casparcg-install/bin/casparcg | grep -i 'not found'
