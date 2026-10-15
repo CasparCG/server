@@ -53,7 +53,6 @@ void* find_symbol(void* module, const char* name)
     return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(module), name));
 }
 
-void close_module(void* module) { FreeLibrary(static_cast<HMODULE>(module)); }
 #else
 const char* const library_filename = "libomt.so";
 
@@ -61,7 +60,6 @@ void* open_module(const boost::filesystem::path& path) { return dlopen(path.c_st
 
 void* find_symbol(void* module, const char* name) { return dlsym(module, name); }
 
-void close_module(void* module) { dlclose(module); }
 #endif
 
 [[noreturn]] void throw_library_not_found()
@@ -95,8 +93,8 @@ void* open_library()
 
     CASPAR_LOG(info) << L"Loaded " << boost::filesystem::path(library_filename).wstring();
 
-    // Unloads the library when CasparCG exits.
-    static std::shared_ptr<void> keep_loaded(module, close_module);
+    // The library is never unloaded: it runs threads of its own (discovery, logging), and unloading it
+    // while they run crashes the process. The system unloads it when CasparCG exits.
     return module;
 }
 
@@ -164,6 +162,17 @@ omt_lib* load_library()
 
         if (all_functions_found == false) {
             throw_library_incompatible();
+        }
+
+        // Not every libomt has it, so it is not required.
+        find_function(module, "omt_shutdown", loaded->shutdown);
+        if (loaded->shutdown != nullptr) {
+            // By the time statics are destroyed, the producers and consumers are gone.
+            static const struct shutdown_at_exit
+            {
+                decltype(&::omt_shutdown) shutdown;
+                ~shutdown_at_exit() { shutdown(); }
+            } stop_threads_at_exit{loaded->shutdown};
         }
 
         return loaded.release();

@@ -41,6 +41,9 @@ struct omt_lib
     decltype(&::omt_send)             send;
     decltype(&::omt_send_getaddress)  send_getaddress;
     decltype(&::omt_send_connections) send_connections;
+
+    // Stops the threads that libomt runs on its own. Not every libomt has it.
+    decltype(&::omt_shutdown) shutdown;
 };
 
 // Loads libomt on the first call and returns it on every call.
