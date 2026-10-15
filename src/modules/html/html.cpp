@@ -40,8 +40,10 @@
 #include <memory>
 #include <utility>
 
+#include <include/cef_api_hash.h>
 #include <include/cef_app.h>
 #include <include/cef_version.h>
+#include <include/cef_version_info.h>
 
 #ifdef WIN32
 #include <accelerator/d3d/d3d_device.h>
@@ -203,6 +205,14 @@ class renderer_application
         command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
         command_line->AppendSwitchWithValue("remote-allow-origins", "*");
 
+        // Component updates (e.g. CRLSet) are irrelevant for an embedded playout renderer, and starting
+        // the updater's Unzipper utility process has been observed to crash with a stack-smashing abort
+        // on Linux (mismatched stack-protector settings across the prebuilt CEF binary after fork()).
+        // Disabling updates avoids ever spawning that process; the flag below is Chromium's own workaround
+        // for the same class of crash, kept as a defense in depth.
+        command_line->AppendSwitch("disable-component-update");
+        command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
+
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
             // smoothly
@@ -262,6 +272,12 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(error) << "[html] Failed to initialize CEF";
         return;
     }
+
+    // The loaded libcef can be newer than the headers we were built with, as long as it supports our API version
+    CASPAR_LOG(info) << "[html] Using CEF " << cef_version_info(0) << "." << cef_version_info(1) << "."
+                     << cef_version_info(2) << " (Chromium " << cef_version_info(4) << "." << cef_version_info(5)
+                     << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
+                     << cef_api_version() << ". Built against CEF " << CEF_VERSION;
 
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(
