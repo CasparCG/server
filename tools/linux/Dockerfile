@@ -1,7 +1,8 @@
 FROM docker.io/buildpack-deps:noble AS build-casparcg
 	ADD tools/linux/install-dependencies /
+	ADD tools/linux/platform-config /
 
-	RUN apt-get update && /install-dependencies
+	RUN /install-dependencies --download-cef
 
 	RUN mkdir /source && mkdir /build && mkdir /install
 

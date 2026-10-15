@@ -12,11 +12,14 @@ case "$ID" in
   opensuse-leap|opensuse-tumbleweed)
     zypper --non-interactive refresh
     zypper --non-interactive install --no-recommends \
-      cmake ninja gcc gcc-c++ git make pkg-config \
+      cmake ninja gcc gcc-c++ git make pkg-config curl tar bzip2 \
+      liberation-fonts libcups2 \
       boost-devel 'cmake(SFML)' \
       libboost_thread-devel libboost_filesystem-devel libboost_log-devel \
       libboost_locale-devel libboost_regex-devel libboost_date_time-devel \
       libboost_coroutine-devel \
+      'pkgconfig(gtk+-3.0)' 'pkgconfig(nss)' 'pkgconfig(alsa)' \
+      'pkgconfig(gbm)' 'pkgconfig(libdrm)' 'pkgconfig(icu-uc)' \
       'pkgconfig(glew)' 'pkgconfig(tbb)' 'pkgconfig(openal)' \
       'pkgconfig(gl)' 'pkgconfig(glx)' 'pkgconfig(egl)' \
       'pkgconfig(x11)' 'pkgconfig(xrandr)' \

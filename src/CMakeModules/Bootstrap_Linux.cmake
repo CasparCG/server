@@ -13,7 +13,7 @@ endif()
 
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
-set(USE_SYSTEM_CEF ON CACHE BOOL "Use the version of cef from your OS (only tested with Ubuntu)")
+set(USE_SYSTEM_CEF ON CACHE BOOL "Use a compatible system CEF package")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
 set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
@@ -65,36 +65,32 @@ find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
     if (USE_SYSTEM_CEF)
-        # Provides CasparCG::CEF, with include dir, CEF_API_VERSION, libs and rpath already set
+        # Prefer the CasparCG CEF package when available.
         find_package(casparcg-cef-api15000 CONFIG QUIET)
 
-        # ALIAS of a non-global imported target needs cmake 3.18
         add_library(CEF::CEF INTERFACE IMPORTED)
 
         if (${casparcg-cef-api15000_FOUND})
             target_link_libraries(CEF::CEF INTERFACE CasparCG::CEF)
         else()
-            # Fall back to a generic distro-packaged CEF (e.g. Arch's or Fedora's "cef" package),
-            # which ships a FindCEF.cmake module instead of a CasparCG-specific package config.
+            # Otherwise use the distro's FindCEF.cmake.
             set(CEF_API_VERSION 15000)
             find_package(CEF MODULE REQUIRED)
             target_link_libraries(CEF::CEF INTERFACE CEF::Library CEF::Wrapper)
             target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=${CEF_API_VERSION})
         endif()
 
-        # cmake strips the RPATH computed during the build when installing targets unless told
-        # otherwise. Without this, a distro package that installs libcef.so outside the default
-        # linker search path (e.g. Arch's /usr/lib/cef) leaves the installed binary unable to
-        # find it at runtime.
+        # Preserve non-standard system CEF library paths after installation.
         set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     else()
+        # Download prebuilt CEF; compile only its API 15000 wrapper.
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
             URL ${CASPARCG_DOWNLOAD_MIRROR}/cef/cef_binary_150.0.22+gc1a097e+chromium-150.0.7871.256_linux64_minimal.tar.bz2
             URL_HASH SHA256=dd1b5cc3ac6efe659ec7e8e9b0677ba4e43216a2fefcafd5abc9340837e32d96
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
-            # api_version must match CEF_API_VERSION below
             CMAKE_ARGS -DUSE_SANDBOX=Off -Dapi_version=15000
+            BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target libcef_dll_wrapper --config Release
             INSTALL_COMMAND ""
             BUILD_BYPRODUCTS
                 "<SOURCE_DIR>/Release/libcef.so"
@@ -117,7 +113,7 @@ if (ENABLE_HTML)
             "${SOURCE_DIR}"
         )
         target_link_libraries(CEF::CEF INTERFACE
-            # Note: All of these must be referenced in the BUILD_BYPRODUCTS above, to satisfy ninja
+            # Ninja requires the library byproducts declared above.
             "${SOURCE_DIR}/Release/libcef.so"
             "${BINARY_DIR}/libcef_dll_wrapper/libcef_dll_wrapper.a"
         )

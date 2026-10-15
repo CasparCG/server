@@ -6,6 +6,10 @@ on:
     pull_request:
         branches: ["master"]
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/2.3.x-lts' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
     build:
         name: ${{ matrix.container || matrix.os }} ${{ matrix.arch }} (${{matrix.family}}:${{ matrix.distribution }})
@@ -40,14 +44,14 @@ jobs:
                       arch: amd64
                       container: debian:trixie # Debian 13
                       apt_prefix: ""
-                      upload_artifacts: false # Because of CEF, this is not built correctly
+                      upload_artifacts: false
                     - os: ubuntu-latest
                       family: debian
                       distribution: sid
                       arch: amd64
                       container: debian:sid # Debian Testing
                       apt_prefix: ""
-                      upload_artifacts: false # Because of CEF, this is not built correctly
+                      upload_artifacts: false
                       experimental: true
                     - os: ubuntu-latest
                       family: archlinux
@@ -75,6 +79,7 @@ jobs:
                       experimental: true
 
         runs-on: ${{ matrix.os }}
+        timeout-minutes: 120
         container: ${{ matrix.container }}
         continue-on-error: ${{ matrix.experimental || false }} # Stop failures of smoke tests being loud
         defaults:
@@ -141,13 +146,27 @@ jobs:
                   DEBIAN_FRONTEND: noninteractive
                   APT_PREFIX: ${{ matrix.apt_prefix }}
 
+            - name: Install native dependencies
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              run: ./tools/linux/install-dependencies
+              env:
+                  CI: 1
+
+            - name: Cache dependency downloads
+              if: ${{ matrix.family == 'debian' || matrix.family == 'opensuse' }}
+              uses: actions/cache@v5
+              with:
+                  path: .cache/casparcg-downloads
+                  key: downloads-${{ matrix.family }}-${{ matrix.distribution }}-${{ matrix.arch }}-${{ hashFiles('src/CMakeModules/Bootstrap_Linux.cmake') }}
+
             - name: Run build
               if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
               run: |
                   # Perform build
-                  debuild -b -uc -us
+                  debuild --preserve-envvar=CASPARCG_DOWNLOAD_CACHE -b -uc -us
               env:
                   CI: 1
+                  CASPARCG_DOWNLOAD_CACHE: ${{ github.workspace }}/.cache/casparcg-downloads
 
             - name: Collect artifacts
               id: artifacts
@@ -185,73 +204,42 @@ jobs:
                   name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
                   path: dist
 
-            - name: Setup environment (archlinux)
-              if: ${{ matrix.family == 'archlinux' }}
-              run: |
-                  pacman -Syu --noconfirm
-                  pacman -S --noconfirm --needed \
-                    base-devel cmake ninja pkg-config \
-                    boost boost-libs ffmpeg glew libglvnd \
-                    onetbb openal sfml \
-                    libxrandr simde cef
-              env:
-                  CI: 1
-
-            - name: Run build (archlinux)
-              if: ${{ matrix.family == 'archlinux' }}
-              run: |
-                  # ENABLE_HTML and USE_SYSTEM_CEF both default to ON; set explicitly for clarity.
-                  # This exercises the generic distro-package (FindCEF.cmake) fallback used by
-                  # Arch/Fedora, since neither ships the CasparCG-specific casparcg-cef-api15000
-                  # package config that Ubuntu/Debian's PPA does.
-                  cmake -B build -S src \
-                    -DCMAKE_BUILD_TYPE=Release \
-                    -DDIAG_FONT_PATH="/usr/share/fonts/liberation/LiberationMono-Regular.ttf" \
-                    -DENABLE_HTML=ON \
-                    -DUSE_SYSTEM_CEF=ON \
-                    -G Ninja
-
-                  cmake --build build
-              env:
-                  CI: 1
-
-            - name: Verify system CEF linkage (archlinux)
-              if: ${{ matrix.family == 'archlinux' }}
-              run: |
-                  cmake --install build --prefix /tmp/casparcg-install
-
-                  echo "--- RPATH of installed binary ---"
-                  readelf -d /tmp/casparcg-install/bin/casparcg | grep -i 'rpath\|runpath'
-                  readelf -d /tmp/casparcg-install/bin/casparcg | grep -qi 'rpath\|runpath'
-
-                  echo "--- Confirming libcef.so resolves via ldd ---"
-                  ldd /tmp/casparcg-install/bin/casparcg | grep -i libcef.so
-                  ldd /tmp/casparcg-install/bin/casparcg | grep -qE 'libcef[.]so[[:space:]]+=>[[:space:]]+/'
-                  if ldd /tmp/casparcg-install/bin/casparcg | grep -qi 'not found'; then
-                    echo "::error::Installed binary has unresolved shared libraries"
-                    ldd /tmp/casparcg-install/bin/casparcg | grep -i 'not found'
-                    exit 1
-                  fi
-
-                  echo "--- Confirming no undefined symbols remain (full relocation check) ---"
-                  if LD_LIBRARY_PATH=/tmp/casparcg-install/lib ldd -r /tmp/casparcg-install/bin/casparcg 2>&1 | grep -qi 'undefined symbol'; then
-                    echo "::error::Installed binary has undefined symbols"
-                    LD_LIBRARY_PATH=/tmp/casparcg-install/lib ldd -r /tmp/casparcg-install/bin/casparcg 2>&1 | grep -i 'undefined symbol'
-                    exit 1
-                  fi
-              env:
-                  CI: 1
-
-            - name: Install dependencies (openSUSE)
-              if: ${{ matrix.family == 'opensuse' }}
-              run: ./tools/linux/install-dependencies
-
-            - name: Build and install (openSUSE)
-              if: ${{ matrix.family == 'opensuse' }}
-              run: ./tools/linux/build-with-system-deps
+            - name: Build and install native targets
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              run: ./tools/build.sh -DCASPARCG_DOWNLOAD_CACHE="$GITHUB_WORKSPACE/.cache/casparcg-downloads"
               env:
                   CI: 1
                   PROC_COUNT: 2
+
+            - name: Verify installed CEF linkage
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              run: |
+                  binary="$PWD/build/staging/bin/casparcg"
+                  if [[ "$CEF_FAMILY" == 'archlinux' ]]; then
+                    dynamic_section=$(readelf -d "$binary")
+                    printf '%s\n' "$dynamic_section"
+                    grep -qE '\((RPATH|RUNPATH)\)' <<< "$dynamic_section"
+                  else
+                    export LD_LIBRARY_PATH="$PWD/build/staging/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                  fi
+
+                  libraries=$(ldd "$binary" 2>&1)
+                  printf '%s\n' "$libraries"
+                  if [[ "$libraries" == *'not found'* ]]; then
+                    echo "::error::Installed binary has unresolved shared libraries"
+                    exit 1
+                  fi
+                  grep -qE 'libcef[.]so[[:space:]]+=>[[:space:]]+/' <<< "$libraries"
+
+                  relocations=$(ldd -r "$binary" 2>&1)
+                  printf '%s\n' "$relocations"
+                  if [[ "$relocations" == *'undefined symbol'* || "$relocations" == *'not found'* ]]; then
+                    echo "::error::Installed binary has undefined symbols"
+                    exit 1
+                  fi
+              env:
+                  CI: 1
+                  CEF_FAMILY: ${{ matrix.family }}
 
             - uses: actions/upload-artifact@v7
               if: ${{ matrix.family == 'opensuse' && matrix.upload_artifacts }}

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /etc/os-release
+
+case "$ID" in
+  ubuntu)
+    system_cef=ON
+    font_path=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
+    ;;
+  arch)
+    system_cef=ON
+    font_path=/usr/share/fonts/TTF/LiberationMono-Regular.ttf
+    ;;
+  debian)
+    system_cef=OFF
+    font_path=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
+    ;;
+  opensuse-leap|opensuse-tumbleweed)
+    system_cef=OFF
+    font_path=/usr/share/fonts/truetype/LiberationMono-Regular.ttf
+    ;;
+  rocky)
+    echo "Rocky Linux builds are deferred until the SFML dependency is removed." >&2
+    exit 1
+    ;;
+  *)
+    echo "Unsupported distribution: $ID. See BUILDING.md for supported platforms." >&2
+    exit 1
+    ;;
+esac

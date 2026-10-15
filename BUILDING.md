@@ -30,7 +30,7 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 4. `cd casparcg-server-master`
 
-5. `.\tools\windows\build.bat`
+5. `.\tools\build.bat`
 
 6. Copy the `dist\casparcg_server.zip` file for distribution
 
@@ -50,8 +50,8 @@ You can figure out which files you need by looking at each of the `ExternalProje
 
 We only officially support Ubuntu LTS releases, other distros may work but often run into build issues. We are happy to accept PRs to resolve these issues, but are unlikely to write fixes ourselves.
 
-We currently document two approaches to building CasparCG. The recommended way is to use the `deb` packaging we have in the repository, but we only provide that for Ubuntu LTS releases.
-Other deb based distros can work with some tweaks to one of those, other distros will need something else which is not documented here.
+We currently document two approaches to building CasparCG. The recommended way is to use the `deb` packaging we have in the repository for Ubuntu and Debian.
+For native builds on other distributions, follow the Development steps below.
 
 We also provide a script to produce a build in docker, but this is not recommended unless absolutely necessary. The resulting builds are often rather brittle depending on where they are used.
 
@@ -76,51 +76,57 @@ _Note: if you ran docker with sudo, CasparCG server will not be able to run with
 ## Development
 
 Before beginning, check the build options section below, to decide if you want to use any to simplify or customise your build.
+Install Git using your distribution's package manager before cloning.
 
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
-3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
-4. If using system CEF (default & recommended), `sudo add-apt-repository ppa:casparcg/ppa` and `sudo apt-get install casparcg-cef-api15000-dev`
-5. `mkdir build && cd build`
-6. `cmake ../src` You can add any of the build options from below to this command
-7. `cmake --build . --parallel`
-8. `cmake --install . --prefix staging`
+3. `sudo ./tools/linux/install-dependencies`
+4. `./tools/build.sh` You can add any of the build options from below to this command.
 
-If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
+If all goes to plan, a folder called `build/staging` has been created with everything you need to run CasparCG server on the build system.
+The dependency installer requires root; the build itself should run as your normal user. The install tree is not a portable bundle: its system libraries and diagnostic font must also exist on the target machine.
 
-### openSUSE Leap and Tumbleweed
+The common build launcher calls the existing platform-specific tools: `tools/windows/build.bat` on Windows and `tools/linux/build-with-system-deps` on Linux.
+On Linux, the installer selects APT, pacman, or zypper, and both scripts use `tools/linux/platform-config` to select the CEF provider and diagnostic font. No separate CEF setup step is required.
 
-Experimental system-dependency builds are available for openSUSE Leap 16.0 and
-Tumbleweed. The Linux system-dependency CI workflow builds both distributions and
-uploads their install trees. These are not RPM packages or portable bundles;
-the target system must have the corresponding runtime dependencies installed.
+| Distribution | CEF source |
+| --- | --- |
+| Ubuntu 24.04 and 26.04 | CasparCG PPA, added by the installer |
+| Debian 13 (Trixie) and Sid | Pinned CEF download |
+| Arch Linux | Distribution `cef` package |
+| openSUSE Leap 16.0 and Tumbleweed | Pinned CEF download |
 
-From the repository root:
+HTML is enabled by default. These configurations target x86-64 and require CMake 3.28 or newer and Boost 1.83 or newer.
+Ubuntu ARM64 requires the PPA's matching ARM64 CEF package; the downloaded CEF archive is x86-64 only.
+The Arch installer performs a full pacman system upgrade. Non-Ubuntu targets are experimental.
 
-```sh
-sudo ./tools/linux/install-dependencies
-./tools/linux/build-with-system-deps
-```
-
-The build is installed into `build/staging`. Set `BUILD_DIR` to use a different
-build directory and `PROC_COUNT` to change the default of two parallel build
-jobs. Additional arguments are forwarded to CMake, for example:
+On Linux, `BUILD_DIR` selects a different build directory and `PROC_COUNT` changes the default of two parallel build jobs.
+Additional arguments are forwarded to CMake and override the script's defaults, for example:
 
 ```sh
-PROC_COUNT=4 ./tools/linux/build-with-system-deps -DCMAKE_BUILD_TYPE=Debug
+PROC_COUNT=4 ./tools/build.sh -DCMAKE_BUILD_TYPE=Debug
 ```
 
-HTML is disabled by default because the system CEF packages are Ubuntu-specific.
-Vulkan is also disabled by default. To enable HTML with the downloaded CEF build,
-pass `-DENABLE_HTML=ON -DUSE_SYSTEM_CEF=OFF` and install CEF's additional build and
-runtime dependencies yourself.
+To use downloaded CEF instead of Ubuntu's PPA or Arch's package, select it in both commands. Use a separate build directory when changing providers:
+
+```sh
+sudo ./tools/linux/install-dependencies --download-cef
+BUILD_DIR=build-downloaded-cef ./tools/build.sh -DUSE_SYSTEM_CEF=OFF
+```
+
+Compatible packaged CEF is preferred. The checked Debian Trixie and openSUSE repositories do not provide a CEF development package, so these targets use the pinned binary archive.
+The archive supplies prebuilt CEF libraries and resources; only `libcef_dll_wrapper` is compiled locally. Downloads are cached as described above.
+To enable Vulkan, install a compatible Vulkan SDK and set up its environment before passing `-DENABLE_VULKAN=ON`. The Docker build already provisions its own SDK.
+
+### Running Headless
+
+CasparCG 2.5 and later can run without X11 using the normal Linux build. See the upstream [Headless Linux Server guide](https://github.com/CasparCG/casparcg.com/blob/master/docs/guides/linux-headless.md).
+With `DISPLAY` unset, OpenGL uses EGL and CEF selects its headless platform. A working graphics driver is still required; do not configure screen output or graphical diagnostics. SFML remains a build dependency, so no separate headless build option is provided.
 
 ### Rocky Linux
 
-Rocky Linux builds and CI are deferred until the SFML dependency is removed.
-Rocky Linux 10 meets the current minimum Boost (1.83) and CMake (3.28) versions,
-but SFML is unavailable in its standard, CRB, EPEL, and RPM Fusion repositories.
-The dependency installer reports this blocker without changing the system.
+Rocky Linux 10 meets the minimum Boost and CMake versions, but lacks SFML in its standard, CRB, EPEL, and RPM Fusion repositories.
+The tools report this blocker without changing the system. Headless operation does not bypass the SFML build dependency, so Rocky builds and CI remain deferred.
 
 ## Build options
 
@@ -128,7 +134,9 @@ The dependency installer reports this blocker without changing the system.
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
--DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa
+-DUSE_SYSTEM_CEF=OFF - (Linux only, CMake default ON) download the pinned CEF build instead of using system CEF. System CEF can come from the CasparCG Ubuntu PPA or a distro package providing `FindCEF.cmake` (such as Arch's). The native build script chooses the appropriate default per distribution.
+
+-DENABLE_VULKAN=ON - (Linux only, default OFF) enable Vulkan support; requires a compatible Vulkan SDK.
 
 -DENABLE_AVX2=ON (Linux only, default OFF) Enable the AVX and AVX2 instruction sets (requires a CPU that supports it)
 

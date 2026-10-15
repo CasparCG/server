@@ -2,7 +2,10 @@
 
 set -euo pipefail
 
-source_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/platform-config"
+
+source_root="$(cd "$script_dir/../.." && pwd)"
 build_dir="${BUILD_DIR:-"$source_root/build"}"
 mkdir -p "$build_dir"
 build_dir="$(cd "$build_dir" && pwd)"
@@ -10,7 +13,9 @@ build_dir="$(cd "$build_dir" && pwd)"
 cmake -B "$build_dir" -S "$source_root/src" \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
-  -DENABLE_HTML=OFF \
+  -DENABLE_HTML=ON \
+  -DUSE_SYSTEM_CEF="$system_cef" \
+  -DDIAG_FONT_PATH="$font_path" \
   "$@"
 
 cmake --build "$build_dir" --parallel "${PROC_COUNT:-2}"
