@@ -6,7 +6,28 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/platform-config"
 
 source_root="$(cd "$script_dir/../.." && pwd)"
-build_dir="${BUILD_DIR:-"$source_root/build"}"
+build_dir="$source_root/build"
+cmake_arguments=()
+while (( $# )); do
+  case "$1" in
+    -B)
+      if (( $# < 2 )); then
+        echo "-B requires a build directory" >&2
+        exit 1
+      fi
+      build_dir="$2"
+      shift 2
+      ;;
+    -B?*)
+      build_dir="${1#-B}"
+      shift
+      ;;
+    *)
+      cmake_arguments+=("$1")
+      shift
+      ;;
+  esac
+done
 mkdir -p "$build_dir"
 build_dir="$(cd "$build_dir" && pwd)"
 
@@ -16,7 +37,7 @@ cmake -B "$build_dir" -S "$source_root/src" \
   -DENABLE_HTML=ON \
   -DUSE_SYSTEM_CEF="$system_cef" \
   -DDIAG_FONT_PATH="$font_path" \
-  "$@"
+  "${cmake_arguments[@]}"
 
-cmake --build "$build_dir" --parallel "${PROC_COUNT:-2}"
+cmake --build "$build_dir" --parallel
 cmake --install "$build_dir" --prefix "$build_dir/staging"

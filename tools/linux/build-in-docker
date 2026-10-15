@@ -5,7 +5,6 @@ GIT_HASH=$(git rev-parse --verify --short HEAD)
 docker build -t casparcg/server \
   --build-arg CC \
   --build-arg CXX \
-  --build-arg PROC_COUNT \
   --build-arg GIT_HASH \
   -f $PWD/tools/linux/Dockerfile $PWD
 

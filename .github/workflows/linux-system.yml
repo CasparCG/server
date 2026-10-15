@@ -209,7 +209,7 @@ jobs:
               run: ./tools/build.sh -DCASPARCG_DOWNLOAD_CACHE="$GITHUB_WORKSPACE/.cache/casparcg-downloads"
               env:
                   CI: 1
-                  PROC_COUNT: 2
+                  CMAKE_BUILD_PARALLEL_LEVEL: 2
 
             - name: Verify installed CEF linkage
               if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
