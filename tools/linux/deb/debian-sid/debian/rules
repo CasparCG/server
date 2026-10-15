@@ -9,6 +9,10 @@ override_dh_auto_configure:
 # read yet (https://bugs.debian.org/1016936). dh_strip still runs normally afterwards.
 override_dh_dwz:
 
+# The prebuilt CEF binaries carry DWARF 5 debug sections (.debug_addr) that dwz cannot
+# read yet (https://bugs.debian.org/1016936). dh_strip still runs normally afterwards.
+override_dh_dwz:
+
 # Generate and install manual page
 debian/casparcg-server-beta.1: debian/casparcg.txt2man
 	txt2man -t CASPARCG -d 2018-12-14 -s 1 debian/casparcg.txt2man > $@
