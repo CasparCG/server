@@ -65,6 +65,17 @@ constexpr size_t max_queued_frames = 3;
 // Audio that arrives without video to go with it is dropped beyond this length.
 constexpr int max_buffered_audio_seconds = 2;
 
+// True if the image holds every row that the frame announces.
+bool is_usable_video(const OMTMediaFrame& frame)
+{
+    if (frame.Data == nullptr || frame.Width < 1 || frame.Height < 1) {
+        return false;
+    }
+
+    const int64_t row_bytes = static_cast<int64_t>(frame.Width) * 4;
+    return frame.Stride >= row_bytes && frame.DataLength >= static_cast<int64_t>(frame.Stride) * frame.Height;
+}
+
 // What a received audio frame may announce. libomt documents at most 32 channels, and passes the
 // sample rate on without looking at it. A value outside of this range cannot come from a real sender.
 constexpr int max_audio_channels    = 32;
@@ -410,7 +421,7 @@ struct omt_producer : public core::frame_producer
 
     void handle_video(const OMTMediaFrame& frame)
     {
-        if (frame.Width <= 0 || frame.Height <= 0 || frame.Data == nullptr) {
+        if (is_usable_video(frame) == false) {
             return;
         }
 
