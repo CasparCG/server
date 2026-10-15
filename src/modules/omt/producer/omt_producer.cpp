@@ -65,6 +65,26 @@ constexpr size_t max_queued_frames = 3;
 // Audio that arrives without video to go with it is dropped beyond this length.
 constexpr int max_buffered_audio_seconds = 2;
 
+// What a received audio frame may announce. libomt documents at most 32 channels, and passes the
+// sample rate on without looking at it. A value outside of this range cannot come from a real sender.
+constexpr int max_audio_channels    = 32;
+constexpr int min_audio_sample_rate = 8000;
+constexpr int max_audio_sample_rate = 384000;
+
+// True if the frame can be converted without reading or allocating more than the data it holds.
+bool is_usable_audio(const OMTMediaFrame& frame)
+{
+    if (frame.Data == nullptr || frame.Channels < 1 || frame.Channels > max_audio_channels ||
+        frame.SamplesPerChannel < 1 || frame.SampleRate < min_audio_sample_rate ||
+        frame.SampleRate > max_audio_sample_rate) {
+        return false;
+    }
+
+    // libomt works out the size of the data in 32 bit arithmetic, which wraps around for very large counts.
+    const int64_t announced_bytes = static_cast<int64_t>(frame.Channels) * frame.SamplesPerChannel * sizeof(float);
+    return frame.DataLength >= announced_bytes;
+}
+
 struct swr_deleter
 {
     void operator()(SwrContext* context) { swr_free(&context); }
@@ -102,6 +122,7 @@ struct omt_producer : public core::frame_producer
     // Converted audio waiting for the next video frame to be played with.
     std::deque<int32_t> audio_queue_;
     std::mutex          audio_mutex_;
+    bool                warned_about_audio_ = false;
 
     // CasparCG video frames need a different number of audio samples depending on the frame rate.
     int       cadence_counter_ = 0;
@@ -225,42 +246,68 @@ struct omt_producer : public core::frame_producer
     // --- Audio ---
 
     // (Re)creates the audio converter when the sender changes its channel count or sample rate.
-    void ensure_audio_converter(int channels, int sample_rate)
+    // Returns false if there is no converter for this audio.
+    bool ensure_audio_converter(int channels, int sample_rate)
     {
         const bool converter_matches =
             swr_ != nullptr && recv_channels_ == channels && recv_sample_rate_ == sample_rate;
         if (converter_matches == true) {
-            return;
+            return true;
         }
 
-        recv_channels_    = channels;
-        recv_sample_rate_ = sample_rate;
+        // The queued samples are laid out for the old channel count.
+        {
+            std::lock_guard<std::mutex> lock(audio_mutex_);
+            audio_queue_.clear();
+        }
+        swr_.reset();
+        recv_channels_    = 0;
+        recv_sample_rate_ = 0;
 
         AVChannelLayout layout;
         av_channel_layout_default(&layout, channels);
 
         SwrContext* context = nullptr;
-        swr_alloc_set_opts2(&context,
-                            &layout,
-                            AV_SAMPLE_FMT_S32,
-                            format_desc_.audio_sample_rate,
-                            &layout,
-                            AV_SAMPLE_FMT_FLTP,
-                            sample_rate,
-                            0,
-                            nullptr);
+        const int   result  = swr_alloc_set_opts2(&context,
+                                               &layout,
+                                               AV_SAMPLE_FMT_S32,
+                                               format_desc_.audio_sample_rate,
+                                               &layout,
+                                               AV_SAMPLE_FMT_FLTP,
+                                               sample_rate,
+                                               0,
+                                               nullptr);
+        av_channel_layout_uninit(&layout);
+        if (result < 0) {
+            return false;
+        }
+        if (swr_init(context) < 0) {
+            swr_free(&context);
+            return false;
+        }
+
         swr_.reset(context);
-        swr_init(context);
+        recv_channels_    = channels;
+        recv_sample_rate_ = sample_rate;
+        return true;
     }
 
     // Converts received audio and queues it for the next video frames.
     void handle_audio(const OMTMediaFrame& frame)
     {
-        if (frame.Channels <= 0 || frame.SamplesPerChannel <= 0 || frame.Data == nullptr) {
+        if (is_usable_audio(frame) == false) {
+            if (warned_about_audio_ == false) {
+                warned_about_audio_ = true;
+                CASPAR_LOG(warning) << print() << L" Ignoring audio that the sender announced as " << frame.Channels
+                                    << L" channels, " << frame.SampleRate << L" Hz, " << frame.SamplesPerChannel
+                                    << L" samples per channel and " << frame.DataLength << L" bytes.";
+            }
             return;
         }
 
-        ensure_audio_converter(frame.Channels, frame.SampleRate);
+        if (ensure_audio_converter(frame.Channels, frame.SampleRate) == false) {
+            return;
+        }
 
         // Planar: the samples of each channel follow each other, one channel after the other.
         std::vector<const uint8_t*> input_planes(frame.Channels);
