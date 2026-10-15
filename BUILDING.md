@@ -87,9 +87,14 @@ Before beginning, check the build options section below, to decide if you want t
 
 If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
 
-The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch Linux, and openSUSE Leap 16.0/Tumbleweed, including CEF setup. It adds the CasparCG PPA on Ubuntu and performs a full system upgrade on Arch. Build as your normal user after installing dependencies.
-HTML is enabled by default. Compatible packaged CEF is used on Ubuntu and Arch; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
+The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch Linux, Fedora Rawhide, and openSUSE Leap 16.0/Tumbleweed, including CEF setup. It adds the CasparCG PPA on Ubuntu and performs a full system upgrade on Arch. Build as your normal user after installing dependencies.
+HTML is enabled by default. Compatible packaged CEF is used on Ubuntu, Arch, and Fedora; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
+
+Fedora CI uses Rawhide because Fedora 44/45 currently package CEF 146, which is
+older than the required API 15000. Like Arch, the Fedora job builds with system
+CEF and checks the installed binary's RPATH/RUNPATH, library resolution, and
+relocations without setting `LD_LIBRARY_PATH`.
 
 Debian CI checks compilation only: it downloads prebuilt CEF, compiles its wrapper,
 and builds CasparCG with HTML enabled. It does not install or package the bundled

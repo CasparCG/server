@@ -62,6 +62,14 @@ jobs:
                       upload_artifacts: false # Not packaged, this just verifies the build + system CEF discovery
                       experimental: true
                     - os: ubuntu-latest
+                      family: fedora
+                      distribution: rawhide
+                      arch: amd64
+                      container: fedora:rawhide # Stable releases currently ship CEF older than API 15000
+                      apt_prefix: ""
+                      upload_artifacts: false
+                      experimental: true
+                    - os: ubuntu-latest
                       family: opensuse
                       distribution: leap-16.0
                       arch: amd64
@@ -94,6 +102,10 @@ jobs:
             - name: Install git (openSUSE)
               if: ${{ matrix.family == 'opensuse' }}
               run: zypper --non-interactive install --no-recommends git
+
+            - name: Install git (Fedora)
+              if: ${{ matrix.family == 'fedora' }}
+              run: dnf -y install git
 
             - uses: actions/checkout@v7
 
@@ -147,7 +159,7 @@ jobs:
                   APT_PREFIX: ${{ matrix.apt_prefix }}
 
             - name: Install native dependencies
-              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'fedora' || matrix.family == 'opensuse' }}
               run: ./tools/linux/install-dependencies
               env:
                   CI: 1
@@ -212,17 +224,17 @@ jobs:
                   path: dist
 
             - name: Build and install native targets
-              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'fedora' || matrix.family == 'opensuse' }}
               run: ./tools/build.sh -DCASPARCG_DOWNLOAD_CACHE="$GITHUB_WORKSPACE/.cache/casparcg-downloads"
               env:
                   CI: 1
                   CMAKE_BUILD_PARALLEL_LEVEL: 2
 
             - name: Verify installed CEF linkage
-              if: ${{ matrix.family == 'archlinux' || matrix.family == 'opensuse' }}
+              if: ${{ matrix.family == 'archlinux' || matrix.family == 'fedora' || matrix.family == 'opensuse' }}
               run: |
                   binary="$PWD/build/staging/bin/casparcg"
-                  if [[ "$CEF_FAMILY" == 'archlinux' ]]; then
+                  if [[ "$CEF_FAMILY" == 'archlinux' || "$CEF_FAMILY" == 'fedora' ]]; then
                     dynamic_section=$(readelf -d "$binary")
                     printf '%s\n' "$dynamic_section"
                     grep -qE '\((RPATH|RUNPATH)\)' <<< "$dynamic_section"

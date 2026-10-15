@@ -5,6 +5,19 @@ set -euo pipefail
 source /etc/os-release
 
 case "$ID" in
+  fedora)
+    cef_packages=()
+    if [[ "${system_cef:-ON}" == ON ]]; then
+      cef_packages+=(cef-devel)
+    fi
+    dnf -y --setopt=install_weak_deps=False install \
+      cmake ninja-build gcc gcc-c++ git make pkgconf-pkg-config curl tar bzip2 \
+      liberation-mono-fonts cups-libs \
+      boost-devel SFML-devel glew-devel tbb-devel openal-soft-devel \
+      libglvnd-devel libX11-devel libXrandr-devel \
+      gtk3-devel nss-devel alsa-lib-devel mesa-libgbm-devel libdrm-devel libicu-devel \
+      ffmpeg-free-devel "${cef_packages[@]}"
+    ;;
   rocky)
     echo "Rocky Linux builds are deferred until the SFML dependency is removed." >&2
     exit 1

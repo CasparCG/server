@@ -11,6 +11,10 @@ case "$ID" in
     system_cef=ON
     font_path=/usr/share/fonts/TTF/LiberationMono-Regular.ttf
     ;;
+  fedora)
+    system_cef=ON
+    font_path=/usr/share/fonts/liberation-mono-fonts/LiberationMono-Regular.ttf
+    ;;
   debian)
     system_cef=OFF
     font_path=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf

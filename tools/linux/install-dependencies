@@ -32,8 +32,8 @@ case "$ID" in
       "${cef_packages[@]}"
     exit 0
     ;;
-  rocky|opensuse-leap|opensuse-tumbleweed)
-    exec bash "$script_dir/install-dependencies-rpm"
+  fedora|rocky|opensuse-leap|opensuse-tumbleweed)
+    exec env system_cef="$system_cef" bash "$script_dir/install-dependencies-rpm"
     ;;
   ubuntu|debian)
     apt-get update
