@@ -52,7 +52,8 @@ bool operator<(const route_id& a, const route_id& b) { return a.mode + (a.index 
 
 struct video_channel::impl final
 {
-    monitor::state state_;
+    monitor::state     state_;
+    mutable std::mutex state_mutex_;
 
     const channel_info channel_info_;
 
@@ -183,10 +184,13 @@ struct video_channel::impl final
                                                 stage_frames.format_desc.field_count,
                                             stage_frames.format_desc.framerate.denominator()};
                     state["format"]      = stage_frames.format_desc.name;
-                    state_               = state;
+                    {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        state_ = state;
+                    }
 
                     caspar::timer osc_timer;
-                    tick_(state_);
+                    tick_(state);
                     graph_->set_value("osc-time", osc_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
@@ -258,7 +262,11 @@ output&                             video_channel::output() { return impl_->outp
 spl::shared_ptr<frame_factory>      video_channel::frame_factory() { return impl_->image_mixer_; }
 int                                 video_channel::index() const { return impl_->index(); }
 channel_info         video_channel::get_consumer_channel_info() const { return impl_->get_consumer_channel_info(); };
-core::monitor::state video_channel::state() const { return impl_->state_; }
+core::monitor::state video_channel::state() const
+{
+    std::lock_guard<std::mutex> lock(impl_->state_mutex_);
+    return impl_->state_;
+}
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 
