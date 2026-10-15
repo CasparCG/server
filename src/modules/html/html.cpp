@@ -40,12 +40,43 @@
 #include <memory>
 #include <utility>
 
+#include <include/cef_api_hash.h>
 #include <include/cef_app.h>
 #include <include/cef_version.h>
+#include <include/cef_version_info.h>
 
 #ifdef WIN32
 #include <accelerator/d3d/d3d_device.h>
 #endif
+
+// Malinfo patch start - Remove once fixed upstream.
+#if defined(__linux__)
+#include <algorithm>
+#include <cstdint>
+#include <dlfcn.h>
+#include <malloc.h>
+
+// Work around CEF's Linux mallinfo() overflow by forwarding to mallinfo2() with int-safe field clamps.
+extern "C" struct mallinfo mallinfo(void)
+{
+    struct mallinfo2 m2 = mallinfo2();
+    struct mallinfo   m {};
+    // Keep arena + hblkhd below INT32_MAX to avoid overflow in CEF's signed-int sum.
+    auto clamp = [](size_t v) { return static_cast<int>(std::min<size_t>(v, INT32_MAX / 2)); };
+    m.arena                 = clamp(m2.arena);
+    m.ordblks               = clamp(m2.ordblks);
+    m.smblks                = clamp(m2.smblks);
+    m.hblks                 = clamp(m2.hblks);
+    m.hblkhd                = clamp(m2.hblkhd);
+    m.usmblks               = clamp(m2.usmblks);
+    m.fsmblks               = clamp(m2.fsmblks);
+    m.uordblks              = clamp(m2.uordblks);
+    m.fordblks              = clamp(m2.fordblks);
+    m.keepcost              = clamp(m2.keepcost);
+    return m;
+}
+#endif
+// Malinfo patch end section one - Remove once fixed upstream.
 
 namespace caspar::html {
 
@@ -237,6 +268,19 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(const core::module_dependencies& dependencies)
 {
+// Malinfo patch section 2 start - Remove once fixed upstream.
+#if defined(__linux__)
+    // Verify the override resolves before CEF initializes.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    if (reinterpret_cast<void*>(dlsym(RTLD_DEFAULT, "mallinfo")) == reinterpret_cast<void*>(&mallinfo)) {
+#pragma GCC diagnostic pop
+        CASPAR_LOG(info) << L"[html] mallinfo() override installed";
+    } else {
+        CASPAR_LOG(warning) << L"[html] mallinfo() override did NOT install; CEF mallinfo() SIGILL (cef#3963) may occur";
+    }
+#endif
+// Malinfo patch section 2 end - Remove once fixed upstream.
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
@@ -270,6 +314,12 @@ void init(const core::module_dependencies& dependencies)
         CASPAR_LOG(error) << "[html] Failed to initialize CEF";
         return;
     }
+
+    // The loaded libcef can be newer than the headers we were built with, as long as it supports our API version
+    CASPAR_LOG(info) << "[html] Using CEF " << cef_version_info(0) << "." << cef_version_info(1) << "."
+                     << cef_version_info(2) << " (Chromium " << cef_version_info(4) << "." << cef_version_info(5)
+                     << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
+                     << cef_api_version() << ". Built against CEF " << CEF_VERSION;
 
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(
