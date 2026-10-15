@@ -1129,6 +1129,12 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
 
     bool call(const std::vector<std::wstring>& params)
     {
+        if (!vanc_) {
+            CASPAR_LOG(warning) << print() << L" VANC is not enabled, ignoring: "
+                                << (params.empty() ? L"N/A" : params[0]);
+            return false;
+        }
+
         try {
             bool result = vanc_->try_push_data(params);
             if (!result) {
