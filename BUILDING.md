@@ -91,6 +91,11 @@ The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch Lin
 HTML is enabled by default. Compatible packaged CEF is used on Ubuntu and Arch; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
 
+Debian CI checks compilation only: it downloads prebuilt CEF, compiles its wrapper,
+and builds CasparCG with HTML enabled. It does not install or package the bundled
+CEF runtime, so these jobs do not produce `.deb` artifacts. Native development
+installs still include the bundled runtime when `USE_SYSTEM_CEF=OFF`.
+
 ## Build options
 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.

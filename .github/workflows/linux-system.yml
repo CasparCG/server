@@ -159,8 +159,8 @@ jobs:
                   path: .cache/casparcg-downloads
                   key: downloads-${{ matrix.family }}-${{ matrix.distribution }}-${{ matrix.arch }}-${{ hashFiles('src/CMakeModules/Bootstrap_Linux.cmake') }}
 
-            - name: Run build
-              if: ${{ matrix.family == 'ubuntu' || matrix.family == 'debian' }}
+            - name: Build Ubuntu packages
+              if: ${{ matrix.family == 'ubuntu' }}
               run: |
                   # Perform build
                   debuild --preserve-envvar=CASPARCG_DOWNLOAD_CACHE -b -uc -us
@@ -168,9 +168,16 @@ jobs:
                   CI: 1
                   CASPARCG_DOWNLOAD_CACHE: ${{ github.workspace }}/.cache/casparcg-downloads
 
+            - name: Compile Debian targets without packaging
+              if: ${{ matrix.family == 'debian' }}
+              run: debian/rules build
+              env:
+                  CI: 1
+                  CASPARCG_DOWNLOAD_CACHE: ${{ github.workspace }}/.cache/casparcg-downloads
+
             - name: Collect artifacts
               id: artifacts
-              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
+              if: ${{ matrix.family == 'ubuntu' && matrix.upload_artifacts }}
               run: |
                   mkdir -p dist
                   mv ../*.deb dist/
@@ -199,7 +206,7 @@ jobs:
                   CI: 1
 
             - uses: actions/upload-artifact@v7
-              if: ${{ (matrix.family == 'ubuntu' || matrix.family == 'debian') && matrix.upload_artifacts }}
+              if: ${{ matrix.family == 'ubuntu' && matrix.upload_artifacts }}
               with:
                   name: ${{ steps.setup-env.outputs.BUILD_FILENAME }}
                   path: dist
