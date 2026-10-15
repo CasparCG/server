@@ -77,7 +77,7 @@ inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
     /* COMPUTE LUMA */
     {
         __m256i y_coeff =
-            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[2], color_matrix[1], color_matrix[0]));
+            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[0], color_matrix[1], color_matrix[2]));
         __m256i y_offset = _mm256_set1_epi32(64 << 20);
 
         // Multiply by y-coefficients
@@ -97,9 +97,9 @@ inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
     /* COMPUTE CHROMA */
     {
         __m256i cb_coeff =
-            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[5], color_matrix[4], color_matrix[3]));
+            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[3], color_matrix[4], color_matrix[5]));
         __m256i cr_coeff =
-            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[8], color_matrix[7], color_matrix[6]));
+            _mm256_broadcastsi128_si256(_mm_set_epi32(0, color_matrix[6], color_matrix[7], color_matrix[8]));
         __m256i c_offset = _mm256_set1_epi32((1025) << 19);
 
         // Multiply by cb-coefficients
@@ -110,8 +110,8 @@ inline void rgb_to_yuv_avx2(__m256i                     pixel_pairs[4],
         }
 
         // sum products
-        __m256i cbcr_sum02    = _mm256_hadd_epi32(cbcr4[1], cbcr4[0]);
-        __m256i cbcr_sum46    = _mm256_hadd_epi32(cbcr4[3], cbcr4[2]);
+        __m256i cbcr_sum02    = _mm256_hadd_epi32(cbcr4[0], cbcr4[1]);
+        __m256i cbcr_sum46    = _mm256_hadd_epi32(cbcr4[2], cbcr4[3]);
         __m256i cbcr_sum_0426 = _mm256_hadd_epi32(cbcr_sum02, cbcr_sum46);
         *chroma_out           = _mm256_srli_epi32(_mm256_add_epi32(cbcr_sum_0426, c_offset),
                                         20); // add offset and shift down to 10 bit precision
@@ -163,9 +163,9 @@ inline void pack_v210_avx2(__m256i luma[6], __m256i chroma[6], __m128i** v210_de
 template <typename T = uint16_t>
 struct ARGBPixel
 {
-    T R;
-    T G;
     T B;
+    T G;
+    T R;
     T A;
 };
 
@@ -195,12 +195,12 @@ void pack_v210(const ARGBPixel<T>* src, const std::vector<int32_t>& color_matrix
         }
 
         if (x % 2 == 0) {
-            // Compute Cr
-            uint32_t v = 1025 << 19;
-            v += (int32_t)(color_matrix[6] * static_cast<int32_t>(r) + color_matrix[7] * static_cast<int32_t>(g) +
-                           color_matrix[8] * static_cast<int32_t>(b));
-            v >>= 20;
-            write_v210(v);
+            // Compute Cb
+            uint32_t u = 1025 << 19;
+            u += (int32_t)(color_matrix[3] * static_cast<int32_t>(r) + color_matrix[4] * static_cast<int32_t>(g) +
+                           color_matrix[5] * static_cast<int32_t>(b));
+            u >>= 20;
+            write_v210(u);
         }
 
         // Compute Y
@@ -211,12 +211,12 @@ void pack_v210(const ARGBPixel<T>* src, const std::vector<int32_t>& color_matrix
         write_v210(luma);
 
         if (x % 2 == 0) {
-            // Compute Cb
-            uint32_t u = 1025 << 19;
-            u += (int32_t)(color_matrix[3] * static_cast<int32_t>(r) + color_matrix[4] * static_cast<int32_t>(g) +
-                           color_matrix[5] * static_cast<int32_t>(b));
-            u >>= 20;
-            write_v210(u);
+            // Compute Cr
+            uint32_t v = 1025 << 19;
+            v += (int32_t)(color_matrix[6] * static_cast<int32_t>(r) + color_matrix[7] * static_cast<int32_t>(g) +
+                           color_matrix[8] * static_cast<int32_t>(b));
+            v >>= 20;
+            write_v210(v);
         }
     }
 }
