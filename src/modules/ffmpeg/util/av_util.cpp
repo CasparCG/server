@@ -2,9 +2,6 @@
 #include "av_assert.h"
 
 #include <common/bit_depth.h>
-#include <cstdint>
-#include <cstring>
-#include <vector>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -12,13 +9,15 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
-#include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 }
 
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <concepts>
+#include <cstring>
+#include <source_location>
 #include <tuple>
 
 namespace caspar { namespace ffmpeg {
@@ -417,187 +416,149 @@ uint64_t get_channel_layout_mask_for_channels(int channel_count)
     return channel_layout;
 }
 
+#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(10, 6, 0)
+
 namespace {
-template <typename Tag>
-struct GetSetAttribute
+
+template<typename T>
+auto get_supported(const AVCodecContext* avctx, const AVCodec* codec, AVCodecConfig config)
 {
-    using type = Tag::type;
-
-    static constexpr const char* get_supported_name = Tag::get_supported_name;
-    static constexpr const char* set_name           = Tag::set_name;
-    static constexpr const char* config_name        = Tag::config_name;
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-    static constexpr AVMediaType codec_type            = Tag::codec_type;
-    static constexpr const type* AVCodec::* field      = Tag::field;
-    static constexpr type                   terminator = Tag::terminator;
-#else
-    static constexpr AVCodecConfig config_type = Tag::config_type;
-    static constexpr AVOptionType  opt_type    = Tag::opt_type;
-#endif
-
-    static av_opt_array_ref<type> get_supported(const AVCodecContext* avctx, const AVCodec* codec)
-    {
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-        if (!codec)
-            codec = avctx->codec;
-        if (codec->type != codec_type)
-            FF_RET(AVERROR(EINVAL), get_supported_name);
-        return av_opt_array_ref<type>::terminated(codec->*field, terminator);
-#else
-        const type* data = nullptr;
-        int         size = 0;
-        FF(avcodec_get_supported_config(avctx, codec, config_type, 0, reinterpret_cast<const void**>(&data), &size));
-        return av_opt_array_ref<type>(data, size);
-#endif
-    }
-
-    static void set(AVFilterContext* target, av_opt_array_ref<type> array_ref)
-    {
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-        std::size_t size = sizeof(type) * array_ref.size();
-        if (size > static_cast<std::size_t>(INT_MAX))
-            CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function(set_name));
-        FF(av_opt_set_bin(target,
-                          config_name,
-                          reinterpret_cast<const uint8_t*>(array_ref.data()),
-                          static_cast<int>(size),
-                          AV_OPT_SEARCH_CHILDREN));
-#else
-        if (array_ref.size() > static_cast<std::size_t>(UINT_MAX))
-            CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function(set_name));
-        FF(av_opt_set_array(target,
-                            config_name,
-                            AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
-                            0,
-                            static_cast<unsigned>(array_ref.size()),
-                            opt_type,
-                            array_ref.data()));
-#endif
-    }
-};
-
-struct pixel_formats_tag
-{
-    using type = AVPixelFormat;
-
-    static constexpr const char* get_supported_name = "get_supported_pixel_formats";
-    static constexpr const char* set_name           = "set_pixel_formats";
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-    static constexpr const char* config_name           = "pix_fmts";
-    static constexpr AVMediaType codec_type            = AVMEDIA_TYPE_VIDEO;
-    static constexpr const type* AVCodec::* field      = &AVCodec::pix_fmts;
-    static constexpr type                   terminator = AV_PIX_FMT_NONE;
-#else
-    static constexpr const char*   config_name = "pixel_formats";
-    static constexpr AVCodecConfig config_type = AV_CODEC_CONFIG_PIX_FORMAT;
-    static constexpr AVOptionType  opt_type    = AV_OPT_TYPE_PIXEL_FMT;
-#endif
-};
-
-struct sample_formats_tag
-{
-    using type = AVSampleFormat;
-
-    static constexpr const char* get_supported_name = "get_supported_sample_formats";
-    static constexpr const char* set_name           = "set_sample_formats";
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-    static constexpr const char* config_name           = "sample_fmts";
-    static constexpr AVMediaType codec_type            = AVMEDIA_TYPE_AUDIO;
-    static constexpr const type* AVCodec::* field      = &AVCodec::sample_fmts;
-    static constexpr type                   terminator = AV_SAMPLE_FMT_NONE;
-#else
-    static constexpr const char*   config_name = "sample_formats";
-    static constexpr AVCodecConfig config_type = AV_CODEC_CONFIG_SAMPLE_FORMAT;
-    static constexpr AVOptionType  opt_type    = AV_OPT_TYPE_SAMPLE_FMT;
-#endif
-};
-
-struct sample_rates_tag
-{
-    using type = int;
-
-    static constexpr const char* get_supported_name = "get_supported_sample_rates";
-    static constexpr const char* set_name           = "set_sample_rates";
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-    static constexpr const char* config_name           = "sample_rates";
-    static constexpr AVMediaType codec_type            = AVMEDIA_TYPE_AUDIO;
-    static constexpr const type* AVCodec::* field      = &AVCodec::supported_samplerates;
-    static constexpr type                   terminator = 0;
-#else
-    static constexpr const char*   config_name = "samplerates";
-    static constexpr AVCodecConfig config_type = AV_CODEC_CONFIG_SAMPLE_RATE;
-    static constexpr AVOptionType  opt_type    = AV_OPT_TYPE_INT;
-#endif
-};
-} // namespace
-
-av_opt_array_ref<AVPixelFormat> get_supported_pixel_formats(const AVCodecContext* avctx, const AVCodec* codec)
-{
-    return GetSetAttribute<pixel_formats_tag>::get_supported(avctx, codec);
+    const void* data = nullptr;
+    int size = 0;
+    FF(avcodec_get_supported_config(avctx, codec, config, 0, &data, &size));
+    return std::span{static_cast<const T*>(data), static_cast<std::size_t>(size)};
 }
 
-void set_pixel_formats(AVFilterContext* target, av_opt_array_ref<AVPixelFormat> array_ref)
+template<typename T>
+void set_array(AVFilterContext* target, const char* name, AVOptionType type, std::span<const T> values)
 {
-    return GetSetAttribute<pixel_formats_tag>::set(target, array_ref);
+    FF(av_opt_set_array(target, name, AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                        0, static_cast<unsigned>(values.size()), type, values.data()));
 }
 
-av_opt_array_ref<AVSampleFormat> get_supported_sample_formats(const AVCodecContext* avctx, const AVCodec* codec)
-{
-    return GetSetAttribute<sample_formats_tag>::get_supported(avctx, codec);
 }
 
-void set_sample_formats(AVFilterContext* target, av_opt_array_ref<AVSampleFormat> array_ref)
+std::span<const AVPixelFormat> get_supported_pixel_formats(const AVCodecContext* avctx, const AVCodec* codec)
 {
-    return GetSetAttribute<sample_formats_tag>::set(target, array_ref);
+    return get_supported<AVPixelFormat>(avctx, codec, AV_CODEC_CONFIG_PIX_FORMAT);
+}
+void set_pixel_formats(AVFilterContext* target, std::span<const AVPixelFormat> values)
+{
+    set_array(target, "pixel_formats", AV_OPT_TYPE_PIXEL_FMT, values);
 }
 
-av_opt_array_ref<int> get_supported_sample_rates(const AVCodecContext* avctx, const AVCodec* codec)
+std::span<const AVSampleFormat> get_supported_sample_formats(const AVCodecContext* avctx, const AVCodec* codec)
 {
-    return GetSetAttribute<sample_rates_tag>::get_supported(avctx, codec);
+    return get_supported<AVSampleFormat>(avctx, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT);
+}
+void set_sample_formats(AVFilterContext* target, std::span<const AVSampleFormat> values)
+{
+    set_array(target, "sample_formats", AV_OPT_TYPE_SAMPLE_FMT, values);
 }
 
-void set_sample_rates(AVFilterContext* target, av_opt_array_ref<int> array_ref)
+std::span<const int> get_supported_sample_rates(const AVCodecContext* avctx, const AVCodec* codec)
 {
-    return GetSetAttribute<sample_rates_tag>::set(target, array_ref);
+    return get_supported<int>(avctx, codec, AV_CODEC_CONFIG_SAMPLE_RATE);
+}
+void set_sample_rates(AVFilterContext* target, std::span<const int> values)
+{
+    set_array(target, "samplerates", AV_OPT_TYPE_INT, values);
 }
 
-av_opt_array_ref<AVChannelLayout> get_supported_channel_layouts(const AVCodecContext* avctx, const AVCodec* codec)
+std::span<const AVChannelLayout> get_supported_channel_layouts(const AVCodecContext* avctx, const AVCodec* codec)
 {
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
+    return get_supported<AVChannelLayout>(avctx, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT);
+}
+void set_channel_layouts(AVFilterContext* target, std::span<const AVChannelLayout> values)
+{
+    set_array(target, "channel_layouts", AV_OPT_TYPE_CHLAYOUT, values);
+}
+
+#else
+
+namespace {
+
+const AVCodec* resolve_codec(const AVCodecContext* avctx, const AVCodec* codec, AVMediaType expected,
+    const std::source_location& location = std::source_location::current())
+{
     if (!codec)
         codec = avctx->codec;
-    if (codec->type != AVMEDIA_TYPE_AUDIO)
-        FF_RET(AVERROR(EINVAL), THROW_ON_ERROR_STR(get_supported_channel_layouts));
-    static constexpr AVChannelLayout terminator = {};
-    return av_opt_array_ref<AVChannelLayout>::terminated(codec->ch_layouts, [](const AVChannelLayout& v) {
-        return 0 == std::memcmp(&v, &terminator, sizeof(terminator));
-    });
-#else
-    const AVChannelLayout* data = nullptr;
-    int                    size = 0;
-    FF(avcodec_get_supported_config(
-        avctx, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, reinterpret_cast<const void**>(&data), &size));
-    return av_opt_array_ref<AVChannelLayout>(data, size);
-#endif
+    if (codec->type != expected)
+        FF_RET(AVERROR(EINVAL), location.function_name());
+    return codec;
 }
 
-void set_channel_layouts(AVFilterContext* target, av_opt_array_ref<AVChannelLayout> array_ref)
+template <typename T>
+void set_bin(AVFilterContext* target, const char* name, std::span<const T> values)
 {
-#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(10, 6, 0)
-    // TODO: need to translate into something that can be passed via av_opt_set_*
-    // FF(av_opt_set_chlayout(sink, "ch_layouts", ch_layouts, AV_OPT_SEARCH_CHILDREN));
-#else
-    if (array_ref.size() > static_cast<std::size_t>(UINT_MAX))
-        CASPAR_THROW_EXCEPTION(caspar::bad_alloc() << boost::errinfo_api_function("set_channel_layouts"));
-    FF(av_opt_set_array(target,
-                        "channel_layouts",
-                        AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
-                        0,
-                        static_cast<unsigned>(array_ref.size()),
-                        AV_OPT_TYPE_CHLAYOUT,
-                        array_ref.data()));
-#endif
+    FF(av_opt_set_bin(target, name, reinterpret_cast<const uint8_t*>(values.data()),
+                      static_cast<int>(values.size_bytes()), AV_OPT_SEARCH_CHILDREN));
 }
+
+template <typename T, std::predicate<const T&> Fn>
+constexpr auto span_until_if(const T* data, Fn is_sentinel)
+{
+    std::size_t size = 0;
+    if (data) {
+        while (!is_sentinel(data[size])) ++size;
+    }
+    return std::span{data, size};
+}
+
+template <typename T>
+constexpr auto span_until(const T* data, std::type_identity_t<T> sentinel) noexcept
+{
+    return span_until_if(data, [sentinel](const T& v) { return v == sentinel; });
+}
+
+}
+
+std::span<const AVPixelFormat> get_supported_pixel_formats(const AVCodecContext* avctx, const AVCodec* codec)
+{
+    codec = resolve_codec(avctx, codec, AVMEDIA_TYPE_VIDEO);
+    return span_until(codec->pix_fmts, AV_PIX_FMT_NONE);
+}
+void set_pixel_formats(AVFilterContext* target, std::span<const AVPixelFormat> values)
+{
+    set_bin(target, "pix_fmts", values);
+}
+
+std::span<const AVSampleFormat> get_supported_sample_formats(const AVCodecContext* avctx, const AVCodec* codec)
+{
+    codec = resolve_codec(avctx, codec, AVMEDIA_TYPE_AUDIO);
+    return span_until(codec->sample_fmts, AV_SAMPLE_FMT_NONE);
+}
+void set_sample_formats(AVFilterContext* target, std::span<const AVSampleFormat> values)
+{
+    set_bin(target, "sample_fmts", values);
+}
+
+std::span<const int> get_supported_sample_rates(const AVCodecContext* avctx, const AVCodec* codec)
+{
+    codec = resolve_codec(avctx, codec, AVMEDIA_TYPE_AUDIO);
+    return span_until(codec->supported_samplerates, 0);
+}
+void set_sample_rates(AVFilterContext* target, std::span<const int> values)
+{
+    set_bin(target, "sample_rates", values);
+}
+
+std::span<const AVChannelLayout> get_supported_channel_layouts(const AVCodecContext* avctx, const AVCodec* codec)
+{
+    codec = resolve_codec(avctx, codec, AVMEDIA_TYPE_AUDIO);
+    // AVChannelLayout has no sentinel value recognized by av_channel_layout_check(); the
+    // terminator is a zeroed struct, so it must be compared via memcmp (this is how FFmpeg's
+    // own avcodec_get_supported_config() does it internally).
+    static constexpr AVChannelLayout terminator = {};
+    return span_until_if(codec->ch_layouts,
+                         [](const AVChannelLayout& l) { return 0 == std::memcmp(&l, &terminator, sizeof(terminator)); });
+}
+void set_channel_layouts(AVFilterContext* avctx, std::span<const AVChannelLayout> values)
+{
+    // TODO
+}
+
+#endif
 
 AVChannelLayout get_channel_layout_default(int nb_channels)
 {
@@ -607,7 +568,7 @@ AVChannelLayout get_channel_layout_default(int nb_channels)
 }
 
 AVFilterContext*
-create_buffersink(AVFilterGraph* graph, const char* name, av_opt_array_ref<AVPixelFormat> pixel_formats)
+create_buffersink(AVFilterGraph* graph, const char* name, std::span<const AVPixelFormat> pixel_formats)
 {
     AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("buffersink"), name));
     if (!pixel_formats.empty()) {
@@ -617,11 +578,9 @@ create_buffersink(AVFilterGraph* graph, const char* name, av_opt_array_ref<AVPix
     return retval;
 }
 
-AVFilterContext* create_abuffersink(AVFilterGraph*                    graph,
-                                    const char*                       name,
-                                    av_opt_array_ref<AVSampleFormat>  sample_formats,
-                                    av_opt_array_ref<int>             sample_rates,
-                                    av_opt_array_ref<AVChannelLayout> channel_layouts)
+AVFilterContext*
+create_abuffersink(AVFilterGraph* graph, const char* name, std::span<const AVSampleFormat> sample_formats,
+    std::span<const int> sample_rates, std::span<const AVChannelLayout> channel_layouts)
 {
     AVFilterContext* retval = FFMEM(avfilter_graph_alloc_filter(graph, avfilter_get_by_name("abuffersink"), name));
     if (!sample_formats.empty()) {
@@ -641,4 +600,5 @@ AVFilterContext* create_abuffersink(AVFilterGraph*                    graph,
     FF(avfilter_init_str(retval, nullptr));
     return retval;
 }
+
 }} // namespace caspar::ffmpeg

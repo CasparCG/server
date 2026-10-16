@@ -202,20 +202,28 @@ struct Stream
         }
 
         if (codec->type == AVMEDIA_TYPE_VIDEO) {
-            // TODO codec->profiles
-            // TODO codec->supported_framerates
             sink = create_buffersink(graph.get(), "out", get_supported_pixel_formats(nullptr, codec));
+
+            // TODO codec->profiles
+            // TODO FF(av_opt_set_int_list(sink, "framerates", codec->supported_framerates, { 0, 0 },
+            // AV_OPT_SEARCH_CHILDREN));
+
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             // TODO codec->profiles
-            sink = create_abuffersink(graph.get(),
-                                      "out",
-                                      get_supported_sample_formats(nullptr, codec),
-                                      get_supported_sample_rates(nullptr, codec),
-                                      get_supported_channel_layouts(nullptr, codec));
+            sink = create_abuffersink(graph.get(), "out",
+                get_supported_sample_formats(nullptr, codec),
+                get_supported_sample_rates(nullptr, codec),
+                get_supported_channel_layouts(nullptr, codec)
+            );
+
+            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
+            // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
+
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
         }
+
         {
             const auto cur = outputs;
 

@@ -1,9 +1,6 @@
 #pragma once
 
 extern "C" {
-#define __STDC_CONSTANT_MACROS
-#define __STDC_LIMIT_MACROS
-#include <libavfilter/avfilter.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 }
@@ -14,21 +11,19 @@ extern "C" {
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <cstdint>
-#include <initializer_list>
 #include <map>
 #include <memory>
-#include <optional>
-#include <type_traits>
+#include <span>
 #include <vector>
 
-struct AVFrame;
-struct AVPacket;
-struct AVFilterContext;
-struct AVFilterGraph;
+struct AVChannelLayout;
 struct AVCodec;
 struct AVCodecContext;
 struct AVDictionary;
+struct AVFilterContext;
+struct AVFilterGraph;
+struct AVFrame;
+struct AVPacket;
 
 namespace caspar { namespace ffmpeg {
 
@@ -58,78 +53,23 @@ std::map<std::string, std::string> to_map(AVDictionary** dict);
 
 uint64_t get_channel_layout_mask_for_channels(int channel_count);
 
-template <typename T>
-class av_opt_array_ref final
-{
-  private:
-    const T*    data_;
-    std::size_t size_;
+std::span<const AVPixelFormat> get_supported_pixel_formats(const AVCodecContext*, const AVCodec*);
+void set_pixel_formats(AVFilterContext*, std::span<const AVPixelFormat>);
 
-  public:
-    constexpr av_opt_array_ref() noexcept
-        : av_opt_array_ref(nullptr, 0)
-    {
-    }
-    constexpr av_opt_array_ref(const T* data, std::size_t size) noexcept
-        : data_(size == 0 ? nullptr : data)
-        , size_(size)
-    {
-    }
-    constexpr av_opt_array_ref(std::initializer_list<T> data) noexcept
-        : av_opt_array_ref(data.begin(), data.size())
-    {
-    }
-    template <typename U = void,
-              typename   = std::enable_if_t<std::is_void_v<U> && (std::is_integral_v<T> || std::is_enum_v<T>)>>
-    static constexpr av_opt_array_ref terminated(const T* data, T terminator)
-    {
-        if (!data) {
-            return av_opt_array_ref();
-        }
-        std::size_t size = 0;
-        while (data[size] != terminator)
-            size++;
-        return av_opt_array_ref(data, size);
-    }
-    template <typename F,
-              typename = std::enable_if_t<std::is_same_v<bool, decltype(std::declval<F&>()(std::declval<const T&>()))>>>
-    static constexpr av_opt_array_ref terminated(const T* data, F&& is_terminator)
-    {
-        if (!data) {
-            return av_opt_array_ref();
-        }
-        std::size_t size = 0;
-        while (!is_terminator(data[size]))
-            size++;
-        return av_opt_array_ref(data, size);
-    }
-    constexpr const T*    begin() const noexcept { return data_; }
-    constexpr const T*    end() const noexcept { return data_ + size_; }
-    constexpr const T*    data() const noexcept { return data_; }
-    constexpr std::size_t size() const noexcept { return size_; }
-    constexpr bool        empty() const noexcept { return size_ == 0; }
-};
+std::span<const AVSampleFormat> get_supported_sample_formats(const AVCodecContext*, const AVCodec*);
+void set_sample_formats(AVFilterContext*, std::span<const AVSampleFormat>);
 
-av_opt_array_ref<AVPixelFormat> get_supported_pixel_formats(const AVCodecContext* avctx, const AVCodec* codec);
-void set_pixel_formats(AVFilterContext* target, av_opt_array_ref<AVPixelFormat> pixel_formats);
+std::span<const int> get_supported_sample_rates(const AVCodecContext*, const AVCodec*);
+void set_sample_rates(AVFilterContext*, std::span<const int>);
 
-av_opt_array_ref<AVSampleFormat> get_supported_sample_formats(const AVCodecContext* avctx, const AVCodec* codec);
-void set_sample_formats(AVFilterContext* target, av_opt_array_ref<AVSampleFormat> sample_formats);
-
-av_opt_array_ref<int> get_supported_sample_rates(const AVCodecContext* avctx, const AVCodec* codec);
-void                  set_sample_rates(AVFilterContext* target, av_opt_array_ref<int> sample_rates);
-
-av_opt_array_ref<AVChannelLayout> get_supported_channel_layouts(const AVCodecContext* avctx, const AVCodec* codec);
-void            set_channel_layouts(AVFilterContext* target, av_opt_array_ref<AVChannelLayout> channel_layouts);
+std::span<const AVChannelLayout> get_supported_channel_layouts(const AVCodecContext*, const AVCodec*);
+void set_channel_layouts(AVFilterContext*, std::span<const AVChannelLayout>);
 AVChannelLayout get_channel_layout_default(int nb_channels);
 
-AVFilterContext*
-create_buffersink(AVFilterGraph* graph, const char* name, av_opt_array_ref<AVPixelFormat> pixel_formats = {});
+AVFilterContext* create_buffersink(AVFilterGraph*, const char* name, std::span<const AVPixelFormat> = {});
 
-AVFilterContext* create_abuffersink(AVFilterGraph*                    graph,
-                                    const char*                       name,
-                                    av_opt_array_ref<AVSampleFormat>  sample_formats  = {},
-                                    av_opt_array_ref<int>             sample_rates    = {},
-                                    av_opt_array_ref<AVChannelLayout> channel_layouts = {});
+AVFilterContext* create_abuffersink(AVFilterGraph*, const char* name,
+    std::span<const AVSampleFormat> = {}, std::span<const int> = {}, std::span<const AVChannelLayout> = {}
+);
 
 }} // namespace caspar::ffmpeg

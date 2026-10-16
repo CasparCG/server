@@ -41,11 +41,11 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <deque>
 #include <iomanip>
 #include <memory>
-#include <optional>
 #include <queue>
 #include <sstream>
 #include <string>
@@ -546,39 +546,36 @@ struct Filter
         }
 
         if (media_type == AVMEDIA_TYPE_VIDEO) {
-            sink = create_buffersink(graph.get(),
-                                     "out",
-                                     {
-                                         AV_PIX_FMT_RGB24,
-                                         AV_PIX_FMT_BGR24,
-                                         AV_PIX_FMT_BGRA,
-                                         AV_PIX_FMT_ARGB,
-                                         AV_PIX_FMT_RGBA,
-                                         AV_PIX_FMT_ABGR,
-                                         AV_PIX_FMT_YUV444P,
-                                         AV_PIX_FMT_YUV444P10,
-                                         AV_PIX_FMT_YUV444P12,
-                                         AV_PIX_FMT_YUV422P,
-                                         AV_PIX_FMT_YUV422P10,
-                                         AV_PIX_FMT_YUV422P12,
-                                         AV_PIX_FMT_YUV420P,
-                                         AV_PIX_FMT_YUV420P10,
-                                         AV_PIX_FMT_YUV420P12,
-                                         AV_PIX_FMT_YUV410P,
-                                         AV_PIX_FMT_YUVA444P,
-                                         AV_PIX_FMT_YUVA422P,
-                                         AV_PIX_FMT_YUVA420P,
-                                         AV_PIX_FMT_UYVY422,
-                                         // bwdif needs planar rgb
-                                         AV_PIX_FMT_GBRP,
-                                         AV_PIX_FMT_GBRP10,
-                                         AV_PIX_FMT_GBRP12,
-                                         AV_PIX_FMT_GBRP16,
-                                         AV_PIX_FMT_GBRAP,
-                                         AV_PIX_FMT_GBRAP16,
-                                     });
+            const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGB24,
+                                              AV_PIX_FMT_BGR24,
+                                              AV_PIX_FMT_BGRA,
+                                              AV_PIX_FMT_ARGB,
+                                              AV_PIX_FMT_RGBA,
+                                              AV_PIX_FMT_ABGR,
+                                              AV_PIX_FMT_YUV444P,
+                                              AV_PIX_FMT_YUV444P10,
+                                              AV_PIX_FMT_YUV444P12,
+                                              AV_PIX_FMT_YUV422P,
+                                              AV_PIX_FMT_YUV422P10,
+                                              AV_PIX_FMT_YUV422P12,
+                                              AV_PIX_FMT_YUV420P,
+                                              AV_PIX_FMT_YUV420P10,
+                                              AV_PIX_FMT_YUV420P12,
+                                              AV_PIX_FMT_YUV410P,
+                                              AV_PIX_FMT_YUVA444P,
+                                              AV_PIX_FMT_YUVA422P,
+                                              AV_PIX_FMT_YUVA420P,
+                                              AV_PIX_FMT_UYVY422,
+                                              // bwdif needs planar rgb
+                                              AV_PIX_FMT_GBRP,
+                                              AV_PIX_FMT_GBRP10,
+                                              AV_PIX_FMT_GBRP12,
+                                              AV_PIX_FMT_GBRP16,
+                                              AV_PIX_FMT_GBRAP,
+                                              AV_PIX_FMT_GBRAP16};
+            sink = create_buffersink(graph.get(), "out", pix_fmts);
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
-            sink = create_abuffersink(graph.get(), "out", {AV_SAMPLE_FMT_S32}, {format_desc.audio_sample_rate});
+            sink = create_abuffersink(graph.get(), "out", std::array{AV_SAMPLE_FMT_S32}, std::array{format_desc.audio_sample_rate});
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));

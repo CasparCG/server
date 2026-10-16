@@ -60,6 +60,7 @@ extern "C" {
 
 #include <boost/format.hpp>
 
+#include <array>
 #include <mutex>
 
 #include "../decklink_api.h"
@@ -213,16 +214,21 @@ struct Filter
         }
 
         if (type == AVMEDIA_TYPE_VIDEO) {
-            sink = create_buffersink(graph.get(), "out", {pix_fmt});
+            sink = create_buffersink(graph.get(), "out", std::array{pix_fmt});
         } else if (type == AVMEDIA_TYPE_AUDIO) {
-            av_opt_array_ref<AVChannelLayout> channel_layouts;
+            sink = create_abuffersink(graph.get(), "out", std::array{AV_SAMPLE_FMT_S32}, std::array{format_desc.audio_sample_rate});
+
             // TODO - we might want to force the filter to produce 16 channels
             // But this segfaults (changing the property name causes it to fail with an error)
             // As 16 channel packets are fed into the filter, with the filter set to the same, that is what we get out
-            //
-            // channel_layouts = {get_channel_layout_default(format_desc.audio_channels)};
-            sink = create_abuffersink(
-                graph.get(), "out", {AV_SAMPLE_FMT_S32}, {format_desc.audio_sample_rate}, channel_layouts);
+            /*
+            AVChannelLayout channel_layout = AV_CHANNEL_LAYOUT_STEREO;
+            av_channel_layout_default(&channel_layout, format_desc.audio_channels);
+
+            FF(av_opt_set_chlayout(sink, "ch_layouts", &channel_layout, AV_OPT_SEARCH_CHILDREN));
+            av_channel_layout_uninit(&channel_layout);
+             */
+
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
