@@ -165,7 +165,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                                                               static_cast<unsigned long>(probe_buffer_.size()));
                             write_osc_message(probe, it->first, it->second);
 
-                            if (has_message && o.Size() + probe.Size() > max_bundle_size) {
+                            if (has_message && o.Size() + sizeof(uint32_t) + probe.Size() > max_bundle_size) {
                                 break;
                             }
 
