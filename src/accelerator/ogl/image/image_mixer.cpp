@@ -92,8 +92,8 @@ class image_renderer
     operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
     {
         if (layers.empty()) { // Bypass GPU with empty frame.
-            static const std::vector<uint8_t, boost::alignment::aligned_allocator<uint8_t, 32>> buffer(max_frame_size_,
-                                                                                                       0);
+            static const std::vector<uint8_t, boost::alignment::aligned_allocator<uint8_t, 32>> buffer(
+                max_frame_size_ + core::frame_padding, 0);
             return make_ready_future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>(
                 {array<const std::uint8_t>(buffer.data(), format_desc.size, true), nullptr});
         }

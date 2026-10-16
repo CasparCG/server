@@ -13,6 +13,8 @@ extern "C" {
 }
 
 #include <array>
+#include <cstdint>
+#include <memory>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
@@ -345,9 +347,36 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
             break;
     }
 
-    FF(av_frame_get_buffer(av_frame.get(), is_16bit ? 64 : 32));
+    // Reference the frame's image data instead of copying it. Read-only, so filters copy before writing.
+    // Relies on the mixer allocating core::frame_padding past the end, as some filters read past it.
+    const auto align   = is_16bit ? 64 : 32;
+    auto       aligned = true;
+    for (int n = 0; n < planes.size(); ++n) {
+        aligned = aligned && reinterpret_cast<std::uintptr_t>(frame.image_data(n).data()) % align == 0 &&
+                  planes[n].linesize % align == 0;
+    }
+    if (aligned) {
+        for (int n = 0; n < planes.size(); ++n) {
+            auto data        = const_cast<uint8_t*>(frame.image_data(n).data());
+            auto owner       = std::make_unique<core::const_frame>(frame);
+            av_frame->buf[n] = av_buffer_create(
+                data,
+                frame.image_data(n).size(),
+                [](void* opaque, uint8_t*) { delete static_cast<core::const_frame*>(opaque); },
+                owner.get(),
+                AV_BUFFER_FLAG_READONLY);
+            if (!av_frame->buf[n]) {
+                FF_RET(AVERROR(ENOMEM), "av_buffer_create");
+            }
+            owner.release();
+            av_frame->data[n]     = data;
+            av_frame->linesize[n] = planes[n].linesize;
+        }
+        return av_frame;
+    }
 
-    // TODO (perf) Avoid extra memcpy.
+    FF(av_frame_get_buffer(av_frame.get(), align));
+
     for (int n = 0; n < planes.size(); ++n) {
         for (int y = 0; y < av_frame->height; ++y) {
             std::memcpy(av_frame->data[n] + y * av_frame->linesize[n],

@@ -11,6 +11,10 @@
 
 namespace caspar { namespace core {
 
+// Bytes allocated past the end of a frame's image data. The ffmpeg consumer passes frames to FFmpeg without
+// copying them, and some FFmpeg filters and swscale read past the end of a frame.
+inline constexpr std::size_t frame_padding = 64;
+
 class texture
 {
   public:
