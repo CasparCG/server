@@ -348,7 +348,7 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
     }
 
     // Reference the frame's image data instead of copying it. Read-only, so filters copy before writing.
-    // Relies on the mixer padding its frames, as some filters read past the end.
+    // Relies on the mixer allocating core::frame_padding past the end, as some filters read past it.
     const auto align   = is_16bit ? 64 : 32;
     auto       aligned = true;
     for (int n = 0; n < planes.size(); ++n) {

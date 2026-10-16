@@ -30,6 +30,8 @@
 #include <common/future.h>
 #include <common/log.h>
 
+#include <core/frame/frame.h>
+
 #include <cstring>
 
 namespace caspar { namespace accelerator { namespace vulkan {
@@ -93,8 +95,7 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
 
 std::future<array<const uint8_t>> transfer::copy_async(const std::shared_ptr<texture>& source)
 {
-    // Padded, as some FFmpeg filters read past the end of a frame.
-    auto buf = device_.create_buffer(source->size() + 64, false);
+    auto buf = device_.create_buffer(source->size() + core::frame_padding, false);
 
     vk::CopyImageToBufferInfo2 copyInfo{};
     copyInfo.dstBuffer      = buf->id();
