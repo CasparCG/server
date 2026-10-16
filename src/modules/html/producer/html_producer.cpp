@@ -143,7 +143,6 @@ class html_client
     bool                      audio_clock_calibrated_ = false;
     std::int64_t              audio_clock_offset_ms_  = 0; // translates CEF pts -> steady_now_ms()
     double                    audio_buffer_start_ms_  = 0; // steady-clock timestamp of the oldest buffered sample
-    size_t                    audio_cadence_index_    = 0;
 
     const size_t buffer_capacity_ = 4;
     struct buffered_frame
@@ -219,25 +218,25 @@ class html_client
         });
     }
 
-    bool try_pop(const core::video_field field, core::draw_frame& audio_slice, bool& video_updated)
+    bool try_pop(const core::video_field field, int nb_samples, core::draw_frame& audio_slice, bool& video_updated)
     {
         std::lock_guard<std::mutex> pairing_lock(pairing_mutex_);
         std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
         const auto                  now_time = steady_now_ms();
         video_updated                        = false;
 
-        const auto take_samples  = static_cast<size_t>(format_desc_.audio_cadence[audio_cadence_index_]);
+        const auto take_samples  = static_cast<size_t>(nb_samples);
         const auto take_elements = take_samples * kAudioChannels;
-        audio_cadence_index_     = (audio_cadence_index_ + 1) % format_desc_.audio_cadence.size();
 
         const auto terminating = closing_ || not_found_;
-        if (!terminating && audio_stream_active_ &&
+        if (nb_samples > 0 && !terminating && audio_stream_active_ &&
             (!audio_clock_calibrated_ || audio_buffer_.size() < take_elements)) {
             return false;
         }
 
-        const auto use_audio   = !terminating && audio_clock_calibrated_ && audio_buffer_.size() >= take_elements;
-        size_t     video_count = 0;
+        const auto use_audio =
+            nb_samples > 0 && !terminating && audio_clock_calibrated_ && audio_buffer_.size() >= take_elements;
+        size_t video_count = 0;
         if (use_audio) {
             const auto tick_duration_ms = take_samples * 1000.0 / format_desc_.audio_sample_rate;
             if (audio_buffer_start_ms_ > now_time + tick_duration_ms) {
@@ -288,11 +287,11 @@ class html_client
         return video_updated || static_cast<bool>(audio_slice);
     }
 
-    core::draw_frame receive(const core::video_field field)
+    core::draw_frame receive(const core::video_field field, int nb_samples)
     {
         core::draw_frame audio_slice;
         bool             video_updated = false;
-        if (!try_pop(field, audio_slice, video_updated)) {
+        if (!try_pop(field, nb_samples, audio_slice, video_updated)) {
             graph_->set_tag(diagnostics::tag_severity::SILENT, "late-frame");
         }
 
@@ -762,7 +761,7 @@ class html_producer : public core::frame_producer
     core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
         if (client_ != nullptr) {
-            return client_->receive(field);
+            return client_->receive(field, nb_samples);
         }
 
         return core::draw_frame::empty();
