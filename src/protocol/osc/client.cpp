@@ -80,12 +80,27 @@ uint64_t osc_time_tag()
            static_cast<uint64_t>(frac * 4294967296.0);
 }
 
+constexpr unsigned long max_bundle_size = 2048;
+
+void write_osc_message(::osc::OutboundPacketStream& stream, const std::string& address, const core::monitor::vector_t& args)
+{
+    stream << ::osc::BeginMessage(address.c_str());
+
+    param_visitor<::osc::OutboundPacketStream> visitor(stream);
+    for (const auto& element : args) {
+        boost::apply_visitor(visitor, element);
+    }
+
+    stream << ::osc::EndMessage;
+}
+
 struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
     std::shared_ptr<boost::asio::io_context> io_context_;
     udp::socket                              socket_;
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
+    std::vector<char>                        probe_buffer_;
 
     std::mutex              mutex_;
     std::condition_variable cond_;
@@ -101,6 +116,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         : io_context_(std::move(io_context))
         , socket_(*io_context_, udp::v4())
         , buffer_(1000000)
+        , probe_buffer_(65536)
     {
         thread_ = std::thread([this] {
             try {
@@ -139,17 +155,22 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                         o << ::osc::BeginBundle(bundle_time);
 
-                        // TODO (fix): < 2048 is a hack. Properly calculate if messages will fit.
-                        while (it != std::end(bundle) && o.Size() < 2048) {
-                            o << ::osc::BeginMessage(it->first.c_str());
+                        // Measure each message's real encoded size before adding it, so one
+                        // that wouldn't fit is deferred to the next bundle instead of silently
+                        // overflowing this one. The first message of a bundle is always added
+                        // regardless of size, so an oversized message can't stall the loop.
+                        bool has_message = false;
+                        while (it != std::end(bundle)) {
+                            ::osc::OutboundPacketStream probe(probe_buffer_.data(),
+                                                              static_cast<unsigned long>(probe_buffer_.size()));
+                            write_osc_message(probe, it->first, it->second);
 
-                            param_visitor<decltype(o)> param_visitor(o);
-                            for (const auto& element : it->second) {
-                                boost::apply_visitor(param_visitor, element);
+                            if (has_message && o.Size() + probe.Size() > max_bundle_size) {
+                                break;
                             }
 
-                            o << ::osc::EndMessage;
-
+                            write_osc_message(o, it->first, it->second);
+                            has_message = true;
                             ++it;
                         }
 
@@ -174,7 +195,9 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_.join();
     }
 
-    // TODO (refactor) This is weird...
+    // shared_ptr<void> with a null pointee and a cleanup deleter, so this composes with the
+    // generic protocol_strategy::add_lifecycle_bound_object(shared_ptr<void>) lifetime binding
+    // used for every other per-connection resource (see lock_container.cpp for the same pattern).
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(mutex_);
