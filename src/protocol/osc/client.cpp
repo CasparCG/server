@@ -33,6 +33,7 @@
 
 #include <boost/asio.hpp>
 
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -63,6 +64,22 @@ struct param_visitor : public boost::static_visitor<void>
     void operator()(const std::wstring& value) { o << u8(value).c_str(); }
 };
 
+// OSC time tags are NTP format: seconds since 1900-01-01 in the high 32 bits, fractional
+// seconds in the low 32 bits.
+uint64_t osc_time_tag()
+{
+    using namespace std::chrono;
+
+    constexpr uint64_t ntp_epoch_offset = 2208988800ULL;
+
+    auto since_epoch = system_clock::now().time_since_epoch();
+    auto secs        = duration_cast<seconds>(since_epoch);
+    auto frac        = duration_cast<duration<double>>(since_epoch - secs).count();
+
+    return ((static_cast<uint64_t>(secs.count()) + ntp_epoch_offset) << 32) |
+           static_cast<uint64_t>(frac * 4294967296.0);
+}
+
 struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
     std::shared_ptr<boost::asio::io_context> io_context_;
@@ -75,8 +92,6 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     core::monitor::state    bundle_;
     uint64_t                bundle_time_    = 0;
     bool                    bundle_pending_ = false;
-
-    uint64_t time_ = 0;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -165,8 +180,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         std::lock_guard<std::mutex> lock(mutex_);
 
         if (++reference_counts_by_endpoint_[endpoint] == 1) {
-            // A genuinely new subscriber, as opposed to another token for an endpoint that was
-            // already subscribed. Let change_gate-backed state know it may need to resend.
+            // New subscriber: let change_gate-backed state know it may need to resend.
             core::monitor::bump_subscription_epoch();
         }
 
@@ -195,18 +209,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // Merge rather than replace. A pending bundle not yet picked up by the sender
-            // thread must not be discarded wholesale: a change-gated producer (see
-            // core::monitor::change_gate) may have written a key into an earlier, still-pending
-            // state that this tick's state omits because nothing changed, and that key would
-            // otherwise be silently dropped instead of eventually reaching a subscriber.
+            // Merge rather than replace, so a pending bundle isn't lost before the sender
+            // thread drains it.
             for (auto& p : state) {
                 bundle_[p.first] = p.second;
             }
 
             if (!bundle_pending_) {
-                // TODO: time_++ is a hack. Use proper channel time.
-                bundle_time_    = time_++;
+                bundle_time_    = osc_time_tag();
                 bundle_pending_ = true;
             }
         }

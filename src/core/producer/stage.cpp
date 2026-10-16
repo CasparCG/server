@@ -76,9 +76,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
 
-    // Gates OSC transform state per layer so unchanged mixer properties aren't retransmitted
-    // every tick, while still resending once a subscriber may have connected since the last
-    // send (see core::monitor::change_gate).
+    // Gates per-layer OSC transform state (see core::monitor::change_gate).
     std::map<int, monitor::change_gate<frame_transform>> last_sent_transforms_;
 
     mutable std::mutex      format_desc_mutex_;
