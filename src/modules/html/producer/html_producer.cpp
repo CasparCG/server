@@ -61,7 +61,9 @@
 #include <include/cef_client.h>
 #include <include/cef_render_handler.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <deque>
 #include <optional>
 #include <queue>
@@ -234,10 +236,39 @@ class html_client
             return false;
         }
 
+        // Preserve the interlace stutter heuristic before consuming or resynchronizing either stream.
+        if (!terminating && field == core::video_field::a && buffer_.size() == 1) {
+            const auto follows_gap_in_frames    = (now_time - last_pop_timestamp_ms_) > 100;
+            const auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
+            const auto front_frame_is_too_young = (now_time - buffer_.front().timestamp_ms) < time_per_frame;
+            if (follows_gap_in_frames && front_frame_is_too_young) {
+                return false;
+            }
+        }
+
         const auto use_audio =
             nb_samples > 0 && !terminating && audio_clock_calibrated_ && audio_buffer_.size() >= take_elements;
         size_t video_count = 0;
         if (use_audio) {
+            const auto last_image_is_valid =
+                last_frame_ && last_pop_timestamp_ms_ <= audio_buffer_start_ms_ &&
+                (!dropped_video_start_ms_ || audio_buffer_start_ms_ < *dropped_video_start_ms_);
+            const auto first_video_ms = buffer_.empty() ? last_pop_timestamp_ms_ : buffer_.front().timestamp_ms;
+            if (!last_image_is_valid && (!buffer_.empty() || last_frame_) && first_video_ms > audio_buffer_start_ms_) {
+                // The image for this PCM was lost (or predates the first paint). Waiting for both
+                // bounded queues to catch up can preserve the same gap forever; discard only the
+                // unmatchable prefix, rounding forward to a complete sample.
+                const auto skip_samples =
+                    std::min(audio_buffer_.size() / kAudioChannels,
+                             static_cast<size_t>(std::ceil((first_video_ms - audio_buffer_start_ms_) *
+                                                           format_desc_.audio_sample_rate / 1000.0)));
+                audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + skip_samples * kAudioChannels);
+                audio_buffer_start_ms_ += skip_samples * 1000.0 / format_desc_.audio_sample_rate;
+                graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-video-resync");
+                if (audio_buffer_.size() < take_elements) {
+                    return false;
+                }
+            }
             const auto tick_duration_ms = take_samples * 1000.0 / format_desc_.audio_sample_rate;
             if (audio_buffer_start_ms_ > now_time + tick_duration_ms) {
                 return false;
@@ -255,16 +286,6 @@ class html_client
             }
         } else if (!buffer_.empty()) {
             video_count = 1;
-        }
-
-        // Preserve the interlace stutter heuristic, holding both streams when a video pop is delayed.
-        if (video_count > 0 && field == core::video_field::a && buffer_.size() == 1) {
-            const auto follows_gap_in_frames    = (now_time - last_pop_timestamp_ms_) > 100;
-            const auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
-            const auto front_frame_is_too_young = (now_time - buffer_.front().timestamp_ms) < time_per_frame;
-            if (follows_gap_in_frames && front_frame_is_too_young) {
-                return false;
-            }
         }
 
         if (use_audio) {
