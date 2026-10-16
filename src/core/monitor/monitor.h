@@ -23,7 +23,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
+#include <atomic>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -118,6 +120,46 @@ class state
     data_map_t::const_iterator begin() const { return data_.begin(); }
 
     data_map_t::const_iterator end() const { return data_.end(); }
+};
+
+namespace detail {
+inline std::atomic<std::uint64_t>& subscription_epoch_counter()
+{
+    static std::atomic<std::uint64_t> value{1};
+    return value;
+}
+} // namespace detail
+
+inline std::uint64_t subscription_epoch()
+{
+    return detail::subscription_epoch_counter().load(std::memory_order_relaxed);
+}
+
+// Call when a subscriber connects, so change_gate resends current values to it.
+inline void bump_subscription_epoch()
+{
+    detail::subscription_epoch_counter().fetch_add(1, std::memory_order_relaxed);
+}
+
+// Sends a value only when it differs from the last should_send() call, or a subscriber has
+// connected since then.
+template <typename T>
+class change_gate
+{
+    std::optional<T> last_value_;
+    std::uint64_t    last_epoch_ = 0;
+
+  public:
+    bool should_send(const T& value)
+    {
+        auto epoch   = subscription_epoch();
+        auto changed = !last_value_.has_value() || *last_value_ != value || epoch != last_epoch_;
+        if (changed) {
+            last_value_ = value;
+            last_epoch_ = epoch;
+        }
+        return changed;
+    }
 };
 
 }}} // namespace caspar::core::monitor

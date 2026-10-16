@@ -33,6 +33,7 @@
 
 #include <boost/asio.hpp>
 
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -63,19 +64,49 @@ struct param_visitor : public boost::static_visitor<void>
     void operator()(const std::wstring& value) { o << u8(value).c_str(); }
 };
 
+// OSC time tags are NTP format: seconds since 1900-01-01 in the high 32 bits, fractional
+// seconds in the low 32 bits.
+uint64_t osc_time_tag()
+{
+    using namespace std::chrono;
+
+    constexpr uint64_t ntp_epoch_offset = 2208988800ULL;
+
+    auto since_epoch = system_clock::now().time_since_epoch();
+    auto secs        = duration_cast<seconds>(since_epoch);
+    auto frac        = duration_cast<duration<double>>(since_epoch - secs).count();
+
+    return ((static_cast<uint64_t>(secs.count()) + ntp_epoch_offset) << 32) |
+           static_cast<uint64_t>(frac * 4294967296.0);
+}
+
+constexpr unsigned long max_bundle_size = 2048;
+
+void write_osc_message(::osc::OutboundPacketStream& stream, const std::string& address, const core::monitor::vector_t& args)
+{
+    stream << ::osc::BeginMessage(address.c_str());
+
+    param_visitor<::osc::OutboundPacketStream> visitor(stream);
+    for (const auto& element : args) {
+        boost::apply_visitor(visitor, element);
+    }
+
+    stream << ::osc::EndMessage;
+}
+
 struct client::impl : public spl::enable_shared_from_this<client::impl>
 {
     std::shared_ptr<boost::asio::io_context> io_context_;
     udp::socket                              socket_;
     std::map<udp::endpoint, int>             reference_counts_by_endpoint_;
     std::vector<char>                        buffer_;
+    std::vector<char>                        probe_buffer_;
 
     std::mutex              mutex_;
     std::condition_variable cond_;
     core::monitor::state    bundle_;
-    uint64_t                bundle_time_ = 0;
-
-    uint64_t time_ = 0;
+    uint64_t                bundle_time_    = 0;
+    bool                    bundle_pending_ = false;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -85,6 +116,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         : io_context_(std::move(io_context))
         , socket_(*io_context_, udp::v4())
         , buffer_(1000000)
+        , probe_buffer_(65536)
     {
         thread_ = std::thread([this] {
             try {
@@ -95,15 +127,16 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return bundle_time_ > 0 || abort_request_; });
+                        cond_.wait(lock, [&] { return bundle_pending_ || abort_request_; });
 
                         if (abort_request_) {
                             return;
                         }
 
-                        bundle       = std::move(bundle_);
-                        bundle_time  = bundle_time_;
-                        bundle_time_ = 0;
+                        bundle          = std::move(bundle_);
+                        bundle_         = core::monitor::state{};
+                        bundle_time     = bundle_time_;
+                        bundle_pending_ = false;
 
                         for (auto& p : reference_counts_by_endpoint_) {
                             endpoints.push_back(p.first);
@@ -122,17 +155,22 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                         o << ::osc::BeginBundle(bundle_time);
 
-                        // TODO (fix): < 2048 is a hack. Properly calculate if messages will fit.
-                        while (it != std::end(bundle) && o.Size() < 2048) {
-                            o << ::osc::BeginMessage(it->first.c_str());
+                        // Measure each message's real encoded size before adding it, so one
+                        // that wouldn't fit is deferred to the next bundle instead of silently
+                        // overflowing this one. The first message of a bundle is always added
+                        // regardless of size, so an oversized message can't stall the loop.
+                        bool has_message = false;
+                        while (it != std::end(bundle)) {
+                            ::osc::OutboundPacketStream probe(probe_buffer_.data(),
+                                                              static_cast<unsigned long>(probe_buffer_.size()));
+                            write_osc_message(probe, it->first, it->second);
 
-                            param_visitor<decltype(o)> param_visitor(o);
-                            for (const auto& element : it->second) {
-                                boost::apply_visitor(param_visitor, element);
+                            if (has_message && o.Size() + sizeof(uint32_t) + probe.Size() > max_bundle_size) {
+                                break;
                             }
 
-                            o << ::osc::EndMessage;
-
+                            write_osc_message(o, it->first, it->second);
+                            has_message = true;
                             ++it;
                         }
 
@@ -157,12 +195,17 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_.join();
     }
 
-    // TODO (refactor) This is weird...
+    // shared_ptr<void> with a null pointee and a cleanup deleter, so this composes with the
+    // generic protocol_strategy::add_lifecycle_bound_object(shared_ptr<void>) lifetime binding
+    // used for every other per-connection resource (see lock_container.cpp for the same pattern).
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        ++reference_counts_by_endpoint_[endpoint];
+        if (++reference_counts_by_endpoint_[endpoint] == 1) {
+            // New subscriber: let change_gate-backed state know it may need to resend.
+            core::monitor::bump_subscription_epoch();
+        }
 
         std::weak_ptr<impl> weak_self = shared_from_this();
 
@@ -189,9 +232,16 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // TODO: time_++ is a hack. Use proper channel time.
-            bundle_time_ = time_++;
-            bundle_      = state;
+            // Merge rather than replace, so a pending bundle isn't lost before the sender
+            // thread drains it.
+            for (auto& p : state) {
+                bundle_[p.first] = p.second;
+            }
+
+            if (!bundle_pending_) {
+                bundle_time_    = osc_time_tag();
+                bundle_pending_ = true;
+            }
         }
         cond_.notify_all();
     }
