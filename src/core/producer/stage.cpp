@@ -76,9 +76,10 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
 
-    // The last transform actually sent to OSC subscribers for each layer, so unchanged mixer
-    // properties aren't retransmitted every tick.
-    std::map<int, frame_transform> last_sent_transforms_;
+    // Gates OSC transform state per layer so unchanged mixer properties aren't retransmitted
+    // every tick, while still resending once a subscriber may have connected since the last
+    // send (see core::monitor::change_gate).
+    std::map<int, monitor::change_gate<frame_transform>> last_sent_transforms_;
 
     mutable std::mutex      format_desc_mutex_;
     core::video_format_desc format_desc_;
@@ -249,10 +250,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                     state["layer"][p.first] = p.second.state();
 
                     auto transform = tweens_[p.first].fetch();
-                    auto last_sent = last_sent_transforms_.find(p.first);
-                    if (last_sent == last_sent_transforms_.end() || last_sent->second != transform) {
+                    if (last_sent_transforms_[p.first].should_send(transform)) {
                         state["layer"][p.first]["transform"] = transform_state(transform);
-                        last_sent_transforms_[p.first]        = transform;
                     }
                 }
 

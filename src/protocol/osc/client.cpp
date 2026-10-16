@@ -162,7 +162,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        ++reference_counts_by_endpoint_[endpoint];
+        if (++reference_counts_by_endpoint_[endpoint] == 1) {
+            // A genuinely new subscriber, as opposed to another token for an endpoint that was
+            // already subscribed. Let change_gate-backed state know it may need to resend.
+            core::monitor::bump_subscription_epoch();
+        }
 
         std::weak_ptr<impl> weak_self = shared_from_this();
 
