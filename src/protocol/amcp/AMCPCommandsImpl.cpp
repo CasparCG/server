@@ -2088,7 +2088,10 @@ std::wstring osc_subscribe_command(command_context& ctx)
     auto subscription = ctx.static_context->osc_client->get_subscription_token(
         udp::endpoint(make_address_v4(u8(ctx.client->address())), port), include_diagnostics);
 
-    ctx.client->add_lifecycle_bound_object(get_osc_subscription_token(port), subscription);
+    const auto token                 = get_osc_subscription_token(port);
+    auto       previous_subscription = ctx.client->remove_lifecycle_bound_object(token);
+    ctx.client->add_lifecycle_bound_object(token, subscription);
+    previous_subscription.reset();
 
     return L"202 OSC SUBSCRIBE OK\r\n";
 }

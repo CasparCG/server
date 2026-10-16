@@ -94,7 +94,7 @@ class osc_graph_sink : public caspar::diagnostics::spi::graph_sink
         pending_tags_[name] = static_cast<int>(severity);
     }
 
-    // Matches osd_graph's behaviour of decaying every value back to 0 after a render/snapshot cycle.
+    // Preserve the explicit reset behavior exposed by caspar::diagnostics::graph.
     void auto_reset() override
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -121,7 +121,7 @@ class osc_graph_sink : public caspar::diagnostics::spi::graph_sink
             node["tag"][p.first] =
                 std::string(tag_severity_name(static_cast<caspar::diagnostics::tag_severity>(p.second)));
 
-        pending_tags_.clear(); // only report tags fired since the previous snapshot, like osd_graph's tick_tag_
+        pending_tags_.clear();
     }
 };
 
