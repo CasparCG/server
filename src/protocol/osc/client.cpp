@@ -73,7 +73,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::mutex              mutex_;
     std::condition_variable cond_;
     core::monitor::state    bundle_;
-    uint64_t                bundle_time_ = 0;
+    uint64_t                bundle_time_    = 0;
+    bool                    bundle_pending_ = false;
 
     uint64_t time_ = 0;
 
@@ -95,15 +96,16 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        cond_.wait(lock, [&] { return bundle_time_ > 0 || abort_request_; });
+                        cond_.wait(lock, [&] { return bundle_pending_ || abort_request_; });
 
                         if (abort_request_) {
                             return;
                         }
 
-                        bundle       = std::move(bundle_);
-                        bundle_time  = bundle_time_;
-                        bundle_time_ = 0;
+                        bundle          = std::move(bundle_);
+                        bundle_         = core::monitor::state{};
+                        bundle_time     = bundle_time_;
+                        bundle_pending_ = false;
 
                         for (auto& p : reference_counts_by_endpoint_) {
                             endpoints.push_back(p.first);
@@ -193,9 +195,20 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // TODO: time_++ is a hack. Use proper channel time.
-            bundle_time_ = time_++;
-            bundle_      = state;
+            // Merge rather than replace. A pending bundle not yet picked up by the sender
+            // thread must not be discarded wholesale: a change-gated producer (see
+            // core::monitor::change_gate) may have written a key into an earlier, still-pending
+            // state that this tick's state omits because nothing changed, and that key would
+            // otherwise be silently dropped instead of eventually reaching a subscriber.
+            for (auto& p : state) {
+                bundle_[p.first] = p.second;
+            }
+
+            if (!bundle_pending_) {
+                // TODO: time_++ is a hack. Use proper channel time.
+                bundle_time_    = time_++;
+                bundle_pending_ = true;
+            }
         }
         cond_.notify_all();
     }
