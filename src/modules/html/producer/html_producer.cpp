@@ -139,6 +139,7 @@ class html_client
     // steady_now_ms(). audio_buffer_ is a continuous PCM backlog, sliced when receive() consumes a
     // tick rather than when either CEF callback arrives.
     std::vector<std::int32_t> audio_buffer_;
+    bool                      audio_stream_active_    = false;
     bool                      audio_clock_calibrated_ = false;
     std::int64_t              audio_clock_offset_ms_  = 0; // translates CEF pts -> steady_now_ms()
     double                    audio_buffer_start_ms_  = 0; // steady-clock timestamp of the oldest buffered sample
@@ -150,10 +151,11 @@ class html_client
         core::draw_frame frame;
         std::int64_t     timestamp_ms;
     };
-    std::deque<buffered_frame> buffer_;
-    mutable std::mutex         buffer_mutex_;
-    core::draw_frame           last_frame_;
-    std::int64_t               last_pop_timestamp_ms_ = 0;
+    std::deque<buffered_frame>  buffer_;
+    mutable std::mutex          buffer_mutex_;
+    core::draw_frame            last_frame_;
+    std::int64_t                last_pop_timestamp_ms_ = 0;
+    std::optional<std::int64_t> dropped_video_start_ms_;
 
     CefRefPtr<CefBrowser> browser_;
 
@@ -220,62 +222,68 @@ class html_client
     bool try_pop(const core::video_field field, core::draw_frame& audio_slice, bool& video_updated)
     {
         std::lock_guard<std::mutex> pairing_lock(pairing_mutex_);
+        std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
         const auto                  now_time = steady_now_ms();
         video_updated                        = false;
 
-        {
-            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+        const auto take_samples  = static_cast<size_t>(format_desc_.audio_cadence[audio_cadence_index_]);
+        const auto take_elements = take_samples * kAudioChannels;
+        audio_cadence_index_     = (audio_cadence_index_ + 1) % format_desc_.audio_cadence.size();
 
-            /*
-             * CEF in gpu-enabled mode only sends frames when something changes, and interlaced channels
-             * consume two frames in a short time span.
-             * This can interact poorly and cause the second
-             * field of an animation repeat the first.
-             * If there is a single frame in the buffer, it may
-             * want delaying to avoid this stutter.
-             * The hazard here is that sometimes animations will
-             * start a field later than intended.
-             */
-            if (!buffer_.empty()) {
-                auto should_delay = false;
-                if (field == core::video_field::a && buffer_.size() == 1) {
-                    // Make sure there has been a gap before this pop, of at least a couple of frames
-                    auto follows_gap_in_frames = (now_time - last_pop_timestamp_ms_) > 100;
-
-                    // Check if the sole buffered frame is too young to have a partner field generated (with a
-                    // tolerance)
-                    auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
-                    auto front_frame_is_too_young = (now_time - buffer_.front().timestamp_ms) < time_per_frame;
-                    should_delay                  = follows_gap_in_frames && front_frame_is_too_young;
-                }
-
-                if (!should_delay) {
-                    last_pop_timestamp_ms_ = buffer_.front().timestamp_ms;
-                    last_frame_            = std::move(buffer_.front().frame);
-                    buffer_.pop_front();
-                    video_updated = true;
-                }
-            }
-
-            graph_->set_value("buffered-frames", (double)buffer_.size() / buffer_capacity_);
+        const auto terminating = closing_ || not_found_;
+        if (!terminating && audio_stream_active_ &&
+            (!audio_clock_calibrated_ || audio_buffer_.size() < take_elements)) {
+            return false;
         }
 
-        if (last_frame_ && audio_clock_calibrated_) {
-            const auto take_samples  = static_cast<size_t>(format_desc_.audio_cadence[audio_cadence_index_]);
-            const auto take_elements = take_samples * kAudioChannels;
-            // Fixed-cadence mixers do not retain leftovers. Emit a full tick, never a partial slice
-            // based on callback jitter; interlaced fields may be consumed back-to-back.
+        const auto use_audio   = !terminating && audio_clock_calibrated_ && audio_buffer_.size() >= take_elements;
+        size_t     video_count = 0;
+        if (use_audio) {
             const auto tick_duration_ms = take_samples * 1000.0 / format_desc_.audio_sample_rate;
-            if (audio_buffer_.size() >= take_elements && audio_buffer_start_ms_ <= now_time + tick_duration_ms) {
-                std::vector<std::int32_t> taken(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
-                audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
-                audio_buffer_start_ms_ += take_samples * 1000.0 / format_desc_.audio_sample_rate;
+            if (audio_buffer_start_ms_ > now_time + tick_duration_ms) {
+                return false;
+            }
+            // A snapshot remains valid until the next paint. Select the latest snapshot at the
+            // PCM interval's start, not an old FIFO entry paired with wall-clock-current audio.
+            for (const auto& frame : buffer_) {
+                if (frame.timestamp_ms > audio_buffer_start_ms_)
+                    break;
+                ++video_count;
+            }
+            if (video_count == 0 && (!last_frame_ || last_pop_timestamp_ms_ > audio_buffer_start_ms_ ||
+                                     (dropped_video_start_ms_ && *dropped_video_start_ms_ <= audio_buffer_start_ms_))) {
+                return false;
+            }
+        } else if (!buffer_.empty()) {
+            video_count = 1;
+        }
 
-                audio_slice = core::draw_frame(
-                    core::mutable_frame(this, {}, array<std::int32_t>(std::move(taken)), core::pixel_format_desc()));
+        // Preserve the interlace stutter heuristic, holding both streams when a video pop is delayed.
+        if (video_count > 0 && field == core::video_field::a && buffer_.size() == 1) {
+            const auto follows_gap_in_frames    = (now_time - last_pop_timestamp_ms_) > 100;
+            const auto time_per_frame           = (1000 * 1.5) / format_desc_.fps;
+            const auto front_frame_is_too_young = (now_time - buffer_.front().timestamp_ms) < time_per_frame;
+            if (follows_gap_in_frames && front_frame_is_too_young) {
+                return false;
             }
         }
-        audio_cadence_index_ = (audio_cadence_index_ + 1) % format_desc_.audio_cadence.size();
+
+        if (use_audio) {
+            std::vector<std::int32_t> taken(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
+            audio_slice = core::draw_frame(
+                core::mutable_frame(this, {}, array<std::int32_t>(std::move(taken)), core::pixel_format_desc()));
+            audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
+            audio_buffer_start_ms_ += take_samples * 1000.0 / format_desc_.audio_sample_rate;
+        }
+
+        if (video_count > 0) {
+            last_pop_timestamp_ms_ = buffer_[video_count - 1].timestamp_ms;
+            last_frame_            = std::move(buffer_[video_count - 1].frame);
+            buffer_.erase(buffer_.begin(), buffer_.begin() + video_count);
+            dropped_video_start_ms_.reset();
+            video_updated = true;
+        }
+        graph_->set_value("buffered-frames", (double)buffer_.size() / buffer_capacity_);
 
         return video_updated || static_cast<bool>(audio_slice);
     }
@@ -317,6 +325,8 @@ class html_client
             std::lock_guard<std::mutex> buf_lock(buffer_mutex_);
             buffer_.push_back({latest_video_frame_, now_ms});
             if (buffer_.size() > buffer_capacity_) {
+                if (!dropped_video_start_ms_)
+                    dropped_video_start_ms_ = buffer_.front().timestamp_ms;
                 buffer_.pop_front();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
             }
@@ -617,6 +627,7 @@ class html_client
         // A restarted stream's pts isn't guaranteed to continue from where the last one left off -
         // force recalibration (see OnAudioStreamPacket) rather than reuse a possibly-stale offset.
         std::lock_guard<std::mutex> lock(pairing_mutex_);
+        audio_stream_active_    = true;
         audio_clock_calibrated_ = false;
         audio_buffer_.clear();
     }
@@ -666,11 +677,16 @@ class html_client
             }
         }
     }
-    void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override { audioResampler_ = nullptr; }
+    void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override
+    {
+        audioResampler_ = nullptr;
+        std::lock_guard<std::mutex> lock(pairing_mutex_);
+        audio_stream_active_ = false;
+    }
     void OnAudioStreamError(CefRefPtr<CefBrowser> browser, const CefString& message) override
     {
         CASPAR_LOG(info) << "[html_producer] OnAudioStreamError: \"" << message.ToString() << "\"";
-        audioResampler_ = nullptr;
+        OnAudioStreamStopped(browser);
     }
 
     void do_execute_javascript(const std::wstring& javascript)
