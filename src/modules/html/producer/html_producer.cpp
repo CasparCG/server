@@ -205,7 +205,7 @@ class html_client
 
     void reload()
     {
-        html::begin_invoke([this] {
+        html::invoke([this] {
             if (browser_ != nullptr) {
                 {
                     std::lock_guard<std::mutex> lock(javascript_mutex_);
