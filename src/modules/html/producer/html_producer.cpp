@@ -515,7 +515,7 @@ class html_client
 
     CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
-    static constexpr int    max_renderer_crashes       = 5;
+    static constexpr int    max_renderer_reloads       = 5;
     static constexpr double renderer_crash_window_secs = 60.0;
 
     void OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
@@ -532,9 +532,9 @@ class html_client
                    renderer_crash_window_secs)
             renderer_termination_times_.pop_front();
 
-        if (renderer_termination_times_.size() >= max_renderer_crashes) {
+        if (renderer_termination_times_.size() >= max_renderer_reloads) {
             CASPAR_LOG(error) << "[html_producer] " << print() << L" renderer process terminated (status: "
-                              << static_cast<int>(status) << L"); already reloaded after " << max_renderer_crashes
+                              << static_cast<int>(status) << L"); already reloaded after " << max_renderer_reloads
                               << L" terminations within " << static_cast<int>(renderer_crash_window_secs)
                               << L"s; giving up on automatic reload. Manual RELOAD or REMOVE/LOAD is required.";
             return;
