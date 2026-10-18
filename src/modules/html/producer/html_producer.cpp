@@ -545,6 +545,7 @@ class html_client
         renderer_termination_times_.push_back(now);
         CASPAR_LOG(warning) << "[html_producer] " << print() << L" renderer process terminated (status: "
                             << static_cast<int>(status) << L"), reloading.";
+        loaded_ = false;
         browser->Reload();
     }
 
