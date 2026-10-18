@@ -197,7 +197,8 @@ void signal_handler(int signum)
         boost::stacktrace::safe_dump_to(reinterpret_cast<void*>(::_get_osfhandle(fd)));
         ::_close(fd);
     } else {
-        ::_write(2, failure, sizeof(failure) - 1);
+        const auto written = ::_write(2, failure, sizeof(failure) - 1);
+        (void)written; // A failed stderr write cannot be reported safely from this handler.
     }
 #else
     const auto fd = ::open(crash_dump_path.c_str(), O_CREAT | O_EXCL | O_WRONLY, 0600);
@@ -205,7 +206,8 @@ void signal_handler(int signum)
         boost::stacktrace::safe_dump_to(fd);
         ::close(fd);
     } else {
-        ::write(STDERR_FILENO, failure, sizeof(failure) - 1);
+        const auto written = ::write(STDERR_FILENO, failure, sizeof(failure) - 1);
+        (void)written; // A failed stderr write cannot be reported safely from this handler.
     }
 #endif
     std::abort();
