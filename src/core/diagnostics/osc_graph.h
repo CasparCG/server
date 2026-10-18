@@ -31,12 +31,12 @@ namespace caspar { namespace core { namespace diagnostics { namespace osc_graph 
 void register_sink();
 
 // A snapshot of every currently-live graph's text/values/colors/tags, addressed as:
-//   diag/<id>/channel        - the video channel the graph belongs to, or -1
-//   diag/<id>/layer          - the layer the graph belongs to, or -1
-//   diag/<id>/text           - the graph's label, matching the SFML window's corner text
-//   diag/<id>/value/<name>   - the current value (0..1) of a named series
-//   diag/<id>/color/<name>   - the configured color of a named series, same encoding as get_sfml_color
-//   diag/<id>/tag/<name>     - severity ("warning"/"info"/"silent") of a tag that fired since the last call
+//   /diag/<id>/channel        - the video channel the graph belongs to, or -1
+//   /diag/<id>/layer          - the layer the graph belongs to, or -1
+//   /diag/<id>/text           - the graph's label, matching the SFML window's corner text
+//   /diag/<id>/value/<name>   - the current value (0..1) of a named series
+//   /diag/<id>/color/<name>   - the configured color of a named series, same encoding as get_sfml_color
+//   /diag/<id>/tag/<name>     - severity ("warning"/"info"/"silent") of a tag that fired since the last call
 // Reports each graph's latest values (which remain until changed or explicitly reset) and clears tags
 // after reporting them once. Drops bookkeeping for any graph whose owning caspar::diagnostics::graph has
 // since been destroyed.

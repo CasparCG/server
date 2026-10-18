@@ -106,7 +106,8 @@ class osc_graph_sink : public caspar::diagnostics::spi::graph_sink
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        auto node       = state["diag"][id_];
+        // Root at "" so the resulting OSC addresses start with "/" (same convention as the channel state).
+        auto node       = state[""]["diag"][id_];
         node["channel"] = context_.video_channel;
         node["layer"]   = context_.layer;
         node["text"]    = text_;

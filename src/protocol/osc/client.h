@@ -58,7 +58,7 @@ class client
      *
      * @param endpoint            The UDP endpoint to send OSC messages to.
      * @param include_diagnostics When true, also send the (more verbose, separately-rated)
-     *                            caspar::diagnostics::graph telemetry under the `diag/` OSC address
+     *                            caspar::diagnostics::graph telemetry under the `/diag/` OSC address
      *                            prefix to this endpoint - see `OSC SUBSCRIBE <port> DIAG`.
      *
      * @return The token. It is ok for the token to outlive the client

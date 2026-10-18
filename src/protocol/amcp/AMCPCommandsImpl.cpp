@@ -2081,7 +2081,7 @@ std::wstring osc_subscribe_command(command_context& ctx)
     }
 
     // Optional second parameter opts this subscription into the (more verbose, separately-rated)
-    // caspar::diagnostics::graph telemetry under the `diag/` OSC address prefix - a lightweight,
+    // caspar::diagnostics::graph telemetry under the `/diag/` OSC address prefix - a lightweight,
     // network-friendly alternative to the SFML DIAG window.
     bool include_diagnostics = ctx.parameters.size() > 1 && boost::iequals(ctx.parameters.at(1), L"DIAG");
 
