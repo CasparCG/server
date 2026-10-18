@@ -65,6 +65,7 @@
 
 namespace caspar {
 
+/// Configures the global text encoding while retaining C numeric parsing for media libraries.
 void setup_global_locale()
 {
     boost::locale::generator gen;
@@ -76,6 +77,7 @@ void setup_global_locale()
     std::setlocale(LC_ALL, "C");
 }
 
+/// Logs the server version, license, and project information.
 void print_info()
 {
     CASPAR_LOG(info) << L"############################################################################";
@@ -87,6 +89,7 @@ void print_info()
     CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 }
 
+/// Runs the server and console command loop until shutdown, returning whether a restart was requested.
 auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
 {
     boost::asio::io_context io;
@@ -105,6 +108,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     // For example CEF resets the global locale, so this is to reset it back to "our" preference.
     setup_global_locale();
 
+    // Log the effective configuration after server initialization.
     std::wstringstream                                      str;
     boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
     boost::property_tree::write_xml(str, env::properties(), w);
@@ -185,6 +189,7 @@ void signal_handler(int signum)
 /// Logs and archives a previous crash dump after startup logging is available.
 void report_previous_crash()
 {
+    // Distinguish an absent dump from a filesystem inspection failure.
     const boost::filesystem::path dump("./backtrace.dump");
     boost::system::error_code     error;
     const auto                    exists = boost::filesystem::exists(dump, error);
@@ -197,6 +202,7 @@ void report_previous_crash()
     if (!exists)
         return;
 
+    // Retain unreadable, truncated, or empty dumps rather than treating them as complete traces.
     std::ifstream input(dump.string(), std::ios::binary);
     if (!input) {
         CASPAR_LOG(error) << L"Could not open previous crash dump; retained at ./backtrace.dump.";
@@ -209,6 +215,7 @@ void report_previous_crash()
     }
     input.close();
 
+    // Report raw addresses without resolving them against this process's unrelated ASLR mappings.
     std::wostringstream report;
     report << L"Previous process crash (raw addresses; not symbolized across ASLR restarts):";
     for (std::size_t n = 0; n < trace.size(); ++n) {
@@ -218,6 +225,7 @@ void report_previous_crash()
               L"See BUILDING.md, Linux crash diagnostics.";
     CASPAR_LOG(error) << report.str();
 
+    // Reserve an archive name without replacing existing evidence, retrying name collisions.
     boost::filesystem::path archive;
     for (int attempt = 0; attempt < 8; ++attempt) {
         archive = boost::filesystem::unique_path("./backtrace-%%%%-%%%%-%%%%-%%%%.dump");
@@ -231,6 +239,7 @@ void report_previous_crash()
         return;
     }
     CASPAR_LOG(error) << L"Previous crash dump preserved at " << archive.wstring();
+    // Remove the original name only after the archive exists.
     boost::filesystem::remove(dump, error);
     if (error)
         CASPAR_LOG(error) << L"Could not remove archived ./backtrace.dump; both paths retained: " << u16(error.message());
