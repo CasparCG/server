@@ -202,7 +202,7 @@ void report_previous_crash()
         return;
     }
     const auto trace = boost::stacktrace::stacktrace::from_dump(input);
-    if (input.bad() || trace.empty()) {
+    if (input.fail() || trace.empty()) {
         CASPAR_LOG(error) << L"Previous crash dump is unreadable or empty; retained at ./backtrace.dump.";
         return;
     }
