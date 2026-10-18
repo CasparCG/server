@@ -115,15 +115,28 @@ pa_library::pa_library()
                                << msg_info(std::string("Failed to initialize PortAudio: ") + Pa_GetErrorText(err)));
 }
 
-pa_library::~pa_library() { Pa_Terminate(); }
+pa_library::~pa_library()
+{
+    std::lock_guard guard{mutex_};
+    Pa_Terminate();
+    initialized_ = false;
+    condition_.notify_one();
+}
 
 std::shared_ptr<pa_library> pa_library::acquire()
 {
-    std::lock_guard guard{mutex_};
+    std::unique_lock guard{mutex_};
 
     auto shared = instance_.lock();
-    if (!shared)
+    while (!shared && initialized_) {
+        condition_.wait(guard);
+        shared = instance_.lock();
+    }
+
+    if (!shared) {
         instance_ = shared = std::shared_ptr<pa_library>{new pa_library()};
+        initialized_       = true;
+    }
 
     return shared;
 }

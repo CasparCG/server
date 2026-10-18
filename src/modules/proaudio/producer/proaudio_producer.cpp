@@ -93,6 +93,7 @@ struct proaudio_producer : public core::frame_producer
         using diagnostics::color;
         graph_->set_color("underflow", color(0.6, 0.3, 0.9));
         graph_->set_color("device-overflow", color(0.6, 0.3, 0.3));
+        graph_->set_color("dropout", color(0.9, 0.6, 0.3));
         diagnostics::register_graph(graph_);
 
         channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
@@ -123,6 +124,11 @@ struct proaudio_producer : public core::frame_producer
                                                 "' only has " + std::to_string(info->maxInputChannels) +
                                                 " input channels"));
 
+        if (channel_map_.size() > static_cast<std::size_t>(format_desc_.audio_channels))
+            CASPAR_THROW_EXCEPTION(invalid_operation()
+                                   << msg_info("CHANNEL_MAP contains more channels than the format's " +
+                                               std::to_string(format_desc_.audio_channels) + " audio channels"));
+
         device_channels_ = max_source_channel;
 
         if (buffer_size_frames_ > 0)
@@ -150,8 +156,7 @@ struct proaudio_producer : public core::frame_producer
                                  &in_params,
                                  nullptr,
                                  format_desc_.audio_sample_rate,
-                                 buffer_size_frames_ > 0 ? static_cast<unsigned long>(buffer_size_frames_)
-                                                        : paFramesPerBufferUnspecified,
+                                 buffer_size_frames_ > 0 ? max_frames_per_callback_ : paFramesPerBufferUnspecified,
                                  paNoFlag,
                                  &proaudio_producer::pa_callback,
                                  this);
@@ -161,10 +166,14 @@ struct proaudio_producer : public core::frame_producer
                                                Pa_GetErrorText(err)));
 
         err = Pa_StartStream(stream_);
-        if (err != paNoError)
-            CASPAR_THROW_EXCEPTION(invalid_operation()
-                                   << msg_info(std::string("Failed to start PortAudio stream: ") +
-                                               Pa_GetErrorText(err)));
+        if (err != paNoError) {
+            auto message   = std::string("Failed to start PortAudio stream: ") + Pa_GetErrorText(err);
+            auto close_err = Pa_CloseStream(stream_);
+            stream_        = nullptr;
+            if (close_err != paNoError)
+                message += std::string("; failed to close PortAudio stream: ") + Pa_GetErrorText(close_err);
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(message));
+        }
 
         graph_->set_text(print());
         CASPAR_LOG(info) << print() << L" Using device '" << u16(std::string(info->name)) << "'";
@@ -191,12 +200,20 @@ struct proaudio_producer : public core::frame_producer
             graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
         if (device_overflow_.exchange(false, std::memory_order_relaxed))
             graph_->set_tag(diagnostics::tag_severity::WARNING, "device-overflow");
+        if (dropout_.exchange(false, std::memory_order_relaxed))
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "dropout");
 
         // Left-justify each 16-bit capture into caspar's 32-bit sample range - the inverse of the
         // consumer's `>> 16` truncation down to int16 for playback.
-        std::vector<std::int32_t> audio(captured.size());
-        for (std::size_t i = 0; i < captured.size(); ++i)
-            audio[i] = static_cast<std::int32_t>(captured[i]) << 16;
+        auto                      output_channels = static_cast<std::size_t>(format_desc_.audio_channels);
+        std::vector<std::int32_t> audio(static_cast<std::size_t>(nb_samples) * output_channels, 0);
+        for (int sample = 0; sample < nb_samples; ++sample) {
+            for (std::size_t channel = 0; channel < n_map; ++channel) {
+                auto source   = static_cast<std::size_t>(sample) * n_map + channel;
+                auto target   = static_cast<std::size_t>(sample) * output_channels + channel;
+                audio[target] = static_cast<std::int32_t>(captured[source]) << 16;
+            }
+        }
 
         // A 1x1 fully transparent pixel, same trick as color_producer's "EMPTY" color - contributes
         // nothing visually so this producer is audio-only, but stays a valid (non-invalid-format)

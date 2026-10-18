@@ -10,6 +10,7 @@ set(SOURCES
 
                 util/device_util.cpp
                 util/device_util.h
+		proaudio.cpp
 		proaudio.h
 )
 
