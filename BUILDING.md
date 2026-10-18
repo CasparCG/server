@@ -120,6 +120,11 @@ After logging is initialized on the next successful startup, CasparCG reports
 the saved **raw addresses** to the configured logging sinks and archives the
 binary dump as `backtrace-<unique-id>.dump` in the working directory. It does not
 delete the evidence or resolve old addresses against the new process's mappings.
+Archival creates a hard link without replacing an existing destination, retrying
+name collisions up to eight times, then removes the original name only after
+the archive exists. The working filesystem must support hard links; failures
+retain the original dump and produce an error diagnostic. Failure to remove the
+original after archiving retains both names and is also reported.
 Unreadable or empty dumps remain in place with an error diagnostic. Retain
 archives as needed and remove old ones according to your operational retention
 policy. A subsequent crash can replace an unarchived `backtrace.dump`.

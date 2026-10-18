@@ -217,14 +217,22 @@ void report_previous_crash()
               L"See BUILDING.md, Linux crash diagnostics.";
     CASPAR_LOG(error) << report.str();
 
-    const auto archive = boost::filesystem::unique_path("./backtrace-%%%%-%%%%-%%%%-%%%%.dump");
-    boost::filesystem::rename(dump, archive, error);
+    boost::filesystem::path archive;
+    for (int attempt = 0; attempt < 8; ++attempt) {
+        archive = boost::filesystem::unique_path("./backtrace-%%%%-%%%%-%%%%-%%%%.dump");
+        boost::filesystem::create_hard_link(dump, archive, error);
+        if (error != boost::system::errc::file_exists)
+            break;
+    }
     if (error) {
         CASPAR_LOG(error) << L"Could not archive previous crash dump; retained at ./backtrace.dump: "
                           << u16(error.message());
-    } else {
-        CASPAR_LOG(error) << L"Previous crash dump preserved at " << archive.wstring();
+        return;
     }
+    CASPAR_LOG(error) << L"Previous crash dump preserved at " << archive.wstring();
+    boost::filesystem::remove(dump, error);
+    if (error)
+        CASPAR_LOG(error) << L"Could not remove archived ./backtrace.dump; both paths retained: " << u16(error.message());
 }
 
 void terminate_handler()
