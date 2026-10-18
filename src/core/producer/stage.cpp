@@ -244,7 +244,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     state["layer"][p.first] = p.second.state();
 
-                    state["layer"][p.first]["transform"] = transform_state(tweens_[p.first].fetch());
+                    result.transforms["layer"][p.first]["transform"] = transform_state(tweens_[p.first].fetch());
                 }
 
                 state_ = std::move(state);

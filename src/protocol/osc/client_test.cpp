@@ -3,15 +3,21 @@
 
 #include <common/diagnostics/graph.h>
 #include <core/frame/frame_transform.h>
+#include <core/mixer/image/image_mixer.h>
+#include <core/mixer/mixer.h>
 #include <core/producer/stage.h>
+#include <core/video_channel.h>
 
 #include <boost/asio.hpp>
 
 #include <array>
 #include <chrono>
+#include <condition_variable>
+#include <future>
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -121,6 +127,99 @@ void require_transform(const values_t& received, int channel, const monitor::sta
     }
 }
 
+class test_image_mixer : public caspar::core::image_mixer
+{
+  public:
+    bool         fail_render = false;
+    std::uint8_t marker      = 0;
+
+    void push(const caspar::core::frame_transform& value) override
+    {
+        marker = static_cast<std::uint8_t>(value.image_transform.opacity * 128);
+    }
+    void visit(const caspar::core::const_frame&) override {}
+    void pop() override {}
+    void update_aspect_ratio(double) override {}
+
+    std::future<std::tuple<caspar::array<const std::uint8_t>, std::shared_ptr<caspar::core::texture>>>
+    render(const caspar::core::video_format_desc&) override
+    {
+        return std::async(std::launch::deferred, [value = marker, fail = fail_render] {
+            if (fail)
+                throw std::runtime_error("Injected render failure");
+            return std::make_tuple(caspar::array<const std::uint8_t>(std::vector<std::uint8_t>{value}),
+                                   std::shared_ptr<caspar::core::texture>{});
+        });
+    }
+
+    caspar::core::mutable_frame create_frame(const void*, const caspar::core::pixel_format_desc&) override
+    {
+        throw std::logic_error("Unexpected frame allocation");
+    }
+    caspar::core::mutable_frame
+    create_frame(const void*, const caspar::core::pixel_format_desc&, caspar::common::bit_depth) override
+    {
+        throw std::logic_error("Unexpected frame allocation");
+    }
+#ifdef WIN32
+    caspar::core::const_frame import_d3d_texture(const void*,
+                                                 const std::shared_ptr<caspar::accelerator::d3d::d3d_texture2d>&,
+                                                 caspar::core::pixel_format,
+                                                 caspar::common::bit_depth) override
+    {
+        throw std::logic_error("Unexpected texture import");
+    }
+#endif
+    caspar::common::bit_depth depth() const override { return caspar::common::bit_depth::bit8; }
+};
+
+void test_mixer_alignment()
+{
+    namespace core = caspar::core;
+    for (auto format : {core::video_format::x720p5000, core::video_format::x1080i5000}) {
+        const auto  desc  = core::video_format_repository().find_format(format);
+        auto        image = caspar::spl::make_shared<test_image_mixer>();
+        core::mixer mixer(1, caspar::spl::make_shared<caspar::diagnostics::graph>(), image);
+        for (int field = 0; field < 12; ++field) {
+            core::draw_frame draw;
+            draw.transform().image_transform.opacity = static_cast<double>(field + 1) / 16;
+            monitor::state properties;
+            properties["opacity"] = draw.transform().image_transform.opacity;
+            auto frame            = mixer({draw}, desc, desc.audio_cadence.front(), properties);
+            if (field < desc.field_count) {
+                require(!frame, "Mixer returned a frame before buffer priming");
+                const auto state = mixer.transforms();
+                require(state.begin() == state.end(), "Transform status was exposed before a frame was rendered");
+            } else {
+                require(static_cast<bool>(frame), "Mixer did not return a rendered frame");
+                const auto state    = mixer.transforms();
+                const auto expected = static_cast<double>(field + 1 - desc.field_count) / 16;
+                require(boost::get<double>(state.begin()->second.front()) == expected,
+                        "Transform status leads or lags its rendered frame");
+                require(frame.image_data(0).data()[0] == static_cast<std::uint8_t>(expected * 128),
+                        "Transform status does not match the actual rendered frame");
+            }
+        }
+        image->fail_render = true;
+        bool failed        = false;
+        for (int i = 0; i <= desc.field_count; ++i) {
+            const auto                last = mixer.transforms();
+            const monitor::data_map_t previous(last.begin(), last.end());
+            try {
+                mixer({}, desc, desc.audio_cadence.front(), {});
+            } catch (const std::runtime_error& e) {
+                require(std::string(e.what()) == "Injected render failure", "Unexpected render error");
+                failed           = true;
+                const auto state = mixer.transforms();
+                require(monitor::data_map_t(state.begin(), state.end()) == previous,
+                        "Failed rendering advanced the applied transform state");
+                break;
+            }
+        }
+        require(failed, "Injected render failure was not observed");
+    }
+}
+
 void test_stage_snapshots()
 {
     namespace core = caspar::core;
@@ -128,6 +227,8 @@ void test_stage_snapshots()
                       caspar::spl::make_shared<caspar::diagnostics::graph>(),
                       core::video_format_repository().find_format(core::video_format::x720p5000));
     stage.pause(10).get();
+    core::mixer mixer(
+        1, caspar::spl::make_shared<caspar::diagnostics::graph>(), caspar::spl::make_shared<test_image_mixer>());
 
     auto        context = std::make_shared<boost::asio::io_context>();
     udp::socket socket(*context, udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
@@ -137,9 +238,11 @@ void test_stage_snapshots()
     std::uint64_t    frame = 0;
     std::vector<int> backgrounds;
     auto             produce = [&] {
-        stage(++frame, backgrounds, [](int, const core::layer_frame&) {});
+        const auto frames = stage(++frame, backgrounds, [](int, const core::layer_frame&) {});
+        mixer(frames.frames, frames.format_desc, frames.nb_samples, frames.transforms);
         monitor::state state;
         state[""]["channel"][1]["stage"] = stage.state();
+        state[""]["channel"][1]["stage"] = mixer.transforms();
         state["/test/tick"]              = static_cast<std::int32_t>(frame);
         return state;
     };
@@ -148,6 +251,7 @@ void test_stage_snapshots()
         return receive(socket, static_cast<std::int32_t>(frame));
     };
 
+    require_transform(send(), 1, {});
     require_transform(send(), 1, transform());
     require_transform(send(), 1, {});
     stage
@@ -160,7 +264,8 @@ void test_stage_snapshots()
             0,
             caspar::tweener())
         .get();
-    produce(); // Simulate a channel tick that fails before OSC submission.
+    require_transform(send(), 1, {}); // New transform is still in the mixer buffer.
+    produce();                        // Render it, but simulate a channel tick that fails before OSC submission.
     monitor::state change;
     change["opacity"] = 0.5;
     require_transform(send(), 1, change);
@@ -188,6 +293,7 @@ void test_stage_snapshots()
             4,
             caspar::tweener())
         .get();
+    require_transform(send(), 1, {});
     for (int step = 1; step <= 4; ++step) {
         change          = {};
         change["angle"] = static_cast<double>(step) / 4;
@@ -196,9 +302,49 @@ void test_stage_snapshots()
     require_transform(send(), 1, {});
 }
 
+void test_unmixed_status()
+{
+    namespace core = caspar::core;
+    std::mutex              mutex;
+    std::condition_variable changed;
+    int                     ticks               = 0;
+    bool                    announced_transform = false;
+    core::video_channel     channel(1,
+                                core::video_format_repository().find_format(core::video_format::x720p5000),
+                                core::color_space::bt709,
+                                std::make_unique<test_image_mixer>(),
+                                [&](monitor::state state) {
+                                    std::lock_guard<std::mutex> lock(mutex);
+                                    for (const auto& p : state) {
+                                        if (p.first.find("/transform/") != std::string::npos)
+                                            announced_transform = true;
+                                    }
+                                    ++ticks;
+                                    changed.notify_all();
+                                });
+    channel.stage()->pause(10).get();
+    channel.stage()
+        ->apply_transform(
+            10,
+            [](core::frame_transform value) {
+                value.image_transform.opacity = 0.5;
+                return value;
+            },
+            0,
+            caspar::tweener())
+        .get();
+    std::unique_lock<std::mutex> lock(mutex);
+    const auto                   target = ticks + 3;
+    require(changed.wait_for(lock, std::chrono::seconds(5), [&] { return ticks >= target; }),
+            "Channel stopped ticking without consumers");
+    require(!announced_transform, "Channel announced a transform without ever mixing a frame");
+}
+
 void run()
 {
     test_stage_snapshots();
+    test_mixer_alignment();
+    test_unmixed_status();
     auto        context = std::make_shared<boost::asio::io_context>();
     udp::socket first(*context, udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
     first.non_blocking(true);

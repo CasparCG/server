@@ -68,10 +68,17 @@ Layer mixer properties are available under
 `clip_scale`, `angle`, and `volume`. Position and scale properties contain two
 float arguments; the other properties contain one float argument.
 
-Channel state snapshots always contain the current transform. OSC queues only
-changed transform properties, and queues a full set on the next channel tick
-when a new endpoint subscribes. Other OSC telemetry continues at its existing
-cadence. As with all OSC-over-UDP telemetry, queueing does not guarantee delivery.
+Transform snapshots travel with their rendered frames through the mixer buffer.
+Channel status publishes the snapshot for the frame returned by the mixer, after
+the output call, never a transform waiting in the mixer queue. Before the first
+rendered frame is returned, no transform status is published. With no consumers,
+mixing is skipped and new mixer settings are not announced.
+
+OSC queues only changed transform properties, and queues the latest applied
+snapshot on the next channel tick when a new endpoint subscribes. Consumer and
+hardware presentation delays are not included. Other OSC telemetry continues at
+its existing cadence. As with all OSC-over-UDP telemetry, queueing does not
+guarantee delivery.
 
 Development
 -----------
