@@ -605,6 +605,9 @@ class html_client
 
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override
     {
+        if (!frame->IsMain())
+            return;
+
         std::lock_guard<std::mutex> lock(javascript_mutex_);
         if (not_found_ || recovery_stopped_)
             return;
