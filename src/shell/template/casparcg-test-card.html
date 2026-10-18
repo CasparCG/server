@@ -3,14 +3,20 @@
   CasparCG channel test card / identification slide.
 
   Usage (AMCP):
-    PLAY 1-99 CASPARCG-TEST-CARD
-    CG 1-99 ADD 1 CASPARCG-TEST-CARD 1 "{\"channel\":1,\"resolution\":\"1920x1080\",\"frameRate\":\"59.94i\",\"hostname\":\"PLAY3\",\"version\":\"2.6.0\",\"title\":\"THIS IS ONLY A TEST\",\"company\":\"CASPARCG BROADCASTING CO.\",\"take\":1,\"duration\":\"CONTINUOUS\",\"date\":\"2026-09-21\"}"
+    CG 1-99 ADD 1 CASPARCG-TEST-CARD 1 "{}"
+    CG 1-99 ADD 1 CASPARCG-TEST-CARD 1 "{\"channel\":1,\"resolution\":\"1920x1080\",\"frameRate\":\"59.94i\",\"hostname\":\"PLAY3\",\"ip\":\"10.0.0.21\",\"device\":\"DECKLINK 2\",\"version\":\"2.6.0\",\"title\":\"THIS IS ONLY A TEST\",\"company\":\"CASPARCG BROADCASTING CO.\",\"take\":1,\"duration\":\"CONTINUOUS\",\"date\":\"2026-09-21\"}"
+
+  A plain PLAY 1-99 CASPARCG-TEST-CARD will show the card, but only CG ADD
+  with play_on_load (the trailing 1) invokes the play() callback below that
+  starts the audio tone, live clock and title rotation - see
+  src/modules/html/producer/html_cg_proxy.cpp for why.
 
   Every field in the update() JSON payload is optional and works the same way:
-  channel/resolution/hostname/version fall back to "-" if not supplied, and
-  title/company/duration/take/date fall back to CasparCG-flavored defaults
-  ("take" to a running count of play() calls, "date" to a live clock) so the
-  card is still useful with a plain PLAY and no CG data at all. Audio is a
+  channel/resolution/frameRate/hostname/ip/device/version fall back to "-" if
+  not supplied, and title/company/duration/take/date fall back to
+  CasparCG-flavored defaults ("take" to a running count of play() calls,
+  "date" to a live clock) so the card is still useful with a bare
+  CG ADD ... 1 "{}" and no identification data at all. Audio is a
   GLITS ident per EBU Tech 3304: 1kHz at -18dBFS, continuous on the right
   channel and interrupted for 250ms every 3 seconds on the left, generated
   with the Web Audio API - no external files needed for either the picture or
@@ -32,7 +38,7 @@
     padding: 0;
     width: 100vw;
     height: 100vh;
-    background: #000;
+    background: transparent;
     overflow: hidden;
     font-family: "Consolas", "Courier New", monospace;
   }
@@ -146,7 +152,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2.5vw;
+    gap: 1.6vw;
     color: #ffffff;
     font-size: 2vh;
     background: #000;
@@ -183,7 +189,10 @@
   <div id="ident">
     <div><span class="label">CH</span> <span id="ident-channel">-</span></div>
     <div><span class="label">RES</span> <span id="ident-resolution">-</span></div>
+    <div><span class="label">FPS</span> <span id="ident-framerate">-</span></div>
     <div><span class="label">HOST</span> <span id="ident-hostname">-</span></div>
+    <div><span class="label">IP</span> <span id="ident-ip">-</span></div>
+    <div><span class="label">DEV</span> <span id="ident-device">-</span></div>
     <div><span class="label">VER</span> <span id="ident-version">-</span></div>
   </div>
 
@@ -194,7 +203,10 @@
     data = data || {};
     document.getElementById("ident-channel").textContent    = data.channel      || "-";
     document.getElementById("ident-resolution").textContent = data.resolution   || "-";
+    document.getElementById("ident-framerate").textContent  = data.frameRate    || "-";
     document.getElementById("ident-hostname").textContent   = data.hostname     || "-";
+    document.getElementById("ident-ip").textContent         = data.ip          || "-";
+    document.getElementById("ident-device").textContent     = data.device      || "-";
     document.getElementById("ident-version").textContent    = data.version      || "-";
   }
 
