@@ -147,9 +147,8 @@ class html_client
     const size_t                         frames_max_size_ = 4;
     std::atomic<bool>                    closing_;
 
-    // Bounds OnRenderProcessTerminated's auto-reload so a persistently crash-looping renderer
-    // (e.g. a reproducible CEF SIGILL - see GitHub issue #1812) can't spin this layer in a tight
-    // crash/respawn loop forever; see max_renderer_crashes below.
+    // Bound automatic reloads so a persistently failing renderer cannot spin this layer in a
+    // tight crash/respawn loop; see max_renderer_crashes below.
     std::atomic<int> renderer_crash_count_;
     caspar::timer     renderer_crash_window_;
 
@@ -519,10 +518,9 @@ class html_client
 
     CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
-    // A crash/kill of the (separate-process) renderer leaves this browser instance permanently blank
-    // otherwise - respawn it the same way an explicit RELOAD would, rather than losing the layer for
-    // good. But if the renderer keeps crashing immediately after each respawn (e.g. a reproducible CEF
-    // bug), give up after a few attempts instead of busy-looping forever - see GitHub issue #1812.
+    // A reported termination of the separate-process renderer leaves this browser blank otherwise.
+    // Reload it the same way an explicit RELOAD would, but stop after repeated terminations rather
+    // than looping indefinitely if the renderer cannot stay running.
     static constexpr int    max_renderer_crashes       = 5;
     static constexpr double renderer_crash_window_secs = 60.0;
 
