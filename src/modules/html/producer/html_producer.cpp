@@ -534,6 +534,7 @@ class html_client
                    renderer_crash_window_secs)
             renderer_termination_times_.pop_front();
 
+        loaded_ = false;
         if (renderer_termination_times_.size() >= max_renderer_reloads) {
             CASPAR_LOG(error) << "[html_producer] " << print() << L" renderer process terminated (status: "
                               << static_cast<int>(status) << L"); already reloaded after " << max_renderer_reloads
@@ -545,7 +546,6 @@ class html_client
         renderer_termination_times_.push_back(now);
         CASPAR_LOG(warning) << "[html_producer] " << print() << L" renderer process terminated (status: "
                             << static_cast<int>(status) << L"), reloading.";
-        loaded_ = false;
         browser->Reload();
     }
 
