@@ -282,7 +282,6 @@ void init(const core::module_dependencies& dependencies)
     }
 #endif
 // Malinfo patch section 2 end - Remove once fixed upstream.
-    dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     // Validate the selected CEF API against the loaded library, including after system package updates.
     // A mismatch means libcef.so doesn't honor the API-version contract CasparCG was built against, so
@@ -336,6 +335,10 @@ void init(const core::module_dependencies& dependencies)
                      << cef_version_info(2) << " (Chromium " << cef_version_info(4) << "." << cef_version_info(5)
                      << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
                      << cef_api_version() << ". Built against CEF " << CEF_VERSION;
+
+    // Only register the producer factory once CEF has actually initialized successfully, so a load
+    // attempt can't reach html::create_producer (and post tasks to a never-initialized CEF) above.
+    dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
     dependencies.cg_registry->register_cg_producer(
