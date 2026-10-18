@@ -96,8 +96,7 @@ else ()
 		z
 		pthread
 	)
-	# Exports externally visible executable symbols for in-process stack traces.
-	# Raw addresses from a previous ASLR process require separate postmortem analysis.
+	# Export executable symbols for in-process traces, not address decoding after restart.
 	target_link_options(casparcg PRIVATE -rdynamic)
 endif ()
 
