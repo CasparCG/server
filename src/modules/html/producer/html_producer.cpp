@@ -140,13 +140,15 @@ class html_client
     // OnAudioStreamPacket for the one-time calibration this requires before pts is comparable to
     // steady_now_ms(). audio_buffer_ is a continuous PCM backlog, sliced when receive() consumes a
     // tick rather than when either CEF callback arrives.
-    std::vector<std::int32_t> audio_buffer_;
-    bool                      audio_stream_active_    = false;
-    bool                      audio_clock_calibrated_ = false;
-    std::int64_t              audio_clock_offset_ms_  = 0; // translates CEF pts -> steady_now_ms()
-    double                    audio_buffer_start_ms_  = 0; // steady-clock timestamp of the oldest buffered sample
-
-    std::optional<double>     next_audio_packet_pts_ms_; // independent of backlog consumption and callback arrival
+    std::vector<std::int32_t>   audio_buffer_;
+    bool                        audio_stream_active_    = false;
+    bool                        audio_clock_calibrated_ = false;
+    std::int64_t                audio_clock_offset_ms_  = 0; // translates CEF pts -> steady_now_ms()
+    double                      audio_buffer_start_ms_  = 0; // steady-clock timestamp of the oldest buffered sample
+    std::optional<double>       next_audio_packet_pts_ms_;   // independent of backlog consumption and callback arrival
+    std::optional<std::int64_t> audio_wait_started_ms_;
+    std::optional<double>       audio_resume_floor_ms_;
+    bool                        audio_starved_ = false;
 
     const size_t buffer_capacity_ = 4;
     struct buffered_frame
@@ -233,11 +235,6 @@ class html_client
         const auto take_elements = take_samples * kAudioChannels;
 
         const auto terminating = closing_ || not_found_;
-        if (nb_samples > 0 && !terminating && audio_stream_active_ &&
-            (!audio_clock_calibrated_ || audio_buffer_.size() < take_elements)) {
-            return false;
-        }
-
         // Preserve the interlace stutter heuristic before consuming or resynchronizing either stream.
         if (!terminating && field == core::video_field::a && buffer_.size() == 1) {
             const auto follows_gap_in_frames    = (now_time - last_pop_timestamp_ms_) > 100;
@@ -248,10 +245,22 @@ class html_client
             }
         }
 
-        const auto use_audio =
-            nb_samples > 0 && !terminating && audio_clock_calibrated_ && audio_buffer_.size() >= take_elements;
-        size_t video_count = 0;
-        if (use_audio) {
+        size_t     video_count = 0;
+        const auto audio_ready = [&] {
+            if (nb_samples <= 0 || terminating || !audio_clock_calibrated_)
+                return false;
+
+            if (audio_resume_floor_ms_ && audio_buffer_start_ms_ < *audio_resume_floor_ms_) {
+                const auto skip_samples =
+                    std::min(audio_buffer_.size() / kAudioChannels,
+                             static_cast<size_t>(std::ceil((*audio_resume_floor_ms_ - audio_buffer_start_ms_) *
+                                                           format_desc_.audio_sample_rate / 1000.0)));
+                audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + skip_samples * kAudioChannels);
+                audio_buffer_start_ms_ += skip_samples * 1000.0 / format_desc_.audio_sample_rate;
+            }
+            if (audio_buffer_.size() < take_elements)
+                return false;
+
             const auto last_image_is_valid =
                 last_frame_ && last_pop_timestamp_ms_ <= audio_buffer_start_ms_ &&
                 (!dropped_video_start_ms_ || audio_buffer_start_ms_ < *dropped_video_start_ms_);
@@ -286,9 +295,9 @@ class html_client
                                      (dropped_video_start_ms_ && *dropped_video_start_ms_ <= audio_buffer_start_ms_))) {
                 return false;
             }
-        } else if (!buffer_.empty()) {
-            video_count = 1;
-        }
+            return true;
+        };
+        const auto use_audio = audio_ready();
 
         if (use_audio) {
             std::vector<std::int32_t> taken(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
@@ -296,6 +305,38 @@ class html_client
                 core::mutable_frame(this, {}, array<std::int32_t>(std::move(taken)), core::pixel_format_desc()));
             audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + take_elements);
             audio_buffer_start_ms_ += take_samples * 1000.0 / format_desc_.audio_sample_rate;
+            audio_wait_started_ms_.reset();
+            audio_resume_floor_ms_.reset();
+            if (audio_starved_) {
+                audio_starved_ = false;
+                graph_->set_tag(diagnostics::tag_severity::INFO, "audio-stream-resumed");
+            }
+        } else {
+            if (nb_samples > 0 && !terminating && (audio_stream_active_ || audio_clock_calibrated_)) {
+                if (audio_stream_active_ && !audio_starved_) {
+                    if (!audio_wait_started_ms_)
+                        audio_wait_started_ms_ = now_time;
+                    // Bound all audio synchronization waits by the existing four-packet buffering budget.
+                    const auto wait_budget_ms =
+                        kAudioBacklogPackets *
+                        *std::max_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end()) *
+                        1000.0 / format_desc_.audio_sample_rate;
+                    if (now_time - *audio_wait_started_ms_ < wait_budget_ms)
+                        return false;
+                    audio_starved_ = true;
+                    audio_buffer_.clear();
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-stream-underflow");
+                }
+                if (!audio_stream_active_)
+                    audio_buffer_.clear();
+                // Once video advances without audio, do not replay PCM from the skipped interval.
+                audio_resume_floor_ms_ = now_time;
+                auto silence           = std::vector<std::int32_t>(take_elements, 0);
+                audio_slice            = core::draw_frame(
+                    core::mutable_frame(this, {}, array<std::int32_t>(std::move(silence)), core::pixel_format_desc()));
+            }
+            if (!buffer_.empty())
+                video_count = audio_starved_ ? buffer_.size() : 1;
         }
 
         if (video_count > 0) {
@@ -647,7 +688,7 @@ class html_client
         // A restarted stream's pts isn't guaranteed to continue from where the last one left off -
         // force recalibration (see OnAudioStreamPacket) rather than reuse a possibly-stale offset.
         std::lock_guard<std::mutex> lock(pairing_mutex_);
-        audioResampler_ = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
+        audioResampler_         = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
         audio_stream_active_    = true;
         audio_clock_calibrated_ = false;
         next_audio_packet_pts_ms_.reset();
@@ -709,7 +750,7 @@ class html_client
     void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override
     {
         std::lock_guard<std::mutex> lock(pairing_mutex_);
-        audioResampler_ = nullptr;
+        audioResampler_      = nullptr;
         audio_stream_active_ = false;
         next_audio_packet_pts_ms_.reset();
     }
