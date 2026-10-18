@@ -147,6 +147,12 @@ class html_client
     const size_t                         frames_max_size_ = 4;
     std::atomic<bool>                    closing_;
 
+    // Bounds OnRenderProcessTerminated's auto-reload so a persistently crash-looping renderer
+    // (e.g. a reproducible CEF SIGILL - see GitHub issue #1812) can't spin this layer in a tight
+    // crash/respawn loop forever; see max_renderer_crashes below.
+    std::atomic<int> renderer_crash_count_;
+    caspar::timer     renderer_crash_window_;
+
     std::unique_ptr<ffmpeg::AudioResampler> audioResampler_;
 
     core::draw_frame   last_video_frame_;
@@ -194,6 +200,8 @@ class html_client
         loaded_    = false;
         not_found_ = false;
         closing_   = false;
+
+        renderer_crash_count_ = 0;
     }
 
     void reload()
@@ -512,7 +520,12 @@ class html_client
     CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
     // A crash/kill of the (separate-process) renderer leaves this browser instance permanently blank
-    // otherwise - respawn it the same way an explicit RELOAD would, rather than losing the layer for good.
+    // otherwise - respawn it the same way an explicit RELOAD would, rather than losing the layer for
+    // good. But if the renderer keeps crashing immediately after each respawn (e.g. a reproducible CEF
+    // bug), give up after a few attempts instead of busy-looping forever - see GitHub issue #1812.
+    static constexpr int    max_renderer_crashes       = 5;
+    static constexpr double renderer_crash_window_secs = 60.0;
+
     void OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
                                    TerminationStatus     status,
                                    int                    error_code,
@@ -520,6 +533,20 @@ class html_client
     {
         if (closing_)
             return;
+
+        if (renderer_crash_window_.elapsed() > renderer_crash_window_secs) {
+            renderer_crash_count_ = 0;
+            renderer_crash_window_.restart();
+        }
+
+        if (++renderer_crash_count_ > max_renderer_crashes) {
+            CASPAR_LOG(error) << "[html_producer] " << print() << L" renderer process terminated (status: "
+                              << static_cast<int>(status) << L") " << max_renderer_crashes
+                              << L" times within " << static_cast<int>(renderer_crash_window_secs)
+                              << L"s - giving up on automatic reload to avoid a crash loop; this layer "
+                                 L"needs a manual RELOAD (or REMOVE/LOAD) to recover.";
+            return;
+        }
 
         CASPAR_LOG(warning) << "[html_producer] " << print() << L" renderer process terminated (status: "
                             << static_cast<int>(status) << L"), reloading.";
