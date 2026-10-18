@@ -287,12 +287,11 @@ void init(const core::module_dependencies& dependencies)
     // Validate the selected CEF API against the loaded library, including after system package updates.
     const char* actual_hash = cef_api_hash(CEF_API_VERSION, 0);
     if (!actual_hash || std::strcmp(actual_hash, CEF_API_HASH_PLATFORM) != 0) {
-        CASPAR_LOG(error) << L"[html] CEF API hash mismatch: this build of CasparCG does not match the "
-                             L"installed CEF library/version. This is a known cause of crashes (including "
-                             L"SIGILL) inside libcef.so. Rebuild CasparCG against the currently-installed "
-                             L"casparcg-cef-api15000-dev package (or reinstall the runtime version this build "
-                             L"expects) to resolve. built-against="
-                          << CEF_API_HASH_PLATFORM << L" installed=" << (actual_hash ? actual_hash : "(null)");
+        CASPAR_LOG(error) << L"[html] CEF API hash mismatch (built-against=" << CEF_API_HASH_PLATFORM
+                          << L", installed=" << (actual_hash ? actual_hash : "(null)")
+                          << L"). This build and the installed CEF library disagree on the API shape and "
+                             L"may crash unpredictably. Rebuild against the installed casparcg-cef-api15000-dev "
+                             L"package, or reinstall the CEF version this build expects.";
     }
 
     CefMainArgs main_args;
