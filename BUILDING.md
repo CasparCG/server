@@ -127,7 +127,12 @@ retain the original dump and produce an error diagnostic. Failure to remove the
 original after archiving retains both names and is also reported.
 Unreadable or empty dumps remain in place with an error diagnostic. Retain
 archives as needed and remove old ones according to your operational retention
-policy. A subsequent crash can replace an unarchived `backtrace.dump`.
+policy. If `backtrace.dump` remains after reporting, the next crash uses a
+separate `backtrace-capture-<unique-id>.dump` path announced in the startup log.
+Capture creates its file exclusively and never truncates an existing dump or
+hard-linked archive. Alternate capture files are retained for manual inspection;
+they are not automatically reported on startup. Failure to create a capture file
+leaves existing evidence untouched, but no new Boost dump is written.
 
 ASLR changes executable and library addresses between processes. Neither
 `-rdynamic` nor debug information makes an address-only dump reliably
@@ -135,6 +140,8 @@ symbolizable after restart. Do not disable ASLR as a workaround.
 
 For a reliable symbolized postmortem trace, enable OS core dumps before starting
 the server, subject to your deployment's disk-space and retention policies:
+Replace `casparcg` in the commands below with the executable name configured by
+`CASPARCG_BINARY_NAME` if it differs.
 
 ```sh
 ulimit -c unlimited

@@ -58,12 +58,23 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include <clocale>
 #include <csignal>
+#include <fcntl.h>
+
+#ifdef WIN32
+#include <io.h>
+#include <sys/stat.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace caspar {
+
+std::string crash_dump_path = "./backtrace.dump";
 
 void setup_global_locale()
 {
@@ -178,8 +189,40 @@ void signal_handler(int signum)
     ::signal(signum, SIG_DFL);
     // Prevent abort() from re-entering this handler.
     ::signal(SIGABRT, SIG_DFL);
-    boost::stacktrace::safe_dump_to("./backtrace.dump"); // Avoid logging and symbol lookup in the signal handler.
+    // Exclusive creation protects retained dumps, including hard-linked archives.
+    constexpr char failure[] = "Could not create crash dump; existing files were not overwritten.\n";
+#ifdef WIN32
+    const auto fd = ::_open(crash_dump_path.c_str(), _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY, _S_IREAD | _S_IWRITE);
+    if (fd != -1) {
+        boost::stacktrace::safe_dump_to(reinterpret_cast<void*>(::_get_osfhandle(fd)));
+        ::_close(fd);
+    } else {
+        ::_write(2, failure, sizeof(failure) - 1);
+    }
+#else
+    const auto fd = ::open(crash_dump_path.c_str(), O_CREAT | O_EXCL | O_WRONLY, 0600);
+    if (fd != -1) {
+        boost::stacktrace::safe_dump_to(fd);
+        ::close(fd);
+    } else {
+        ::write(STDERR_FILENO, failure, sizeof(failure) - 1);
+    }
+#endif
     std::abort();
+}
+
+void prepare_crash_dump()
+{
+    boost::system::error_code error;
+    const auto                retained = boost::filesystem::exists("./backtrace.dump", error);
+    if (error == boost::system::errc::no_such_file_or_directory)
+        error.clear();
+    if (retained || error) {
+        crash_dump_path = boost::filesystem::unique_path("./backtrace-capture-%%%%-%%%%-%%%%-%%%%.dump").string();
+        if (error)
+            CASPAR_LOG(error) << L"Could not inspect crash capture path: " << u16(error.message());
+        CASPAR_LOG(warning) << L"Preserving ./backtrace.dump; next crash capture will use " << u16(crash_dump_path);
+    }
 }
 
 void report_previous_crash()
@@ -308,6 +351,7 @@ int main(int argc, char** argv)
 
         // Logging is ready; archive old evidence before enabling handlers that could overwrite it.
         report_previous_crash();
+        prepare_crash_dump();
 
         ::signal(SIGSEGV, signal_handler);
         ::signal(SIGABRT, signal_handler);
