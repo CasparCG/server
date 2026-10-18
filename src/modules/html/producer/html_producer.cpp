@@ -688,11 +688,16 @@ class html_client
         // A restarted stream's pts isn't guaranteed to continue from where the last one left off -
         // force recalibration (see OnAudioStreamPacket) rather than reuse a possibly-stale offset.
         std::lock_guard<std::mutex> lock(pairing_mutex_);
-        audioResampler_         = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
         audio_stream_active_    = true;
         audio_clock_calibrated_ = false;
         next_audio_packet_pts_ms_.reset();
         audio_buffer_.clear();
+        audioResampler_.reset();
+        try {
+            audioResampler_ = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+        }
     }
     void OnAudioStreamPacket(CefRefPtr<CefBrowser> browser, const float** data, int samples, int64_t pts) override
     {
@@ -700,7 +705,16 @@ class html_client
         if (!audioResampler_)
             return;
 
-        auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
+        caspar::array<std::int32_t> audio;
+        try {
+            audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
+        } catch (...) {
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            audio_buffer_.clear();
+            audio_clock_calibrated_ = false;
+            next_audio_packet_pts_ms_.reset();
+            return;
+        }
 
         auto now_ms          = steady_now_ms();
         auto expected_offset = now_ms - pts;
@@ -754,6 +768,8 @@ class html_client
         std::lock_guard<std::mutex> lock(pairing_mutex_);
         audioResampler_      = nullptr;
         audio_stream_active_ = false;
+        audio_buffer_.clear();
+        audio_clock_calibrated_ = false;
         next_audio_packet_pts_ms_.reset();
     }
     void OnAudioStreamError(CefRefPtr<CefBrowser> browser, const CefString& message) override
