@@ -178,8 +178,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                         // Measure each message's real encoded size before adding it, so one
                         // that wouldn't fit is deferred to the next bundle instead of silently
-                        // overflowing this one. The first message of a bundle is always added
-                        // regardless of size, so an oversized message can't stall the loop.
+                        // overflowing this one. A message that alone exceeds the bundle limit
+                        // is dropped outright so it can't stall the loop or blow the limit.
                         bool has_message = false;
                         while (it != std::end(bundle)) {
                             ::osc::OutboundPacketStream probe(probe_buffer_.data(),
@@ -194,7 +194,14 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                                 continue;
                             }
 
-                            if (has_message && o.Size() + sizeof(uint32_t) + probe.Size() > max_bundle_size) {
+                            if (o.Size() + sizeof(uint32_t) + probe.Size() > max_bundle_size) {
+                                if (!has_message) {
+                                    CASPAR_LOG(warning)
+                                        << "Dropping OSC message " << it->first << ": encoded size "
+                                        << probe.Size() << " exceeds the " << max_bundle_size << "-byte bundle limit";
+                                    ++it;
+                                    continue;
+                                }
                                 break;
                             }
 

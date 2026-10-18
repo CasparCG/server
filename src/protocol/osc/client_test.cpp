@@ -199,6 +199,17 @@ void test_sender_errors()
     receive(socket, tick);
     require(logs.count(L"Dropping OSC message /z/oversized") == 1, "Trailing oversized message stopped the sender");
 
+    // A message smaller than the probe buffer but larger than the bundle limit must still be
+    // dropped on its own, rather than being written out as a bundle exceeding max_bundle_size
+    // (receive() below enforces the 2048-byte limit on every datagram it reads).
+    monitor::state bundle_oversized_only;
+    bundle_oversized_only["/y/bundle_oversized"] = std::string(3000, 'x');
+    sender.send(1, bundle_oversized_only);
+    sender.send(1, snapshot(1, properties, ++tick));
+    receive(socket, tick);
+    require(logs.count(L"Dropping OSC message /y/bundle_oversized") == 1,
+            "Message exceeding the bundle limit alone was not dropped");
+
     auto invalid_token = sender.get_subscription_token(udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
     for (int i = 0; i < 20; ++i) {
         sender.send(1, snapshot(1, properties, ++tick));
