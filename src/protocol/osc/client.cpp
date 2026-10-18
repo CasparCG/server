@@ -33,6 +33,7 @@
 
 #include <boost/asio.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -101,21 +102,34 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     {
         thread_ = std::thread([this] {
             try {
+                auto next_diagnostics_deadline = std::chrono::steady_clock::time_point{};
                 while (!abort_request_) {
                     core::monitor::state       bundle;
-                    uint64_t                   bundle_time = 0;
-                    bool                       have_bundle = false;
+                    uint64_t                   bundle_time      = 0;
+                    uint64_t                   diagnostics_time = 0;
+                    bool                       have_bundle      = false;
+                    bool                       send_diagnostics = false;
                     std::vector<udp::endpoint> endpoints;
                     std::vector<udp::endpoint> diagnostics_endpoints;
 
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
 
-                        if (diagnostics_reference_counts_by_endpoint_.empty()) {
-                            cond_.wait(lock, [&] { return bundle_time_ > 0 || abort_request_; });
+                        if (!diagnostics_provider_ || diagnostics_reference_counts_by_endpoint_.empty()) {
+                            next_diagnostics_deadline = {};
+                            cond_.wait(lock, [&] {
+                                return bundle_time_ > 0 || abort_request_ ||
+                                       (diagnostics_provider_ && !diagnostics_reference_counts_by_endpoint_.empty());
+                            });
                         } else {
-                            cond_.wait_for(
-                                lock, diagnostics_push_interval_, [&] { return bundle_time_ > 0 || abort_request_; });
+                            if (next_diagnostics_deadline == std::chrono::steady_clock::time_point{}) {
+                                next_diagnostics_deadline =
+                                    std::chrono::steady_clock::now() + diagnostics_push_interval_;
+                            }
+                            cond_.wait_until(lock, next_diagnostics_deadline, [&] {
+                                return bundle_time_ > 0 || abort_request_ ||
+                                       diagnostics_reference_counts_by_endpoint_.empty();
+                            });
                         }
 
                         if (abort_request_) {
@@ -135,14 +149,28 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         for (auto& p : diagnostics_reference_counts_by_endpoint_) {
                             diagnostics_endpoints.push_back(p.first);
                         }
+
+                        const auto now = std::chrono::steady_clock::now();
+                        if (diagnostics_provider_ && !diagnostics_endpoints.empty() &&
+                            next_diagnostics_deadline == std::chrono::steady_clock::time_point{}) {
+                            next_diagnostics_deadline = now + diagnostics_push_interval_;
+                        }
+                        if (diagnostics_provider_ && !diagnostics_endpoints.empty() &&
+                            now >= next_diagnostics_deadline) {
+                            send_diagnostics = true;
+                            diagnostics_time = time_++;
+                        }
                     }
 
                     if (have_bundle && !endpoints.empty()) {
                         send_bundle(bundle, bundle_time, endpoints);
                     }
 
-                    if (!diagnostics_endpoints.empty() && diagnostics_provider_) {
-                        send_bundle(diagnostics_provider_(), time_++, diagnostics_endpoints);
+                    if (send_diagnostics) {
+                        send_bundle(diagnostics_provider_(), diagnostics_time, diagnostics_endpoints);
+                        next_diagnostics_deadline =
+                            std::max(next_diagnostics_deadline + diagnostics_push_interval_,
+                                     std::chrono::steady_clock::now() + diagnostics_push_interval_);
                     }
                 }
             } catch (...) {
@@ -197,12 +225,18 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint,
                                                  bool                                  include_diagnostics)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        bool wake_diagnostics_worker = false;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
 
-        ++reference_counts_by_endpoint_[endpoint];
-        if (include_diagnostics) {
-            ++diagnostics_reference_counts_by_endpoint_[endpoint];
+            ++reference_counts_by_endpoint_[endpoint];
+            if (include_diagnostics) {
+                wake_diagnostics_worker = diagnostics_reference_counts_by_endpoint_.empty();
+                ++diagnostics_reference_counts_by_endpoint_[endpoint];
+            }
         }
+        if (wake_diagnostics_worker)
+            cond_.notify_all();
 
         std::weak_ptr<impl> weak_self = shared_from_this();
 
@@ -212,23 +246,28 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
             if (!strong)
                 return;
 
-            auto& self = *strong;
+            auto& self                    = *strong;
+            bool  wake_diagnostics_worker = false;
+            {
+                std::lock_guard<std::mutex> lock(self.mutex_);
 
-            std::lock_guard<std::mutex> lock(self.mutex_);
+                int reference_count_after = --self.reference_counts_by_endpoint_[endpoint];
 
-            int reference_count_after = --self.reference_counts_by_endpoint_[endpoint];
+                if (reference_count_after == 0) {
+                    self.reference_counts_by_endpoint_.erase(endpoint);
+                }
 
-            if (reference_count_after == 0) {
-                self.reference_counts_by_endpoint_.erase(endpoint);
-            }
+                if (include_diagnostics) {
+                    int diagnostics_reference_count_after = --self.diagnostics_reference_counts_by_endpoint_[endpoint];
 
-            if (include_diagnostics) {
-                int diagnostics_reference_count_after = --self.diagnostics_reference_counts_by_endpoint_[endpoint];
-
-                if (diagnostics_reference_count_after == 0) {
-                    self.diagnostics_reference_counts_by_endpoint_.erase(endpoint);
+                    if (diagnostics_reference_count_after == 0) {
+                        self.diagnostics_reference_counts_by_endpoint_.erase(endpoint);
+                        wake_diagnostics_worker = self.diagnostics_reference_counts_by_endpoint_.empty();
+                    }
                 }
             }
+            if (wake_diagnostics_worker)
+                self.cond_.notify_all();
         });
     }
 

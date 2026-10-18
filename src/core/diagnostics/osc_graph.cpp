@@ -137,6 +137,10 @@ void register_sink()
 
         {
             std::lock_guard<std::mutex> lock(g_registry_mutex);
+            g_registry.erase(std::remove_if(g_registry.begin(),
+                                            g_registry.end(),
+                                            [](const std::weak_ptr<osc_graph_sink>& w) { return w.expired(); }),
+                             g_registry.end());
             g_registry.push_back(sink);
         }
 
