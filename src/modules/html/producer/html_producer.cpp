@@ -721,12 +721,14 @@ class html_client
             }
         }
 
+        const auto packet_ms = samples * 1000.0 / format_desc_.audio_sample_rate;
         // Integer-millisecond PTS can round adjacent packets differently; do not mistake that for a gap.
-        if (next_audio_packet_pts_ms_ && std::abs(pts - *next_audio_packet_pts_ms_) > 2.0) {
+        if (next_audio_packet_pts_ms_ &&
+            std::abs(pts - *next_audio_packet_pts_ms_) > std::max(2.0, packet_ms * 0.5)) {
             audio_buffer_.clear();
             graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-timestamp-discontinuity");
         }
-        next_audio_packet_pts_ms_ = pts + samples * 1000.0 / format_desc_.audio_sample_rate;
+        next_audio_packet_pts_ms_ = pts + packet_ms;
 
         if (audio.size() > 0) {
             if (audio_buffer_.empty()) {
