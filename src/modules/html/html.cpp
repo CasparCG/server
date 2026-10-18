@@ -285,13 +285,18 @@ void init(const core::module_dependencies& dependencies)
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     // Validate the selected CEF API against the loaded library, including after system package updates.
+    // A mismatch means libcef.so doesn't honor the API-version contract CasparCG was built against, so
+    // don't risk calling CefInitialize() into undefined behavior - fail the same way a CefInitialize()
+    // failure below does, rather than just logging and continuing anyway.
     const char* actual_hash = cef_api_hash(CEF_API_VERSION, 0);
     if (!actual_hash || std::strcmp(actual_hash, CEF_API_HASH_PLATFORM) != 0) {
         CASPAR_LOG(error) << L"[html] CEF API hash mismatch (built-against=" << CEF_API_HASH_PLATFORM
                           << L", installed=" << (actual_hash ? actual_hash : "(null)")
-                          << L"). This build and the installed CEF library disagree on the API shape and "
-                             L"may crash unpredictably. Rebuild against the installed casparcg-cef-api15000-dev "
-                             L"package, or reinstall the CEF version this build expects.";
+                          << L"). This build and the installed CEF library disagree on the API shape; "
+                             L"refusing to initialize CEF rather than risk undefined behavior. Rebuild "
+                             L"against the installed casparcg-cef-api15000-dev package, or reinstall the "
+                             L"CEF version this build expects.";
+        return;
     }
 
     CefMainArgs main_args;
