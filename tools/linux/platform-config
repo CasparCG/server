@@ -26,7 +26,7 @@ case "$ID" in
     ;;
   arch)
     system_cef=ON
-    font_path=/usr/share/fonts/TTF/LiberationMono-Regular.ttf
+    font_path=/usr/share/fonts/liberation/LiberationMono-Regular.ttf
     ;;
   fedora)
     system_cef=ON

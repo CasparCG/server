@@ -7,7 +7,12 @@ on:
         branches: ["master"]
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    # Protected refs (master, 2.3.x-lts, tags) get a group unique per commit/tag, so a later push
+    # to one of them can never replace another protected push's still-pending run in the same
+    # group - GitHub's default "queue: single" behavior cancels a pending run whenever a new one
+    # is queued into the same group, independent of cancel-in-progress (which only governs the
+    # already-running run). Everything else keeps sharing one group per PR/branch as before.
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || ((github.ref == 'refs/heads/master' || github.ref == 'refs/heads/2.3.x-lts' || startsWith(github.ref, 'refs/tags/')) && github.sha) || github.ref }}
     cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/2.3.x-lts' && !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
