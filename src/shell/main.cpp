@@ -258,11 +258,6 @@ int main(int argc, char** argv)
     if (intercept_command_line_args(argc, argv))
         return 0;
 
-    ::signal(SIGSEGV, signal_handler);
-    ::signal(SIGABRT, signal_handler);
-    ::signal(SIGILL, signal_handler);
-    std::set_terminate(caspar::terminate_handler);
-
     int return_code = 0;
     setup_prerequisites();
 
@@ -311,6 +306,11 @@ int main(int argc, char** argv)
         }
 
         report_previous_crash();
+
+        ::signal(SIGSEGV, signal_handler);
+        ::signal(SIGABRT, signal_handler);
+        ::signal(SIGILL, signal_handler);
+        std::set_terminate(caspar::terminate_handler);
 
         // Once logging to file, log configuration warnings.
         env::log_configuration_warnings();
