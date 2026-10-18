@@ -96,8 +96,8 @@ else ()
 		z
 		pthread
 	)
-	# Keeps internal (non-exported) symbol names in the dynamic symbol table, so
-	# boost::stacktrace can resolve function names in a crash backtrace instead of just addresses.
+	# Exports externally visible executable symbols for in-process stack traces.
+	# Raw addresses from a previous ASLR process require separate postmortem analysis.
 	target_link_options(casparcg PRIVATE -rdynamic)
 endif ()
 
