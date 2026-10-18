@@ -75,7 +75,7 @@ jobs:
                       arch: amd64
                       container: opensuse/leap:16.0
                       apt_prefix: ""
-                      upload_artifacts: true
+                      upload_artifacts: false # Experimental builds don't upload artifacts, matching archlinux/fedora/debian:sid
                       experimental: true
                     - os: ubuntu-latest
                       family: opensuse
@@ -83,7 +83,7 @@ jobs:
                       arch: amd64
                       container: opensuse/tumbleweed:latest
                       apt_prefix: ""
-                      upload_artifacts: true
+                      upload_artifacts: false # Experimental builds don't upload artifacts, matching archlinux/fedora/debian:sid
                       experimental: true
 
         runs-on: ${{ matrix.os }}
