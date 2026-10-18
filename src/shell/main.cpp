@@ -54,6 +54,7 @@
 #include <boost/stacktrace.hpp>
 
 #include <atomic>
+#include <cerrno>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -67,10 +68,10 @@
 
 #ifdef WIN32
 #include <io.h>
-#include <sys/stat.h>
 #else
 #include <unistd.h>
 #endif
+#include <sys/stat.h>
 
 namespace caspar {
 
@@ -244,17 +245,62 @@ void report_previous_crash()
     if (!exists)
         return;
 
+    if (!boost::filesystem::is_regular_file(dump, error) || error) {
+        CASPAR_LOG(error) << L"Previous crash dump is not a regular file or could not be inspected; retained at "
+                             L"./backtrace.dump.";
+        return;
+    }
+
+    boost::stacktrace::stacktrace trace;
+#ifdef WIN32
     std::ifstream input(dump.string(), std::ios::binary);
     if (!input) {
         CASPAR_LOG(error) << L"Could not open previous crash dump; retained at ./backtrace.dump.";
         return;
     }
-    const auto trace = boost::stacktrace::stacktrace::from_dump(input);
-    if (input.fail() || trace.empty()) { // Keep incomplete evidence for manual inspection.
+    trace = boost::stacktrace::stacktrace::from_dump(input);
+    const auto read_failed = input.fail();
+    input.close();
+#else
+    const auto fd = ::open(dump.c_str(), O_RDONLY | O_NONBLOCK);
+    if (fd == -1) {
+        CASPAR_LOG(error) << L"Could not open previous crash dump; retained at ./backtrace.dump.";
+        return;
+    }
+    struct stat info;
+    if (::fstat(fd, &info) != 0 || !S_ISREG(info.st_mode)) {
+        ::close(fd);
+        CASPAR_LOG(error) << L"Previous crash dump is not a regular file or could not be inspected; retained at "
+                             L"./backtrace.dump.";
+        return;
+    }
+    std::string contents;
+    char        buffer[4096];
+    bool        read_failed = false;
+    for (;;) {
+        const auto count = ::read(fd, buffer, sizeof(buffer));
+        if (count > 0)
+            contents.append(buffer, static_cast<std::size_t>(count));
+        else if (count == 0)
+            break;
+        else if (errno != EINTR) {
+            read_failed = true;
+            break;
+        }
+    }
+    ::close(fd);
+    if (read_failed) {
+        CASPAR_LOG(error) << L"Could not read previous crash dump; retained at ./backtrace.dump.";
+        return;
+    }
+    std::istringstream input(contents, std::ios::in | std::ios::binary);
+    trace = boost::stacktrace::stacktrace::from_dump(input);
+    read_failed = input.fail();
+#endif
+    if (read_failed || trace.empty()) { // Keep incomplete evidence for manual inspection.
         CASPAR_LOG(error) << L"Previous crash dump is unreadable or empty; retained at ./backtrace.dump.";
         return;
     }
-    input.close();
 
     // ASLR makes this process's symbol mappings unsuitable for the previous process's addresses.
     std::wostringstream report;
