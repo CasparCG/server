@@ -173,6 +173,7 @@ auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
     return restart;
 }
 
+/// Saves the current stack addresses and aborts using the default signal action.
 void signal_handler(int signum)
 {
     ::signal(signum, SIG_DFL);
@@ -181,7 +182,7 @@ void signal_handler(int signum)
     std::abort();
 }
 
-/// Reports saved addresses without resolving them against this process's unrelated ASLR mappings.
+/// Logs and archives a previous crash dump after startup logging is available.
 void report_previous_crash()
 {
     const boost::filesystem::path dump("./backtrace.dump");
@@ -235,6 +236,7 @@ void report_previous_crash()
         CASPAR_LOG(error) << L"Could not remove archived ./backtrace.dump; both paths retained: " << u16(error.message());
 }
 
+/// Logs an uncaught exception and aborts so the signal handler can capture it.
 void terminate_handler()
 {
     try {
@@ -247,6 +249,7 @@ void terminate_handler()
 
 } // namespace caspar
 
+/// Initializes the server, reports a prior crash, and runs the main server loop.
 int main(int argc, char** argv)
 {
     using namespace caspar;
@@ -305,6 +308,7 @@ int main(int argc, char** argv)
                        << std::endl;
         }
 
+        // Archive the previous dump before installing handlers that could overwrite it.
         report_previous_crash();
 
         ::signal(SIGSEGV, signal_handler);
