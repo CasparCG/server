@@ -146,6 +146,8 @@ class html_client
     std::int64_t              audio_clock_offset_ms_  = 0; // translates CEF pts -> steady_now_ms()
     double                    audio_buffer_start_ms_  = 0; // steady-clock timestamp of the oldest buffered sample
 
+    std::optional<double>     next_audio_packet_pts_ms_; // independent of backlog consumption and callback arrival
+
     const size_t buffer_capacity_ = 4;
     struct buffered_frame
     {
@@ -642,23 +644,22 @@ class html_client
 
     void OnAudioStreamStarted(CefRefPtr<CefBrowser> browser, const CefAudioParameters& params, int channels) override
     {
-        audioResampler_ = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
-
         // A restarted stream's pts isn't guaranteed to continue from where the last one left off -
         // force recalibration (see OnAudioStreamPacket) rather than reuse a possibly-stale offset.
         std::lock_guard<std::mutex> lock(pairing_mutex_);
+        audioResampler_ = std::make_unique<ffmpeg::AudioResampler>(params.sample_rate, AV_SAMPLE_FMT_FLTP);
         audio_stream_active_    = true;
         audio_clock_calibrated_ = false;
+        next_audio_packet_pts_ms_.reset();
         audio_buffer_.clear();
     }
     void OnAudioStreamPacket(CefRefPtr<CefBrowser> browser, const float** data, int samples, int64_t pts) override
     {
+        std::lock_guard<std::mutex> lock(pairing_mutex_);
         if (!audioResampler_)
             return;
 
         auto audio = audioResampler_->convert(samples, reinterpret_cast<const void**>(data));
-
-        std::lock_guard<std::mutex> lock(pairing_mutex_);
 
         auto now_ms          = steady_now_ms();
         auto expected_offset = now_ms - pts;
@@ -674,9 +675,17 @@ class html_client
                 // - hard resync rather than let stale buffered samples/position tracking stay wrong.
                 audio_buffer_.clear();
                 audio_clock_offset_ms_ = expected_offset;
+                next_audio_packet_pts_ms_.reset();
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clock-resync");
             }
         }
+
+        // Integer-millisecond PTS can round adjacent packets differently; do not mistake that for a gap.
+        if (next_audio_packet_pts_ms_ && std::abs(pts - *next_audio_packet_pts_ms_) > 2.0) {
+            audio_buffer_.clear();
+            graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-timestamp-discontinuity");
+        }
+        next_audio_packet_pts_ms_ = pts + samples * 1000.0 / format_desc_.audio_sample_rate;
 
         if (audio.size() > 0) {
             if (audio_buffer_.empty()) {
@@ -699,9 +708,10 @@ class html_client
     }
     void OnAudioStreamStopped(CefRefPtr<CefBrowser> browser) override
     {
-        audioResampler_ = nullptr;
         std::lock_guard<std::mutex> lock(pairing_mutex_);
+        audioResampler_ = nullptr;
         audio_stream_active_ = false;
+        next_audio_packet_pts_ms_.reset();
     }
     void OnAudioStreamError(CefRefPtr<CefBrowser> browser, const CefString& message) override
     {
