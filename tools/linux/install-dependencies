@@ -33,7 +33,7 @@ case "$ID" in
     exit 0
     ;;
   fedora|rocky|opensuse-leap|opensuse-tumbleweed)
-    exec env system_cef="$system_cef" bash "$script_dir/install-dependencies-rpm"
+    exec env system_cef="$system_cef" platform_id="$ID" bash "$script_dir/install-dependencies-rpm"
     ;;
   ubuntu|debian)
     apt-get update

@@ -3,6 +3,10 @@
 set -euo pipefail
 
 source /etc/os-release
+# install-dependencies may have already normalized a derivative distro's ID (e.g. Nobara -> fedora)
+# via platform-config's ID_LIKE resolution before exec'ing into this script; prefer that over the
+# raw ID this file would otherwise re-source, so the normalization isn't lost across the exec.
+ID="${platform_id:-$ID}"
 
 case "$ID" in
   fedora)
