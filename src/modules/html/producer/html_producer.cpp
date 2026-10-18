@@ -203,8 +203,10 @@ class html_client
     void reload()
     {
         html::begin_invoke([this] {
-            if (browser_ != nullptr)
+            if (browser_ != nullptr) {
+                renderer_termination_times_.clear();
                 browser_->Reload();
+            }
         });
     }
 
