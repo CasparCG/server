@@ -194,7 +194,10 @@ void signal_handler(int signum)
 #ifdef WIN32
     const auto fd = ::_open(crash_dump_path.c_str(), _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY, _S_IREAD | _S_IWRITE);
     if (fd != -1) {
-        boost::stacktrace::safe_dump_to(reinterpret_cast<void*>(::_get_osfhandle(fd)));
+        void* frames[129];
+        const auto frame_count = boost::stacktrace::safe_dump_to(frames, sizeof(frames));
+        const auto written = ::_write(fd, frames, static_cast<unsigned int>(frame_count * sizeof(frames[0])));
+        (void)written;
         ::_close(fd);
     } else {
         const auto written = ::_write(2, failure, sizeof(failure) - 1);
