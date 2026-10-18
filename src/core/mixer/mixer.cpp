@@ -66,6 +66,7 @@ struct mixer::impl
     {
     }
 
+    /// Advances the render queue and exposes transforms only for the frame successfully returned.
     const_frame operator()(std::vector<draw_frame>  frames,
                            const video_format_desc& format_desc,
                            int                      nb_samples,
@@ -127,6 +128,7 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 }
 void        mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float       mixer::get_master_volume() { return impl_->get_master_volume(); }
+/// Carries transform metadata through the same buffering path as its rendered image.
 const_frame mixer::operator()(std::vector<draw_frame>  frames,
                               const video_format_desc& format_desc,
                               int                      nb_samples,
@@ -139,6 +141,7 @@ mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc
     return impl_->image_mixer_->create_frame(tag, desc);
 }
 core::monitor::state mixer::state() const { return impl_->state_; }
+/// Reports completed render state rather than transforms still waiting in the mixer buffer.
 core::monitor::state mixer::transforms() const { return impl_->transforms_; }
 
 common::bit_depth mixer::depth() const { return impl_->image_mixer_->depth(); }

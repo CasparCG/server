@@ -80,6 +80,11 @@ hardware presentation delays are not included. Other OSC telemetry continues at
 its existing cadence. As with all OSC-over-UDP telemetry, queueing does not
 guarantee delivery.
 
+Messages exceeding the OSC encoder's 65536-byte probe buffer are dropped with a
+warning; other messages continue to be sent. Repeated identical send errors are
+logged once per endpoint until recovery, a different error, or removal of that
+endpoint from the sender's active set.
+
 Development
 -----------
 

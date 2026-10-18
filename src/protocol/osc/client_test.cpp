@@ -9,6 +9,11 @@
 #include <core/video_channel.h>
 
 #include <boost/asio.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/make_shared.hpp>
 
 #include <array>
 #include <chrono>
@@ -18,6 +23,7 @@
 #include <iterator>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -30,12 +36,14 @@ using boost::asio::ip::udp;
 using caspar::protocol::osc::client;
 using values_t = std::map<std::string, std::vector<float>>;
 
+/// Fails the test with a diagnostic that remains enabled in release builds.
 void require(bool condition, const std::string& message)
 {
     if (!condition)
         throw std::runtime_error(message);
 }
 
+/// Builds the default eleven-property snapshot with the expected scalar and vector shapes.
 monitor::state transform()
 {
     monitor::state state;
@@ -53,8 +61,10 @@ monitor::state transform()
     return state;
 }
 
+/// Selects the test layer while allowing channel-isolation checks to reuse its addresses.
 std::string layer_path(int channel) { return "/channel/" + std::to_string(channel) + "/stage/layer/10"; }
 
+/// Combines transform telemetry, an unsuppressed producer property, and a tick completion marker.
 monitor::state snapshot(int channel, const monitor::state& properties, std::int32_t tick)
 {
     monitor::state state;
@@ -65,6 +75,7 @@ monitor::state snapshot(int channel, const monitor::state& properties, std::int3
     return state;
 }
 
+/// Collects split UDP bundles through the requested tick while checking encoding and size limits.
 values_t receive(udp::socket& socket, std::int32_t tick)
 {
     values_t                values;
@@ -107,6 +118,7 @@ values_t receive(udp::socket& socket, std::int32_t tick)
     throw std::runtime_error("Timed out waiting for OSC tick " + std::to_string(tick));
 }
 
+/// Checks the exact transform address set, argument counts, and transmitted float values.
 void require_transform(const values_t& received, int channel, const monitor::state& expected)
 {
     const auto  prefix = layer_path(channel) + "/transform/";
@@ -127,20 +139,102 @@ void require_transform(const values_t& received, int channel, const monitor::sta
     }
 }
 
+class captured_logs
+{
+    using sink_t = boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_ostream_backend>;
+    boost::shared_ptr<std::wostringstream> stream_ = boost::make_shared<std::wostringstream>();
+    boost::shared_ptr<sink_t>              sink_   = boost::make_shared<sink_t>();
+
+  public:
+    /// Attaches a synchronous sink so sender diagnostics can be counted without timing guesses.
+    captured_logs()
+    {
+        sink_->locked_backend()->add_stream(stream_);
+        sink_->set_formatter(boost::log::expressions::stream << boost::log::expressions::wmessage);
+        boost::log::core::get()->add_sink(sink_);
+    }
+    /// Detaches the test sink without changing other logging destinations.
+    ~captured_logs() { boost::log::core::get()->remove_sink(sink_); }
+
+    /// Counts matching diagnostics while excluding concurrent writes from the sender.
+    std::size_t count(const std::wstring& text)
+    {
+        auto        lock     = sink_->locked_backend();
+        const auto  contents = stream_->str();
+        std::size_t count    = 0;
+        for (auto pos = contents.find(text); pos != std::wstring::npos; pos = contents.find(text, pos + text.size()))
+            ++count;
+        return count;
+    }
+};
+
+/// Verifies oversized-message survival, repeated-error suppression, and endpoint-history cleanup.
+void test_sender_errors()
+{
+    captured_logs logs;
+    auto          context = std::make_shared<boost::asio::io_context>();
+    udp::socket   socket(*context, udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
+    socket.non_blocking(true);
+    client       sender(context);
+    auto         token      = sender.get_subscription_token(socket.local_endpoint());
+    auto         properties = transform();
+    std::int32_t tick       = 0;
+
+    auto oversized            = snapshot(1, properties, ++tick);
+    oversized["/a/oversized"] = std::string(70000, 'x');
+    sender.send(1, oversized);
+    const auto received = receive(socket, tick);
+    require(!received.contains("/a/oversized"), "Oversized OSC message was not dropped");
+    require_transform(received, 1, properties);
+    sender.send(1, snapshot(1, properties, ++tick));
+    receive(socket, tick);
+    require(logs.count(L"Dropping OSC message /a/oversized") == 1, "Oversized message was not explicitly logged once");
+
+    monitor::state oversized_only;
+    oversized_only["/z/oversized"] = std::string(70000, 'x');
+    sender.send(1, oversized_only);
+    sender.send(1, snapshot(1, properties, ++tick));
+    receive(socket, tick);
+    sender.send(1, snapshot(1, properties, ++tick));
+    receive(socket, tick);
+    require(logs.count(L"Dropping OSC message /z/oversized") == 1, "Trailing oversized message stopped the sender");
+
+    auto invalid_token = sender.get_subscription_token(udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
+    for (int i = 0; i < 20; ++i) {
+        sender.send(1, snapshot(1, properties, ++tick));
+        require_transform(receive(socket, tick), 1, properties);
+    }
+    require(logs.count(L"failed:") == 1, "Repeated identical OSC send errors flooded the log");
+    invalid_token.reset();
+    for (int i = 0; i < 2; ++i) {
+        sender.send(1, snapshot(1, properties, ++tick));
+        receive(socket, tick);
+    }
+    invalid_token = sender.get_subscription_token(udp::endpoint(boost::asio::ip::address_v4::loopback(), 0));
+    sender.send(1, snapshot(1, properties, ++tick));
+    receive(socket, tick);
+    require(logs.count(L"failed:") == 2, "Removed endpoint retained stale send-error history");
+}
+
 class test_image_mixer : public caspar::core::image_mixer
 {
   public:
     bool         fail_render = false;
     std::uint8_t marker      = 0;
 
+    /// Encodes opacity into a pixel marker to identify the transform used for rendering.
     void push(const caspar::core::frame_transform& value) override
     {
         marker = static_cast<std::uint8_t>(value.image_transform.opacity * 128);
     }
+    /// Ignores source pixels because this test renderer produces transform markers instead.
     void visit(const caspar::core::const_frame&) override {}
+    /// Leaves the marker intact because test inputs contain no nested render layers.
     void pop() override {}
+    /// Ignores aspect ratio because the synthetic marker has no spatial geometry.
     void update_aspect_ratio(double) override {}
 
+    /// Returns a deferred marker image or the injected failure for this render submission.
     std::future<std::tuple<caspar::array<const std::uint8_t>, std::shared_ptr<caspar::core::texture>>>
     render(const caspar::core::video_format_desc&) override
     {
@@ -152,16 +246,19 @@ class test_image_mixer : public caspar::core::image_mixer
         });
     }
 
+    /// Rejects unexpected producer allocations in tests that supply their own draw frames.
     caspar::core::mutable_frame create_frame(const void*, const caspar::core::pixel_format_desc&) override
     {
         throw std::logic_error("Unexpected frame allocation");
     }
+    /// Rejects depth-specific allocations that would bypass the synthetic render path.
     caspar::core::mutable_frame
     create_frame(const void*, const caspar::core::pixel_format_desc&, caspar::common::bit_depth) override
     {
         throw std::logic_error("Unexpected frame allocation");
     }
 #ifdef WIN32
+    /// Rejects GPU imports because the regression renderer is deliberately hardware-independent.
     caspar::core::const_frame import_d3d_texture(const void*,
                                                  const std::shared_ptr<caspar::accelerator::d3d::d3d_texture2d>&,
                                                  caspar::core::pixel_format,
@@ -170,9 +267,11 @@ class test_image_mixer : public caspar::core::image_mixer
         throw std::logic_error("Unexpected texture import");
     }
 #endif
+    /// Matches the byte-sized marker image returned by the synthetic renderer.
     caspar::common::bit_depth depth() const override { return caspar::common::bit_depth::bit8; }
 };
 
+/// Matches progressive and interlaced render markers to status and checks failed renders cannot advance it.
 void test_mixer_alignment()
 {
     namespace core = caspar::core;
@@ -220,6 +319,7 @@ void test_mixer_alignment()
     }
 }
 
+/// Verifies stage-to-OSC updates wait for rendering and survive skipped forwarding during tweens.
 void test_stage_snapshots()
 {
     namespace core = caspar::core;
@@ -302,6 +402,7 @@ void test_stage_snapshots()
     require_transform(send(), 1, {});
 }
 
+/// Ensures a ticking channel with no consumers never announces transforms it has not mixed.
 void test_unmixed_status()
 {
     namespace core = caspar::core;
@@ -340,8 +441,10 @@ void test_unmixed_status()
     require(!announced_transform, "Channel announced a transform without ever mixing a frame");
 }
 
+/// Exercises frame timing, subscriber lifecycle, channel isolation, coalescing, and bundle splitting.
 void run()
 {
+    test_sender_errors();
     test_stage_snapshots();
     test_mixer_alignment();
     test_unmixed_status();
@@ -439,6 +542,7 @@ void run()
 
 } // namespace
 
+/// Converts regression failures into a nonzero CTest exit code with a readable diagnostic.
 int main()
 {
     try {

@@ -152,6 +152,7 @@ bool operator==(const rectangle& lhs, const rectangle& rhs)
     return boost::range::equal(lhs.ul, rhs.ul, eq) && boost::range::equal(lhs.lr, rhs.lr, eq);
 }
 
+/// Compares image properties with numeric tolerance and requires matching geometry-modifier flags.
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
     return eq(lhs.opacity, rhs.opacity) && eq(lhs.contrast, rhs.contrast) && eq(lhs.brightness, rhs.brightness) &&

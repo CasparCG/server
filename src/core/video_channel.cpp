@@ -100,6 +100,7 @@ struct video_channel::impl final
     };
 
   public:
+    /// Starts the channel loop, publishing completed mixer transforms only after the output call.
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
          color_space                               default_color_space,

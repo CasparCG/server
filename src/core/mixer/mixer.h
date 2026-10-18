@@ -43,6 +43,7 @@ class mixer final
                    spl::shared_ptr<caspar::diagnostics::graph> graph,
                    spl::shared_ptr<image_mixer>                image_mixer);
 
+    /// Buffers the supplied transform snapshot with its frame until rendering completes.
     const_frame operator()(std::vector<draw_frame>  frames,
                            const video_format_desc& format_desc,
                            int                      nb_samples,
@@ -55,7 +56,7 @@ class mixer final
 
     core::monitor::state state() const;
 
-    // Transform snapshot belonging to the last successfully returned rendered frame.
+    /// Returns the last successfully rendered frame's transforms, or empty state before priming.
     core::monitor::state transforms() const;
 
     common::bit_depth depth() const;

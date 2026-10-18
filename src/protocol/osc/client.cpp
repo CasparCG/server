@@ -51,24 +51,33 @@ struct param_visitor : public boost::static_visitor<void>
 {
     T& o;
 
+    /// Binds argument conversion to the packet stream being measured or transmitted.
     param_visitor(T& o)
         : o(o)
     {
     }
 
+    /// Preserves OSC boolean type tags rather than encoding integer flags.
     void operator()(const bool value) { o << value; }
+    /// Encodes signed 32-bit monitor values as OSC integers.
     void operator()(const int32_t value) { o << static_cast<int32_t>(value); }
+    /// Widens unsigned 32-bit values to avoid overflow in signed OSC integers.
     void operator()(const uint32_t value) { o << static_cast<int64_t>(value); }
+    /// Preserves signed 64-bit monitor counters as OSC long integers.
     void operator()(const int64_t value) { o << static_cast<int64_t>(value); }
+    /// Maps unsigned counters to OSC's signed 64-bit representation.
     void operator()(const uint64_t value) { o << static_cast<int64_t>(value); }
+    /// Preserves single-precision arguments in the outgoing OSC message.
     void operator()(const float value) { o << value; }
+    /// Narrows doubles to the single-precision format used by existing OSC telemetry.
     void operator()(const double value) { o << static_cast<float>(value); }
+    /// Encodes narrow strings as null-terminated OSC string arguments.
     void operator()(const std::string& value) { o << value.c_str(); }
+    /// Converts wide monitor strings to UTF-8 before OSC encoding.
     void operator()(const std::wstring& value) { o << u8(value).c_str(); }
 };
 
-// OSC time tags are NTP format: seconds since 1900-01-01 in the high 32 bits, fractional
-// seconds in the low 32 bits.
+/// Returns the current wall-clock time as an OSC/NTP 32-bit seconds and 32-bit fraction timestamp.
 uint64_t osc_time_tag()
 {
     using namespace std::chrono;
@@ -85,6 +94,7 @@ uint64_t osc_time_tag()
 
 constexpr unsigned long max_bundle_size = 2048;
 
+/// Uses identical encoding for message-size probing and actual packet construction.
 void write_osc_message(::osc::OutboundPacketStream& stream, const std::string& address, const core::monitor::vector_t& args)
 {
     stream << ::osc::BeginMessage(address.c_str());
@@ -117,6 +127,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     std::thread       thread_;
 
   public:
+    /// Opens the UDP socket and starts the worker that drains queued monitor snapshots.
     impl(std::shared_ptr<boost::asio::io_context> io_context)
         : io_context_(std::move(io_context))
         , socket_(*io_context_, udp::v4())
@@ -125,6 +136,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     {
         thread_ = std::thread([this] {
             try {
+                std::map<udp::endpoint, boost::system::error_code> send_errors;
                 while (!abort_request_) {
                     core::monitor::state       bundle;
                     uint64_t                   bundle_time;
@@ -148,6 +160,10 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         }
                     }
 
+                    std::erase_if(send_errors, [&](const auto& p) {
+                        return !std::binary_search(endpoints.begin(), endpoints.end(), p.first);
+                    });
+
                     if (endpoints.empty()) {
                         continue;
                     }
@@ -168,7 +184,15 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         while (it != std::end(bundle)) {
                             ::osc::OutboundPacketStream probe(probe_buffer_.data(),
                                                               static_cast<unsigned long>(probe_buffer_.size()));
-                            write_osc_message(probe, it->first, it->second);
+                            try {
+                                write_osc_message(probe, it->first, it->second);
+                            } catch (const ::osc::OutOfBufferMemoryException&) {
+                                CASPAR_LOG(warning)
+                                    << "Dropping OSC message " << it->first << ": encoded size exceeds the "
+                                    << probe_buffer_.size() << "-byte probe buffer";
+                                ++it;
+                                continue;
+                            }
 
                             if (has_message && o.Size() + sizeof(uint32_t) + probe.Size() > max_bundle_size) {
                                 break;
@@ -181,13 +205,21 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
                         o << ::osc::EndBundle;
 
+                        if (!has_message)
+                            continue;
+
                         boost::system::error_code ec;
                         for (const auto& endpoint : endpoints) {
                             socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
                             if (ec) {
-                                CASPAR_LOG(warning) << "OSC send to " << endpoint << " failed: " << ec.message();
+                                const auto last = send_errors.find(endpoint);
+                                if (last == send_errors.end() || last->second != ec)
+                                    CASPAR_LOG(warning) << "OSC send to " << endpoint << " failed: " << ec.message();
+                                send_errors[endpoint] = ec;
                                 std::lock_guard<std::mutex> lock(mutex_);
                                 queued_transforms_.clear();
+                            } else if (send_errors.erase(endpoint)) {
+                                CASPAR_LOG(info) << "OSC send to " << endpoint << " recovered";
                             }
                         }
                     }
@@ -198,6 +230,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
+    /// Wakes and joins the sender before its socket and queued state are destroyed.
     ~impl()
     {
         abort_request_ = true;
@@ -205,9 +238,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         thread_.join();
     }
 
-    // shared_ptr<void> with a null pointee and a cleanup deleter, so this composes with the
-    // generic protocol_strategy::add_lifecycle_bound_object(shared_ptr<void>) lifetime binding
-    // used for every other per-connection resource (see lock_container.cpp for the same pattern).
+    /// Keeps an endpoint subscribed for the token's lifetime and refreshes state for new endpoints.
     std::shared_ptr<void> get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -236,6 +267,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
+    /// Merges a channel snapshot into the pending bundle before recording its transform deltas.
     void send(int channel_index, const core::monitor::state& state)
     {
         {
@@ -274,29 +306,35 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     }
 };
 
+/// Creates an independently queued OSC sender using the supplied I/O context.
 client::client(std::shared_ptr<boost::asio::io_context> io_context)
     : impl_(new impl(std::move(io_context)))
 {
 }
 
+/// Transfers the sender without restarting its worker or losing pending updates.
 client::client(client&& other)
     : impl_(std::move(other.impl_))
 {
 }
 
+/// Replaces this sender with the other's worker, subscriptions, and pending state.
 client& client::operator=(client&& other)
 {
     impl_ = std::move(other.impl_);
     return *this;
 }
 
+/// Releases ownership of the sender and its background worker.
 client::~client() {}
 
+/// Returns a lifetime token that shares the endpoint's subscription reference count.
 std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
 {
     return impl_->get_subscription_token(endpoint);
 }
 
+/// Queues applied channel telemetry without suppressing unchanged non-transform properties.
 void client::send(int channel_index, const core::monitor::state& state) { impl_->send(channel_index, state); }
 
 }}} // namespace caspar::protocol::osc

@@ -44,8 +44,7 @@
 namespace caspar { namespace core {
 
 namespace {
-// Serializes the mixer/transform properties applied via the MIXER family of AMCP commands (opacity,
-// fill, clip, etc.) into OSC state, alongside the producer state layer::state() already provides.
+/// Captures current MIXER properties for publication only after their associated frame is rendered.
 monitor::state transform_state(const frame_transform& transform)
 {
     monitor::state state;
@@ -140,6 +139,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     {
     }
 
+    /// Produces channel frames and captures their transforms without marking those settings as applied.
     const stage_frames operator()(uint64_t                                     frame_number,
                                   std::vector<int>&                            fetch_background,
                                   std::function<void(int, const layer_frame&)> routesCb)
