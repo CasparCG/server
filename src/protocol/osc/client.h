@@ -55,7 +55,8 @@ class client
 
     client& operator=(client&&);
 
-    void send(const core::monitor::state& state);
+    // Queues a complete channel snapshot; unchanged transform properties are suppressed.
+    void send(int channel_index, const core::monitor::state& state);
 
   private:
     struct impl;

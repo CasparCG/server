@@ -33,9 +33,12 @@
 
 #include <boost/asio.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <map>
 #include <mutex>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -108,6 +111,8 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
     uint64_t                bundle_time_    = 0;
     bool                    bundle_pending_ = false;
 
+    std::map<int, core::monitor::data_map_t> queued_transforms_;
+
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
 
@@ -179,6 +184,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
                         boost::system::error_code ec;
                         for (const auto& endpoint : endpoints) {
                             socket_.send_to(boost::asio::buffer(o.Data(), o.Size()), endpoint, 0, ec);
+                            if (ec) {
+                                CASPAR_LOG(warning) << "OSC send to " << endpoint << " failed: " << ec.message();
+                                std::lock_guard<std::mutex> lock(mutex_);
+                                queued_transforms_.clear();
+                            }
                         }
                     }
                 }
@@ -203,8 +213,7 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         std::lock_guard<std::mutex> lock(mutex_);
 
         if (++reference_counts_by_endpoint_[endpoint] == 1) {
-            // New subscriber: let change_gate-backed state know it may need to resend.
-            core::monitor::bump_subscription_epoch();
+            queued_transforms_.clear();
         }
 
         std::weak_ptr<impl> weak_self = shared_from_this();
@@ -227,16 +236,34 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
         });
     }
 
-    void send(const core::monitor::state& state)
+    void send(int channel_index, const core::monitor::state& state)
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // Merge rather than replace, so a pending bundle isn't lost before the sender
-            // thread drains it.
-            for (auto& p : state) {
+            if (reference_counts_by_endpoint_.empty())
+                return;
+
+            const auto                prefix   = "/channel/" + std::to_string(channel_index) + "/stage/layer/";
+            auto&                     previous = queued_transforms_[channel_index];
+            core::monitor::data_map_t current;
+
+            // Compare only OSC transform properties, not renderer-only transform fields.
+            // Commit the cache after merging into the queue, never while building stage state.
+            for (const auto& p : state) {
+                const auto layer_end    = p.first.find('/', prefix.size());
+                const auto is_transform = p.first.starts_with(prefix) && layer_end != std::string::npos &&
+                                          std::string_view(p.first).substr(layer_end).starts_with("/transform/");
+                if (is_transform) {
+                    current.emplace(p.first, p.second);
+                    auto it = previous.find(p.first);
+                    if (it != previous.end() && it->second == p.second)
+                        continue;
+                }
                 bundle_[p.first] = p.second;
             }
+            // Replacing this channel's cache also forgets layers absent from its snapshot.
+            previous = std::move(current);
 
             if (!bundle_pending_) {
                 bundle_time_    = osc_time_tag();
@@ -270,6 +297,6 @@ std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp:
     return impl_->get_subscription_token(endpoint);
 }
 
-void client::send(const core::monitor::state& state) { impl_->send(state); }
+void client::send(int channel_index, const core::monitor::state& state) { impl_->send(channel_index, state); }
 
 }}} // namespace caspar::protocol::osc

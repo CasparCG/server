@@ -60,6 +60,19 @@ The most up-to-date documentation is always available at https://casparcg.com/do
 
 Ask questions in the forum: https://casparcgforum.org/
 
+### OSC mixer state
+
+Layer mixer properties are available under
+`/channel/N/stage/layer/L/transform/`: `opacity`, `contrast`, `brightness`,
+`saturation`, `anchor`, `fill_translation`, `fill_scale`, `clip_translation`,
+`clip_scale`, `angle`, and `volume`. Position and scale properties contain two
+float arguments; the other properties contain one float argument.
+
+Channel state snapshots always contain the current transform. OSC queues only
+changed transform properties, and queues a full set on the next channel tick
+when a new endpoint subscribes. Other OSC telemetry continues at its existing
+cadence. As with all OSC-over-UDP telemetry, queueing does not guarantee delivery.
+
 Development
 -----------
 

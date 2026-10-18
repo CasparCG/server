@@ -76,9 +76,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
     std::map<int, tweened_transform>    tweens_;
     std::set<int>                       routeSources;
 
-    // Gates per-layer OSC transform state (see core::monitor::change_gate).
-    std::map<int, monitor::change_gate<frame_transform>> last_sent_transforms_;
-
     mutable std::mutex      format_desc_mutex_;
     core::video_format_desc format_desc_;
 
@@ -247,14 +244,8 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 for (auto& p : layers_) {
                     state["layer"][p.first] = p.second.state();
 
-                    auto transform = tweens_[p.first].fetch();
-                    if (last_sent_transforms_[p.first].should_send(transform)) {
-                        state["layer"][p.first]["transform"] = transform_state(transform);
-                    }
+                    state["layer"][p.first]["transform"] = transform_state(tweens_[p.first].fetch());
                 }
-
-                // Stop tracking layers that no longer exist, so this doesn't grow unbounded.
-                std::erase_if(last_sent_transforms_, [&](const auto& kv) { return !layers_.contains(kv.first); });
 
                 state_ = std::move(state);
             } catch (...) {
