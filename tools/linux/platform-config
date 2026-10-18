@@ -2,6 +2,23 @@
 
 source /etc/os-release
 
+# Normalize distro derivatives (e.g. Linux Mint, Pop!_OS, Manjaro) to their parent ID via ID_LIKE,
+# so they fall into one of the supported branches below instead of always hitting "Unsupported
+# distribution". Exact IDs already handled below are left untouched.
+case "$ID" in
+  ubuntu|arch|fedora|debian|opensuse-leap|opensuse-tumbleweed|rocky) ;;
+  *)
+    for like in ${ID_LIKE:-}; do
+      case "$like" in
+        ubuntu|debian|arch|fedora)
+          ID="$like"
+          break
+          ;;
+      esac
+    done
+    ;;
+esac
+
 case "$ID" in
   ubuntu)
     system_cef=ON
