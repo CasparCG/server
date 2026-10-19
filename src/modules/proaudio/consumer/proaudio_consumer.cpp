@@ -41,6 +41,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstring>
 #include <future>
 #include <memory>
@@ -84,6 +85,8 @@ struct proaudio_consumer : public core::frame_consumer
     std::atomic<bool>                  dropout_{false};
     std::atomic<bool>                  device_underflow_{false};
     std::atomic<bool>                  stop_{false};
+    std::atomic<bool>                  failed_{false};
+    std::chrono::duration<double>      playback_timeout_{0};
 
     executor executor_{L"proaudio_consumer"};
 
@@ -115,13 +118,7 @@ struct proaudio_consumer : public core::frame_consumer
     {
         stop_ = true;
 
-        executor_.invoke([this] {
-            if (stream_) {
-                Pa_StopStream(stream_);
-                Pa_CloseStream(stream_);
-                stream_ = nullptr;
-            }
-        });
+        executor_.invoke([this] { close_stream(); });
     }
 
     // frame_consumer
@@ -130,12 +127,16 @@ struct proaudio_consumer : public core::frame_consumer
                     const core::channel_info&      channel_info,
                     int                            port_index) override
     {
-        format_desc_   = format_desc;
-        channel_index_ = channel_info.index;
-        graph_->set_text(print());
-
-        executor_.begin_invoke([this] {
+        executor_.begin_invoke([this, format_desc, channel_index = channel_info.index] {
             try {
+                close_stream();
+                dropout_.store(false, std::memory_order_relaxed);
+                device_underflow_.store(false, std::memory_order_relaxed);
+                failed_.store(false, std::memory_order_release);
+                format_desc_   = format_desc;
+                channel_index_ = channel_index;
+                graph_->set_text(print());
+
                 channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
                 if (channel_map_.empty())
                     CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("CHANNEL_MAP resolved to no channels"));
@@ -210,7 +211,7 @@ struct proaudio_consumer : public core::frame_consumer
                                          nullptr,
                                          &out_params,
                                          format_desc_.audio_sample_rate,
-                                         buffer_size_frames_ > 0 ? static_cast<unsigned long>(buffer_size_frames_)
+                                         buffer_size_frames_ > 0 ? max_frames_per_callback_
                                                                 : paFramesPerBufferUnspecified,
                                          paNoFlag,
                                          &proaudio_consumer::pa_callback,
@@ -226,6 +227,12 @@ struct proaudio_consumer : public core::frame_consumer
                                            << msg_info(std::string("Failed to start PortAudio stream: ") +
                                                        Pa_GetErrorText(err)));
 
+                // Large driver buffers and device latency can exceed several video frame durations.
+                playback_timeout_ = std::chrono::duration<double>(
+                    std::max(4.0 / format_desc_.fps,
+                             2.0 * max_frames_per_callback_ / format_desc_.audio_sample_rate +
+                                 Pa_GetStreamInfo(stream_)->outputLatency));
+
                 CASPAR_LOG(info) << print() << " Using device '" << u16(std::string(info->name)) << "'";
                 CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames ("
                                  << out_params.suggestedLatency * 1000.0 << " ms suggested, buffer "
@@ -233,20 +240,17 @@ struct proaudio_consumer : public core::frame_consumer
                                  << " frames)";
             } catch (...) {
                 CASPAR_LOG_CURRENT_EXCEPTION();
+                failed_.store(true, std::memory_order_release);
+                close_stream();
             }
         });
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        auto target_promise = std::make_shared<std::promise<std::uint64_t>>();
-        auto target_future  = target_promise->get_future().share();
-
-        executor_.begin_invoke([this, frame = std::move(frame), target_promise] {
-            if (!stream_) {
-                target_promise->set_value(frames_played_.load(std::memory_order_acquire));
-                return;
-            }
+        auto target_future = executor_.begin_invoke([this, frame = std::move(frame)] {
+            if (failed_.load(std::memory_order_acquire) || stop_)
+                return std::uint64_t{0};
 
             auto&& audio_in     = frame.audio_data();
             auto    audio_ptr    = audio_in.data();
@@ -270,8 +274,7 @@ struct proaudio_consumer : public core::frame_consumer
             if (written < static_cast<std::size_t>(num_samples))
                 dropout_.store(true, std::memory_order_relaxed);
 
-            target_promise->set_value(frames_played_.load(std::memory_order_acquire) +
-                                      static_cast<std::uint64_t>(num_samples));
+            auto target = frames_played_.load(std::memory_order_acquire) + static_cast<std::uint64_t>(num_samples);
 
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
@@ -279,18 +282,26 @@ struct proaudio_consumer : public core::frame_consumer
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
             if (device_underflow_.exchange(false, std::memory_order_relaxed))
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "device-underflow");
+
+            return target;
         });
 
-        return std::async(std::launch::deferred, [this, target_future] {
+        return std::async(std::launch::deferred, [this, target_future = std::move(target_future)]() mutable {
             // Block until the executor task above has actually computed the target - only then do
             // we know how many played-frames to wait for.
             auto target = target_future.get();
+            auto deadline = std::chrono::steady_clock::now() + playback_timeout_;
 
-            while (!stop_) {
+            while (!stop_ && !failed_.load(std::memory_order_acquire)) {
                 if (frames_played_.load(std::memory_order_acquire) >= target) {
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     frame_timer_.restart();
                     return true;
+                }
+                if (std::chrono::steady_clock::now() >= deadline) {
+                    CASPAR_LOG(error) << print() << " PortAudio callback stalled; removing consumer.";
+                    failed_.store(true, std::memory_order_release);
+                    return false;
                 }
                 std::this_thread::sleep_for(100us);
             }
@@ -317,6 +328,21 @@ struct proaudio_consumer : public core::frame_consumer
     }
 
   private:
+    void close_stream()
+    {
+        if (!stream_)
+            return;
+
+        auto err = Pa_StopStream(stream_);
+        if (err != paNoError && err != paStreamIsStopped)
+            CASPAR_LOG(error) << print() << " Failed to stop PortAudio stream: " << Pa_GetErrorText(err);
+
+        err = Pa_CloseStream(stream_);
+        stream_ = nullptr;
+        if (err != paNoError)
+            CASPAR_LOG(error) << print() << " Failed to close PortAudio stream: " << Pa_GetErrorText(err);
+    }
+
     // Realtime audio thread - no locks, no allocation, no logging in here.
     static int pa_callback(const void* /*input*/,
                            void*                            output,

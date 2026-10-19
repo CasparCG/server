@@ -246,6 +246,10 @@ if (ENABLE_PROAUDIO)
 		URL https://github.com/PortAudio/portaudio/archive/refs/tags/v19.7.0.tar.gz
 		DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 	)
+	if (CMAKE_VERSION VERSION_GREATER_EQUAL 4.0 AND
+		(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM OR CMAKE_POLICY_VERSION_MINIMUM VERSION_LESS 3.5))
+		set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+	endif ()
 	FetchContent_MakeAvailable(portaudio)
 
 	# PA_BUILD_STATIC=ON/PA_BUILD_SHARED=OFF always produces a CMake target literally named
