@@ -49,6 +49,7 @@ cmake -B "$build_dir" -S "$source_root/src" \
   "${cmake_arguments[@]}"
 
 if [[ "$check_dependencies" == ON ]]; then
+  cmake --build "$build_dir" --target casparcg_dependency_check --parallel
   exit 0
 fi
 

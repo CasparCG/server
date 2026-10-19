@@ -151,7 +151,7 @@ jobs:
 
                   # install some needed tooling
                   $APT_PREFIX apt-get update
-                  $APT_PREFIX apt-get -y install build-essential dpkg-dev debhelper devscripts
+                  $APT_PREFIX apt-get -y install build-essential dpkg-dev debhelper devscripts ninja-build
 
                   if [[ "${{ matrix.family }}" == "ubuntu" ]]; then
                     $APT_PREFIX apt-get -y install software-properties-common
