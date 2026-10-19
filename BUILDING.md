@@ -110,8 +110,39 @@ It checks shared-library symbol resolution, but does not validate CasparCG sourc
 compatibility or the installed server. Downloaded CEF and its wrapper require a
 full build for validation.
 
-Debian CI checks compilation only: it downloads prebuilt CEF, compiles its wrapper,
-and builds CasparCG with HTML enabled. It does not install or package the bundled
+### CI coverage
+
+Every push and pull request targeting master runs full Linux builds for Ubuntu
+24.04 amd64, Ubuntu 26.04 amd64/arm64, and Arch amd64. Windows x64 and the existing
+Linux Docker build remain unchanged.
+
+The other configured Linux targets (Debian Trixie/Sid, Fedora Rawhide, and
+openSUSE Leap 16.0/Tumbleweed, all amd64) install dependencies and run the
+dependency-only check on every run. They also get a full build when their installed
+package inventory, compiler/linker versions, or repository build/dependency
+definitions differ from a cached successful full-build baseline. The fingerprint
+includes all installed packages, so updates to indirect dependencies and base-image
+packages can also trigger a full build.
+
+An initial run or an evicted cache entry requires a full build. Failed builds
+never establish a baseline. Source-only changes do not trigger alternate-target
+full builds, so dependency probes do not replace manual source-compatibility
+testing. Baselines follow GitHub Actions branch/PR cache visibility rules; a new
+PR may need an initial full build if no matching default-branch baseline exists.
+
+To force the full Linux system-dependency matrix, open **Actions > Build Linux
+with system dependencies > Run workflow**, select the desired branch, and enable
+**Rebuild alternate platforms even if dependencies are unchanged**. Without that
+override, manual runs use the same fingerprint policy. No periodic schedule is
+enabled. Manual dispatch becomes available through the Actions UI once the
+workflow is on the default branch.
+
+The experimental targets help community builds; they do not extend official
+package support beyond Ubuntu. Existing experimental failure-tolerance settings
+are preserved. Neither armhf nor Windows ARM64 is added by this configuration.
+
+Debian full builds check compilation only: they download prebuilt CEF, compile its wrapper,
+and build CasparCG with HTML enabled. They do not install or package the bundled
 CEF runtime, so these jobs do not produce `.deb` artifacts. Native development
 installs still include the bundled runtime when `USE_SYSTEM_CEF=OFF`.
 
