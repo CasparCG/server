@@ -38,7 +38,7 @@ jobs:
 
             - name: Run build
               run: |
-                  ./tools/build.bat
+                  ./tools/windows/build.bat
               env:
                   CI: 1
                   MEDIA_SCANNER_FOLDER: "..\\media-scanner"
