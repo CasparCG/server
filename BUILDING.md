@@ -139,7 +139,7 @@ workflow is on the default branch.
 
 The experimental targets help community builds; they do not extend official
 package support beyond Ubuntu. Existing experimental failure-tolerance settings
-are preserved. Neither armhf nor Windows ARM64 is added by this configuration.
+are preserved.
 
 Debian full builds check compilation only: they download prebuilt CEF, compile its wrapper,
 and build CasparCG with HTML enabled. They do not install or package the bundled
