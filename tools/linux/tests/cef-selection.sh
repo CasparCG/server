@@ -9,7 +9,8 @@ trap 'rm -rf -- "$test_dir"' EXIT
 check_selection() {
   local name="$1" expected="$2"
   shift 2
-  cmake -S "$script_dir/cef-selection" -B "$test_dir/$name" \
+  # Some cases deliberately pass package hints that the selected policy must ignore.
+  cmake --no-warn-unused-cli -S "$script_dir/cef-selection" -B "$test_dir/$name" \
     -DEXPECTED_CEF_SOURCE="$expected" "$@"
   echo "PASS: $name"
 }
@@ -32,7 +33,7 @@ check_selection explicit-download download -DUSE_SYSTEM_CEF=OFF \
 check_selection legacy-boolean download -DUSE_SYSTEM_CEF=0
 check_selection explicit-system system -DUSE_SYSTEM_CEF=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_casparcg-cef-api15000=ON -DTEST_CEF_VERSION=150
-if cmake -S "$script_dir/cef-selection" -B "$test_dir/required-system" \
+if cmake --no-warn-unused-cli -S "$script_dir/cef-selection" -B "$test_dir/required-system" \
     -DUSE_SYSTEM_CEF=ON -DCMAKE_DISABLE_FIND_PACKAGE_casparcg-cef-api15000=ON \
     -DTEST_CEF_VERSION=146; then
   echo "FAIL: explicit system CEF must reject incompatible versions" >&2

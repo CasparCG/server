@@ -40,7 +40,7 @@ export LC_ALL=C
     find src -type f -name CMakeLists.txt -print0
     # CI generates a timestamped packaging changelog on every run.
     find src/CMakeModules tools/linux -type f ! -path 'tools/linux/deb/*/debian/changelog' -print0
-    printf '%s\0' tools/build.sh .github/workflows/linux-system.yml
+    printf '%s\0' .github/workflows/linux-system.yml
   } |
     sort -z |
     while IFS= read -r -d '' file; do

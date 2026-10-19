@@ -25,10 +25,12 @@ const char* example = "/*";
 #include PLATFORM_HEADER
 int main() { return 0; }
 EOF
-printf '%s\n' '"local.h"' '<span>' '<thread>' '<vector>' 'PLATFORM_HEADER' > "$test_dir/expected"
-inventory > "$test_dir/actual"
-diff -u "$test_dir/expected" "$test_dir/actual"
+expected="$(printf '%s\n' '"local.h"' '<span>' '<thread>' '<vector>' 'PLATFORM_HEADER')"
 baseline="$(inventory)"
+if [[ "$baseline" != "$expected" ]]; then
+  printf 'FAIL: include inventory mismatch\nExpected:\n%s\nActual:\n%s\n' "$expected" "$baseline" >&2
+  exit 1
+fi
 echo "PASS: comments, whitespace, continuations and macro includes"
 
 echo 'int unrelated_function() { return 42; }' >> "$test_dir/src/first.cpp"
@@ -54,7 +56,7 @@ echo "PASS: documentation is excluded"
 # Exercise the real fingerprint with host tool/package queries but no package installation.
 mkdir -p "$test_dir/tools/linux" "$test_dir/src/CMakeModules" "$test_dir/.github/workflows"
 cp "$script_dir/../dependency-fingerprint" "$script_dir/../source-includes" "$test_dir/tools/linux/"
-touch "$test_dir/tools/build.sh" "$test_dir/.github/workflows/linux-system.yml"
+touch "$test_dir/.github/workflows/linux-system.yml"
 
 fingerprint() {
   bash "$test_dir/tools/linux/dependency-fingerprint"

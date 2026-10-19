@@ -87,8 +87,8 @@ install the native dependencies:
 6. `cmake --build . --parallel`
 7. `cmake --install . --prefix staging`
 
-The staged build is in `build/staging`. As a shortcut, `./tools/build.sh` from
-the repository root configures, builds, and installs in one command, selecting
+The staged build is in `build/staging`. As a shortcut, `./tools/linux/build-with-system-deps`
+from the repository root configures, builds, and installs in one command, selecting
 the diagnostic font path for the current distribution. CMake options can be
 passed after the script name.
 
