@@ -127,7 +127,9 @@ definitions differ from a cached successful full-build baseline. The fingerprint
 includes all installed packages, so updates to indirect dependencies and base-image
 packages can also trigger a full build.
 
-An initial run or an evicted cache entry requires a full build. Failed builds
+Release refs (pushes to master, `v*.x`/`v*.x-lts` branches such as `v2.5.x`, and
+tags) always run full builds on every target and are never cancelled by later
+pushes. An initial run or an evicted cache entry also requires a full build. Failed builds
 never establish a baseline. Source-only changes do not trigger alternate-target
 full builds, so dependency probes do not replace manual source-compatibility
 testing. Baselines follow GitHub Actions branch/PR cache visibility rules; a new

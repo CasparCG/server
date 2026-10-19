@@ -13,15 +13,15 @@ on:
                 default: false
 
 concurrency:
-    # Protected refs (master, 2.3.x-lts, tags) get a group unique per ref+commit, so a later push
-    # to one of them can never replace another protected push's still-pending run in the same
+    # Release refs (master, v*.x and v*.x-lts branches such as v2.5.x and v2.3.x-lts, tags) get a group unique per ref+commit, so a later push
+    # to one of them can never replace another release push's still-pending run in the same
     # group - GitHub's default "queue: single" behavior cancels a pending run whenever a new one
     # is queued into the same group, independent of cancel-in-progress (which only governs the
     # already-running run). Including the ref alongside the commit sha keeps two tags that point
     # at the same commit from colliding into one group. Everything else keeps sharing one group
     # per PR/branch as before.
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || ((github.ref == 'refs/heads/master' || github.ref == 'refs/heads/2.3.x-lts' || startsWith(github.ref, 'refs/tags/')) && format('{0}-{1}', github.ref, github.sha)) || github.ref }}
-    cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/2.3.x-lts' && !startsWith(github.ref, 'refs/tags/') }}
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || ((github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && (endsWith(github.ref, '.x') || endsWith(github.ref, '.x-lts'))) || startsWith(github.ref, 'refs/tags/')) && format('{0}-{1}', github.ref, github.sha)) || github.ref }}
+    cancel-in-progress: ${{ !(github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && (endsWith(github.ref, '.x') || endsWith(github.ref, '.x-lts'))) || startsWith(github.ref, 'refs/tags/')) }}
 
 jobs:
     build:
@@ -210,7 +210,10 @@ jobs:
             - name: Select alternate-platform build
               if: ${{ !matrix.full_build }}
               run: |
-                  if [[ "$PREVIOUS_BUILD" != 'true' || "$FORCE_FULL_BUILD" == 'true' ]]; then
+                  if [[ "$RELEASE_REF" == 'true' ]]; then
+                    echo "FULL_BUILD=true" >> "$GITHUB_ENV"
+                    echo "Full build required: release refs always build every target."
+                  elif [[ "$PREVIOUS_BUILD" != 'true' || "$FORCE_FULL_BUILD" == 'true' ]]; then
                     echo "FULL_BUILD=true" >> "$GITHUB_ENV"
                     echo "Full build required: dependencies/build definitions changed, no successful baseline exists, or a manual rebuild was requested."
                   else
@@ -219,6 +222,7 @@ jobs:
               env:
                   PREVIOUS_BUILD: ${{ steps.previous-build.outputs.cache-hit }}
                   FORCE_FULL_BUILD: ${{ inputs.force_full_build || false }}
+                  RELEASE_REF: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && (endsWith(github.ref, '.x') || endsWith(github.ref, '.x-lts'))) || startsWith(github.ref, 'refs/tags/')) }}
 
             - name: Check dependency versions and linker
               if: ${{ !matrix.full_build }}
