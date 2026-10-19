@@ -516,12 +516,17 @@ class output_callback_shim final : public IDeckLinkVideoOutputCallback
     output_callback_shim(const output_callback_shim&)            = delete;
     output_callback_shim& operator=(const output_callback_shim&) = delete;
 
-    // Bounded: this runs with the channel blocked, so a callback that never returns must cost one
-    // device rather than the channel. False means one is still inside the target.
-    [[nodiscard]] bool detach()
+    // Bounded normally: this runs with the channel blocked, so a callback that never returns must
+    // cost one device rather than the channel. Unbounded while a constructor unwinds, where the
+    // caller has no object left to leak and returning would destroy the target underneath it.
+    [[nodiscard]] bool detach(bool bounded)
     {
         std::unique_lock<std::mutex> lock(mutex_);
         target_ = nullptr;
+        if (!bounded) {
+            drained_.wait(lock, [&] { return in_flight_ == 0; });
+            return true;
+        }
         return drained_.wait_for(lock, std::chrono::seconds(2), [&] { return in_flight_ == 0; });
     }
 
@@ -557,11 +562,11 @@ class output_callback_handle
     output_callback_handle& operator=(const output_callback_handle&) = delete;
 
     // Deliberately does not free the shim; only the dispatch to the target is stopped.
-    ~output_callback_handle() { static_cast<void>(shim_->detach()); }
+    ~output_callback_handle() { static_cast<void>(shim_->detach(true)); }
 
     [[nodiscard]] IDeckLinkVideoOutputCallback* get() const { return shim_; }
 
-    [[nodiscard]] bool detach() { return shim_->detach(); }
+    [[nodiscard]] bool detach(bool bounded) { return shim_->detach(bounded); }
 };
 
 struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
@@ -639,7 +644,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
     }
 
     // False means a driver callback is still inside this object; the caller must not destroy it.
-    [[nodiscard]] bool shutdown()
+    [[nodiscard]] bool shutdown(bool bounded = true)
     {
         if (std::exchange(shutdown_, true))
             return drained_;
@@ -664,7 +669,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
             }
 
             // Unconditional: a sync-group port is stopped by the primary but has its own callback registration.
-            drained_ = callback_.detach();
+            drained_ = callback_.detach(bounded);
             if (!drained_) {
                 CASPAR_LOG(error) << print() << L" Output callback did not return; leaving this device open.";
                 return false;
@@ -854,7 +859,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         CASPAR_SCOPE_EXIT
         {
             if (!constructed)
-                static_cast<void>(shutdown());
+                static_cast<void>(shutdown(false));
         };
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -967,7 +972,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     }
 
     // False means a driver callback is still inside this object or a secondary port; do not destroy it.
-    [[nodiscard]] bool shutdown()
+    [[nodiscard]] bool shutdown(bool bounded = true)
     {
         if (std::exchange(shutdown_, true))
             return drained_;
@@ -998,7 +1003,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             }
 
             // Must precede the disables and the secondary ports: an in-flight callback uses both.
-            drained_ = callback_.detach();
+            drained_ = callback_.detach(bounded);
             if (!drained_) {
                 CASPAR_LOG(error) << print() << L" Output callback did not return; leaving this device open.";
                 return false;
@@ -1014,7 +1019,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         for (auto& context : secondary_port_contexts_)
-            drained_ = context->shutdown() && drained_;
+            drained_ = context->shutdown(bounded) && drained_;
 
         if (!drained_)
             return false;
