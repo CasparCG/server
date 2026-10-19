@@ -114,11 +114,8 @@ For a downloaded-CEF build, pass `--download-cef` to the dependency installer an
 `-DUSE_SYSTEM_CEF=OFF` to CMake or the build script.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
 
-Fedora CI uses Rawhide to cover a compatible system CEF package; Fedora 44/45
-currently package CEF 146, older than the required API 15000. Like Arch, packaged
-CEF builds check the installed binary's RPATH/RUNPATH, library resolution, and
-relocations without setting `LD_LIBRARY_PATH`. Downloaded CEF builds check the
-bundled runtime from the staging directory.
+Fedora 44/45 currently package CEF 146, older than the required API 15000;
+Rawhide provides a compatible system CEF package.
 
 ### Checking dependencies without building the server
 
@@ -136,48 +133,6 @@ full build for validation.
 When a distro provides its CEF wrapper as source, the dependency probe links the
 installed CEF library without compiling that wrapper; full builds validate the
 wrapper.
-
-### CI coverage
-
-Every push and pull request targeting master runs full Linux builds for Ubuntu
-24.04 amd64, Ubuntu 26.04 amd64/arm64, and Arch amd64. Windows x64 and the existing
-Linux Docker build remain unchanged.
-
-The other configured Linux targets (Debian Trixie/Sid, Fedora Rawhide, and
-openSUSE Leap 16.0/Tumbleweed, all amd64) install dependencies and run the
-dependency-only check on every run. They also get a full build when their installed
-package inventory, compiler/linker versions, or repository build/dependency
-definitions differ from a cached successful full-build baseline. The fingerprint
-includes all installed packages, so updates to indirect dependencies and base-image
-packages can also trigger a full build.
-
-Release refs (pushes to master, `v*.x`/`v*.x-lts` branches such as `v2.5.x`, and
-tags) always run full builds on every target and are never cancelled by later
-pushes. An initial run or an evicted cache entry also requires a full build. Failed builds
-never establish a baseline. Source-only changes do not trigger alternate-target
-full builds, so dependency probes do not replace manual source-compatibility
-testing. Baselines follow GitHub Actions branch/PR cache visibility rules; a new
-PR may need an initial full build if no matching default-branch baseline exists.
-
-To force the full Linux system-dependency matrix, open **Actions > Build Linux
-with system dependencies > Run workflow**, select the desired branch, and enable
-**Rebuild alternate platforms even if dependencies are unchanged**. Without that
-override, manual runs use the same fingerprint policy. No periodic schedule is
-enabled. Manual dispatch becomes available through the Actions UI once the
-workflow is on the default branch.
-
-The experimental targets help community builds; they do not extend official
-package support beyond Ubuntu. Existing experimental failure-tolerance settings
-are preserved.
-
-Debian full builds check compilation only, with HTML enabled and the same
-automatic CEF selection. With the current repositories they download prebuilt
-CEF and compile its wrapper. They do not install or package the bundled CEF
-runtime, so these jobs do not produce `.deb` artifacts. Native development
-installs include the bundled runtime when downloaded CEF is selected.
-
-The Docker build explicitly uses downloaded CEF so its runtime can be bundled
-in the final image. Windows also downloads CEF and builds its wrapper by default.
 
 ## Build options
 
