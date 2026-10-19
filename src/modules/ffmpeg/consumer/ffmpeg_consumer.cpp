@@ -225,6 +225,52 @@ struct Stream
 
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             sink = FFMEM(avfilter_graph_alloc_filter(graph.get(), avfilter_get_by_name("abuffersink"), "out"));
+
+            // -ac must constrain the sink; it is not an AVCodecContext option, so passing it on to
+            // avcodec_open2 did nothing and the encoder still saw the channel's 16 channels.
+            const auto requested_channels = [&]() -> int {
+                const auto parse = [](const std::string& key, const std::string& value) {
+                    std::size_t end = 0;
+                    int         n   = 0;
+                    try {
+                        n = std::stoi(value, &end);
+                    } catch (const std::logic_error&) {
+                        end = 0;
+                    }
+                    if (end != value.size() || n <= 0 || n > AV_NUM_DATA_POINTERS * 16) {
+                        CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
+                                               << boost::errinfo_errno(EINVAL)
+                                               << msg_info_t("invalid channel count for -" + key + ": " + value));
+                    }
+                    return n;
+                };
+
+                int found[2] = {0, 0};
+                int i        = 0;
+                for (auto* map : {&stream_options, &options}) {
+                    std::string first_key;
+                    for (const auto* key : {"ac", "channels"}) {
+                        const auto it = map->find(key);
+                        if (it == map->end())
+                            continue;
+                        const auto n = parse(key, it->second);
+                        map->erase(it);
+                        if (found[i] != 0 && found[i] != n) {
+                            CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
+                                                   << boost::errinfo_errno(EINVAL)
+                                                   << msg_info_t("conflicting channel counts: -" + first_key + " " +
+                                                                 std::to_string(found[i]) + " and -" + key + " " +
+                                                                 std::to_string(n)));
+                        }
+                        found[i]  = n;
+                        first_key = key;
+                    }
+                    ++i;
+                }
+
+                // Stream-specific outranks general, as it does everywhere else in ffmpeg.
+                return found[0] != 0 ? found[0] : found[1];
+            }();
             // TODO codec->profiles
 
 #if LIBAVUTIL_VERSION_MAJOR >= 60 // FFmpeg 8
@@ -253,13 +299,59 @@ struct Stream
                                 nb_sample_rates,
                                 AV_OPT_TYPE_INT,
                                 sample_rates));
+
+            // An explicit -ac takes precedence: it is a request, not a guess, so it can be
+            // honoured even where the encoder publishes no list to constrain against.
+            if (requested_channels > 0) {
+                AVChannelLayout want{};
+                av_channel_layout_default(&want, requested_channels);
+                const auto ret_layout = av_opt_set_array(sink,
+                                                         "channel_layouts",
+                                                         AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                                         0,
+                                                         1,
+                                                         AV_OPT_TYPE_CHLAYOUT,
+                                                         &want);
+                av_channel_layout_uninit(&want);
+                FF(ret_layout);
+            } else {
+                const void* ch_layouts;
+                int         nb_ch_layouts = 0;
+                FF(avcodec_get_supported_config(
+                    nullptr, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, &ch_layouts, &nb_ch_layouts));
+
+                // A null list means no restriction, and the sink must then be left alone: an empty
+                // array would say "no layout is supported". aac publishes none, which is why -ac is
+                // the only lever there. PCM takes the 16 channels unchanged.
+                if (ch_layouts != nullptr && nb_ch_layouts > 0) {
+                    FF(av_opt_set_array(sink,
+                                        "channel_layouts",
+                                        AV_OPT_SEARCH_CHILDREN | AV_OPT_ARRAY_REPLACE,
+                                        0,
+                                        nb_ch_layouts,
+                                        AV_OPT_TYPE_CHLAYOUT,
+                                        ch_layouts));
+                }
+            }
 #else
             FF(av_opt_set_int_list(sink, "sample_fmts", codec->sample_fmts, -1, AV_OPT_SEARCH_CHILDREN));
             FF(av_opt_set_int_list(sink, "sample_rates", codec->supported_samplerates, 0, AV_OPT_SEARCH_CHILDREN));
-#endif
+            if (requested_channels > 0) {
+                // abuffersink has no "channel_layouts" before FFmpeg 8; "ch_layouts" takes a
+                // '|'-separated list of names, and every default layout describes back to one.
+                AVChannelLayout want{};
+                av_channel_layout_default(&want, requested_channels);
+                char name[64] = {0};
+                const auto len = av_channel_layout_describe(&want, name, sizeof(name));
+                av_channel_layout_uninit(&want);
+                FF(len);
+                FF(av_opt_set(sink, "ch_layouts", name, AV_OPT_SEARCH_CHILDREN));
+            }
 
-            // TODO: need to translate codec->ch_layouts into something that can be passed via av_opt_set_*
-            // FF(av_opt_set_chlayout(sink, "ch_layouts", codec->ch_layouts, AV_OPT_SEARCH_CHILDREN));
+            // TODO: need to translate codec->ch_layouts into something that can be passed via
+            // av_opt_set_*. Unconstrained here; the FFmpeg 8 path above constrains the sink where
+            // the encoder publishes a layout list, which aac does not.
+#endif
 
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
