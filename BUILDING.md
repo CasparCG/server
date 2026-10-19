@@ -109,6 +109,9 @@ compile/link probe against system libraries, including system CEF when enabled.
 It checks shared-library symbol resolution, but does not validate CasparCG source
 compatibility or the installed server. Downloaded CEF and its wrapper require a
 full build for validation.
+When a distro provides its CEF wrapper as source, the dependency probe links the
+installed CEF library without compiling that wrapper; full builds validate the
+wrapper.
 
 ### CI coverage
 

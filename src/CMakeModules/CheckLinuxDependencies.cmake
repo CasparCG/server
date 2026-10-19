@@ -18,7 +18,12 @@ target_link_libraries(casparcg_dependency_check PRIVATE
 target_link_options(casparcg_dependency_check PRIVATE -Wl,--no-as-needed -Wl,--no-allow-shlib-undefined)
 if(ENABLE_HTML)
     if(USE_SYSTEM_CEF)
-        target_link_libraries(casparcg_dependency_check PRIVATE CEF::CEF)
+        if(TARGET CEF::Library)
+            # Distro CEF wrappers can be source targets; keep the probe limited to installed libraries.
+            target_link_libraries(casparcg_dependency_check PRIVATE CEF::Library)
+        else()
+            target_link_libraries(casparcg_dependency_check PRIVATE CEF::CEF)
+        endif()
     else()
         message(STATUS "Bundled CEF linkage is checked only by a full build, not by this dependency probe")
     endif()

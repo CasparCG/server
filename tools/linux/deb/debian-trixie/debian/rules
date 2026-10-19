@@ -1,4 +1,9 @@
 #!/usr/bin/make -f
+.PHONY: build
+
+build:
+	dh $@ --sourcedirectory=src --buildsystem=cmake
+
 %:
 	dh $@ --sourcedirectory=src --buildsystem=cmake
 
