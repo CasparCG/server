@@ -31,9 +31,11 @@ export LC_ALL=C
   cmake --version
   c++ --version
   ld --version
-  git ls-files --cached --others --exclude-standard -z -- \
-    ':(glob)src/**/CMakeLists.txt' src/CMakeModules tools/linux tools/build.sh \
-    .github/workflows/linux-system.yml |
+  {
+    find src -type f -name CMakeLists.txt -print0
+    find src/CMakeModules tools/linux -type f -print0
+    printf '%s\0' tools/build.sh .github/workflows/linux-system.yml
+  } |
     sort -z |
     while IFS= read -r -d '' file; do
       sha256sum "$file"
