@@ -516,14 +516,13 @@ class output_callback_shim final : public IDeckLinkVideoOutputCallback
     output_callback_shim(const output_callback_shim&)            = delete;
     output_callback_shim& operator=(const output_callback_shim&) = delete;
 
-    // Unbounded by design: a drained callback has already been aborted and its remaining work is
-    // computation, so it terminates without the driver's cooperation.
-    void detach(const std::wstring& print)
+    // Bounded: this runs with the channel blocked, so a callback that never returns must cost one
+    // device rather than the channel. False means one is still inside the target.
+    [[nodiscard]] bool detach()
     {
         std::unique_lock<std::mutex> lock(mutex_);
         target_ = nullptr;
-        while (!drained_.wait_for(lock, std::chrono::seconds(2), [&] { return in_flight_ == 0; }))
-            CASPAR_LOG(warning) << print << L" Still waiting for an output callback to return.";
+        return drained_.wait_for(lock, std::chrono::seconds(2), [&] { return in_flight_ == 0; });
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) override { return E_NOINTERFACE; }
@@ -558,11 +557,11 @@ class output_callback_handle
     output_callback_handle& operator=(const output_callback_handle&) = delete;
 
     // Deliberately does not free the shim; only the dispatch to the target is stopped.
-    ~output_callback_handle() { shim_->detach(L"[decklink]"); }
+    ~output_callback_handle() { static_cast<void>(shim_->detach()); }
 
     [[nodiscard]] IDeckLinkVideoOutputCallback* get() const { return shim_; }
 
-    void detach(const std::wstring& print) { shim_->detach(print); }
+    [[nodiscard]] bool detach() { return shim_->detach(); }
 };
 
 struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
@@ -594,6 +593,7 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                                            bmdSupportedVideoModeDefault);
 
     bool                   shutdown_ = false;
+    bool                   drained_  = false;
     output_callback_handle callback_{this};
 
     decklink_secondary_port(const configuration&           config,
@@ -638,10 +638,13 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
                                    << boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
     }
 
-    void shutdown()
+    // False means a driver callback is still inside this object; the caller must not destroy it.
+    [[nodiscard]] bool shutdown()
     {
         if (std::exchange(shutdown_, true))
-            return;
+            return drained_;
+
+        drained_ = true;
 
         if (output_) {
             if (device_sync_group_ == 0) {
@@ -661,16 +664,26 @@ struct decklink_secondary_port final : public IDeckLinkVideoOutputCallback
             }
 
             // Unconditional: a sync-group port is stopped by the primary but has its own callback registration.
-            callback_.detach(print());
+            drained_ = callback_.detach();
+            if (!drained_) {
+                CASPAR_LOG(error) << print() << L" Output callback did not return; leaving this device open.";
+                return false;
+            }
 
             output_->DisableVideoOutput();
 
             if (FAILED(output_->SetScheduledFrameCompletionCallback(nullptr)))
                 CASPAR_LOG(warning) << print() << L" Failed to unregister playback completion callback.";
         }
+
+        return drained_;
     }
 
-    ~decklink_secondary_port() { shutdown(); }
+    ~decklink_secondary_port()
+    {
+        if (!shutdown())
+            CASPAR_LOG(error) << print() << L" Destroyed while an output callback was still running.";
+    }
 
     [[nodiscard]] std::wstring print() const
     {
@@ -825,6 +838,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     bool                    playback_stopped_ = true;
 
     bool                   shutdown_ = false;
+    bool                   drained_  = false;
     output_callback_handle callback_{this};
 
   public:
@@ -840,7 +854,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         CASPAR_SCOPE_EXIT
         {
             if (!constructed)
-                shutdown();
+                static_cast<void>(shutdown());
         };
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
@@ -952,12 +966,20 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         constructed = true;
     }
 
-    void shutdown()
+    // False means a driver callback is still inside this object or a secondary port; do not destroy it.
+    [[nodiscard]] bool shutdown()
     {
         if (std::exchange(shutdown_, true))
-            return;
+            return drained_;
 
-        abort_request_ = true;
+        drained_ = true;
+
+        {
+            // Under the waiters' mutex: an atomic store plus notify can be missed between pop()'s
+            // predicate check and its wait, and the drain below would then never finish.
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
+            abort_request_ = true;
+        }
         buffer_cond_.notify_all();
 
         if (output_ != nullptr) {
@@ -976,7 +998,11 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             }
 
             // Must precede the disables and the secondary ports: an in-flight callback uses both.
-            callback_.detach(print());
+            drained_ = callback_.detach();
+            if (!drained_) {
+                CASPAR_LOG(error) << print() << L" Output callback did not return; leaving this device open.";
+                return false;
+            }
 
             if (config_.embedded_audio) {
                 output_->DisableAudioOutput();
@@ -988,12 +1014,21 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         for (auto& context : secondary_port_contexts_)
-            context->shutdown();
+            drained_ = context->shutdown() && drained_;
+
+        if (!drained_)
+            return false;
 
         secondary_port_contexts_.clear();
+
+        return true;
     }
 
-    ~decklink_consumer() { shutdown(); }
+    ~decklink_consumer()
+    {
+        if (!shutdown())
+            CASPAR_LOG(error) << print() << L" Destroyed while an output callback was still running.";
+    }
 
     void wait_for_reference_lock()
     {
@@ -1376,8 +1411,11 @@ struct decklink_consumer_proxy : public core::frame_consumer
         if (!consumer_)
             return;
 
-        consumer_->shutdown();
-        consumer_.reset();
+        // Leak rather than free memory a driver callback may still be executing inside.
+        if (consumer_->shutdown())
+            consumer_.reset();
+        else
+            static_cast<void>(consumer_.release());
     }
 
     ~decklink_consumer_proxy() override
