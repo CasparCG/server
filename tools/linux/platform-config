@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source /etc/os-release
+system_cef=AUTO
 
 # Normalize distro derivatives (e.g. Linux Mint, Pop!_OS, Manjaro) to their parent ID via ID_LIKE,
 # so they fall into one of the supported branches below instead of always hitting "Unsupported
@@ -21,23 +22,18 @@ esac
 
 case "$ID" in
   ubuntu)
-    system_cef=ON
     font_path=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
     ;;
   arch)
-    system_cef=ON
     font_path=/usr/share/fonts/liberation/LiberationMono-Regular.ttf
     ;;
   fedora)
-    system_cef=ON
     font_path=/usr/share/fonts/liberation-mono-fonts/LiberationMono-Regular.ttf
     ;;
   debian)
-    system_cef=OFF
     font_path=/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf
     ;;
   opensuse-leap|opensuse-tumbleweed)
-    system_cef=OFF
     font_path=/usr/share/fonts/truetype/LiberationMono-Regular.ttf
     ;;
   rocky)

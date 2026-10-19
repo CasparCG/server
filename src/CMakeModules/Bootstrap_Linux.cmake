@@ -13,14 +13,6 @@ endif()
 
 set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use shared library version of Boost")
-set(DEFAULT_USE_SYSTEM_CEF ON)
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-    cmake_host_system_information(RESULT LINUX_DISTRIBUTION QUERY DISTRIB_ID)
-    if(LINUX_DISTRIBUTION MATCHES "^(debian|opensuse-leap|opensuse-tumbleweed)$")
-        set(DEFAULT_USE_SYSTEM_CEF OFF)
-    endif()
-endif()
-set(USE_SYSTEM_CEF ${DEFAULT_USE_SYSTEM_CEF} CACHE BOOL "Use a compatible system CEF package")
 set(CASPARCG_BINARY_NAME "casparcg" CACHE STRING "Custom name of the binary to build (this disables some install files)")
 set(ENABLE_AVX2 OFF CACHE BOOL "Enable the AVX2 instruction set (requires a CPU that supports it)")
 set(ENABLE_VULKAN OFF CACHE BOOL "Enable Vulkan support")
@@ -71,25 +63,14 @@ endif()
 find_package(X11 REQUIRED)
 
 if (ENABLE_HTML)
+    include(SelectLinuxCEF)
     if (USE_SYSTEM_CEF)
-        # Prefer the CasparCG CEF package when available.
-        find_package(casparcg-cef-api15000 CONFIG QUIET)
-
-        add_library(CEF::CEF INTERFACE IMPORTED)
-
-        if (${casparcg-cef-api15000_FOUND})
-            target_link_libraries(CEF::CEF INTERFACE CasparCG::CEF)
-        else()
-            # Otherwise use the distro's FindCEF.cmake.
-            set(CEF_API_VERSION 15000)
-            find_package(CEF MODULE REQUIRED)
-            target_link_libraries(CEF::CEF INTERFACE CEF::Library CEF::Wrapper)
-            target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=${CEF_API_VERSION})
-        endif()
-
         # Preserve non-standard system CEF library paths after installation.
         set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     else()
+        if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+            message(FATAL_ERROR "Downloaded CEF is available only for x86-64. Install a compatible system CEF package for ${CMAKE_SYSTEM_PROCESSOR}, or explicitly disable HTML with -DENABLE_HTML=OFF.")
+        endif()
         # Download prebuilt CEF; compile only its API 15000 wrapper.
         casparcg_add_external_project(cef)
         ExternalProject_Add(cef
@@ -97,6 +78,8 @@ if (ENABLE_HTML)
             URL_HASH SHA256=dd1b5cc3ac6efe659ec7e8e9b0677ba4e43216a2fefcafd5abc9340837e32d96
             DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
             CMAKE_ARGS -DUSE_SANDBOX=Off -Dapi_version=15000
+                -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
             BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target libcef_dll_wrapper --config Release
             INSTALL_COMMAND ""
             BUILD_BYPRODUCTS

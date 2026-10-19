@@ -183,6 +183,12 @@ jobs:
               env:
                   CI: 1
 
+            - name: Test Linux dependency helpers
+              run: |
+                  bash tools/linux/tests/check-compiler.sh
+                  bash tools/linux/tests/install-cef.sh
+                  bash tools/linux/tests/cef-selection.sh
+
             - name: Cache dependency downloads
               if: ${{ matrix.family == 'debian' || matrix.family == 'opensuse' }}
               uses: actions/cache@v5
@@ -293,12 +299,12 @@ jobs:
               if: ${{ env.FULL_BUILD == 'true' && (matrix.family == 'archlinux' || matrix.family == 'fedora' || matrix.family == 'opensuse') }}
               run: |
                   binary="$PWD/build/staging/bin/casparcg"
-                  if [[ "$CEF_FAMILY" == 'archlinux' || "$CEF_FAMILY" == 'fedora' ]]; then
+                  if [[ -f "$PWD/build/staging/lib/libcef.so" ]]; then
+                    export LD_LIBRARY_PATH="$PWD/build/staging/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                  elif [[ "$CEF_FAMILY" == 'archlinux' || "$CEF_FAMILY" == 'fedora' ]]; then
                     dynamic_section=$(readelf -d "$binary")
                     printf '%s\n' "$dynamic_section"
                     grep -qE '\((RPATH|RUNPATH)\)' <<< "$dynamic_section"
-                  else
-                    export LD_LIBRARY_PATH="$PWD/build/staging/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
                   fi
 
                   libraries=$(ldd "$binary" 2>&1)

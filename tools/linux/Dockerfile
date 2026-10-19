@@ -1,6 +1,12 @@
 FROM docker.io/buildpack-deps:noble AS build-casparcg
 	ADD tools/linux/install-dependencies /
 	ADD tools/linux/platform-config /
+	ADD tools/linux/check-compiler /
+	ADD tools/linux/install-cef /
+
+	ARG CC
+	ARG CXX
+	ARG GIT_HASH
 
 	RUN /install-dependencies --download-cef
 
@@ -15,10 +21,6 @@ FROM docker.io/buildpack-deps:noble AS build-casparcg
 	ENV PATH=$VULKAN_SDK/bin:$PATH
 
 	COPY ./src /source
-
-	ARG CC
-	ARG CXX
-	ARG GIT_HASH
 
 	RUN cmake -GNinja /source -DUSE_STATIC_BOOST=ON -DUSE_SYSTEM_CEF=OFF -DENABLE_VULKAN=ON
 

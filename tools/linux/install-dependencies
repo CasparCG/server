@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/platform-config"
 source "$script_dir/check-compiler"
+source "$script_dir/install-cef"
 
 for argument in "$@"; do
   case "$argument" in
@@ -20,18 +21,14 @@ done
 
 case "$ID" in
   arch)
-    cef_packages=()
-    if [[ "$system_cef" == ON ]]; then
-      cef_packages+=(cef)
-    fi
     pacman -Syu --noconfirm
     pacman -S --noconfirm --needed \
-      cmake ninja make binutils pkgconf curl git \
+      cmake ninja make binutils pkgconf curl git ca-certificates \
       boost boost-libs ffmpeg glew libglvnd \
       onetbb openal sfml libxrandr simde ttf-liberation \
-      gtk3 nss alsa-lib libcups libxcomposite libxdamage \
-      "${cef_packages[@]}"
+      gtk3 nss alsa-lib libcups libxcomposite libxdamage
     ensure_build_compiler
+    install_cef
     exit 0
     ;;
   fedora|rocky|opensuse-leap|opensuse-tumbleweed)
@@ -52,6 +49,7 @@ apt-get install -yq --no-install-recommends \
   cmake \
   ninja-build \
   curl \
+  ca-certificates \
   bzip2 \
   git \
   fonts-liberation \
@@ -101,11 +99,5 @@ apt-get install -yq --no-install-recommends \
   libswresample-dev \
   libsimde-dev
 
-if [[ "$ID" == ubuntu && "$system_cef" == ON ]]; then
-  apt-get install -yq --no-install-recommends software-properties-common
-  add-apt-repository -y ppa:casparcg/ppa
-  apt-get update
-  apt-get install -yq --no-install-recommends casparcg-cef-api15000-dev
-fi
-
 ensure_build_compiler
+install_cef

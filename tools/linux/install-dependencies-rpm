@@ -4,6 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/check-compiler"
+source "$script_dir/install-cef"
 source /etc/os-release
 # install-dependencies may have already normalized a derivative distro's ID (e.g. Nobara -> fedora)
 # via platform-config's ID_LIKE resolution before exec'ing into this script; prefer that over the
@@ -12,17 +13,13 @@ ID="${platform_id:-$ID}"
 
 case "$ID" in
   fedora)
-    cef_packages=()
-    if [[ "${system_cef:-ON}" == ON ]]; then
-      cef_packages+=(cef-devel)
-    fi
     dnf -y --setopt=install_weak_deps=False install \
-      cmake ninja-build git make pkgconf-pkg-config curl tar bzip2 \
+      cmake ninja-build git make pkgconf-pkg-config curl tar bzip2 ca-certificates \
       liberation-mono-fonts cups-libs \
       boost-devel SFML-devel glew-devel tbb-devel openal-soft-devel \
       libglvnd-devel libX11-devel libXrandr-devel \
       gtk3-devel nss-devel alsa-lib-devel mesa-libgbm-devel libdrm-devel libicu-devel \
-      ffmpeg-free-devel "${cef_packages[@]}"
+      ffmpeg-free-devel
     ;;
   rocky)
     echo "Rocky Linux builds are deferred until the SFML dependency is removed." >&2
@@ -31,7 +28,7 @@ case "$ID" in
   opensuse-leap|opensuse-tumbleweed)
     zypper --non-interactive refresh
     zypper --non-interactive install --no-recommends \
-      cmake ninja git make pkg-config curl tar bzip2 \
+      cmake ninja git make pkg-config curl tar bzip2 ca-certificates \
       liberation-fonts libcups2 \
       boost-devel 'cmake(SFML)' \
       libboost_thread-devel libboost_filesystem-devel libboost_log-devel \
@@ -54,3 +51,4 @@ case "$ID" in
 esac
 
 ensure_build_compiler
+install_cef

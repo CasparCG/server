@@ -102,13 +102,23 @@ changed. An explicit `CC`/`CXX` selection that fails the check reports an error
 instead of being overridden. Pass the same variables to installation and building,
 for example `sudo env CC=clang CXX=clang++ ./tools/linux/install-dependencies`
 and `CC=clang CXX=clang++ cmake ../src`.
-HTML is enabled by default. Compatible packaged CEF is used on Ubuntu, Arch, and Fedora; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
+
+HTML/CEF is enabled by default on every supported distro. The installer and CMake
+prefer the CasparCG API 15000 package (from the PPA on Ubuntu), then a compatible
+distro CEF package (150 or newer). If neither is available, CMake downloads the
+pinned prebuilt CEF runtime and compiles only its wrapper, not Chromium. The
+downloaded runtime and its resources are included in the staged installation.
+The downloaded archive is x86-64 only; other architectures require a compatible
+packaged CEF. Explicitly disable HTML with `-DENABLE_HTML=OFF` only if desired.
+For a downloaded-CEF build, pass `--download-cef` to the dependency installer and
+`-DUSE_SYSTEM_CEF=OFF` to CMake or the build script.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
 
-Fedora CI uses Rawhide because Fedora 44/45 currently package CEF 146, which is
-older than the required API 15000. Like Arch, the Fedora job builds with system
-CEF and checks the installed binary's RPATH/RUNPATH, library resolution, and
-relocations without setting `LD_LIBRARY_PATH`.
+Fedora CI uses Rawhide to cover a compatible system CEF package; Fedora 44/45
+currently package CEF 146, older than the required API 15000. Like Arch, packaged
+CEF builds check the installed binary's RPATH/RUNPATH, library resolution, and
+relocations without setting `LD_LIBRARY_PATH`. Downloaded CEF builds check the
+bundled runtime from the staging directory.
 
 ### Checking dependencies without building the server
 
@@ -160,10 +170,14 @@ The experimental targets help community builds; they do not extend official
 package support beyond Ubuntu. Existing experimental failure-tolerance settings
 are preserved.
 
-Debian full builds check compilation only: they download prebuilt CEF, compile its wrapper,
-and build CasparCG with HTML enabled. They do not install or package the bundled
-CEF runtime, so these jobs do not produce `.deb` artifacts. Native development
-installs still include the bundled runtime when `USE_SYSTEM_CEF=OFF`.
+Debian full builds check compilation only, with HTML enabled and the same
+automatic CEF selection. With the current repositories they download prebuilt
+CEF and compile its wrapper. They do not install or package the bundled CEF
+runtime, so these jobs do not produce `.deb` artifacts. Native development
+installs include the bundled runtime when downloaded CEF is selected.
+
+The Docker build explicitly uses downloaded CEF so its runtime can be bundled
+in the final image. Windows also downloads CEF and builds its wrapper by default.
 
 ## Build options
 
@@ -171,7 +185,7 @@ installs still include the bundled runtime when `USE_SYSTEM_CEF=OFF`.
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
--DUSE_SYSTEM_CEF=OFF - (Linux only, default OFF on Debian/openSUSE and ON elsewhere) use pinned prebuilt CEF binaries instead of a compatible system CEF package.
+-DUSE_SYSTEM_CEF=AUTO - (Linux only, default AUTO) prefer the CasparCG CEF package, then compatible distro CEF, then download the runtime and compile its wrapper. ON requires a compatible package; OFF always uses downloaded CEF.
 
 -DENABLE_VULKAN=ON - (Linux only, default OFF) enable Vulkan support; requires a compatible Vulkan SDK.
 
