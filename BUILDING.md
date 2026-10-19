@@ -96,6 +96,20 @@ older than the required API 15000. Like Arch, the Fedora job builds with system
 CEF and checks the installed binary's RPATH/RUNPATH, library resolution, and
 relocations without setting `LD_LIBRARY_PATH`.
 
+### Checking dependencies without building the server
+
+For a local dependency-only check, run
+`./tools/linux/build-with-system-deps --check-dependencies` after installing
+dependencies. It uses `build/dependency-check` and does not build or install the
+server. Additional CMake options and `-B <directory>` are accepted; the probe uses
+a `dependency-check` subdirectory of the selected build directory.
+
+This runs the normal Linux CMake dependency discovery and a small C++20
+compile/link probe against system libraries, including system CEF when enabled.
+It checks shared-library symbol resolution, but does not validate CasparCG source
+compatibility or the installed server. Downloaded CEF and its wrapper require a
+full build for validation.
+
 Debian CI checks compilation only: it downloads prebuilt CEF, compiles its wrapper,
 and builds CasparCG with HTML enabled. It does not install or package the bundled
 CEF runtime, so these jobs do not produce `.deb` artifacts. Native development
