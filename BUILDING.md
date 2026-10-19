@@ -95,6 +95,13 @@ passed after the script name.
 The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch
 Linux, Fedora Rawhide, and openSUSE Leap 16.0/Tumbleweed, including CEF setup.
 It adds the CasparCG PPA on Ubuntu and performs a full system upgrade on Arch.
+After installing libraries and build tools, it checks the compiler selected by
+CMake with a C/C++20 compile-and-link probe. A working existing toolchain is kept;
+otherwise the distro's GCC toolchain is installed. Compiler alternatives are not
+changed. An explicit `CC`/`CXX` selection that fails the check reports an error
+instead of being overridden. Pass the same variables to installation and building,
+for example `sudo env CC=clang CXX=clang++ ./tools/linux/install-dependencies`
+and `CC=clang CXX=clang++ cmake ../src`.
 HTML is enabled by default. Compatible packaged CEF is used on Ubuntu, Arch, and Fedora; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
 
