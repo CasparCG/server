@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Configure and stage a native Linux build, or run only the dependency compile/link probe.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,6 +10,7 @@ source_root="$(cd "$script_dir/../.." && pwd)"
 build_dir="$source_root/build"
 check_dependencies=OFF
 cmake_arguments=()
+# Consume helper options and forward remaining arguments as CMake overrides.
 while (( $# )); do
   case "$1" in
     --check-dependencies)
@@ -34,6 +36,7 @@ while (( $# )); do
   esac
 done
 if [[ "$check_dependencies" == ON ]]; then
+  # Keep probe targets and cache separate from the normal server build.
   build_dir="$build_dir/dependency-check"
 fi
 mkdir -p "$build_dir"

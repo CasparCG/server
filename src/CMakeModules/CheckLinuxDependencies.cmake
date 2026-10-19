@@ -1,3 +1,4 @@
+# Build a small system-library compile/link probe instead of the CasparCG server.
 message(STATUS "Dependency check compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "Dependency check linker: ${CMAKE_LINKER}")
 execute_process(COMMAND "${CMAKE_LINKER}" --version COMMAND_ERROR_IS_FATAL ANY)

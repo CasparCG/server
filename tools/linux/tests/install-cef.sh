@@ -1,11 +1,13 @@
 #!/bin/bash
 
+# Verify CEF package priority, version filtering and download policy using fake package managers.
 set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../install-cef"
 test_dir="$(mktemp -d)"
 trap 'rm -rf -- "$test_dir"' EXIT
 
+# Supply package metadata and record install requests without modifying the host.
 apt-cache() {
   if [[ "$2" == "$available_package" ]]; then
     echo "  Candidate: $available_version"

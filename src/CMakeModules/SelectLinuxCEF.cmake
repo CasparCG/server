@@ -1,5 +1,7 @@
+# Select packaged CEF in priority order, falling back to downloads only in AUTO/OFF mode.
 set(USE_SYSTEM_CEF AUTO CACHE STRING "CEF source: AUTO prefers CasparCG then distro packages; ON requires a package; OFF downloads CEF")
 set_property(CACHE USE_SYSTEM_CEF PROPERTY STRINGS AUTO ON OFF)
+# Accept legacy boolean values without replacing the user's cached source policy.
 string(TOUPPER "${USE_SYSTEM_CEF}" USE_SYSTEM_CEF)
 if(USE_SYSTEM_CEF MATCHES "^(1|TRUE|YES|Y)$")
     set(USE_SYSTEM_CEF ON)

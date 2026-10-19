@@ -1,11 +1,14 @@
 #!/bin/bash
 
+# Source this helper to retain a usable compiler or install the distro GCC fallback.
+# The caller supplies the normalized distro ID and runs with package-install privileges.
 ensure_build_compiler() (
   set -euo pipefail
 
   probe_dir="$(mktemp -d)"
   trap 'rm -rf -- "$probe_dir"' EXIT
 
+  # Test both languages and C++20 library linking without building CasparCG.
   cat > "$probe_dir/CMakeLists.txt" <<'EOF'
 cmake_minimum_required(VERSION 3.16)
 project(CasparCGCompilerCheck LANGUAGES C CXX)
@@ -46,6 +49,7 @@ EOF
     cat "$probe_dir/build.log"
   fi
   if [[ -n "${CC:-}" || -n "${CXX:-}" ]]; then
+    # An explicit selection must be repaired by the user, never silently replaced.
     echo "The compiler selected by CC/CXX failed the compile/link check. Fix that selection and rerun the installer; it has not been overridden." >&2
     return 1
   fi

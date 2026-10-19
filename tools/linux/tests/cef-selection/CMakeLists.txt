@@ -1,3 +1,4 @@
+# Assert CEF provider selection without requiring a compiler or real CEF libraries.
 cmake_minimum_required(VERSION 3.28)
 project(CEFSelectionTest NONE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}" "${CMAKE_CURRENT_LIST_DIR}/../../../../src/CMakeModules")

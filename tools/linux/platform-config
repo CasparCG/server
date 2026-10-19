@@ -1,11 +1,10 @@
 #!/bin/bash
 
+# Source shared distro settings: normalized ID, diagnostic font path and CEF policy.
 source /etc/os-release
 system_cef=AUTO
 
-# Normalize distro derivatives (e.g. Linux Mint, Pop!_OS, Manjaro) to their parent ID via ID_LIKE,
-# so they fall into one of the supported branches below instead of always hitting "Unsupported
-# distribution". Exact IDs already handled below are left untouched.
+# Resolve derivatives through ID_LIKE without replacing explicitly supported distro IDs.
 case "$ID" in
   ubuntu|arch|fedora|debian|opensuse-leap|opensuse-tumbleweed|rocky) ;;
   *)

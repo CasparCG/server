@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Verify compiler retention, fallback installation and error propagation without installing packages.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,6 +9,7 @@ source "$script_dir/../check-compiler"
 test_dir="$(mktemp -d)"
 trap 'rm -rf -- "$test_dir"' EXIT
 
+# Simulate configure/link outcomes and record whether the compiler is probed again.
 cmake() {
   printf '%s\n' "$*" >> "$test_dir/cmake-calls"
   if [[ "$probe_state" == link-failure && "$1" != --build ]]; then

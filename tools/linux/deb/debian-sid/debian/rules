@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+# Drive Debian builds through debhelper with native CMake dependency discovery.
 .PHONY: build
 
 build:

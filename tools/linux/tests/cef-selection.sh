@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Verify CMake's CEF selection with synthetic packages and no CEF downloads or compilation.
 set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 test_dir="$(mktemp -d)"
@@ -23,6 +24,7 @@ check_selection old-system-download download \
   -DCMAKE_DISABLE_FIND_PACKAGE_casparcg-cef-api15000=ON -DTEST_CEF_VERSION=146
 check_selection missing-system-download download \
   -DCMAKE_DISABLE_FIND_PACKAGE_casparcg-cef-api15000=ON
+# Reconfigure the same cache to confirm AUTO can discover a newly available package.
 check_selection missing-system-download system \
   -DCMAKE_DISABLE_FIND_PACKAGE_casparcg-cef-api15000=ON -DTEST_CEF_VERSION=150
 check_selection explicit-download download -DUSE_SYSTEM_CEF=OFF \

@@ -1,3 +1,4 @@
+# Discover Linux libraries and prepare pinned downloads for optional dependencies.
 cmake_minimum_required (VERSION 3.28)
 
 include(ExternalProject)

@@ -1,5 +1,6 @@
 #! /bin/bash
 
+# Build the distributable image from the repository root, forwarding compiler overrides.
 GIT_HASH=$(git rev-parse --verify --short HEAD)
 
 docker build -t casparcg/server \
@@ -7,4 +8,3 @@ docker build -t casparcg/server \
   --build-arg CXX \
   --build-arg GIT_HASH \
   -f $PWD/tools/linux/Dockerfile $PWD
-

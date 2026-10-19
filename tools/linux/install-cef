@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Source this helper to install compatible packaged CEF before CMake's download fallback.
+# The caller supplies the distro ID, optional system_cef policy and install privileges.
 install_cef() {
   if [[ "${system_cef:-AUTO}" == OFF ]]; then
     echo "CEF will be downloaded and its wrapper built by CMake."
@@ -15,6 +17,7 @@ install_cef() {
         add-apt-repository -y ppa:casparcg/ppa
         apt-get update
       fi
+      # Prefer the API-specific CasparCG package over a generic distro package.
       for package in casparcg-cef-api15000-dev libcef-dev; do
         metadata="$(apt-cache policy "$package")"
         version="$(awk '/Candidate:/ {print $2}' <<< "$metadata")"
@@ -67,6 +70,7 @@ install_cef() {
 }
 
 cef_version_compatible() {
+  # Strip a package epoch before checking the minimum CEF major version.
   local version="${1#*:}"
   [[ "$version" =~ ^([0-9]+)[.] ]] && (( BASH_REMATCH[1] >= 150 ))
 }

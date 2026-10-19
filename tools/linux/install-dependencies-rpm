@@ -1,14 +1,13 @@
 #!/bin/bash
 
+# Install RPM-family build dependencies as root on behalf of install-dependencies.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/check-compiler"
 source "$script_dir/install-cef"
 source /etc/os-release
-# install-dependencies may have already normalized a derivative distro's ID (e.g. Nobara -> fedora)
-# via platform-config's ID_LIKE resolution before exec'ing into this script; prefer that over the
-# raw ID this file would otherwise re-source, so the normalization isn't lost across the exec.
+# Preserve the caller's normalized distro ID across exec (e.g. Nobara -> Fedora).
 ID="${platform_id:-$ID}"
 
 case "$ID" in

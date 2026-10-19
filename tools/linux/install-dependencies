@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Install native build tools, libraries and CEF support as root on supported Linux distros.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,6 +11,7 @@ source "$script_dir/install-cef"
 for argument in "$@"; do
   case "$argument" in
     --download-cef)
+      # Skip packaged CEF installation; the build must also select USE_SYSTEM_CEF=OFF.
       system_cef=OFF
       ;;
     *)
@@ -21,12 +23,14 @@ done
 
 case "$ID" in
   arch)
+    # Keep Arch's package set coherent rather than performing a partial upgrade.
     pacman -Syu --noconfirm
     pacman -S --noconfirm --needed \
       cmake ninja make binutils pkgconf curl git ca-certificates \
       boost boost-libs ffmpeg glew libglvnd \
       onetbb openal sfml libxrandr simde ttf-liberation \
       gtk3 nss alsa-lib libcups libxcomposite libxdamage
+    # Probe only after the build tools and development libraries are available.
     ensure_build_compiler
     install_cef
     exit 0

@@ -1,3 +1,4 @@
+# Simulate a distro CEF package at TEST_CEF_VERSION, or its absence when unset.
 if(NOT TEST_CEF_VERSION)
     set(CEF_FOUND FALSE)
     return()
