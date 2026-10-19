@@ -81,8 +81,7 @@ install the native dependencies:
 
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
-3. Install dependencies with `sudo ./tools/linux/install-dependencies`. If `sudo`
-   is not installed, run the installer directly as root.
+3. Install dependencies with `sudo ./tools/linux/install-dependencies`.
 4. `mkdir build && cd build`
 5. `cmake ../src` You can add any of the build options below to this command.
 6. `cmake --build . --parallel`
