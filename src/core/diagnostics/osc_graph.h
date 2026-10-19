@@ -21,7 +21,7 @@
 
 #include <core/monitor/monitor.h>
 
-namespace caspar { namespace core { namespace diagnostics { namespace osc_graph {
+namespace caspar::core::diagnostics::osc_graph {
 
 // Registers a graph_sink factory that mirrors every caspar::diagnostics::graph's text/values/colors/tags,
 // so it can be polled (see snapshot_state()) and broadcast over OSC to clients that opted in via
@@ -42,4 +42,4 @@ void register_sink();
 // since been destroyed.
 core::monitor::state snapshot_state();
 
-}}}} // namespace caspar::core::diagnostics::osc_graph
+} // namespace caspar::core::diagnostics::osc_graph

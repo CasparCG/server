@@ -33,7 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace caspar { namespace core { namespace diagnostics { namespace osc_graph {
+namespace caspar::core::diagnostics::osc_graph {
 
 namespace {
 
@@ -58,7 +58,7 @@ std::atomic<long long> g_next_id{1};
 // snapshots even as other graphs come and go.
 class osc_graph_sink : public caspar::diagnostics::spi::graph_sink
 {
-    const long long                               id_      = g_next_id.fetch_add(1);
+    const long long                               id_      = g_next_id.fetch_add(1, std::memory_order_relaxed);
     const caspar::core::diagnostics::call_context context_ = caspar::core::diagnostics::call_context::for_thread();
 
     mutable std::mutex                      mutex_;
@@ -171,4 +171,4 @@ core::monitor::state snapshot_state()
     return state;
 }
 
-}}}} // namespace caspar::core::diagnostics::osc_graph
+} // namespace caspar::core::diagnostics::osc_graph
