@@ -361,23 +361,24 @@ struct proaudio_consumer : public core::frame_consumer
 
         std::memset(out, 0, static_cast<std::size_t>(frame_count) * self->device_channels_ * sizeof(std::int16_t));
 
-        auto frames = std::min<unsigned long>(frame_count, self->max_frames_per_callback_);
-        if (frames < frame_count)
-            self->dropout_.store(true, std::memory_order_relaxed);
-
         auto n_map   = self->channel_map_.size();
-        auto played = self->ring_->pop(self->scratch_.data(), frames);
+        for (unsigned long offset = 0; offset < frame_count;) {
+            auto frames = std::min<unsigned long>(frame_count - offset, self->max_frames_per_callback_);
+            auto played = self->ring_->pop(self->scratch_.data(), frames);
 
-        for (unsigned long i = 0; i < frames; ++i) {
-            for (std::size_t c = 0; c < n_map; ++c) {
-                auto dest_ch = static_cast<std::size_t>(self->channel_map_[c] - 1); // 1-based -> 0-based
-                out[i * self->device_channels_ + dest_ch] = self->scratch_[i * n_map + c];
+            for (unsigned long i = 0; i < frames; ++i) {
+                for (std::size_t c = 0; c < n_map; ++c) {
+                    auto dest_ch = static_cast<std::size_t>(self->channel_map_[c] - 1); // 1-based -> 0-based
+                    out[(offset + i) * self->device_channels_ + dest_ch] = self->scratch_[i * n_map + c];
+                }
             }
-        }
 
-        self->frames_played_.fetch_add(frames, std::memory_order_release);
-        if (played < frames)
-            self->dropout_.store(true, std::memory_order_relaxed);
+            self->frames_played_.fetch_add(frames, std::memory_order_release);
+            if (played < frames)
+                self->dropout_.store(true, std::memory_order_relaxed);
+
+            offset += frames;
+        }
 
         return paContinue;
     }
