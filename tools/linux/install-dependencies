@@ -74,7 +74,9 @@ apt-get install -yq --no-install-recommends \
   libxinerama-dev \
   libxi-dev \
   libsfml-dev \
+  libjpeg-dev \
   libxrandr-dev \
+  libx11-dev \
   libudev-dev \
   libglu1-mesa-dev \
   libgl1-mesa-dev \

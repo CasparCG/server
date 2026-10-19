@@ -75,19 +75,27 @@ _Note: if you ran docker with sudo, CasparCG server will not be able to run with
 
 ## Development
 
-Before beginning, check the build options section below, to decide if you want to use any to simplify or customise your build.
+The build can start from a minimal supported Linux install with Git, a working
+package manager, and either `sudo` or a root shell. Clone the repository and
+install the native dependencies:
 
 1. `git clone --single-branch --branch master https://github.com/CasparCG/server casparcg-server-master`
 2. `cd casparcg-server-master`
-3. Install dependencies, this can be done with `sudo ./tools/linux/install-dependencies`
+3. Install dependencies with `sudo ./tools/linux/install-dependencies`. If `sudo`
+   is not installed, run the installer directly as root.
 4. `mkdir build && cd build`
-5. `cmake ../src` You can add any of the build options from below to this command
+5. `cmake ../src` You can add any of the build options below to this command.
 6. `cmake --build . --parallel`
 7. `cmake --install . --prefix staging`
 
-If all goes to plan, a folder called 'staging' has been created with everything you need to run CasparCG server.
+The staged build is in `build/staging`. As a shortcut, `./tools/build.sh` from
+the repository root configures, builds, and installs in one command, selecting
+the diagnostic font path for the current distribution. CMake options can be
+passed after the script name.
 
-The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch Linux, Fedora Rawhide, and openSUSE Leap 16.0/Tumbleweed, including CEF setup. It adds the CasparCG PPA on Ubuntu and performs a full system upgrade on Arch. Build as your normal user after installing dependencies.
+The dependency installer handles Ubuntu 24.04/26.04, Debian Trixie/Sid, Arch
+Linux, Fedora Rawhide, and openSUSE Leap 16.0/Tumbleweed, including CEF setup.
+It adds the CasparCG PPA on Ubuntu and performs a full system upgrade on Arch.
 HTML is enabled by default. Compatible packaged CEF is used on Ubuntu, Arch, and Fedora; Debian and openSUSE default to prebuilt CEF binaries with only the wrapper compiled locally. The downloaded archive is x86-64 only; Ubuntu ARM64 requires its matching PPA package.
 These builds require CMake 3.28 or newer and Boost 1.83 or newer. Non-Ubuntu targets are experimental.
 
