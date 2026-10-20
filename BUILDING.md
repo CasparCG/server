@@ -30,6 +30,10 @@ This needs, in addition to the normal build tools:
 
 `./tools/linux/install-dependencies` installs all of these on Ubuntu. Configure with `-DOMT_BUILD_FROM_SOURCE=OFF` to skip the OMT runtime. The server still builds and runs, but OMT can only be used once libomt has been installed some other way.
 
+The server only loads libomt when OMT is used, from the system library path or from the folder it was started from, so libomt can also be an optional package that is installed next to the server. Without it the server works, and an OMT consumer or producer reports that libomt was not found.
+
+On Ubuntu 24.04 and later, `./tools/linux/deb/build-libomt` builds that package from the current commit, and `sudo apt install ./dist/deb/libomt_*.deb` installs it. The server packages suggest it. Debian has no .NET SDK in its archive, so the package is not built there. It builds the same OMT runtime at the same revisions, with `tools/linux/libomt/CMakeLists.txt`, so it needs the same network access and is not suitable for a Launchpad PPA build. When the revisions in [OMT.cmake](./src/CMakeModules/OMT.cmake) change, change the version in `tools/linux/deb/libomt/debian/changelog` to the version of libomt too.
+
 To move to a newer upstream version, change the revisions at the top of [OMT.cmake](./src/CMakeModules/OMT.cmake), or override them with `-DOMT_LIBVMX_REVISION`, `-DOMT_LIBOMTNET_REVISION` and `-DOMT_LIBOMT_REVISION`.
 
 At runtime on Linux, libomt loads ICU (`libicuuc` and `libicui18n`) and Avahi (`libavahi-client`) from the system.
