@@ -77,32 +77,69 @@ void* find_symbol(void* module, const char* name) { return dlsym(module, name); 
                                                        L"The installed version may not work with this CasparCG."));
 }
 
-// Looks for libomt on the system library path first, then in the folder CasparCG was started from.
-void* open_library()
-{
-    void* module = open_module(library_filename);
-
-    if (module == nullptr) {
-        const auto path_next_to_server = boost::filesystem::path(env::initial_folder()) / library_filename;
-        module                         = open_module(path_next_to_server);
-    }
-
-    if (module == nullptr) {
-        throw_library_not_found();
-    }
-
-    CASPAR_LOG(info) << L"Loaded " << boost::filesystem::path(library_filename).wstring();
-
-    // The library is never unloaded: it runs threads of its own (discovery, logging), and unloading it
-    // while they run crashes the process. The system unloads it when CasparCG exits.
-    return module;
-}
-
 template <typename Function>
 bool find_function(void* module, const char* name, Function& function)
 {
     function = reinterpret_cast<Function>(find_symbol(module, name));
     return function != nullptr;
+}
+
+// Returns false if the library lacks a function that CasparCG needs.
+bool find_functions(void* module, omt_lib& lib)
+{
+    bool all_functions_found = true;
+    all_functions_found &= find_function(module, "omt_discovery_getaddresses", lib.discovery_getaddresses);
+    all_functions_found &= find_function(module, "omt_receive_create", lib.receive_create);
+    all_functions_found &= find_function(module, "omt_receive_destroy", lib.receive_destroy);
+    all_functions_found &= find_function(module, "omt_receive", lib.receive);
+    all_functions_found &= find_function(module, "omt_send_create", lib.send_create);
+    all_functions_found &= find_function(module, "omt_send_destroy", lib.send_destroy);
+    all_functions_found &= find_function(module, "omt_send", lib.send);
+    all_functions_found &= find_function(module, "omt_send_getaddress", lib.send_getaddress);
+    all_functions_found &= find_function(module, "omt_send_connections", lib.send_connections);
+
+    // Not every libomt has it, so it is not required.
+    find_function(module, "omt_shutdown", lib.shutdown);
+
+    return all_functions_found;
+}
+
+// Looks for libomt on the system library path first, then in the folder CasparCG was started from, and
+// takes the first one that has all the functions that CasparCG needs. A libomt on the system that is too
+// old must not hide a good one next to the server.
+std::unique_ptr<omt_lib> open_library()
+{
+    bool found_incompatible_library = false;
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        // The folder CasparCG was started from is only looked up if the system has no usable libomt.
+        const boost::filesystem::path candidate =
+            attempt == 0 ? boost::filesystem::path(library_filename)
+                         : boost::filesystem::path(env::initial_folder()) / library_filename;
+
+        void* const module = open_module(candidate);
+        if (module == nullptr) {
+            continue;
+        }
+
+        // No library is ever unloaded, not even one that is skipped: libomt runs threads of its own (discovery,
+        // logging), and unloading it while they run crashes the process. The system unloads them when
+        // CasparCG exits.
+        auto loaded = std::make_unique<omt_lib>();
+        if (find_functions(module, *loaded) == false) {
+            CASPAR_LOG(warning) << L"Skipped " << candidate.wstring()
+                                << L", it is missing functions that CasparCG needs.";
+            found_incompatible_library = true;
+            continue;
+        }
+
+        CASPAR_LOG(info) << L"Loaded " << candidate.wstring();
+        return loaded;
+    }
+
+    if (found_incompatible_library == true) {
+        throw_library_incompatible();
+    }
+    throw_library_not_found();
 }
 
 // --- Names ---
@@ -145,27 +182,8 @@ std::wstring remove_diacritics(const std::wstring& text)
 omt_lib* load_library()
 {
     static omt_lib* const lib = [] {
-        void* const module = open_library();
+        auto loaded = open_library();
 
-        auto loaded = std::make_unique<omt_lib>();
-
-        bool all_functions_found = true;
-        all_functions_found &= find_function(module, "omt_discovery_getaddresses", loaded->discovery_getaddresses);
-        all_functions_found &= find_function(module, "omt_receive_create", loaded->receive_create);
-        all_functions_found &= find_function(module, "omt_receive_destroy", loaded->receive_destroy);
-        all_functions_found &= find_function(module, "omt_receive", loaded->receive);
-        all_functions_found &= find_function(module, "omt_send_create", loaded->send_create);
-        all_functions_found &= find_function(module, "omt_send_destroy", loaded->send_destroy);
-        all_functions_found &= find_function(module, "omt_send", loaded->send);
-        all_functions_found &= find_function(module, "omt_send_getaddress", loaded->send_getaddress);
-        all_functions_found &= find_function(module, "omt_send_connections", loaded->send_connections);
-
-        if (all_functions_found == false) {
-            throw_library_incompatible();
-        }
-
-        // Not every libomt has it, so it is not required.
-        find_function(module, "omt_shutdown", loaded->shutdown);
         if (loaded->shutdown != nullptr) {
             // By the time statics are destroyed, the producers and consumers are gone.
             static const struct shutdown_at_exit
