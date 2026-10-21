@@ -46,7 +46,31 @@ namespace {
 #ifdef _WIN32
 const wchar_t* const library_filename = L"libomt.dll";
 
-void* open_module(const boost::filesystem::path& path) { return LoadLibraryW(path.c_str()); }
+// Sets error to the reason when the library cannot be loaded, for example because it is missing.
+void* open_module(const boost::filesystem::path& path, std::wstring& error)
+{
+    void* const module = LoadLibraryW(path.c_str());
+    if (module == nullptr) {
+        const DWORD code   = GetLastError();
+        wchar_t*    buffer = nullptr;
+        const DWORD length =
+            FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                           nullptr,
+                           code,
+                           0,
+                           reinterpret_cast<LPWSTR>(&buffer),
+                           0,
+                           nullptr);
+
+        std::wstring reason = length > 0 ? std::wstring(buffer, length) : L"error " + std::to_wstring(code);
+        LocalFree(buffer);
+        while (reason.empty() == false && (reason.back() == L'\r' || reason.back() == L'\n' || reason.back() == L' ')) {
+            reason.pop_back();
+        }
+        error = path.wstring() + L": " + reason;
+    }
+    return module;
+}
 
 void* find_symbol(void* module, const char* name)
 {
@@ -56,19 +80,34 @@ void* find_symbol(void* module, const char* name)
 #else
 const char* const library_filename = "libomt.so";
 
-void* open_module(const boost::filesystem::path& path) { return dlopen(path.c_str(), RTLD_LOCAL | RTLD_LAZY); }
+// Sets error to the reason when the library cannot be loaded, for example because one of the libraries
+// that it needs is missing.
+void* open_module(const boost::filesystem::path& path, std::wstring& error)
+{
+    void* const module = dlopen(path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+    if (module == nullptr) {
+        const char* const reason = dlerror();
+        error                    = u16(std::string(reason != nullptr ? reason : "unknown error"));
+    }
+    return module;
+}
 
 void* find_symbol(void* module, const char* name) { return dlsym(module, name); }
 
 #endif
 
-[[noreturn]] void throw_library_not_found()
+// load_errors says why the system could not load the candidates. A libomt that is installed but cannot be
+// loaded, for example because a library that it needs is missing, would otherwise look like a missing one.
+[[noreturn]] void throw_library_not_found(const std::wstring& load_errors)
 {
-    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(
-                               L"libomt was not found. It is built together with CasparCG, unless CMake was "
-                               L"configured with -DOMT_BUILD_FROM_SOURCE=OFF. Otherwise libomt "
-                               L"(https://github.com/openmediatransport/libomt) has to be installed where the system "
-                               L"can find it."));
+    std::wstring message = L"libomt was not found. It is built together with CasparCG, unless CMake was "
+                           L"configured with -DOMT_BUILD_FROM_SOURCE=OFF. Otherwise libomt "
+                           L"(https://github.com/openmediatransport/libomt) has to be installed where the system "
+                           L"can find it.";
+    if (load_errors.empty() == false) {
+        message += L" The system could not load it: " + load_errors;
+    }
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(message));
 }
 
 [[noreturn]] void throw_library_incompatible()
@@ -109,15 +148,22 @@ bool find_functions(void* module, omt_lib& lib)
 // old must not hide a good one next to the server.
 std::unique_ptr<omt_lib> open_library()
 {
-    bool found_incompatible_library = false;
+    bool         found_incompatible_library = false;
+    std::wstring load_errors;
     for (int attempt = 0; attempt < 2; ++attempt) {
         // The folder CasparCG was started from is only looked up if the system has no usable libomt.
         const boost::filesystem::path candidate =
             attempt == 0 ? boost::filesystem::path(library_filename)
                          : boost::filesystem::path(env::initial_folder()) / library_filename;
 
-        void* const module = open_module(candidate);
+        std::wstring error;
+        void* const  module = open_module(candidate, error);
         if (module == nullptr) {
+            CASPAR_LOG(debug) << L"Could not load libomt: " << error;
+            if (load_errors.empty() == false) {
+                load_errors += L"; ";
+            }
+            load_errors += error;
             continue;
         }
 
@@ -139,7 +185,7 @@ std::unique_ptr<omt_lib> open_library()
     if (found_incompatible_library == true) {
         throw_library_incompatible();
     }
-    throw_library_not_found();
+    throw_library_not_found(load_errors);
 }
 
 // --- Names ---
