@@ -506,10 +506,15 @@ struct omt_consumer : public core::frame_consumer
                 continue;
             }
 
-            frame_timer_.restart();
-            send_video(frame);
-            send_audio(frame);
-            graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+            // An exception that leaves this thread ends the server, so a frame that cannot be sent is lost instead.
+            try {
+                frame_timer_.restart();
+                send_video(frame);
+                send_audio(frame);
+                graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
         }
     }
 
