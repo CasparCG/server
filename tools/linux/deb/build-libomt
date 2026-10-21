@@ -16,7 +16,6 @@
 set -euo pipefail
 
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-debian="$repo/tools/linux/deb/libomt/debian"
 out="$repo/dist/deb"
 
 install_deps=1
@@ -40,10 +39,11 @@ as_root() {
 
 # The first line of the changelog is "libomt (version) distribution; urgency=...". dpkg-parsechangelog
 # would do, but it is part of dpkg-dev, which is not there before the build tools are installed.
-version=$(sed -n '1s/^[^ ]* (\([^)]*\)).*/\1/p' "$debian/changelog")
+version=$(repo_git show HEAD:tools/linux/deb/libomt/debian/changelog | sed -n '1s/^[^ ]* (\([^)]*\)).*/\1/p')
 test -n "$version"
 
-# The source is the wrapper project and the two CMake modules that build the OMT runtime.
+# The source is the wrapper project, the two CMake modules that build the OMT runtime and the debian
+# directory, all of them from the current commit.
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 source_dir="$work/libomt-$version"
@@ -51,7 +51,8 @@ mkdir -p "$source_dir"
 
 repo_git archive HEAD tools/linux/libomt src/CMakeModules/OMT.cmake src/CMakeModules/CasparCG_Util.cmake |
     tar --extract --directory "$source_dir"
-cp -r "$debian" "$source_dir/debian"
+repo_git archive HEAD:tools/linux/deb/libomt debian |
+    tar --extract --directory "$source_dir"
 
 if [ "$install_deps" -eq 1 ]; then
     export DEBIAN_FRONTEND=noninteractive
