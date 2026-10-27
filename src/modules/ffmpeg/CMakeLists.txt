@@ -10,6 +10,8 @@ set(SOURCES
 	producer/ffmpeg_producer.h
 	consumer/ffmpeg_consumer.cpp
 	consumer/ffmpeg_consumer.h
+	consumer/offline_consumer.cpp
+	consumer/offline_consumer.h
 
 	util/av_util.cpp
 	util/av_util.h
