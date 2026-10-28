@@ -47,6 +47,7 @@ class mixer final
     const_frame operator()(std::vector<draw_frame>  frames,
                            const video_format_desc& format_desc,
                            int                      nb_samples,
+               bool                     need_host_frame,
                            monitor::state           transforms);
 
     void  set_master_volume(float volume);
