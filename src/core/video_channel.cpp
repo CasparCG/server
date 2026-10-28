@@ -100,6 +100,7 @@ struct video_channel::impl final
     };
 
   public:
+    /// Starts the channel loop, publishing completed mixer transforms only after the output call.
     impl(int                                       index,
          const core::video_format_desc&            format_desc,
          color_space                               default_color_space,
@@ -164,13 +165,15 @@ struct video_channel::impl final
                     auto          mixed_frame  = has_consumers ? mixer_(stage_frames.frames,
                                                               stage_frames.format_desc,
                                                               stage_frames.nb_samples,
-                                                              need_host_frame)
+                                                              need_host_frame,
+                                                              stage_frames.transforms)
                                                                : const_frame{};
                     auto          mixed_frame2 = has_consumers && stage_frames.format_desc.field_count == 2
                                                      ? mixer_(stage_frames.frames2,
                                                      stage_frames.format_desc,
                                                      stage_frames.nb_samples,
-                                                     need_host_frame)
+                                                     need_host_frame,
+                                                     stage_frames.transforms)
                                                      : const_frame{};
                     graph_->set_value("mix-time", mix_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
@@ -183,6 +186,7 @@ struct video_channel::impl final
 
                     monitor::state state = {};
                     state["stage"]       = stage_->state();
+                    state["stage"]       = mixer_.transforms();
                     state["mixer"]       = mixer_.state();
                     state["output"]      = output_.state();
                     state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
