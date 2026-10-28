@@ -106,6 +106,8 @@ class Decoder
     int64_t           next_pts = AV_NOPTS_VALUE;
     std::atomic<bool> eof      = {false};
 
+    bool invalid_audio = false;
+
     std::queue<std::shared_ptr<AVPacket>> input;
     mutable boost::mutex                  input_mutex;
     boost::condition_variable             input_cond;
@@ -117,6 +119,28 @@ class Decoder
     int                                  output_capacity = 8;
 
     boost::thread thread;
+
+    bool handle_invalid_audio(int result)
+    {
+        // ff_adts_header_parse() returns private errors instead of AVERROR_INVALIDDATA.
+        // See AACParseError in libavcodec/adts_header.h (formerly AACAC3ParseError
+        // in libavcodec/aac_ac3_parser.h).
+        constexpr int adts_error_sync        = -0x1030c0a;
+        constexpr int adts_error_sample_rate = -0x3030c0a;
+        constexpr int adts_error_frame_size  = -0x4030c0a;
+
+        const bool invalid_adts =
+            ctx->codec_id == AV_CODEC_ID_AAC &&
+            (result == adts_error_sync || result == adts_error_sample_rate || result == adts_error_frame_size);
+        if (ctx->codec_type != AVMEDIA_TYPE_AUDIO || (result != AVERROR_INVALIDDATA && !invalid_adts)) {
+            return false;
+        }
+        if (!invalid_audio) {
+            CASPAR_LOG(warning) << "Discarding invalid audio data; waiting for the next valid packet.";
+        }
+        invalid_audio = true;
+        return true;
+    }
 
   public:
     std::shared_ptr<AVCodecContext> ctx;
@@ -174,7 +198,11 @@ class Decoder
                             packet = std::move(input.front());
                             input.pop();
                         }
-                        FF(avcodec_send_packet(ctx.get(), packet.get()));
+                        ret = avcodec_send_packet(ctx.get(), packet.get());
+                        if (handle_invalid_audio(ret)) {
+                            continue;
+                        }
+                        FF_RET(ret, "avcodec_send_packet");
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
@@ -187,7 +215,11 @@ class Decoder
                             output.push(std::move(av_frame));
                         }
                     } else {
+                        if (handle_invalid_audio(ret)) {
+                            continue;
+                        }
                         FF_RET(ret, "avcodec_receive_frame");
+                        invalid_audio = false;
 
                         // TODO: Maybe Fixed in:
                         // https://github.com/FFmpeg/FFmpeg/commit/33203a08e0a26598cb103508327a1dc184b27bc6
@@ -913,6 +945,9 @@ struct AVProducer::Impl
                 frame.start_time = start_time;
                 frame.pts        = av_rescale_q(frame.audio->pts, tb, TIME_BASE_Q) - start_time;
                 frame.duration   = av_rescale_q(frame.audio->nb_samples, {1, sr}, TIME_BASE_Q);
+            } else if (audio_filter_.eof) {
+                // Do not repeat the last audio frame when video outlives audio.
+                frame.audio.reset();
             }
 
             frame.frame = core::draw_frame(
