@@ -22,6 +22,7 @@
 #include "platform_specific.h"
 
 #include <common/log.h>
+#include <common/locale.h>
 #include <exception>
 
 #include <iostream>
@@ -39,8 +40,8 @@ void setup_prerequisites()
 {
     // Enable utf8 console input and output
     std::wcout.sync_with_stdio(false);
-    std::wcout.imbue(std::locale(""));
-    std::wcin.imbue(std::locale(""));
+    std::wcout.imbue(safe_utf8_locale());
+    std::wcin.imbue(safe_utf8_locale());
 
     XInitThreads();
 
