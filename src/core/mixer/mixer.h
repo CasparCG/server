@@ -43,10 +43,12 @@ class mixer final
                    spl::shared_ptr<caspar::diagnostics::graph> graph,
                    spl::shared_ptr<image_mixer>                image_mixer);
 
+    /// Buffers the supplied transform snapshot with its frame until rendering completes.
     const_frame operator()(std::vector<draw_frame>  frames,
                            const video_format_desc& format_desc,
                            int                      nb_samples,
-                           bool                     need_host_frame);
+               bool                     need_host_frame,
+                           monitor::state           transforms);
 
     void  set_master_volume(float volume);
     float get_master_volume();
@@ -54,6 +56,9 @@ class mixer final
     mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
     core::monitor::state state() const;
+
+    /// Returns the last successfully rendered frame's transforms, or empty state before priming.
+    core::monitor::state transforms() const;
 
     common::bit_depth depth() const;
 
