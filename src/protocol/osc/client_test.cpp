@@ -247,7 +247,7 @@ class test_image_mixer : public caspar::core::image_mixer
 
     /// Returns a deferred marker image or the injected failure for this render submission.
     std::future<std::tuple<caspar::array<const std::uint8_t>, std::shared_ptr<caspar::core::texture>>>
-    render(const caspar::core::video_format_desc&) override
+    render(const caspar::core::video_format_desc&, bool) override
     {
         return std::async(std::launch::deferred, [value = marker, fail = fail_render] {
             if (fail)
@@ -295,7 +295,7 @@ void test_mixer_alignment()
             draw.transform().image_transform.opacity = static_cast<double>(field + 1) / 16;
             monitor::state properties;
             properties["opacity"] = draw.transform().image_transform.opacity;
-            auto frame            = mixer({draw}, desc, desc.audio_cadence.front(), properties);
+            auto frame            = mixer({draw}, desc, desc.audio_cadence.front(), true, properties);
             if (field < desc.field_count) {
                 require(!frame, "Mixer returned a frame before buffer priming");
                 const auto state = mixer.transforms();
@@ -316,7 +316,7 @@ void test_mixer_alignment()
             const auto                last = mixer.transforms();
             const monitor::data_map_t previous(last.begin(), last.end());
             try {
-                mixer({}, desc, desc.audio_cadence.front(), {});
+                mixer({}, desc, desc.audio_cadence.front(), true, {});
             } catch (const std::runtime_error& e) {
                 require(std::string(e.what()) == "Injected render failure", "Unexpected render error");
                 failed           = true;
@@ -350,7 +350,7 @@ void test_stage_snapshots()
     std::vector<int> backgrounds;
     auto             produce = [&] {
         const auto frames = stage(++frame, backgrounds, [](int, const core::layer_frame&) {});
-        mixer(frames.frames, frames.format_desc, frames.nb_samples, frames.transforms);
+        mixer(frames.frames, frames.format_desc, frames.nb_samples, true, frames.transforms);
         monitor::state state;
         state[""]["channel"][1]["stage"] = stage.state();
         state[""]["channel"][1]["stage"] = mixer.transforms();

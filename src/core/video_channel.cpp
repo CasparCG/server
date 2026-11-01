@@ -186,13 +186,18 @@ struct video_channel::impl final
 
                     monitor::state state = {};
                     state["stage"]       = stage_->state();
-                    state["stage"]       = mixer_.transforms();
-                    state["mixer"]       = mixer_.state();
-                    state["output"]      = output_.state();
-                    state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
-                                                stage_frames.format_desc.field_count,
-                                            stage_frames.format_desc.framerate.denominator()};
-                    state["format"]      = stage_frames.format_desc.name;
+                    // Only publish the mixer's rendered transforms while there are consumers to drive
+                    // rendering; otherwise the mixer never advances and this would keep republishing a
+                    // stale snapshot (e.g. for layers that have since been cleared).
+                    if (has_consumers) {
+                        state["stage"] = mixer_.transforms();
+                    }
+                    state["mixer"]     = mixer_.state();
+                    state["output"]    = output_.state();
+                    state["framerate"] = {stage_frames.format_desc.framerate.numerator() *
+                                              stage_frames.format_desc.field_count,
+                                          stage_frames.format_desc.framerate.denominator()};
+                    state["format"]    = stage_frames.format_desc.name;
                     {
                         std::lock_guard<std::mutex> lock(state_mutex_);
                         state_ = state;
