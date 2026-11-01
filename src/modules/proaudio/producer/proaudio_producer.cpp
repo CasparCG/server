@@ -143,7 +143,10 @@ struct proaudio_producer : public core::frame_producer
                                                    static_cast<std::size_t>(max_frames_per_callback_) * 2);
 
         ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
-        scratch_.resize(max_frames_per_callback_ * device_channels_);
+        // scratch_ is written by pa_callback() with a stride of channel_map_.size() (one sample per mapped
+        // channel per frame), not device_channels_ - a repeated-channel map (e.g. CHANNEL_MAP 1,1) has more
+        // mapped channels than source device channels, so sizing by device_channels_ can overflow the buffer.
+        scratch_.resize(max_frames_per_callback_ * channel_map_.size());
 
         PaStreamParameters in_params{};
         in_params.device                    = device;

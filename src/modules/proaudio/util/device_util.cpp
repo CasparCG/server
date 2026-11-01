@@ -120,7 +120,10 @@ pa_library::~pa_library()
     std::lock_guard guard{mutex_};
     Pa_Terminate();
     initialized_ = false;
-    condition_.notify_one();
+    // Multiple threads can be blocked in acquire() waiting on this instance to finish tearing down;
+    // notify_one() would leave all but one of them stuck forever, so wake every waiter and let each
+    // re-check instance_/initialized_.
+    condition_.notify_all();
 }
 
 std::shared_ptr<pa_library> pa_library::acquire()
