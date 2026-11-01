@@ -177,10 +177,21 @@ struct output::impl
             consumers = consumers_;
         }
 
-        auto do_send = [this, &consumers](core::video_field field, const core::const_frame& frame) {
+        // A frame mixed while no consumer needed the picture on the host carries only the GPU texture
+        // (need_host_frame in video_channel.cpp), and size() still reports the full size. The mixer keeps
+        // field_count frames in flight, so a consumer that reads the bytes and was just added can be handed
+        // one of them: it skips that frame instead of copying from a null pointer.
+        const bool host_bytes = input_frame1.image_data(0).data() != nullptr &&
+                                (!input_frame2 || input_frame2.image_data(0).data() != nullptr);
+
+        auto do_send = [this, &consumers, host_bytes](core::video_field field, const core::const_frame& frame) {
             std::map<int, std::future<bool>> futures;
 
             for (auto it = consumers.begin(); it != consumers.end();) {
+                if (!host_bytes && it->second->needs_host_frame()) {
+                    ++it;
+                    continue;
+                }
                 try {
                     futures.emplace(it->first, it->second->send(field, frame));
                     ++it;
