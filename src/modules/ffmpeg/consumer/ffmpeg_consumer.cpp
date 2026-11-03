@@ -20,6 +20,7 @@
  */
 
 #include "ffmpeg_consumer.h"
+#include "buffer_config.h"
 
 #include "../util/av_assert.h"
 #include "../util/av_util.h"
@@ -68,6 +69,7 @@ extern "C" {
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
 
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -357,8 +359,13 @@ struct ffmpeg_consumer : public core::frame_consumer
 
     spl::shared_ptr<diagnostics::graph> graph_;
 
-    std::string path_;
-    std::string args_;
+    std::string   path_;
+    std::string   args_;
+    buffer_config buffers_;
+
+    std::uint64_t                                        dropped_frames_        = 0;
+    std::uint64_t                                        dropped_audio_samples_ = 0;
+    std::optional<std::chrono::steady_clock::time_point> last_drop_warning_;
 
     std::exception_ptr exception_;
     std::mutex         exception_mutex_;
@@ -369,7 +376,7 @@ struct ffmpeg_consumer : public core::frame_consumer
     common::bit_depth depth_;
 
   public:
-    ffmpeg_consumer(std::string path, std::string args, bool realtime, common::bit_depth depth)
+    ffmpeg_consumer(std::string path, std::string args, bool realtime, common::bit_depth depth, buffer_config buffers)
         : channel_index_([&] {
             boost::crc_16_type result;
             result.process_bytes(path.data(), path.length());
@@ -378,11 +385,18 @@ struct ffmpeg_consumer : public core::frame_consumer
         , realtime_(realtime)
         , path_(std::move(path))
         , args_(std::move(args))
+        , buffers_(buffers)
         , depth_(depth)
     {
         state_["file/path"] = u8(path_);
 
-        frame_buffer_.set_capacity(realtime_ ? 1 : 64);
+        frame_buffer_.set_capacity(buffers_.frames);
+        if (realtime_) {
+            state_["buffer/frames/capacity"]       = buffers_.frames;
+            state_["buffer/packets/capacity"]      = buffers_.packets;
+            state_["buffer/dropped-frames"]        = dropped_frames_;
+            state_["buffer/dropped-audio-samples"] = dropped_audio_samples_;
+        }
 
         diagnostics::register_graph(graph_);
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -500,7 +514,7 @@ struct ffmpeg_consumer : public core::frame_consumer
                 }
 
                 tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packet_buffer;
-                packet_buffer.set_capacity(realtime_ ? 1 : 128);
+                packet_buffer.set_capacity(buffers_.packets);
                 auto packet_thread = std::thread([&] {
                     try {
                         CASPAR_SCOPE_EXIT
@@ -598,12 +612,29 @@ struct ffmpeg_consumer : public core::frame_consumer
             }
         }
 
+        const auto audio_samples = frame.audio_data().size() / format_desc_.audio_channels;
         if (!frame_buffer_.try_push({frame, video_pts, audio_pts})) {
             graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+            if (realtime_) {
+                ++dropped_frames_;
+                dropped_audio_samples_ += audio_samples;
+                {
+                    std::lock_guard<std::mutex> lock(state_mutex_);
+                    state_["buffer/dropped-frames"]        = dropped_frames_;
+                    state_["buffer/dropped-audio-samples"] = dropped_audio_samples_;
+                }
+                const auto now = std::chrono::steady_clock::now();
+                if (!last_drop_warning_ || now - *last_drop_warning_ >= std::chrono::seconds(5)) {
+                    CASPAR_LOG(warning) << print() << L" Input buffer full (capacity " << buffers_.frames
+                                        << L"); dropped " << dropped_frames_ << L" frames and "
+                                        << dropped_audio_samples_ << L" audio samples per channel in total.";
+                    last_drop_warning_ = now;
+                }
+            }
         }
 
         video_pts += 1;
-        audio_pts += frame.audio_data().size() / format_desc_.audio_channels;
+        audio_pts += audio_samples;
 
         graph_->set_value("input", static_cast<double>(frame_buffer_.size() + 0.001) / frame_buffer_.capacity());
 
@@ -633,13 +664,16 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
     if (params.size() < 2 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
         return core::frame_consumer::empty();
 
-    auto                     path = u8(params.at(1));
+    auto                      path     = u8(params.at(1));
+    const bool                realtime = boost::iequals(params.at(0), L"STREAM");
+    buffer_config             buffers(realtime);
+    std::vector<std::wstring> options(params.begin() + 2, params.end());
+    buffers.consume_options(options);
     std::vector<std::string> args;
-    for (auto n = 2; n < params.size(); ++n) {
-        args.emplace_back(u8(params[n]));
+    for (const auto& option : options) {
+        args.emplace_back(u8(option));
     }
-    return spl::make_shared<ffmpeg_consumer>(
-        path, boost::join(args, " "), boost::iequals(params.at(0), L"STREAM"), channel_info.depth);
+    return spl::make_shared<ffmpeg_consumer>(path, boost::join(args, " "), realtime, channel_info.depth, buffers);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -648,9 +682,13 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
+    const bool    realtime = ptree.get(L"realtime", false);
+    buffer_config buffers(realtime);
+    buffers.read_config(ptree);
     return spl::make_shared<ffmpeg_consumer>(u8(ptree.get<std::wstring>(L"path", L"")),
                                              u8(ptree.get<std::wstring>(L"args", L"")),
-                                             ptree.get(L"realtime", false),
-                                             channel_info.depth);
+                                             realtime,
+                                             channel_info.depth,
+                                             buffers);
 }
 }} // namespace caspar::ffmpeg
